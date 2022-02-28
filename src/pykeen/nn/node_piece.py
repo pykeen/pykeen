@@ -1,4 +1,5 @@
 """Node Piece representations."""
+
 import logging
 from abc import abstractmethod
 from collections import defaultdict
@@ -6,11 +7,12 @@ from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy.linalg
+import numpy.random
 import scipy.sparse
 import scipy.sparse.csgraph
 import torch
 import torch.nn
-from class_resolver import HintOrType, OptionalKwargs, Resolver
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
 from .emb import EmbeddingSpecification, RepresentationModule
 from ..constants import AGGREGATIONS
@@ -20,6 +22,20 @@ from ..typing import MappedTriples, OneOrSequence
 from ..utils import format_relative_comparison, upgrade_to_sequence
 
 __all__ = [
+    "AnchorSelection",
+    "DegreeAnchorSelection",
+    "MixtureAnchorSelection",
+    "PageRankAnchorSelection",
+    "RandomAnchorSelection",
+    "anchor_selection_resolver",
+    "AnchorSearcher",
+    "ScipySparseAnchorSearcher",
+    "CSGraphAnchorSearcher",
+    "anchor_searcher_resolver",
+    "Tokenizer",
+    "RelationTokenizer",
+    "AnchorTokenizer",
+    "tokenizer_resolver",
     "NodePieceRepresentation",
 ]
 
@@ -131,7 +147,11 @@ class AnchorSelection:
         self.num_anchors = num_anchors
 
     @abstractmethod
-    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:
+    def __call__(
+        self,
+        edge_index: numpy.ndarray,
+        known_anchors: Optional[numpy.ndarray] = None,
+    ) -> numpy.ndarray:
         """
         Select anchor nodes.
 
@@ -142,6 +162,9 @@ class AnchorSelection:
         :param edge_index: shape: (m, 2)
             the edge_index, i.e., adjacency list.
 
+        :param known_anchors: numpy.ndarray
+            an array of already known anchors for getting only unique anchors
+
         :return: (k,)
             the selected entity ids
         """
@@ -151,20 +174,133 @@ class AnchorSelection:
         """Extra components for __repr__."""
         yield f"num_anchors={self.num_anchors}"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
+    def filter_unique(
+        self,
+        anchor_ranking: numpy.ndarray,
+        known_anchors: Optional[numpy.ndarray],
+    ) -> numpy.ndarray:
+        """
+        Filter out already known anchors, and select from remaining ones afterwards.
 
-class DegreeAnchorSelection(AnchorSelection):
+        .. note ::
+            the output size may be smaller, if there are not enough candidates remaining.
+
+        :param anchor_ranking: shape: (n,)
+            the anchor node IDs sorted by preference, where the first one is the most preferrable.
+        :param known_anchors: shape: (m,)
+            a collection of already known anchors
+
+        :return: shape: (m + num_anchors,)
+            the extended anchors, i.e., the known ones and `num_anchors` novel ones.
+        """
+        if known_anchors is None:
+            return anchor_ranking[: self.num_anchors]
+
+        # isin() preserves the sorted order
+        unique_anchors = anchor_ranking[~numpy.isin(anchor_ranking, known_anchors)]
+        unique_anchors = unique_anchors[: self.num_anchors]
+        return numpy.concatenate([known_anchors, unique_anchors])
+
+
+class SingleSelection(AnchorSelection):
+    """Single-step selection."""
+
+    def __call__(
+        self,
+        edge_index: numpy.ndarray,
+        known_anchors: Optional[numpy.ndarray] = None,
+    ) -> numpy.ndarray:
+        """
+        Select anchor nodes.
+
+        .. note ::
+            the number of selected anchors may be smaller than $k$, if there
+            are less entities present in the edge index.
+
+        :param edge_index: shape: (m, 2)
+            the edge_index, i.e., adjacency list.
+
+        :param known_anchors: numpy.ndarray
+            an array of already known anchors for getting only unique anchors
+
+        :return: (k,)
+            the selected entity ids
+        """
+        return self.filter_unique(anchor_ranking=self.rank(edge_index=edge_index), known_anchors=known_anchors)
+
+    @abstractmethod
+    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:
+        """
+        Rank nodes.
+
+        :param edge_index: shape: (m, 2)
+            the edge_index, i.e., adjacency list.
+
+        :return: (n,)
+            the node IDs sorted decreasingly by anchor selection preference.
+        """
+        raise NotImplementedError
+
+
+class DegreeAnchorSelection(SingleSelection):
     """Select entities according to their (undirected) degree."""
 
-    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         unique, counts = numpy.unique(edge_index, return_counts=True)
-        top_ids = numpy.argpartition(counts, max(counts.size - self.num_anchors, 0))[-self.num_anchors :]
-        return unique[top_ids]
+        # sort by decreasing degree
+        ids = numpy.argsort(counts)[::-1]
+        return unique[ids]
 
 
-class PageRankAnchorSelection(AnchorSelection):
+def page_rank(
+    edge_index: numpy.ndarray,
+    max_iter: int = 1_000,
+    alpha: float = 0.05,
+    epsilon: float = 1.0e-04,
+) -> numpy.ndarray:
+    """
+    Compute page-rank vector by power iteration.
+
+    :param edge_index: shape: (2, m)
+        the edge index of the graph, i.e, the edge list.
+    :param max_iter: $>0$
+        the maximum number of iterations
+    :param alpha: $0 < x < 1$
+        the smoothing value / teleport probability
+    :param epsilon: $>0$
+        a (small) constant to check for convergence
+
+    :return: shape: (n,)
+        the page-rank vector, i.e., a score between 0 and 1 for each node.
+    """
+    # convert to sparse matrix
+    adj = _edge_index_to_sparse_matrix(edge_index=edge_index)
+    # symmetrize
+    # TODO: should we add self-links
+    # adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
+    adj = (adj + adj.transpose()).tocsr()
+    # degree for adjacency normalization
+    degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=float))[0]
+    n = degree_inv.shape[0]
+    # power iteration
+    x = numpy.full(shape=(n,), fill_value=1.0 / n)
+    x_old = x
+    beta = 1.0 - alpha
+    for i in range(max_iter):
+        x = beta * adj.dot(degree_inv * x) + alpha / n
+        if numpy.linalg.norm(x - x_old, ord=float("+inf")) < epsilon:
+            logger.debug(f"Converged after {i} iterations up to {epsilon}.")
+            break
+        x_old = x
+    else:  # for/else, cf. https://book.pythontips.com/en/latest/for_-_else.html
+        logger.warning(f"No covergence after {max_iter} iterations with epsilon={epsilon}.")
+    return x
+
+
+class PageRankAnchorSelection(SingleSelection):
     """Select entities according to their page rank."""
 
     def __init__(
@@ -189,7 +325,6 @@ class PageRankAnchorSelection(AnchorSelection):
         super().__init__(num_anchors=num_anchors)
         self.max_iter = max_iter
         self.alpha = alpha
-        self.beta = 1.0 - alpha
         self.epsilon = epsilon
 
     def extra_repr(self) -> Iterable[str]:  # noqa: D102
@@ -198,30 +333,39 @@ class PageRankAnchorSelection(AnchorSelection):
         yield f"alpha={self.alpha}"
         yield f"epsilon={self.epsilon}"
 
-    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
-        # convert to sparse matrix
-        adj = _edge_index_to_sparse_matrix(edge_index=edge_index)
-        # symmetrize
-        # TODO: should we add self-links
-        # adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
-        adj = (adj + adj.transpose()).tocsr()
-        # degree
-        degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0)))[0]
-        n = degree_inv.shape[0]
-        # power iteration
-        x = numpy.full(shape=(n,), fill_value=1.0 / n)
-        x_old = x
-        no_convergence = True
-        for i in range(self.max_iter):
-            x = self.beta * adj.dot(degree_inv * x) + self.alpha
-            if numpy.linalg.norm(x - x_old, ord=float("+inf")) < self.epsilon:
-                logger.debug(f"Converged after {i} iterations up to {self.epsilon}.")
-                no_convergence = False
-                break
-            x_old = x
-        if no_convergence:
-            logger.warning(f"No covergence after {self.max_iter} iterations with epsilon={self.epsilon}.")
-        return numpy.argpartition(x, max(x.size - self.num_anchors, 0))[-self.num_anchors :]
+    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+        # sort by decreasing page rank
+        return numpy.argsort(
+            page_rank(
+                edge_index=edge_index,
+                max_iter=self.max_iter,
+                alpha=self.alpha,
+                epsilon=self.epsilon,
+            ),
+        )[::-1]
+
+
+class RandomAnchorSelection(SingleSelection):
+    """Random node selection."""
+
+    def __init__(
+        self,
+        num_anchors: int = 32,
+        random_seed: Optional[int] = None,
+    ) -> None:
+        """
+        Initialize the selection stragegy.
+
+        :param num_anchors:
+            the number of anchors to select
+        :param random_seed:
+            the random seed to use.
+        """
+        super().__init__(num_anchors=num_anchors)
+        self.generator: numpy.random.Generator = numpy.random.default_rng(random_seed)
+
+    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+        return self.generator.permutation(edge_index.max())
 
 
 class MixtureAnchorSelection(AnchorSelection):
@@ -238,7 +382,9 @@ class MixtureAnchorSelection(AnchorSelection):
         Initialize the selection strategy.
 
         :param selections:
-            the individual selections
+            the individual selections.
+            For the sake of selecting unique anchors, selections will be executed in the given order
+            eg, ['degree', 'pagerank'] will be executed differently from ['pagerank', 'degree']
         :param ratios:
             the ratios, cf. normalize_ratios. None means uniform ratios
         :param selection_kwargs:
@@ -270,13 +416,21 @@ class MixtureAnchorSelection(AnchorSelection):
         yield from super().extra_repr()
         yield f"selections={self.selections}"
 
-    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
-        return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
+    def __call__(
+        self,
+        edge_index: numpy.ndarray,
+        known_anchors: Optional[numpy.ndarray] = None,
+    ) -> numpy.ndarray:  # noqa: D102
+        anchors = known_anchors or None
+        for selection in self.selections:
+            anchors = selection(edge_index=edge_index, known_anchors=anchors)
+        return anchors
 
 
-anchor_selection_resolver: Resolver[AnchorSelection] = Resolver.from_subclasses(
+anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
     base=AnchorSelection,
     default=DegreeAnchorSelection,
+    skip={SingleSelection},
 )
 
 
@@ -304,7 +458,7 @@ class AnchorSearcher:
         """Extra components for __repr__."""
         return []
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
 
@@ -471,7 +625,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
 
 # TODO: use graph library, such as igraph, graph-tool, or networkit
-anchor_searcher_resolver: Resolver[AnchorSearcher] = Resolver.from_subclasses(
+anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
     base=AnchorSearcher,
     default=CSGraphAnchorSearcher,
 )
@@ -517,6 +671,8 @@ class AnchorTokenizer(Tokenizer):
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
         anchors = self.anchor_selection(edge_index=edge_index)
+        if len(numpy.unique(anchors)) < len(anchors):
+            logger.warning(f"Only {len(numpy.unique(anchors))} out of {len(anchors)} anchors are unique")
         # find closest anchors
         logger.info(f"Searching closest anchors with {self.searcher}")
         tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens)
@@ -529,7 +685,7 @@ class AnchorTokenizer(Tokenizer):
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
 
 
-tokenizer_resolver: Resolver[Tokenizer] = Resolver.from_subclasses(
+tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
     base=Tokenizer,
     default=RelationTokenizer,
 )
@@ -599,7 +755,15 @@ class TokenizationRepresentationModule(RepresentationModule):
 
         # fill padding (nn.Embedding cannot deal with negative indices)
         padding = assignment < 0
-        assignment[padding] = self.vocabulary_size = assignment.max().item() + 1
+        # sometimes, assignment.max() does not cover all relations (eg, inductive inference graphs
+        # contain a subset of training relations) - for that, the padding index is the last index of the Representation
+        self.vocabulary_size = (
+            token_representation.max_id
+            if isinstance(token_representation, RepresentationModule)
+            else assignment.max().item() + 1
+        )
+
+        assignment[padding] = self.vocabulary_size - 1  # = assignment.max().item() + 1
         max_id, num_chosen_tokens = assignment.shape
 
         # resolve token representation

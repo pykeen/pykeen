@@ -31,7 +31,15 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
         **kwargs,
-    ) -> None:
+    ):
+        """Initialize the training loop.
+
+        :param negative_sampler: The class, instance, or name of the negative sampler
+        :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
+            for every positive one
+        :param kwargs:
+            Additional keyword-based parameters passed to TrainingLoop.__init__
+        """
         super().__init__(**kwargs)
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
@@ -76,8 +84,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         negative_batch = negative_batch.to(self.device)
 
         # Compute negative and positive scores
-        positive_scores = self.model.score_hrt(positive_batch)
-        negative_scores = self.model.score_hrt(negative_batch).view(*negative_score_shape)
+        positive_scores = self.model.score_hrt(positive_batch, mode=self.mode)
+        negative_scores = self.model.score_hrt(negative_batch, mode=self.mode).view(*negative_score_shape)
 
         return (
             self.loss.process_slcwa_scores(
@@ -85,7 +93,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
                 negative_scores=negative_scores,
                 label_smoothing=label_smoothing,
                 batch_filter=positive_filter,
-                num_entities=self.model.num_entities,
+                num_entities=self.model._get_entity_len(mode=self.mode),
             )
             + self.model.collect_regularization_term()
         )

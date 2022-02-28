@@ -166,7 +166,8 @@ from textwrap import dedent
 from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
 import torch
-from class_resolver import Hint, Resolver
+from class_resolver import ClassResolver, Hint
+from class_resolver.contrib.torch import margin_activation_resolver
 from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
@@ -427,19 +428,6 @@ class MSELoss(PointwiseLoss):
     ) -> torch.FloatTensor:  # noqa: D102
         assert self.validate_labels(labels=labels)
         return functional.mse_loss(scores, labels, reduction=self.reduction)
-
-
-margin_activation_resolver = Resolver(
-    classes={
-        nn.ReLU,
-        nn.Softplus,
-    },
-    base=nn.Module,  # type: ignore
-    synonyms=dict(
-        hard=nn.ReLU,
-        soft=nn.Softplus,
-    ),
-)
 
 
 class MarginPairwiseLoss(PairwiseLoss):
@@ -1302,7 +1290,7 @@ class FocalLoss(PointwiseLoss):
         return self._reduction_method(loss)
 
 
-loss_resolver = Resolver.from_subclasses(
+loss_resolver = ClassResolver.from_subclasses(
     Loss,
     default=MarginRankingLoss,
     skip={

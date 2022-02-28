@@ -109,7 +109,7 @@ if tail corruption is used with probability $1 - p_r$.
     )
 """  # noqa
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from .basic_negative_sampler import BasicNegativeSampler
 from .bernoulli_negative_sampler import BernoulliNegativeSampler
@@ -125,7 +125,7 @@ __all__ = [
     "negative_sampler_resolver",
 ]
 
-negative_sampler_resolver: Resolver[NegativeSampler] = Resolver.from_subclasses(
-    base=NegativeSampler,
+negative_sampler_resolver = ClassResolver.from_subclasses(
+    NegativeSampler,
     default=BasicNegativeSampler,
 )

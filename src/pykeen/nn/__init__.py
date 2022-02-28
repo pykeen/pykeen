@@ -2,7 +2,7 @@
 
 """PyKEEN internal "nn" module."""
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from . import init
 from .emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
@@ -18,6 +18,7 @@ from .modules import (
     ERMLPEInteraction,
     ERMLPInteraction,
     HolEInteraction,
+    Interaction,
     KG2EInteraction,
     MonotonicAffineTransformationInteraction,
     MuREInteraction,
@@ -49,6 +50,7 @@ __all__ = [
     "SubsetRepresentationModule",
     "TokenizationRepresentationModule",
     "init",
+    "Interaction",
     "interaction_resolver",
     "tokenizer_resolver",
     "representation_resolver",
@@ -87,7 +89,7 @@ __all__ = [
 ]
 
 
-representation_resolver: Resolver[RepresentationModule] = Resolver.from_subclasses(
+representation_resolver: ClassResolver[RepresentationModule] = ClassResolver.from_subclasses(
     base=RepresentationModule,
     default=Embedding,
 )

@@ -15,6 +15,7 @@ import numpy as np
 import torch
 import torch.nn
 from class_resolver import FunctionResolver
+from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
 
@@ -25,7 +26,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
-from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize
+from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device
 
 __all__ = [
     "RepresentationModule",
@@ -139,6 +140,11 @@ class RepresentationModule(nn.Module, ABC):
         warnings.warn("The embedding_dim property is deprecated. Use .shape instead.", DeprecationWarning)
         return int(np.prod(self.shape))
 
+    @property
+    def device(self) -> torch.device:
+        """Return the device."""
+        return get_preferred_device(module=self, allow_ambiguity=True)
+
 
 class SubsetRepresentationModule(RepresentationModule):
     """A representation module, which only exposes a subset of representations of its base."""
@@ -166,7 +172,7 @@ class SubsetRepresentationModule(RepresentationModule):
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id)
+            indices = torch.arange(self.max_id, device=self.device)
         return self.base.forward(indices=indices)
 
 
@@ -374,7 +380,7 @@ class Embedding(RepresentationModule):
             x = self._embeddings.weight
         else:
             prefix_shape = indices.shape
-            x = self._embeddings(indices)
+            x = self._embeddings(indices.to(self.device))
         x = x.view(*prefix_shape, *self.shape)
         # verify that contiguity is preserved
         assert x.is_contiguous()
@@ -442,7 +448,7 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
         # get base weights, shape: (*batch_dims, num_bases)
         weight = self.weight
         if indices is not None:
-            weight = weight[indices]
+            weight = weight[indices.to(self.device)]
         # weighted linear combination of bases, shape: (*batch_dims, *shape)
         return torch.tensordot(weight, bases, dims=([-1], [0]))
 
@@ -842,7 +848,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
     ) -> torch.FloatTensor:  # noqa: D102
         x = self.combined()[self.position]
         if indices is not None:
-            x = x[indices]
+            x = x[indices.to(self.device)]
         return x
 
 
@@ -931,8 +937,8 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id)
-        uniq, inverse = indices.unique(return_inverse=True)
+            indices = torch.arange(self.max_id, device=self.device)
+        uniq, inverse = indices.to(device=self.device).unique(return_inverse=True)
         x = self.encoder(
             labels=[self.labels[i] for i in uniq.tolist()],
         )

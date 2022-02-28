@@ -6,9 +6,9 @@ import sys
 from typing import Optional
 
 import click
+from class_resolver.contrib.optuna import sampler_resolver
 
 from .hpo import hpo_pipeline
-from .samplers import sampler_resolver
 from ..losses import loss_resolver
 
 

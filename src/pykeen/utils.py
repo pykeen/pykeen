@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    Collection,
     Dict,
     Generic,
     Iterable,
@@ -39,7 +40,7 @@ import torch
 import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
-from class_resolver import Resolver, normalize_string
+from class_resolver import normalize_string
 from torch import nn
 from torch.nn import functional
 
@@ -98,13 +99,14 @@ __all__ = [
     "convert_to_canonical_shape",
     "get_expected_norm",
     "Bias",
-    "activation_resolver",
     "complex_normalize",
     "lp_norm",
     "powersum_norm",
     "product_normalize",
     "compute_box",
     "point_to_box_distance",
+    "get_devices",
+    "get_preferred_device",
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
 ]
@@ -137,6 +139,43 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
         device = torch.device("cpu")
         logger.warning("No cuda devices were available. The model runs on CPU")
     return device
+
+
+class DeviceResolutionError(ValueError):
+    """An error in the resolution of a model's device."""
+
+
+class AmbiguousDeviceError(DeviceResolutionError):
+    """An error raised if there is ambiguity in device resolution."""
+
+    def __init__(self, module: nn.Module) -> None:
+        """Initialize the error."""
+        _info = defaultdict(list)
+        for name, tensor in itt.chain(module.named_parameters(), module.named_buffers()):
+            _info[tensor.data.device].append(name)
+        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
+        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
+
+
+def get_devices(module: nn.Module) -> Collection[torch.device]:
+    """Return the device(s) from each components of the model."""
+    return {tensor.data.device for tensor in itt.chain(module.parameters(), module.buffers())}
+
+
+def get_preferred_device(module: nn.Module, allow_ambiguity: bool = True) -> torch.device:
+    """Return the preferred device."""
+    devices = get_devices(module=module)
+    if len(devices) == 0:
+        raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
+    if len(devices) == 1:
+        return next(iter(devices))
+    if not allow_ambiguity:
+        raise AmbiguousDeviceError(module=module)
+    # try to resolve ambiguous device; there has to be at least one cuda device
+    cuda_devices = {d for d in devices if d.type == "cuda"}
+    if len(cuda_devices) == 1:
+        return next(iter(cuda_devices))
+    raise AmbiguousDeviceError(module=module)
 
 
 X = TypeVar("X")
@@ -983,20 +1022,6 @@ def get_expected_norm(
         return math.pow(exp_abs_norm_p * d, 1 / p)
     else:
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
-
-
-activation_resolver = Resolver(
-    classes=(
-        nn.LeakyReLU,
-        nn.PReLU,
-        nn.ReLU,
-        nn.Softplus,
-        nn.Sigmoid,
-        nn.Tanh,
-    ),
-    base=nn.Module,  # type: ignore
-    default=nn.ReLU,
-)
 
 
 class Bias(nn.Module):

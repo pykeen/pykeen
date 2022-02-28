@@ -2,11 +2,12 @@
 
 """Basic structure for a negative sampler."""
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
 from class_resolver import HintOrType, normalize_string
+from torch import nn
 
 from .filtering import Filterer, filterer_resolver
 from ..typing import MappedTriples
@@ -16,7 +17,7 @@ __all__ = [
 ]
 
 
-class NegativeSampler(ABC):
+class NegativeSampler(nn.Module):
     """A negative sampler."""
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters
@@ -60,6 +61,7 @@ class NegativeSampler(ABC):
         :param filterer_kwargs:
             Additional keyword-based arguments passed to the filterer upon construction.
         """
+        super().__init__()
         self.num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
         self.num_relations = num_relations or mapped_triples[:, 1].max().item() + 1
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1

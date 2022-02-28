@@ -10,7 +10,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import CPInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import Hint, InductiveMode, Initializer, Normalizer
 
 __all__ = [
     "CP",
@@ -96,6 +96,8 @@ class CP(ERModel):
         h: Optional[torch.LongTensor],
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
+        *,
+        mode: Optional[InductiveMode],
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:  # noqa: D102
         # Override to allow different head and tail entity representations
         h, r, t = [

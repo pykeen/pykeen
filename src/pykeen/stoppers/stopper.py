@@ -5,9 +5,11 @@
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Union
+from typing import Any, List, Mapping, Optional, Union
 
 import torch
+
+from ..typing import InductiveMode
 
 __all__ = [
     "Stopper",
@@ -29,7 +31,7 @@ class Stopper(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def should_stop(self, epoch: int) -> bool:
+    def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
         """Validate on validation set and check for termination condition."""
         raise NotImplementedError
 
@@ -77,7 +79,7 @@ class NopStopper(Stopper):
         """Return false; should never evaluate."""
         return False
 
-    def should_stop(self, epoch: int) -> bool:
+    def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
         """Return false; should never stop."""
         return False
 
