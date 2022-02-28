@@ -3,7 +3,7 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from abc import ABC
-from typing import Callable, Generic, List, Mapping, Optional, Tuple, TypeVar
+from typing import Callable, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -112,7 +112,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
         return positive, negative, mask
 
     @staticmethod
-    def collate(samples: List[SLCWASampleType]) -> SLCWABatchType:
+    def collate(samples: Iterable[SLCWASampleType]) -> SLCWABatchType:
         """Collate samples."""
         # each shape: (1, 3), (1, k, 3), (1, k, 3)?
         positives, negatives, masks = zip(*samples)

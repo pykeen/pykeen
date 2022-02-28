@@ -10,7 +10,7 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 
 from ..sampling import NegativeSampler
-from ..triples.instances import BatchType, Instances, SampleType, SLCWABatchType, SLCWAInstances, SLCWASampleType
+from ..triples.instances import BatchType, Instances, SLCWABatchType, SLCWAInstances, SLCWASampleType, SampleType
 from ..typing import MappedTriples
 
 
@@ -196,17 +196,10 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWASampleType, 
         return super().__len__() // self.graph_sampler.subgraph_size
 
     def __getitem__(self, item: int) -> SLCWABatchType:  # noqa: D105
-        positive, negative, mask = list(
-            zip(*(SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler.sample_batch()))
+        return SLCWAInstances.collate(
+            (SLCWAInstances.__getitem__(self, idx) for idx in (self.graph_sampler.sample_batch()))
         )
-        positive = torch.cat(positive, dim=0)
-        negative = torch.cat(negative, dim=0)
-        if mask[0] is None:
-            assert all(m is None for m in mask)
-            mask = None
-        else:
-            mask = torch.cat(mask, dim=0)
-        return positive, negative, mask
 
     def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
+        # note: already collated by __getitem__
         return None
