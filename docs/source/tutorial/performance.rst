@@ -141,7 +141,7 @@ are identical to training without sub-batching.
     e.g. batch normalization, require the entire batch to be calculated in one pass to avoid altering statistics.
 
 .. note::
-    Sub-batching is sometimes also called _Gradient Accumulation_, e.g., by huggingface's
+    Sub-batching is sometimes also called *Gradient Accumulation*, e.g., by huggingface's
     `transformer <https://huggingface.co/docs/transformers/master/en/main_classes/deepspeed#gradient-accumulation>`_
     library, since we accumulate the gradients over multiple sub-batches before updating the parameters.
 
