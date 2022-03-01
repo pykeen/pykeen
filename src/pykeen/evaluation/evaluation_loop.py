@@ -5,7 +5,7 @@ import dataclasses
 import itertools
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Collection, Generic, Iterable, List, Mapping, MutableMapping, Optional, Tuple, TypeVar, cast
+from typing import Any, Collection, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, cast
 
 import numpy
 import pandas
@@ -13,6 +13,7 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
+from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
 from . import evaluator_resolver
@@ -23,6 +24,21 @@ from ..triples import CoreTriplesFactory
 from ..typing import InductiveMode, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
 
 BatchType = TypeVar("BatchType")
+
+
+def _hasher(d: Mapping[str, Any]) -> int:
+    """
+    Calculate hash based on ID of dataset.
+
+    This means that we can have separate batch sizes for different evaluation datasets.
+    """
+    obj = d["self"]
+    assert hasattr(obj, "dataset")
+    obj = obj.dataset
+    return id(obj)
+
+
+evaluation_batch_size_maximizer = MemoryUtilizationMaximizer(hasher=_hasher)
 
 
 class EvaluationLoop(Generic[BatchType]):
@@ -41,10 +57,23 @@ class EvaluationLoop(Generic[BatchType]):
 
     @abstractmethod
     def process_batch(self, batch: BatchType) -> None:
+        """Process a single batch."""
         raise NotImplementedError
 
+    def get_collator(self):
+        """Get the collator to use for the data loader."""
+        return None
+
     def get_loader(self, batch_size: int, **kwargs) -> DataLoader:
-        return DataLoader(dataset=self.dataset, batch_size=batch_size, shuffle=False, pin_memory=True, **kwargs)
+        """Create a data loader for a single evaluation round."""
+        return DataLoader(
+            dataset=self.dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            pin_memory=True,
+            collate_fn=self.get_collator(),
+            **kwargs,
+        )
 
     @torch.inference_mode()
     def evaluate(
@@ -57,8 +86,15 @@ class EvaluationLoop(Generic[BatchType]):
         # data loader
         **kwargs,
     ) -> MetricResults:
-        return self._evaluate(batch_size=batch_size, use_tqdm=use_tqdm, tqdm_kwargs=tqdm_kwargs, **kwargs)
+        """Evaluate."""
+        return self._evaluate(
+            batch_size=batch_size or len(self.dataset),
+            use_tqdm=use_tqdm,
+            tqdm_kwargs=tqdm_kwargs,
+            **kwargs,
+        )
 
+    @evaluation_batch_size_maximizer
     def _evaluate(
         self,
         batch_size: int,
@@ -103,7 +139,7 @@ class FilterIndex:
     @classmethod
     def from_df(cls, df: pandas.DataFrame, target: Target) -> "FilterIndex":
         """Create index from dataframe."""
-        key = [c for c in df.column if c != target]
+        key = [c for c in df.columns if c != target]
         triple_id_to_key_id = numpy.empty_like(df.index)
         indices = []
         bounds = [0]
@@ -160,8 +196,8 @@ class LinkPredictionEvaluationDataset(Dataset):
         batch: Iterable[Tuple[Target, MappedTriples, Optional[torch.LongTensor]]]
     ) -> Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]:
         """Collate batches."""
-        triples: MutableMapping[Target, List[torch.LongTensor]] = defaultdict(list)
-        nnz = defaultdict(list)
+        triples: Mapping[Target, List[torch.LongTensor]] = defaultdict(list)
+        nnz: Mapping[Target, List[torch.LongTensor]] = defaultdict(list)
         for target, triple, opt_nnz in batch:
             triples[target].append(triple)
             if opt_nnz is not None:
@@ -172,8 +208,8 @@ class LinkPredictionEvaluationDataset(Dataset):
             if target in nnz:
                 batch_ids = []
                 target_nnz = nnz[target]
-                for batch_id, target_nnz in enumerate(target_nnz):
-                    batch_ids.append(torch.full(size=(len(target_nnz),), fill_value=batch_id, dtype=torch.long))
+                for batch_id, size in enumerate(map(len, target_nnz)):
+                    batch_ids.append(torch.full(size=(size,), fill_value=batch_id, dtype=torch.long))
                 batch_ids = torch.cat(batch_ids)
                 target_nnz = torch.cat(target_nnz)
                 sparse_filter_mask = torch.stack([batch_ids, target_nnz], dim=-1)
@@ -190,21 +226,27 @@ class LinkPredictionEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]
         self,
         triples_factory: CoreTriplesFactory,
         evaluator: HintOrType[Evaluator] = None,
+        evaluator_kwargs: OptionalKwargs = None,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
         mode: Optional[InductiveMode] = None,
         **kwargs,
     ) -> None:
-        evaluator = evaluator_resolver.make(evaluator)
+        """Initialize the evaluation loop."""
+        evaluator = evaluator_resolver.make(evaluator, pos_kwargs=evaluator_kwargs)
         super().__init__(
             dataset=LinkPredictionEvaluationDataset(
                 factory=triples_factory,
                 targets=targets,
                 filtered=evaluator.filtered or evaluator.requires_positive_mask,
             ),
+            evaluator=evaluator,
             **kwargs,
         )
         self.targets = targets
         self.mode = mode
+
+    def get_collator(self):  # noqa: D102
+        return LinkPredictionEvaluationDataset.collate
 
     def process_batch(self, batch: Mapping[Target, MappedTriples]) -> None:  # noqa: D102
         for target, (hrt_batch, filter_batch) in batch.items():
@@ -218,7 +260,7 @@ class LinkPredictionEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]
                 # replace by nan
                 scores = filter_scores_(scores=scores, filter_batch=filter_batch)
                 # rewrite true scores
-                scores[batch_ids, target_ids] = true_scores
+                scores[batch_ids, target_ids] = true_scores[:, 0]
             elif self.evaluator.requires_positive_mask:
                 assert filter_batch is not None
                 dense_positive_mask = torch.zeros_like(scores, dtype=torch.bool, device=filter_batch.device)

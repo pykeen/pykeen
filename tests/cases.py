@@ -36,15 +36,14 @@ import unittest_templates
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
-from torch.optim import SGD, Adagrad
+from torch.optim import Adagrad, SGD
 
+import pykeen.evaluation.evaluation_loop
 import pykeen.models
-from pykeen.models.mocks import FixedModel
 import pykeen.nn.emb
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.weighting
-import pykeen.evaluation.evaluation_loop
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
@@ -52,8 +51,9 @@ from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL, TransE
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.mocks import FixedModel
 from pykeen.models.nbase import ERModel
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -67,14 +67,14 @@ from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
 from pykeen.typing import (
-    LABEL_HEAD,
-    LABEL_TAIL,
-    TRAINING,
     HeadRepresentation,
     InductiveMode,
     Initializer,
+    LABEL_HEAD,
+    LABEL_TAIL,
     MappedTriples,
     RelationRepresentation,
+    TRAINING,
     TailRepresentation,
 )
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
@@ -1924,6 +1924,7 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
         kwargs["model"] = FixedModel(triples_factory=self.factory)
         return kwargs
 
+    @torch.inference_mode()
     def test_process_batch(self):
         """Test processing a single batch."""
         batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
