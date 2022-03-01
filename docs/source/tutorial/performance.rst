@@ -131,7 +131,7 @@ Sub-batching & Slicing
 ----------------------
 With growing model and dataset sizes the KGEM at hand is likely to exceed the memory provided by GPUs. Especially during
 training it might be desired to train using a certain batch size. When this batch size is too big for the hardware at
-hand, PyKEEN allows to set a sub-batch size in the range of :math:`[1, \textit{batch-size}]`. When the sub-batch size is set,
+hand, PyKEEN allows to set a sub-batch size in the range of :math:`[1, \text{batch_size}]`. When the sub-batch size is set,
 PyKEEN automatically accumulates the gradients after each sub-batch and clears the computational graph during training.
 This allows to train KGEMs on GPU that otherwise would be too big for the hardware at hand, while the obtained results
 are identical to training without sub-batching.
@@ -148,7 +148,7 @@ are identical to training without sub-batching.
 For some large configurations, even after applying the sub-batching trick, out-of-memory errors may still occur.
 In this case,  PyKEEN implements another technique, called *slicing*.
 Note that we often compute more than one score for each batch element:
-in sLCWA, we have `1 + num_negative_samples` scores, and in LCWA, we have `num_entities` scores for each batch element.
+in sLCWA, we have :math:`1 + \text{num_negative_samples}` scores, and in LCWA, we have :math:`\text{num_entities}` scores for each batch element.
 In slicing, we do not compute all of these scores at once, but rather in smaller "batches".
 For old-style models, i.e., those subclassing from :class:`pykeen.models.base._OldAbstractModel`, this has to be implemented individually for each of them.
 New-style models, i.e., those deriving from :class:`pykeen.models.nbase.ERModel` have a generic implementation enabling slicing for *all* interactions.
