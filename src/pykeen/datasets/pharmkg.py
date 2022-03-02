@@ -9,17 +9,20 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import UnpackedRemoteDataset, SingleTabbedDataset
+from .base import SingleTabbedDataset, UnpackedRemoteDataset
 from ..typing import TorchRandomHint
 
-__all__ = ["PharmKG8k", "PharmKGFull"]
+__all__ = [
+    "PharmKG8k",
+    "PharmKG",
+]
 
 BASE_URL = "https://raw.githubusercontent.com/biomed-AI/PharmKG/master/data/PharmKG-8k/"
 VALID_URL = f"{BASE_URL}/valid.tsv"
 TEST_URL = f"{BASE_URL}/test.tsv"
 TRAIN_URL = f"{BASE_URL}/train.tsv"
 
-FULL_URL = "https://zenodo.org/record/4077338/files/raw_PharmKG-180k.zip"
+RAW_URL = "https://zenodo.org/record/4077338/files/raw_PharmKG-180k.zip"
 
 
 @parse_docdata
@@ -63,11 +66,11 @@ class PharmKG8k(UnpackedRemoteDataset):
 
 
 @parse_docdata
-class PharmKGFull(SingleTabbedDataset):
+class PharmKG(SingleTabbedDataset):
     """The PharmKGFull dataset from [zheng2020]_.
 
     ---
-    name: PharmKGFull
+    name: PharmKG
     citation:
         github: biomed-AI/PharmKG
         author: Zheng
@@ -86,13 +89,13 @@ class PharmKGFull(SingleTabbedDataset):
         random_state: TorchRandomHint = 0,
         **kwargs,
     ):
-        """Initialize the PharmKGFull dataset from [zheng2020]_.
+        """Initialize the PharmKG dataset from [zheng2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
-            url=FULL_URL,
+            url=RAW_URL,
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             read_csv_kwargs=dict(
@@ -105,7 +108,7 @@ class PharmKGFull(SingleTabbedDataset):
 @click.command()
 @verbose_option
 def _main():
-    for cls in [PharmKG8k, PharmKGFull]:
+    for cls in [PharmKG8k, PharmKG]:
         cls.summarize()
 
 
