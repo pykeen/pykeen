@@ -40,7 +40,7 @@ from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
 from .nations import Nations
-from .ogb import OGBBioKG, OGBWikiKG
+from .ogb import OGBBioKG, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .openea import OpenEA
 from .pharmkg import PharmKG8k, PharmKGFull
@@ -64,7 +64,7 @@ __all__ = [
     "CoDExMedium",
     "CoDExLarge",
     "OGBBioKG",
-    "OGBWikiKG",
+    "OGBWikiKG2",
     "UMLS",
     "FB15k",
     "FB15k237",
