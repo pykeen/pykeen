@@ -133,7 +133,7 @@ class OGBWikiKG2(OGBLoader):
     .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg2
 
     ---
-    name: ogbl-wikikg2
+    name: OGB WikiKG2
     citation:
         author: Hu
         year: 2020
