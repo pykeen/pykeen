@@ -176,13 +176,8 @@ def _prepare_representation_module_list(
         if isinstance(representations[i], EmbeddingSpecification):
             warnings.warn("Do not use EmbeddingSpecification", DeprecationWarning)
             representations[i] = representations[i].make(max_id=max_id)
-    # TODO: use extended make_many from https://github.com/cthoyt/class-resolver/pull/34
-    representation_kwargs = upgrade_to_sequence(representation_kwargs)
-    representation_kwargs = [dict(kw or {}, max_id=max_id) for kw in representation_kwargs]
-    if not representations:
-        representation_kwargs = []
     # TODO: we could infer some shapes from the given interaction shape information
-    rs = representation_resolver.make_many(representations, kwargs=representation_kwargs)
+    rs = representation_resolver.make_many(representations, kwargs=representation_kwargs, max_id=max_id)
 
     # check max-id
     for r in rs:
