@@ -580,6 +580,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         return np.empty(shape=(0, 2), dtype=int)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
+        # TODO: code duplication; merge with normal rank based
         if self.num_entities is None:
             raise ValueError
 
