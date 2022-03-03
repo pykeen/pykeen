@@ -609,6 +609,19 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
                     if isinstance(metric_value, np.ndarray):
                         metric_value = metric_value.item()
                     asr[metric_name][side][rank_type] = metric_value
+
+                expected_rank_type = EXPECTED_RANKS.get(rank_type)
+                if expected_rank_type is not None:
+                    expected_ranks = self._get_ranks(side=side, rank_type=expected_rank_type)
+                    if 0 < len(expected_ranks):
+                        # Adjusted mean rank calculation
+                        expected_mean_rank = float(np.mean(expected_ranks))
+                        asr[ADJUSTED_ARITHMETIC_MEAN_RANK][side][rank_type] = (
+                            asr[ARITHMETIC_MEAN_RANK][side][rank_type] / expected_mean_rank
+                        )
+                        asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX][side][rank_type] = 1.0 - (
+                            asr[ARITHMETIC_MEAN_RANK][side][rank_type] - 1
+                        ) / (expected_mean_rank - 1)
         data = {key: dict(value) for key, value in asr.items()}
         data["hits_at_k"] = dict(hits_at_k)
         return RankBasedMetricResults.from_dict(**data)
