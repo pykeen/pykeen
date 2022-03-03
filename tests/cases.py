@@ -53,7 +53,7 @@ from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, Unsupp
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
-from pykeen.nn.representation import RepresentationModule
+from pykeen.nn.representation import Representation
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
@@ -1062,7 +1062,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             **self.instance_kwargs,
         )
 
-        def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
+        def _equal_embeddings(a: Representation, b: Representation) -> bool:
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
@@ -1421,7 +1421,7 @@ class InductiveModelTestCase(ModelTestCase):
         raise SkipTest("Inductive models are not compatible the pipeline.")
 
 
-class RepresentationTestCase(GenericTestCase[RepresentationModule]):
+class RepresentationTestCase(GenericTestCase[Representation]):
     """Common tests for representation modules."""
 
     batch_size: ClassVar[int] = 2

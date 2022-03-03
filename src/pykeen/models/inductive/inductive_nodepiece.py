@@ -15,7 +15,7 @@ from ...nn import (
     EmbeddingSpecification,
     Interaction,
     NodePieceRepresentation,
-    SubsetRepresentationModule,
+    SubsetRepresentation,
 )
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
@@ -141,7 +141,7 @@ class InductiveNodePiece(ERModel):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=entity_representations,
-            relation_representations=SubsetRepresentationModule(  # hide padding relation
+            relation_representations=SubsetRepresentation(  # hide padding relation
                 relation_representations,
                 max_id=triples_factory.num_relations,
             ),

@@ -10,7 +10,7 @@ from class_resolver import Hint, HintOrType, OptionalKwargs
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
+from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentation
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...nn.perceptron import ConcatMLP
@@ -174,7 +174,7 @@ class NodePiece(ERModel):
                 shape=shape,
                 num_tokens=num_tokens,
             ),
-            relation_representations=SubsetRepresentationModule(  # hide padding relation
+            relation_representations=SubsetRepresentation(  # hide padding relation
                 relation_representations,
                 max_id=triples_factory.num_relations,
             ),

@@ -11,7 +11,7 @@ from class_resolver import ClassResolver, Hint
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from .representation import EmbeddingSpecification, LowRankEmbeddingRepresentation, RepresentationModule
+from .representation import EmbeddingSpecification, LowRankEmbeddingRepresentation, Representation
 from .init import uniform_norm_p1_
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
@@ -559,7 +559,7 @@ class RGCNLayer(nn.Module):
 decomposition_resolver = ClassResolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
 
 
-class RGCNRepresentations(RepresentationModule):
+class RGCNRepresentations(Representation):
     r"""Entity representations enriched by R-GCN.
 
     The GCN employed by the entity encoder is adapted to include typed edges.

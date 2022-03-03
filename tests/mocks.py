@@ -8,7 +8,7 @@ import torch
 from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
-from pykeen.nn.representation import RepresentationModule
+from pykeen.nn.representation import Representation
 from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, MappedTriples, Target
 
 __all__ = [
@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-class CustomRepresentations(RepresentationModule):
+class CustomRepresentations(Representation):
     """A custom representation module with minimal implementation."""
 
     def __init__(self, num_entities: int, shape: Tuple[int, ...] = (2,)):

@@ -14,7 +14,7 @@ import torch
 import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
-from .representation import EmbeddingSpecification, RepresentationModule
+from .representation import EmbeddingSpecification, Representation
 from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
@@ -722,14 +722,14 @@ def resolve_aggregation(
     return aggregation
 
 
-class TokenizationRepresentationModule(RepresentationModule):
+class TokenizationRepresentation(Representation):
     """A module holding the result of tokenization."""
 
     #: the token ID of the padding token
     vocabulary_size: int
 
     #: the token representations
-    vocabulary: RepresentationModule
+    vocabulary: Representation
 
     #: the assigned tokens for each entity
     assignment: torch.LongTensor
@@ -737,7 +737,7 @@ class TokenizationRepresentationModule(RepresentationModule):
     def __init__(
         self,
         assignment: torch.LongTensor,
-        token_representation: HintOrType[RepresentationModule] = None,
+        token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
     ) -> None:
         """
@@ -759,7 +759,7 @@ class TokenizationRepresentationModule(RepresentationModule):
         # contain a subset of training relations) - for that, the padding index is the last index of the Representation
         self.vocabulary_size = (
             token_representation.max_id
-            if isinstance(token_representation, RepresentationModule)
+            if isinstance(token_representation, Representation)
             else assignment.max().item() + 1
         )
 
@@ -796,11 +796,11 @@ class TokenizationRepresentationModule(RepresentationModule):
         cls,
         tokenizer: Tokenizer,
         num_tokens: int,
-        token_representation: Union[EmbeddingSpecification, RepresentationModule],
+        token_representation: Union[EmbeddingSpecification, Representation],
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
-    ) -> "TokenizationRepresentationModule":
+    ) -> "TokenizationRepresentation":
         """
         Create a tokenization from applying a tokenizer.
 
@@ -827,7 +827,7 @@ class TokenizationRepresentationModule(RepresentationModule):
         # create token representations if necessary
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(num_embeddings=vocabulary_size)
-        return TokenizationRepresentationModule(assignment=assignment, token_representation=token_representation)
+        return TokenizationRepresentation(assignment=assignment, token_representation=token_representation)
 
     def extra_repr(self) -> str:  # noqa: D102
         return "\n".join(
@@ -851,7 +851,7 @@ class TokenizationRepresentationModule(RepresentationModule):
         return self.vocabulary(token_ids)
 
 
-class NodePieceRepresentation(RepresentationModule):
+class NodePieceRepresentation(Representation):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
 
@@ -866,13 +866,13 @@ class NodePieceRepresentation(RepresentationModule):
     """
 
     #: the token representations
-    tokenizations: Sequence[TokenizationRepresentationModule]
+    tokenizations: Sequence[TokenizationRepresentation]
 
     def __init__(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representations: OneOrSequence[Union[EmbeddingSpecification, RepresentationModule]],
+        token_representations: OneOrSequence[Union[EmbeddingSpecification, Representation]],
         tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
         tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         num_tokens: OneOrSequence[int] = 2,
@@ -915,7 +915,7 @@ class NodePieceRepresentation(RepresentationModule):
 
         # tokenize
         tokenizations = [
-            TokenizationRepresentationModule.from_tokenizer(
+            TokenizationRepresentation.from_tokenizer(
                 tokenizer=tokenizer_inst,
                 num_tokens=num_tokens_,
                 token_representation=token_representation,

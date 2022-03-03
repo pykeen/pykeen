@@ -29,7 +29,7 @@ from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device
 
 __all__ = [
-    "RepresentationModule",
+    "Representation",
     "Embedding",
     "LowRankEmbeddingRepresentation",
     "EmbeddingSpecification",
@@ -37,7 +37,7 @@ __all__ = [
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
-    "SubsetRepresentationModule",
+    "SubsetRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -46,7 +46,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class RepresentationModule(nn.Module, ABC):
+class Representation(nn.Module, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -146,12 +146,12 @@ class RepresentationModule(nn.Module, ABC):
         return get_preferred_device(module=self, allow_ambiguity=True)
 
 
-class SubsetRepresentationModule(RepresentationModule):
+class SubsetRepresentation(Representation):
     """A representation module, which only exposes a subset of representations of its base."""
 
     def __init__(
         self,
-        base: RepresentationModule,
+        base: Representation,
         max_id: int,
     ):
         """
@@ -176,7 +176,7 @@ class SubsetRepresentationModule(RepresentationModule):
         return self.base.forward(indices=indices)
 
 
-class Embedding(RepresentationModule):
+class Embedding(Representation):
     """Trainable embeddings.
 
     This class provides the same interface as :class:`torch.nn.Embedding` and
@@ -394,7 +394,7 @@ class Embedding(RepresentationModule):
         return x
 
 
-class LowRankEmbeddingRepresentation(RepresentationModule):
+class LowRankEmbeddingRepresentation(Representation):
     r"""
     Low-rank embedding factorization.
 
@@ -813,7 +813,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         )
 
 
-class SingleCompGCNRepresentation(RepresentationModule):
+class SingleCompGCNRepresentation(Representation):
     """A wrapper around the combined representation module."""
 
     def __init__(
@@ -852,7 +852,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
-class LabelBasedTransformerRepresentation(RepresentationModule):
+class LabelBasedTransformerRepresentation(Representation):
     """
     Label-based representations using a transformer encoder.
 
