@@ -776,8 +776,8 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        entity_representations: EmbeddingSpecification,
-        relation_representations: EmbeddingSpecification,
+        entity_representations: Union[EmbeddingSpecification, OptionalKwargs],
+        relation_representations: Union[EmbeddingSpecification, OptionalKwargs],
         **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
