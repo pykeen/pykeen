@@ -102,7 +102,7 @@ class RankBasedMetricResults(MetricResults):
         for metric_cls in rank_based_metric_resolver.lookup_dict.values():
             metric = metric_cls()
             low, high = metric_cls.value_range.lower, metric_cls.value_range.upper
-            if math.isinf(high):
+            if high is None or math.isinf(high):
                 high = 1000.0
             for target, rank_type in itertools.product(SIDES, RANK_TYPES):
                 data[metric.key, target, rank_type] = random.uniform(low, high)
