@@ -12,8 +12,8 @@ from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...nn import representation_resolver
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...nn.representation import Embedding, EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
@@ -89,14 +89,14 @@ class TransR(EntityRelationEmbeddingModel):
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            entity_representation_kwargs=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representation_kwargs=dict(
+                shape=(embedding_dim,),
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
-            relation_representation_kwargs=EmbeddingSpecification(
-                embedding_dim=relation_dim,
+            relation_representation_kwargs=dict(
+                shape=(relation_dim,),
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
                 constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
@@ -108,10 +108,10 @@ class TransR(EntityRelationEmbeddingModel):
         # TODO: Initialize from TransE
 
         # embeddings
-        self.relation_projections = Embedding.init_with_device(
-            num_embeddings=self.num_relations,
-            embedding_dim=relation_dim * embedding_dim,
-            device=self.device,
+        self.relation_projections = representation_resolver.make(
+            query=None,
+            shape=(relation_dim * embedding_dim,),
+            max_id=self.num_relations,
             initializer=partial(
                 _projection_initializer,
                 num_relations=self.num_relations,
