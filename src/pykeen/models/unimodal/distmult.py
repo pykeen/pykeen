@@ -10,7 +10,6 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
-from ...nn.representation import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, Hint, Initializer
 
@@ -90,13 +89,13 @@ class DistMult(EntityRelationEmbeddingModel):
             Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """
         super().__init__(
-            entity_representation_kwargs=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representation_kwargs=dict(
+                shape=(embedding_dim,),
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
             ),
-            relation_representation_kwargs=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representation_kwargs=dict(
+                shape=(embedding_dim,),
                 initializer=relation_initializer,
             ),
             **kwargs,
