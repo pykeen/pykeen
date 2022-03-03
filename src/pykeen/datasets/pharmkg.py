@@ -103,6 +103,7 @@ class PharmKG(SingleTabbedDataset):
                 usecols=["Entity1_name", "relationship_type", "Entity2_name"],
                 sep=",",
             ),
+            **kwargs,
         )
 
 
