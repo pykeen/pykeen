@@ -254,7 +254,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.           |
 | sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) |                                                  |
 
-### Metrics (23)
+### Metrics (37)
 
 | Name                                                                                                                   | Interval   | Direction   | Description                                                 | Type           |
 |------------------------------------------------------------------------------------------------------------------------|------------|-------------|-------------------------------------------------------------|----------------|
@@ -280,7 +280,21 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | [Threat Score](https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.threat_score)   | [0, 1]     | 📈          | TP / (TP + FN + FP)                                         | Classification |
 | [True Negative Rate](https://en.wikipedia.org/wiki/Specificity_(tests))                                                | [0, 1]     | 📈          | TN / (TN + FP)                                              | Classification |
 | [True Positive Rate](https://en.wikipedia.org/wiki/Sensitivity_(test))                                                 | [0, 1]     | 📈          | TP / (TP + FN)                                              | Classification |
+| [Adjusted Arithmetic Mean Rank (AAMR)](https://arxiv.org/abs/2002.06914)                                               | [0, 2)     | 📉          | The mean over all ranks divided by its expected value.      | Ranking        |
+| [Adjusted Arithmetic Mean Rank Index (AAMRI)](https://arxiv.org/abs/2002.06914)                                        | [-1, 1]    | 📈          | The re-indexed adjusted mean rank (AAMR)                    | Ranking        |
+| [Count](https://pykeen.readthedocs.io/en/stable/reference/evaluation.html)                                             | [0, inf)   | 📉          | The ranks&#39; count.                                           | Ranking        |
+| [Geometric Mean Rank (GMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                 | [1, inf)   | 📉          | The geometric mean over all ranks.                          | Ranking        |
+| [Harmonic Mean Rank (HMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                  | [1, inf)   | 📉          | The harmonic mean over all ranks.                           | Ranking        |
+| [Hits @ K](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k)                      | [0, 1]     | 📈          | The relative frequency of ranks not larger than a given k.  | Ranking        |
+| [Inverse Arithmetic Mean Rank (IAMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                       | (0, 1]     | 📈          | The inverse of the arithmetic mean over all ranks.          | Ranking        |
+| [Inverse Geometric Mean Rank (IGMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                        | (0, 1]     | 📈          | The inverse of the geometric mean over all ranks.           | Ranking        |
+| [Inverse Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                       | (0, 1]     | 📈          | The inverse of the median over all ranks.                   | Ranking        |
 | [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank)             | [1, inf)   | 📉          | The arithmetic mean over all ranks.                         | Ranking        |
+| [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank)                                       | (0, 1]     | 📈          | The inverse of the harmonic mean over all ranks.            | Ranking        |
+| [Median Absolute Deviation (MAD)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html)      | [0, inf)   | 📉          | The ranks&#39; median absolute deviation (MAD).                 | Ranking        |
+| [Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                               | [1, inf)   | 📉          | The median over all ranks.                                  | Ranking        |
+| [Standard Deviation (std)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html)             | [0, inf)   | 📉          | The ranks&#39; standard deviation.                              | Ranking        |
+| [Variance](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html)                             | [0, inf)   | 📉          | The ranks&#39; variance.                                        | Ranking        |
 
 ### Trackers (8)
 

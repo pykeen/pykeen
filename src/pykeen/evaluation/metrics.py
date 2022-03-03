@@ -9,7 +9,7 @@ from abc import abstractmethod
 from typing import ClassVar, Collection, Iterable, NamedTuple, Optional, Union, cast
 
 import numpy as np
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 from docdata import get_docdata, parse_docdata
 from scipy import stats
 
@@ -29,7 +29,6 @@ __all__ = [
     "MetricKey",
     "rank_based_metric_resolver",
 ]
-
 
 camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
 
@@ -471,11 +470,10 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
         return 1.0 - (super().__call__(ranks=ranks) - 1.0) / (self.expected_value(num_candidates=num_candidates) - 1.0)
 
 
-rank_based_metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
+rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
 )
-
 
 # parsing metrics
 # metric pattern = side?.type?.metric.k?

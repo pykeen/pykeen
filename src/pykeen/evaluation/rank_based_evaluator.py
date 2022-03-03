@@ -38,7 +38,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-RANKING_METRICS = {cls.key: cls for cls in rank_based_metric_resolver}
+RANKING_METRICS: Mapping[str, RankBasedMetric] = {cls().key: cls for cls in rank_based_metric_resolver}
 
 
 K = TypeVar("K")
