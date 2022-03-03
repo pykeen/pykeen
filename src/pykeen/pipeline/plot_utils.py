@@ -56,11 +56,15 @@ def plot_early_stopping(pipeline_result, *, ax=None, lineplot_kwargs=None):
 
 
 def _default_entity_embedding_getter(m) -> Embedding:
-    return m.entity_embeddings
+    x = m.entity_embeddings
+    assert isinstance(x, Embedding)
+    return x
 
 
 def _default_relation_embedding_getter(m) -> Embedding:
-    return m.relation_embeddings
+    x = m.relation_embeddings
+    assert isinstance(x, Embedding)
+    return x
 
 
 def plot_er(  # noqa: C901

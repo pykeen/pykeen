@@ -768,9 +768,9 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     #: Primary embeddings for entities
-    entity_embeddings: Embedding
+    entity_embeddings: Representation
     #: Primary embeddings for relations
-    relation_embeddings: Embedding
+    relation_embeddings: Representation
 
     def __init__(
         self,
