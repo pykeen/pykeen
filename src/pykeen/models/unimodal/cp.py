@@ -9,7 +9,6 @@ import torch
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import CPInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, InductiveMode, Initializer, Normalizer
 
 __all__ = [

@@ -10,7 +10,6 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_, xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import TransDInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
