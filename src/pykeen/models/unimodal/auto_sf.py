@@ -64,7 +64,7 @@ class AutoSF(ERModel):
             the coefficients determining the structure. The coefficients describe which head/relation/tail
             component get combined with each other. While in theory, we can have up to `num_components**3`
             unique triples, usually, a smaller number is preferrable to have some sparsity.
-        :param embedding_kwargs: keyword arguments passed to :class:`pykeen.nn.emb.EmbeddingSpecification`.
+        :param embedding_kwargs: keyword arguments passed to :class:`pykeen.nn.representation.EmbeddingSpecification`.
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         embedding_kwargs = embedding_kwargs or {}

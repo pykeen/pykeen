@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 class NodePiece(ERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.emb.NodePieceRepresentation` instead of a typical
-    :class:`pykeen.nn.emb.Embedding` to more efficiently store representations.
+    This model uses the :class:`pykeen.nn.representation.NodePieceRepresentation` instead of a typical
+    :class:`pykeen.nn.representation.Embedding` to more efficiently store representations.
     ---
     citation:
         author: Galkin

@@ -30,7 +30,7 @@ class RGCN(
     The Relational Graph Convolutional Network (R-GCN) comprises three parts:
 
     1. A GCN-based entity encoder that computes enriched representations for entities, cf.
-       :class:`pykeen.nn.emb.RGCNRepresentations`. The representation for entity $i$ at level $l \in (1,\dots,L)$
+       :class:`pykeen.nn.representation.RGCNRepresentations`. The representation for entity $i$ at level $l \in (1,\dots,L)$
        is denoted as $\textbf{e}_i^l$.
        The GCN is modified to use different weights depending on the type of the relation.
     2. Relation representations $\textbf{R}_{r} \in \mathbb{R}^{d \times d}$ is a diagonal matrix that are learned
