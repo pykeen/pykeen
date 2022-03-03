@@ -226,6 +226,7 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
     skip_cls = {mocks.CustomRepresentation}
 
 
+# TODO: Remove once finished
 class EmbeddingSpecificationTests(unittest.TestCase):
     """Tests for EmbeddingSpecification."""
 
