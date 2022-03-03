@@ -158,6 +158,7 @@ def _normalize_entity_representations(
     Sequence[Union[EmbeddingSpecification, Representation]],
     Sequence[Union[EmbeddingSpecification, Representation]],
 ]:
+    # TODO: update to hint + kwargs
     if isinstance(dimensions, int):
         dimensions = {"d": dimensions}
     assert isinstance(dimensions, dict)
