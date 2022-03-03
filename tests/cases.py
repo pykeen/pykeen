@@ -77,7 +77,7 @@ from pykeen.typing import (
 )
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
-from tests.mocks import CustomRepresentations
+from tests.mocks import CustomRepresentation
 from tests.utils import rand
 
 T = TypeVar("T")
@@ -1307,7 +1307,7 @@ Traceback
         """Tests whether we can provide custom representations."""
         if isinstance(self.instance, EntityRelationEmbeddingModel):
             old_embeddings = self.instance.relation_embeddings
-            self.instance.relation_embeddings = CustomRepresentations(
+            self.instance.relation_embeddings = CustomRepresentation(
                 num_entities=self.factory.num_relations,
                 shape=old_embeddings.shape,
             )

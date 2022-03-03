@@ -82,7 +82,7 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
 
-    cls = pykeen.nn.message_passing.RGCNRepresentations
+    cls = pykeen.nn.message_passing.RGCNRepresentation
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
@@ -222,7 +222,7 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
 
     base_cls = pykeen.nn.emb.Representation
     base_test = cases.RepresentationTestCase
-    skip_cls = {mocks.CustomRepresentations}
+    skip_cls = {mocks.CustomRepresentation}
 
 
 class EmbeddingSpecificationTests(unittest.TestCase):

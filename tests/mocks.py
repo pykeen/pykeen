@@ -12,11 +12,11 @@ from pykeen.nn.representation import Representation
 from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, MappedTriples, Target
 
 __all__ = [
-    "CustomRepresentations",
+    "CustomRepresentation",
 ]
 
 
-class CustomRepresentations(Representation):
+class CustomRepresentation(Representation):
     """A custom representation module with minimal implementation."""
 
     def __init__(self, num_entities: int, shape: Tuple[int, ...] = (2,)):
