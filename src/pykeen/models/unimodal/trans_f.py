@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import TransFInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
