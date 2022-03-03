@@ -10,7 +10,7 @@ from class_resolver import Hint, HintOrType, OptionalKwargs
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
+from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentation
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...nn.perceptron import ConcatMLP
@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 class NodePiece(ERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.emb.NodePieceRepresentation` instead of a typical
-    :class:`pykeen.nn.emb.Embedding` to more efficiently store representations.
+    This model uses the :class:`pykeen.nn.representation.NodePieceRepresentation` instead of a typical
+    :class:`pykeen.nn.representation.Embedding` to more efficiently store representations.
     ---
     citation:
         author: Galkin
@@ -174,7 +174,7 @@ class NodePiece(ERModel):
                 shape=shape,
                 num_tokens=num_tokens,
             ),
-            relation_representations=SubsetRepresentationModule(  # hide padding relation
+            relation_representations=SubsetRepresentation(  # hide padding relation
                 relation_representations,
                 max_id=triples_factory.num_relations,
             ),

@@ -15,7 +15,7 @@ from ...nn import (
     EmbeddingSpecification,
     Interaction,
     NodePieceRepresentation,
-    SubsetRepresentationModule,
+    SubsetRepresentation,
 )
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 class InductiveNodePiece(ERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.emb.NodePieceRepresentation` instead of a typical
-    :class:`pykeen.nn.emb.Embedding` to more efficiently store representations.
+    This model uses the :class:`pykeen.nn.representation.NodePieceRepresentation` instead of a typical
+    :class:`pykeen.nn.representation.Embedding` to more efficiently store representations.
 
     INDUCTIVE VERSION
     ---
@@ -69,7 +69,7 @@ class InductiveNodePiece(ERModel):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.emb.NodePieceRepresentation`.
+            :class:`pykeen.nn.representation.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param embedding_specification:
@@ -141,7 +141,7 @@ class InductiveNodePiece(ERModel):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=entity_representations,
-            relation_representations=SubsetRepresentationModule(  # hide padding relation
+            relation_representations=SubsetRepresentation(  # hide padding relation
                 relation_representations,
                 max_id=triples_factory.num_relations,
             ),

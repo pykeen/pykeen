@@ -9,8 +9,8 @@ import torch.nn as nn
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.combinations import GatedCombination
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, LiteralInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [

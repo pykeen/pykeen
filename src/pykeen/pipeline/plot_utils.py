@@ -6,7 +6,7 @@ import logging
 from typing import Mapping, Optional, Set
 
 from ..losses import loss_resolver
-from ..nn.emb import Embedding
+from ..nn.representation import Embedding
 from ..stoppers import EarlyStopper
 
 __all__ = [

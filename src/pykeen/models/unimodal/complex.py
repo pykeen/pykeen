@@ -11,8 +11,8 @@ from torch.nn.init import normal_
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 

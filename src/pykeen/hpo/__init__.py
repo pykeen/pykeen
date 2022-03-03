@@ -305,8 +305,8 @@ constrainer and regularizer since there could be multiple representations for ei
 relation, or both. Check your desired model's documentation page for the kwargs that you can
 optimize over.
 
-Keys of :data:`pykeen.nn.emb.initializers` can be passed as initializers as strings and
-keys of :data:`pykeen.nn.emb.constrainers` can be passed as constrainers as strings.
+Keys of :data:`pykeen.nn.representation.initializers` can be passed as initializers as strings and
+keys of :data:`pykeen.nn.representation.constrainers` can be passed as constrainers as strings.
 
 The HPO pipeline does not support optimizing over the hyper-parameters for each
 initializer. If you are interested in this, consider rolling your own ablation
