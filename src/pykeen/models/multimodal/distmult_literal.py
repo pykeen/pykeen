@@ -53,14 +53,12 @@ class DistMultLiteral(LiteralModel):
                     input_dropout=input_dropout,
                 ),
             ),
-            entity_representations=[None],  # default
             entity_representation_kwargs=[
                 dict(
                     shape=(embedding_dim,),
                     initializer=nn.init.xavier_normal_,
                 ),
             ],
-            relation_representations=[None],  # default
             relation_representation_kwargs=[
                 dict(
                     shape=(embedding_dim,),

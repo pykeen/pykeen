@@ -60,7 +60,6 @@ class ComplExLiteral(LiteralModel):
                     input_dropout=input_dropout,
                 ),
             ),
-            entity_representations=[None],  # default
             entity_representation_kwargs=[
                 dict(
                     shape=(embedding_dim,),
@@ -68,7 +67,6 @@ class ComplExLiteral(LiteralModel):
                     dtype=torch.complex64,
                 ),
             ],
-            relation_representations=[None],  # default
             relation_representation_kwargs=[
                 dict(
                     shape=(embedding_dim,),

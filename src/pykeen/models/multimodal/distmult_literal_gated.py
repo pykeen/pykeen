@@ -10,7 +10,6 @@ from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.combinations import GatedCombination
 from ...nn.modules import DistMultInteraction, LiteralInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -59,15 +58,15 @@ class DistMultLiteralGated(LiteralModel):
                     input_dropout=input_dropout,
                 ),
             ),
-            entity_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representation_kwargs=[
+                dict(
+                    shape=(embedding_dim,),
                     initializer=nn.init.xavier_normal_,
                 ),
             ],
-            relation_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            relation_representation_kwargs=[
+                dict(
+                    shape=(embedding_dim,),
                     initializer=nn.init.xavier_normal_,
                 ),
             ],
