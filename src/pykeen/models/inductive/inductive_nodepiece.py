@@ -6,13 +6,12 @@ import logging
 from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
 
 import torch
-from class_resolver import Hint, HintOrType
+from class_resolver import Hint, HintOrType, OptionalKwargs
 
 from ..nbase import ERModel, _prepare_representation_module_list
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
     DistMultInteraction,
-    EmbeddingSpecification,
     Interaction,
     NodePieceRepresentation,
     SubsetRepresentation,
@@ -21,7 +20,7 @@ from ...nn import (
 from ...nn.node_piece import RelationTokenizer
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
+from ...typing import InductiveMode, TESTING, TRAINING, VALIDATION
 
 __all__ = [
     "InductiveNodePiece",
@@ -56,7 +55,7 @@ class InductiveNodePiece(ERModel):
         inference_factory: CoreTriplesFactory,
         num_tokens: int = 2,
         embedding_dim: int = 64,
-        embedding_specification: Optional[EmbeddingSpecification] = None,
+        relation_representation_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[Sequence[int]] = None,
@@ -74,8 +73,8 @@ class InductiveNodePiece(ERModel):
             :class:`pykeen.nn.node_piece.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
-        :param embedding_specification:
-            the embedding specification.
+        :param relation_representation_kwargs:
+            the relation representation parameters
         :param interaction:
             the interaction module, or a hint for it.
         :param aggregation:
@@ -115,11 +114,10 @@ class InductiveNodePiece(ERModel):
             )
 
         # always create representations for normal and inverse relations and padding
-        max_id = 2 * triples_factory.real_num_relations + 1
         relation_representations = representation_resolver.make(
-            # TODO: get rid of embedding specification
-            query=embedding_specification.make(max_id=max_id) if embedding_specification else None,
-            max_id=max_id,
+            query=None,
+            pos_kwargs=relation_representation_kwargs,
+            max_id=2 * triples_factory.real_num_relations + 1,
             shape=(embedding_dim,),
         )
 
