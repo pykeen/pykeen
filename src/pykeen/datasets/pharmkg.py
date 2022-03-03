@@ -92,6 +92,7 @@ class PharmKG(SingleTabbedDataset):
         """Initialize the PharmKG dataset from [zheng2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
