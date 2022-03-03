@@ -439,8 +439,7 @@ class LowRankRepresentation(Representation):
             the initializer for basis weights
         :param kwargs:
             additional keyword based arguments passed to :class:`pykeen.nn.representation.Embedding`, which is used
-            for
-            the base representations.
+            for the base representations.
         """
         super().__init__(max_id=max_id, shape=shape)
         self.bases = Embedding(max_id=num_bases, shape=shape, **kwargs)
