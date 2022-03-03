@@ -64,7 +64,7 @@ In PyKEEN, there exist at least 2 such mechanisms depending on the availability 
 NodePiece
 ~~~~~~~~~
 In the most basic case, unseen entities arrive without any features nor descriptions.
-We cater for this case using :class:`pykeen.nn.emb.NodePieceRepresentation` -
+We cater for this case using :class:`pykeen.nn.representation.NodePieceRepresentation` -
 since the set of relations at training and inference time is the same, NodePiece Representation
 will *tokenize* each entity through a subset of incident relation types.
 Out of computational reasons, NodePiece representations of `inductive_inference` entities
@@ -131,7 +131,7 @@ for more details.
 Label-based Transformer Representation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 If entity descriptions are available, the universal featurizing mechanism can
-be a language model accessible via :class:`pykeen.nn.emb.LabelBasedTransformerRepresentation`.
+be a language model accessible via :class:`pykeen.nn.representation.LabelBasedTransformerRepresentation`.
 At both training and inference time, fixed-size entity vectors are obtained after passing
 their textual descriptions through a pre-trained language model.
 
