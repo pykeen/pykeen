@@ -11,19 +11,19 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union, cast
 
 import pandas as pd
 import torch
-from class_resolver import HintOrType
+from class_resolver import HintOrType, OptionalKwargs
 from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn.representation import Embedding, EmbeddingSpecification, Representation
+from ..nn.representation import Embedding, EmbeddingSpecification, Representation, _build_representation
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
+from ..typing import InductiveMode, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
 __all__ = [
@@ -747,6 +747,23 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         self.regularizer.reset()
 
 
+def _build_representation2(
+    max_id: int,
+    representation: HintOrType[Representation] = Embedding,  # TODO: unused
+    representation_kwargs: Union[OptionalKwargs, EmbeddingSpecification] = None,
+) -> Embedding:
+    if isinstance(representation_kwargs, EmbeddingSpecification):
+        representation_kwargs = representation_kwargs.to_dict()
+    return cast(
+        representation,
+        _build_representation(
+            max_id=max_id,
+            representation=Embedding,
+            representation_kwargs=representation_kwargs,
+        ),
+    )
+
+
 class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
@@ -768,13 +785,11 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.entity_embeddings = entity_representations.make(
-            num_embeddings=triples_factory.num_entities,
-            device=self.device,
+        self.entity_embeddings = _build_representation2(
+            max_id=triples_factory.num_entities, representation_kwargs=entity_representations
         )
-        self.relation_embeddings = relation_representations.make(
-            num_embeddings=triples_factory.num_relations,
-            device=self.device,
+        self.relation_embeddings = _build_representation2(
+            max_id=triples_factory.num_relations, representation_kwargs=relation_representations
         )
 
     @property

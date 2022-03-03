@@ -516,6 +516,26 @@ class EmbeddingSpecification:
             rv = rv.to(device)
         return rv
 
+    def to_dict(self) -> Mapping[str, Any]:
+        shape = process_shape(dim=self.embedding_dim, shape=self.shape)[1]
+        d = dict(shape=shape)
+        for key in [
+            "initializer",
+            "initializer_kwargs",
+            "normalizer",
+            "normalizer_kwargs",
+            "constrainer",
+            "constrainer_kwargs",
+            "regularizer",
+            "regularizer_kwargs",
+            "dtype",
+            "dropout",
+        ]:
+            value = getattr(self, key)
+            if value is not None:
+                d[key] = value
+        return d
+
 
 def process_shape(
     dim: Optional[int],
