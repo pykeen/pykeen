@@ -11,7 +11,6 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
 
 __all__ = [
@@ -80,13 +79,13 @@ class TransE(EntityRelationEmbeddingModel):
            - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
         """
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations=dict(
+                shape=(embedding_dim,),
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations=dict(
+                shape=(embedding_dim,),
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
             ),
