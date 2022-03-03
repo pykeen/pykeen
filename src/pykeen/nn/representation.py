@@ -321,46 +321,6 @@ class Embedding(Representation):
         self._embeddings.requires_grad_(trainable)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
 
-    @classmethod
-    def init_with_device(
-        cls,
-        embedding_dim: int,
-        device: torch.device,
-        max_id: Optional[int] = None,
-        num_embeddings: Optional[int] = None,
-        initializer: Optional[Initializer] = None,
-        initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        normalizer: Optional[Normalizer] = None,
-        normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        constrainer: Optional[Constrainer] = None,
-        constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> "Embedding":  # noqa:E501
-        """Create an embedding object on the given device by wrapping :func:`__init__`.
-
-        This method is a hotfix for not being able to pass a device during initialization of
-        :class:`torch.nn.Embedding`. Instead the weight is always initialized on CPU and has
-        to be moved to GPU afterwards.
-
-        .. seealso::
-
-            https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
-
-        :return:
-            The embedding.
-        """
-        # TODO: remove?
-        return cls(
-            max_id=max_id,
-            num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            initializer=initializer,
-            initializer_kwargs=initializer_kwargs,
-            normalizer=normalizer,
-            normalizer_kwargs=normalizer_kwargs,
-            constrainer=constrainer,
-            constrainer_kwargs=constrainer_kwargs,
-        ).to(device=device)
-
     @property
     def num_embeddings(self) -> int:  # noqa: D401
         """The total number of representations (i.e. the maximum ID)."""
