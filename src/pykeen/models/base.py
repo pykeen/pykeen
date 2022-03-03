@@ -767,6 +767,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 
     #: Primary embeddings for entities
     entity_embeddings: Representation
+
     #: Primary embeddings for relations
     relation_embeddings: Representation
 
