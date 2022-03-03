@@ -4,7 +4,7 @@
 
 import itertools as itt
 import re
-from typing import Mapping, NamedTuple, Optional, Union, cast
+from typing import Iterable, Mapping, NamedTuple, Optional, Tuple, Union, cast
 
 import numpy as np
 from scipy import stats
@@ -152,3 +152,21 @@ def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
     for metric_name, metric_func in ALL_TYPE_FUNCS.items():
         rv[metric_name] = metric_func(ranks).item()
     return rv
+
+
+def get_macro_ranking_metrics(ranks: np.ndarray, weights: np.ndarray) -> Iterable[Tuple[str, float]]:
+    """Calculate all macro rank-based metrics."""
+    mean = np.average(ranks, weights=weights)
+    variance = np.average((ranks - mean) ** 2.0, weights=weights)
+    yield ARITHMETIC_MEAN_RANK, mean
+    yield GEOMETRIC_MEAN_RANK, stats.gmean(ranks, weights=weights)
+    # TODO: HARMONIC_MEAN_RANK
+    # TODO: MEDIAN_RANK
+    yield INVERSE_ARITHMETIC_MEAN_RANK, np.reciprocal(mean)
+    yield INVERSE_GEOMETRIC_MEAN_RANK, np.reciprocal(stats.gmean(ranks, weights=weights))
+    # TODO: INVERSE_HARMONIC_MEAN_RANK
+    # TODO: INVERSE_MEDIAN_RANK
+    yield RANK_STD, np.sqrt(variance)
+    yield RANK_VARIANCE, variance
+    # TODO: RANK_MAD
+    yield RANK_COUNT, np.asarray(ranks.size)
