@@ -16,8 +16,8 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.nations import Nations
 from pykeen.models import (
-    EntityRelationEmbeddingModel,
     ERModel,
+    EntityRelationEmbeddingModel,
     EvaluationOnlyModel,
     FixedModel,
     Model,
@@ -27,7 +27,7 @@ from pykeen.models import (
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
-from pykeen.nn import Embedding, EmbeddingSpecification, NodePieceRepresentation
+from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
@@ -142,7 +142,7 @@ class TestDistMult(cases.ModelTestCase):
         actual_k, n_cols = top_triples.shape
         assert n_cols == 3
         if k is None:
-            assert actual_k == self.factory.num_entities**2 * self.factory.num_relations
+            assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
         else:
             assert actual_k == min(k, self.factory.num_triples)
         assert top_scores.shape == (actual_k,)
@@ -874,9 +874,9 @@ class ERModelTests(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        embedding_dim = kwargs.pop("embedding_dim")
-        kwargs["entity_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
-        kwargs["relation_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        shape = (kwargs.pop("embedding_dim"),)
+        kwargs["entity_representation_kwargs"] = dict(shape=shape)
+        kwargs["relation_representation_kwargs"] = dict(shape=shape)
         return kwargs
 
     def test_has_hpo_defaults(self):  # noqa: D102
