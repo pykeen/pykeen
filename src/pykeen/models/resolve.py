@@ -61,8 +61,8 @@ import logging
 from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
 
 from .nbase import EmbeddingSpecificationHint, ERModel
-from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
+from ..nn.representation import EmbeddingSpecification, Representation
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 
 __all__ = [
@@ -155,8 +155,8 @@ def _normalize_entity_representations(
     entity_representations: EmbeddingSpecificationHint,
     relation_representations: EmbeddingSpecificationHint,
 ) -> Tuple[
-    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
-    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
+    Sequence[Union[EmbeddingSpecification, Representation]],
+    Sequence[Union[EmbeddingSpecification, Representation]],
 ]:
     if isinstance(dimensions, int):
         dimensions = {"d": dimensions}

@@ -1,4 +1,4 @@
 Representation
 ==============
-.. automodule:: pykeen.nn.emb
+.. automodule:: pykeen.nn.representation
     :members:

@@ -9,8 +9,8 @@ import torch.autograd
 from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
-from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
+from ...nn.representation import EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import complex_normalize
 
