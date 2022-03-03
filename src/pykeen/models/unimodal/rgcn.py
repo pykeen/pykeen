@@ -8,6 +8,10 @@ import torch
 from class_resolver import Hint, HintOrType
 from torch import nn
 
+from ..nbase import EmbeddingSpecificationHint, ERModel
+from ...nn.message_passing import Decomposition, RGCNRepresentation
+from ...nn.modules import Interaction, interaction_resolver
+from ...nn.representation import EmbeddingSpecification
 from ..nbase import ERModel
 from ...nn.message_passing import Decomposition, RGCNRepresentation
 from ...nn.modules import Interaction

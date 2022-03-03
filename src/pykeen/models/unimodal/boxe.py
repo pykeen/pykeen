@@ -11,6 +11,7 @@ from ...losses import NSSALoss
 from ...models import ERModel
 from ...nn.init import uniform_norm_
 from ...nn.modules import BoxEInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
