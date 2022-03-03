@@ -19,7 +19,6 @@ from tqdm import tqdm
 from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
-from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
 from ..evaluation.metrics import ArithmeticMeanRank, HitsAtK
 from ..typing import LABEL_HEAD, LABEL_TAIL
@@ -231,9 +230,6 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
     directory = PYKEEN_DATASETS
     df_data: List[Tuple[str, str, str, str, float]] = []
     for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset, max_triples=max_triples):
-        if dataset_cls is OGBWikiKG:
-            click.echo("Skip OGB WikiKG")
-            continue
         dataset_instance = get_dataset(dataset=dataset_cls)
         dataset_name = dataset_resolver.normalize_inst(dataset_instance)
         d = directory.joinpath(dataset_name, "analysis")
