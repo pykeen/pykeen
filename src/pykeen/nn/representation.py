@@ -29,7 +29,7 @@ from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device
 
 __all__ = [
-    "RepresentationModule",
+    "Representation",
     "Embedding",
     "LowRankEmbeddingRepresentation",
     "EmbeddingSpecification",
@@ -37,7 +37,7 @@ __all__ = [
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
-    "SubsetRepresentationModule",
+    "SubsetRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -46,7 +46,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class RepresentationModule(nn.Module, ABC):
+class Representation(nn.Module, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -146,12 +146,12 @@ class RepresentationModule(nn.Module, ABC):
         return get_preferred_device(module=self, allow_ambiguity=True)
 
 
-class SubsetRepresentationModule(RepresentationModule):
+class SubsetRepresentation(Representation):
     """A representation module, which only exposes a subset of representations of its base."""
 
     def __init__(
         self,
-        base: RepresentationModule,
+        base: Representation,
         max_id: int,
     ):
         """
@@ -176,7 +176,7 @@ class SubsetRepresentationModule(RepresentationModule):
         return self.base.forward(indices=indices)
 
 
-class Embedding(RepresentationModule):
+class Embedding(Representation):
     """Trainable embeddings.
 
     This class provides the same interface as :class:`torch.nn.Embedding` and
@@ -195,7 +195,7 @@ class Embedding(RepresentationModule):
 
     >>> from pykeen.datasets import Nations
     >>> dataset = Nations()
-    >>> from pykeen.nn.emb import EmbeddingSpecification
+    >>> from pykeen.nn.representation import EmbeddingSpecification
     >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
     >>> from pykeen.models import ERModel
     >>> model = ERModel(
@@ -241,7 +241,7 @@ class Embedding(RepresentationModule):
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
             initialization may be in-place). Can be passed as a function, or as string corresponding to a key in
-            :data:`pykeen.nn.emb.initializers` such as:
+            :data:`pykeen.nn.representation.initializers` such as:
 
             - ``"xavier_uniform"``
             - ``"xavier_uniform_norm"``
@@ -262,7 +262,7 @@ class Embedding(RepresentationModule):
             A function which is applied to the weights after each parameter update, without tracking gradients.
             It may be used to enforce model constraints outside of gradient-based training. The function does not need
             to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string
-            corresponding to a key in :data:`pykeen.nn.emb.constrainers` such as:
+            corresponding to a key in :data:`pykeen.nn.representation.constrainers` such as:
 
             - ``'normalize'``
             - ``'complex_normalize'``
@@ -394,7 +394,7 @@ class Embedding(RepresentationModule):
         return x
 
 
-class LowRankEmbeddingRepresentation(RepresentationModule):
+class LowRankEmbeddingRepresentation(Representation):
     r"""
     Low-rank embedding factorization.
 
@@ -426,8 +426,8 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
         :param weight_initializer:
             the initializer for basis weights
         :param kwargs:
-            additional keyword based arguments passed to :class:`pykeen.nn.emb.Embedding`, which is used for the base
-            representations.
+            additional keyword based arguments passed to :class:`pykeen.nn.representation.Embedding`, which is used
+            for the base representations.
         """
         super().__init__(max_id=max_id, shape=shape)
         self.bases = Embedding(num_embeddings=num_bases, shape=shape, **kwargs)
@@ -813,7 +813,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         )
 
 
-class SingleCompGCNRepresentation(RepresentationModule):
+class SingleCompGCNRepresentation(Representation):
     """A wrapper around the combined representation module."""
 
     def __init__(
@@ -852,7 +852,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
-class LabelBasedTransformerRepresentation(RepresentationModule):
+class LabelBasedTransformerRepresentation(Representation):
     """
     Label-based representations using a transformer encoder.
 
@@ -864,7 +864,7 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
     .. code-block:: python
 
         from pykeen.datasets import get_dataset
-        from pykeen.nn.emb import EmbeddingSpecification, LabelBasedTransformerRepresentation
+        from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")

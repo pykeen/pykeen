@@ -9,9 +9,9 @@ from torch import FloatTensor, nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import CrossEInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [

@@ -9,8 +9,8 @@ from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import PairREInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
