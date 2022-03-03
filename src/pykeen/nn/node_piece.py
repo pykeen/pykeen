@@ -796,7 +796,7 @@ class TokenizationRepresentation(Representation):
         cls,
         tokenizer: Tokenizer,
         num_tokens: int,
-        token_representation: Union[EmbeddingSpecification, Representation],
+        token_representation: Representation,
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
@@ -824,9 +824,6 @@ class TokenizationRepresentation(Representation):
             num_entities=num_entities,
             num_relations=num_relations,
         )
-        # create token representations if necessary
-        if isinstance(token_representation, EmbeddingSpecification):
-            token_representation = token_representation.make(num_embeddings=vocabulary_size)
         return TokenizationRepresentation(assignment=assignment, token_representation=token_representation)
 
     def extra_repr(self) -> str:  # noqa: D102
