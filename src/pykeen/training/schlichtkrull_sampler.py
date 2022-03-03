@@ -197,7 +197,7 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWASampleType, 
 
     def __getitem__(self, item: int) -> SLCWABatchType:  # noqa: D105
         return SLCWAInstances.collate(
-            (SLCWAInstances.__getitem__(self, idx) for idx in (self.graph_sampler.sample_batch()))
+            SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler.sample_batch()
         )
 
     def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102

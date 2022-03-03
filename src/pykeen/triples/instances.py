@@ -125,7 +125,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
             masks = torch.cat(masks, dim=0)
         return positives, negatives, masks
 
-    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
+    def get_collator(self) -> Callable[[List[SLCWASampleType]], SLCWABatchType]:  # noqa: D102
         return self.collate
 
     @classmethod
@@ -192,10 +192,6 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
         return cls(pairs=unique_pairs, compressed=compressed)
-
-    @staticmethod
-    def _get_target_size(num_entities: int, num_relations: int) -> int:
-        raise NotImplementedError
 
     def __len__(self) -> int:  # noqa: D105
         return self.pairs.shape[0]
