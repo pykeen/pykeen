@@ -31,19 +31,24 @@ from pykeen.evaluation.evaluator import (
 )
 from pykeen.evaluation.expectation import expected_hits_at_k, expected_mean_rank
 from pykeen.evaluation.metrics import MetricKey
-from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
+from pykeen.evaluation.rank_based_evaluator import (
+    MacroRankBasedEvaluator,
+    RANKING_METRICS,
+    SampledRankBasedEvaluator,
+    sample_negatives,
+)
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
 from pykeen.typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
+    MappedTriples,
     RANK_EXPECTED_REALISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
-    SIDE_BOTH,
     SIDES,
-    MappedTriples,
+    SIDE_BOTH,
     Target,
 )
 from tests import cases
@@ -130,6 +135,12 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["evaluation_factory"] = self.factory
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
+
+
+class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
+    """unittest for the MacroRankBasedEvaluator."""
+
+    cls = MacroRankBasedEvaluator
 
 
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
