@@ -165,23 +165,26 @@ def weighted_median(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
     return s_ranks[idx]
 
 
+def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Calculate weighted harmonic mean."""
+    return weights.sum() / np.average(np.reciprocal(a), weights=weights)
+
+
 def get_macro_ranking_metrics(ranks: np.ndarray, weights: np.ndarray) -> Iterable[Tuple[str, float]]:
     """Calculate all macro rank-based metrics."""
     mean = np.average(ranks, weights=weights)
     yield ARITHMETIC_MEAN_RANK, mean
     yield GEOMETRIC_MEAN_RANK, stats.gmean(ranks, weights=weights)
-    # TODO: HARMONIC_MEAN_RANK
-    yield HARMONIC_MEAN_RANK, float("nan")
+    harm_mean = weighted_harmonic_mean(ranks, weights=weights)
+    yield HARMONIC_MEAN_RANK, harm_mean
     median = weighted_median(a=ranks, weights=weights)
     yield MEDIAN_RANK, median
     yield INVERSE_ARITHMETIC_MEAN_RANK, np.reciprocal(mean)
     yield INVERSE_GEOMETRIC_MEAN_RANK, np.reciprocal(stats.gmean(ranks, weights=weights))
-    # TODO: INVERSE_HARMONIC_MEAN_RANK
-    yield INVERSE_HARMONIC_MEAN_RANK, float("nan")
+    yield INVERSE_HARMONIC_MEAN_RANK, np.reciprocal(harm_mean)
     yield INVERSE_MEDIAN_RANK, np.reciprocal(median)
     variance = np.average((ranks - mean) ** 2.0, weights=weights)
     yield RANK_STD, np.sqrt(variance)
     yield RANK_VARIANCE, variance
-    # TODO: RANK_MAD
-    yield RANK_MAD, float("nan")
+    yield RANK_MAD, weighted_median(np.abs(ranks - median), weights=weights)
     yield RANK_COUNT, np.asarray(ranks.size)
