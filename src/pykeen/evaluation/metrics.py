@@ -9,7 +9,7 @@ from typing import Iterable, Mapping, NamedTuple, Optional, Tuple, Union, cast
 import numpy as np
 from scipy import stats
 
-from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedRankType, ExtendedTarget
+from ..typing import ExtendedRankType, ExtendedTarget, RANK_REALISTIC, RANK_TYPES, RANK_TYPE_SYNONYMS, SIDES, SIDE_BOTH
 
 __all__ = [
     "MetricKey",
@@ -154,22 +154,32 @@ def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
     return rv
 
 
+def weighted_median(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Calculate weighted median."""
+    indices = np.argsort(a)
+    s_ranks = a[indices]
+    s_weights = weights[indices]
+    cum_sum = np.cumsum(np.r_[0, s_weights])
+    cum_sum /= cum_sum[-1]
+    idx = np.searchsorted(cum_sum, v=0.5)
+    return s_ranks[idx]
+
+
 def get_macro_ranking_metrics(ranks: np.ndarray, weights: np.ndarray) -> Iterable[Tuple[str, float]]:
     """Calculate all macro rank-based metrics."""
     mean = np.average(ranks, weights=weights)
-    variance = np.average((ranks - mean) ** 2.0, weights=weights)
     yield ARITHMETIC_MEAN_RANK, mean
     yield GEOMETRIC_MEAN_RANK, stats.gmean(ranks, weights=weights)
     # TODO: HARMONIC_MEAN_RANK
     yield HARMONIC_MEAN_RANK, float("nan")
-    # TODO: MEDIAN_RANK
-    yield MEDIAN_RANK, float("nan")
+    median = weighted_median(a=ranks, weights=weights)
+    yield MEDIAN_RANK, median
     yield INVERSE_ARITHMETIC_MEAN_RANK, np.reciprocal(mean)
     yield INVERSE_GEOMETRIC_MEAN_RANK, np.reciprocal(stats.gmean(ranks, weights=weights))
     # TODO: INVERSE_HARMONIC_MEAN_RANK
     yield INVERSE_HARMONIC_MEAN_RANK, float("nan")
-    # TODO: INVERSE_MEDIAN_RANK
-    yield INVERSE_MEDIAN_RANK, float("nan")
+    yield INVERSE_MEDIAN_RANK, np.reciprocal(median)
+    variance = np.average((ranks - mean) ** 2.0, weights=weights)
     yield RANK_STD, np.sqrt(variance)
     yield RANK_VARIANCE, variance
     # TODO: RANK_MAD
