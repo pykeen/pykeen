@@ -750,10 +750,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 def _build_representation2(
     max_id: int,
     representation: HintOrType[Representation] = Embedding,  # TODO: unused
-    representation_kwargs: Union[OptionalKwargs, EmbeddingSpecification] = None,
+    representation_kwargs: OptionalKwargs = None,
 ) -> Embedding:
-    if isinstance(representation_kwargs, EmbeddingSpecification):
-        representation_kwargs = representation_kwargs.to_dict()
     return cast(
         representation,
         _build_representation(
@@ -776,8 +774,8 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        entity_representation_kwargs: Union[EmbeddingSpecification, OptionalKwargs],
-        relation_representation_kwargs: Union[EmbeddingSpecification, OptionalKwargs],
+        entity_representation_kwargs: OptionalKwargs,
+        relation_representation_kwargs: OptionalKwargs,
         **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
