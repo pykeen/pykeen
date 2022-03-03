@@ -25,28 +25,30 @@ from .metrics import (
     INVERSE_HARMONIC_MEAN_RANK,
     INVERSE_MEDIAN_RANK,
     MEDIAN_RANK,
+    MetricKey,
     RANK_COUNT,
     RANK_MAD,
     RANK_STD,
     RANK_VARIANCE,
-    MetricKey,
+    get_macro_ranking_metrics,
     get_ranking_metrics,
 )
 from .ranks import Ranks
 from .utils import MetricAnnotation, ValueRange
+from ..constants import TARGET_TO_INDEX
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     EXPECTED_RANKS,
+    ExtendedRankType,
+    ExtendedTarget,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
-    RANK_TYPES,
-    SIDE_BOTH,
-    SIDES,
-    ExtendedRankType,
-    ExtendedTarget,
     MappedTriples,
+    RANK_TYPES,
     RankType,
+    SIDES,
+    SIDE_BOTH,
     Target,
 )
 
@@ -545,3 +547,66 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # write back correct num_entities
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
         self.num_entities = num_entities
+
+
+class MacroRankBasedEvaluator(RankBasedEvaluator):
+    """Rank-based evaluation with macro averages."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.keys = defaultdict(list)
+
+    def process_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        target: Target,
+        **kwargs,
+    ) -> None:  # noqa: D102
+        super().process_scores_(hrt_batch=hrt_batch, target=target, **kwargs)
+        idx = TARGET_TO_INDEX[target]
+        key_ids = [i for i in range(hrt_batch.shape[1]) if i != idx]
+        self.keys[target].extend(hrt_batch[:, key_ids].detach().cpu().tolist())
+
+    def _get_keys(self, side: ExtendedTarget) -> np.ndarray:
+        if side == SIDE_BOTH:
+            # TODO: has to have same order as _get_ranks
+            return np.concatenate(
+                [self._get_keys(side=single_side) for single_side in (LABEL_HEAD, LABEL_TAIL)], axis=0
+            )
+        assert side in (LABEL_HEAD, LABEL_TAIL)
+        keys = self.keys[side]
+        if keys:
+            return np.asarray(self.keys[side], dtype=int)
+        return np.empty(shape=(0, 2), dtype=int)
+
+    def finalize(self) -> RankBasedMetricResults:  # noqa: D102
+        if self.num_entities is None:
+            raise ValueError
+
+        hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
+        asr: DefaultDict[str, DefaultDict[str, Dict[str, float]]] = defaultdict(lambda: defaultdict(dict))
+
+        for side in SIDES:
+            # compute weights, s.t. sum per key, e.g., (h, r), == 1
+            keys = self._get_keys(side=side)
+            unique_inverse, unique_counts = np.unique(keys, return_counts=True, return_inverse=True, axis=0)[1:]
+            unique_weights = np.reciprocal(unique_counts.astype(float))
+            weights = unique_weights[unique_inverse]
+
+            # aggregate different rank types
+            for rank_type in RANK_TYPES:
+                ranks = self._get_ranks(side=side, rank_type=rank_type)
+                assert ranks.shape == weights.shape
+                if len(ranks) < 1:
+                    continue
+                hits_at_k[side][rank_type] = {
+                    k: np.average(
+                        ranks <= (k if isinstance(k, int) else int(self.num_entities * k)), weights=weights
+                    ).item()
+                    for k in self.ks
+                }
+                for metric_name, metric_value in get_macro_ranking_metrics(ranks=ranks, weights=weights):
+                    asr[metric_name][side][rank_type] = metric_value
+        data = {key: dict(value) for key, value in asr.items()}
+        data["hits_at_k"] = dict(hits_at_k)
+        return RankBasedMetricResults.from_dict(**data)
