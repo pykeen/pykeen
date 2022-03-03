@@ -161,12 +161,17 @@ def get_macro_ranking_metrics(ranks: np.ndarray, weights: np.ndarray) -> Iterabl
     yield ARITHMETIC_MEAN_RANK, mean
     yield GEOMETRIC_MEAN_RANK, stats.gmean(ranks, weights=weights)
     # TODO: HARMONIC_MEAN_RANK
+    yield HARMONIC_MEAN_RANK, float("nan")
     # TODO: MEDIAN_RANK
+    yield MEDIAN_RANK, float("nan")
     yield INVERSE_ARITHMETIC_MEAN_RANK, np.reciprocal(mean)
     yield INVERSE_GEOMETRIC_MEAN_RANK, np.reciprocal(stats.gmean(ranks, weights=weights))
     # TODO: INVERSE_HARMONIC_MEAN_RANK
+    yield INVERSE_HARMONIC_MEAN_RANK, float("nan")
     # TODO: INVERSE_MEDIAN_RANK
+    yield INVERSE_MEDIAN_RANK, float("nan")
     yield RANK_STD, np.sqrt(variance)
     yield RANK_VARIANCE, variance
     # TODO: RANK_MAD
+    yield RANK_MAD, float("nan")
     yield RANK_COUNT, np.asarray(ranks.size)
