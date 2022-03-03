@@ -5,7 +5,7 @@
 from class_resolver import ClassResolver
 
 from . import init
-from .emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
+from .representation import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
 from .modules import (
     AutoSFInteraction,
     BoxEInteraction,

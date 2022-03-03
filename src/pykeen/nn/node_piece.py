@@ -14,7 +14,7 @@ import torch
 import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
-from .emb import EmbeddingSpecification, RepresentationModule
+from .representation import EmbeddingSpecification, RepresentationModule
 from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
