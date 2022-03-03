@@ -606,6 +606,8 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
                     for k in self.ks
                 }
                 for metric_name, metric_value in get_macro_ranking_metrics(ranks=ranks, weights=weights):
+                    if isinstance(metric_value, np.ndarray):
+                        metric_value = metric_value.item()
                     asr[metric_name][side][rank_type] = metric_value
         data = {key: dict(value) for key, value in asr.items()}
         data["hits_at_k"] = dict(hits_at_k)
