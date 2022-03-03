@@ -89,13 +89,13 @@ class TransR(EntityRelationEmbeddingModel):
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            entity_representations=EmbeddingSpecification(
+            entity_representation_kwargs=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
-            relation_representations=EmbeddingSpecification(
+            relation_representation_kwargs=EmbeddingSpecification(
                 embedding_dim=relation_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,

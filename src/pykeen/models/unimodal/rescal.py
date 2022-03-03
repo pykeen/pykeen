@@ -77,11 +77,11 @@ class RESCAL(EntityRelationEmbeddingModel):
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
         super().__init__(
-            entity_representations=EmbeddingSpecification(
+            entity_representation_kwargs=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
+            relation_representation_kwargs=EmbeddingSpecification(
                 shape=(embedding_dim, embedding_dim),  # d x d matrices
                 initializer=relation_initializer,
             ),

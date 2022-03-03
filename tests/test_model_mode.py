@@ -165,8 +165,8 @@ class SimpleInteractionModel(EntityRelationEmbeddingModel):
     def __init__(self, *, triples_factory: TriplesFactory):
         super().__init__(
             triples_factory=triples_factory,
-            entity_representations=EmbeddingSpecification(embedding_dim=50),
-            relation_representations=EmbeddingSpecification(embedding_dim=50),
+            entity_representation_kwargs=EmbeddingSpecification(embedding_dim=50),
+            relation_representation_kwargs=EmbeddingSpecification(embedding_dim=50),
         )
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)

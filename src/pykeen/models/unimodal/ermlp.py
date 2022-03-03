@@ -57,11 +57,11 @@ class ERMLP(EntityRelationEmbeddingModel):
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            entity_representations=EmbeddingSpecification(
+            entity_representation_kwargs=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
+            relation_representation_kwargs=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
             ),

@@ -79,12 +79,12 @@ class TransE(EntityRelationEmbeddingModel):
            - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
         """
         super().__init__(
-            entity_representations=dict(
+            entity_representation_kwargs=dict(
                 shape=(embedding_dim,),
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
             ),
-            relation_representations=dict(
+            relation_representation_kwargs=dict(
                 shape=(embedding_dim,),
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,

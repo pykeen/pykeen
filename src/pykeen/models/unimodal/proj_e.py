@@ -70,11 +70,11 @@ class ProjE(EntityRelationEmbeddingModel):
         **kwargs,
     ) -> None:
         super().__init__(
-            entity_representations=dict(
+            entity_representation_kwargs=dict(
                 shape=(embedding_dim,),
                 initializer=entity_initializer,
             ),
-            relation_representations=dict(
+            relation_representation_kwargs=dict(
                 shape=(embedding_dim,),
                 initializer=relation_initializer,
             ),

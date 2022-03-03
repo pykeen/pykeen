@@ -152,11 +152,11 @@ class ConvE(EntityRelationEmbeddingModel):
 
         super().__init__(
             triples_factory=triples_factory,
-            entity_representations=EmbeddingSpecification(
+            entity_representation_kwargs=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
+            relation_representation_kwargs=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
             ),
