@@ -10,7 +10,7 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 
 from ..sampling import NegativeSampler
-from ..triples.instances import BatchType, Instances, SLCWABatchType, SLCWAInstances, SLCWASampleType, SampleType
+from ..triples.instances import BatchType, Instances, SampleType, SLCWABatchType, SLCWAInstances, SLCWASampleType
 from ..typing import MappedTriples
 
 
