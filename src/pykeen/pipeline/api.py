@@ -376,6 +376,7 @@ class PipelineResult(Result):
         *,
         save_metadata: bool = True,
         save_replicates: bool = True,
+        save_training: bool = True,
         **_kwargs,
     ) -> None:
         """Save all artifacts in the given directory."""
@@ -383,12 +384,16 @@ class PipelineResult(Result):
             directory = pathlib.Path(directory).resolve()
         directory.mkdir(exist_ok=True, parents=True)
 
-        with directory.joinpath("metadata.json").open("w") as file:
-            json.dump(self.metadata, file, indent=2, sort_keys=True)
         with directory.joinpath("results.json").open("w") as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
+        if save_metadata:
+            with directory.joinpath("metadata.json").open("w") as file:
+                json.dump(self.metadata, file, indent=2, sort_keys=True)
         if save_replicates:
             self.save_model(directory.joinpath("trained_model.pkl"))
+        if save_training:
+            self.training.to_path_binary(directory.joinpath("training_triples"))
+        logger.info(f"Saved to directory: {directory.as_uri()}")
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
@@ -501,6 +506,7 @@ def replicate_pipeline_from_config(
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
+    save_training: bool = False,
     keep_seed: bool = False,
     **kwargs,
 ) -> None:
@@ -512,6 +518,7 @@ def replicate_pipeline_from_config(
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
+    :param save_training: whether to save the training factory.
     :param keep_seed: whether to keep the random seed in a configuration
     """
     # note: we do not directly forward discard_seed here, since we want to highlight the different default behaviour:
@@ -523,6 +530,7 @@ def replicate_pipeline_from_config(
         pipeline_results=pipeline_results,
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
+        save_training=save_training,
     )
 
 
@@ -625,6 +633,7 @@ def save_pipeline_results_to_directory(
     move_to_cpu: bool = False,
     save_metadata: bool = False,
     save_replicates: bool = True,
+    save_training: bool = False,
     width: int = 5,
 ) -> None:
     """Save the result set to the directory.
@@ -636,6 +645,7 @@ def save_pipeline_results_to_directory(
     :param save_metadata: Should the metadata be saved? Might be redundant in a scenario when you're
         using this function, so defaults to false.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param save_training: Should the training triples be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
     if isinstance(directory, str):
@@ -657,6 +667,7 @@ def save_pipeline_results_to_directory(
             replicate_directory,
             save_metadata=save_metadata,
             save_replicates=save_replicates,
+            save_training=save_training,
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
