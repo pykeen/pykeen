@@ -12,8 +12,8 @@ from torch import nn
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
-from ...nn.representation import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
+from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [

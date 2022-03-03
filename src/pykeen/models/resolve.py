@@ -61,8 +61,8 @@ import logging
 from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
 
 from .nbase import EmbeddingSpecificationHint, ERModel
-from ..nn.representation import EmbeddingSpecification, Representation
 from ..nn.modules import Interaction, interaction_resolver
+from ..nn.representation import EmbeddingSpecification, Representation
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 
 __all__ = [

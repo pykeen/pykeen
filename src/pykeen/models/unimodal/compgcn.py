@@ -8,8 +8,8 @@ import torch
 from class_resolver import Hint
 
 from ..nbase import ERModel
-from ...nn.representation import CombinedCompGCNRepresentations, EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, Interaction
+from ...nn.representation import CombinedCompGCNRepresentations, EmbeddingSpecification
 from ...triples import CoreTriplesFactory
 from ...typing import RelationRepresentation
 

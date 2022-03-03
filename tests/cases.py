@@ -39,9 +39,9 @@ from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
-import pykeen.nn.representation
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.representation
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
@@ -53,8 +53,8 @@ from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, Unsupp
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
-from pykeen.nn.representation import Representation
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.nn.representation import Representation
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer

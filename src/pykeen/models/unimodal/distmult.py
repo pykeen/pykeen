@@ -9,8 +9,8 @@ from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.representation import EmbeddingSpecification
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
+from ...nn.representation import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, Hint, Initializer
 

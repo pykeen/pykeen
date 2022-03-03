@@ -14,8 +14,8 @@ import torch
 from torch import nn
 
 from .base import Model
-from ..nn.representation import EmbeddingSpecification, Representation
 from ..nn.modules import Interaction, interaction_resolver
+from ..nn.representation import EmbeddingSpecification, Representation
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation

@@ -9,9 +9,9 @@ from torch.nn.init import uniform_
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import NSSALoss
 from ...models import ERModel
-from ...nn.representation import EmbeddingSpecification
 from ...nn.init import uniform_norm_
 from ...nn.modules import BoxEInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
