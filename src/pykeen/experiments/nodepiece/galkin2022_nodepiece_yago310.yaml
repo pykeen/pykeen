@@ -42,8 +42,7 @@ pipeline:
   negative_sampler_kwargs:
     num_negs_per_pos: 10
 results:  # https://openreview.net/pdf?id=xMJWUKJnFSw Table 3 row 5
-  hits_at_k:
-    best:
+  best:
+    hits_at_k:
       '10': 0.491  # line in paper: no anchor distances
-  mean_reciprocal_rank:
-    best: 0.250
+    mean_reciprocal_rank: 0.250
