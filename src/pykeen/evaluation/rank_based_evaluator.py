@@ -100,8 +100,8 @@ class RankBasedMetricResults(MetricResults):
     def create_random(cls, random_state: Union[None, int, random.Random] = None) -> "RankBasedMetricResults":
         """Create random results useful for testing."""
         generator = numpy.random.default_rng(seed=random_state)
-        num_candidates = generator.integers(low=1, high=1000, size=(2, 1000))
-        ranks = generator.integers(low=0, high=num_candidates[None], size=(3, 2, 1000))
+        num_candidates = generator.integers(low=2, high=1000, size=(2, 1000))
+        ranks = generator.integers(low=1, high=num_candidates[None], size=(3, 2, 1000))
         ranks = numpy.maximum.accumulate(ranks, axis=1)  # increasing, since order of RANK_TYPES
         data = {}
         target_to_idx = {
