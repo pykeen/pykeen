@@ -130,7 +130,7 @@ class NodePieceRelationTests(cases.NodePieceTestCase):
     """Tests for node piece representation."""
 
     kwargs = dict(
-        token_representations=pykeen.nn.representation.EmbeddingSpecification(
+        token_representation_kargs=dict(
             shape=(3,),
         )
     )
@@ -140,7 +140,7 @@ class NodePieceAnchorTests(cases.NodePieceTestCase):
     """Tests for node piece representation with anchor nodes."""
 
     kwargs = dict(
-        token_representations=pykeen.nn.representation.EmbeddingSpecification(
+        token_representation_kwargs=dict(
             shape=(3,),
         ),
         tokenizers="anchor",
@@ -154,11 +154,11 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
     """Tests for node piece representation with mixed tokenizers."""
 
     kwargs = dict(
-        token_representations=(
-            pykeen.nn.representation.EmbeddingSpecification(
+        token_representation_kwargs=(
+            dict(
                 shape=(3,),
             ),
-            pykeen.nn.representation.EmbeddingSpecification(
+            dict(
                 shape=(3,),
             ),
         ),
@@ -171,6 +171,11 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
             ),
         ),
     )
+
+    def test_instance(self):  # noqa: D102
+        super().test_instance()
+        assert isinstance(self.instance, pykeen.nn.node_piece.NodePieceRepresentation)
+        self.instance.token_representations
 
 
 class TokenizationTests(cases.RepresentationTestCase):

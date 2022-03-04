@@ -867,7 +867,7 @@ class NodePieceRepresentation(Representation):
     """
 
     #: the token representations
-    tokenizations: Sequence[TokenizationRepresentation]
+    token_representations: Sequence[TokenizationRepresentation]
 
     def __init__(
         self,
@@ -945,7 +945,7 @@ class NodePieceRepresentation(Representation):
         super().__init__(max_id=triples_factory.num_entities, shape=shape)
 
         # assign module
-        self.tokenizations = torch.nn.ModuleList(token_representations)
+        self.token_representations = torch.nn.ModuleList(token_representations)
 
         # Assign default aggregation
         self.aggregation = resolve_aggregation(aggregation=aggregation)
@@ -961,7 +961,7 @@ class NodePieceRepresentation(Representation):
     ) -> torch.FloatTensor:  # noqa: D102
         return self.aggregation(
             torch.cat(
-                [tokenization(indices=indices) for tokenization in self.tokenizations],
+                [tokenization(indices=indices) for tokenization in self.token_representations],
                 dim=self.aggregation_index,
             ),
             self.aggregation_index,
