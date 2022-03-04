@@ -45,13 +45,13 @@ from pykeen.typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
-    MappedTriples,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
-    SIDES,
     SIDE_BOTH,
+    SIDES,
+    MappedTriples,
     Target,
 )
 from tests import cases
