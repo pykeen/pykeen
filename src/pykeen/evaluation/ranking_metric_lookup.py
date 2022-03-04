@@ -4,10 +4,10 @@
 
 import itertools as itt
 import re
-from typing import NamedTuple, Optional, Tuple, Union, cast
+from typing import Any, Mapping, NamedTuple, Optional, Tuple, Union, cast
 
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
-from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedTarget, RankType
+from ..typing import ExtendedTarget, RANK_REALISTIC, RANK_TYPES, RANK_TYPE_SYNONYMS, RankType, SIDES, SIDE_BOTH
 
 __all__ = [
     "MetricKey",
@@ -15,6 +15,8 @@ __all__ = [
 
 # parsing metrics
 # metric pattern = side?.type?.metric.k?
+from ..utils import flatten_dictionary
+
 _SIDE_PATTERN = "|".join(SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 METRIC_PATTERN = re.compile(
@@ -93,3 +95,19 @@ class MetricKey(NamedTuple):
     def normalize(cls, s: Optional[str]) -> str:
         """Normalize a metric key string."""
         return str(cls.lookup(s))
+
+
+def normalize_flattened_metric_results(result: Mapping[str, Any]) -> Mapping[str, Any]:
+    """
+    Flatten metric result dictionary and normalize metric keys.
+
+    :param result:
+        the result dictionary.
+
+    :return:
+        the flattened metric results with normalized metric names.
+    """
+    # normalize keys
+    # TODO: this can only normalize rank-based metrics!
+    result = {MetricKey.normalize(k): v for k, v in flatten_dictionary(result).items()}
+    return result
