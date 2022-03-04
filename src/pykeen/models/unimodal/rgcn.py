@@ -9,9 +9,9 @@ from class_resolver import Hint, HintOrType
 from torch import nn
 
 from ..nbase import EmbeddingSpecificationHint, ERModel
-from ...nn.emb import EmbeddingSpecification
-from ...nn.message_passing import Decomposition, RGCNRepresentations
+from ...nn.message_passing import Decomposition, RGCNRepresentation
 from ...nn.modules import Interaction, interaction_resolver
+from ...nn.representation import EmbeddingSpecification
 from ...nn.weighting import EdgeWeighting
 from ...regularizers import Regularizer
 from ...triples import CoreTriplesFactory
@@ -30,8 +30,8 @@ class RGCN(
     The Relational Graph Convolutional Network (R-GCN) comprises three parts:
 
     1. A GCN-based entity encoder that computes enriched representations for entities, cf.
-       :class:`pykeen.nn.emb.RGCNRepresentations`. The representation for entity $i$ at level $l \in (1,\dots,L)$
-       is denoted as $\textbf{e}_i^l$.
+       :class:`pykeen.nn.representation.RGCNRepresentations`. The representation for entity $i$ at level
+       $l \in (1,\dots,L)$ is denoted as $\textbf{e}_i^l$.
        The GCN is modified to use different weights depending on the type of the relation.
     2. Relation representations $\textbf{R}_{r} \in \mathbb{R}^{d \times d}$ is a diagonal matrix that are learned
        independently from the GCN-based encoder.
@@ -105,7 +105,7 @@ class RGCN(
         **kwargs,
     ):
         # create enriched entity representations
-        entity_representations = RGCNRepresentations(
+        entity_representations = RGCNRepresentation(
             triples_factory=triples_factory,
             embedding_specification=EmbeddingSpecification(
                 embedding_dim=embedding_dim,

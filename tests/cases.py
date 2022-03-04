@@ -40,9 +40,9 @@ from torch.optim import Adagrad, SGD
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
-import pykeen.nn.emb
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.representation
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
@@ -55,8 +55,8 @@ from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.mocks import FixedModel
 from pykeen.models.nbase import ERModel
-from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.nn.representation import Representation
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
@@ -65,7 +65,7 @@ from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
-from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
+from pykeen.triples.utils import get_entities
 from pykeen.typing import (
     HeadRepresentation,
     InductiveMode,
@@ -77,9 +77,17 @@ from pykeen.typing import (
     TRAINING,
     TailRepresentation,
 )
-from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import (
+    all_in_bounds,
+    get_batchnorm_modules,
+    is_triple_tensor_subset,
+    resolve_device,
+    set_random_seed,
+    triple_tensor_to_set,
+    unpack_singletons,
+)
 from tests.constants import EPSILON
-from tests.mocks import CustomRepresentations
+from tests.mocks import CustomRepresentation
 from tests.utils import rand
 
 T = TypeVar("T")
@@ -1064,7 +1072,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             **self.instance_kwargs,
         )
 
-        def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
+        def _equal_embeddings(a: Representation, b: Representation) -> bool:
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
@@ -1309,7 +1317,7 @@ Traceback
         """Tests whether we can provide custom representations."""
         if isinstance(self.instance, EntityRelationEmbeddingModel):
             old_embeddings = self.instance.relation_embeddings
-            self.instance.relation_embeddings = CustomRepresentations(
+            self.instance.relation_embeddings = CustomRepresentation(
                 num_entities=self.factory.num_relations,
                 shape=old_embeddings.shape,
             )
@@ -1423,7 +1431,7 @@ class InductiveModelTestCase(ModelTestCase):
         raise SkipTest("Inductive models are not compatible the pipeline.")
 
 
-class RepresentationTestCase(GenericTestCase[RepresentationModule]):
+class RepresentationTestCase(GenericTestCase[Representation]):
     """Common tests for representation modules."""
 
     batch_size: ClassVar[int] = 2

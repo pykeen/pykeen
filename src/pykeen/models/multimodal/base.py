@@ -5,9 +5,9 @@
 from typing import Sequence, Union
 
 from ..nbase import EmbeddingSpecificationHint, ERModel
-from ...nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ...nn.init import PretrainedInitializer
 from ...nn.modules import LiteralInteraction
+from ...nn.representation import Embedding, EmbeddingSpecification, Representation
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 
@@ -23,7 +23,7 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         interaction: LiteralInteraction,
-        entity_representations: Sequence[Union[EmbeddingSpecification, RepresentationModule]],
+        entity_representations: Sequence[Union[EmbeddingSpecification, Representation]],
         relation_representations: EmbeddingSpecificationHint = None,
         **kwargs,
     ):
