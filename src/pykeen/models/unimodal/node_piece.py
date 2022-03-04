@@ -179,7 +179,7 @@ class NodePiece(ERModel):
             ),
             relation_representations=SubsetRepresentation,
             relation_representation_kwargs=dict(  # hide padding relation
-                max_id=triples_factory.num_relations,
+                # max_id=triples_factory.num_relations,  # will get added by ERModel
                 base=relation_representations,
             ),
             **kwargs,

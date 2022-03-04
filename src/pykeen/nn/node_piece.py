@@ -880,6 +880,7 @@ class NodePieceRepresentation(Representation):
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         max_id: Optional[int] = None,
+        shape: Optional[Sequence[int]] = None,
     ):
         """
         Initialize the representation.
@@ -940,10 +941,11 @@ class NodePieceRepresentation(Representation):
         ]
 
         # determine shape
-        shapes = {t.vocabulary.shape for t in token_representations}
-        if len(shapes) != 1:
-            raise ValueError(f"Inconsistent token shapes: {shapes}")
-        shape = list(shapes)[0]
+        if shape is None:
+            shapes = {t.vocabulary.shape for t in token_representations}
+            if len(shapes) != 1:
+                raise ValueError(f"Inconsistent token shapes: {shapes}")
+            shape = list(shapes)[0]
 
         # super init; has to happen *before* any parameter or buffer is assigned
         super().__init__(max_id=triples_factory.num_entities, shape=shape)
