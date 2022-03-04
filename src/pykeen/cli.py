@@ -419,10 +419,12 @@ METRIC_NAMES: Mapping[Type[MetricResults], str] = {
     RankBasedMetricResults: "Ranking",
 }
 
+METRICS_SKIP = {"standard_deviation", "variance", "median_absolute_deviation", "count"}
+
 
 def _get_metrics_lines(tablefmt: str):
     for key, metric, metric_results_cls in get_metric_list():
-        if key in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
+        if key in METRICS_SKIP:
             continue
         label = getattr_or_docdata(metric, "name")
         link = getattr_or_docdata(metric, "link")
@@ -511,6 +513,15 @@ def _link(text: str, link: str, fmt: str) -> str:
         return f"[{text}]({link})"
 
 
+def get_metric_list() -> List[Tuple[str, Type[Metric], Type[MetricResults]]]:
+    """Get info about all metrics across all evaluators."""
+    return [
+        (metric_key, metric_cls, resolver_cls)
+        for resolver_cls in metric_resolver
+        for metric_key, metric_cls in resolver_cls.metrics.items()
+    ]
+
+
 @main.command()
 @click.option("--check", is_flag=True)
 def readme(check: bool):
@@ -597,16 +608,6 @@ for cls in model_resolver.lookup_dict.values():
 # Add HPO command
 main.add_command(optimize)
 main.add_command(experiments)
-
-
-def get_metric_list() -> List[Tuple[str, Type[Metric], Type[MetricResults]]]:
-    """Get info about all metrics across all evaluators."""
-    return [
-        (metric_key, metric_cls, resolver_cls)
-        for resolver_cls in metric_resolver
-        for metric_key, metric_cls in resolver_cls.metrics.items()
-    ]
-
 
 if __name__ == "__main__":
     main()
