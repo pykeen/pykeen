@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Mapping, Optional, Type
+from typing import List, Mapping, Optional, Tuple, Type
 
 import click
 from class_resolver.contrib.optuna import sampler_resolver
@@ -30,12 +30,13 @@ from .evaluation import (
     MetricResults,
     RankBasedMetricResults,
     evaluator_resolver,
-    get_metric_list,
+    metric_resolver,
 )
 from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
+from .metrics.utils import Metric
 from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
 from .models.cli import build_cli_from_cls
 from .nn.modules import LiteralInteraction, interaction_resolver
@@ -596,6 +597,16 @@ for cls in model_resolver.lookup_dict.values():
 # Add HPO command
 main.add_command(optimize)
 main.add_command(experiments)
+
+
+def get_metric_list() -> List[Tuple[str, Type[Metric], Type[MetricResults]]]:
+    """Get info about all metrics across all evaluators."""
+    return [
+        (metric_key, metric_cls, resolver_cls)
+        for resolver_cls in metric_resolver
+        for metric_key, metric_cls in resolver_cls.metrics.items()
+    ]
+
 
 if __name__ == "__main__":
     main()
