@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
@@ -18,11 +17,11 @@ from torch import nn
 from .base import Model
 from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
-from ..nn.representation import EmbeddingSpecification, Representation
+from ..nn.representation import Representation
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import HeadRepresentation, InductiveMode, OneOrSequence, RelationRepresentation, TailRepresentation
-from ..utils import check_shapes, upgrade_to_sequence
+from ..utils import check_shapes
 
 __all__ = [
     "_NewAbstractModel",
@@ -30,13 +29,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-EmbeddingSpecificationHint = Union[
-    None,
-    EmbeddingSpecification,
-    Representation,
-    Sequence[Union[EmbeddingSpecification, Representation]],
-]
 
 
 class _NewAbstractModel(Model, ABC):
@@ -170,12 +162,6 @@ def _prepare_representation_module_list(
     :raises ValueError:
         if the maximum ID or shapes do not match
     """
-    # TODO: remove once EmbeddingSpecification is deprecated
-    representations = list(upgrade_to_sequence(representations))
-    for i in range(len(representations)):
-        if isinstance(representations[i], EmbeddingSpecification):
-            warnings.warn("Do not use EmbeddingSpecification", DeprecationWarning)
-            representations[i] = representations[i].make(max_id=max_id)
     # TODO: we could infer some shapes from the given interaction shape information
     rs = representation_resolver.make_many(representations, kwargs=representation_kwargs, max_id=max_id)
 

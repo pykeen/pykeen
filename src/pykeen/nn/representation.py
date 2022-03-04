@@ -8,7 +8,6 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -32,7 +31,6 @@ __all__ = [
     "Representation",
     "Embedding",
     "LowRankRepresentation",
-    "EmbeddingSpecification",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
@@ -421,58 +419,6 @@ class LowRankRepresentation(Representation):
             weight = weight[indices.to(self.device)]
         # weighted linear combination of bases, shape: (*batch_dims, *shape)
         return torch.tensordot(weight, bases, dims=([-1], [0]))
-
-
-# TODO: deprecate in favour of using class_resolver hints
-@dataclass
-class EmbeddingSpecification:
-    """An embedding specification."""
-
-    embedding_dim: Optional[int] = None
-    shape: Union[None, int, Sequence[int]] = None
-
-    initializer: Hint[Initializer] = None
-    initializer_kwargs: Optional[Mapping[str, Any]] = None
-
-    normalizer: Hint[Normalizer] = None
-    normalizer_kwargs: Optional[Mapping[str, Any]] = None
-
-    constrainer: Hint[Constrainer] = None
-    constrainer_kwargs: Optional[Mapping[str, Any]] = None
-
-    regularizer: Hint[Regularizer] = None
-    regularizer_kwargs: Optional[Mapping[str, Any]] = None
-
-    dtype: Optional[torch.dtype] = None
-    dropout: Optional[float] = None
-
-    def make(
-        self,
-        *,
-        max_id: Optional[int] = None,
-        num_embeddings: Optional[int] = None,
-        device: Optional[torch.device] = None,
-    ) -> Embedding:
-        """Create an embedding with this specification."""
-        rv = Embedding(
-            max_id=max_id,
-            num_embeddings=num_embeddings,
-            embedding_dim=self.embedding_dim,
-            shape=self.shape,
-            initializer=self.initializer,
-            initializer_kwargs=self.initializer_kwargs,
-            normalizer=self.normalizer,
-            normalizer_kwargs=self.normalizer_kwargs,
-            constrainer=self.constrainer,
-            constrainer_kwargs=self.constrainer_kwargs,
-            regularizer=self.regularizer,
-            regularizer_kwargs=self.regularizer_kwargs,
-            dtype=self.dtype,
-            dropout=self.dropout,
-        )
-        if device is not None:
-            rv = rv.to(device)
-        return rv
 
 
 def process_shape(
