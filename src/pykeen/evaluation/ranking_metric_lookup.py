@@ -3,20 +3,22 @@
 """Lookup for metrics."""
 
 import itertools as itt
+import logging
 import re
 from typing import Any, Mapping, NamedTuple, Optional, Tuple, Union, cast
 
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
 from ..typing import ExtendedTarget, RANK_REALISTIC, RANK_TYPES, RANK_TYPE_SYNONYMS, RankType, SIDES, SIDE_BOTH
+from ..utils import flatten_dictionary
 
 __all__ = [
     "MetricKey",
 ]
 
+logger = logging.getLogger(__name__)
+
 # parsing metrics
 # metric pattern = side?.type?.metric.k?
-from ..utils import flatten_dictionary
-
 _SIDE_PATTERN = "|".join(SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 METRIC_PATTERN = re.compile(
@@ -116,6 +118,7 @@ def normalize_flattened_metric_results(result: Mapping[str, Any]) -> Mapping[str
         try:
             key = MetricKey.normalize(key)
         except ValueError as error:
+            logger.warning(f"Trying to fix malformed key: {error}")
             key = MetricKey.normalize(
                 key.replace("nondeterministic", "").replace("unknown", "").strip(".").replace("..", ".")
             )
