@@ -73,7 +73,7 @@ class Objective:
     stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
     result_tracker: Union[ResultTracker, Type[ResultTracker]]  # 9.
-    metric: str
+    metric: Optional[str]
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
