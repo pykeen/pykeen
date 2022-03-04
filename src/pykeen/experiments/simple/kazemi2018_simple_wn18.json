@@ -41,11 +41,9 @@
     }
   },
   "results": {
-    "mean_reciprocal_rank": {
-      "best": 0.942
-    },
-    "hits_at_k": {
-      "best": {
+    "best": {
+      "mean_reciprocal_rank": 0.942,
+      "hits_at_k": {
         "1": 0.939,
         "3": 0.944,
         "10": 0.947

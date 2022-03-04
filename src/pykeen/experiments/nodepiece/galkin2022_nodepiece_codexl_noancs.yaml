@@ -30,8 +30,7 @@ pipeline:
     label_smoothing: 0.3
   training_loop: LCWA
 results:  # https://openreview.net/pdf?id=xMJWUKJnFSw Table 3 row 6
-  hits_at_k:
-    best:
+  best:
+    hits_at_k:
       '10': 0.121
-  mean_reciprocal_rank:
-    best: 0.063
+    mean_reciprocal_rank: 0.063
