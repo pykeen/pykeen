@@ -728,21 +728,8 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
     num_triples: int = 13
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        kwargs = super()._pre_instantiation_hook(kwargs)
-        generator = numpy.random.default_rng()
-        # Populate with real results.
-        evaluator = RankBasedEvaluator()
-        evaluator.num_entities = self.num_entities
-        evaluator.num_candidates = {
-            side: [numpy.full(shape=(self.num_triples,), fill_value=self.num_entities)]
-            for side in (LABEL_HEAD, LABEL_TAIL)
-        }
-        # TODO: problem in generating ranks!
-        evaluator.ranks = {
-            (side, rank_type): [generator.random(size=(self.num_triples,))]
-            for side, rank_type in itertools.product((LABEL_HEAD, LABEL_TAIL), RANK_TYPES)
-        }
-        kwargs["data"] = evaluator.finalize().data
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["data"] = RankBasedMetricResults.create_random().data
         return kwargs
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):  # noqa: D102
