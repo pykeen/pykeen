@@ -5,6 +5,7 @@
 from typing import Any, Mapping, Optional
 
 from class_resolver import ClassResolver, HintType
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 
 from .base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker, ResultTracker, TrackerHint
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
@@ -42,8 +43,8 @@ tracker_resolver: ClassResolver[ResultTracker] = ClassResolver.from_subclasses(
 
 
 def resolve_result_trackers(
-    result_tracker: Optional[OneOrSequence[HintType[ResultTracker]]] = None,
-    result_tracker_kwargs: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
+    result_tracker: OneOrManyHintOrType[ResultTracker] = None,
+    result_tracker_kwargs: OneOrManyOptionalKwargs = None,
 ) -> MultiResultTracker:
     """Resolve and compose result trackers.
 

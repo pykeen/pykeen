@@ -2,16 +2,14 @@
 
 """Base classes for multi-modal models."""
 
-from typing import Optional
-
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 
 from ..nbase import ERModel
 from ...nn.init import PretrainedInitializer
 from ...nn.modules import LiteralInteraction
 from ...nn.representation import Embedding, Representation
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import HeadRepresentation, OneOrSequence, RelationRepresentation, TailRepresentation
+from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ...utils import upgrade_to_sequence
 
 __all__ = [
@@ -26,10 +24,10 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         interaction: LiteralInteraction,
-        entity_representations: Optional[OneOrSequence[HintOrType[Representation]]] = None,
-        entity_representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
-        relation_representations: Optional[OneOrSequence[HintOrType[Representation]]] = None,
-        relation_representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
+        entity_representations: OneOrManyHintOrType[Representation] = None,
+        entity_representation_kwargs: OneOrManyOptionalKwargs = None,
+        relation_representations: OneOrManyHintOrType[Representation] = None,
+        relation_representation_kwargs: OneOrManyOptionalKwargs = None,
         **kwargs,
     ):
         literals = triples_factory.get_numeric_literals_tensor()

@@ -11,7 +11,8 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch import nn
 
 from .base import Model
@@ -20,7 +21,7 @@ from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import Representation
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import HeadRepresentation, InductiveMode, OneOrSequence, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
 __all__ = [
@@ -132,8 +133,8 @@ def _prepare_representation_module_list(
     max_id: int,
     shapes: Sequence[str],
     label: str,
-    representations: Optional[OneOrSequence[HintOrType[Representation]]] = None,
-    representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
+    representations: OneOrManyHintOrType[Representation] = None,
+    representation_kwargs: OneOrManyOptionalKwargs = None,
     skip_checks: bool = False,
 ) -> Sequence[Representation]:
     """
@@ -267,10 +268,10 @@ class ERModel(
             Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         ],
         interaction_kwargs: OptionalKwargs = None,
-        entity_representations: Optional[OneOrSequence[HintOrType[Representation]]] = None,
-        entity_representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
-        relation_representations: Optional[OneOrSequence[HintOrType[Representation]]] = None,
-        relation_representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
+        entity_representations: OneOrManyHintOrType[Representation] = None,
+        entity_representation_kwargs: OneOrManyOptionalKwargs = None,
+        relation_representations: OneOrManyHintOrType[Representation] = None,
+        relation_representation_kwargs: OneOrManyOptionalKwargs = None,
         skip_checks: bool = False,
         **kwargs,
     ) -> None:
