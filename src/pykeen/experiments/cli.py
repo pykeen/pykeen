@@ -260,5 +260,22 @@ def ablation(
     )
 
 
+@experiments.command()
+def validate():
+    """Validate configurations."""
+    from .validate import get_configuration_errors, iterate_config_paths
+
+    has_error = False
+    for _directory_name, _config_name, path in iterate_config_paths():
+        path = path.resolve()
+        errors = get_configuration_errors(path=path)
+        if errors:
+            click.secho(f"Errors in {path.as_uri()}")
+        for error in errors:
+            click.secho(error, err=True, color=True)
+            has_error = True
+    exit(-1 if has_error else 0)
+
+
 if __name__ == "__main__":
     experiments()
