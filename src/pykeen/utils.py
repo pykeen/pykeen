@@ -180,7 +180,7 @@ X = TypeVar("X")
 
 def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable[List[X]]:
     """Split a list of instances in batches of size batch_size."""
-    return (input_list[i : i + batch_size] for i in range(0, len(input_list), batch_size))
+    return (input_list[i: i + batch_size] for i in range(0, len(input_list), batch_size))
 
 
 def get_until_first_blank(s: str) -> str:
@@ -882,6 +882,13 @@ def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Seque
 
     :return:
         a sequence of length m, where each element is a sequence and all elements have the same length.
+
+    >>> broadcast_upgrade_to_sequences(1)
+    ((1,),)
+    >>> broadcast_upgrade_to_sequences(1, 2)
+    ((1,), (2,))
+    >>> broadcast_upgrade_to_sequences(1, (2, 3))
+    ((1, 1), (2, 3))
     """
     # upgrade to sequence
     xs = [upgrade_to_sequence(x) for x in xs]
