@@ -10,7 +10,7 @@ from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metri
 from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedRankType, ExtendedTarget
 
 __all__ = [
-    "MetricKey",
+    "RankingMetricKey",
 ]
 
 # parsing metrics
@@ -23,7 +23,7 @@ METRIC_PATTERN = re.compile(
 HITS_PATTERN = re.compile(r"(?P<name>h@|hits@|hits_at_)(?P<k>\d+)")
 
 
-class MetricKey(NamedTuple):
+class RankingMetricKey(NamedTuple):
     """A key for the kind of metric to resolve."""
 
     #: The metric key
@@ -39,7 +39,7 @@ class MetricKey(NamedTuple):
         return ".".join(map(str, (self.side, self.rank_type, self.metric)))
 
     @classmethod
-    def lookup(cls, s: Optional[str]) -> "MetricKey":
+    def lookup(cls, s: Optional[str]) -> "RankingMetricKey":
         """Functional metric name normalization."""
         if s is None:
             return cls(metric=InverseHarmonicMeanRank().key, side=SIDE_BOTH, rank_type=RANK_REALISTIC)
