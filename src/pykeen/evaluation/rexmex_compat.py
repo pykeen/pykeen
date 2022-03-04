@@ -13,7 +13,7 @@ import inspect
 
 import rexmex.metrics.classification as rmc
 
-from .utils import MetricAnnotator
+from ..metrics.utils import MetricAnnotator
 
 __all__ = [
     "classifier_annotator",

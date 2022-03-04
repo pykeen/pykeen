@@ -9,8 +9,8 @@ import torch
 
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
-from .utils import MetricAnnotation
 from ..constants import TARGET_TO_INDEX
+from ..metrics.utils import MetricAnnotation
 from ..typing import MappedTriples, Target
 
 __all__ = [

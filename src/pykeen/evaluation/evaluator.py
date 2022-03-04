@@ -16,8 +16,8 @@ import pandas
 import torch
 from tqdm.autonotebook import tqdm
 
-from .utils import Metric, MetricAnnotation
 from ..constants import TARGET_TO_INDEX
+from ..metrics.utils import Metric, MetricAnnotation
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations

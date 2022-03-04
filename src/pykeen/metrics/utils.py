@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Utilities for evaluation."""
+"""Utilities for metrics."""
 
 from dataclasses import dataclass
 from typing import Callable, ClassVar, Collection, Iterable, MutableMapping, Optional
