@@ -4,10 +4,10 @@
 
 import itertools as itt
 import re
-from typing import NamedTuple, Optional, Union, cast
+from typing import NamedTuple, Optional, Tuple, Union, cast
 
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
-from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedTarget, RankType
+from ..typing import ExtendedTarget, RANK_REALISTIC, RANK_TYPES, RANK_TYPE_SYNONYMS, RankType, SIDES, SIDE_BOTH
 
 __all__ = [
     "MetricKey",
@@ -39,8 +39,11 @@ class MetricKey(NamedTuple):
         return ".".join(map(str, (self.side, self.rank_type, self.metric)))
 
     @classmethod
-    def lookup(cls, s: Optional[str]) -> "MetricKey":
+    def lookup(cls, s: Union[None, str, Tuple[str, ExtendedTarget, RankType]]) -> "MetricKey":
         """Functional metric name normalization."""
+        if isinstance(s, tuple):
+            return cls.lookup(str(MetricKey(*s)))
+
         if s is None:
             return cls(metric=InverseHarmonicMeanRank().key, side=SIDE_BOTH, rank_type=RANK_REALISTIC)
 
