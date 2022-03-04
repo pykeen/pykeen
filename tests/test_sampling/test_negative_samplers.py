@@ -16,16 +16,11 @@ class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
         """Test if relations and half of heads and tails are not corrupted."""
         negative_batch, batch_filter = self.instance.sample(positive_batch=self.positive_batch)
 
-        # Test that half of the subjects and half of the objects are corrupted
+        # Test that exactly one entry is corrupted
         positive_batch = self.positive_batch.unsqueeze(dim=1)
-        num_triples = negative_batch[..., 0].numel()
-        half_size = num_triples // 2
-        num_subj_corrupted = (positive_batch[..., 0] != negative_batch[..., 0]).sum()
-        num_obj_corrupted = (positive_batch[..., 2] != negative_batch[..., 2]).sum()
-        assert num_obj_corrupted - 1 <= num_subj_corrupted
-        assert num_subj_corrupted - 1 <= num_obj_corrupted
-        assert num_subj_corrupted - 1 <= num_triples
-        assert half_size - 1 <= num_subj_corrupted
+        # unfiltered
+        if batch_filter is None:
+            assert ((positive_batch != negative_batch).sum(dim=-1) <= 1).all()
 
 
 class BernoulliNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
@@ -55,7 +50,9 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
 
     def test_index_structure(self):
         """Test the index structure."""
-        data, offsets = create_index(triples_factory=self.triples_factory)
+        data, offsets = create_index(
+            mapped_triples=self.triples_factory.mapped_triples, num_relations=self.triples_factory.num_relations
+        )
         triples = self.triples_factory.mapped_triples
         for r in range(self.triples_factory.num_relations):
             triples_with_r = triples[triples[:, 1] == r]
