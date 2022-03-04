@@ -11,7 +11,7 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union, cast
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -20,7 +20,7 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn.representation import Embedding, Representation, _build_representation
+from ..nn.representation import Representation, _build_representation
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
@@ -747,21 +747,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         self.regularizer.reset()
 
 
-def _build_representation2(
-    max_id: int,
-    representation: HintOrType[Representation] = Embedding,  # TODO: unused
-    representation_kwargs: OptionalKwargs = None,
-) -> Embedding:
-    return cast(
-        Embedding,
-        _build_representation(
-            max_id=max_id,
-            representation=Embedding,
-            representation_kwargs=representation_kwargs,
-        ),
-    )
-
-
 class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
@@ -775,8 +760,10 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        entity_representation_kwargs: OptionalKwargs,
-        relation_representation_kwargs: OptionalKwargs,
+        entity_representations: HintOrType[Representation] = None,
+        entity_representation_kwargs: OptionalKwargs = None,
+        relation_representations: HintOrType[Representation] = None,
+        relation_representation_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
@@ -784,11 +771,15 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.entity_embeddings = _build_representation2(
-            max_id=triples_factory.num_entities, representation_kwargs=entity_representation_kwargs
+        self.entity_embeddings = _build_representation(
+            max_id=triples_factory.num_entities,
+            representation=entity_representations,
+            representation_kwargs=entity_representation_kwargs,
         )
-        self.relation_embeddings = _build_representation2(
-            max_id=triples_factory.num_relations, representation_kwargs=relation_representation_kwargs
+        self.relation_embeddings = _build_representation(
+            max_id=triples_factory.num_relations,
+            representation=relation_representations,
+            representation_kwargs=relation_representation_kwargs,
         )
 
     @property
