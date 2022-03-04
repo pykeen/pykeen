@@ -172,10 +172,9 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
         ),
     )
 
-    def test_instance(self):  # noqa: D102
-        super().test_instance()
-        assert isinstance(self.instance, pykeen.nn.node_piece.NodePieceRepresentation)
-        self.instance.token_representations
+    def test_token_representations(self):
+        """Verify that the number of token representations is correct."""
+        assert len(self.instance.token_representations) == 2
 
 
 class TokenizationTests(cases.RepresentationTestCase):
