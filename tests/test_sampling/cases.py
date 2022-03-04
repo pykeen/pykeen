@@ -55,7 +55,13 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["triples_factory"] = self.triples_factory
+        kwargs.update(
+            {
+                "mapped_triples": self.triples_factory.mapped_triples,
+                "num_entities": self.triples_factory.num_entities,
+                "num_relations": self.triples_factory.num_relations,
+            }
+        )
         return kwargs
 
     def check_sample(self, instance: NegativeSampler) -> None:
