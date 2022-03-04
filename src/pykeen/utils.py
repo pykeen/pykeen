@@ -49,6 +49,7 @@ from .version import get_git_hash
 
 __all__ = [
     "at_least_eps",
+    "broadcast_upgrade_to_sequences",
     "compose",
     "clamp_norm",
     "compact_mapping",
@@ -871,6 +872,28 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     ('t', 'e', 's', 't')
     """
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
+
+
+def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    """Apply upgrade_to_sequence to each input, and afterwards repeat singletons to match the maximum length.
+
+    :param xs: length: m
+        the inputs.
+
+    :return:
+        a sequence of length m, where each element is a sequence and all elements have the same length.
+    """
+    # upgrade to sequence
+    xs = [upgrade_to_sequence(x) for x in xs]
+    # broadcast
+    max_len = max(map(len, xs))
+    for i in range(len(xs)):
+        x = xs[i]
+        if len(x) < max_len:
+            if len(x) != 1:
+                raise ValueError
+            xs[i] = tuple(list(x) * max_len)
+    return xs
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
