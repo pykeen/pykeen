@@ -10,6 +10,7 @@ from collections import defaultdict
 from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
+import numpy.random
 import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -21,15 +22,14 @@ from ..metrics.ranking import RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
+    ExtendedTarget,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
-    RANK_TYPES,
-    SIDE_BOTH,
-    SIDES,
-    ExtendedTarget,
     MappedTriples,
+    RANK_TYPES,
     RankType,
+    SIDE_BOTH,
     Target,
 )
 
@@ -99,16 +99,23 @@ class RankBasedMetricResults(MetricResults):
     @classmethod
     def create_random(cls, random_state: Union[None, int, random.Random] = None) -> "RankBasedMetricResults":
         """Create random results useful for testing."""
-        if random_state is None or isinstance(random_state, int):
-            random_state = random.Random(random_state)
+        generator = numpy.random.default_rng(seed=random_state)
+        num_candidates = generator.integers(low=1, high=1000, size=(2, 1000))
+        ranks = generator.integers(low=0, high=num_candidates[None], size=(3, 2, 1000))
+        ranks = numpy.maximum.accumulate(ranks, axis=1)  # increasing, since order of RANK_TYPES
         data = {}
+        target_to_idx = {
+            LABEL_HEAD: 0,
+            LABEL_TAIL: 1,
+            SIDE_BOTH: [0, 1],
+        }
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
-            low, high = metric_cls.value_range.lower, metric_cls.value_range.upper
-            if high is None or math.isinf(high):
-                high = 1000.0
-            for target, rank_type in itertools.product(SIDES, RANK_TYPES):
-                data[metric.key, target, rank_type] = random_state.uniform(low, high)
+            for target, i in target_to_idx.items():
+                for j, rank_type in enumerate(RANK_TYPES):
+                    data[metric.key, target, rank_type] = metric(
+                        ranks=ranks[j, i].flatten(), num_candidates=num_candidates[i]
+                    )
         return cls(data=data)
 
     def get_metric(self, name: str) -> float:
