@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from pykeen.metrics.utils import construct_indicator
+from pykeen.metrics.classification import construct_indicator
 
 
 def get_true(pos: int = 5, neg: int = 5) -> np.ndarray:

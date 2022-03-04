@@ -5,14 +5,12 @@
 from dataclasses import dataclass
 from typing import ClassVar, Collection, Iterable, Optional
 
-import numpy as np
 from docdata import get_docdata
 
 from ..utils import camel_to_snake
 
 __all__ = [
     "Metric",
-    "construct_indicator",
     "ValueRange",
 ]
 
@@ -112,37 +110,3 @@ class Metric:
 
     def __str__(self) -> str:  # noqa:D105
         return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
-
-
-def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    """Construct binary indicators from a list of scores.
-
-    If there are $n$ positively labeled entries in ``y_true``, this function
-    assigns the top $n$ highest scores in ``y_score`` as positive and remainder
-    as negative.
-
-    .. note ::
-        Since the method uses the number of true labels to determine a threshold, the
-        results will typically be overly optimistic estimates of the generalization performance.
-
-    .. todo ::
-        Add a method which estimates a threshold based on a validation set, and applies this
-        threshold for binarization on the test set.
-
-    :param y_score:
-        A 1-D array of the score values
-    :param y_true:
-        A 1-D array of binary values (1 and 0)
-    :return:
-        A 1-D array of indicator values
-
-    .. seealso::
-
-        This implementation was inspired by
-        https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
-    """
-    number_pos = np.sum(y_true, dtype=int)
-    y_sort = np.flip(np.argsort(y_score))
-    y_pred = np.zeros_like(y_true, dtype=int)
-    y_pred[y_sort[np.arange(number_pos)]] = 1
-    return y_pred

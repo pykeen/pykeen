@@ -1,13 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Temporary storage of annotations to :mod:`rexmex` functions.
-
-Hopefully https://github.com/AstraZeneca/rexmex/pull/29 will get accepted
-so we can rely on first-class annotations of functions.
-
-Periodically, run ``python -m pykeen.evaluation.rexmex_compat`` to be informed of new metrics available
-through :mod:`rexmex`.
-"""
+"""Classification metrics."""
 
 import inspect
 from typing import Callable, ClassVar, MutableMapping, Optional, Type
@@ -16,16 +9,51 @@ import numpy as np
 import rexmex.metrics.classification as rmc
 from class_resolver import ClassResolver
 
-from .utils import Metric, ValueRange, construct_indicator
+from .utils import Metric, ValueRange
 
 __all__ = [
     "ClassificationMetric",
     "classifier_annotator",
+    "construct_indicator",
 ]
 
 
+def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
+    """Construct binary indicators from a list of scores.
+
+    If there are $n$ positively labeled entries in ``y_true``, this function
+    assigns the top $n$ highest scores in ``y_score`` as positive and remainder
+    as negative.
+
+    .. note ::
+        Since the method uses the number of true labels to determine a threshold, the
+        results will typically be overly optimistic estimates of the generalization performance.
+
+    .. todo ::
+        Add a method which estimates a threshold based on a validation set, and applies this
+        threshold for binarization on the test set.
+
+    :param y_score:
+        A 1-D array of the score values
+    :param y_true:
+        A 1-D array of binary values (1 and 0)
+    :return:
+        A 1-D array of indicator values
+
+    .. seealso::
+
+        This implementation was inspired by
+        https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
+    """
+    number_pos = np.sum(y_true, dtype=int)
+    y_sort = np.flip(np.argsort(y_score))
+    y_pred = np.zeros_like(y_true, dtype=int)
+    y_pred[y_sort[np.arange(number_pos)]] = 1
+    return y_pred
+
+
 class ClassificationMetric(Metric):
-    """A classification metric."""
+    """A base class for classification metrics."""
 
     #: A description of the metric
     description: ClassVar[str]
