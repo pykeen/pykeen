@@ -77,10 +77,8 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         for (metric, side, rank_type), value in result.data.items():
             self.assertIn(side, SIDES)
             self.assertIn(rank_type, RANK_TYPES)
-            self.assertIsInstance(metric, RankBasedMetric)
+            self.assertIsInstance(metric, str)
             self.assertIsInstance(value, float)
-            assert metric.value_range is not None
-            assert value in metric.value_range
 
 
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
@@ -493,7 +491,7 @@ def test_resolve_metric_name():
             (HitsAtK, SIDE_BOTH, RANK_REALISTIC, 10),
         ),
     ):
-        expected = str(MetricKey(metric=cls(*args), side=side, rank_type=rank_type))
+        expected = str(MetricKey(metric=cls(*args).key, side=side, rank_type=rank_type))
         result = MetricKey.normalize(s)
         assert result == expected, s
 
