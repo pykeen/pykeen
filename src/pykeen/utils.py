@@ -907,7 +907,7 @@ def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Seque
             if len(x) != 1:
                 raise ValueError(f"Length mismatch: maximum length: {max_len}, but encountered length {len(x)}, too.")
             xs_[i] = tuple(list(x) * max_len)
-    return xs_
+    return tuple(xs_)
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
