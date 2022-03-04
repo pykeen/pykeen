@@ -6,7 +6,7 @@ import itertools as itt
 import re
 from typing import NamedTuple, Optional, Union, cast
 
-from .ranking_metrics import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
+from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
 from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedRankType, ExtendedTarget
 
 __all__ = [

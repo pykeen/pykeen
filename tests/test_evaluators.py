@@ -30,14 +30,14 @@ from pykeen.evaluation.evaluator import (
 )
 from pykeen.evaluation.lookup import MetricKey
 from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
-from pykeen.evaluation.ranking_metrics import (
+from pykeen.evaluation.ranks import Ranks
+from pykeen.metrics.ranking import (
     AdjustedArithmeticMeanRankIndex,
     ArithmeticMeanRank,
     HitsAtK,
     InverseHarmonicMeanRank,
     rank_based_metric_resolver,
 )
-from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
 from pykeen.typing import (
     LABEL_HEAD,

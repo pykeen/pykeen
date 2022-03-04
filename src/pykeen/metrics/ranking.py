@@ -9,7 +9,7 @@ from class_resolver import ClassResolver
 from docdata import parse_docdata
 from scipy import stats
 
-from ..metrics.utils import Metric, ValueRange
+from .utils import Metric, ValueRange
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 
 __all__ = [
