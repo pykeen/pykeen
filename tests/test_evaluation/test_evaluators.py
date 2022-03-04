@@ -5,6 +5,7 @@
 import itertools
 import logging
 import unittest
+from operator import itemgetter
 from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
 import numpy
@@ -43,13 +44,13 @@ from pykeen.typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
+    MappedTriples,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
-    SIDE_BOTH,
     SIDES,
-    MappedTriples,
+    SIDE_BOTH,
     Target,
 )
 from tests import cases
@@ -748,6 +749,25 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
             metric = metric_cls()
             metric_name = metric.key
             self.assertTrue(any(metric_name in key for key in flat_dict.keys()), metric_name)
+
+    def test_monotonicity_in_rank_type(self):
+        """Test monotonicity for different rank-types."""
+        self.instance: RankBasedMetricResults
+        metric_names, targets = [set(map(itemgetter(i), self.instance.data.keys())) for i in (0, 1)]
+        for metric_name in metric_names:
+            if metric_name.startswith("hits_at_"):
+                metric_name = "hits_at_"
+            increasing = rank_based_metric_resolver.lookup(metric_name).increasing
+            exp_sort_indices = numpy.arange(3) if increasing else numpy.arange(3)[::-1]
+            for target in targets:
+                values = numpy.asarray(
+                    [
+                        self.instance.data[metric_name, target, rank_type]
+                        for rank_type in (RANK_PESSIMISTIC, RANK_REALISTIC, RANK_OPTIMISTIC)
+                    ]
+                )
+                sort_indices = numpy.argsort(values, kind="mergesort")  # use stable sort
+                self.assertTrue((sort_indices == exp_sort_indices).all(), metric_name)
 
     def test_to_df(self):
         """Test to_df."""
