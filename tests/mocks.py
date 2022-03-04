@@ -60,7 +60,7 @@ class MockEvaluator(Evaluator):
         pass
 
     def finalize(self) -> MetricResults:  # noqa: D102
-        result = RankBasedMetricResults.create_random()
+        result = RankBasedMetricResults.create_random(self.random_state)
         assert self.values_iter is not None
         if self.key not in result.data:
             raise KeyError(self.key)
