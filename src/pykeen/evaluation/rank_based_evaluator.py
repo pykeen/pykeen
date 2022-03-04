@@ -27,6 +27,9 @@ from ..typing import (
     LABEL_RELATION,
     LABEL_TAIL,
     MappedTriples,
+    RANK_OPTIMISTIC,
+    RANK_PESSIMISTIC,
+    RANK_REALISTIC,
     RANK_TYPES,
     RankType,
     SIDE_BOTH,
@@ -101,7 +104,7 @@ class RankBasedMetricResults(MetricResults):
         """Create random results useful for testing."""
         generator = numpy.random.default_rng(seed=random_state)
         num_candidates = generator.integers(low=2, high=1000, size=(2, 1000))
-        ranks = generator.integers(low=1, high=num_candidates[None], size=(3, 2, 1000))
+        ranks = generator.integers(low=1, high=num_candidates[None], size=(2, 2, 1000))
         ranks = numpy.maximum.accumulate(ranks, axis=1)  # increasing, since order of RANK_TYPES
         data = {}
         target_to_idx = {
@@ -109,13 +112,17 @@ class RankBasedMetricResults(MetricResults):
             LABEL_TAIL: 1,
             SIDE_BOTH: [0, 1],
         }
+        rank_to_idx = {
+            RANK_OPTIMISTIC: [0],
+            RANK_PESSIMISTIC: [1],
+            RANK_REALISTIC: [0, 1],
+        }
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
             for target, i in target_to_idx.items():
-                for j, rank_type in enumerate(RANK_TYPES):
-                    data[metric.key, target, rank_type] = metric(
-                        ranks=ranks[j, i].flatten(), num_candidates=num_candidates[i]
-                    )
+                for rank_type, j in rank_to_idx.items():
+                    this_ranks = ranks[i, j].mean(axis=0).flatten()
+                    data[metric.key, target, rank_type] = metric(ranks=this_ranks, num_candidates=num_candidates[i])
         return cls(data=data)
 
     def get_metric(self, name: str) -> float:

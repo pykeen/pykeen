@@ -14,6 +14,7 @@ import numpy.testing
 import pandas
 import torch
 import unittest_templates
+from more_itertools import pairwise
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
@@ -743,11 +744,13 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
         self.instance: RankBasedMetricResults
         metric_names, targets = [set(map(itemgetter(i), self.instance.data.keys())) for i in (0, 1)]
         for metric_name in metric_names:
+            if metric_name in {"variance", "standard_deviation", "median_absolute_deviation"}:
+                continue
             norm_metric_name = metric_name
             if metric_name.startswith("hits_at_"):
                 norm_metric_name = "hits_at_"
             increasing = rank_based_metric_resolver.lookup(norm_metric_name).increasing
-            exp_sort_indices = numpy.arange(3) if increasing else numpy.arange(3)[::-1]
+            exp_sort_indices = [0, 1, 2] if increasing else [2, 1, 0]
             for target in targets:
                 values = numpy.asarray(
                     [
@@ -755,8 +758,8 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
                         for rank_type in (RANK_PESSIMISTIC, RANK_REALISTIC, RANK_OPTIMISTIC)
                     ]
                 )
-                sort_indices = numpy.argsort(values, kind="mergesort")  # use stable sort
-                self.assertTrue((sort_indices == exp_sort_indices).all(), metric_name)
+                for i, j in pairwise(exp_sort_indices):
+                    assert values[i] <= values[j], metric_name
 
     def test_to_df(self):
         """Test to_df."""
