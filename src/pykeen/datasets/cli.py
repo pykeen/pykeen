@@ -8,7 +8,7 @@ import logging
 import math
 import pathlib
 from textwrap import dedent
-from typing import Iterable, List, Optional, Tuple, Type, Union
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union
 
 import click
 import docdata
@@ -20,7 +20,7 @@ from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..evaluation.evaluator import get_candidate_set_size
-from ..evaluation.expectation import expected_hits_at_k, expected_mean_rank
+from ..metrics.ranking import ArithmeticMeanRank, HitsAtK
 from ..typing import LABEL_HEAD, LABEL_TAIL
 
 
@@ -261,16 +261,25 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
             ks = (1, 3, 5, 10) + tuple(
                 10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
-            this_metrics = dict()
+            this_metrics: MutableMapping[str, Mapping[str, float]] = dict()
             for label, sides in dict(
                 head=[LABEL_HEAD],
                 tail=[LABEL_TAIL],
                 both=[LABEL_HEAD, LABEL_TAIL],
             ).items():
-                candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
+                num_candidates = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
-                    "mean_rank": expected_mean_rank(candidate_set_sizes),
-                    **{f"hits_at_{k}": expected_hits_at_k(candidate_set_sizes, k=k) for k in ks},
+                    ArithmeticMeanRank()
+                    .key: ArithmeticMeanRank()
+                    .expected_value(
+                        num_candidates=num_candidates,
+                    ),
+                    **{
+                        f"hits_at_{k}": HitsAtK(k).expected_value(
+                            num_candidates=num_candidates,
+                        )
+                        for k in ks
+                    },
                 }
             expected_metrics[key] = this_metrics
         with d.joinpath("expected_metrics.json").open("w") as file:
