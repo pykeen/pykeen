@@ -760,7 +760,7 @@ class TokenizationRepresentation(Representation):
         self.vocabulary_size = (
             token_representation.max_id
             if isinstance(token_representation, Representation)
-            else assignment.max().item() + 1
+            else assignment.max().item() + 2  # exclusive (+1) and including padding (+1)
         )
 
         assignment[padding] = self.vocabulary_size - 1  # = assignment.max().item() + 1
