@@ -755,9 +755,10 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
         self.instance: RankBasedMetricResults
         metric_names, targets = [set(map(itemgetter(i), self.instance.data.keys())) for i in (0, 1)]
         for metric_name in metric_names:
+            norm_metric_name = metric_name
             if metric_name.startswith("hits_at_"):
-                metric_name = "hits_at_"
-            increasing = rank_based_metric_resolver.lookup(metric_name).increasing
+                norm_metric_name = "hits_at_"
+            increasing = rank_based_metric_resolver.lookup(norm_metric_name).increasing
             exp_sort_indices = numpy.arange(3) if increasing else numpy.arange(3)[::-1]
             for target in targets:
                 values = numpy.asarray(
