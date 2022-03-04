@@ -19,7 +19,7 @@ from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import broadcast_upgrade_to_sequences, format_relative_comparison, upgrade_to_sequence
+from ..utils import broadcast_upgrade_to_sequences, format_relative_comparison
 
 __all__ = [
     "AnchorSelection",

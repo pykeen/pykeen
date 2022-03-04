@@ -20,7 +20,7 @@ from ...nn import (
 from ...nn.node_piece import RelationTokenizer
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import InductiveMode, TESTING, TRAINING, VALIDATION
+from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
 
 __all__ = [
     "InductiveNodePiece",

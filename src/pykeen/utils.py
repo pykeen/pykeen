@@ -180,7 +180,7 @@ X = TypeVar("X")
 
 def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable[List[X]]:
     """Split a list of instances in batches of size batch_size."""
-    return (input_list[i: i + batch_size] for i in range(0, len(input_list), batch_size))
+    return (input_list[i : i + batch_size] for i in range(0, len(input_list), batch_size))
 
 
 def get_until_first_blank(s: str) -> str:
@@ -883,6 +883,9 @@ def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Seque
     :return:
         a sequence of length m, where each element is a sequence and all elements have the same length.
 
+    :raises ValueError:
+        if there is a non-singleton sequence input with length different from the maximum sequence length.
+
     >>> broadcast_upgrade_to_sequences(1)
     ((1,),)
     >>> broadcast_upgrade_to_sequences(1, 2)
@@ -891,16 +894,16 @@ def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Seque
     ((1, 1), (2, 3))
     """
     # upgrade to sequence
-    xs = [upgrade_to_sequence(x) for x in xs]
+    xs_ = [upgrade_to_sequence(x) for x in xs]
     # broadcast
-    max_len = max(map(len, xs))
-    for i in range(len(xs)):
-        x = xs[i]
+    max_len = max(map(len, xs_))
+    for i in range(len(xs_)):
+        x = xs_[i]
         if len(x) < max_len:
             if len(x) != 1:
-                raise ValueError
-            xs[i] = tuple(list(x) * max_len)
-    return xs
+                raise ValueError(f"Length mismatch: maximum length: {max_len}, but encountered length {len(x)}, too.")
+            xs_[i] = tuple(list(x) * max_len)
+    return xs_
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:

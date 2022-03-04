@@ -20,10 +20,10 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn.representation import Embedding, EmbeddingSpecification, Representation, _build_representation
+from ..nn.representation import Embedding, Representation, _build_representation
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import InductiveMode, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, ScorePack, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
 __all__ = [
@@ -753,7 +753,7 @@ def _build_representation2(
     representation_kwargs: OptionalKwargs = None,
 ) -> Embedding:
     return cast(
-        representation,
+        Embedding,
         _build_representation(
             max_id=max_id,
             representation=Embedding,

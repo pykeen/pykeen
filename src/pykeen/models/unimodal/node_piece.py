@@ -3,7 +3,7 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
+from typing import Any, Callable, ClassVar, List, Mapping, Optional, Sequence
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
@@ -154,7 +154,7 @@ class NodePiece(ERModel):
 
         # prepare token representations & kwargs
         token_representations = []
-        token_representation_kwargs = []
+        token_representation_kwargs: List[OptionalKwargs] = []
         for tokenizer in upgrade_to_sequence(tokenizers):
             if tokenizer_resolver.lookup(tokenizer) is RelationTokenizer:
                 token_representations.append(relation_representations)
