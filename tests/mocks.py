@@ -9,6 +9,7 @@ import torch
 from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
+from pykeen.evaluation.ranking_metric_lookup import MetricKey
 from pykeen.nn import Representation
 from pykeen.typing import ExtendedTarget, MappedTriples, RankType, Target
 
@@ -40,7 +41,7 @@ class MockEvaluator(Evaluator):
         seed: Optional[int] = None,
     ) -> None:
         super().__init__(automatic_memory_optimization=automatic_memory_optimization)
-        self.key = key
+        self.key = MetricKey.lookup(key)
         self.random_state = random.Random(seed)
         if values is None:
             self.values = self.values_iter = None
@@ -59,12 +60,11 @@ class MockEvaluator(Evaluator):
         pass
 
     def finalize(self) -> MetricResults:  # noqa: D102
-        result = RankBasedMetricResults.create_random(self.random_state)
-        if self.key:
-            assert self.values_iter is not None
-            if self.key not in result.data:
-                raise KeyError(self.key)
-            result.data[self.key] = next(self.values_iter)
+        result = RankBasedMetricResults.create_random()
+        assert self.values_iter is not None
+        if self.key not in result.data:
+            raise KeyError(self.key)
+        result.data[self.key] = next(self.values_iter)
         return result
 
     def __repr__(self):  # noqa: D105
