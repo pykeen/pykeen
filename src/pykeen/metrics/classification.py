@@ -15,6 +15,7 @@ __all__ = [
     "ClassificationMetric",
     "classifier_annotator",
     "construct_indicator",
+    "classification_metric_resolver",
 ]
 
 
