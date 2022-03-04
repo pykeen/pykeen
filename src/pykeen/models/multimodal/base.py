@@ -37,7 +37,7 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         entity_representations = tuple(upgrade_to_sequence(entity_representations)) + (Embedding,)
         entity_representation_kwargs = tuple(upgrade_to_sequence(entity_representation_kwargs)) + (
             dict(
-                max_id=max_id,
+                # max_id=max_id,  # will be added by ERModel
                 shape=shape,
                 initializer=PretrainedInitializer(tensor=literals),
                 trainable=False,
