@@ -19,7 +19,7 @@ from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import format_relative_comparison, upgrade_to_sequence
+from ..utils import broadcast_upgrade_to_sequences, format_relative_comparison, upgrade_to_sequence
 
 __all__ = [
     "AnchorSelection",
@@ -916,6 +916,10 @@ class NodePieceRepresentation(Representation):
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
+        token_representations, token_representation_kwargs, num_tokens = broadcast_upgrade_to_sequences(
+            token_representations, token_representation_kwargs, num_tokens
+        )
+
         # tokenize
         token_representations = [
             TokenizationRepresentation.from_tokenizer(
@@ -929,9 +933,9 @@ class NodePieceRepresentation(Representation):
             )
             for tokenizer_inst, token_representation, token_representation_kwargs, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
-                upgrade_to_sequence(token_representations),
-                upgrade_to_sequence(token_representation_kwargs),
-                upgrade_to_sequence(num_tokens),
+                token_representations,
+                token_representation_kwargs,
+                num_tokens,
             )
         ]
 
