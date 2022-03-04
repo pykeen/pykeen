@@ -23,7 +23,7 @@ from ..constants import USER_DEFINED_CODE
 from ..datasets import dataset_resolver, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.ranking_metric_lookup import RankingMetricKey
+from ..evaluation.ranking_metric_lookup import MetricKey
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
@@ -745,7 +745,7 @@ def hpo_pipeline(
     evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
-    metric = RankingMetricKey.normalize(metric)
+    metric = MetricKey.normalize(metric)
     study.set_user_attr("metric", metric)
     logger.info(f"Attempting to {direction} {metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)

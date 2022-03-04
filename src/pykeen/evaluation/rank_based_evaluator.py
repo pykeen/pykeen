@@ -15,7 +15,7 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from .ranking_metric_lookup import RankingMetricKey
+from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
 from ..metrics.ranking import RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
@@ -151,11 +151,11 @@ class RankBasedMetricResults(MetricResults):
 
         >>> metric_results.get('hits@5')
         """
-        return self._get_metric(RankingMetricKey.lookup(name))
+        return self._get_metric(MetricKey.lookup(name))
 
-    def _get_metric(self, metric_key: RankingMetricKey) -> float:
+    def _get_metric(self, metric_key: MetricKey) -> float:
         for (metric_key_, target, rank_type), value in self.data.items():
-            if RankingMetricKey(metric=metric_key_, side=target, rank_type=rank_type) == metric_key:
+            if MetricKey(metric=metric_key_, side=target, rank_type=rank_type) == metric_key:
                 return value
         raise KeyError(metric_key)
 

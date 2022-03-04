@@ -141,16 +141,6 @@ RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
     "average": RANK_REALISTIC,
 }
 
-RankTypeExpectedRealistic = Literal["expected_realistic"]
-RANK_EXPECTED_REALISTIC: RankTypeExpectedRealistic = "expected_realistic"
-ExtendedRankType = Union[RankType, RankTypeExpectedRealistic]
-
-EXPECTED_RANKS: Mapping[RankType, Optional[RankTypeExpectedRealistic]] = {
-    RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
-    RANK_OPTIMISTIC: None,  # TODO - research problem
-    RANK_PESSIMISTIC: None,  # TODO - research problem
-}
-
 TargetBoth = Literal["both"]
 SIDE_BOTH: TargetBoth = "both"
 ExtendedTarget = Union[Target, TargetBoth]

@@ -7,10 +7,10 @@ import re
 from typing import NamedTuple, Optional, Union, cast
 
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
-from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedRankType, ExtendedTarget
+from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedTarget, RankType
 
 __all__ = [
-    "RankingMetricKey",
+    "MetricKey",
 ]
 
 # parsing metrics
@@ -23,7 +23,7 @@ METRIC_PATTERN = re.compile(
 HITS_PATTERN = re.compile(r"(?P<name>h@|hits@|hits_at_)(?P<k>\d+)")
 
 
-class RankingMetricKey(NamedTuple):
+class MetricKey(NamedTuple):
     """A key for the kind of metric to resolve."""
 
     #: The metric key
@@ -33,13 +33,13 @@ class RankingMetricKey(NamedTuple):
     side: ExtendedTarget
 
     #: The rank type
-    rank_type: ExtendedRankType
+    rank_type: RankType
 
     def __str__(self) -> str:  # noqa: D105
         return ".".join(map(str, (self.side, self.rank_type, self.metric)))
 
     @classmethod
-    def lookup(cls, s: Optional[str]) -> "RankingMetricKey":
+    def lookup(cls, s: Optional[str]) -> "MetricKey":
         """Functional metric name normalization."""
         if s is None:
             return cls(metric=InverseHarmonicMeanRank().key, side=SIDE_BOTH, rank_type=RANK_REALISTIC)
@@ -84,7 +84,7 @@ class RankingMetricKey(NamedTuple):
                 f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
             )
 
-        return cls(metric.key, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type))
+        return cls(metric.key, cast(ExtendedTarget, side), cast(RankType, rank_type))
 
     @classmethod
     def normalize(cls, s: Optional[str]) -> str:

@@ -28,8 +28,8 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.lookup import MetricKey
 from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
+from pykeen.evaluation.ranking_metric_lookup import MetricKey
 from pykeen.evaluation.ranks import Ranks
 from pykeen.metrics.ranking import (
     AdjustedArithmeticMeanRankIndex,
