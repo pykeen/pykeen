@@ -129,7 +129,7 @@ class NodePieceRelationTests(cases.NodePieceTestCase):
     """Tests for node piece representation."""
 
     kwargs = dict(
-        token_representation_kargs=dict(
+        token_representation_kwargs=dict(
             shape=(3,),
         )
     )
