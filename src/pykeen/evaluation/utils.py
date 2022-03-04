@@ -71,9 +71,8 @@ class MetricAnnotation:
     value_range: ValueRange
     description: str
     link: str
-
-    binarize: Optional[bool] = None
-    func: Optional[Callable[[np.array, np.array], float]] = None
+    func: Callable[[np.array, np.array], float]
+    binarize: bool
 
     def score(self, y_true, y_score) -> float:
         """Run the scoring function."""

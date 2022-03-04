@@ -16,6 +16,7 @@ import pandas
 import torch
 from tqdm.autonotebook import tqdm
 
+from .metrics import Metric
 from .utils import MetricAnnotation
 from ..constants import TARGET_TO_INDEX
 from ..models import Model
@@ -54,7 +55,7 @@ def optional_context_manager(condition, context_manager):
 class MetricResults:
     """Results from computing metrics."""
 
-    metrics: ClassVar[Mapping[str, MetricAnnotation]]
+    metrics: ClassVar[Mapping[str, Union[MetricAnnotation, Metric]]]
 
     def __init__(self, data: Mapping):
         """Initialize the result wrapper."""
