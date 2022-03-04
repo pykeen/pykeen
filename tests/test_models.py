@@ -307,9 +307,9 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         """Test the expected vocabulary size of the individual tokenizations."""
         assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
         node_piece = self.instance.entity_representations[0]
-        assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)
-        assert len(node_piece.tokenizations) == 2
-        anchor, relation = node_piece.tokenizations
+        assert isinstance(node_piece.token_representations, torch.nn.ModuleList)
+        assert len(node_piece.token_representations) == 2
+        anchor, relation = node_piece.token_representations
         assert anchor.vocabulary.max_id == self.num_anchors + 1
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
