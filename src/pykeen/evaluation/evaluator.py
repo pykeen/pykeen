@@ -17,7 +17,6 @@ import torch
 from tqdm.autonotebook import tqdm
 
 from ..constants import TARGET_TO_INDEX
-from ..metrics.classification import MetricAnnotation
 from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
@@ -55,7 +54,7 @@ def optional_context_manager(condition, context_manager):
 class MetricResults:
     """Results from computing metrics."""
 
-    metrics: ClassVar[Mapping[str, Union[MetricAnnotation, Type[Metric]]]]
+    metrics: ClassVar[Mapping[str, Type[Metric]]]
 
     def __init__(self, data: Mapping):
         """Initialize the result wrapper."""

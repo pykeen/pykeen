@@ -2,14 +2,15 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from typing import Mapping, MutableMapping, Optional, Tuple, cast
+from typing import Mapping, MutableMapping, Optional, Tuple, Type, cast
 
 import numpy as np
 import torch
 
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
-from ..metrics.classification import MetricAnnotation, classifier_annotator
+from ..metrics.classification import classification_metric_resolver
+from ..metrics.utils import Metric
 from ..typing import MappedTriples, Target
 
 __all__ = [
@@ -17,18 +18,7 @@ __all__ = [
     "ClassificationMetricResults",
 ]
 
-
-def _get_classification_metrics():
-    rv = {}
-    for metric in classifier_annotator.metrics.values():
-        key = metric.func.__name__
-        rv[key] = metric
-
-    return rv
-
-
-CLASSIFICATION_METRICS: Mapping[str, MetricAnnotation] = _get_classification_metrics()
-del _get_classification_metrics
+CLASSIFICATION_METRICS: Mapping[str, Type[Metric]] = {cls().key: cls for cls in classification_metric_resolver}
 
 
 class ClassificationMetricResults(MetricResults):

@@ -10,36 +10,36 @@ through :mod:`rexmex`.
 """
 
 import inspect
-from dataclasses import dataclass
-from typing import Callable, MutableMapping, Optional
+from typing import Callable, ClassVar, MutableMapping, Optional, Type
 
 import numpy as np
 import rexmex.metrics.classification as rmc
+from class_resolver import ClassResolver
 
-from .utils import ValueRange, construct_indicator
+from .utils import Metric, ValueRange, construct_indicator
 
 __all__ = [
+    "ClassificationMetric",
     "classifier_annotator",
 ]
 
 
-@dataclass
-class MetricAnnotation:
-    """Metadata about a classifier function."""
+class ClassificationMetric(Metric):
+    """A classification metric."""
 
-    name: str
-    increasing: bool
-    value_range: ValueRange
-    description: str
-    link: str
-    func: Callable[[np.array, np.array], float]
-    binarize: bool
+    #: A description of the metric
+    description: ClassVar[str]
+    #: The function that runs the metric
+    func: ClassVar[Callable[[np.array, np.array], float]]
 
-    def score(self, y_true, y_score) -> float:
+    @classmethod
+    def get_description(cls) -> str:  # noqa:D102
+        return cls.description
+
+    @classmethod
+    def score(cls, y_true, y_score) -> float:
         """Run the scoring function."""
-        if self.func is None:
-            raise ValueError
-        return self.func(y_true, construct_indicator(y_score=y_score, y_true=y_true) if self.binarize else y_score)
+        return cls.func(y_true, construct_indicator(y_score=y_score, y_true=y_true) if cls.binarize else y_score)
 
 
 #: Functions with the right signature in the :mod:`rexmex.metrics.classification` that are not themselves metrics
@@ -48,6 +48,7 @@ EXCLUDE = {
     rmc.true_negative,
     rmc.false_positive,
     rmc.false_negative,
+    rmc.pr_auc_score,  # for now there's an issue
 }
 
 #: This dictionary maps from duplicate functions to the canonical function in :mod:`rexmex.metrics.classification`
@@ -67,7 +68,7 @@ DUPLICATE_CLASSIFIERS = {
 class MetricAnnotator:
     """A class for annotating metric functions."""
 
-    metrics: MutableMapping[str, MetricAnnotation]
+    metrics: MutableMapping[str, Type[ClassificationMetric]]
 
     def __init__(self):
         self.metrics = {}
@@ -95,20 +96,26 @@ class MetricAnnotator:
         binarize: bool = False,
     ):
         """Annotate a function."""
-        self.metrics[func] = MetricAnnotation(
-            func=func,
-            binarize=binarize,
-            name=name or func.__name__.replace("_", " ").title(),
-            value_range=ValueRange(
-                lower=lower,
-                lower_inclusive=lower_inclusive,
-                upper=upper,
-                upper_inclusive=upper_inclusive,
+        title = func.__name__.replace("_", " ").title()
+        metric_cls = type(
+            title.replace(" ", ""),
+            (ClassificationMetric,),
+            dict(
+                name=name or title,
+                link=link,
+                binarize=binarize,
+                increasing=increasing,
+                value_range=ValueRange(
+                    lower=lower,
+                    lower_inclusive=lower_inclusive,
+                    upper=upper,
+                    upper_inclusive=upper_inclusive,
+                ),
+                func=func,
+                description=description,
             ),
-            increasing=increasing,
-            description=description,
-            link=link,
         )
+        self.metrics[func.__name__] = metric_cls
 
 
 classifier_annotator = MetricAnnotator()
@@ -233,6 +240,7 @@ classifier_annotator.higher(
     description="A balanced measure applicable even with class imbalance",
     link="https://en.wikipedia.org/wiki/Phi_coefficient",
 )
+
 # TODO there's something wrong with this, so add it later
 # classifier_annotator.higher(
 #     rmc.pr_auc_score,
@@ -240,6 +248,11 @@ classifier_annotator.higher(
 #     description="Area Under the Precision-Recall Curve",
 #     link="https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.pr_auc_score",
 # )
+
+classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver(
+    list(classifier_annotator.metrics.values()),
+    base=ClassificationMetric,
+)
 
 
 def _check():
@@ -258,7 +271,7 @@ def _check():
             if func in classifier_annotator.metrics:
                 raise ValueError(f"{func.__name__} is a duplicate of {DUPLICATE_CLASSIFIERS[func].__name__}")
             continue
-        if func not in classifier_annotator.metrics:
+        if func.__name__ not in classifier_annotator.metrics:
             raise ValueError(f"missing rexmex classifier: {func.__name__}")
 
 

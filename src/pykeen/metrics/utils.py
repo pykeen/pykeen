@@ -79,8 +79,8 @@ class Metric:
     #: whether it is increasing, i.e., larger values are better
     increasing: ClassVar[bool]
 
-    #: the value range (as string)
-    value_range: ClassVar[Optional[ValueRange]] = None
+    #: the value range
+    value_range: ClassVar[ValueRange]
 
     #: synonyms for this metric
     synonyms: ClassVar[Collection[str]] = tuple()
@@ -110,7 +110,7 @@ class Metric:
     def _extra_repr(self) -> Iterable[str]:
         return []
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa:D105
         return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
 
 
