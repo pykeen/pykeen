@@ -2,9 +2,7 @@
 
 """Result trackers in PyKEEN."""
 
-from typing import Any, Mapping, Optional
-
-from class_resolver import ClassResolver, HintType
+from class_resolver import ClassResolver
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 
 from .base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker, ResultTracker, TrackerHint
@@ -13,7 +11,6 @@ from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
 from .tensorboard import TensorBoardResultTracker
 from .wandb import WANDBResultTracker
-from ..typing import OneOrSequence
 
 __all__ = [
     # Base classes
