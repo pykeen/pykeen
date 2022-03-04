@@ -71,7 +71,7 @@ def _iter_ranks(
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    data: Mapping[Tuple[str, ExtendedTarget, RankType], float]
+    data: MutableMapping[Tuple[str, ExtendedTarget, RankType], float]
 
     metrics = RANKING_METRICS
 
