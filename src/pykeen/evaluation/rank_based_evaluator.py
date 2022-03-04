@@ -100,7 +100,7 @@ class RankBasedMetricResults(MetricResults):
         )
 
     @classmethod
-    def create_random(cls, random_state: Union[None, int, random.Random] = None) -> "RankBasedMetricResults":
+    def create_random(cls, random_state: Optional[int] = None) -> "RankBasedMetricResults":
         """Create random results useful for testing."""
         generator = numpy.random.default_rng(seed=random_state)
         num_candidates = generator.integers(low=2, high=1000, size=(2, 1000))
