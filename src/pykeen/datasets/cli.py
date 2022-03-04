@@ -20,7 +20,7 @@ from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..evaluation.evaluator import get_candidate_set_size
-from ..evaluation.metrics import ArithmeticMeanRank, HitsAtK
+from ..evaluation.ranking_metrics import ArithmeticMeanRank, HitsAtK
 from ..typing import LABEL_HEAD, LABEL_TAIL
 
 

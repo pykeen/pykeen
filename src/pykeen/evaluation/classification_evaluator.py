@@ -18,11 +18,18 @@ __all__ = [
     "ClassificationMetricResults",
 ]
 
-CLASSIFICATION_METRICS: Mapping[str, MetricAnnotation] = {
-    metric.func.__name__: metric
-    for metric in classifier_annotator.metrics.values()
-    if metric.func is not None  # this is always true
-}
+
+def _get_classification_metrics():
+    rv = {}
+    for metric in classifier_annotator.metrics.values():
+        key = metric.func.__name__
+        rv[key] = metric
+
+    return rv
+
+
+CLASSIFICATION_METRICS: Mapping[str, MetricAnnotation] = _get_classification_metrics()
+del _get_classification_metrics
 
 
 class ClassificationMetricResults(MetricResults):

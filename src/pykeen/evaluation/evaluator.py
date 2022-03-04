@@ -9,15 +9,14 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from math import ceil
 from textwrap import dedent
-from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import pandas
 import torch
 from tqdm.autonotebook import tqdm
 
-from .metrics import Metric
-from .utils import MetricAnnotation
+from .utils import Metric, MetricAnnotation
 from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
@@ -55,7 +54,7 @@ def optional_context_manager(condition, context_manager):
 class MetricResults:
     """Results from computing metrics."""
 
-    metrics: ClassVar[Mapping[str, Union[MetricAnnotation, Metric]]]
+    metrics: ClassVar[Mapping[str, Union[MetricAnnotation, Type[Metric]]]]
 
     def __init__(self, data: Mapping):
         """Initialize the result wrapper."""

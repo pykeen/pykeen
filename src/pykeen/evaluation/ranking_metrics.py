@@ -1,92 +1,21 @@
-# -*- coding: utf-8 -*-
+"""Ranking metrics."""
 
-"""Utilities for metrics."""
-
-import itertools as itt
 import math
-import re
 from abc import abstractmethod
-from typing import ClassVar, Collection, Iterable, NamedTuple, Optional, Union, cast
+from typing import ClassVar, Collection, Iterable, Optional
 
 import numpy as np
 from class_resolver import ClassResolver
-from docdata import get_docdata, parse_docdata
+from docdata import parse_docdata
 from scipy import stats
 
-from .utils import ValueRange
-from ..typing import (
-    RANK_REALISTIC,
-    RANK_TYPE_SYNONYMS,
-    RANK_TYPES,
-    SIDE_BOTH,
-    SIDES,
-    ExtendedRankType,
-    ExtendedTarget,
-    RankType,
-)
+from .utils import Metric, ValueRange
+from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 
 __all__ = [
-    "MetricKey",
+    "RankBasedMetric",
     "rank_based_metric_resolver",
 ]
-
-camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
-
-
-def camel_to_snake(name: str) -> str:
-    """Convert camel-case to snake case."""
-    # cf. https://stackoverflow.com/a/1176023
-    return camel_to_snake_pattern.sub("_", name).lower()
-
-
-class Metric:
-    """A base class for metrics."""
-
-    #: The name of the metric
-    name: ClassVar[str]
-
-    #: a link to further information
-    link: ClassVar[str]
-
-    #: whether the metric needs binarized scores
-    binarize: ClassVar[Optional[bool]] = None
-
-    #: whether it is increasing, i.e., larger values are better
-    increasing: ClassVar[bool]
-
-    #: the value range (as string)
-    value_range: ClassVar[Optional[ValueRange]] = None
-
-    #: synonyms for this metric
-    synonyms: ClassVar[Collection[str]] = tuple()
-
-    @classmethod
-    def get_description(cls) -> str:
-        """Get the description."""
-        docdata = get_docdata(cls)
-        if docdata is not None and "description" in docdata:
-            return docdata["description"]
-        assert cls.__doc__ is not None
-        return cls.__doc__.splitlines()[0]
-
-    @classmethod
-    def get_link(cls) -> str:
-        """Get the link from the docdata."""
-        docdata = get_docdata(cls)
-        if docdata is None:
-            raise TypeError
-        return docdata["link"]
-
-    @property
-    def key(self) -> str:
-        """Return the key for use in metric result dictionaries."""
-        return camel_to_snake(self.__class__.__name__)
-
-    def _extra_repr(self) -> Iterable[str]:
-        return []
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
 
 
 class RankBasedMetric(Metric):
@@ -474,81 +403,3 @@ rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
 )
-
-# parsing metrics
-# metric pattern = side?.type?.metric.k?
-_SIDE_PATTERN = "|".join(SIDES)
-_TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
-METRIC_PATTERN = re.compile(
-    rf"^((?P<side>{_SIDE_PATTERN})\.)?((?P<type>{_TYPE_PATTERN})\.)?(?P<name>[\w@]+)(\.(?P<k>\d+))?$",
-)
-_HITS_PATTERN = re.compile(r"(?P<name>h@|hits@|hits_at_)(?P<k>\d+)")
-
-
-class MetricKey(NamedTuple):
-    """A key for the kind of metric to resolve."""
-
-    #: The metric key
-    metric: str
-
-    #: Side of the metric, or "both"
-    side: ExtendedTarget
-
-    #: The rank type
-    rank_type: ExtendedRankType
-
-    def __str__(self) -> str:  # noqa: D105
-        return ".".join(map(str, (self.side, self.rank_type, self.metric)))
-
-    @classmethod
-    def lookup(cls, s: Optional[str]) -> "MetricKey":
-        """Functional metric name normalization."""
-        if s is None:
-            return cls(metric=InverseHarmonicMeanRank().key, side=SIDE_BOTH, rank_type=RANK_REALISTIC)
-
-        match = METRIC_PATTERN.match(s)
-        if not match:
-            raise ValueError(f"Invalid metric name: {s}")
-        k: Union[None, str, int]
-        name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
-        name = name.lower()
-        match = _HITS_PATTERN.match(name)
-        if match:
-            name, k = match.groups()
-
-        # normalize metric name
-        if not name:
-            raise ValueError("A metric name must be provided.")
-        metric_cls = rank_based_metric_resolver.lookup(name)
-
-        kwargs = {}
-        if issubclass(metric_cls, HitsAtK):
-            k = int(k or 10)
-            assert k > 0
-            kwargs["k"] = k
-
-        metric = rank_based_metric_resolver.make(metric_cls, kwargs)
-
-        # normalize side
-        side = side or SIDE_BOTH
-        side = side.lower()
-        if side not in SIDES:
-            raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
-
-        # normalize rank type
-        rank_type = rank_type or RANK_REALISTIC
-        rank_type = rank_type.lower()
-        rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
-        if rank_type not in RANK_TYPES:
-            raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-        elif rank_type not in metric.supported_rank_types:
-            raise ValueError(
-                f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
-            )
-
-        return cls(metric.key, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type))
-
-    @classmethod
-    def normalize(cls, s: Optional[str]) -> str:
-        """Normalize a metric key string."""
-        return str(cls.lookup(s))

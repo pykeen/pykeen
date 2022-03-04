@@ -3,9 +3,12 @@
 """Utilities for evaluation."""
 
 from dataclasses import dataclass
-from typing import Callable, MutableMapping, Optional
+from typing import Callable, ClassVar, Collection, Iterable, MutableMapping, Optional
 
 import numpy as np
+from docdata import get_docdata
+
+from ..utils import camel_to_snake
 
 __all__ = [
     "MetricAnnotation",
@@ -160,3 +163,53 @@ def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarra
     y_pred = np.zeros_like(y_true, dtype=int)
     y_pred[y_sort[np.arange(number_pos)]] = 1
     return y_pred
+
+
+class Metric:
+    """A base class for metrics."""
+
+    #: The name of the metric
+    name: ClassVar[str]
+
+    #: a link to further information
+    link: ClassVar[str]
+
+    #: whether the metric needs binarized scores
+    binarize: ClassVar[Optional[bool]] = None
+
+    #: whether it is increasing, i.e., larger values are better
+    increasing: ClassVar[bool]
+
+    #: the value range (as string)
+    value_range: ClassVar[Optional[ValueRange]] = None
+
+    #: synonyms for this metric
+    synonyms: ClassVar[Collection[str]] = tuple()
+
+    @classmethod
+    def get_description(cls) -> str:
+        """Get the description."""
+        docdata = get_docdata(cls)
+        if docdata is not None and "description" in docdata:
+            return docdata["description"]
+        assert cls.__doc__ is not None
+        return cls.__doc__.splitlines()[0]
+
+    @classmethod
+    def get_link(cls) -> str:
+        """Get the link from the docdata."""
+        docdata = get_docdata(cls)
+        if docdata is None:
+            raise TypeError
+        return docdata["link"]
+
+    @property
+    def key(self) -> str:
+        """Return the key for use in metric result dictionaries."""
+        return camel_to_snake(self.__class__.__name__)
+
+    def _extra_repr(self) -> Iterable[str]:
+        return []
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"

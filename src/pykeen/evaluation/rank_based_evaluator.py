@@ -7,7 +7,7 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,8 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from .metrics import MetricKey, RankBasedMetric, rank_based_metric_resolver
+from .lookup import MetricKey
+from .ranking_metrics import RankBasedMetric, rank_based_metric_resolver
 from .ranks import Ranks
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
@@ -38,7 +39,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-RANKING_METRICS: Mapping[str, RankBasedMetric] = {cls().key: cls for cls in rank_based_metric_resolver}
+RANKING_METRICS: Mapping[str, Type[RankBasedMetric]] = {cls().key: cls for cls in rank_based_metric_resolver}
 
 
 K = TypeVar("K")

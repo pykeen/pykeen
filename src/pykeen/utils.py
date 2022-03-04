@@ -12,6 +12,7 @@ import operator
 import os
 import pathlib
 import random
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
@@ -1320,6 +1321,15 @@ def create_relation_to_entity_set_mapping(
         heads[r].add(h)
         tails[r].add(t)
     return heads, tails
+
+
+camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def camel_to_snake(name: str) -> str:
+    """Convert camel-case to snake case."""
+    # cf. https://stackoverflow.com/a/1176023
+    return camel_to_snake_pattern.sub("_", name).lower()
 
 
 if __name__ == "__main__":
