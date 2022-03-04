@@ -18,6 +18,7 @@ from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .lookup import MetricKey
 from .ranks import Ranks
 from ..metrics.ranking import RankBasedMetric, rank_based_metric_resolver
+from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     LABEL_HEAD,
@@ -39,7 +40,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-RANKING_METRICS: Mapping[str, Type[RankBasedMetric]] = {cls().key: cls for cls in rank_based_metric_resolver}
+RANKING_METRICS: Mapping[str, Type[Metric]] = {cls().key: cls for cls in rank_based_metric_resolver}
 
 K = TypeVar("K")
 

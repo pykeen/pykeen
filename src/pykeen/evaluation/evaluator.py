@@ -17,7 +17,8 @@ import torch
 from tqdm.autonotebook import tqdm
 
 from ..constants import TARGET_TO_INDEX
-from ..metrics.utils import Metric, MetricAnnotation
+from ..metrics.classification import MetricAnnotation
+from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations

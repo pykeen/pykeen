@@ -9,7 +9,8 @@ from class_resolver import ClassResolver
 from .classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from .evaluator import Evaluator, MetricResults, evaluate
 from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
-from ..metrics.utils import MetricAnnotation, ValueRange
+from ..metrics.classification import MetricAnnotation
+from ..metrics.utils import ValueRange
 
 __all__ = [
     "evaluate",
@@ -22,7 +23,6 @@ __all__ = [
     "evaluator_resolver",
     "metric_resolver",
     "get_metric_list",
-    "MetricAnnotation",
     "ValueRange",
 ]
 
