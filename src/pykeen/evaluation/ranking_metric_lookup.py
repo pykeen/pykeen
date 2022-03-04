@@ -7,7 +7,7 @@ import re
 from typing import Any, Mapping, NamedTuple, Optional, Tuple, Union, cast
 
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
-from ..typing import ExtendedTarget, RANK_REALISTIC, RANK_TYPES, RANK_TYPE_SYNONYMS, RankType, SIDES, SIDE_BOTH
+from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedTarget, RankType
 
 __all__ = [
     "MetricKey",
