@@ -770,8 +770,7 @@ class TokenizationRepresentation(Representation):
         token_representation = representation_resolver.make(
             token_representation,
             token_representation_kwargs,
-            # TODO: Embedding uses a different name
-            num_embeddings=self.vocabulary_size,
+            max_id=self.vocabulary_size,
         )
         super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
 
