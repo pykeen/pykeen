@@ -737,6 +737,7 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
             side: [numpy.full(shape=(self.num_triples,), fill_value=self.num_entities)]
             for side in (LABEL_HEAD, LABEL_TAIL)
         }
+        # TODO: problem in generating ranks!
         evaluator.ranks = {
             (side, rank_type): [generator.random(size=(self.num_triples,))]
             for side, rank_type in itertools.product((LABEL_HEAD, LABEL_TAIL), RANK_TYPES)
