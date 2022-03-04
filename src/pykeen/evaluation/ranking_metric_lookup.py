@@ -7,7 +7,7 @@ import re
 from typing import Any, Mapping, NamedTuple, Optional, Tuple, Union, cast
 
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
-from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedTarget, RankType
+from ..typing import ExtendedTarget, RANK_REALISTIC, RANK_TYPES, RANK_TYPE_SYNONYMS, RankType, SIDES, SIDE_BOTH
 
 __all__ = [
     "MetricKey",
@@ -109,5 +109,15 @@ def normalize_flattened_metric_results(result: Mapping[str, Any]) -> Mapping[str
     """
     # normalize keys
     # TODO: this can only normalize rank-based metrics!
-    result = {MetricKey.normalize(k): v for k, v in flatten_dictionary(result).items()}
+    # TODO: find a better way to handle this
+    flat_result = flatten_dictionary(result)
+    result = {}
+    for key, value in flat_result.items():
+        try:
+            key = MetricKey.normalize(key)
+        except ValueError as error:
+            key = MetricKey.normalize(
+                key.replace("nondeterministic", "").replace("unknown", "").strip(".").replace("..", ".")
+            )
+        result[key] = value
     return result
