@@ -205,14 +205,12 @@ class Embedding(Representation):
 
     >>> from pykeen.datasets import Nations
     >>> dataset = Nations()
-    >>> from pykeen.nn.representation import EmbeddingSpecification
-    >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
     >>> from pykeen.models import ERModel
     >>> model = ERModel(
     ...     triples_factory=dataset.training,
     ...     interaction='distmult',
-    ...     entity_representations=spec,
-    ...     relation_representations=spec,
+    ...     entity_representation_kwargs=dict(embedding_dim=3, dropout=0.1),
+    ...     relation_representation_kwargs=dict(embedding_dim=3, dropout=0.1),
     ... )
     >>> import torch
     >>> batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
