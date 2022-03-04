@@ -2,6 +2,7 @@
 
 """Mocks for tests."""
 
+import random
 from typing import Iterable, Optional, Tuple
 
 import torch
@@ -36,9 +37,11 @@ class MockEvaluator(Evaluator):
         key: Optional[Tuple[str, ExtendedTarget, RankType]] = None,
         values: Optional[Iterable[float]] = None,
         automatic_memory_optimization: bool = True,
+        seed: Optional[int] = None,
     ) -> None:
         super().__init__(automatic_memory_optimization=automatic_memory_optimization)
         self.key = key
+        self.random_state = random.Random(seed)
         if values is None:
             self.values = self.values_iter = None
         else:
@@ -56,7 +59,7 @@ class MockEvaluator(Evaluator):
         pass
 
     def finalize(self) -> MetricResults:  # noqa: D102
-        result = RankBasedMetricResults.create_random()
+        result = RankBasedMetricResults.create_random(self.random_state)
         if self.key:
             assert self.values_iter is not None
             if self.key not in result.data:
