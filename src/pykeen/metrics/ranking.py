@@ -267,8 +267,7 @@ class AdjustedInverseHarmonicMeanRank(InverseHarmonicMeanRank):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        e = self.expected_value(num_candidates=num_candidates)
-        raise NotImplementedError
+        return super().__call__(ranks) / self.expected_value(num_candidates=num_candidates)
 
 
 @parse_docdata
@@ -428,12 +427,32 @@ class AdjustedHitsAtK(HitsAtK):
 
     ---
     link: ...
-    description: The re-indexed adjusted hits at K
+    description: The adjusted hits at K
     """
 
     name = "Adjusted Hits at K"
     value_range = ValueRange(lower=-1, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms = ("ahk",)
+    increasing = True
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return super().__call__(ranks) / self.expected_value(num_candidates=num_candidates)
+
+
+@parse_docdata
+class AdjustedHitsAtKIndex(HitsAtK):
+    """The adjusted Hits at K index ($AH_kI$).
+
+    ---
+    link: ...
+    description: The re-indexed adjusted hits at K
+    """
+
+    name = "Adjusted Hits at K Index"
+    value_range = ValueRange(lower=-1, lower_inclusive=False, upper=1, upper_inclusive=True)
+    synonyms = ("ahki",)
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
