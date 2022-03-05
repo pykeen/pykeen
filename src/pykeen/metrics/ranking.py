@@ -115,9 +115,24 @@ class ArithmeticMeanRank(RankBasedMetric):
             the number of candidates for each individual rank computation
 
         :return:
-            the expected mean rank
+            the expected value of the mean rank
         """
         return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)).item())
+
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        """Calculate the variance under random ordering
+
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+
+        :return:
+            the variance of the mean rank
+        """
+        return np.square(np.mean(np.asanyarray(num_candidates)).item()) / 12.0
 
 
 @parse_docdata
