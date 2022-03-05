@@ -10,7 +10,6 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...moves import irfft, rfft
 from ...nn.init import xavier_uniform_
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
@@ -73,15 +72,15 @@ class HolE(EntityRelationEmbeddingModel):
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs or self.entity_constrainer_default_kwargs,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,

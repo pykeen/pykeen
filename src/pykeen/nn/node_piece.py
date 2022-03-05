@@ -14,12 +14,12 @@ import torch
 import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
-from .representation import EmbeddingSpecification, Representation
+from .representation import Representation
 from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import format_relative_comparison, upgrade_to_sequence
+from ..utils import broadcast_upgrade_to_sequences, format_relative_comparison
 
 __all__ = [
     "AnchorSelection",
@@ -760,7 +760,7 @@ class TokenizationRepresentation(Representation):
         self.vocabulary_size = (
             token_representation.max_id
             if isinstance(token_representation, Representation)
-            else assignment.max().item() + 1
+            else assignment.max().item() + 2  # exclusive (+1) and including padding (+1)
         )
 
         assignment[padding] = self.vocabulary_size - 1  # = assignment.max().item() + 1
@@ -770,8 +770,7 @@ class TokenizationRepresentation(Representation):
         token_representation = representation_resolver.make(
             token_representation,
             token_representation_kwargs,
-            # TODO: Embedding uses a different name
-            num_embeddings=self.vocabulary_size,
+            max_id=self.vocabulary_size,
         )
         super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
 
@@ -796,10 +795,11 @@ class TokenizationRepresentation(Representation):
         cls,
         tokenizer: Tokenizer,
         num_tokens: int,
-        token_representation: Union[EmbeddingSpecification, Representation],
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
+        token_representation: HintOrType[Representation] = None,
+        token_representation_kwargs: OptionalKwargs = None,
     ) -> "TokenizationRepresentation":
         """
         Create a tokenization from applying a tokenizer.
@@ -824,10 +824,11 @@ class TokenizationRepresentation(Representation):
             num_entities=num_entities,
             num_relations=num_relations,
         )
-        # create token representations if necessary
-        if isinstance(token_representation, EmbeddingSpecification):
-            token_representation = token_representation.make(num_embeddings=vocabulary_size)
-        return TokenizationRepresentation(assignment=assignment, token_representation=token_representation)
+        return TokenizationRepresentation(
+            assignment=assignment,
+            token_representation=token_representation,
+            token_representation_kwargs=token_representation_kwargs,
+        )
 
     def extra_repr(self) -> str:  # noqa: D102
         return "\n".join(
@@ -866,17 +867,19 @@ class NodePieceRepresentation(Representation):
     """
 
     #: the token representations
-    tokenizations: Sequence[TokenizationRepresentation]
+    token_representations: Sequence[TokenizationRepresentation]
 
     def __init__(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representations: OneOrSequence[Union[EmbeddingSpecification, Representation]],
+        token_representations: OneOrSequence[HintOrType[Representation]] = None,
+        token_representation_kwargs: OneOrSequence[OptionalKwargs] = None,
         tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
         tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
+        max_id: Optional[int] = None,
         shape: Optional[Sequence[int]] = None,
     ):
         """
@@ -904,43 +907,51 @@ class NodePieceRepresentation(Representation):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         """
+        if max_id:
+            assert max_id == triples_factory.num_entities
+
         # normalize triples
         mapped_triples = triples_factory.mapped_triples
         if triples_factory.create_inverse_triples:
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
+        token_representations, token_representation_kwargs, num_tokens = broadcast_upgrade_to_sequences(
+            token_representations, token_representation_kwargs, num_tokens
+        )
+
         # tokenize
-        tokenizations = [
+        token_representations = [
             TokenizationRepresentation.from_tokenizer(
                 tokenizer=tokenizer_inst,
                 num_tokens=num_tokens_,
                 token_representation=token_representation,
+                token_representation_kwargs=token_representation_kwargs,
                 mapped_triples=mapped_triples,
                 num_entities=triples_factory.num_entities,
                 num_relations=triples_factory.real_num_relations,
             )
-            for tokenizer_inst, token_representation, num_tokens_ in zip(
+            for tokenizer_inst, token_representation, token_representation_kwargs, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
-                upgrade_to_sequence(token_representations),
-                upgrade_to_sequence(num_tokens),
+                token_representations,
+                token_representation_kwargs,
+                num_tokens,
             )
         ]
 
         # determine shape
-        shapes = {t.vocabulary.shape for t in tokenizations}
-        if len(shapes) != 1:
-            raise ValueError(f"Inconsistent token shapes: {shapes}")
-        shape = list(shapes)[0]
+        if shape is None:
+            shapes = {t.vocabulary.shape for t in token_representations}
+            if len(shapes) != 1:
+                raise ValueError(f"Inconsistent token shapes: {shapes}")
+            shape = list(shapes)[0]
 
         # super init; has to happen *before* any parameter or buffer is assigned
         super().__init__(max_id=triples_factory.num_entities, shape=shape)
 
         # assign module
-        self.tokenizations = torch.nn.ModuleList(tokenizations)
+        self.token_representations = torch.nn.ModuleList(token_representations)
 
         # Assign default aggregation
         self.aggregation = resolve_aggregation(aggregation=aggregation)
@@ -956,7 +967,7 @@ class NodePieceRepresentation(Representation):
     ) -> torch.FloatTensor:  # noqa: D102
         return self.aggregation(
             torch.cat(
-                [tokenization(indices=indices) for tokenization in self.tokenizations],
+                [tokenization(indices=indices) for tokenization in self.token_representations],
                 dim=self.aggregation_index,
             ),
             self.aggregation_index,

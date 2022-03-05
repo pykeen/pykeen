@@ -7,7 +7,6 @@ from typing import Any, ClassVar, Mapping, Optional, Sequence, Tuple
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import AutoSFInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Sign
 
 __all__ = [
@@ -63,24 +62,24 @@ class AutoSF(ERModel):
         :param coefficients:
             the coefficients determining the structure. The coefficients describe which head/relation/tail
             component get combined with each other. While in theory, we can have up to `num_components**3`
-            unique triples, usually, a smaller number is preferrable to have some sparsity.
-        :param embedding_kwargs: keyword arguments passed to :class:`pykeen.nn.representation.EmbeddingSpecification`.
+            unique triples, usually, a smaller number is preferable to have some sparsity.
+        :param embedding_kwargs: keyword arguments passed to the entity representation
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         embedding_kwargs = embedding_kwargs or {}
         super().__init__(
             interaction=AutoSFInteraction,
             interaction_kwargs=dict(coefficients=coefficients),
-            entity_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representations_kwargs=[
+                dict(
+                    shape=embedding_dim,
                     **embedding_kwargs,
                 )
                 for _ in range(num_components)
             ],
-            relation_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            relation_representations_kwargs=[
+                dict(
+                    shape=embedding_dim,
                     **embedding_kwargs,
                 )
                 for _ in range(num_components)

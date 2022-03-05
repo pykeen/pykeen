@@ -11,7 +11,7 @@ from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.representation import Embedding, EmbeddingSpecification
+from ...nn import representation_resolver
 from ...regularizers import Regularizer, TransHRegularizer
 from ...typing import Hint, Initializer
 
@@ -87,12 +87,12 @@ class TransH(EntityRelationEmbeddingModel):
             Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
@@ -101,10 +101,10 @@ class TransH(EntityRelationEmbeddingModel):
         self.scoring_fct_norm = scoring_fct_norm
 
         # embeddings
-        self.normal_vector_embeddings = Embedding.init_with_device(
-            num_embeddings=self.num_relations,
-            embedding_dim=embedding_dim,
-            device=self.device,
+        self.normal_vector_embeddings = representation_resolver.make(
+            query=None,
+            max_id=self.num_relations,
+            shape=embedding_dim,
             # Normalise the normal vectors by their l2 norms
             constrainer=functional.normalize,
         )

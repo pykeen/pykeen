@@ -12,7 +12,6 @@ from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDD
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.combinations import ComplExLiteralCombination
 from ...nn.modules import ComplExInteraction, LiteralInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -61,16 +60,16 @@ class ComplExLiteral(LiteralModel):
                     input_dropout=input_dropout,
                 ),
             ),
-            entity_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representations_kwargs=[
+                dict(
+                    shape=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                     dtype=torch.complex64,
                 ),
             ],
-            relation_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            relation_representations_kwargs=[
+                dict(
+                    shape=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                     dtype=torch.complex64,
                 ),

@@ -10,7 +10,6 @@ from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
 from ...nn.init import init_phases, xavier_uniform_
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import complex_normalize
 
@@ -65,13 +64,13 @@ class RotatE(EntityRelationEmbeddingModel):
         **kwargs,
     ) -> None:
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 dtype=torch.cfloat,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
                 dtype=torch.cfloat,

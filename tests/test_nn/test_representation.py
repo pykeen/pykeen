@@ -4,7 +4,6 @@
 
 import unittest
 from typing import Any, ClassVar, MutableMapping, Tuple
-from unittest.mock import Mock
 
 import numpy
 import torch
@@ -56,7 +55,7 @@ class EmbeddingTests(cases.RepresentationTestCase):
 class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
     """Tests for low-rank embedding representations."""
 
-    cls = pykeen.nn.representation.LowRankEmbeddingRepresentation
+    cls = pykeen.nn.representation.LowRankRepresentation
     kwargs = dict(
         max_id=10,
         shape=(3, 7),
@@ -88,7 +87,7 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
     num_triples: ClassVar[int] = 31
     num_bases: ClassVar[int] = 2
     kwargs = dict(
-        embedding_specification=pykeen.nn.representation.EmbeddingSpecification(embedding_dim=num_entities),
+        entity_representations_kwargs=dict(embedding_dim=num_entities),
     )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -119,7 +118,8 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
                 num_triples=self.num_triples,
                 create_inverse_triples=True,
             ),
-            embedding_specification=pykeen.nn.representation.EmbeddingSpecification(embedding_dim=self.dim),
+            entity_representations_kwargs=dict(embedding_dim=self.dim),
+            relation_representations_kwargs=dict(embedding_dim=self.dim),
             dims=self.dim,
         )
         return kwargs
@@ -129,7 +129,7 @@ class NodePieceRelationTests(cases.NodePieceTestCase):
     """Tests for node piece representation."""
 
     kwargs = dict(
-        token_representations=pykeen.nn.representation.EmbeddingSpecification(
+        token_representation_kwargs=dict(
             shape=(3,),
         )
     )
@@ -139,7 +139,7 @@ class NodePieceAnchorTests(cases.NodePieceTestCase):
     """Tests for node piece representation with anchor nodes."""
 
     kwargs = dict(
-        token_representations=pykeen.nn.representation.EmbeddingSpecification(
+        token_representation_kwargs=dict(
             shape=(3,),
         ),
         tokenizers="anchor",
@@ -153,11 +153,11 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
     """Tests for node piece representation with mixed tokenizers."""
 
     kwargs = dict(
-        token_representations=(
-            pykeen.nn.representation.EmbeddingSpecification(
+        token_representation_kwargs=(
+            dict(
                 shape=(3,),
             ),
-            pykeen.nn.representation.EmbeddingSpecification(
+            dict(
                 shape=(3,),
             ),
         ),
@@ -170,6 +170,10 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
             ),
         ),
     )
+
+    def test_token_representations(self):
+        """Verify that the number of token representations is correct."""
+        assert len(self.instance.token_representations) == 2
 
 
 class TokenizationTests(cases.RepresentationTestCase):
@@ -223,69 +227,3 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
     base_cls = pykeen.nn.representation.Representation
     base_test = cases.RepresentationTestCase
     skip_cls = {mocks.CustomRepresentation}
-
-
-class EmbeddingSpecificationTests(unittest.TestCase):
-    """Tests for EmbeddingSpecification."""
-
-    #: The number of embeddings
-    num: ClassVar[int] = 3
-
-    def test_make(self):
-        """Test make."""
-        initializer = Mock()
-        normalizer = Mock()
-        constrainer = Mock()
-        regularizer = Mock()
-        for embedding_dim, shape in [
-            (None, (3,)),
-            (None, (3, 5)),
-            (3, None),
-        ]:
-            spec = pykeen.nn.representation.EmbeddingSpecification(
-                embedding_dim=embedding_dim,
-                shape=shape,
-                initializer=initializer,
-                normalizer=normalizer,
-                constrainer=constrainer,
-                regularizer=regularizer,
-            )
-            emb = spec.make(num_embeddings=self.num)
-
-            # check shape
-            self.assertEqual(emb.embedding_dim, (embedding_dim or int(numpy.prod(shape))))
-            self.assertEqual(emb.shape, (shape or (embedding_dim,)))
-            self.assertEqual(emb.num_embeddings, self.num)
-
-            # check attributes
-            self.assertIs(emb.initializer, initializer)
-            self.assertIs(emb.normalizer, normalizer)
-            self.assertIs(emb.constrainer, constrainer)
-            self.assertIs(emb.regularizer, regularizer)
-
-    def test_make_complex(self):
-        """Test making a complex embedding."""
-        s = pykeen.nn.representation.EmbeddingSpecification(
-            shape=(5, 5),
-            dtype=torch.cfloat,
-        )
-        e = s.make(num_embeddings=100)
-        self.assertEqual((5, 10), e.shape)
-
-    def test_make_errors(self):
-        """Test errors on making with an invalid key."""
-        with self.assertRaises(KeyError):
-            pykeen.nn.representation.EmbeddingSpecification(
-                shape=(1, 1),
-                initializer="garbage",
-            ).make(num_embeddings=1)
-        with self.assertRaises(KeyError):
-            pykeen.nn.representation.EmbeddingSpecification(
-                shape=(1, 1),
-                constrainer="garbage",
-            ).make(num_embeddings=1)
-        with self.assertRaises(KeyError):
-            pykeen.nn.representation.EmbeddingSpecification(
-                shape=(1, 1),
-                normalizer="garbage",
-            ).make(num_embeddings=1)
