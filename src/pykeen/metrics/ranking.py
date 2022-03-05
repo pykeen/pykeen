@@ -403,8 +403,8 @@ class AdjustedHitsAtK(HitsAtK):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        e = self.expected_value(num_candidates=num_candidates) - 1.0
-        return (super().__call__(ranks) - e) / (1 - e)
+        ev = self.expected_value(num_candidates=num_candidates)
+        return (super().__call__(ranks) - ev) / (1 - ev)
 
 
 @parse_docdata
