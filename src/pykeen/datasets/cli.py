@@ -21,7 +21,7 @@ from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..evaluation.evaluator import get_candidate_set_size
 from ..metrics.ranking import ArithmeticMeanRank, HitsAtK, InverseHarmonicMeanRank
-from ..typing import LABEL_HEAD, LABEL_TAIL, SIDE_BOTH, ExtendedTarget
+from ..typing import LABEL_HEAD, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
 
 
 @click.group()
@@ -263,8 +263,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, s
                 10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
             this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
-            _xxxx = {LABEL_HEAD: [LABEL_HEAD], LABEL_TAIL: [LABEL_TAIL], SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL]}
-            for label, sides in _xxxx.items():
+            for label, sides in SIDE_MAPPING.items():
                 num_candidates = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
                     ArithmeticMeanRank()

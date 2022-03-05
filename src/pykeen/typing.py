@@ -145,3 +145,4 @@ TargetBoth = Literal["both"]
 SIDE_BOTH: TargetBoth = "both"
 ExtendedTarget = Union[Target, TargetBoth]
 SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
+SIDE_MAPPING = {LABEL_HEAD: [LABEL_HEAD], LABEL_TAIL: [LABEL_TAIL], SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL]}
