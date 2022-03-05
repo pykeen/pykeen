@@ -387,6 +387,27 @@ class HitsAtK(RankBasedMetric):
 
 
 @parse_docdata
+class AdjustedHitsAtK(HitsAtK):
+    """The adjusted Hits at K ($AH_k$).
+
+    ---
+    link: ...
+    description: The re-indexed adjusted hits at K
+    """
+
+    name = "Adjusted Hits at K"
+    value_range = ValueRange(lower=-1, lower_inclusive=False, upper=1, upper_inclusive=True)
+    synonyms = ("ahk",)
+    increasing = True
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        e = self.expected_value(num_candidates=num_candidates) - 1.0
+        return (super().__call__(ranks) - e) / (1 - e)
+
+
+@parse_docdata
 class AdjustedArithmeticMeanRank(ArithmeticMeanRank):
     """The adjusted arithmetic mean rank (AMR).
 
