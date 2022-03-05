@@ -163,6 +163,7 @@ def _prepare_representation_module_list(
     :raises ValueError:
         if the maximum ID or shapes do not match
     """
+    # TODO: allow max_id being present in representation_kwargs; if it matches max_id
     # TODO: we could infer some shapes from the given interaction shape information
     rs = representation_resolver.make_many(representations, kwargs=representation_kwargs, max_id=max_id)
 
