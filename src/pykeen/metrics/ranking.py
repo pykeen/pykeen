@@ -209,6 +209,31 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(stats.hmean(ranks)).item()
 
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        r"""
+        Calculate the expected mean rank under random ordering.
+
+        .. math ::
+
+            \mathbb{E}\left[\textrm{MRR}\right]
+            = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
+            = \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right]
+            = \mathbb{E}\left[r_i^{-1}\right]
+            \stackrel{*}{=} \frac{\ln n}{n - 1}
+
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+
+        :return:
+            the expected mean rank
+        """
+        n = np.mean(np.asanyarray(num_candidates)).item()
+        return np.log(n) / (n - 1)
+
 
 @parse_docdata
 class MedianRank(RankBasedMetric):
