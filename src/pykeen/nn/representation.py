@@ -377,7 +377,7 @@ class LowRankRepresentation(Representation):
         self,
         *,
         max_id: int,
-        shape: Sequence[int],
+        shape: OneOrSequence[int],
         num_bases: int = 3,
         weight_initializer: Initializer = uniform_norm_p1_,
         **kwargs,
