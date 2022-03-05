@@ -109,7 +109,7 @@ class TuckER(EntityRelationEmbeddingModel):
                 initializer=entity_initializer,
             ),
             relation_representations_kwargs=dict(
-                shape=(relation_dim,) if relation_dim else (embedding_dim,),
+                shape=relation_dim or embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
