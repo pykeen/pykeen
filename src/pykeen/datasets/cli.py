@@ -22,9 +22,11 @@ from ..datasets.base import Dataset
 from ..evaluation.evaluator import get_candidate_set_size
 from ..metrics.ranking import (
     ArithmeticMeanRank,
+    GeometricMeanRank,
     HarmonicMeanRank,
     HitsAtK,
     InverseArithmeticMeanRank,
+    InverseGeometricMeanRank,
     InverseHarmonicMeanRank,
 )
 from ..typing import LABEL_HEAD, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
@@ -280,6 +282,8 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, s
                 InverseArithmeticMeanRank(),  # needs simulation
                 HarmonicMeanRank(),  # needs simulation
                 InverseHarmonicMeanRank(),
+                GeometricMeanRank(),  # needs simulation
+                InverseGeometricMeanRank(),  # needs simulation
                 *(HitsAtK(k) for k in ks),
             ]
             this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
