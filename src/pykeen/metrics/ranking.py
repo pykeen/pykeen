@@ -236,6 +236,27 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
 
 @parse_docdata
+class AdjustedInverseHarmonicMeanRank(InverseHarmonicMeanRank):
+    """The adjusted inverse harmonic mean rank (AIHMR).
+
+    ---
+    link: ...
+    description: The adjusted MRR
+    """
+
+    name = "Adjusted Mean Reciprocal Rank (AMRR)"
+    value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
+    synonyms = ("adjusted_mean_reciprocal_rank", "amrr", "aihmr")
+    increasing = True
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        e = self.expected_value(num_candidates=num_candidates)
+        raise NotImplementedError
+
+
+@parse_docdata
 class MedianRank(RankBasedMetric):
     """The median rank.
 
