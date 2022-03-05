@@ -20,7 +20,13 @@ from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..evaluation.evaluator import get_candidate_set_size
-from ..metrics.ranking import ArithmeticMeanRank, HitsAtK, InverseHarmonicMeanRank
+from ..metrics.ranking import (
+    ArithmeticMeanRank,
+    HarmonicMeanRank,
+    HitsAtK,
+    InverseArithmeticMeanRank,
+    InverseHarmonicMeanRank,
+)
 from ..typing import LABEL_HEAD, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
 
 
@@ -223,7 +229,14 @@ def verify(dataset: str):
 @verbose_option
 @click.option("-d", "--dataset", help="Regex for filtering datasets by name")
 @click.option("-m", "--max-triples", type=int, default=None)
-@click.option("-s", "--samples", type=int, default=1000)
+@click.option(
+    "-s",
+    "--samples",
+    type=int,
+    default=1000,
+    show_default=True,
+    help="Number of samples for estimating expected values",
+)
 @log_level_option(default=logging.ERROR)
 def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, samples: int):
     """Compute expected metrics for all datasets (matching the given pattern)."""
@@ -264,8 +277,10 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, s
             )
             metrics = [
                 ArithmeticMeanRank(),
+                InverseArithmeticMeanRank(),  # needs simulation
+                HarmonicMeanRank(),  # needs simulation
                 InverseHarmonicMeanRank(),
-                *(HitsAtK(k) for k in ks)
+                *(HitsAtK(k) for k in ks),
             ]
             this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
             for label, sides in SIDE_MAPPING.items():
