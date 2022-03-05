@@ -284,7 +284,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, s
             ]
             this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
             for label, sides in SIDE_MAPPING.items():
-                num_candidates = df[[f"{side}_candidates" for side in sides]]
+                num_candidates = df[[f"{side}_candidates" for side in sides]].values.ravel()
                 this_metrics[label] = {
                     metric.key: metric.expected_value(
                         num_candidates=num_candidates,
