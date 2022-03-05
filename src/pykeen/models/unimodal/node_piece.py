@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class NodePiece(ERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.node_piece.NodePieceRepresentation` instead of a typical
+    This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical
     :class:`pykeen.nn.representation.Embedding` to more efficiently store representations.
     ---
     citation:
@@ -71,7 +71,7 @@ class NodePiece(ERModel):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.node_piece.NodePieceRepresentation`.
+            :class:`pykeen.nn.NodePieceRepresentation`.
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
         :param tokenizers_kwargs:

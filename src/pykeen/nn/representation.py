@@ -639,7 +639,7 @@ class CompGCNLayer(nn.Module):
         return x_e, x_r
 
 
-def _build_representation(
+def build_representation(
     max_id: int,
     representation: HintOrType[Representation],
     representation_kwargs: OptionalKwargs,
@@ -700,12 +700,12 @@ class CombinedCompGCNRepresentations(nn.Module):
         super().__init__()
         # TODO: Check
         assert triples_factory.create_inverse_triples
-        self.entity_representations = _build_representation(
+        self.entity_representations = build_representation(
             max_id=triples_factory.num_entities,
             representation=entity_representations,
             representation_kwargs=entity_representation_kwargs,
         )
-        self.relation_representations = _build_representation(
+        self.relation_representations = build_representation(
             max_id=2 * triples_factory.real_num_relations,
             representation=relation_representations,
             representation_kwargs=relation_representation_kwargs,

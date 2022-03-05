@@ -70,7 +70,7 @@ class InductiveNodePiece(ERModel):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.node_piece.NodePieceRepresentation`.
+            :class:`pykeen.nn.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param relation_representation_kwargs:

@@ -20,7 +20,7 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn.representation import Representation, _build_representation
+from ..nn.representation import Representation, build_representation
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
@@ -771,12 +771,12 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.entity_embeddings = _build_representation(
+        self.entity_embeddings = build_representation(
             max_id=triples_factory.num_entities,
             representation=entity_representations,
             representation_kwargs=entity_representation_kwargs,
         )
-        self.relation_embeddings = _build_representation(
+        self.relation_embeddings = build_representation(
             max_id=triples_factory.num_relations,
             representation=relation_representations,
             representation_kwargs=relation_representation_kwargs,
