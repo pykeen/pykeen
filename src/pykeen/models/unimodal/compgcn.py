@@ -64,8 +64,8 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
             Additional keyword based arguments passed to :class:`pykeen.models.ERModel`.
         """
         encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
-        encoder_kwargs.setdefault("entity_representation_kwargs", dict(embedding_dim=embedding_dim))
-        encoder_kwargs.setdefault("relation_representation_kwargs", encoder_kwargs["entity_representation_kwargs"])
+        encoder_kwargs.setdefault("entity_representations_kwargs", dict(embedding_dim=embedding_dim))
+        encoder_kwargs.setdefault("relation_representations_kwargs", encoder_kwargs["entity_representations_kwargs"])
 
         # combined representation
         entity_representations, relation_representations = CombinedCompGCNRepresentations(

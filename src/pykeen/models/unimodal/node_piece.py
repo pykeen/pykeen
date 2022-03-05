@@ -167,7 +167,7 @@ class NodePiece(ERModel):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=NodePieceRepresentation,
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 triples_factory=triples_factory,
                 token_representations=token_representations,
                 token_representation_kwargs=token_representation_kwargs,
@@ -178,7 +178,7 @@ class NodePiece(ERModel):
                 num_tokens=num_tokens,
             ),
             relation_representations=SubsetRepresentation,
-            relation_representation_kwargs=dict(  # hide padding relation
+            relation_representations_kwargs=dict(  # hide padding relation
                 # max_id=triples_factory.num_relations,  # will get added by ERModel
                 base=relation_representations,
             ),

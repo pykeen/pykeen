@@ -88,14 +88,14 @@ class PairRE(ERModel):
         super().__init__(
             interaction=PairREInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
                 initializer_kwargs=entity_initializer_kwargs,
                 normalizer=entity_normalizer,
                 normalizer_kwargs=entity_normalizer_kwargs,
             ),
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 dict(
                     shape=embedding_dim,
                     initializer=relation_initializer,

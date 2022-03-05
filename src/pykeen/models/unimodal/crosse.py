@@ -69,13 +69,13 @@ class CrossE(ERModel[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor])
                 combination_dropout=combination_dropout,
                 embedding_dim=embedding_dim,
             ),
-            entity_representation_kwargs=[
+            entity_representations_kwargs=[
                 dict(
                     shape=embedding_dim,
                     initializer=entity_initializer,
                 ),
             ],
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 # Regular relation embeddings
                 dict(
                     shape=embedding_dim,

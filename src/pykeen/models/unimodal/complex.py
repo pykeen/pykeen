@@ -99,7 +99,7 @@ class ComplEx(ERModel):
         regularizer_kwargs = regularizer_kwargs or ComplEx.regularizer_default_kwargs
         super().__init__(
             interaction=ComplExInteraction,
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
                 # use torch's native complex data type
@@ -107,7 +107,7 @@ class ComplEx(ERModel):
                 regularizer=regularizer,
                 regularizer_kwargs=regularizer_kwargs,
             ),
-            relation_representation_kwargs=dict(
+            relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
                 # use torch's native complex data type

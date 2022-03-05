@@ -83,7 +83,7 @@ class SimplE(ERModel):
         super().__init__(
             interaction=SimplEInteraction,
             interaction_kwargs=dict(clamp_score=clamp_score),
-            entity_representation_kwargs=[
+            entity_representations_kwargs=[
                 # (head) entity
                 dict(
                     shape=embedding_dim,
@@ -97,7 +97,7 @@ class SimplE(ERModel):
                     regularizer=regularizer,
                 ),
             ],
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 # relations
                 dict(
                     shape=embedding_dim,

@@ -207,8 +207,8 @@ class Embedding(Representation):
     >>> model = ERModel(
     ...     triples_factory=dataset.training,
     ...     interaction='distmult',
-    ...     entity_representation_kwargs=dict(embedding_dim=3, dropout=0.1),
-    ...     relation_representation_kwargs=dict(embedding_dim=3, dropout=0.1),
+    ...     entity_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
+    ...     relation_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
     ... )
     >>> import torch
     >>> batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
@@ -672,9 +672,9 @@ class CombinedCompGCNRepresentations(nn.Module):
         *,
         triples_factory: CoreTriplesFactory,
         entity_representations: HintOrType[Representation] = None,
-        entity_representation_kwargs: OptionalKwargs = None,
+        entity_representations_kwargs: OptionalKwargs = None,
         relation_representations: HintOrType[Representation] = None,
-        relation_representation_kwargs: OptionalKwargs = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         num_layers: Optional[int] = 1,
         dims: Union[None, int, Sequence[int]] = None,
         layer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -686,7 +686,7 @@ class CombinedCompGCNRepresentations(nn.Module):
             The triples factory containing the training triples.
         :param entity_representations:
             the base entity representations
-        :param entity_representation_kwargs:
+        :param entity_representations_kwargs:
             additional keyword parameters for the base entity representations
         :param num_layers:
             The number of message passing layers to use. If None, will be inferred by len(dims), i.e., requires dims to
@@ -703,12 +703,12 @@ class CombinedCompGCNRepresentations(nn.Module):
         self.entity_representations = build_representation(
             max_id=triples_factory.num_entities,
             representation=entity_representations,
-            representation_kwargs=entity_representation_kwargs,
+            representation_kwargs=entity_representations_kwargs,
         )
         self.relation_representations = build_representation(
             max_id=2 * triples_factory.real_num_relations,
             representation=relation_representations,
-            representation_kwargs=relation_representation_kwargs,
+            representation_kwargs=relation_representations_kwargs,
         )
         input_dim = self.entity_representations.embedding_dim
         assert self.relation_representations.embedding_dim == input_dim

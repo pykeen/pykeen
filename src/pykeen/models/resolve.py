@@ -82,8 +82,8 @@ def make_model(
         Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
     ],
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
-    entity_representation_kwargs: OptionalKwargs = None,
-    relation_representation_kwargs: OptionalKwargs = None,
+    entity_representations_kwargs: OptionalKwargs = None,
+    relation_representations_kwargs: OptionalKwargs = None,
     **kwargs,
 ) -> ERModel:
     """Build a model from an interaction class hint (name or class)."""
@@ -91,8 +91,8 @@ def make_model(
         dimensions=dimensions,
         interaction=interaction,
         interaction_kwargs=interaction_kwargs,
-        entity_representation_kwargs=entity_representation_kwargs,
-        relation_representation_kwargs=relation_representation_kwargs,
+        entity_representations_kwargs=entity_representations_kwargs,
+        relation_representations_kwargs=relation_representations_kwargs,
     )
     return model_cls(**kwargs)
 
@@ -116,8 +116,8 @@ def make_model_cls(
         Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
     ],
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
-    entity_representation_kwargs: OptionalKwargs = None,
-    relation_representation_kwargs: OptionalKwargs = None,
+    entity_representations_kwargs: OptionalKwargs = None,
+    relation_representations_kwargs: OptionalKwargs = None,
 ) -> Type[ERModel]:
     """Build a model class from an interaction class hint (name or class)."""
     if isinstance(interaction, Interaction):
@@ -125,11 +125,11 @@ def make_model_cls(
     else:
         interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
 
-    entity_representation_kwargs, relation_representation_kwargs = _normalize_representation_kwargs(
+    entity_representations_kwargs, relation_representations_kwargs = _normalize_representation_kwargs(
         dimensions=dimensions,
         interaction=interaction_instance.__class__,  # type: ignore
-        entity_representation_kwargs=entity_representation_kwargs,
-        relation_representation_kwargs=relation_representation_kwargs,
+        entity_representations_kwargs=entity_representations_kwargs,
+        relation_representations_kwargs=relation_representations_kwargs,
     )
 
     # TODO pack/unpack dimensions as default kwargs such that they don't actually need to be used
@@ -142,8 +142,8 @@ def make_model_cls(
             """Initialize the model."""
             super().__init__(
                 interaction=interaction_instance,
-                entity_representation_kwargs=entity_representation_kwargs,
-                relation_representation_kwargs=relation_representation_kwargs,
+                entity_representations_kwargs=entity_representations_kwargs,
+                relation_representations_kwargs=relation_representations_kwargs,
                 **kwargs,
             )
 
@@ -155,8 +155,8 @@ def make_model_cls(
 def _normalize_representation_kwargs(
     dimensions: Union[int, Mapping[str, int]],
     interaction: Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
-    entity_representation_kwargs: OptionalKwargs,
-    relation_representation_kwargs: OptionalKwargs,
+    entity_representations_kwargs: OptionalKwargs,
+    relation_representations_kwargs: OptionalKwargs,
 ) -> Tuple[Sequence[OptionalKwargs], Sequence[OptionalKwargs]]:
     # TODO: update to hint + kwargs
     if isinstance(dimensions, int):
@@ -164,19 +164,19 @@ def _normalize_representation_kwargs(
     assert isinstance(dimensions, dict)
     if set(dimensions) < interaction.get_dimensions():
         raise DimensionError(set(dimensions), interaction.get_dimensions())
-    if entity_representation_kwargs is None:
+    if entity_representations_kwargs is None:
         # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
         if interaction.tail_entity_shape is not None:
             raise NotImplementedError
-        entity_representation_kwargs = [
+        entity_representations_kwargs = [
             dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.entity_shape
         ]
-    elif not isinstance(entity_representation_kwargs, Sequence):
-        entity_representation_kwargs = [entity_representation_kwargs]
-    if relation_representation_kwargs is None:
-        relation_representation_kwargs = [
+    elif not isinstance(entity_representations_kwargs, Sequence):
+        entity_representations_kwargs = [entity_representations_kwargs]
+    if relation_representations_kwargs is None:
+        relation_representations_kwargs = [
             dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.relation_shape
         ]
-    elif not isinstance(relation_representation_kwargs, Sequence):
-        relation_representation_kwargs = [relation_representation_kwargs]
-    return entity_representation_kwargs, relation_representation_kwargs
+    elif not isinstance(relation_representations_kwargs, Sequence):
+        relation_representations_kwargs = [relation_representations_kwargs]
+    return entity_representations_kwargs, relation_representations_kwargs

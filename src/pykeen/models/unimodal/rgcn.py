@@ -106,9 +106,9 @@ class RGCN(
     ):
         super().__init__(
             entity_representations=RGCNRepresentation,
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 triples_factory=triples_factory,
-                entity_representation_kwargs=dict(
+                entity_representations_kwargs=dict(
                     shape=embedding_dim,
                     initializer=base_entity_initializer,
                     initializer_kwargs=base_entity_initializer_kwargs,
@@ -127,7 +127,7 @@ class RGCN(
                 regularizer_kwargs=regularizer_kwargs,
             ),
             relation_representations=relation_representations,
-            relation_representation_kwargs=dict(
+            relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,

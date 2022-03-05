@@ -60,7 +60,7 @@ class CP(ERModel):
         """
         super().__init__(
             interaction=CPInteraction,
-            entity_representation_kwargs=[
+            entity_representations_kwargs=[
                 # head representation
                 dict(
                     shape=(rank, embedding_dim),
@@ -78,7 +78,7 @@ class CP(ERModel):
                     normalizer_kwargs=entity_normalizer_kwargs,
                 ),
             ],
-            relation_representation_kwargs=dict(
+            relation_representations_kwargs=dict(
                 shape=(rank, embedding_dim),
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,

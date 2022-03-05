@@ -87,7 +87,7 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
     num_triples: ClassVar[int] = 31
     num_bases: ClassVar[int] = 2
     kwargs = dict(
-        entity_representation_kwargs=dict(embedding_dim=num_entities),
+        entity_representations_kwargs=dict(embedding_dim=num_entities),
     )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -118,8 +118,8 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
                 num_triples=self.num_triples,
                 create_inverse_triples=True,
             ),
-            entity_representation_kwargs=dict(embedding_dim=self.dim),
-            relation_representation_kwargs=dict(embedding_dim=self.dim),
+            entity_representations_kwargs=dict(embedding_dim=self.dim),
+            relation_representations_kwargs=dict(embedding_dim=self.dim),
             dims=self.dim,
         )
         return kwargs

@@ -74,13 +74,13 @@ class SE(ERModel):
                 p=scoring_fct_norm,
                 power_norm=False,
             ),
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs,
             ),
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 dict(
                     shape=(embedding_dim, embedding_dim),
                     initializer=relation_initializer,

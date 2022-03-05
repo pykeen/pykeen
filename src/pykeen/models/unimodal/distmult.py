@@ -89,12 +89,12 @@ class DistMult(EntityRelationEmbeddingModel):
             Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """
         super().__init__(
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
             ),
-            relation_representation_kwargs=dict(
+            relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
             ),

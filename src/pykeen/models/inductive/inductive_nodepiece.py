@@ -55,7 +55,7 @@ class InductiveNodePiece(ERModel):
         inference_factory: CoreTriplesFactory,
         num_tokens: int = 2,
         embedding_dim: int = 64,
-        relation_representation_kwargs: OptionalKwargs = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[OneOrSequence[int]] = None,
@@ -73,7 +73,7 @@ class InductiveNodePiece(ERModel):
             :class:`pykeen.nn.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
-        :param relation_representation_kwargs:
+        :param relation_representations_kwargs:
             the relation representation parameters
         :param interaction:
             the interaction module, or a hint for it.
@@ -116,7 +116,7 @@ class InductiveNodePiece(ERModel):
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
             query=None,
-            pos_kwargs=relation_representation_kwargs,
+            pos_kwargs=relation_representations_kwargs,
             max_id=2 * triples_factory.real_num_relations + 1,
             shape=embedding_dim,
         )
@@ -125,7 +125,7 @@ class InductiveNodePiece(ERModel):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=NodePieceRepresentation,
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 triples_factory=triples_factory,
                 tokenizers=RelationTokenizer,
                 token_representations=relation_representations,

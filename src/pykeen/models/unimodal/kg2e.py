@@ -95,7 +95,7 @@ class KG2E(ERModel):
             interaction_kwargs=dict(
                 similarity=dist_similarity,
             ),
-            entity_representation_kwargs=[
+            entity_representations_kwargs=[
                 # mean
                 dict(
                     shape=embedding_dim,
@@ -111,7 +111,7 @@ class KG2E(ERModel):
                     constrainer_kwargs=dict(min=c_min, max=c_max),
                 ),
             ],
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 # mean
                 dict(
                     shape=embedding_dim,

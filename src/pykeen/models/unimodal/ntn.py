@@ -89,11 +89,11 @@ class NTN(ERModel):
                 activation=non_linearity,
                 activation_kwargs=non_linearity_kwargs,
             ),
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 # w: (k, d, d)
                 dict(shape=(num_slices, embedding_dim, embedding_dim)),
                 # vh: (k, d)

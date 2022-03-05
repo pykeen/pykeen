@@ -98,7 +98,7 @@ class BoxE(ERModel):
                 power_norm=power_norm,
                 tanh_map=tanh_map,
             ),
-            entity_representation_kwargs=[  # Base position
+            entity_representations_kwargs=[  # Base position
                 dict(
                     shape=embedding_dim,
                     initializer=entity_initializer,
@@ -111,7 +111,7 @@ class BoxE(ERModel):
                     initializer_kwargs=entity_initializer_kwargs,
                 ),
             ],
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 # relation position head
                 dict(
                     shape=embedding_dim,

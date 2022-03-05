@@ -76,7 +76,7 @@ class TransD(ERModel):
         super().__init__(
             interaction=TransDInteraction,
             interaction_kwargs=interaction_kwargs,
-            entity_representation_kwargs=[
+            entity_representations_kwargs=[
                 dict(
                     shape=embedding_dim,
                     initializer=entity_initializer,
@@ -88,7 +88,7 @@ class TransD(ERModel):
                     initializer=xavier_normal_,
                 ),
             ],
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 dict(
                     shape=(relation_dim,),
                     initializer=relation_initializer,

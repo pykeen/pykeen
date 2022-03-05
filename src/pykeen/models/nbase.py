@@ -270,9 +270,9 @@ class ERModel(
         ],
         interaction_kwargs: OptionalKwargs = None,
         entity_representations: OneOrManyHintOrType[Representation] = None,
-        entity_representation_kwargs: OneOrManyOptionalKwargs = None,
+        entity_representations_kwargs: OneOrManyOptionalKwargs = None,
         relation_representations: OneOrManyHintOrType[Representation] = None,
-        relation_representation_kwargs: OneOrManyOptionalKwargs = None,
+        relation_representations_kwargs: OneOrManyOptionalKwargs = None,
         skip_checks: bool = False,
         **kwargs,
     ) -> None:
@@ -285,10 +285,10 @@ class ERModel(
             Additional key-word based parameters given to the interaction module's constructor, if not already
             instantiated.
         :param entity_representations: The entity representation or sequence of representations
-        :param entity_representation_kwargs:
+        :param entity_representations_kwargs:
             additional keyword-based parameters for instantiation of entity representations
         :param relation_representations: The relation representation or sequence of representations
-        :param relation_representation_kwargs:
+        :param relation_representations_kwargs:
             additional keyword-based parameters for instantiation of relation representations
         :param skip_checks:
             whether to skip entity representation checks.
@@ -299,7 +299,7 @@ class ERModel(
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
-            representation_kwargs=entity_representation_kwargs,
+            representation_kwargs=entity_representations_kwargs,
             max_id=triples_factory.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
@@ -307,7 +307,7 @@ class ERModel(
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
-            representation_kwargs=relation_representation_kwargs,
+            representation_kwargs=relation_representations_kwargs,
             max_id=triples_factory.num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",

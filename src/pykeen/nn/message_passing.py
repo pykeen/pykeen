@@ -591,7 +591,7 @@ class RGCNRepresentation(Representation):
         max_id: Optional[int] = None,
         shape: Optional[Sequence[int]] = None,
         entity_representations: HintOrType[Representation] = None,
-        entity_representation_kwargs: OptionalKwargs = None,
+        entity_representations_kwargs: OptionalKwargs = None,
         num_layers: int = 2,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
@@ -615,7 +615,7 @@ class RGCNRepresentation(Representation):
             the shape information. If None, will propagate the shape information of the base entity representations.
         :param entity_representations:
             the base entity representations (or a hint for them)
-        :param entity_representation_kwargs:
+        :param entity_representations_kwargs:
             additional keyword-based parameters for the base entity representations
         :param num_layers:
             The number of layers.
@@ -649,7 +649,7 @@ class RGCNRepresentation(Representation):
         base_embeddings = representation_resolver.make(
             entity_representations,
             max_id=triples_factory.num_entities,
-            pos_kwargs=entity_representation_kwargs,
+            pos_kwargs=entity_representations_kwargs,
         )
         super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape)
         self.entity_embeddings = base_embeddings

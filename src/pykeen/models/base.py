@@ -761,9 +761,9 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         *,
         triples_factory: CoreTriplesFactory,
         entity_representations: HintOrType[Representation] = None,
-        entity_representation_kwargs: OptionalKwargs = None,
+        entity_representations_kwargs: OptionalKwargs = None,
         relation_representations: HintOrType[Representation] = None,
-        relation_representation_kwargs: OptionalKwargs = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
@@ -774,12 +774,12 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         self.entity_embeddings = build_representation(
             max_id=triples_factory.num_entities,
             representation=entity_representations,
-            representation_kwargs=entity_representation_kwargs,
+            representation_kwargs=entity_representations_kwargs,
         )
         self.relation_embeddings = build_representation(
             max_id=triples_factory.num_relations,
             representation=relation_representations,
-            representation_kwargs=relation_representation_kwargs,
+            representation_kwargs=relation_representations_kwargs,
         )
 
     @property

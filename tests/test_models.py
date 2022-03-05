@@ -62,10 +62,10 @@ class TestCompGCN(cases.ModelTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         dim = kwargs.pop("embedding_dim")
         kwargs["encoder_kwargs"] = dict(
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 shape=(dim,),
             ),
-            relation_representation_kwargs=dict(
+            relation_representations_kwargs=dict(
                 shape=(dim,),
             ),
         )
@@ -875,8 +875,8 @@ class ERModelTests(cases.ModelTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         shape = (kwargs.pop("embedding_dim"),)
-        kwargs["entity_representation_kwargs"] = dict(shape=shape)
-        kwargs["relation_representation_kwargs"] = dict(shape=shape)
+        kwargs["entity_representations_kwargs"] = dict(shape=shape)
+        kwargs["relation_representations_kwargs"] = dict(shape=shape)
         return kwargs
 
     def test_has_hpo_defaults(self):  # noqa: D102

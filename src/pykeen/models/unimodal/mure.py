@@ -69,7 +69,7 @@ class MuRE(ERModel):
         super().__init__(
             interaction=MuREInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representation_kwargs=[
+            entity_representations_kwargs=[
                 dict(
                     shape=embedding_dim,
                     initializer=entity_initializer,
@@ -89,7 +89,7 @@ class MuRE(ERModel):
                     initializer=entity_bias_initializer,
                 ),
             ],
-            relation_representation_kwargs=[
+            relation_representations_kwargs=[
                 # relation offset
                 dict(
                     shape=embedding_dim,
