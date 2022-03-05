@@ -20,8 +20,8 @@ from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..evaluation.evaluator import get_candidate_set_size
-from ..metrics.ranking import ArithmeticMeanRank, HitsAtK
-from ..typing import LABEL_HEAD, LABEL_TAIL
+from ..metrics.ranking import ArithmeticMeanRank, HitsAtK, InverseHarmonicMeanRank
+from ..typing import LABEL_HEAD, LABEL_TAIL, SIDE_BOTH, ExtendedTarget
 
 
 @click.group()
@@ -223,8 +223,9 @@ def verify(dataset: str):
 @verbose_option
 @click.option("-d", "--dataset", help="Regex for filtering datasets by name")
 @click.option("-m", "--max-triples", type=int, default=None)
+@click.option("-s", "--samples", type=int, default=1000)
 @log_level_option(default=logging.ERROR)
-def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
+def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, samples: int):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
     directory = PYKEEN_DATASETS
@@ -261,22 +262,27 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
             ks = (1, 3, 5, 10) + tuple(
                 10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
-            this_metrics: MutableMapping[str, Mapping[str, float]] = dict()
-            for label, sides in dict(
-                head=[LABEL_HEAD],
-                tail=[LABEL_TAIL],
-                both=[LABEL_HEAD, LABEL_TAIL],
-            ).items():
+            this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
+            _xxxx = {LABEL_HEAD: [LABEL_HEAD], LABEL_TAIL: [LABEL_TAIL], SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL]}
+            for label, sides in _xxxx.items():
                 num_candidates = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
                     ArithmeticMeanRank()
                     .key: ArithmeticMeanRank()
                     .expected_value(
                         num_candidates=num_candidates,
+                        num_samples=samples,  # unused since closed form available
+                    ),
+                    InverseHarmonicMeanRank()
+                    .key: InverseHarmonicMeanRank()
+                    .expected_value(
+                        num_candidates=num_candidates,
+                        num_samples=samples,  # unused since closed form available
                     ),
                     **{
                         f"hits_at_{k}": HitsAtK(k).expected_value(
                             num_candidates=num_candidates,
+                            num_samples=samples,  # unused since closed form available
                         )
                         for k in ks
                     },
