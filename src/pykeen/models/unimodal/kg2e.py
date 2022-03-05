@@ -98,14 +98,14 @@ class KG2E(ERModel):
             entity_representation_kwargs=[
                 # mean
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     constrainer=entity_constrainer,
                     constrainer_kwargs=entity_constrainer_kwargs or self.constrainer_default_kwargs,
                 ),
                 # diagonal covariance
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     # Ensure positive definite covariances matrices and appropriate size by clamping
                     constrainer=torch.clamp,
                     constrainer_kwargs=dict(min=c_min, max=c_max),
@@ -114,14 +114,14 @@ class KG2E(ERModel):
             relation_representation_kwargs=[
                 # mean
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     constrainer=relation_constrainer,
                     constrainer_kwargs=relation_constrainer_kwargs or self.constrainer_default_kwargs,
                 ),
                 # diagonal covariance
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     # Ensure positive definite covariances matrices and appropriate size by clamping
                     constrainer=torch.clamp,
                     constrainer_kwargs=dict(min=c_min, max=c_max),

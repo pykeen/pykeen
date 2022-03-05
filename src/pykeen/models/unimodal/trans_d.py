@@ -78,13 +78,13 @@ class TransD(ERModel):
             interaction_kwargs=interaction_kwargs,
             entity_representation_kwargs=[
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     constrainer=entity_constrainer,
                     constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
                 ),
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=xavier_normal_,
                 ),
             ],

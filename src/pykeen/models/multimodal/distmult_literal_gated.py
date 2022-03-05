@@ -60,13 +60,13 @@ class DistMultLiteralGated(LiteralModel):
             ),
             entity_representation_kwargs=[
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                 ),
             ],
             relation_representation_kwargs=[
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                 ),
             ],

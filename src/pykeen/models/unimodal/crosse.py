@@ -71,19 +71,19 @@ class CrossE(ERModel[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor])
             ),
             entity_representation_kwargs=[
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                 ),
             ],
             relation_representation_kwargs=[
                 # Regular relation embeddings
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                 ),
                 # The relation-specific interaction vector
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_interaction_initializer,
                 ),
             ],

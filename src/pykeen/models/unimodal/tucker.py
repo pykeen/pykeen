@@ -105,7 +105,7 @@ class TuckER(EntityRelationEmbeddingModel):
     ) -> None:
         super().__init__(
             entity_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
             relation_representation_kwargs=dict(

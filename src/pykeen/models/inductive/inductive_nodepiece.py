@@ -20,7 +20,7 @@ from ...nn import (
 from ...nn.node_piece import RelationTokenizer
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
+from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode, OneOrSequence
 
 __all__ = [
     "InductiveNodePiece",
@@ -58,7 +58,7 @@ class InductiveNodePiece(ERModel):
         relation_representation_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        shape: Optional[Sequence[int]] = None,
+        shape: Optional[OneOrSequence[int]] = None,
         validation_factory: Optional[CoreTriplesFactory] = None,
         test_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,
@@ -118,7 +118,7 @@ class InductiveNodePiece(ERModel):
             query=None,
             pos_kwargs=relation_representation_kwargs,
             max_id=2 * triples_factory.real_num_relations + 1,
-            shape=(embedding_dim,),
+            shape=embedding_dim,
         )
 
         super().__init__(

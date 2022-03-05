@@ -86,13 +86,13 @@ class SimplE(ERModel):
             entity_representation_kwargs=[
                 # (head) entity
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     regularizer=regularizer,
                 ),
                 # tail entity
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     regularizer=regularizer,
                 ),
@@ -100,13 +100,13 @@ class SimplE(ERModel):
             relation_representation_kwargs=[
                 # relations
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     regularizer=regularizer,
                 ),
                 # inverse relations
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     regularizer=regularizer,
                 ),

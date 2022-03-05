@@ -71,7 +71,7 @@ class MuRE(ERModel):
             interaction_kwargs=dict(p=p, power_norm=power_norm),
             entity_representation_kwargs=[
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs
                     or dict(
@@ -92,7 +92,7 @@ class MuRE(ERModel):
             relation_representation_kwargs=[
                 # relation offset
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs
                     or dict(
@@ -101,7 +101,7 @@ class MuRE(ERModel):
                 ),
                 # diagonal relation transformation matrix
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_matrix_initializer,
                     initializer_kwargs=relation_matrix_initializer_kwargs
                     or dict(

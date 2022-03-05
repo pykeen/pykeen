@@ -65,12 +65,12 @@ class RotatE(EntityRelationEmbeddingModel):
     ) -> None:
         super().__init__(
             entity_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 dtype=torch.cfloat,
             ),
             relation_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
                 dtype=torch.cfloat,

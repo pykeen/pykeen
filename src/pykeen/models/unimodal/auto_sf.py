@@ -72,14 +72,14 @@ class AutoSF(ERModel):
             interaction_kwargs=dict(coefficients=coefficients),
             entity_representation_kwargs=[
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     **embedding_kwargs,
                 )
                 for _ in range(num_components)
             ],
             relation_representation_kwargs=[
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     **embedding_kwargs,
                 )
                 for _ in range(num_components)

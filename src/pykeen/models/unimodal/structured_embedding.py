@@ -75,7 +75,7 @@ class SE(ERModel):
                 power_norm=False,
             ),
             entity_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs,

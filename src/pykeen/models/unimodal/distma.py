@@ -54,14 +54,14 @@ class DistMA(ERModel):
         super().__init__(
             interaction=DistMAInteraction,
             entity_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 initializer_kwargs=entity_initializer_kwargs,
                 normalizer=entity_normalizer,
                 normalizer_kwargs=entity_normalizer_kwargs,
             ),
             relation_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
             ),

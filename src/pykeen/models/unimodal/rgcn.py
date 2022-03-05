@@ -109,7 +109,7 @@ class RGCN(
             entity_representation_kwargs=dict(
                 triples_factory=triples_factory,
                 entity_representation_kwargs=dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=base_entity_initializer,
                     initializer_kwargs=base_entity_initializer_kwargs,
                 ),
@@ -128,7 +128,7 @@ class RGCN(
             ),
             relation_representations=relation_representations,
             relation_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
                 # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501

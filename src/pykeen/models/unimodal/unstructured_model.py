@@ -65,7 +65,7 @@ class UM(ERModel):
             interaction=UMInteraction,
             interaction_kwargs=dict(p=scoring_fct_norm),
             entity_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
             relation_representations=[],

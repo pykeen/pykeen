@@ -90,7 +90,7 @@ class NTN(ERModel):
                 activation_kwargs=non_linearity_kwargs,
             ),
             entity_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
             relation_representation_kwargs=[

@@ -100,7 +100,7 @@ class ComplEx(ERModel):
         super().__init__(
             interaction=ComplExInteraction,
             entity_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 # use torch's native complex data type
                 dtype=torch.cfloat,
@@ -108,7 +108,7 @@ class ComplEx(ERModel):
                 regularizer_kwargs=regularizer_kwargs,
             ),
             relation_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=relation_initializer,
                 # use torch's native complex data type
                 dtype=torch.cfloat,

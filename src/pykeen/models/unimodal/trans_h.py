@@ -88,11 +88,11 @@ class TransH(EntityRelationEmbeddingModel):
         """
         super().__init__(
             entity_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
             relation_representation_kwargs=dict(
-                shape=(embedding_dim,),
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
@@ -104,7 +104,7 @@ class TransH(EntityRelationEmbeddingModel):
         self.normal_vector_embeddings = representation_resolver.make(
             query=None,
             max_id=self.num_relations,
-            shape=(embedding_dim,),
+            shape=embedding_dim,
             # Normalise the normal vectors by their l2 norms
             constrainer=functional.normalize,
         )

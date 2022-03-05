@@ -136,7 +136,7 @@ class NodePiece(ERModel):
         relation_representations = representation_resolver.make(
             query=None,
             max_id=2 * triples_factory.real_num_relations + 1,
-            shape=(embedding_dim,),
+            shape=embedding_dim,
             initializer=relation_initializer,
             normalizer=relation_normalizer,
             constrainer=relation_constrainer,
@@ -145,7 +145,7 @@ class NodePiece(ERModel):
 
         # normalize embedding specification
         anchor_kwargs = dict(
-            shape=(embedding_dim,),
+            shape=embedding_dim,
             initializer=entity_initializer,
             normalizer=entity_normalizer,
             constrainer=entity_constrainer,

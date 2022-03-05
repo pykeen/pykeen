@@ -100,13 +100,13 @@ class BoxE(ERModel):
             ),
             entity_representation_kwargs=[  # Base position
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs,
                 ),  # Bump
                 # entity bias for head
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs,
                 ),
@@ -114,13 +114,13 @@ class BoxE(ERModel):
             relation_representation_kwargs=[
                 # relation position head
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
                 # relation shape head
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
@@ -132,13 +132,13 @@ class BoxE(ERModel):
                 ),
                 # relation position tail
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
                 # relation shape tail
                 dict(
-                    shape=(embedding_dim,),
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
