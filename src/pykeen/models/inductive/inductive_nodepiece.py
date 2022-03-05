@@ -3,7 +3,7 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
+from typing import Any, Callable, ClassVar, Mapping, Optional
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
