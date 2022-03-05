@@ -235,7 +235,7 @@ def verify(dataset: str):
     "-s",
     "--samples",
     type=int,
-    default=1000,
+    default=10_000,
     show_default=True,
     help="Number of samples for estimating expected values",
 )
