@@ -262,29 +262,20 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, s
             ks = (1, 3, 5, 10) + tuple(
                 10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
+            metrics = [
+                ArithmeticMeanRank(),
+                InverseHarmonicMeanRank(),
+                *(HitsAtK(k) for k in ks)
+            ]
             this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
             for label, sides in SIDE_MAPPING.items():
                 num_candidates = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
-                    ArithmeticMeanRank()
-                    .key: ArithmeticMeanRank()
-                    .expected_value(
+                    metric.key: metric.expected_value(
                         num_candidates=num_candidates,
-                        num_samples=samples,  # unused since closed form available
-                    ),
-                    InverseHarmonicMeanRank()
-                    .key: InverseHarmonicMeanRank()
-                    .expected_value(
-                        num_candidates=num_candidates,
-                        num_samples=samples,  # unused since closed form available
-                    ),
-                    **{
-                        f"hits_at_{k}": HitsAtK(k).expected_value(
-                            num_candidates=num_candidates,
-                            num_samples=samples,  # unused since closed form available
-                        )
-                        for k in ks
-                    },
+                        num_samples=samples,
+                    )
+                    for metric in metrics
                 }
             expected_metrics[key] = this_metrics
         with d.joinpath("expected_metrics.json").open("w") as file:
