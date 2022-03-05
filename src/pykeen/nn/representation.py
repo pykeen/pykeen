@@ -24,8 +24,8 @@ from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
-from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device
+from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
+from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device, upgrade_to_sequence
 
 __all__ = [
     "Representation",
@@ -74,7 +74,7 @@ class Representation(nn.Module, ABC):
     def __init__(
         self,
         max_id: int,
-        shape: Sequence[int],
+        shape: OneOrSequence[int],
     ):
         """Initialize the representation module.
 
@@ -85,7 +85,7 @@ class Representation(nn.Module, ABC):
         """
         super().__init__()
         self.max_id = max_id
-        self.shape = tuple(shape)
+        self.shape = tuple(upgrade_to_sequence(shape))
 
     @abstractmethod
     def forward(
