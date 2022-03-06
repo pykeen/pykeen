@@ -346,6 +346,13 @@ def expected_metrics(
     click.secho(f"wrote {results_path}")
     click.echo(df.to_markdown(index=False))
 
+    # TODO add zenodo client upload
+    if max_triples is None and min_triples is None and dataset is None:
+        try:
+            import zenodo_client
+        except ImportError:
+            return
+
 
 if __name__ == "__main__":
     main()
