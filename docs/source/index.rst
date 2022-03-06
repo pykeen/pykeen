@@ -18,6 +18,7 @@ PyKEEN
    tutorial/running_ablation
    tutorial/performance
    tutorial/representations
+   tutorial/inductive_lp
 
 .. toctree::
    :caption: Bring Your Own
@@ -52,6 +53,7 @@ PyKEEN
    reference/trackers
    reference/negative_sampling
    reference/evaluation
+   reference/metrics
    reference/hpo
    reference/ablation
    reference/lookup

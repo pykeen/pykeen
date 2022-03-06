@@ -15,7 +15,8 @@ from typing import Any, Callable, Generic, Iterable, Mapping, MutableMapping, Op
 import more_itertools
 import numpy
 import torch
-from class_resolver import Resolver
+from class_resolver import ClassResolver
+from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
 from torch.nn.init import xavier_normal_
@@ -31,7 +32,7 @@ from ..typing import (
     Sign,
     TailRepresentation,
 )
-from ..utils import activation_resolver, ensure_tuple, unpack_singletons, upgrade_to_sequence
+from ..utils import ensure_tuple, unpack_singletons, upgrade_to_sequence
 
 __all__ = [
     "interaction_resolver",
@@ -1757,7 +1758,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         )
 
 
-interaction_resolver = Resolver.from_subclasses(
+interaction_resolver = ClassResolver.from_subclasses(
     Interaction,  # type: ignore
     skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
     suffix=Interaction.__name__,

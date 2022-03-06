@@ -186,7 +186,7 @@ class ConsoleResultTracker(ResultTracker):
         self.write(f"Step: {step}")
         for key, value in flatten_dictionary(dictionary=metrics, prefix=prefix).items():
             if not self.metric_filter or self.metric_filter.match(key):
-                self.write(f"Parameter: {key} = {value}")
+                self.write(f"Metric: {key} = {value}")
 
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         if not success:

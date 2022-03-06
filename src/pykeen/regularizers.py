@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional
 
 import torch
-from class_resolver import Resolver, normalize_string
+from class_resolver import ClassResolver, normalize_string
 from torch import linalg, nn
 from torch.nn import functional
 
@@ -263,7 +263,7 @@ class CombinedRegularizer(Regularizer):
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 
 
-regularizer_resolver = Resolver.from_subclasses(
+regularizer_resolver = ClassResolver.from_subclasses(
     base=Regularizer,
     default=NoRegularizer,
 )

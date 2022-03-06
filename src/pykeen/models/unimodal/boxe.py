@@ -9,7 +9,6 @@ from torch.nn.init import uniform_
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import NSSALoss
 from ...models import ERModel
-from ...nn.emb import EmbeddingSpecification
 from ...nn.init import uniform_norm_
 from ...nn.modules import BoxEInteraction
 from ...typing import Hint, Initializer
@@ -99,50 +98,53 @@ class BoxE(ERModel):
                 power_norm=power_norm,
                 tanh_map=tanh_map,
             ),
-            entity_representations=[  # Base position
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representations_kwargs=[  # Base position
+                dict(
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs,
                 ),  # Bump
                 # entity bias for head
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs,
                 ),
             ],
-            relation_representations=[
+            relation_representations_kwargs=[
                 # relation position head
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
                 # relation shape head
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
-                EmbeddingSpecification(
-                    embedding_dim=1,  # Size
+                # relation size head
+                dict(
+                    shape=(1,),
                     initializer=relation_size_initializer,
                     initializer_kwargs=relation_size_initializer_kwargs,
                 ),
-                EmbeddingSpecification(  # Tail position
-                    embedding_dim=embedding_dim,
+                # relation position tail
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
                 # relation shape tail
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
-                EmbeddingSpecification(
-                    embedding_dim=1,  # Tail Size
+                # relation size tail
+                dict(
+                    shape=(1,),
                     initializer=relation_size_initializer,
                     initializer_kwargs=relation_size_initializer_kwargs,
                 ),

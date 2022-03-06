@@ -1,0 +1,39 @@
+metadata:
+  title: Learn WN18RR Dataset with NodePiece + RotatE (no anchor tokenization) as described by Galkin et al., 2022
+pipeline:
+  random_seed: 42
+  dataset: wn18rr
+  dataset_kwargs:
+    create_inverse_triples: True
+  evaluator_kwargs:
+    filtered: true
+  loss: NSSALoss
+  loss_kwargs:
+    margin: 15.0
+    adversarial_temperature: 1.0
+    reduction: 'mean'
+  model: NodePiece
+  model_kwargs:
+    entity_initializer: xavier_uniform_
+    relation_initializer: init_phases
+    relation_constrainer: complex_normalize
+    embedding_dim: 200   # for both anchors and relations
+    interaction: RotatEInteraction
+    aggregation: mlp
+    tokenizers: RelationTokenizer
+    num_tokens: 4 # 4 relations
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.0005
+  training_kwargs:
+    batch_size: 512
+    num_epochs: 601
+  training_loop: SLCWA
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 20
+results: # https://openreview.net/pdf?id=xMJWUKJnFSw Table 2 row 5
+  best:
+    hits_at_k:
+      '10': 0.041
+    mean_reciprocal_rank: 0.025

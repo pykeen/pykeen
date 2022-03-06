@@ -1,23 +1,75 @@
 # -*- coding: utf-8 -*-
 
-"""Temporary storage of annotations to :mod:`rexmex` functions.
-
-Hopefully https://github.com/AstraZeneca/rexmex/pull/29 will get accepted
-so we can rely on first-class annotations of functions.
-
-Periodically, run ``python -m pykeen.evaluation.rexmex_compat`` to be informed of new metrics available
-through :mod:`rexmex`.
-"""
+"""Classification metrics."""
 
 import inspect
+from typing import Callable, ClassVar, MutableMapping, Optional, Type
 
+import numpy as np
 import rexmex.metrics.classification as rmc
+from class_resolver import ClassResolver
 
-from .utils import MetricAnnotator
+from .utils import Metric, ValueRange
 
 __all__ = [
+    "ClassificationMetric",
     "classifier_annotator",
+    "construct_indicator",
+    "classification_metric_resolver",
 ]
+
+
+def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
+    """Construct binary indicators from a list of scores.
+
+    If there are $n$ positively labeled entries in ``y_true``, this function
+    assigns the top $n$ highest scores in ``y_score`` as positive and remainder
+    as negative.
+
+    .. note ::
+        Since the method uses the number of true labels to determine a threshold, the
+        results will typically be overly optimistic estimates of the generalization performance.
+
+    .. todo ::
+        Add a method which estimates a threshold based on a validation set, and applies this
+        threshold for binarization on the test set.
+
+    :param y_score:
+        A 1-D array of the score values
+    :param y_true:
+        A 1-D array of binary values (1 and 0)
+    :return:
+        A 1-D array of indicator values
+
+    .. seealso::
+
+        This implementation was inspired by
+        https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
+    """
+    number_pos = np.sum(y_true, dtype=int)
+    y_sort = np.flip(np.argsort(y_score))
+    y_pred = np.zeros_like(y_true, dtype=int)
+    y_pred[y_sort[np.arange(number_pos)]] = 1
+    return y_pred
+
+
+class ClassificationMetric(Metric):
+    """A base class for classification metrics."""
+
+    #: A description of the metric
+    description: ClassVar[str]
+    #: The function that runs the metric
+    func: ClassVar[Callable[[np.array, np.array], float]]
+
+    @classmethod
+    def get_description(cls) -> str:  # noqa:D102
+        return cls.description
+
+    @classmethod
+    def score(cls, y_true, y_score) -> float:
+        """Run the scoring function."""
+        return cls.func(y_true, construct_indicator(y_score=y_score, y_true=y_true) if cls.binarize else y_score)
+
 
 #: Functions with the right signature in the :mod:`rexmex.metrics.classification` that are not themselves metrics
 EXCLUDE = {
@@ -25,6 +77,7 @@ EXCLUDE = {
     rmc.true_negative,
     rmc.false_positive,
     rmc.false_negative,
+    rmc.pr_auc_score,  # for now there's an issue
 }
 
 #: This dictionary maps from duplicate functions to the canonical function in :mod:`rexmex.metrics.classification`
@@ -40,7 +93,61 @@ DUPLICATE_CLASSIFIERS = {
     rmc.recall_score: rmc.true_positive_rate,
 }
 
-classifier_annotator = MetricAnnotator("classification")
+
+class MetricAnnotator:
+    """A class for annotating metric functions."""
+
+    metrics: MutableMapping[str, Type[ClassificationMetric]]
+
+    def __init__(self):
+        self.metrics = {}
+
+    def higher(self, func, **kwargs):
+        """Annotate a function where higher values are better."""
+        return self.add(func, increasing=True, **kwargs)
+
+    def lower(self, func, **kwargs):
+        """Annotate a function where lower values are better."""
+        return self.add(func, increasing=False, **kwargs)
+
+    def add(
+        self,
+        func,
+        *,
+        increasing: bool,
+        description: str,
+        link: str,
+        name: Optional[str] = None,
+        lower: Optional[float] = 0.0,
+        lower_inclusive: bool = True,
+        upper: Optional[float] = 1.0,
+        upper_inclusive: bool = True,
+        binarize: bool = False,
+    ):
+        """Annotate a function."""
+        title = func.__name__.replace("_", " ").title()
+        metric_cls = type(
+            title.replace(" ", ""),
+            (ClassificationMetric,),
+            dict(
+                name=name or title,
+                link=link,
+                binarize=binarize,
+                increasing=increasing,
+                value_range=ValueRange(
+                    lower=lower,
+                    lower_inclusive=lower_inclusive,
+                    upper=upper,
+                    upper_inclusive=upper_inclusive,
+                ),
+                func=func,
+                description=description,
+            ),
+        )
+        self.metrics[func.__name__] = metric_cls
+
+
+classifier_annotator = MetricAnnotator()
 classifier_annotator.higher(
     rmc.true_negative_rate,
     description="TN / (TN + FP)",
@@ -82,14 +189,14 @@ classifier_annotator.lower(
 classifier_annotator.higher(
     rmc.positive_likelihood_ratio,
     lower=0.0,
-    upper=float("inf"),
+    upper=None,
     description="TPR / FPR",
     link="https://en.wikipedia.org/wiki/Positive_likelihood_ratio",
 )
 classifier_annotator.lower(
     rmc.negative_likelihood_ratio,
     lower=0.0,
-    upper=float("inf"),
+    upper=None,
     description="FNR / TNR",
     link="https://en.wikipedia.org/wiki/Negative_likelihood_ratio",
 )
@@ -117,7 +224,7 @@ classifier_annotator.higher(
 classifier_annotator.higher(
     rmc.diagnostic_odds_ratio,
     lower=0.0,
-    upper=float("inf"),
+    upper=None,
     description="LR+/LR-",
     link="https://en.wikipedia.org/wiki/Diagnostic_odds_ratio",
 )
@@ -162,6 +269,7 @@ classifier_annotator.higher(
     description="A balanced measure applicable even with class imbalance",
     link="https://en.wikipedia.org/wiki/Phi_coefficient",
 )
+
 # TODO there's something wrong with this, so add it later
 # classifier_annotator.higher(
 #     rmc.pr_auc_score,
@@ -169,6 +277,11 @@ classifier_annotator.higher(
 #     description="Area Under the Precision-Recall Curve",
 #     link="https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.pr_auc_score",
 # )
+
+classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver(
+    list(classifier_annotator.metrics.values()),
+    base=ClassificationMetric,
+)
 
 
 def _check():
@@ -187,7 +300,7 @@ def _check():
             if func in classifier_annotator.metrics:
                 raise ValueError(f"{func.__name__} is a duplicate of {DUPLICATE_CLASSIFIERS[func].__name__}")
             continue
-        if func not in classifier_annotator.metrics:
+        if func.__name__ not in classifier_annotator.metrics:
             raise ValueError(f"missing rexmex classifier: {func.__name__}")
 
 

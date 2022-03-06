@@ -75,7 +75,7 @@ triples considered in LCWA vs. sLCWA based on the given true triples (in red):
   :alt: Troubleshooting Image 2
 """  # noqa:E501
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from .callbacks import TrainingCallback  # noqa: F401
 from .lcwa import LCWATrainingLoop  # noqa: F401
@@ -91,7 +91,7 @@ __all__ = [
     "TrainingCallback",
 ]
 
-training_loop_resolver = Resolver.from_subclasses(
+training_loop_resolver = ClassResolver.from_subclasses(
     base=TrainingLoop,  # type: ignore
     default=SLCWATrainingLoop,
 )

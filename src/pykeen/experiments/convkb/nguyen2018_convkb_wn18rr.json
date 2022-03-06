@@ -42,16 +42,12 @@
     }
   },
   "results": {
-    "mean_rank": {
-      "best": 2554
-    },
-    "hits_at_k": {
-      "best": {
+    "best": {
+      "mean_rank": 2554,
+      "hits_at_k": {
         "10": 0.525
-      }
-    },
-    "mean_reciprocal_rank": {
-      "best": 0.248
+      },
+      "mean_reciprocal_rank": 0.248
     }
   }
 }

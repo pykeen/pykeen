@@ -12,12 +12,15 @@ import operator
 import os
 import pathlib
 import random
+import re
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
 from typing import (
     Any,
     Callable,
+    Collection,
     Dict,
     Generic,
     Iterable,
@@ -25,6 +28,7 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -37,7 +41,8 @@ import torch
 import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
-from class_resolver import Resolver, normalize_string
+from class_resolver import normalize_string
+from docdata import get_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -47,9 +52,11 @@ from .version import get_git_hash
 
 __all__ = [
     "at_least_eps",
+    "broadcast_upgrade_to_sequences",
     "compose",
     "clamp_norm",
     "compact_mapping",
+    "create_relation_to_entity_set_mapping",
     "ensure_torch_random_state",
     "format_relative_comparison",
     "invert_mapping",
@@ -95,13 +102,16 @@ __all__ = [
     "convert_to_canonical_shape",
     "get_expected_norm",
     "Bias",
-    "activation_resolver",
     "complex_normalize",
     "lp_norm",
     "powersum_norm",
     "product_normalize",
     "compute_box",
     "point_to_box_distance",
+    "get_devices",
+    "get_preferred_device",
+    "triple_tensor_to_set",
+    "is_triple_tensor_subset",
 ]
 
 logger = logging.getLogger(__name__)
@@ -132,6 +142,43 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
         device = torch.device("cpu")
         logger.warning("No cuda devices were available. The model runs on CPU")
     return device
+
+
+class DeviceResolutionError(ValueError):
+    """An error in the resolution of a model's device."""
+
+
+class AmbiguousDeviceError(DeviceResolutionError):
+    """An error raised if there is ambiguity in device resolution."""
+
+    def __init__(self, module: nn.Module) -> None:
+        """Initialize the error."""
+        _info = defaultdict(list)
+        for name, tensor in itt.chain(module.named_parameters(), module.named_buffers()):
+            _info[tensor.data.device].append(name)
+        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
+        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
+
+
+def get_devices(module: nn.Module) -> Collection[torch.device]:
+    """Return the device(s) from each components of the model."""
+    return {tensor.data.device for tensor in itt.chain(module.parameters(), module.buffers())}
+
+
+def get_preferred_device(module: nn.Module, allow_ambiguity: bool = True) -> torch.device:
+    """Return the preferred device."""
+    devices = get_devices(module=module)
+    if len(devices) == 0:
+        raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
+    if len(devices) == 1:
+        return next(iter(devices))
+    if not allow_ambiguity:
+        raise AmbiguousDeviceError(module=module)
+    # try to resolve ambiguous device; there has to be at least one cuda device
+    cuda_devices = {d for d in devices if d.type == "cuda"}
+    if len(cuda_devices) == 1:
+        return next(iter(cuda_devices))
+    raise AmbiguousDeviceError(module=module)
 
 
 X = TypeVar("X")
@@ -833,6 +880,38 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
 
 
+def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    """Apply upgrade_to_sequence to each input, and afterwards repeat singletons to match the maximum length.
+
+    :param xs: length: m
+        the inputs.
+
+    :return:
+        a sequence of length m, where each element is a sequence and all elements have the same length.
+
+    :raises ValueError:
+        if there is a non-singleton sequence input with length different from the maximum sequence length.
+
+    >>> broadcast_upgrade_to_sequences(1)
+    ((1,),)
+    >>> broadcast_upgrade_to_sequences(1, 2)
+    ((1,), (2,))
+    >>> broadcast_upgrade_to_sequences(1, (2, 3))
+    ((1, 1), (2, 3))
+    """
+    # upgrade to sequence
+    xs_ = [upgrade_to_sequence(x) for x in xs]
+    # broadcast
+    max_len = max(map(len, xs_))
+    for i in range(len(xs_)):
+        x = xs_[i]
+        if len(x) < max_len:
+            if len(x) != 1:
+                raise ValueError(f"Length mismatch: maximum length: {max_len}, but encountered length {len(x)}, too.")
+            xs_[i] = tuple(list(x) * max_len)
+    return tuple(xs_)
+
+
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
     """Ensure that all elements in the sequence are upgraded to sequences.
 
@@ -978,20 +1057,6 @@ def get_expected_norm(
         return math.pow(exp_abs_norm_p * d, 1 / p)
     else:
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
-
-
-activation_resolver = Resolver(
-    classes=(
-        nn.LeakyReLU,
-        nn.PReLU,
-        nn.ReLU,
-        nn.Softplus,
-        nn.Sigmoid,
-        nn.Tanh,
-    ),
-    base=nn.Module,  # type: ignore
-    default=nn.ReLU,
-)
 
 
 class Bias(nn.Module):
@@ -1246,6 +1311,58 @@ def boxe_kg_arity_position_score(
 
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+def getattr_or_docdata(cls, key: str) -> str:
+    """Get the attr or data inside docdata."""
+    if hasattr(cls, key):
+        return getattr(cls, key)
+    getter_key = f"get_{key}"
+    if hasattr(cls, getter_key):
+        return getattr(cls, getter_key)()
+    docdata = get_docdata(cls)
+    if key in docdata:
+        return docdata[key]
+    raise KeyError
+
+
+def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
+    """Convert a tensor of triples to a set of int-tuples."""
+    return set(map(tuple, tensor.tolist()))
+
+
+def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+    """Check whether one tensor of triples is a subset of another one."""
+    return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
+
+
+def create_relation_to_entity_set_mapping(
+    triples: Iterable[Tuple[int, int, int]],
+) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    """
+    Create mappings from relation IDs to the set of their head / tail entities.
+
+    :param triples:
+        The triples.
+
+    :return:
+        A pair of dictionaries, each mapping relation IDs to entity ID sets.
+    """
+    tails = defaultdict(set)
+    heads = defaultdict(set)
+    for h, r, t in triples:
+        heads[r].add(h)
+        tails[r].add(t)
+    return heads, tails
+
+
+camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def camel_to_snake(name: str) -> str:
+    """Convert camel-case to snake case."""
+    # cf. https://stackoverflow.com/a/1176023
+    return camel_to_snake_pattern.sub("_", name).lower()
 
 
 if __name__ == "__main__":

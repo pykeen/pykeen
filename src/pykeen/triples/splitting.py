@@ -10,7 +10,7 @@ from typing import Collection, Optional, Sequence, Set, Tuple, Type, Union
 import numpy
 import pandas
 import torch
-from class_resolver.api import HintOrType, Resolver
+from class_resolver.api import ClassResolver, HintOrType
 
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target, TorchRandomHint
 from ..utils import ensure_torch_random_state
@@ -304,7 +304,7 @@ class DeterministicCleaner(Cleaner):
         return reference, other
 
 
-cleaner_resolver = Resolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+cleaner_resolver = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
 
 
 class Splitter:
@@ -439,7 +439,7 @@ class CoverageSplitter(Splitter):
         return [torch.cat([train_seed, train], dim=0), *rest]
 
 
-splitter_resolver = Resolver.from_subclasses(base=Splitter, default=CoverageSplitter)
+splitter_resolver = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
 
 
 def split(

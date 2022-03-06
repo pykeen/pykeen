@@ -51,18 +51,25 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
+import pathlib
 from typing import Any, List, Optional
 
-from class_resolver import HintOrType, OptionalKwargs, Resolver
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
-from ..trackers import ResultTracker, tracker_resolver
+from ..losses import Loss
+from ..models import Model
+from ..stoppers import Stopper
+from ..trackers import ResultTracker
+from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
 
 __all__ = [
     "TrainingCallbackHint",
     "TrainingCallback",
+    "StopperTrainingCallback",
     "TrackerTrainingCallback",
     "EvaluationTrainingCallback",
     "MultiTrainingCallback",
@@ -86,19 +93,25 @@ class TrainingCallback:
         return self._training_loop
 
     @property
-    def model(self):  # noqa:D401
+    def model(self) -> Model:  # noqa:D401
         """The model, accessed via the training loop."""
         return self.training_loop.model
 
     @property
-    def loss(self):  # noqa: D401
+    def loss(self) -> Loss:  # noqa: D401
         """The loss, accessed via the training loop."""
         return self.training_loop.loss
 
     @property
-    def optimizer(self):  # noqa:D401
+    def optimizer(self) -> optim.Optimizer:  # noqa:D401
         """The optimizer, accessed via the training loop."""
         return self.training_loop.optimizer
+
+    @property
+    def result_tracker(self) -> ResultTracker:  # noqa: D401
+        """The result tracker, accessed via the training loop."""
+        assert self.training_loop.result_tracker is not None
+        return self.training_loop.result_tracker
 
     def register_training_loop(self, training_loop) -> None:
         """Register the training loop."""
@@ -126,16 +139,6 @@ class TrackerTrainingCallback(TrainingCallback):
 
     It logs the loss after each epoch to the given result tracker,
     """
-
-    def __init__(self, result_tracker: ResultTracker):
-        """
-        Initialize the callback.
-
-        :param result_tracker:
-            The result tracker to which the loss is logged.
-        """
-        super().__init__()
-        self.result_tracker = result_tracker
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
@@ -199,12 +202,14 @@ class EvaluationTrainingCallback(TrainingCallback):
         result = pipeline(
             dataset=dataset,
             model="mure",
+            training_loop_kwargs=dict(
+                result_tracker="console",
+            ),
             training_kwargs=dict(
                 num_epochs=100,
                 callbacks="evaluation",
                 callback_kwargs=dict(
                     evaluation_triples=dataset.training.mapped_triples,
-                    tracker="console",
                     prefix="training",
                 ),
             ),
@@ -216,8 +221,6 @@ class EvaluationTrainingCallback(TrainingCallback):
         *,
         evaluation_triples: MappedTriples,
         frequency: int = 1,
-        tracker: HintOrType[ResultTracker] = None,
-        tracker_kwargs: OptionalKwargs = None,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         prefix: Optional[str] = None,
@@ -230,10 +233,6 @@ class EvaluationTrainingCallback(TrainingCallback):
             the triples on which to evaluate
         :param frequency:
             the evaluation frequency in epochs
-        :param tracker:
-            the result tracker to which results are logged, cf. `tracker_resolver`
-        :param tracker_kwargs:
-            additional keyword-based parameters for the result tracker
         :param evaluator:
             the evaluator to use for evaluation, cf. `evaluator_resolver`
         :param evaluator_kwargs:
@@ -246,7 +245,6 @@ class EvaluationTrainingCallback(TrainingCallback):
         super().__init__()
         self.frequency = frequency
         self.evaluation_triples = evaluation_triples
-        self.tracker = tracker_resolver.make(tracker, tracker_kwargs)
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         self.prefix = prefix
         self.kwargs = kwargs
@@ -255,15 +253,57 @@ class EvaluationTrainingCallback(TrainingCallback):
         if epoch % self.frequency:
             return
         result = self.evaluator.evaluate(
-            model=self.training_loop.model,
+            model=self.model,
             mapped_triples=self.evaluation_triples,
             device=self.training_loop.device,
             **self.kwargs,
         )
-        self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
+        self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
-callback_resolver: Resolver[TrainingCallback] = Resolver.from_subclasses(
+class StopperTrainingCallback(TrainingCallback):
+    """An adapter for the :class:`pykeen.stopper.Stopper`."""
+
+    def __init__(
+        self,
+        stopper: Stopper,
+        *,
+        triples_factory: CoreTriplesFactory,
+        last_best_epoch: Optional[int] = None,
+        best_epoch_model_file_path: Optional[pathlib.Path],
+    ):
+        """
+        Initialize the callback.
+
+        :param stopper:
+            the stopper
+        :param triples_factory:
+            the triples factory used for saving the state
+        :param last_best_epoch:
+            the last best epoch
+        :param best_epoch_model_file_path:
+            the path under which to store the best model checkpoint
+        """
+        super().__init__()
+        self.stopper = stopper
+        self.triples_factory = triples_factory
+        self.last_best_epoch = last_best_epoch
+        self.best_epoch_model_file_path = best_epoch_model_file_path
+
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        if self.stopper.should_evaluate(epoch):
+            # TODO how to pass inductive mode
+            if self.stopper.should_stop(epoch):
+                self.training_loop._should_stop = True
+            # Since the model is also used within the stopper, its graph and cache have to be cleared
+            self.model._free_graph_and_cache()
+            # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
+        if self.stopper.best_epoch != self.last_best_epoch and self.best_epoch_model_file_path is not None:
+            self.training_loop._save_state(path=self.best_epoch_model_file_path, triples_factory=self.triples_factory)
+            self.last_best_epoch = epoch
+
+
+callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
     base=TrainingCallback,
 )
 

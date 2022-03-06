@@ -13,18 +13,17 @@ from dataclasses import dataclass
 from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
+from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
 from optuna import Study, Trial, TrialPruned, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
-from .pruners import pruner_resolver
-from .samplers import sampler_resolver
 from ..constants import USER_DEFINED_CODE
-from ..datasets import get_dataset, has_dataset
+from ..datasets import dataset_resolver, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.metrics import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+from ..evaluation.ranking_metric_lookup import MetricKey
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
@@ -442,6 +441,7 @@ class HpoPipelineResult(Result):
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
+        save_training: bool = False,
     ) -> None:
         """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
 
@@ -449,6 +449,7 @@ class HpoPipelineResult(Result):
         :param replicates: The number of times to retrain the model
         :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
         :param save_replicates: Should the artifacts of the replicates be saved?
+        :param save_training: Should the training triples be saved?
         """
         config = self._get_best_study_config()
 
@@ -462,6 +463,7 @@ class HpoPipelineResult(Result):
             use_testing_data=True,
             move_to_cpu=move_to_cpu,
             save_replicates=save_replicates,
+            save_training=save_training,
         )
 
 
@@ -743,8 +745,7 @@ def hpo_pipeline(
     evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
-    if metric is None:
-        metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+    metric = MetricKey.normalize(metric)
     study.set_user_attr("metric", metric)
     logger.info(f"Attempting to {direction} {metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)
@@ -927,7 +928,7 @@ def _set_study_dataset(
             raise ValueError("Cannot specify dataset and training, testing and validation")
         elif isinstance(dataset, (str, pathlib.Path)):
             if isinstance(dataset, str) and has_dataset(dataset):
-                study.set_user_attr("dataset", get_dataset(dataset=dataset).get_normalized_name())
+                study.set_user_attr("dataset", dataset_resolver.normalize(dataset))
             else:
                 # otherwise, dataset refers to a file that should be automatically split
                 study.set_user_attr("dataset", str(dataset))

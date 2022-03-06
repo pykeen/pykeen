@@ -9,7 +9,6 @@ import torch
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...moves import irfft, rfft
-from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
@@ -73,15 +72,15 @@ class HolE(EntityRelationEmbeddingModel):
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs or self.entity_constrainer_default_kwargs,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
@@ -129,7 +128,7 @@ class HolE(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
         t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
@@ -141,7 +140,7 @@ class HolE(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
         t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
@@ -153,7 +152,7 @@ class HolE(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
         t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)

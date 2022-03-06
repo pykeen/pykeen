@@ -17,19 +17,26 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Mapping, Optional, Tuple, Type
 
 import click
+from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
-from .evaluation import evaluator_resolver, get_metric_list
+from .evaluation import (
+    ClassificationMetricResults,
+    MetricResults,
+    RankBasedMetricResults,
+    evaluator_resolver,
+    metric_resolver,
+)
 from .experiments.cli import experiments
 from .hpo.cli import optimize
-from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
+from .metrics.utils import Metric
 from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
 from .models.cli import build_cli_from_cls
 from .nn.modules import LiteralInteraction, interaction_resolver
@@ -40,7 +47,7 @@ from .stoppers import stopper_resolver
 from .trackers import tracker_resolver
 from .training import training_loop_resolver
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
-from .utils import get_until_first_blank
+from .utils import get_until_first_blank, getattr_or_docdata
 from .version import env_table
 
 HERE = Path(__file__).resolve().parent
@@ -407,27 +414,29 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-METRIC_NAMES = {
-    "classification": "Classification",
-    "rankbased": "Ranking",
+METRIC_NAMES: Mapping[Type[MetricResults], str] = {
+    ClassificationMetricResults: "Classification",
+    RankBasedMetricResults: "Ranking",
 }
+
+METRICS_SKIP = {"standard_deviation", "variance", "median_absolute_deviation", "count"}
 
 
 def _get_metrics_lines(tablefmt: str):
-    for field, name, value in get_metric_list():
-        if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
+    for key, metric, metric_results_cls in get_metric_list():
+        if key in METRICS_SKIP:
             continue
-        label = field.metadata["name"]
-        link = field.metadata["link"]
+        label = getattr_or_docdata(metric, "name")
+        link = getattr_or_docdata(metric, "link")
         yv = [
             f"[{label}]({link})",
-            field.metadata["range"],
-            "📈" if field.metadata["increasing"] else "📉",
-            field.metadata["doc"],
-            METRIC_NAMES[name],
+            metric.value_range.notate(),
+            "📈" if metric.increasing else "📉",
+            getattr_or_docdata(metric, "description"),
+            METRIC_NAMES[metric_results_cls],
         ]
         if tablefmt != "github":
-            yv.append(f"pykeen.evaluation.{value.__name__}")
+            yv.append(f"pykeen.evaluation.{metric_results_cls.__name__}")
         yield tuple(yv)
 
 
@@ -502,6 +511,15 @@ def _link(text: str, link: str, fmt: str) -> str:
         return f"`{text} <{link}>`_"
     else:
         return f"[{text}]({link})"
+
+
+def get_metric_list() -> List[Tuple[str, Type[Metric], Type[MetricResults]]]:
+    """Get info about all metrics across all evaluators."""
+    return [
+        (metric_key, metric_cls, resolver_cls)
+        for resolver_cls in metric_resolver
+        for metric_key, metric_cls in resolver_cls.metrics.items()
+    ]
 
 
 @main.command()

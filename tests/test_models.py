@@ -27,8 +27,8 @@ from pykeen.models import (
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
-from pykeen.models.unimodal.node_piece import _ConcatMLP
-from pykeen.nn import Embedding, EmbeddingSpecification, NodePieceRepresentation
+from pykeen.nn import Embedding, NodePieceRepresentation
+from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
@@ -60,9 +60,13 @@ class TestCompGCN(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        dim = kwargs.pop("embedding_dim")
         kwargs["encoder_kwargs"] = dict(
-            embedding_specification=EmbeddingSpecification(
-                embedding_dim=(kwargs.pop("embedding_dim")),
+            entity_representations_kwargs=dict(
+                shape=(dim,),
+            ),
+            relation_representations_kwargs=dict(
+                shape=(dim,),
             ),
         )
         return kwargs
@@ -247,7 +251,7 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
         """Test that the MLP gets registered properly and is trainable."""
         self.assertIsInstance(self.instance, pykeen.models.NodePiece)
         self.assertIsInstance(self.instance.entity_representations[0], NodePieceRepresentation)
-        self.assertIsInstance(self.instance.entity_representations[0].aggregation, _ConcatMLP)
+        self.assertIsInstance(self.instance.entity_representations[0].aggregation, ConcatMLP)
 
         # Test that the weight in the MLP is trainable (i.e. requires grad)
         keys = [
@@ -303,11 +307,27 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         """Test the expected vocabulary size of the individual tokenizations."""
         assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
         node_piece = self.instance.entity_representations[0]
-        assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)
-        assert len(node_piece.tokenizations) == 2
-        anchor, relation = node_piece.tokenizations
+        assert isinstance(node_piece.token_representations, torch.nn.ModuleList)
+        assert len(node_piece.token_representations) == 2
+        anchor, relation = node_piece.token_representations
         assert anchor.vocabulary.max_id == self.num_anchors + 1
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
+
+
+class TestInductiveNodePiece(cases.InductiveModelTestCase):
+    """Test the InductiveNodePiece model."""
+
+    cls = pykeen.models.InductiveNodePiece
+    create_inverse_triples = True
+
+
+class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
+    """Test the InductiveNodePieceGNN model."""
+
+    cls = pykeen.models.InductiveNodePieceGNN
+    num_constant_init = 6
+    create_inverse_triples = True
+    train_batch_size = 8
 
 
 class TestNTN(cases.ModelTestCase):
@@ -854,9 +874,9 @@ class ERModelTests(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        embedding_dim = kwargs.pop("embedding_dim")
-        kwargs["entity_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
-        kwargs["relation_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        shape = (kwargs.pop("embedding_dim"),)
+        kwargs["entity_representations_kwargs"] = dict(shape=shape)
+        kwargs["relation_representations_kwargs"] = dict(shape=shape)
         return kwargs
 
     def test_has_hpo_defaults(self):  # noqa: D102
