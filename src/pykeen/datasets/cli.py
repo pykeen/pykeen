@@ -247,19 +247,25 @@ def verify(dataset: str):
 )
 @log_level_option(default=logging.ERROR)
 @force_option
+@click.option("--output-directory", default=PYKEEN_DATASETS, type=pathlib.Path, show_default=True)
 def expected_metrics(
-    dataset: str, max_triples: Optional[int], min_triples: Optional[int], log_level: str, samples: int, force: bool
+    dataset: str,
+    max_triples: Optional[int],
+    min_triples: Optional[int],
+    log_level: str,
+    samples: int,
+    force: bool,
+    output_directory: pathlib.Path,
 ):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
-    datasets_directory = PYKEEN_DATASETS
     df_data: List[Tuple[str, str, str, str, float]] = []
     for _dataset_name, dataset_cls in _iter_datasets(
         regex_name_filter=dataset, max_triples=max_triples, min_triples=min_triples
     ):
         dataset_instance = get_dataset(dataset=dataset_cls)
         dataset_name = dataset_resolver.normalize_inst(dataset_instance)
-        adjustments_directory = datasets_directory.joinpath(dataset_name, "adjustments")
+        adjustments_directory = output_directory.joinpath(dataset_name, "adjustments")
         adjustments_directory.mkdir(parents=True, exist_ok=True)
         expected_metrics_path = adjustments_directory.joinpath("expected_metrics.json")
         if expected_metrics_path.is_file() and not force:
@@ -330,7 +336,7 @@ def expected_metrics(
         )
         .reset_index(drop=True)
     )
-    results_path = datasets_directory.joinpath("expected_metrics.tsv.gz")
+    results_path = output_directory.joinpath("expected_metrics.tsv.gz")
     df.to_csv(results_path, sep="\t", index=False)
     click.secho(f"wrote {results_path}")
     click.echo(df.to_markdown(index=False))
