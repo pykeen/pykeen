@@ -59,11 +59,10 @@ class RankBasedMetric(Metric):
         """
         num_candidates = np.asarray(num_candidates)
         generator = np.random.default_rng()
-        expectation = 0.0
-        for _ in range(num_samples):
-            ranks = generator.integers(low=1, high=num_candidates + 1)
-            expectation += self(ranks)
-        return expectation / num_samples
+        return sum(
+            self(generator.integers(low=1, high=num_candidates + 1))
+            for _ in range(num_samples)
+        ) / num_samples
 
     def expected_value(
         self,
