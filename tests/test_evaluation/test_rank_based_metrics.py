@@ -40,6 +40,7 @@ class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.ArithmeticMeanRank
+    check_expectation = True
 
 
 class CountTests(cases.RankBasedMetricTestCase):
@@ -64,6 +65,7 @@ class HitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for Hits at k."""
 
     cls = pykeen.metrics.ranking.HitsAtK
+    check_expectation = True
 
 
 class InverseArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
@@ -88,6 +90,7 @@ class InverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for inverse harmonic mean rank."""
 
     cls = pykeen.metrics.ranking.InverseHarmonicMeanRank
+    check_expectation = True
 
 
 class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
