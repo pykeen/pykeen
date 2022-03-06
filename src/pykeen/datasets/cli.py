@@ -262,7 +262,7 @@ def expected_metrics(
         adjustments_directory = datasets_directory.joinpath(dataset_name, "adjustments")
         adjustments_directory.mkdir(parents=True, exist_ok=True)
         expected_metrics_path = adjustments_directory.joinpath("expected_metrics.json")
-        if expected_metrics_path.exists() and not force:
+        if expected_metrics_path.is_file() and not force:
             expected_metrics_dict = json.loads(expected_metrics_path.read_text())
         else:
             expected_metrics_dict = dict()
