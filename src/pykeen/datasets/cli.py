@@ -13,7 +13,7 @@ from typing import Iterable, List, Mapping, MutableMapping, Optional, Tuple, Typ
 import click
 import docdata
 import pandas as pd
-from more_click import log_level_option, verbose_option
+from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
 
 from . import dataset_resolver, get_dataset
@@ -73,7 +73,7 @@ def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None) ->
         desc="Datasets",
     )
     for k, v in it_tqdm:
-        it_tqdm.set_postfix(name=k)
+        it_tqdm.set_postfix(name=k, triples=docdata.get_docdata(v)["statistics"]["triples"])
         yield k, v
 
 
@@ -240,7 +240,8 @@ def verify(dataset: str):
     help="Number of samples for estimating expected values",
 )
 @log_level_option(default=logging.ERROR)
-def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, samples: int):
+@force_option
+def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, samples: int, force: bool):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
     directory = PYKEEN_DATASETS
@@ -250,55 +251,61 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, s
         dataset_name = dataset_resolver.normalize_inst(dataset_instance)
         d = directory.joinpath(dataset_name, "analysis")
         d.mkdir(parents=True, exist_ok=True)
-        expected_metrics = dict()
-        for key, factory in dataset_instance.factory_dict.items():
-            if key == "training":
-                additional_filter_triples = None
-            elif key == "validation":
-                additional_filter_triples = dataset_instance.training.mapped_triples
-            elif key == "testing":
-                additional_filter_triples = [
-                    dataset_instance.training.mapped_triples,
-                ]
-                if dataset_instance.validation is None:
-                    click.echo(f"WARNING: {dataset_name} does not have validation triples!")
+        expected_metrics_path = d.joinpath("expected_metrics.json")
+        if expected_metrics_path.exists() and not force:
+            expected_metrics = json.loads(expected_metrics_path.read_text())
+        else:
+            expected_metrics = dict()
+            for key, factory in dataset_instance.factory_dict.items():
+                if key == "training":
+                    additional_filter_triples = None
+                elif key == "validation":
+                    additional_filter_triples = dataset_instance.training.mapped_triples
+                elif key == "testing":
+                    additional_filter_triples = [
+                        dataset_instance.training.mapped_triples,
+                    ]
+                    if dataset_instance.validation is None:
+                        click.echo(f"WARNING: {dataset_name} does not have validation triples!")
+                    else:
+                        additional_filter_triples.append(dataset_instance.validation.mapped_triples)
                 else:
-                    additional_filter_triples.append(dataset_instance.validation.mapped_triples)
-            else:
-                raise AssertionError(key)
-            df = get_candidate_set_size(
-                mapped_triples=factory.mapped_triples,
-                additional_filter_triples=additional_filter_triples,
-            )
-            output_path = d.joinpath(f"{key}_candidates.tsv.gz")
-            df.to_csv(output_path, sep="\t", index=False)
+                    raise AssertionError(key)
+                df = get_candidate_set_size(
+                    mapped_triples=factory.mapped_triples,
+                    additional_filter_triples=additional_filter_triples,
+                )
+                output_path = d.joinpath(f"{key}_candidates.tsv.gz")
+                df.to_csv(output_path, sep="\t", index=False)
+                tqdm.write(f"wrote {output_path}")
 
-            # expected metrics
-            ks = (1, 3, 5, 10) + tuple(
-                10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
-            )
-            metrics = [
-                ArithmeticMeanRank(),
-                InverseArithmeticMeanRank(),  # needs simulation
-                HarmonicMeanRank(),  # needs simulation
-                InverseHarmonicMeanRank(),
-                GeometricMeanRank(),  # needs simulation
-                InverseGeometricMeanRank(),  # needs simulation
-                *(HitsAtK(k) for k in ks),
-            ]
-            this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
-            for label, sides in SIDE_MAPPING.items():
-                num_candidates = df[[f"{side}_candidates" for side in sides]].values.ravel()
-                this_metrics[label] = {
-                    metric.key: metric.expected_value(
-                        num_candidates=num_candidates,
-                        num_samples=samples,
-                    )
-                    for metric in metrics
-                }
-            expected_metrics[key] = this_metrics
-        with d.joinpath("expected_metrics.json").open("w") as file:
-            json.dump(expected_metrics, file, sort_keys=True, indent=4)
+                # expected metrics
+                ks = (1, 3, 5, 10) + tuple(
+                    10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
+                )
+                metrics = [
+                    ArithmeticMeanRank(),
+                    InverseArithmeticMeanRank(),  # needs simulation
+                    HarmonicMeanRank(),  # needs simulation
+                    InverseHarmonicMeanRank(),
+                    GeometricMeanRank(),  # needs simulation
+                    InverseGeometricMeanRank(),  # needs simulation
+                    *(HitsAtK(k) for k in ks),
+                ]
+                this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
+                for label, sides in SIDE_MAPPING.items():
+                    num_candidates = df[[f"{side}_candidates" for side in sides]].values.ravel()
+                    this_metrics[label] = {
+                        metric.key: metric.expected_value(
+                            num_candidates=num_candidates,
+                            num_samples=samples,
+                        )
+                        for metric in metrics
+                    }
+                expected_metrics[key] = this_metrics
+            with expected_metrics_path.open("w") as file:
+                json.dump(expected_metrics, file, sort_keys=True, indent=4)
+            tqdm.write(f"wrote {expected_metrics_path}")
 
         df_data.extend(
             (dataset_name, metric, side, part, value)
@@ -313,7 +320,9 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, s
         )
         .reset_index(drop=True)
     )
-    df.to_csv(directory.joinpath("expected_metrics.tsv.gz"))
+    results_path = directory.joinpath("expected_metrics.tsv.gz")
+    df.to_csv(results_path, sep="\t")
+    click.secho(f"wrote {results_path}")
     click.echo(df.to_markdown(index=False))
 
 
