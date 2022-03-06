@@ -2019,7 +2019,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # data type
         assert isinstance(x, float)
         # value range
-        assert x in self.instance.value_range
+        self.assertIn(x, self.instance.value_range)
 
     def test_call(self):
         """Test __call__."""
@@ -2066,7 +2066,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         closed = self.instance.expected_value(
             num_candidates=self.num_candidates,
         )
-        self.assertAlmostEqual(closed, simulated)
+        self.assertAlmostEqual(closed, simulated, delta=2)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
