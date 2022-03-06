@@ -28,6 +28,8 @@ from ..metrics.ranking import (
     InverseArithmeticMeanRank,
     InverseGeometricMeanRank,
     InverseHarmonicMeanRank,
+    InverseMedianRank,
+    MedianRank,
 )
 from ..typing import LABEL_HEAD, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
 
@@ -249,7 +251,7 @@ def verify(dataset: str):
 @force_option
 @click.option("--output-directory", default=PYKEEN_DATASETS, type=pathlib.Path, show_default=True)
 def expected_metrics(
-    dataset: str,
+    dataset: Optional[str],
     max_triples: Optional[int],
     min_triples: Optional[int],
     log_level: str,
@@ -301,12 +303,15 @@ def expected_metrics(
                 )
                 metrics = [
                     ArithmeticMeanRank(),
-                    InverseArithmeticMeanRank(),  # needs simulation
-                    HarmonicMeanRank(),  # needs simulation
-                    InverseHarmonicMeanRank(),
-                    GeometricMeanRank(),  # needs simulation
-                    InverseGeometricMeanRank(),  # needs simulation
                     *(HitsAtK(k) for k in ks),
+                    InverseHarmonicMeanRank(),
+                    # Needs simulation
+                    InverseArithmeticMeanRank(),
+                    HarmonicMeanRank(),
+                    GeometricMeanRank(),
+                    InverseGeometricMeanRank(),
+                    MedianRank(),
+                    InverseMedianRank(),
                 ]
                 this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
                 for label, sides in SIDE_MAPPING.items():
