@@ -335,9 +335,9 @@ def expected_metrics(
             for metric, value in level2.items()
         )
     df = (
-        pd.DataFrame(df_data, columns=["dataset", "metric", "side", "part", "value"])
+        pd.DataFrame(df_data, columns=["dataset", "metric", "side", "split", "value"])
         .sort_values(
-            by=["dataset", "metric", "side", "part"],
+            by=["dataset", "metric", "side", "split"],
         )
         .reset_index(drop=True)
     )
