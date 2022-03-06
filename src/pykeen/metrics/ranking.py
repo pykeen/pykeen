@@ -480,6 +480,14 @@ class AdjustedArithmeticMeanRank(ArithmeticMeanRank):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return super().__call__(ranks=ranks) / self.expected_value(num_candidates=num_candidates)
+    
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        """Analytically calculate the expected value."""
+        return 1.0
 
 
 @parse_docdata
@@ -500,6 +508,15 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return 1.0 - (super().__call__(ranks=ranks) - 1.0) / (self.expected_value(num_candidates=num_candidates) - 1.0)
+    
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        """Analytically calculate the expected value."""
+        return 0.0
 
 
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
