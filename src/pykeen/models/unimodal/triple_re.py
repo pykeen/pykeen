@@ -10,7 +10,7 @@ from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
+from ...nn.node_piece import NodePieceRepresentation
 from ...nn.modules import TripleREInteraction
 from ...typing import Hint, Initializer, Normalizer
 
@@ -77,25 +77,26 @@ class TripleRE(ERModel):
         super().__init__(
             interaction=TripleREInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representations=EmbeddingSpecification(
+            entity_representations=NodePieceRepresentation(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
                 initializer_kwargs=entity_initializer_kwargs,
                 normalizer=entity_normalizer,
                 normalizer_kwargs=entity_normalizer_kwargs,
             ),
-            relation_representations=[
-                EmbeddingSpecification(
+            relation_representations=[NodePieceRepresentation,NodePieceRepresentation,NodePieceRepresentation],
+            relation_representations_kwargs=[
+                dict(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
-                EmbeddingSpecification(
+                dict(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
-                EmbeddingSpecification(
+                dict(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
