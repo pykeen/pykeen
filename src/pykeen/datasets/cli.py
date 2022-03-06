@@ -341,17 +341,21 @@ def expected_metrics(
         )
         .reset_index(drop=True)
     )
-    results_path = output_directory.joinpath("expected_metrics.tsv.gz")
+    results_path = output_directory.joinpath("metric_adjustments.tsv.gz")
     df.to_csv(results_path, sep="\t", index=False)
     click.secho(f"wrote {results_path}")
     click.echo(df.to_markdown(index=False))
 
-    # TODO add zenodo client upload
     if max_triples is None and min_triples is None and dataset is None:
         try:
-            import zenodo_client
+            from zenodo_client import update_zenodo
         except ImportError:
             return
+        else:
+            zenodo_record = "6331629"
+            # See https://zenodo.org/record/6331629
+            rv = update_zenodo(zenodo_record, results_path)
+            click.secho(f"Updated Zenodo record {zenodo_record}: {rv}", fg="green")
 
 
 if __name__ == "__main__":
