@@ -18,6 +18,24 @@ class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex
 
 
+class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
+    """Tests for adjusted MRR."""
+
+    cls = pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank
+
+
+class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
+    """Tests for adjusted hits at k."""
+
+    cls = pykeen.metrics.ranking.AdjustedHitsAtK
+
+
+class AdjustedHitsAtKIndexTests(cases.RankBasedMetricTestCase):
+    """Tests for adjusted hits at k index."""
+
+    cls = pykeen.metrics.ranking.AdjustedHitsAtKIndex
+
+
 class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for arithmetic mean rank."""
 
