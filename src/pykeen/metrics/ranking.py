@@ -266,7 +266,7 @@ class AdjustedInverseHarmonicMeanRank(InverseHarmonicMeanRank):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return super().__call__(ranks) / self.expected_value(num_candidates=num_candidates)
+        return super().__call__(ranks) / super().expected_value(num_candidates=num_candidates)
 
 
 @parse_docdata
@@ -437,7 +437,7 @@ class AdjustedHitsAtK(HitsAtK):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return super().__call__(ranks) / self.expected_value(num_candidates=num_candidates)
+        return super().__call__(ranks) / super().expected_value(num_candidates=num_candidates)
 
 
 @parse_docdata
@@ -457,7 +457,7 @@ class AdjustedHitsAtKIndex(HitsAtK):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        ev = self.expected_value(num_candidates=num_candidates)
+        ev = super().expected_value(num_candidates=num_candidates)
         return (super().__call__(ranks) - ev) / (1 - ev)
 
 
