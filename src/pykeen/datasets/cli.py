@@ -55,13 +55,17 @@ def _get_num_triples(pair: Tuple[str, Type[Dataset]]) -> int:
     return docdata.get_docdata(pair[1])["statistics"]["triples"]
 
 
-def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None) -> Iterable[Tuple[str, Type[Dataset]]]:
+def _iter_datasets(
+    regex_name_filter=None, *, max_triples: Optional[int] = None, min_triples: Optional[int] = None
+) -> Iterable[Tuple[str, Type[Dataset]]]:
     it = sorted(
         dataset_resolver.lookup_dict.items(),
         key=_get_num_triples,
     )
     if max_triples is not None:
         it = [pair for pair in it if _get_num_triples(pair) <= max_triples]
+    if min_triples is not None:
+        it = [pair for pair in it if _get_num_triples(pair) >= min_triples]
     if regex_name_filter is not None:
         if isinstance(regex_name_filter, str):
             import re
@@ -231,6 +235,7 @@ def verify(dataset: str):
 @verbose_option
 @click.option("-d", "--dataset", help="Regex for filtering datasets by name")
 @click.option("-m", "--max-triples", type=int, default=None)
+@click.option("--min-triples", type=int, default=None)
 @click.option(
     "-s",
     "--samples",
@@ -241,12 +246,16 @@ def verify(dataset: str):
 )
 @log_level_option(default=logging.ERROR)
 @force_option
-def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str, samples: int, force: bool):
+def expected_metrics(
+    dataset: str, max_triples: Optional[int], min_triples: Optional[int], log_level: str, samples: int, force: bool
+):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
     directory = PYKEEN_DATASETS
     df_data: List[Tuple[str, str, str, str, float]] = []
-    for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset, max_triples=max_triples):
+    for _dataset_name, dataset_cls in _iter_datasets(
+        regex_name_filter=dataset, max_triples=max_triples, min_triples=min_triples
+    ):
         dataset_instance = get_dataset(dataset=dataset_cls)
         dataset_name = dataset_resolver.normalize_inst(dataset_instance)
         d = directory.joinpath(dataset_name, "analysis")
