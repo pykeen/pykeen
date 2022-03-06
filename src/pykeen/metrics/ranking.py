@@ -59,10 +59,7 @@ class RankBasedMetric(Metric):
         """
         num_candidates = np.asarray(num_candidates)
         generator = np.random.default_rng()
-        return sum(
-            self(generator.integers(low=1, high=num_candidates + 1))
-            for _ in range(num_samples)
-        ) / num_samples
+        return sum(self(generator.integers(low=1, high=num_candidates + 1)) for _ in range(num_samples)) / num_samples
 
     def expected_value(
         self,
@@ -479,7 +476,7 @@ class AdjustedArithmeticMeanRank(ArithmeticMeanRank):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return super().__call__(ranks=ranks) / super().expected_value(num_candidates=num_candidates)
-    
+
     def expected_value(
         self,
         num_candidates: np.ndarray,
@@ -506,8 +503,9 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return 1.0 - (super().__call__(ranks=ranks) - 1.0) / (super().expected_value(num_candidates=num_candidates) - 1.0)
-    
+        return 1.0 - (super().__call__(ranks=ranks) - 1.0) / (
+            super().expected_value(num_candidates=num_candidates) - 1.0
+        )
 
     def expected_value(
         self,
