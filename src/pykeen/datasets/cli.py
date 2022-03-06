@@ -77,7 +77,8 @@ def _iter_datasets(
         desc="Datasets",
     )
     for k, v in it_tqdm:
-        it_tqdm.set_postfix(name=k, triples=docdata.get_docdata(v)["statistics"]["triples"])
+        n_triples = docdata.get_docdata(v)["statistics"]["triples"]
+        it_tqdm.set_postfix(name=k, triples=f"{n_triples:,}")
         yield k, v
 
 
@@ -251,20 +252,20 @@ def expected_metrics(
 ):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
-    directory = PYKEEN_DATASETS
+    datasets_directory = PYKEEN_DATASETS
     df_data: List[Tuple[str, str, str, str, float]] = []
     for _dataset_name, dataset_cls in _iter_datasets(
         regex_name_filter=dataset, max_triples=max_triples, min_triples=min_triples
     ):
         dataset_instance = get_dataset(dataset=dataset_cls)
         dataset_name = dataset_resolver.normalize_inst(dataset_instance)
-        d = directory.joinpath(dataset_name, "analysis")
-        d.mkdir(parents=True, exist_ok=True)
-        expected_metrics_path = d.joinpath("expected_metrics.json")
+        adjustments_directory = datasets_directory.joinpath(dataset_name, "adjustments")
+        adjustments_directory.mkdir(parents=True, exist_ok=True)
+        expected_metrics_path = adjustments_directory.joinpath("expected_metrics.json")
         if expected_metrics_path.exists() and not force:
-            expected_metrics = json.loads(expected_metrics_path.read_text())
+            expected_metrics_dict = json.loads(expected_metrics_path.read_text())
         else:
-            expected_metrics = dict()
+            expected_metrics_dict = dict()
             for key, factory in dataset_instance.factory_dict.items():
                 if key == "training":
                     additional_filter_triples = None
@@ -284,7 +285,7 @@ def expected_metrics(
                     mapped_triples=factory.mapped_triples,
                     additional_filter_triples=additional_filter_triples,
                 )
-                output_path = d.joinpath(f"{key}_candidates.tsv.gz")
+                output_path = adjustments_directory.joinpath(f"{key}_candidates.tsv.gz")
                 df.to_csv(output_path, sep="\t", index=False)
                 tqdm.write(f"wrote {output_path}")
 
@@ -311,14 +312,14 @@ def expected_metrics(
                         )
                         for metric in metrics
                     }
-                expected_metrics[key] = this_metrics
+                expected_metrics_dict[key] = this_metrics
             with expected_metrics_path.open("w") as file:
-                json.dump(expected_metrics, file, sort_keys=True, indent=4)
+                json.dump(expected_metrics_dict, file, sort_keys=True, indent=4)
             tqdm.write(f"wrote {expected_metrics_path}")
 
         df_data.extend(
             (dataset_name, metric, side, part, value)
-            for part, level1 in expected_metrics.items()
+            for part, level1 in expected_metrics_dict.items()
             for side, level2 in level1.items()
             for metric, value in level2.items()
         )
@@ -329,8 +330,8 @@ def expected_metrics(
         )
         .reset_index(drop=True)
     )
-    results_path = directory.joinpath("expected_metrics.tsv.gz")
-    df.to_csv(results_path, sep="\t")
+    results_path = datasets_directory.joinpath("expected_metrics.tsv.gz")
+    df.to_csv(results_path, sep="\t", index=False)
     click.secho(f"wrote {results_path}")
     click.echo(df.to_markdown(index=False))
 
