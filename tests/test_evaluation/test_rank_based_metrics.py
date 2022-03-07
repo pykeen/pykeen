@@ -21,7 +21,7 @@ class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
 class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted MRR."""
 
-    cls = pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank
+    cls = pykeen.metrics.ranking.ZInverseHarmonicMeanRank
 
 
 class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
@@ -30,17 +30,17 @@ class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedHitsAtK
 
 
-class AdjustedHitsAtKIndexTests(cases.RankBasedMetricTestCase):
-    """Tests for adjusted hits at k index."""
-
-    cls = pykeen.metrics.ranking.AdjustedHitsAtKIndex
-
-
 class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.ArithmeticMeanRank
     check_expectation = True
+
+
+class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
+    """Tests for z-scored arithmetic mean rank."""
+
+    cls = pykeen.metrics.ranking.ZArithmeticMeanRank
 
 
 class CountTests(cases.RankBasedMetricTestCase):

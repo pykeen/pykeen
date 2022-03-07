@@ -51,7 +51,8 @@ class RankBasedMetric(Metric):
     ) -> Iterable[float]:
         num_candidates = np.asarray(num_candidates)
         generator = np.random.default_rng()
-        yield from (self(generator.integers(low=1, high=num_candidates + 1)) for _ in range(num_samples))
+        for _ in range(num_samples):
+            yield self(generator.integers(low=1, high=num_candidates + 1))
 
     def numeric_expected_value(
         self,
@@ -112,6 +113,15 @@ class RankBasedMetric(Metric):
         return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples)
 
 
+class IncreasingZMixin(RankBasedMetric):
+    """A mixin to create a z-scored metric."""
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        v = super().expected_value(num_candidates=num_candidates) - super().__call__(ranks=ranks)
+        std = math.sqrt(super().variance(num_candidates=num_candidates))
+        return v / std
+
+
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
     """The (arithmetic) mean rank.
@@ -155,7 +165,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:
-        """Calculate the variance under random ordering
+        """Calculate the variance under random ordering.
 
         :param num_candidates:
             the number of candidates for each individual rank computation
@@ -164,6 +174,23 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         return np.square(np.mean(np.asanyarray(num_candidates)).item()) / 12.0
+
+
+@parse_docdata
+class ZArithmeticMeanRank(IncreasingZMixin, ArithmeticMeanRank):
+    """The z-scored arithmetic mean rank.
+
+    ---
+    link: https://github.com/pykeen/pykeen/pull/814
+    description: The z-scored mean rank
+    """
+
+    name = "z-Mean Rank (ZMR)"
+    synonyms = ("zamr", "zmr")
+    increasing = True
+    value_range = ValueRange(lower=None, upper=None)
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
 
 
 @parse_docdata
@@ -282,23 +309,20 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
 
 @parse_docdata
-class AdjustedInverseHarmonicMeanRank(InverseHarmonicMeanRank):
-    """The adjusted inverse harmonic mean rank (AIHMR).
+class ZInverseHarmonicMeanRank(IncreasingZMixin, InverseHarmonicMeanRank):
+    """The z-inverse harmonic mean rank (ZIHMR).
 
     ---
-    link: ...
-    description: The adjusted MRR
+    link: https://github.com/pykeen/pykeen/pull/814
+    description: The z-scored mean reciprocal rank
     """
 
-    name = "Adjusted Mean Reciprocal Rank (AMRR)"
-    value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
-    synonyms = ("adjusted_mean_reciprocal_rank", "amrr", "aihmr")
+    name = "z-Mean Reciprocal Rank (ZMRR)"
+    value_range = ValueRange(lower=None, upper=None)
+    synonyms = ("zmrr", "zihmr")
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return super().__call__(ranks) / super().expected_value(num_candidates=num_candidates)
 
 
 @parse_docdata
@@ -485,8 +509,8 @@ class AdjustedHitsAtK(HitsAtK):
     """The adjusted Hits at K ($AH_k$).
 
     ---
-    link: ...
-    description: The adjusted hits at K
+    link: https://github.com/pykeen/pykeen/pull/814
+    description: The re-indexed adjusted hits at K
     """
 
     name = "Adjusted Hits at K"
@@ -497,28 +521,26 @@ class AdjustedHitsAtK(HitsAtK):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return super().__call__(ranks) / super().expected_value(num_candidates=num_candidates)
+        ev = super().expected_value(num_candidates=num_candidates)
+        return (super().__call__(ranks) - ev) / (1 - ev)
 
 
 @parse_docdata
-class AdjustedHitsAtKIndex(HitsAtK):
-    """The adjusted Hits at K index ($AH_kI$).
+class ZHitsAtK(IncreasingZMixin, HitsAtK):
+    """The z-scored hits at k ($ZAH_k$).
 
     ---
-    link: ...
-    description: The re-indexed adjusted hits at K
+    link: https://github.com/pykeen/pykeen/pull/814
+    description: The z-scored hits at K
     """
 
-    name = "Adjusted Hits at K Index"
-    value_range = ValueRange(lower=-1, lower_inclusive=False, upper=1, upper_inclusive=True)
-    synonyms = ("ahki",)
+    name = "z-Hits at K"
+    value_range = ValueRange(lower=None, upper=None)
+    synonyms = ("zahk",)
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        ev = super().expected_value(num_candidates=num_candidates)
-        return (super().__call__(ranks) - ev) / (1 - ev)
 
 
 @parse_docdata
@@ -582,4 +604,5 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
+    skip={IncreasingZMixin},
 )

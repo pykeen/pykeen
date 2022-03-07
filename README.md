@@ -254,7 +254,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.           |
 | sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) |                                                  |
 
-### Metrics (40)
+### Metrics (41)
 
 | Name                                                                                                                   | Interval   | Direction   | Description                                                 | Type           |
 |------------------------------------------------------------------------------------------------------------------------|------------|-------------|-------------------------------------------------------------|----------------|
@@ -282,9 +282,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | [True Positive Rate](https://en.wikipedia.org/wiki/Sensitivity_(test))                                                 | [0, 1]     | 📈          | TP / (TP + FN)                                              | Classification |
 | [Adjusted Arithmetic Mean Rank (AAMR)](https://arxiv.org/abs/2002.06914)                                               | [0, 2)     | 📉          | The mean over all ranks divided by its expected value.      | Ranking        |
 | [Adjusted Arithmetic Mean Rank Index (AAMRI)](https://arxiv.org/abs/2002.06914)                                        | [-1, 1]    | 📈          | The re-indexed adjusted mean rank (AAMR)                    | Ranking        |
-| [Adjusted Hits at K Index](...)                                                                                        | (-1, 1]    | 📈          | The re-indexed adjusted hits at K                           | Ranking        |
-| [Adjusted Hits at K](...)                                                                                              | (-1, 1]    | 📈          | The adjusted hits at K                                      | Ranking        |
-| [Adjusted Mean Reciprocal Rank (AMRR)](...)                                                                            | [-1, 1]    | 📈          | The adjusted MRR                                            | Ranking        |
+| [Adjusted Hits at K](https://github.com/pykeen/pykeen/pull/814)                                                        | (-1, 1]    | 📈          | The re-indexed adjusted hits at K                           | Ranking        |
 | [Geometric Mean Rank (GMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                 | [1, inf)   | 📉          | The geometric mean over all ranks.                          | Ranking        |
 | [Harmonic Mean Rank (HMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                  | [1, inf)   | 📉          | The harmonic mean over all ranks.                           | Ranking        |
 | [Hits @ K](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k)                      | [0, 1]     | 📈          | The relative frequency of ranks not larger than a given k.  | Ranking        |
@@ -294,6 +292,9 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank)             | [1, inf)   | 📉          | The arithmetic mean over all ranks.                         | Ranking        |
 | [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank)                                       | (0, 1]     | 📈          | The inverse of the harmonic mean over all ranks.            | Ranking        |
 | [Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                               | [1, inf)   | 📉          | The median over all ranks.                                  | Ranking        |
+| [z-Hits at K](https://github.com/pykeen/pykeen/pull/814)                                                               | (inf, inf) | 📈          | The z-scored hits at K                                      | Ranking        |
+| [z-Mean Rank (ZMR)](https://github.com/pykeen/pykeen/pull/814)                                                         | (inf, inf) | 📈          | The z-scored mean rank                                      | Ranking        |
+| [z-Mean Reciprocal Rank (ZMRR)](https://github.com/pykeen/pykeen/pull/814)                                             | (inf, inf) | 📈          | The z-scored mean reciprocal rank                           | Ranking        |
 
 ### Trackers (8)
 
