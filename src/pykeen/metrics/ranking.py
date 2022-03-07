@@ -313,7 +313,8 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:
-        raise NotImplementedError
+        n = np.mean(np.asanyarray(num_candidates)).item()
+        return 1 / n - np.log(n) / (n - 1)
 
 
 @parse_docdata
