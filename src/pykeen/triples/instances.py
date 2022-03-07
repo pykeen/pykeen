@@ -213,7 +213,7 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatchType]):
     def __getitem__(self, item: List[int]) -> SLCWABatchType:
         """Get a batch from the given list of positive triple IDs."""
         positive_batch = self.mapped_triples[item]
-        negative_batch, masks = self.negative_sampler.sample()
+        negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
         return SLCWABatchType(positives=positive_batch, negatives=negative_batch, masks=masks)
 
     def __iter__(self) -> Iterator[SLCWABatchType]:
