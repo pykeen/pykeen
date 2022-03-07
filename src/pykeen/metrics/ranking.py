@@ -116,6 +116,8 @@ class RankBasedMetric(Metric):
 class IncreasingZMixin(RankBasedMetric):
     """A mixin to create a z-scored metric."""
 
+    value_range = ValueRange(lower=None, upper=None)
+
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().expected_value(num_candidates=num_candidates) - super().__call__(ranks=ranks)
         std = math.sqrt(super().variance(num_candidates=num_candidates))
@@ -188,7 +190,6 @@ class ZArithmeticMeanRank(IncreasingZMixin, ArithmeticMeanRank):
     name = "z-Mean Rank (ZMR)"
     synonyms = ("zamr", "zmr")
     increasing = True
-    value_range = ValueRange(lower=None, upper=None)
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
 
@@ -325,7 +326,6 @@ class ZInverseHarmonicMeanRank(IncreasingZMixin, InverseHarmonicMeanRank):
     """
 
     name = "z-Mean Reciprocal Rank (ZMRR)"
-    value_range = ValueRange(lower=None, upper=None)
     synonyms = ("zmrr", "zihmr")
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
@@ -549,7 +549,6 @@ class ZHitsAtK(IncreasingZMixin, HitsAtK):
     """
 
     name = "z-Hits at K"
-    value_range = ValueRange(lower=None, upper=None)
     synonyms = ("zahk",)
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
