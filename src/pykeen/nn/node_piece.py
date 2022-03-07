@@ -936,7 +936,7 @@ class NodePieceRepresentation(Representation):
             for tokenizer_inst, token_representation, token_representation_kwargs, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
                 token_representations,
-                token_representation_kwargs,
+                token_representations_kwargs,
                 num_tokens,
             )
         ]
