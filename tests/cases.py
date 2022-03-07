@@ -2091,5 +2091,7 @@ class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
 
     def test_data_loader(self):
         """Test usage with data loader."""
-        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=2, shuffle=True):
+        for batch in torch.utils.data.DataLoader(
+            dataset=self.instance, batch_size=2, shuffle=True, collate_fn=self.instance.get_collator()
+        ):
             assert batch is not None
