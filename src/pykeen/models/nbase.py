@@ -424,11 +424,21 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
-        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
+        return self.score_ts(hr_batch=hr_batch, slice_size=slice_size, mode=mode, ts=None)
+
+    def score_ts(
+        self,
+        hr_batch: torch.LongTensor,
+        ts: Optional[torch.LongTensor] = None,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=ts, mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode),
+            num=self._get_entity_len(mode=mode) if ts is None else ts.shape[-1],
         )
 
     def score_h(
