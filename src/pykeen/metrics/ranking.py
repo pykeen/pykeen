@@ -134,6 +134,7 @@ class DecreasingZMixin(RankBasedMetric):
         variance = super().variance(num_candidates=num_candidates)
         return v / math.sqrt(variance)
 
+
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
     """The (arithmetic) mean rank.
@@ -185,7 +186,8 @@ class ArithmeticMeanRank(RankBasedMetric):
         :return:
             the variance of the mean rank
         """
-        return np.square(np.mean(np.asanyarray(num_candidates)).item()) / 12.0
+        n = np.mean(np.asanyarray(num_candidates)).item()
+        return (np.square(n) - 1) / 12.0
 
 
 @parse_docdata
@@ -324,7 +326,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
     ) -> float:
         n = np.mean(np.asanyarray(num_candidates)).item()
-        return 1 / n - np.log(n) / (n - 1)
+        return 1 / n - (np.log(n) / (n - 1)) ** 2
 
 
 @parse_docdata
