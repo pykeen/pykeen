@@ -875,7 +875,7 @@ class NodePieceRepresentation(Representation):
         *,
         triples_factory: CoreTriplesFactory,
         token_representations: OneOrManyHintOrType[Representation] = None,
-        token_representation_kwargs: OneOrManyOptionalKwargs = None,
+        token_representations_kwargs: OneOrManyOptionalKwargs = None,
         tokenizers: OneOrManyHintOrType[Tokenizer] = None,
         tokenizers_kwargs: OneOrManyOptionalKwargs = None,
         num_tokens: OneOrSequence[int] = 2,
@@ -892,7 +892,7 @@ class NodePieceRepresentation(Representation):
             the token representation specification, or pre-instantiated representation module.
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
-        :param tokenizer_kwargs:
+        :param tokenizers_kwargs:
             additional keyword-based parameters passed to the tokenizer upon construction.
         :param num_tokens:
             the number of tokens for each entity.
@@ -918,8 +918,8 @@ class NodePieceRepresentation(Representation):
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
-        token_representations, token_representation_kwargs, num_tokens = broadcast_upgrade_to_sequences(
-            token_representations, token_representation_kwargs, num_tokens
+        token_representations, token_representations_kwargs, num_tokens = broadcast_upgrade_to_sequences(
+            token_representations, token_representations_kwargs, num_tokens
         )
 
         # tokenize
