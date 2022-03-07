@@ -71,10 +71,25 @@ class Representation(nn.Module, ABC):
     #: the shape of an individual representation
     shape: Tuple[int, ...]
 
+    #: a normalizer for individual representations
+    normalizer: Optional[Normalizer]
+
+    #: a regularizer for individual representations
+    # TODO: difference to weight regularizers
+    regularizer: Optional[Normalizer]
+
+    #: dropout
+    dropout: Optional[nn.Dropout]
+
     def __init__(
         self,
         max_id: int,
         shape: OneOrSequence[int],
+        normalizer: HintOrType[Normalizer] = None,
+        normalizer_kwargs: OptionalKwargs = None,
+        regularizer: HintOrType[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
+        dropout: Optional[float] = None,
     ):
         """Initialize the representation module.
 
@@ -82,12 +97,30 @@ class Representation(nn.Module, ABC):
             The maximum ID (exclusively). Valid Ids reach from 0, ..., max_id-1
         :param shape:
             The shape of an individual representation.
+        :param normalizer:
+            A normalization function, which is applied in every forward pass.
+        :param normalizer_kwargs:
+            Additional keyword arguments passed to the normalizer
+        :param regularizer:
+            A regularizer, which is applied to the selected embeddings in forward pass
+        :param regularizer_kwargs:
+            Additional keyword arguments passed to the regularizer
         """
         super().__init__()
         self.max_id = max_id
         self.shape = tuple(upgrade_to_sequence(shape))
+        self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
+        self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
+        self.dropout = None if dropout is None else nn.Dropout(dropout)
 
     @abstractmethod
+    def _real_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Get representations for indices."""
+        raise NotImplementedError
+
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -106,6 +139,14 @@ class Representation(nn.Module, ABC):
         :return: shape: (``*s``, ``*self.shape``)
             The representations.
         """
+        x = self._real_forward(indices=indices)
+        if self.normalizer is not None:
+            x = self.normalizer(x)
+        if self.regularizer is not None:
+            self.regularizer.update(x)
+        if self.dropout is not None:
+            x = self.dropout(x)
+        return x
 
     def forward_unique(
         self,
@@ -237,6 +278,7 @@ class Embedding(Representation):
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
         dropout: Optional[float] = None,
+        **kwargs,
     ):
         """Instantiate an embedding with extended functionality.
 
@@ -263,10 +305,6 @@ class Embedding(Representation):
             - ``"init_phases"``
         :param initializer_kwargs:
             Additional keyword arguments passed to the initializer
-        :param normalizer:
-            A normalization function, which is applied in every forward pass.
-        :param normalizer_kwargs:
-            Additional keyword arguments passed to the normalizer
         :param constrainer:
             A function which is applied to the weights after each parameter update, without tracking gradients.
             It may be used to enforce model constraints outside of gradient-based training. The function does not need
@@ -279,12 +317,8 @@ class Embedding(Representation):
             - ``'clamp_norm'``
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
-        :param regularizer:
-            A regularizer, which is applied to the selected embeddings in forward pass
-        :param regularizer_kwargs:
-            Additional keyword arguments passed to the regularizer
-        :param dropout:
-            A dropout value for the embeddings.
+        :param kwargs:
+            additional keyword-based parameters passed to Representation.__init__
         """
         # normalize num_embeddings vs. max_id
         max_id = process_max_id(max_id, num_embeddings)
@@ -304,28 +338,26 @@ class Embedding(Representation):
             # point dtype, rather than the combined complex one
             dtype = getattr(torch, torch.finfo(dtype).dtype)
 
-        super().__init__(max_id=max_id, shape=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # use make for initializer since there's a default, and make_safe
         # for the others to pass through None values
         self.initializer = initializer_resolver.make(initializer, initializer_kwargs)
-        self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
         self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
-        self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
-
         self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
-        self.dropout = None if dropout is None else nn.Dropout(dropout)
 
     @property
     def num_embeddings(self) -> int:  # noqa: D401
         """The total number of representations (i.e. the maximum ID)."""
         # wrapper around max_id, for backward compatibility
+        warnings.warn(f"Directly use {self.__class__.__name__}.max_id instead of num_embeddings.")
         return self.max_id
 
     @property
     def embedding_dim(self) -> int:  # noqa: D401
         """The representation dimension."""
+        warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
         return self._embeddings.embedding_dim
 
     def reset_parameters(self) -> None:  # noqa: D102
@@ -339,7 +371,7 @@ class Embedding(Representation):
         if self.constrainer is not None:
             self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
 
-    def forward(
+    def _real_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -352,13 +384,6 @@ class Embedding(Representation):
         x = x.view(*prefix_shape, *self.shape)
         # verify that contiguity is preserved
         assert x.is_contiguous()
-        # TODO: move normalizer / regularizer to base class?
-        if self.normalizer is not None:
-            x = self.normalizer(x)
-        if self.regularizer is not None:
-            self.regularizer.update(x)
-        if self.dropout is not None:
-            x = self.dropout(x)
         return x
 
 
