@@ -70,11 +70,39 @@ class RankBasedMetric(Metric):
         Compute expected metric value.
 
         Prefers analytical solution, if available, but falls back to numeric estimation via summation,
-        cf. `numeric_expected_value`.
+        cf. :func:`numeric_expected_value`.
         """
         if num_samples is None:
             raise ValueError("Numeric estimation requires to specify a number of samples.")
         return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples)
+
+    def numeric_variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: int,
+    ):
+        """Compute variance by summation."""
+        expected = self.expected_value(num_candidates=num_candidates, num_samples=num_samples)
+        num_candidates = np.asarray(num_candidates)
+        generator = np.random.default_rng()
+        return (
+            sum((self(generator.integers(low=1, high=num_candidates + 1)) - expected) ** 2 for _ in range(num_samples))
+            / num_samples
+        )
+
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        """Compute variance.
+
+        Prefers analytical solution, if available, but falls back to numeric estimation via summation,
+        cf. :func:`numeric_variance`.
+        """
+        if num_samples is None:
+            raise ValueError("Numeric estimation requires to specify a number of samples.")
+        return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples)
 
 
 @parse_docdata
