@@ -13,6 +13,7 @@ import scipy.sparse.csgraph
 import torch
 import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 
 from .representation import Representation
 from ..constants import AGGREGATIONS
@@ -873,10 +874,10 @@ class NodePieceRepresentation(Representation):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representations: OneOrSequence[HintOrType[Representation]] = None,
-        token_representation_kwargs: OneOrSequence[OptionalKwargs] = None,
-        tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
-        tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
+        token_representations: OneOrManyHintOrType[Representation] = None,
+        token_representation_kwargs: OneOrManyOptionalKwargs = None,
+        tokenizers: OneOrManyHintOrType[Tokenizer] = None,
+        tokenizers_kwargs: OneOrManyOptionalKwargs = None,
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         max_id: Optional[int] = None,
