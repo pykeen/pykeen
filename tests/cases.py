@@ -2085,7 +2085,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_variance(self):
         """Test the numeric variance is close to the closed form one."""
-        if not self.check_expectation:
+        if not self.check_variance:
             self.skipTest("no implementation of closed-form expectation")
         simulated = self.instance.numeric_variance(
             num_candidates=self.num_candidates,

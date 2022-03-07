@@ -18,7 +18,7 @@ class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex
 
 
-class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
+class ZInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted MRR."""
 
     cls = pykeen.metrics.ranking.ZInverseHarmonicMeanRank
@@ -132,4 +132,7 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
 
     base_cls = pykeen.metrics.ranking.RankBasedMetric
     base_test = cases.RankBasedMetricTestCase
-    skip_cls = {pykeen.metrics.ranking.IncreasingZMixin}
+    skip_cls = {
+        pykeen.metrics.ranking.IncreasingZMixin,
+        pykeen.metrics.ranking.DecreasingZMixin,
+    }
