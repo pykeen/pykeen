@@ -75,7 +75,7 @@ class Representation(nn.Module, ABC):
     normalizer: Optional[Normalizer]
 
     #: a regularizer for individual representations
-    regularizer: Optional[Normalizer]
+    regularizer: Optional[Regularizer]
 
     #: dropout
     dropout: Optional[nn.Dropout]
