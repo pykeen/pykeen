@@ -385,20 +385,9 @@ class ERModel(
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail of each triple and calculates the corresponding score.
-
-        :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, 1), dtype: float
-            The score for each triple.
-        """
+    def score_hrt(
+        self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:  # noqa: D102
         # Note: slicing cannot be used here: the indices for score_hrt only have a batch
         # dimension, and slicing along this dimension is already considered by sub-batching.
         # Note: we do not delegate to the general method for performance reasons
@@ -408,22 +397,7 @@ class ERModel(
 
     def score_t(
         self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using right side (tail) prediction.
-
-        This method calculates the score for all possible tails for each (head, relation) pair.
-
-        :param hr_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, relation) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each h-r pair, the scores for all possible tails.
-        """
+    ) -> torch.FloatTensor:  # noqa: D102
         return self.score_ts(hr_batch=hr_batch, slice_size=slice_size, mode=mode, ts=None)
 
     def score_ts(
@@ -443,22 +417,7 @@ class ERModel(
 
     def score_h(
         self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using left side (head) prediction.
-
-        This method calculates the score for all possible heads for each (relation, tail) pair.
-
-        :param rt_batch: shape: (batch_size, 2), dtype: long
-            The indices of (relation, tail) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each r-t pair, the scores for all possible heads.
-        """
+    ) -> torch.FloatTensor:  # noqa: D102
         return self.score_hs(rt_batch=rt_batch, slice_size=slice_size, mode=mode, hs=None)
 
     def score_hs(
@@ -478,22 +437,7 @@ class ERModel(
 
     def score_r(
         self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using middle (relation) prediction.
-
-        This method calculates the score for all possible relations for each (head, tail) pair.
-
-        :param ht_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, tail) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
-        """
+    ) -> torch.FloatTensor:  # noqa: D102
         return self.score_rs(ht_batch=ht_batch, slice_size=slice_size, mode=mode, rs=None)
 
     def score_rs(
