@@ -88,15 +88,12 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: int,
-    ):
+    ) -> float:
         """Compute variance by summation."""
-        expected = self.expected_value(num_candidates=num_candidates, num_samples=num_samples)
         num_candidates = np.asarray(num_candidates)
         generator = np.random.default_rng()
-        return (
-            sum((self(generator.integers(low=1, high=num_candidates + 1)) - expected) ** 2 for _ in range(num_samples))
-            / num_samples
-        )
+        ranks = generator.integers(low=1, high=num_candidates + 1, size=(num_samples, *num_candidates.shape))
+        return np.apply_along_axis(self, 0, ranks).var().item()
 
     def variance(
         self,
