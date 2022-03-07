@@ -6,7 +6,7 @@ import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.triples import LCWAInstances, SLCWAInstances
-from pykeen.triples.instances import BatchedSLCWAInstances
+from pykeen.triples.instances import BatchedSLCWAInstances, SLCWABatchType
 from tests import cases
 
 
@@ -42,9 +42,13 @@ class BatchedSLCWAInstancesTestCase(unittest_templates.GenericTestCase[BatchedSL
     """Tests for batched sLCWA training instances."""
 
     cls = BatchedSLCWAInstances
-    batch_size = 2
+    batch_size: int = 2
+    num_negatives_per_positive: int = 3
     kwargs = dict(
         batch_size=batch_size,
+        negative_sampler_kwargs=dict(
+            num_negs_per_pos=num_negatives_per_positive,
+        ),
     )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -55,4 +59,7 @@ class BatchedSLCWAInstancesTestCase(unittest_templates.GenericTestCase[BatchedSL
     def test_data_loader(self):
         """Test data loader."""
         for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
-            assert batch is not None
+            assert isinstance(batch, SLCWABatchType)
+            assert batch.positives.shape == (self.batch_size, 3)
+            assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
+            assert batch.masks is None
