@@ -1,0 +1,44 @@
+# paper: https://vixra.org/abs/2112.0095
+# reference implementation: https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/master/TripleRE%2BNodepiece/ogb_wikikg2/model.py
+metadata:
+  title: Learn WikiKG2 Dataset with NodePiece + TripleRE as described by Yu et al., 2022
+pipeline:
+  dataset: OGBWikiKG2
+  dataset_kwargs:
+    create_inverse_triples: True
+  evaluator: sampled
+  evaluator_kwargs:
+    filtered: true
+    num_negatives: 1000  # TODO: use given set of negatives
+  loss: nssa
+  model: TriplRE
+  model_kwargs:
+    embedding_dim: 200   # for both anchors and mid relations, as well as for head/tail relations
+    interaction: TripleRE
+    aggregation: mlp
+    tokenizers: [ Anchor, Relation ]
+    num_tokens: [ 20, 12 ]  # 20 anchors, 12 relations
+    tokenizers_kwargs:
+      - selection: Mixture
+        selection_kwargs:
+          selections: [ Degree, PageRank, Random ]
+          ratios: [ 0.4, 0.4, 0.2 ]
+          num_anchors: 20000
+      - { } # no params for RelationTokenizer
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.001
+  training_kwargs:
+    batch_size: 512
+    negative_sampler: basic
+    negative_sampler_kwargs:
+      num_negs_per_pos: 128
+    num_epochs: 121
+    label_smoothing: 0.3
+  training_loop: sLCWA
+  stopper: early
+  stopper_kwargs:
+    metric: inverse_harmonic_mean_rank
+results:
+  nondeterministic: # https://github.com/snap-stanford/ogb/blob/c8f0d2aca80a4f885bfd6ad5258ecf1c2d0ac2d9/ogb/linkproppred/evaluate.py#L235
+    mean_reciprocal_rank: 0.6866
