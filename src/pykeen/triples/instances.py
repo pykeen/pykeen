@@ -3,7 +3,7 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from abc import ABC
-from typing import Callable, Generic, Iterable, List, Mapping, NamedTuple, Optional, Tuple, TypeVar
+from typing import Callable, Generic, Iterable, Iterator, List, Mapping, NamedTuple, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -152,6 +152,73 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
         **kwargs,
     ) -> Instances:  # noqa:D102
         return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)
+
+
+class BatchedSLCWAInstances(data.IterableDataset[SLCWABatchType]):
+    """
+    Pre-batched training instances for the sLCWA training loop.
+
+    .. note ::
+        this class is intended to be used with automatic batching disabled, i.e., both parameters `batch_size` and
+        `batch_sampler` of torch.utils.data.DataLoader` are set to `None`.
+    """
+
+    def __init__(
+        self,
+        mapped_triples: MappedTriples,
+        batch_size: int = 1,
+        shuffle: bool = True,
+        drop_last: bool = True,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+    ):
+        """
+        Initialize the dataset.
+
+        :param mapped_triples: shape: (num_triples, 3)
+            the mapped triples
+        :param batch_size:
+            the batch size
+        :param shuffle:
+            whether to shuffle the triples
+        :param drop_last:
+            whether to drop the last (incomplete) batch
+        :param num_entities: >0
+            the number of entities, passed to the negative sampler
+        :param num_relations: >0
+            the number of relations, passed to the negative sampler
+        :param negative_sampler:
+            the negative sampler, or a hint thereof
+        :param negative_sampler_kwargs:
+            additional keyword-based parameters used to instantiate the negative sampler
+        """
+        self.mapped_triples = mapped_triples
+        self.batch_sampler = data.BatchSampler(
+            sampler=data.RandomSampler(data_source=mapped_triples)
+            if shuffle
+            else data.SequentialSampler(data_source=mapped_triples),
+            batch_size=batch_size,
+            drop_last=drop_last,
+        )
+        self.negative_sampler = negative_sampler_resolver.make(
+            negative_sampler,
+            pos_kwargs=negative_sampler_kwargs,
+            mapped_triples=mapped_triples,
+            num_entities=num_entities,
+            num_relations=num_relations,
+        )
+
+    def __getitem__(self, item: List[int]) -> SLCWABatchType:
+        """Get a batch from the given list of positive triple IDs."""
+        positive_batch = self.mapped_triples[item]
+        negative_batch, masks = self.negative_sampler.sample()
+        return SLCWABatchType(positives=positive_batch, negatives=negative_batch, masks=masks)
+
+    def __iter__(self) -> Iterator[SLCWABatchType]:
+        """Iterate over batches."""
+        yield from (self[triple_ids] for triple_ids in self.batch_sampler)
 
 
 class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
