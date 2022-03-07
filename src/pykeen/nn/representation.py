@@ -281,15 +281,10 @@ class Embedding(Representation):
         shape: Union[None, int, Sequence[int]] = None,
         initializer: Hint[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        normalizer: Hint[Normalizer] = None,
-        normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Hint[Regularizer] = None,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
-        dropout: Optional[float] = None,
         **kwargs,
     ):
         """Instantiate an embedding with extended functionality.
