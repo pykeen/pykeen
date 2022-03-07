@@ -25,6 +25,15 @@ pipeline:
           ratios: [ 0.4, 0.4, 0.2 ]
           num_anchors: 20000
       - { } # no params for RelationTokenizer
+    # https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L84-L88
+    initializer: uniform_
+    # (gamma + epsilon) / dim, cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L52-L60
+    # gamma = 6 cf. https://raw.githubusercontent.com/LongYu-360/TripleRE-Add-NodePiece/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/run_ogb.sh
+    # epsilon = 2 cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L36
+    # (6 + 2) / 200 = 8 / 200 = 0.04
+    initializer_kwargs:
+      a: -0.04
+      b: 0.04
   optimizer: Adam
   optimizer_kwargs:
     lr: 0.001
