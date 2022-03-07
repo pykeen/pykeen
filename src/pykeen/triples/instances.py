@@ -137,7 +137,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
             masks = None
         else:
             masks = torch.cat(masks, dim=0)
-        return positives, negatives, masks
+        return SLCWABatchType(positives, negatives, masks)
 
     def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
         return self.collate
