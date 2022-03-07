@@ -103,6 +103,7 @@ class MedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for median rank."""
 
     cls = pykeen.metrics.ranking.MedianRank
+    check_expectation = True
 
 
 class StandardDeviationTests(cases.RankBasedMetricTestCase):
