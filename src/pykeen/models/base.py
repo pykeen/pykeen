@@ -235,7 +235,7 @@ class Model(nn.Module, ABC):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-    ):
+    ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
         This method calculates for each of the given (head, relation) pairs the score for all possible tails, or a
@@ -285,7 +285,7 @@ class Model(nn.Module, ABC):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-    ):
+    ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
         This method calculates for each of the given (head, tail) pairs the score for all possible relations, or a
@@ -334,7 +334,7 @@ class Model(nn.Module, ABC):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-    ):
+    ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
         This method calculates for each of the given (relation, tail) pairs the score for all possible heads, or a
