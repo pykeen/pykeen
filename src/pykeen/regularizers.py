@@ -263,7 +263,7 @@ class CombinedRegularizer(Regularizer):
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 
 
-regularizer_resolver = ClassResolver.from_subclasses(
+regularizer_resolver: ClassResolver[Regularizer] = ClassResolver.from_subclasses(
     base=Regularizer,
     default=NoRegularizer,
 )
