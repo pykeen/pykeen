@@ -846,7 +846,7 @@ class TokenizationRepresentation(Representation):
             )
         )
 
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -971,7 +971,7 @@ class NodePieceRepresentation(Representation):
         aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
         return f"aggregation={aggregation_str}, "
 
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102

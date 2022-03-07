@@ -113,11 +113,11 @@ class Representation(nn.Module, ABC):
         self.dropout = None if dropout is None else nn.Dropout(dropout)
 
     @abstractmethod
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
-        """Get representations for indices."""
+        """Get representations for indices, without applying normalization, regularization or output dropout."""
         raise NotImplementedError
 
     def forward(
@@ -138,7 +138,7 @@ class Representation(nn.Module, ABC):
         :return: shape: (``*s``, ``*self.shape``)
             The representations.
         """
-        x = self._real_forward(indices=indices)
+        x = self._plain_forward(indices=indices)
         if self.normalizer is not None:
             x = self.normalizer(x)
         if self.regularizer is not None:
@@ -163,7 +163,7 @@ class Representation(nn.Module, ABC):
         if indices is None:
             return self(None)
         unique, inverse = indices.unique(return_inverse=True)
-        x_unique = self._real_forward(indices=unique)
+        x_unique = self._plain_forward(indices=unique)
         # normalize *before* repeating
         if self.normalizer is not None:
             x_unique = self.normalizer(x_unique)
@@ -228,13 +228,13 @@ class SubsetRepresentation(Representation):
         super().__init__(max_id=max_id, shape=base.shape, **kwargs)
         self.base = base
 
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
             indices = torch.arange(self.max_id, device=self.device)
-        return self.base._real_forward(indices=indices)
+        return self.base._plain_forward(indices=indices)
 
 
 class Embedding(Representation):
@@ -378,7 +378,7 @@ class Embedding(Representation):
         if self.constrainer is not None:
             self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
 
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -439,7 +439,7 @@ class LowRankRepresentation(Representation):
         self.bases.reset_parameters()
         self.weight.data = self.weight_initializer(self.weight)
 
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -844,7 +844,7 @@ class SingleCompGCNRepresentation(Representation):
         self.position = position
         self.reset_parameters()
 
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -937,7 +937,7 @@ class LabelBasedTransformerRepresentation(Representation):
             **kwargs,
         )
 
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102

@@ -749,7 +749,7 @@ class RGCNRepresentation(Representation):
 
         return x
 
-    def _real_forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
