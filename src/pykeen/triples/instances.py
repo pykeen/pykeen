@@ -3,7 +3,7 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from abc import ABC
-from typing import Callable, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar
+from typing import Callable, Generic, Iterable, List, Mapping, NamedTuple, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -29,11 +29,23 @@ BatchType = TypeVar("BatchType")
 LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
 LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
 SLCWASampleType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
-SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+
+
+class SLCWABatchType(NamedTuple):
+    """A batch for sLCWA training."""
+
+    #: the positive triples, shape: (batch_size, 3)
+    positives: torch.LongTensor
+
+    #: the negative triples, shape: (batch_size, num_negatives_per_positive, 3)
+    negatives: torch.LongTensor
+
+    #: filtering masks for negative triples, shape: (batch_size, num_negatives_per_positive)
+    masks: Optional[torch.BoolTensor]
 
 
 class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
-    """Triples and mappings to their indices."""
+    """Base class for training instances."""
 
     def __len__(self):  # noqa:D401
         """The number of instances."""
@@ -56,10 +68,12 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
 
         :param mapped_triples: shape: (num_triples, 3)
             The ID-based triples.
-        :param num_entities:
+        :param num_entities: >0
             The number of entities.
-        :param num_relations:
+        :param num_relations: >0
             The number of relations.
+        :param kwargs:
+            additional keyword-based parameters.
 
         :return:
             The instances.
@@ -68,7 +82,7 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
 
 
 class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
-    """Triples and mappings to their indices for sLCWA."""
+    """Training instances for the sLCWA."""
 
     def __init__(
         self,
@@ -82,13 +96,13 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
         """Initialize the sLCWA instances.
 
         :param mapped_triples: shape: (num_triples, 3)
-            the ID-based triples
-        :param num_entities:
-            the number of entities
-        :param num_relations:
-            the number of relations
+            the ID-based triples, passed to the negative sampler
+        :param num_entities: >0
+            the number of entities, passed to the negative sampler
+        :param num_relations: >0
+            the number of relations, passed to the negative sampler
         :param negative_sampler:
-            the negative sampler
+            the negative sampler, or a hint thereof
         :param negative_sampler_kwargs:
             additional keyword-based arguments passed to the negative sampler
         """
@@ -137,7 +151,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
         num_relations: int,
         **kwargs,
     ) -> Instances:  # noqa:D102
-        return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations)
+        return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)
 
 
 class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
