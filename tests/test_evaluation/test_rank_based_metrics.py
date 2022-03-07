@@ -35,6 +35,7 @@ class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.ArithmeticMeanRank
     check_expectation = True
+    check_variance = True
 
 
 class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
@@ -66,6 +67,7 @@ class HitsAtKTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.HitsAtK
     check_expectation = True
+    check_variance = True
 
 
 class ZHitsAtKTests(cases.RankBasedMetricTestCase):
@@ -97,6 +99,7 @@ class InverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.InverseHarmonicMeanRank
     check_expectation = True
+    check_variance = True
 
 
 class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
