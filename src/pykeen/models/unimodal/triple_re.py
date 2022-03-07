@@ -88,17 +88,21 @@ class TripleRE(ERModel):
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
-        # TODO: the published code uses NodePiece representations instead
+        assert triples_factory.create_inverse_triples
         entity_normalizer_kwargs = ChainMap(entity_normalizer_kwargs or {}, self.default_entity_normalizer_kwargs)
         relation_mid_representation = representation_resolver.make(
-            Embedding, initializer=relation_initializer, initializer_kwargs=relation_initializer_kwargs
+            Embedding,
+            initializer=relation_initializer,
+            initializer_kwargs=relation_initializer_kwargs,
+            max_id=2 * triples_factory.real_num_relations + 1,  # inverse relations + padding
+            shape=embedding_dim,
         )
         super().__init__(
             triples_factory=triples_factory,
             interaction=TripleREInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
             entity_representations=NodePieceRepresentation,
-            entity_representation_kwargs=dict(
+            entity_representations_kwargs=dict(
                 triples_factory=triples_factory,
                 token_representations=[
                     relation_mid_representation,  # for relation-tokens
@@ -109,7 +113,7 @@ class TripleRE(ERModel):
                 token_representations_kwargs=[
                     None,
                     dict(
-                        embedding_dim=embedding_dim,
+                        shape=embedding_dim,
                         initializer=entity_initializer,
                         initializer_kwargs=entity_initializer_kwargs,
                         normalizer=entity_normalizer,
@@ -141,17 +145,13 @@ class TripleRE(ERModel):
             relation_representations=[None, relation_mid_representation, None],
             relation_representations_kwargs=[
                 dict(
-                    embedding_dim=embedding_dim,
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
+                None,  # already instantiated
                 dict(
-                    embedding_dim=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                ),
-                dict(
-                    embedding_dim=embedding_dim,
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
