@@ -4,7 +4,7 @@
 
 import math
 from abc import abstractmethod
-from typing import ClassVar, Collection, Iterable, Optional
+from typing import ClassVar, Collection, Iterable, Optional, Tuple
 
 import numpy as np
 from class_resolver import ClassResolver
@@ -118,7 +118,7 @@ class IncreasingZMixin(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().expected_value(num_candidates=num_candidates) - super().__call__(ranks=ranks)
         variance = super().variance(num_candidates=num_candidates)
-        return v / math.sqrt(variance)
+        return v / math.sqrt(variance)  # clip with minimum value?
 
 
 class DecreasingZMixin(RankBasedMetric):
@@ -129,7 +129,7 @@ class DecreasingZMixin(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().__call__(ranks=ranks) - super().expected_value(num_candidates=num_candidates)
         variance = super().variance(num_candidates=num_candidates)
-        return v / math.sqrt(variance)
+        return v / math.sqrt(variance)  # clip with minimum value?
 
 
 @parse_docdata
@@ -484,7 +484,7 @@ class HitsAtK(RankBasedMetric):
 
     name = "Hits @ K"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
-    synonyms = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
+    synonyms: ClassVar[Tuple[str, ...]] = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
     increasing = True
 
     def __init__(self, k: int = 10) -> None:
@@ -561,7 +561,7 @@ class ZHitsAtK(DecreasingZMixin, HitsAtK):
     """
 
     name = "z-Hits at K"
-    synonyms = ("zahk",)
+    synonyms = ("z_hits_at_", "zahk")
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
