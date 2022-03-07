@@ -68,6 +68,12 @@ class HitsAtKTests(cases.RankBasedMetricTestCase):
     check_expectation = True
 
 
+class ZHitsAtKTests(cases.RankBasedMetricTestCase):
+    """Tests for z-scored hits at k."""
+
+    cls = pykeen.metrics.ranking.ZHitsAtK
+
+
 class InverseArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for inverse arithmetic mean rank."""
 
@@ -123,3 +129,4 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
 
     base_cls = pykeen.metrics.ranking.RankBasedMetric
     base_test = cases.RankBasedMetricTestCase
+    skip_cls = {pykeen.metrics.ranking.IncreasingZMixin}
