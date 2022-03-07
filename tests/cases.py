@@ -1475,6 +1475,20 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         """Test with all indices."""
         self._test_indices(indices=torch.arange(self.instance.max_id))
 
+    def test_dropout(self):
+        """Test dropout layer."""
+        # create a new instance with guaranteed dropout
+        kwargs = self.instance_kwargs
+        kwargs.pop("dropout", None)
+        dropout_instance = self.cls(**kwargs, dropout=0.1)
+        # set to training mode
+        dropout_instance.train()
+        # check for different output
+        indices = torch.arange(2)
+        # use more samples to make sure that enough values can be dropped
+        a = torch.stack([dropout_instance(indices) for _ in range(20)])
+        assert not (a[0:1] == a).all()
+
 
 class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
     """Tests for message weighting."""
