@@ -459,11 +459,21 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
-        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
+        return self.score_hs(rt_batch=rt_batch, slice_size=slice_size, mode=mode, hs=None)
+
+    def score_hs(
+        self,
+        rt_batch: torch.LongTensor,
+        hs: Optional[torch.LongTensor] = None,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = self._get_representations(h=hs, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode),
+            num=self._get_entity_len(mode=mode) if hs is None else hs.shape[-1],
         )
 
     def score_r(
@@ -484,11 +494,21 @@ class ERModel(
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
-        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
+        return self.score_rs(ht_batch=ht_batch, slice_size=slice_size, mode=mode, rs=None)
+
+    def score_rs(
+        self,
+        ht_batch: torch.LongTensor,
+        rs: Optional[torch.LongTensor] = None,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = self._get_representations(h=ht_batch[:, 0], r=rs, t=ht_batch[:, 1], mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
             representations=self.relation_representations,
-            num=self.num_relations,
+            num=self.num_relations if rs is None else rs.shape[-1],
         )
 
     def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
