@@ -739,6 +739,7 @@ class TokenizationRepresentation(Representation):
         assignment: torch.LongTensor,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
+        **kwargs,
     ) -> None:
         """
         Initialize the tokenization.
@@ -749,6 +750,8 @@ class TokenizationRepresentation(Representation):
             the token representations
         :param token_representation_kwargs:
             additional keyword-based parameters
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         # needs to be lazily imported to avoid cyclic imports
         from . import representation_resolver
@@ -772,7 +775,7 @@ class TokenizationRepresentation(Representation):
             token_representation_kwargs,
             max_id=self.vocabulary_size,
         )
-        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
+        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape, **kwargs)
 
         # input validation
         if token_representation.max_id < self.vocabulary_size:
@@ -800,6 +803,7 @@ class TokenizationRepresentation(Representation):
         num_relations: int,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
+        **kwargs,
     ) -> "TokenizationRepresentation":
         """
         Create a tokenization from applying a tokenizer.
@@ -816,6 +820,8 @@ class TokenizationRepresentation(Representation):
             the number of entities
         :param num_relations:
             the number of relations
+        :param kwargs:
+            additional keyword-based parameters passed to TokenizationRepresentation.__init__
         """
         # apply tokenizer
         vocabulary_size, assignment = tokenizer(
@@ -828,6 +834,7 @@ class TokenizationRepresentation(Representation):
             assignment=assignment,
             token_representation=token_representation,
             token_representation_kwargs=token_representation_kwargs,
+            **kwargs,
         )
 
     def extra_repr(self) -> str:  # noqa: D102
@@ -839,7 +846,7 @@ class TokenizationRepresentation(Representation):
             )
         )
 
-    def forward(
+    def _real_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -881,6 +888,7 @@ class NodePieceRepresentation(Representation):
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         max_id: Optional[int] = None,
         shape: Optional[Sequence[int]] = None,
+        **kwargs,
     ):
         """
         Initialize the representation.
@@ -891,7 +899,7 @@ class NodePieceRepresentation(Representation):
             the token representation specification, or pre-instantiated representation module.
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
-        :param tokenizer_kwargs:
+        :param tokenizers_kwargs:
             additional keyword-based parameters passed to the tokenizer upon construction.
         :param num_tokens:
             the number of tokens for each entity.
@@ -907,6 +915,8 @@ class NodePieceRepresentation(Representation):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         if max_id:
             assert max_id == triples_factory.num_entities
@@ -948,7 +958,7 @@ class NodePieceRepresentation(Representation):
             shape = list(shapes)[0]
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape, **kwargs)
 
         # assign module
         self.token_representations = torch.nn.ModuleList(token_representations)
@@ -961,7 +971,7 @@ class NodePieceRepresentation(Representation):
         aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
         return f"aggregation={aggregation_str}, "
 
-    def forward(
+    def _real_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102

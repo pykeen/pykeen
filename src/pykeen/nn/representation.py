@@ -193,6 +193,7 @@ class SubsetRepresentation(Representation):
         max_id: int,
         base: HintOrType[Representation],
         base_kwargs: OptionalKwargs = None,
+        **kwargs,
     ):
         """
         Initialize the representations.
@@ -203,6 +204,8 @@ class SubsetRepresentation(Representation):
             the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         :param base_kwargs:
             additional keyword arguments for the base representation
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
@@ -213,16 +216,16 @@ class SubsetRepresentation(Representation):
                 f"Base representations comprise only {base.max_id} representations, "
                 f"but at least {max_id} are required.",
             )
-        super().__init__(max_id, base.shape)
+        super().__init__(max_id=max_id, shape=base.shape, **kwargs)
         self.base = base
 
-    def forward(
+    def _real_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
             indices = torch.arange(self.max_id, device=self.device)
-        return self.base.forward(indices=indices)
+        return self.base._real_forward(indices=indices)
 
 
 class Embedding(Representation):
@@ -432,7 +435,7 @@ class LowRankRepresentation(Representation):
         self.bases.reset_parameters()
         self.weight.data = self.weight_initializer(self.weight)
 
-    def forward(
+    def _real_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -812,6 +815,7 @@ class SingleCompGCNRepresentation(Representation):
         self,
         combined: CombinedCompGCNRepresentations,
         position: int = 0,
+        **kwargs,
     ):
         """
         Initialize the module.
@@ -820,6 +824,8 @@ class SingleCompGCNRepresentation(Representation):
             The combined representations.
         :param position:
             The position, either 0 for entities, or 1 for relations.
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         if position == 0:  # entity
             max_id = combined.entity_representations.max_id
@@ -829,12 +835,12 @@ class SingleCompGCNRepresentation(Representation):
             shape = (combined.output_dim,)
         else:
             raise ValueError
-        super().__init__(max_id=max_id, shape=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
         self.combined = combined
         self.position = position
         self.reset_parameters()
 
-    def forward(
+    def _real_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -875,6 +881,7 @@ class LabelBasedTransformerRepresentation(Representation):
         labels: Sequence[str],
         pretrained_model_name_or_path: str = "bert-base-cased",
         max_length: int = 512,
+        **kwargs,
     ):
         """
         Initialize the representation.
@@ -885,6 +892,8 @@ class LabelBasedTransformerRepresentation(Representation):
             the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
         :param max_length: >0
             the maximum number of tokens to pad/trim the labels to
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         encoder = TransformerEncoder(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -892,7 +901,7 @@ class LabelBasedTransformerRepresentation(Representation):
         )
         # infer shape
         shape = encoder.encode_all(labels[0:1]).shape[1:]
-        super().__init__(max_id=len(labels), shape=shape)
+        super().__init__(max_id=len(labels), shape=shape, **kwargs)
 
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
@@ -924,7 +933,7 @@ class LabelBasedTransformerRepresentation(Representation):
             **kwargs,
         )
 
-    def forward(
+    def _real_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
