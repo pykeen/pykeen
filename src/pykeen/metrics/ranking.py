@@ -307,6 +307,13 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         n = np.mean(np.asanyarray(num_candidates)).item()
         return np.log(n) / (n - 1)
 
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        raise NotImplementedError
+
 
 @parse_docdata
 class ZInverseHarmonicMeanRank(IncreasingZMixin, InverseHarmonicMeanRank):
@@ -503,6 +510,13 @@ class HitsAtK(RankBasedMetric):
             * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / self.k)).item()
         )
 
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        raise NotImplementedError
+
 
 @parse_docdata
 class AdjustedHitsAtK(HitsAtK):
@@ -540,7 +554,6 @@ class ZHitsAtK(IncreasingZMixin, HitsAtK):
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
-
 
 
 @parse_docdata
