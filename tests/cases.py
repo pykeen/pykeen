@@ -38,7 +38,7 @@ from click.testing import CliRunner, Result
 from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
-from torch.optim import SGD, Adagrad
+from torch.optim import Adagrad, SGD
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -53,7 +53,7 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.metrics.ranking import RankBasedMetric
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -68,14 +68,14 @@ from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
 from pykeen.typing import (
-    LABEL_HEAD,
-    LABEL_TAIL,
-    TRAINING,
     HeadRepresentation,
     InductiveMode,
     Initializer,
+    LABEL_HEAD,
+    LABEL_TAIL,
     MappedTriples,
     RelationRepresentation,
+    TRAINING,
     TailRepresentation,
 )
 from pykeen.utils import (
@@ -1474,6 +1474,20 @@ class RepresentationTestCase(GenericTestCase[Representation]):
     def test_all_indices(self):
         """Test with all indices."""
         self._test_indices(indices=torch.arange(self.instance.max_id))
+
+    def test_dropout(self):
+        """Test dropout layer."""
+        # create a new instance with guaranteed dropout
+        kwargs = self.instance_kwargs
+        kwargs.pop("dropout", None)
+        dropout_instance = self.cls(**kwargs, dropout=0.1)
+        # set to training mode
+        dropout_instance.train()
+        # check for different output
+        indices = torch.arange(2)
+        # use more samples to make sure that enough values can be dropped
+        a = torch.stack([dropout_instance(indices) for _ in range(20)])
+        assert not (a[0:1] == a).all()
 
 
 class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
