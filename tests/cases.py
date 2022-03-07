@@ -38,7 +38,7 @@ from click.testing import CliRunner, Result
 from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
-from torch.optim import SGD, Adagrad
+from torch.optim import Adagrad, SGD
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -53,7 +53,7 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.metrics.ranking import RankBasedMetric
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -63,19 +63,19 @@ from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples import TriplesFactory, generation
+from pykeen.triples import Instances, TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
 from pykeen.typing import (
-    LABEL_HEAD,
-    LABEL_TAIL,
-    TRAINING,
     HeadRepresentation,
     InductiveMode,
     Initializer,
+    LABEL_HEAD,
+    LABEL_TAIL,
     MappedTriples,
     RelationRepresentation,
+    TRAINING,
     TailRepresentation,
 )
 from pykeen.utils import (
@@ -2070,3 +2070,20 @@ class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
         pass
+
+
+class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
+    """Test for training instances."""
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.factory = Nations().training
+        return {}
+
+    def test_getitem(self):
+        """Test __getitem__."""
+        self.instance: Instances
+        assert self.instance[0] is not None
+
+    def test_len(self):
+        """Test __len__."""
+        assert len(self.instance) > 0
