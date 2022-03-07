@@ -11,7 +11,7 @@ from class_resolver import HintOrType, OptionalKwargs
 from .training_loop import TrainingLoop
 from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import SLCWABatchType, SLCWASampleType
+from ..triples.instances import SLCWABatch, SLCWASampleType
 
 __all__ = [
     "SLCWATrainingLoop",
@@ -20,7 +20,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
+class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
     """A training loop that uses the stochastic local closed world assumption training approach.
 
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
@@ -51,12 +51,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         )
 
     @staticmethod
-    def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102
+    def _get_batch_size(batch: SLCWABatch) -> int:  # noqa: D102
         return batch[0].shape[0]
 
     def _process_batch(
         self,
-        batch: SLCWABatchType,
+        batch: SLCWABatch,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,

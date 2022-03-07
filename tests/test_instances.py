@@ -6,7 +6,7 @@ import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.triples import LCWAInstances, SLCWAInstances
-from pykeen.triples.instances import BatchedSLCWAInstances, SLCWABatchType
+from pykeen.triples.instances import BatchedSLCWAInstances, SLCWABatch
 from tests import cases
 
 
@@ -59,7 +59,7 @@ class BatchedSLCWAInstancesTestCase(unittest_templates.GenericTestCase[BatchedSL
     def test_data_loader(self):
         """Test data loader."""
         for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
-            assert isinstance(batch, SLCWABatchType)
+            assert isinstance(batch, SLCWABatch)
             assert batch.positives.shape == (self.batch_size, 3)
             assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
             assert batch.masks is None

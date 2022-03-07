@@ -31,7 +31,7 @@ LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
 SLCWASampleType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
-class SLCWABatchType(NamedTuple):
+class SLCWABatch(NamedTuple):
     """A batch for sLCWA training."""
 
     #: the positive triples, shape: (batch_size, 3)
@@ -81,7 +81,7 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         raise NotImplementedError
 
 
-class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
+class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
     """Training instances for the sLCWA."""
 
     def __init__(
@@ -126,7 +126,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
         return positive, negative, mask
 
     @staticmethod
-    def collate(samples: Iterable[SLCWASampleType]) -> SLCWABatchType:
+    def collate(samples: Iterable[SLCWASampleType]) -> SLCWABatch:
         """Collate samples."""
         # each shape: (1, 3), (1, k, 3), (1, k, 3)?
         positives, negatives, masks = zip(*samples)
@@ -137,9 +137,9 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
             masks = None
         else:
             masks = torch.cat(masks, dim=0)
-        return SLCWABatchType(positives, negatives, masks)
+        return SLCWABatch(positives, negatives, masks)
 
-    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
+    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatch]]:  # noqa: D102
         return self.collate
 
     @classmethod
@@ -154,7 +154,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
         return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)
 
 
-class BatchedSLCWAInstances(data.IterableDataset[SLCWABatchType]):
+class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
     """
     Pre-batched training instances for the sLCWA training loop.
 
@@ -210,13 +210,13 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatchType]):
             num_relations=num_relations,
         )
 
-    def __getitem__(self, item: List[int]) -> SLCWABatchType:
+    def __getitem__(self, item: List[int]) -> SLCWABatch:
         """Get a batch from the given list of positive triple IDs."""
         positive_batch = self.mapped_triples[item]
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
-        return SLCWABatchType(positives=positive_batch, negatives=negative_batch, masks=masks)
+        return SLCWABatch(positives=positive_batch, negatives=negative_batch, masks=masks)
 
-    def __iter__(self) -> Iterator[SLCWABatchType]:
+    def __iter__(self) -> Iterator[SLCWABatch]:
         """Iterate over batches."""
         yield from (self[triple_ids] for triple_ids in self.batch_sampler)
 

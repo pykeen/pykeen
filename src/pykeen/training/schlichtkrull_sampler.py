@@ -10,7 +10,7 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 
 from ..sampling import NegativeSampler
-from ..triples.instances import BatchType, Instances, SampleType, SLCWABatchType, SLCWAInstances, SLCWASampleType
+from ..triples.instances import BatchType, Instances, SampleType, SLCWABatch, SLCWAInstances, SLCWASampleType
 from ..typing import MappedTriples
 
 
@@ -160,7 +160,7 @@ class SubGraphInstances(Instances[SampleType, BatchType], ABC):
         )
 
 
-class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWASampleType, SLCWABatchType]):
+class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWASampleType, SLCWABatch]):
     """SLCWA subgraph instances."""
 
     def __init__(
@@ -195,11 +195,11 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWASampleType, 
         # is already batched!
         return super().__len__() // self.graph_sampler.subgraph_size
 
-    def __getitem__(self, item: int) -> SLCWABatchType:  # noqa: D105
+    def __getitem__(self, item: int) -> SLCWABatch:  # noqa: D105
         return SLCWAInstances.collate(
             SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler.sample_batch()
         )
 
-    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
+    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatch]]:  # noqa: D102
         # note: already collated by __getitem__
         return None
