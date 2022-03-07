@@ -2,7 +2,6 @@
 
 """Implementation of TripleRE."""
 
-from collections import ChainMap
 from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn import functional
@@ -51,14 +50,6 @@ class TripleRE(ERModel):
         p=dict(type=int, low=1, high=2),
     )
 
-    #: The default entity normalizer parameters
-    #: The entity representations are normalized to L2 unit length
-    #: cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L323-L324
-    default_entity_normalizer_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        p=2,
-        dim=-1,
-    )
-
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
@@ -67,12 +58,10 @@ class TripleRE(ERModel):
         power_norm: bool = False,
         num_relation_tokens: int = 12,
         num_anchors: int = 20_000,
-        entity_initializer: Hint[Initializer] = uniform_,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        initializer: Hint[Initializer] = uniform_,
+        initializer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_normalizer: Hint[Normalizer] = functional.normalize,
         entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Hint[Initializer] = uniform_,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
         r"""Initialize TripleRE via the :class:`pykeen.nn.modules.TripleREInteraction` interaction.
@@ -89,14 +78,14 @@ class TripleRE(ERModel):
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         assert triples_factory.create_inverse_triples
-        entity_normalizer_kwargs = ChainMap(entity_normalizer_kwargs or {}, self.default_entity_normalizer_kwargs)
         relation_mid_representation = representation_resolver.make(
             Embedding,
-            initializer=relation_initializer,
-            initializer_kwargs=relation_initializer_kwargs,
+            initializer=initializer,
+            initializer_kwargs=initializer_kwargs,
             max_id=2 * triples_factory.real_num_relations + 1,  # inverse relations + padding
             shape=embedding_dim,
         )
+        # TODO: normalize *after* concat of relation + anchor
         super().__init__(
             triples_factory=triples_factory,
             interaction=TripleREInteraction,
@@ -114,10 +103,8 @@ class TripleRE(ERModel):
                     None,
                     dict(
                         shape=embedding_dim,
-                        initializer=entity_initializer,
-                        initializer_kwargs=entity_initializer_kwargs,
-                        normalizer=entity_normalizer,
-                        normalizer_kwargs=entity_normalizer_kwargs,
+                        initializer=initializer,
+                        initializer_kwargs=initializer_kwargs,
                     ),
                 ],
                 tokenizers=[
@@ -146,14 +133,14 @@ class TripleRE(ERModel):
             relation_representations_kwargs=[
                 dict(
                     shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
+                    initializer=initializer,
+                    initializer_kwargs=initializer_kwargs,
                 ),
                 None,  # already instantiated
                 dict(
                     shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
+                    initializer=initializer,
+                    initializer_kwargs=initializer_kwargs,
                 ),
             ],
             **kwargs,

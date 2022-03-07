@@ -34,6 +34,12 @@ pipeline:
     initializer_kwargs:
       a: -0.04
       b: 0.04
+    # L2 normalization of entity representations, cf.
+    # https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L323-L324
+    entity_normalizer: normalize
+    entity_normalizer_kwargs:
+      p: 2
+      dim: -1
   optimizer: Adam
   optimizer_kwargs:
     lr: 0.001
