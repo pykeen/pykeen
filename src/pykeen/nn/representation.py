@@ -75,7 +75,6 @@ class Representation(nn.Module, ABC):
     normalizer: Optional[Normalizer]
 
     #: a regularizer for individual representations
-    # TODO: difference to weight regularizers
     regularizer: Optional[Normalizer]
 
     #: dropout
@@ -98,11 +97,11 @@ class Representation(nn.Module, ABC):
         :param shape:
             The shape of an individual representation.
         :param normalizer:
-            A normalization function, which is applied in every forward pass.
+            A normalization function, which is applied to the selected representations in every forward pass.
         :param normalizer_kwargs:
             Additional keyword arguments passed to the normalizer
         :param regularizer:
-            A regularizer, which is applied to the selected embeddings in forward pass
+            An output regularizer, which is applied to the selected representations in forward pass
         :param regularizer_kwargs:
             Additional keyword arguments passed to the regularizer
         """
@@ -164,7 +163,17 @@ class Representation(nn.Module, ABC):
         if indices is None:
             return self(None)
         unique, inverse = indices.unique(return_inverse=True)
-        return self(unique)[inverse]
+        x_unique = self._real_forward(indices=unique)
+        # normalize *before* repeating
+        if self.normalizer is not None:
+            x_unique = self.normalizer(x_unique)
+        # regularize *after* repeating
+        x = x_unique[inverse]
+        if self.regularizer is not None:
+            self.regularizer.update(x)
+        if self.dropout is not None:
+            x = self.dropout(x)
+        return x
 
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
