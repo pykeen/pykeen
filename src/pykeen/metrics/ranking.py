@@ -44,6 +44,15 @@ class RankBasedMetric(Metric):
         """
         raise NotImplementedError
 
+    def _yield_expected_values(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: int,
+    ) -> Iterable[float]:
+        num_candidates = np.asarray(num_candidates)
+        generator = np.random.default_rng()
+        yield from (self(generator.integers(low=1, high=num_candidates + 1)) for _ in range(num_samples))
+
     def numeric_expected_value(
         self,
         num_candidates: np.ndarray,
@@ -57,9 +66,7 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        num_candidates = np.asarray(num_candidates)
-        generator = np.random.default_rng()
-        return sum(self(generator.integers(low=1, high=num_candidates + 1)) for _ in range(num_samples)) / num_samples
+        return sum(self._yield_expected_values(num_candidates=num_candidates, num_samples=num_samples)) / num_samples
 
     def expected_value(
         self,
