@@ -282,6 +282,34 @@ class MedianRank(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.median(ranks).item()
 
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        # TODO: not proven (yet)
+        m = num_candidates.max()
+        # performance trick: O(num_triples * max_count) => O(num_unique_candidates * max_count)
+        uniq, count = np.unique(num_candidates, return_counts=True)
+        ps = np.zeros(shape=(m,))
+        for c, w in zip(uniq, count):
+            ps[:c] += w * np.full(shape=(c,), fill_value=1 / c)
+        # normalize cdf
+        ps = np.cumsum(ps)
+        ps /= ps[-1]
+        # find median
+        idx = np.searchsorted(ps, v=0.5, side="left")
+        # special case
+        if idx == 0:
+            # zero- to one-based
+            return idx + 1
+        # linear interpolation
+        p_upper = ps[idx]
+        p_lower = ps[idx - 1]
+        idx = idx - (0.5 - p_lower) / (p_upper - p_lower)
+        # zero- to one-based
+        return idx + 1
+
 
 @parse_docdata
 class InverseMedianRank(RankBasedMetric):
