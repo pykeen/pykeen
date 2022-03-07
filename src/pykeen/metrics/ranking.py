@@ -516,7 +516,8 @@ class HitsAtK(RankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:
-        raise NotImplementedError
+        e = self.expected_value(num_candidates=num_candidates, num_samples=num_samples)
+        return e * (1 - e)
 
 
 @parse_docdata
