@@ -39,6 +39,7 @@ from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
 from torch.optim import Adagrad, SGD
+import torch.utils.data
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -2087,3 +2088,8 @@ class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
     def test_len(self):
         """Test __len__."""
         assert len(self.instance) > 0
+
+    def test_data_loader(self):
+        """Test usage with data loader."""
+        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=2, shuffle=True):
+            assert batch is not None
