@@ -129,7 +129,21 @@ class DecreasingZMixin(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().__call__(ranks=ranks) - super().expected_value(num_candidates=num_candidates)
         variance = super().variance(num_candidates=num_candidates)
-        return v / math.sqrt(variance)  # clip with minimum value?
+        return v / max(math.sqrt(variance), 1.0e-12)
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 0.0  # centered
+
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 1.0  # re-scaled
 
 
 @parse_docdata
