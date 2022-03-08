@@ -741,14 +741,19 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
 
     def test_monotonicity_in_rank_type(self):
         """Test monotonicity for different rank-types."""
+        hits_prefixes = [
+            "hits_at_","z_hits_at_","adjusted_hits_at_",
+        ]
         self.instance: RankBasedMetricResults
         metric_names, targets = [set(map(itemgetter(i), self.instance.data.keys())) for i in (0, 1)]
         for metric_name in metric_names:
             if metric_name in {"variance", "standard_deviation", "median_absolute_deviation"}:
                 continue
             norm_metric_name = metric_name
-            if metric_name.startswith("hits_at_"):
-                norm_metric_name = "hits_at_"
+            for hits_prefix in hits_prefixes:
+                if metric_name.startswith(hits_prefix):
+                    # strips off the "k" at the end
+                    norm_metric_name = hits_prefix
             increasing = rank_based_metric_resolver.lookup(norm_metric_name).increasing
             exp_sort_indices = [0, 1, 2] if increasing else [2, 1, 0]
             for target in targets:
