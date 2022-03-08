@@ -4,7 +4,7 @@
 
 import math
 from abc import abstractmethod
-from typing import ClassVar, Collection, Iterable, Optional, Tuple
+from typing import ClassVar, Collection, Iterable, Optional
 
 import numpy as np
 from class_resolver import ClassResolver
@@ -329,7 +329,7 @@ class ZArithmeticMeanRank(IncreasingZMixin, ArithmeticMeanRank):
     """
 
     name = "z-Mean Rank (ZMR)"
-    synonyms = ("zamr", "zmr")
+    synonyms: ClassVar[Collection[str]] = ("zamr", "zmr")
 
 
 @parse_docdata
@@ -344,7 +344,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     name = "Inverse Arithmetic Mean Rank (IAMR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
-    synonyms = ("iamr",)
+    synonyms: ClassVar[Collection[str]] = ("iamr",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(np.asanyarray(ranks).mean()).item()
@@ -362,7 +362,7 @@ class GeometricMeanRank(RankBasedMetric):
     name = "Geometric Mean Rank (GMR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
-    synonyms = ("gmr",)
+    synonyms: ClassVar[Collection[str]] = ("gmr",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return stats.gmean(ranks).item()
@@ -380,7 +380,7 @@ class InverseGeometricMeanRank(RankBasedMetric):
     name = "Inverse Geometric Mean Rank (IGMR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
-    synonyms = ("igmr",)
+    synonyms: ClassVar[Collection[str]] = ("igmr",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(stats.gmean(ranks)).item()
@@ -398,7 +398,7 @@ class HarmonicMeanRank(RankBasedMetric):
     name = "Harmonic Mean Rank (HMR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
-    synonyms = ("hmr",)
+    synonyms: ClassVar[Collection[str]] = ("hmr",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return stats.hmean(ranks).item()
@@ -467,7 +467,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
     """
 
     name = "Adjusted Inverse Harmonic Mean Rank"
-    synonyms = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
+    synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
     # FIXME Actual lower bound is -E[MRR]
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
@@ -482,7 +482,7 @@ class ZInverseHarmonicMeanRank(DecreasingZMixin, InverseHarmonicMeanRank):
     """
 
     name = "z-Mean Reciprocal Rank (ZMRR)"
-    synonyms = ("zmrr", "zihmr")
+    synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
 
 
 @parse_docdata
@@ -558,7 +558,7 @@ class StandardDeviation(RankBasedMetric):
     name = "Standard Deviation (std)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
-    synonyms = ("rank_std", "std")
+    synonyms: ClassVar[Collection[str]] = ("rank_std", "std")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.asanyarray(ranks).std().item()
@@ -575,7 +575,7 @@ class Variance(RankBasedMetric):
     name = "Variance"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
-    synonyms = ("rank_var", "var")
+    synonyms: ClassVar[Collection[str]] = ("rank_var", "var")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.asanyarray(ranks).var().item()
@@ -592,7 +592,7 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     name = "Median Absolute Deviation (MAD)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
-    synonyms = ("rank_mad", "mad")
+    synonyms: ClassVar[Collection[str]] = ("rank_mad", "mad")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return stats.median_abs_deviation(ranks, scale="normal").item()
@@ -610,7 +610,7 @@ class Count(RankBasedMetric):
     name = "Count"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
-    synonyms = ("rank_count",)
+    synonyms: ClassVar[Collection[str]] = ("rank_count",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return float(np.asanyarray(ranks).size)
@@ -627,7 +627,7 @@ class HitsAtK(RankBasedMetric):
 
     name = "Hits @ K"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
-    synonyms: ClassVar[Tuple[str, ...]] = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
+    synonyms: ClassVar[Collection[str]] = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
     increasing = True
 
     def __init__(self, k: int = 10) -> None:
@@ -683,7 +683,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
     """
 
     name = "Adjusted Hits at K"
-    synonyms: ClassVar[Tuple[str, ...]] = (
+    synonyms: ClassVar[Collection[str]] = (
         "ahk",
         "ah@k",
         "ahits@k",
@@ -707,7 +707,7 @@ class ZHitsAtK(DecreasingZMixin, HitsAtK):
     """
 
     name = "z-Hits at K"
-    synonyms = ("z_hits_at_", "zahk")
+    synonyms: ClassVar[Collection[str]] = ("z_hits_at_", "zahk")
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
@@ -724,7 +724,7 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMixin, ArithmeticMeanRank)
 
     name = "Adjusted Arithmetic Mean Rank (AAMR)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
-    synonyms = ("adjusted_mean_rank", "amr", "aamr")
+    synonyms: ClassVar[Collection[str]] = ("adjusted_mean_rank", "amr", "aamr")
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     increasing = False
@@ -741,7 +741,7 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 
     name = "Adjusted Arithmetic Mean Rank Index (AAMRI)"
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
-    synonyms = ("adjusted_mean_rank_index", "amri", "aamri")
+    synonyms: ClassVar[Collection[str]] = ("adjusted_mean_rank_index", "amri", "aamri")
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
