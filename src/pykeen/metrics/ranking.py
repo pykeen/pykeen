@@ -135,7 +135,10 @@ class BaseZMixin(RankBasedMetric):
 
 
 class IncreasingZMixin(BaseZMixin):
-    """A mixin to create a z-scored metric."""
+    """A mixin to create a z-scored metric.
+
+    .. warning:: This requires a closed-form solution to the expected value and variance
+    """
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().expected_value(num_candidates=num_candidates) - super().__call__(
@@ -146,7 +149,10 @@ class IncreasingZMixin(BaseZMixin):
 
 
 class DecreasingZMixin(BaseZMixin):
-    """A mixin to create a z-scored metric."""
+    """A mixin to create a z-scored metric.
+
+    .. warning:: This requires a closed-form solution to the expected value and variance
+    """
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().__call__(ranks=ranks, num_candidates=num_candidates) - super().expected_value(
@@ -157,7 +163,10 @@ class DecreasingZMixin(BaseZMixin):
 
 
 class ExpectationNormalizedMixin(RankBasedMetric):
-    """A mixin to create a an expectation-normalized metric."""
+    """A mixin to create a an expectation-normalized metric.
+
+    .. warning:: This requires a closed-form solution to the expected value
+    """
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return super().__call__(ranks=ranks, num_candidates=num_candidates) / super().expected_value(
