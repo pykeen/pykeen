@@ -18,6 +18,7 @@ __all__ = [
     "RankBasedMetric",
     "rank_based_metric_resolver",
 ]
+EPSILON = 1.0e-12
 
 
 class RankBasedMetric(Metric):
@@ -118,7 +119,7 @@ class IncreasingZMixin(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().expected_value(num_candidates=num_candidates) - super().__call__(ranks=ranks)
         variance = super().variance(num_candidates=num_candidates)
-        return v / max(math.sqrt(variance), 1.0e-12)
+        return v / max(math.sqrt(variance), EPSILON)
 
     def expected_value(
         self,
@@ -143,7 +144,7 @@ class DecreasingZMixin(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().__call__(ranks=ranks) - super().expected_value(num_candidates=num_candidates)
         variance = super().variance(num_candidates=num_candidates)
-        return v / max(math.sqrt(variance), 1.0e-12)
+        return v / max(math.sqrt(variance), EPSILON)
 
     def expected_value(
         self,
@@ -175,7 +176,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("mean_rank", "mr")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.mean(ranks).item()
+        return np.asanyarray(ranks).mean().item()
 
     def expected_value(
         self,
@@ -196,7 +197,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         :return:
             the expected value of the mean rank
         """
-        return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)).item())
+        return 0.5 * (1 + np.asanyarray(num_candidates).mean().item())
 
     def variance(
         self,
@@ -211,8 +212,8 @@ class ArithmeticMeanRank(RankBasedMetric):
         :return:
             the variance of the mean rank
         """
-        n = np.mean(np.asanyarray(num_candidates)).item()
-        return (np.square(n) - 1) / 12.0
+        n = np.asanyarray(num_candidates).mean().item()
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
@@ -246,7 +247,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     synonyms = ("iamr",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(np.mean(ranks)).item()
+        return np.reciprocal(np.asanyarray(ranks).mean()).item()
 
 
 @parse_docdata
@@ -342,16 +343,16 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         :return:
             the expected mean rank
         """
-        n = np.mean(np.asanyarray(num_candidates)).item()
-        return np.log(n) / (n - 1)
+        n = np.asanyarray(num_candidates).mean()
+        return (np.log(n) / max(n - 1, EPSILON)).item()
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:
-        n = np.mean(np.asanyarray(num_candidates)).item()
-        return 1 / n - (np.log(n) / (n - 1)) ** 2
+        n = np.asanyarray(num_candidates).mean()
+        return (1 / n - (np.log(n) / (n - 1)) ** 2).item()
 
 
 @parse_docdata
@@ -446,7 +447,7 @@ class StandardDeviation(RankBasedMetric):
     synonyms = ("rank_std", "std")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.std(ranks).item()
+        return np.asanyarray(ranks).std().item()
 
 
 @parse_docdata
@@ -463,7 +464,7 @@ class Variance(RankBasedMetric):
     synonyms = ("rank_var", "var")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.var(ranks).item()
+        return np.asanyarray(ranks).var().item()
 
 
 @parse_docdata
@@ -498,7 +499,7 @@ class Count(RankBasedMetric):
     synonyms = ("rank_count",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return float(ranks.size)
+        return float(np.asanyarray(ranks).size)
 
 
 @parse_docdata
