@@ -161,6 +161,20 @@ class DecreasingZMixin(RankBasedMetric):
         return 1.0  # re-scaled
 
 
+class ExpectationNormalizedMixin(RankBasedMetric):
+    """A mixin to create a an expectation-normalized metric."""
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return super().__call__(ranks) / super().expected_value(num_candidates=num_candidates)
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 0.0  # centered
+
+
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
     """The (arithmetic) mean rank.
@@ -599,7 +613,7 @@ class ZHitsAtK(DecreasingZMixin, HitsAtK):
 
 
 @parse_docdata
-class AdjustedArithmeticMeanRank(ArithmeticMeanRank):
+class AdjustedArithmeticMeanRank(ExpectationNormalizedMixin, ArithmeticMeanRank):
     """The adjusted arithmetic mean rank (AMR).
 
     ---
@@ -613,17 +627,6 @@ class AdjustedArithmeticMeanRank(ArithmeticMeanRank):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     increasing = False
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return super().__call__(ranks=ranks) / super().expected_value(num_candidates=num_candidates)
-
-    def expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:
-        """Analytically calculate the expected value."""
-        return 1.0
 
 
 @parse_docdata
@@ -659,5 +662,5 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
-    skip={IncreasingZMixin, DecreasingZMixin},
+    skip={IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin},
 )
