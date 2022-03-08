@@ -185,6 +185,21 @@ class ExpectationNormalizedMixin(RankBasedMetric):
         return 1.0  # centered
 
 
+class ReindexMixin(RankBasedMetric):
+    """A mixin to create an expectation normalized metric with max of 1 and expectation of 0.
+
+    .. warning:: This requires a closed-form solution to the expected value
+    """
+
+    increasing = True
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        ev = super().expected_value(num_candidates=num_candidates)
+        return _safe_divide(super().__call__(ranks=ranks, num_candidates=num_candidates) - ev, 1 - ev)
+
+
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
     """The (arithmetic) mean rank.
@@ -576,7 +591,7 @@ class HitsAtK(RankBasedMetric):
 
 
 @parse_docdata
-class AdjustedHitsAtK(HitsAtK):
+class AdjustedHitsAtK(ReindexMixin, HitsAtK):
     """The adjusted Hits at K ($AH_k$).
 
     ---
@@ -585,8 +600,6 @@ class AdjustedHitsAtK(HitsAtK):
     """
 
     name = "Adjusted Hits at K"
-    # Maybe need to calculate this based on num_candidates
-    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms = (
         "ahk",
         "ah@k",
@@ -597,13 +610,8 @@ class AdjustedHitsAtK(HitsAtK):
         "ah_at_",
         "adjusted_hits_at_",
     )
-    increasing = True
-    supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        ev = super().expected_value(num_candidates=num_candidates)
-        return (super().__call__(ranks=ranks, num_candidates=num_candidates) - ev) / max(1 - ev, EPSILON)
+    # Maybe need to calculate this based on num_candidates, since lower is bound based on k / expectation
+    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 
 @parse_docdata
@@ -673,5 +681,5 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
-    skip={BaseZMixin, IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin},
+    skip={BaseZMixin, IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin, ReindexMixin},
 )
