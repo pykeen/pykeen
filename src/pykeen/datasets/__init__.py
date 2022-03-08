@@ -12,7 +12,7 @@ import hashlib
 import logging
 import pathlib
 from textwrap import dedent
-from typing import Any, Mapping, Optional, Type, Union
+from typing import Any, Collection, Mapping, Optional, Type, Union
 
 from class_resolver import ClassResolver
 
@@ -197,12 +197,21 @@ def get_dataset(
     )
 
 
-def _digest_kwargs(dataset_kwargs: Mapping[str, Any]) -> str:
+def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = tuple()) -> str:
     digester = hashlib.sha256()
     for key in sorted(dataset_kwargs.keys()):
+        if key in ignore:
+            continue
         digester.update(key.encode(encoding="utf8"))
         digester.update(str(dataset_kwargs[key]).encode(encoding="utf8"))
     return base64.urlsafe_b64encode(digester.digest()).decode("utf8")[:32]
+
+
+def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: bool) -> Dataset:
+    dataset_instance.create_inverse_triples = create_inverse_triples
+    for factory in dataset_instance.factory_dict.values():
+        factory.create_inverse_triples = create_inverse_triples
+    return dataset_instance
 
 
 def _cached_get_dataset(
@@ -213,7 +222,7 @@ def _cached_get_dataset(
     """Get dataset by name, potentially using file-based cache."""
     # hash kwargs
     dataset_kwargs = dataset_kwargs or {}
-    digest = _digest_kwargs(dataset_kwargs)
+    digest = _digest_kwargs(dataset_kwargs, ignore={"create_inverse_triples"})
 
     # normalize dataset name
     dataset = dataset_resolver.normalize(dataset)
@@ -224,7 +233,10 @@ def _cached_get_dataset(
     # try to use cached dataset
     if path.is_dir() and not force:
         logger.info(f"Loading cached preprocessed dataset from {path.as_uri()}")
-        return Dataset.from_directory_binary(path)
+        return _set_inverse_triples_(
+            Dataset.from_directory_binary(path),
+            create_inverse_triples=dataset_kwargs.get("create_inverse_triples", False),
+        )
 
     # load dataset without cache
     dataset_instance = dataset_resolver.make(dataset, dataset_kwargs)
