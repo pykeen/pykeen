@@ -516,9 +516,8 @@ class HitsAtK(RankBasedMetric):
             the expected Hits@k value
         """
         return (
-            self.k
-            * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / self.k)).item()
-        )
+            self.k * np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1.0 / self.k).mean()
+        ).item()
 
     def variance(
         self,
