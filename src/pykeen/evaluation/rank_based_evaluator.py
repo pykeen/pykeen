@@ -69,7 +69,9 @@ def _iter_ranks(
         # combined
         to_concat = [ranks_flat[side, rank_type] for side in sides]
         if not to_concat:
-            logger.warning(f"Empty ranks for rank_type={rank_type} and sides={sides}")
+            logger.debug(
+                f"Empty ranks for rank_type={rank_type} and sides={sides}. This should only happen during size probing."
+            )
             continue
         c_ranks = np.concatenate(to_concat)
         c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
