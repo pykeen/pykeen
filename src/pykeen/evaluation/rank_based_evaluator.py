@@ -22,17 +22,17 @@ from ..metrics.ranking import RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
+    ExtendedTarget,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
+    MappedTriples,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
-    SIDE_BOTH,
-    ExtendedTarget,
-    MappedTriples,
     RankType,
+    SIDE_BOTH,
     Target,
 )
 
@@ -56,6 +56,11 @@ def _iter_ranks(
     ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
 ) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]]:
+    # terminate early if there are no ranks
+    if not ranks:
+        logger.debug("Empty ranks. This should only happen during size probing.")
+        return
+
     sides = sorted(num_candidates.keys())
     # flatten dictionaries
     ranks_flat = _flatten(ranks)
@@ -66,13 +71,7 @@ def _iter_ranks(
             yield side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side]
 
         # combined
-        to_concat = [ranks_flat[side, rank_type] for side in sides]
-        if not to_concat:
-            logger.debug(
-                f"Empty ranks for rank_type={rank_type} and sides={sides}. This should only happen during size probing."
-            )
-            continue
-        c_ranks = np.concatenate(to_concat)
+        c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in sides])
         c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
         yield SIDE_BOTH, rank_type, c_ranks, c_num_candidates
 
