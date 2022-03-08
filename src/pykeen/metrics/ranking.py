@@ -110,6 +110,14 @@ class RankBasedMetric(Metric):
             raise ValueError("Numeric estimation requires to specify a number of samples.")
         return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples)
 
+    def std(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        """Compute the standard deviation."""
+        return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples))
+
 
 class BaseZMixin(RankBasedMetric):
     """A base class for creating a z-scored metric."""
@@ -148,8 +156,8 @@ class IncreasingZMixin(BaseZMixin):
         v = super().expected_value(num_candidates=num_candidates) - super().__call__(
             ranks=ranks, num_candidates=num_candidates
         )
-        variance = super().variance(num_candidates=num_candidates)
-        return _safe_divide(v, math.sqrt(variance))
+        std = super().std(num_candidates=num_candidates)
+        return _safe_divide(v, std)
 
 
 class DecreasingZMixin(BaseZMixin):
@@ -162,8 +170,8 @@ class DecreasingZMixin(BaseZMixin):
         v = super().__call__(ranks=ranks, num_candidates=num_candidates) - super().expected_value(
             num_candidates=num_candidates
         )
-        variance = super().variance(num_candidates=num_candidates)
-        return _safe_divide(v, math.sqrt(variance))
+        std = super().std(num_candidates=num_candidates)
+        return _safe_divide(v, std)
 
 
 class ExpectationNormalizedMixin(RankBasedMetric):
