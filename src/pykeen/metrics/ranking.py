@@ -194,7 +194,11 @@ class ExpectationNormalizedMixin(RankBasedMetric):
 
 
 class ReindexMixin(RankBasedMetric):
-    """A mixin to create an expectation normalized metric with max of 1 and expectation of 0.
+    r"""A mixin to create an expectation normalized metric with max of 1 and expectation of 0.
+
+    .. math::
+
+        \mathbb{M}^{*} = $\frac{\mathbb{M} - \mathbb{E}[\mathbb{M}]}{1 - \mathbb{E}[\mathbb{M}]}
 
     .. warning:: This requires a closed-form solution to the expected value
     """
@@ -359,7 +363,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
     name = "Mean Reciprocal Rank (MRR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
-    synonyms = ("mean_reciprocal_rank", "mrr")
+    synonyms: ClassVar[Collection[str]] = ("mean_reciprocal_rank", "mrr")
     increasing = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
@@ -397,6 +401,21 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     ) -> float:
         n = np.asanyarray(num_candidates).mean()
         return (1 / n - (np.log(n) / (n - 1)) ** 2).item()
+
+
+@parse_docdata
+class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
+    """The adjusted MRR index.
+
+    ---
+    link: https://github.com/pykeen/pykeen/pull/814
+    description: The re-indexed adjusted MRR
+    """
+
+    name = "Adjusted Inverse Harmonic Mean Rank"
+    synonyms = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
+    # Actual lower bound is -E[MRR]
+    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 
 @parse_docdata
@@ -618,7 +637,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
         "ah_at_",
         "adjusted_hits_at_",
     )
-    # Maybe need to calculate this based on num_candidates, since lower is bound based on k / expectation
+    # Actual lower bound is -E[H_k]
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 

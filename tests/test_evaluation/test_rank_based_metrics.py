@@ -30,6 +30,12 @@ class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedHitsAtK
 
 
+class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
+    """Tests for adjusted MRR."""
+
+    cls = pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank
+
+
 class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for arithmetic mean rank."""
 
