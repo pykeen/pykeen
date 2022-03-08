@@ -233,11 +233,12 @@ class RankBasedEvaluator(Evaluator):
         if metrics is None:
             assert metrics_kwargs is None
             hits_at_k_keys = ["hits_at_k", "z_hits_at_k", "adjusted_hits_at_k"]
+            ks = (1, 3, 5, 10)
             metrics = [key for key in rank_based_metric_resolver.options if key not in hits_at_k_keys]
             metrics_kwargs = [None] * len(metrics)
             for hits_at_k_key in hits_at_k_keys:
-                metrics += [hits_at_k_key] * 4
-                metrics_kwargs += [dict(k=k) for k in (1, 3, 5, 10, 100)]
+                metrics += [hits_at_k_key] * len(ks)
+                metrics_kwargs += [dict(k=k) for k in ks]
 
         self.metrics = rank_based_metric_resolver.make_many(metrics, metrics_kwargs)
         self.ranks = defaultdict(list)
