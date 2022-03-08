@@ -63,6 +63,13 @@ class RankBasedMetric(Metric):
         """
         Compute expected metric value by summation.
 
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation
+        :return:
+            The estimated expected value of this metric
+
         .. warning ::
 
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
@@ -75,11 +82,23 @@ class RankBasedMetric(Metric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:
-        """
-        Compute expected metric value.
+        """Compute expected metric value.
 
-        Prefers analytical solution, if available, but falls back to numeric estimation via summation,
-        cf. :func:`numeric_expected_value`.
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation, if no closed form
+            expected value is implemented
+        :return:
+            The expected value of this metric
+        :raises ValueError:
+            Raised if a closed form variance has not been implemented and no
+            number of samples are given
+
+        .. note::
+
+            Prefers analytical solution, if available, but falls back to numeric
+            estimation via summation, cf. :func:`numeric_expected_value`.
         """
         if num_samples is None:
             raise ValueError("Numeric estimation requires to specify a number of samples.")
@@ -90,7 +109,15 @@ class RankBasedMetric(Metric):
         num_candidates: np.ndarray,
         num_samples: int,
     ) -> float:
-        """Compute variance by summation."""
+        """Compute variance by summation.
+
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation
+        :return:
+            The estimated variance of this metric
+        """
         num_candidates = np.asarray(num_candidates)
         generator = np.random.default_rng()
         ranks = generator.integers(low=1, high=num_candidates + 1, size=(num_samples, *num_candidates.shape))
@@ -103,8 +130,20 @@ class RankBasedMetric(Metric):
     ) -> float:
         """Compute variance.
 
-        Prefers analytical solution, if available, but falls back to numeric estimation via summation,
-        cf. :func:`numeric_variance`.
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation, if no closed form
+            expected value is implemented
+        :return:
+            The variance of this metric
+        :raises ValueError:
+            Raised if a closed form variance has not been implemented and no
+            number of samples are given
+
+        .. note::
+            Prefers analytical solution, if available, but falls back to numeric
+            estimation via summation, cf. :func:`numeric_variance`.
         """
         if num_samples is None:
             raise ValueError("Numeric estimation requires to specify a number of samples.")
@@ -244,6 +283,8 @@ class ArithmeticMeanRank(RankBasedMetric):
 
         :param num_candidates:
             the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation
 
         :return:
             the expected value of the mean rank
@@ -259,6 +300,8 @@ class ArithmeticMeanRank(RankBasedMetric):
 
         :param num_candidates:
             the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation
 
         :return:
             the variance of the mean rank
@@ -387,6 +430,8 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
         :param num_candidates:
             the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation
 
         :return:
             the expected mean rank
@@ -600,6 +645,8 @@ class HitsAtK(RankBasedMetric):
 
         :param num_candidates:
             the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation
 
         :return:
             the expected Hits@k value
