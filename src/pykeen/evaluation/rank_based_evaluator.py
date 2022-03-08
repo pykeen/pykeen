@@ -22,17 +22,17 @@ from ..metrics.ranking import RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
+    ExtendedTarget,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
+    MappedTriples,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
-    SIDE_BOTH,
-    ExtendedTarget,
-    MappedTriples,
     RankType,
+    SIDE_BOTH,
     Target,
 )
 
@@ -66,7 +66,11 @@ def _iter_ranks(
             yield side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side]
 
         # combined
-        c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in sides])
+        to_concat = [ranks_flat[side, rank_type] for side in sides]
+        if not to_concat:
+            logger.warning(f"Empty ranks for rank_type={rank_type} and sides={sides}")
+            continue
+        c_ranks = np.concatenate(to_concat)
         c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
         yield SIDE_BOTH, rank_type, c_ranks, c_num_candidates
 
