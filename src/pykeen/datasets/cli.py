@@ -350,7 +350,7 @@ def expected_metrics(
         try:
             from zenodo_client import update_zenodo
         except ImportError:
-            return
+            click.secho("Unable to import `zenodo_client`. Not uploading results", fg="red")
         else:
             zenodo_record = "6331629"
             # See https://zenodo.org/record/6331629
