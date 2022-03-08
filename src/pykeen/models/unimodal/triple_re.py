@@ -2,9 +2,9 @@
 
 """Implementation of TripleRE."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Tuple
 
-from torch.nn import functional
+from class_resolver import OptionalKwargs
 from torch.nn.init import uniform_
 
 from ..nbase import ERModel
@@ -13,15 +13,11 @@ from ...nn import Embedding, representation_resolver
 from ...nn.modules import TripleREInteraction
 from ...nn.node_piece import (
     AnchorTokenizer,
-    DegreeAnchorSelection,
-    MixtureAnchorSelection,
     NodePieceRepresentation,
-    PageRankAnchorSelection,
-    RandomAnchorSelection,
     RelationTokenizer,
 )
 from ...triples import CoreTriplesFactory
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import Hint, Initializer
 
 __all__ = [
     "TripleRE",
@@ -56,12 +52,11 @@ class TripleRE(ERModel):
         embedding_dim: int = 128,
         p: int = 1,
         power_norm: bool = False,
-        num_relation_tokens: int = 12,
-        num_anchors: int = 20_000,
         initializer: Hint[Initializer] = uniform_,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Hint[Normalizer] = functional.normalize,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        anchor_tokenizer_kwargs: OptionalKwargs = None,
+        num_tokens: Tuple[int, int] = (20, 12),
+        node_piece_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize TripleRE via the :class:`pykeen.nn.modules.TripleREInteraction` interaction.
@@ -69,8 +64,14 @@ class TripleRE(ERModel):
         :param embedding_dim: The entity embedding dimension $d$.
         :param p: The $l_p$ norm.
         :param power_norm: Should the power norm be used?
-        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
+        :param initializer:
+            the initializer used for anchor and relation representations.
+        :param initializer_kwargs:
+            additional initializer keyword-based parameters
+        :param anchor_tokenizer_kwargs:
+            additional keyword-based parameters passed to the anchor tokenizer.
+        :param num_tokens:
+            the number of tokens to select for (1) the relation tokenizer and (2) the anchor tokenizer
         :param entity_normalizer: Entity normalizer function. Defaults to :func:`torch.nn.functional.normalize`
         :param entity_normalizer_kwargs: Keyword arguments to be used when calling the entity normalizer
         :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
@@ -85,7 +86,6 @@ class TripleRE(ERModel):
             max_id=2 * triples_factory.real_num_relations + 1,  # inverse relations + padding
             shape=embedding_dim,
         )
-        # TODO: normalize *after* concat of relation + anchor
         super().__init__(
             triples_factory=triples_factory,
             interaction=TripleREInteraction,
@@ -115,19 +115,10 @@ class TripleRE(ERModel):
                 tokenizers_kwargs=[
                     #   https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/run_ogb.py#L86-L88
                     None,
-                    dict(
-                        selection=MixtureAnchorSelection,
-                        selection_kwargs=dict(
-                            selections=[
-                                DegreeAnchorSelection,
-                                PageRankAnchorSelection,
-                                RandomAnchorSelection,
-                            ],
-                            ratios=[0.4, 0.4, 0.2],
-                        ),
-                    ),
+                    anchor_tokenizer_kwargs,
                 ],
-                num_tokens=[num_relation_tokens, num_anchors],
+                num_tokens=num_tokens,
+                **(node_piece_kwargs or {}),
             ),
             relation_representations=[None, relation_mid_representation, None],
             relation_representations_kwargs=[
@@ -136,7 +127,7 @@ class TripleRE(ERModel):
                     initializer=initializer,
                     initializer_kwargs=initializer_kwargs,
                 ),
-                None,  # already instantiated
+                None,  # already instantiated for NodePiece
                 dict(
                     shape=embedding_dim,
                     initializer=initializer,
