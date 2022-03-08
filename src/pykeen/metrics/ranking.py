@@ -683,7 +683,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
     """
 
     name = "Adjusted Hits at K"
-    synonyms = (
+    synonyms: ClassVar[Tuple[str, ...]] = (
         "ahk",
         "ah@k",
         "ahits@k",
