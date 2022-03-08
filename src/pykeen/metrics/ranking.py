@@ -49,9 +49,11 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: int,
+        generator: [np.random.Generator] = None,
     ) -> Iterable[float]:
         num_candidates = np.asarray(num_candidates)
-        generator = np.random.default_rng()
+        if generator is None:
+            generator = np.random.default_rng()
         for _ in range(num_samples):
             yield self(generator.integers(low=1, high=num_candidates + 1))
 
@@ -59,6 +61,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: int,
+        generator: [np.random.Generator] = None,
     ) -> float:
         """
         Compute expected metric value by summation.
@@ -67,6 +70,8 @@ class RankBasedMetric(Metric):
             the number of candidates for each individual rank computation
         :param num_samples:
             the number of samples to use for simulation
+        :param generator:
+            A random number generator
         :return:
             The estimated expected value of this metric
 
@@ -75,7 +80,10 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return sum(self._yield_sampled_values(num_candidates=num_candidates, num_samples=num_samples)) / num_samples
+        return (
+            sum(self._yield_sampled_values(num_candidates=num_candidates, num_samples=num_samples, generator=generator))
+            / num_samples
+        )
 
     def expected_value(
         self,
@@ -105,9 +113,7 @@ class RankBasedMetric(Metric):
         return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples)
 
     def numeric_variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: int,
+        self, num_candidates: np.ndarray, num_samples: int, generator: Optional[np.random.Generator] = None
     ) -> float:
         """Compute variance by summation.
 
@@ -115,11 +121,14 @@ class RankBasedMetric(Metric):
             the number of candidates for each individual rank computation
         :param num_samples:
             the number of samples to use for simulation
+        :param generator:
+            A random number generator
         :return:
             The estimated variance of this metric
         """
         num_candidates = np.asarray(num_candidates)
-        generator = np.random.default_rng()
+        if generator is None:
+            generator = np.random.default_rng()
         ranks = generator.integers(low=1, high=num_candidates + 1, size=(num_samples, *num_candidates.shape))
         return np.apply_along_axis(self, 0, ranks).var().item()
 

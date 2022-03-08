@@ -922,7 +922,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert set(id(np) for np in new_params) == set(id(p) for p in params)
 
         # check that the parameters where modified
-        num_equal_weights_after_re_init = sum(1 for np in new_params if (np.data == old_content[id(np)]).all())
+        num_equal_weights_after_re_init = sum(
+            1 for new_param in new_params if (new_param.data == old_content[id(new_param)]).all()
+        )
         self.assertEqual(num_equal_weights_after_re_init, self.num_constant_init)
 
     def _check_scores(self, batch, scores) -> None:
@@ -2074,9 +2076,11 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         """Test the numeric expectation is close to the closed form one."""
         if not self.check_expectation:
             self.skipTest("no implementation of closed-form expectation")
+        generator = numpy.random.default_rng(seed=0)
         simulated = self.instance.numeric_expected_value(
             num_candidates=self.num_candidates,
             num_samples=10000,
+            generator=generator,
         )
         closed = self.instance.expected_value(
             num_candidates=self.num_candidates,
@@ -2087,9 +2091,11 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         """Test the numeric variance is close to the closed form one."""
         if not self.check_variance:
             self.skipTest("no implementation of closed-form expectation")
+        generator = numpy.random.default_rng(seed=0)
         simulated = self.instance.numeric_variance(
             num_candidates=self.num_candidates,
             num_samples=10000,
+            generator=generator,
         )
         closed = self.instance.variance(
             num_candidates=self.num_candidates,
