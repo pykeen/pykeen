@@ -599,7 +599,7 @@ class AdjustedHitsAtK(HitsAtK):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         ev = super().expected_value(num_candidates=num_candidates)
-        return (super().__call__(ranks) - ev) / (1 - ev)
+        return (super().__call__(ranks) - ev) / max(1 - ev, EPSILON)
 
 
 @parse_docdata
