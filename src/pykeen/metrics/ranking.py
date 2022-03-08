@@ -111,10 +111,31 @@ class RankBasedMetric(Metric):
         return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples)
 
 
-class IncreasingZMixin(RankBasedMetric):
-    """A mixin to create a z-scored metric."""
+class BaseZMixin(RankBasedMetric):
+    """A base class for creating a z-scored metric."""
 
+    increasing = True
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
     value_range = ValueRange(lower=None, upper=None)
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 0.0  # centered
+
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 1.0  # re-scaled
+
+
+class IncreasingZMixin(BaseZMixin):
+    """A mixin to create a z-scored metric."""
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().expected_value(num_candidates=num_candidates) - super().__call__(
@@ -123,25 +144,9 @@ class IncreasingZMixin(RankBasedMetric):
         variance = super().variance(num_candidates=num_candidates)
         return v / max(math.sqrt(variance), EPSILON)
 
-    def expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        return 0.0  # centered
 
-    def variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        return 1.0  # re-scaled
-
-
-class DecreasingZMixin(RankBasedMetric):
+class DecreasingZMixin(BaseZMixin):
     """A mixin to create a z-scored metric."""
-
-    value_range = ValueRange(lower=None, upper=None)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         v = super().__call__(ranks=ranks, num_candidates=num_candidates) - super().expected_value(
@@ -149,20 +154,6 @@ class DecreasingZMixin(RankBasedMetric):
         )
         variance = super().variance(num_candidates=num_candidates)
         return v / max(math.sqrt(variance), EPSILON)
-
-    def expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        return 0.0  # centered
-
-    def variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        return 1.0  # re-scaled
 
 
 class ExpectationNormalizedMixin(RankBasedMetric):
@@ -247,9 +238,6 @@ class ZArithmeticMeanRank(IncreasingZMixin, ArithmeticMeanRank):
 
     name = "z-Mean Rank (ZMR)"
     synonyms = ("zamr", "zmr")
-    increasing = True
-    supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
 
 
 @parse_docdata
@@ -386,9 +374,6 @@ class ZInverseHarmonicMeanRank(DecreasingZMixin, InverseHarmonicMeanRank):
 
     name = "z-Mean Reciprocal Rank (ZMRR)"
     synonyms = ("zmrr", "zihmr")
-    increasing = True
-    supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
 
 
 @parse_docdata
@@ -674,5 +659,5 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
-    skip={IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin},
+    skip={BaseZMixin, IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin},
 )
