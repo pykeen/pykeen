@@ -9,7 +9,6 @@ from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification
 from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
@@ -107,12 +106,12 @@ class ConvKB(ERModel):
                 embedding_dim=embedding_dim,
                 num_filters=num_filters,
             ),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,

@@ -3,23 +3,24 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
+from typing import Any, Callable, ClassVar, Mapping, Optional
 
 import torch
-from class_resolver import Hint, HintOrType
+from class_resolver import Hint, HintOrType, OptionalKwargs
 
 from ..nbase import ERModel, _prepare_representation_module_list
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
     DistMultInteraction,
-    EmbeddingSpecification,
     Interaction,
     NodePieceRepresentation,
     SubsetRepresentation,
+    representation_resolver,
 )
+from ...nn.node_piece import RelationTokenizer
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
+from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode, OneOrSequence
 
 __all__ = [
     "InductiveNodePiece",
@@ -31,8 +32,8 @@ logger = logging.getLogger(__name__)
 class InductiveNodePiece(ERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.representation.NodePieceRepresentation` instead of a typical
-    :class:`pykeen.nn.representation.Embedding` to more efficiently store representations.
+    This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical
+    :class:`pykeen.nn.Embedding` to more efficiently store representations.
 
     INDUCTIVE VERSION
     ---
@@ -54,10 +55,10 @@ class InductiveNodePiece(ERModel):
         inference_factory: CoreTriplesFactory,
         num_tokens: int = 2,
         embedding_dim: int = 64,
-        embedding_specification: Optional[EmbeddingSpecification] = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        shape: Optional[Sequence[int]] = None,
+        shape: Optional[OneOrSequence[int]] = None,
         validation_factory: Optional[CoreTriplesFactory] = None,
         test_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,
@@ -69,11 +70,11 @@ class InductiveNodePiece(ERModel):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.representation.NodePieceRepresentation`.
+            :class:`pykeen.nn.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
-        :param embedding_specification:
-            the embedding specification.
+        :param relation_representations_kwargs:
+            the relation representation parameters
         :param interaction:
             the interaction module, or a hint for it.
         :param aggregation:
@@ -104,9 +105,6 @@ class InductiveNodePiece(ERModel):
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
             )
-        embedding_specification = embedding_specification or EmbeddingSpecification(
-            shape=(embedding_dim,),
-        )
 
         # Create an MLP for string aggregation
         if aggregation == "mlp":
@@ -116,41 +114,42 @@ class InductiveNodePiece(ERModel):
             )
 
         # always create representations for normal and inverse relations and padding
-        relation_representations = embedding_specification.make(
-            num_embeddings=2 * triples_factory.real_num_relations + 1,
-        )
-        entity_representations = NodePieceRepresentation(
-            triples_factory=triples_factory,
-            tokenizers="RelationTokenizer",
-            token_representations=relation_representations,
-            aggregation=aggregation,
-            shape=shape,
-            num_tokens=num_tokens,
-        )
-
-        inference_representation = NodePieceRepresentation(
-            triples_factory=inference_factory,
-            tokenizers="RelationTokenizer",
-            token_representations=relation_representations,
-            aggregation=aggregation,
-            shape=shape,
-            num_tokens=num_tokens,
+        relation_representations = representation_resolver.make(
+            query=None,
+            pos_kwargs=relation_representations_kwargs,
+            max_id=2 * triples_factory.real_num_relations + 1,
+            shape=embedding_dim,
         )
 
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
-            entity_representations=entity_representations,
+            entity_representations=NodePieceRepresentation,
+            entity_representations_kwargs=dict(
+                triples_factory=triples_factory,
+                tokenizers=RelationTokenizer,
+                token_representations=relation_representations,
+                aggregation=aggregation,
+                shape=shape,
+                num_tokens=num_tokens,
+            ),
             relation_representations=SubsetRepresentation(  # hide padding relation
-                relation_representations,
                 max_id=triples_factory.num_relations,
+                base=relation_representations,
             ),
             **kwargs,
         )
-
         self.inference_representation = _prepare_representation_module_list(
-            representations=inference_representation,
-            num_embeddings=inference_factory.num_entities,
+            representations=NodePieceRepresentation,
+            representation_kwargs=dict(
+                triples_factory=inference_factory,
+                tokenizers=RelationTokenizer,
+                token_representations=relation_representations,
+                aggregation=aggregation,
+                shape=shape,
+                num_tokens=num_tokens,
+            ),
+            max_id=inference_factory.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
             skip_checks=self.interaction.tail_entity_shape is not None or kwargs["skip_checks"]

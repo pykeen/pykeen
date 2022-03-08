@@ -52,6 +52,7 @@ from .version import get_git_hash
 
 __all__ = [
     "at_least_eps",
+    "broadcast_upgrade_to_sequences",
     "compose",
     "clamp_norm",
     "compact_mapping",
@@ -877,6 +878,38 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     ('t', 'e', 's', 't')
     """
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
+
+
+def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    """Apply upgrade_to_sequence to each input, and afterwards repeat singletons to match the maximum length.
+
+    :param xs: length: m
+        the inputs.
+
+    :return:
+        a sequence of length m, where each element is a sequence and all elements have the same length.
+
+    :raises ValueError:
+        if there is a non-singleton sequence input with length different from the maximum sequence length.
+
+    >>> broadcast_upgrade_to_sequences(1)
+    ((1,),)
+    >>> broadcast_upgrade_to_sequences(1, 2)
+    ((1,), (2,))
+    >>> broadcast_upgrade_to_sequences(1, (2, 3))
+    ((1, 1), (2, 3))
+    """
+    # upgrade to sequence
+    xs_ = [upgrade_to_sequence(x) for x in xs]
+    # broadcast
+    max_len = max(map(len, xs_))
+    for i in range(len(xs_)):
+        x = xs_[i]
+        if len(x) < max_len:
+            if len(x) != 1:
+                raise ValueError(f"Length mismatch: maximum length: {max_len}, but encountered length {len(x)}, too.")
+            xs_[i] = tuple(list(x) * max_len)
+    return tuple(xs_)
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:

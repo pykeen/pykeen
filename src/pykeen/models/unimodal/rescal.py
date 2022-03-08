@@ -9,7 +9,6 @@ from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.representation import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
@@ -77,11 +76,11 @@ class RESCAL(EntityRelationEmbeddingModel):
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
+            relation_representations_kwargs=dict(
                 shape=(embedding_dim, embedding_dim),  # d x d matrices
                 initializer=relation_initializer,
             ),

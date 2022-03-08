@@ -12,7 +12,6 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.init import xavier_normal_
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -105,12 +104,12 @@ class TuckER(EntityRelationEmbeddingModel):
         **kwargs,
     ) -> None:
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=relation_dim or embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=relation_dim or embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,

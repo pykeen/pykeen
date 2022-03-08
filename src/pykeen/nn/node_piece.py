@@ -14,12 +14,12 @@ import torch
 import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
-from .representation import EmbeddingSpecification, Representation
+from .representation import Representation
 from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import format_relative_comparison, upgrade_to_sequence
+from ..utils import broadcast_upgrade_to_sequences, format_relative_comparison
 
 __all__ = [
     "AnchorSelection",
@@ -739,6 +739,7 @@ class TokenizationRepresentation(Representation):
         assignment: torch.LongTensor,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
+        **kwargs,
     ) -> None:
         """
         Initialize the tokenization.
@@ -749,6 +750,8 @@ class TokenizationRepresentation(Representation):
             the token representations
         :param token_representation_kwargs:
             additional keyword-based parameters
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         # needs to be lazily imported to avoid cyclic imports
         from . import representation_resolver
@@ -760,7 +763,7 @@ class TokenizationRepresentation(Representation):
         self.vocabulary_size = (
             token_representation.max_id
             if isinstance(token_representation, Representation)
-            else assignment.max().item() + 1
+            else assignment.max().item() + 2  # exclusive (+1) and including padding (+1)
         )
 
         assignment[padding] = self.vocabulary_size - 1  # = assignment.max().item() + 1
@@ -770,10 +773,9 @@ class TokenizationRepresentation(Representation):
         token_representation = representation_resolver.make(
             token_representation,
             token_representation_kwargs,
-            # TODO: Embedding uses a different name
-            num_embeddings=self.vocabulary_size,
+            max_id=self.vocabulary_size,
         )
-        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
+        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape, **kwargs)
 
         # input validation
         if token_representation.max_id < self.vocabulary_size:
@@ -796,10 +798,12 @@ class TokenizationRepresentation(Representation):
         cls,
         tokenizer: Tokenizer,
         num_tokens: int,
-        token_representation: Union[EmbeddingSpecification, Representation],
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
+        token_representation: HintOrType[Representation] = None,
+        token_representation_kwargs: OptionalKwargs = None,
+        **kwargs,
     ) -> "TokenizationRepresentation":
         """
         Create a tokenization from applying a tokenizer.
@@ -816,6 +820,8 @@ class TokenizationRepresentation(Representation):
             the number of entities
         :param num_relations:
             the number of relations
+        :param kwargs:
+            additional keyword-based parameters passed to TokenizationRepresentation.__init__
         """
         # apply tokenizer
         vocabulary_size, assignment = tokenizer(
@@ -824,10 +830,12 @@ class TokenizationRepresentation(Representation):
             num_entities=num_entities,
             num_relations=num_relations,
         )
-        # create token representations if necessary
-        if isinstance(token_representation, EmbeddingSpecification):
-            token_representation = token_representation.make(num_embeddings=vocabulary_size)
-        return TokenizationRepresentation(assignment=assignment, token_representation=token_representation)
+        return TokenizationRepresentation(
+            assignment=assignment,
+            token_representation=token_representation,
+            token_representation_kwargs=token_representation_kwargs,
+            **kwargs,
+        )
 
     def extra_repr(self) -> str:  # noqa: D102
         return "\n".join(
@@ -838,7 +846,7 @@ class TokenizationRepresentation(Representation):
             )
         )
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -866,18 +874,21 @@ class NodePieceRepresentation(Representation):
     """
 
     #: the token representations
-    tokenizations: Sequence[TokenizationRepresentation]
+    token_representations: Sequence[TokenizationRepresentation]
 
     def __init__(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representations: OneOrSequence[Union[EmbeddingSpecification, Representation]],
+        token_representations: OneOrSequence[HintOrType[Representation]] = None,
+        token_representation_kwargs: OneOrSequence[OptionalKwargs] = None,
         tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
         tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
+        max_id: Optional[int] = None,
         shape: Optional[Sequence[int]] = None,
+        **kwargs,
     ):
         """
         Initialize the representation.
@@ -888,7 +899,7 @@ class NodePieceRepresentation(Representation):
             the token representation specification, or pre-instantiated representation module.
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
-        :param tokenizer_kwargs:
+        :param tokenizers_kwargs:
             additional keyword-based parameters passed to the tokenizer upon construction.
         :param num_tokens:
             the number of tokens for each entity.
@@ -904,43 +915,53 @@ class NodePieceRepresentation(Representation):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
+        if max_id:
+            assert max_id == triples_factory.num_entities
+
         # normalize triples
         mapped_triples = triples_factory.mapped_triples
         if triples_factory.create_inverse_triples:
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
+        token_representations, token_representation_kwargs, num_tokens = broadcast_upgrade_to_sequences(
+            token_representations, token_representation_kwargs, num_tokens
+        )
+
         # tokenize
-        tokenizations = [
+        token_representations = [
             TokenizationRepresentation.from_tokenizer(
                 tokenizer=tokenizer_inst,
                 num_tokens=num_tokens_,
                 token_representation=token_representation,
+                token_representation_kwargs=token_representation_kwargs,
                 mapped_triples=mapped_triples,
                 num_entities=triples_factory.num_entities,
                 num_relations=triples_factory.real_num_relations,
             )
-            for tokenizer_inst, token_representation, num_tokens_ in zip(
+            for tokenizer_inst, token_representation, token_representation_kwargs, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
-                upgrade_to_sequence(token_representations),
-                upgrade_to_sequence(num_tokens),
+                token_representations,
+                token_representation_kwargs,
+                num_tokens,
             )
         ]
 
         # determine shape
-        shapes = {t.vocabulary.shape for t in tokenizations}
-        if len(shapes) != 1:
-            raise ValueError(f"Inconsistent token shapes: {shapes}")
-        shape = list(shapes)[0]
+        if shape is None:
+            shapes = {t.vocabulary.shape for t in token_representations}
+            if len(shapes) != 1:
+                raise ValueError(f"Inconsistent token shapes: {shapes}")
+            shape = list(shapes)[0]
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape, **kwargs)
 
         # assign module
-        self.tokenizations = torch.nn.ModuleList(tokenizations)
+        self.token_representations = torch.nn.ModuleList(token_representations)
 
         # Assign default aggregation
         self.aggregation = resolve_aggregation(aggregation=aggregation)
@@ -950,13 +971,13 @@ class NodePieceRepresentation(Representation):
         aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
         return f"aggregation={aggregation_str}, "
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return self.aggregation(
             torch.cat(
-                [tokenization(indices=indices) for tokenization in self.tokenizations],
+                [tokenization(indices=indices) for tokenization in self.token_representations],
                 dim=self.aggregation_index,
             ),
             self.aggregation_index,

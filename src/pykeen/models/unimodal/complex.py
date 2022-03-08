@@ -12,7 +12,6 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import ComplExInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
@@ -100,16 +99,16 @@ class ComplEx(ERModel):
         regularizer_kwargs = regularizer_kwargs or ComplEx.regularizer_default_kwargs
         super().__init__(
             interaction=ComplExInteraction,
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 # use torch's native complex data type
                 dtype=torch.cfloat,
                 regularizer=regularizer,
                 regularizer_kwargs=regularizer_kwargs,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
                 # use torch's native complex data type
                 dtype=torch.cfloat,

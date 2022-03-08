@@ -15,12 +15,12 @@ from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, U
 
 import pandas as pd
 import torch
-from class_resolver import HintOrType
+from class_resolver import HintOrType, OptionalKwargs
 from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn.representation import Embedding, EmbeddingSpecification, Representation
+from ..nn.representation import Representation, build_representation
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
@@ -751,16 +751,19 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     #: Primary embeddings for entities
-    entity_embeddings: Embedding
+    entity_embeddings: Representation
+
     #: Primary embeddings for relations
-    relation_embeddings: Embedding
+    relation_embeddings: Representation
 
     def __init__(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        entity_representations: EmbeddingSpecification,
-        relation_representations: EmbeddingSpecification,
+        entity_representations: HintOrType[Representation] = None,
+        entity_representations_kwargs: OptionalKwargs = None,
+        relation_representations: HintOrType[Representation] = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
@@ -768,13 +771,15 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.entity_embeddings = entity_representations.make(
-            num_embeddings=triples_factory.num_entities,
-            device=self.device,
+        self.entity_embeddings = build_representation(
+            max_id=triples_factory.num_entities,
+            representation=entity_representations,
+            representation_kwargs=entity_representations_kwargs,
         )
-        self.relation_embeddings = relation_representations.make(
-            num_embeddings=triples_factory.num_relations,
-            device=self.device,
+        self.relation_embeddings = build_representation(
+            max_id=triples_factory.num_relations,
+            representation=relation_representations,
+            representation_kwargs=relation_representations_kwargs,
         )
 
     @property

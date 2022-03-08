@@ -27,7 +27,7 @@ from pykeen.models import (
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
-from pykeen.nn import Embedding, EmbeddingSpecification, NodePieceRepresentation
+from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
@@ -60,9 +60,13 @@ class TestCompGCN(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        dim = kwargs.pop("embedding_dim")
         kwargs["encoder_kwargs"] = dict(
-            embedding_specification=EmbeddingSpecification(
-                embedding_dim=(kwargs.pop("embedding_dim")),
+            entity_representations_kwargs=dict(
+                shape=(dim,),
+            ),
+            relation_representations_kwargs=dict(
+                shape=(dim,),
             ),
         )
         return kwargs
@@ -303,9 +307,9 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         """Test the expected vocabulary size of the individual tokenizations."""
         assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
         node_piece = self.instance.entity_representations[0]
-        assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)
-        assert len(node_piece.tokenizations) == 2
-        anchor, relation = node_piece.tokenizations
+        assert isinstance(node_piece.token_representations, torch.nn.ModuleList)
+        assert len(node_piece.token_representations) == 2
+        anchor, relation = node_piece.token_representations
         assert anchor.vocabulary.max_id == self.num_anchors + 1
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
@@ -870,9 +874,9 @@ class ERModelTests(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        embedding_dim = kwargs.pop("embedding_dim")
-        kwargs["entity_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
-        kwargs["relation_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        shape = (kwargs.pop("embedding_dim"),)
+        kwargs["entity_representations_kwargs"] = dict(shape=shape)
+        kwargs["relation_representations_kwargs"] = dict(shape=shape)
         return kwargs
 
     def test_has_hpo_defaults(self):  # noqa: D102
