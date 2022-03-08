@@ -45,7 +45,7 @@ class RankBasedMetric(Metric):
         """
         raise NotImplementedError
 
-    def _yield_expected_values(
+    def _yield_sampled_values(
         self,
         num_candidates: np.ndarray,
         num_samples: int,
@@ -68,7 +68,7 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return sum(self._yield_expected_values(num_candidates=num_candidates, num_samples=num_samples)) / num_samples
+        return sum(self._yield_sampled_values(num_candidates=num_candidates, num_samples=num_samples)) / num_samples
 
     def expected_value(
         self,
@@ -233,7 +233,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
