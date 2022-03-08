@@ -49,7 +49,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: int,
-        generator: [np.random.Generator] = None,
+        generator: Optional[np.random.Generator] = None,
     ) -> Iterable[float]:
         num_candidates = np.asarray(num_candidates)
         if generator is None:
@@ -61,7 +61,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: int,
-        generator: [np.random.Generator] = None,
+        generator: Optional[np.random.Generator] = None,
     ) -> float:
         """
         Compute expected metric value by summation.
