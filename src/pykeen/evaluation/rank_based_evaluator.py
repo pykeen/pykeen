@@ -56,6 +56,11 @@ def _iter_ranks(
     ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
 ) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]]:
+    # terminate early if there are no ranks
+    if not ranks:
+        logger.debug("Empty ranks. This should only happen during size probing.")
+        return
+
     sides = sorted(num_candidates.keys())
     # flatten dictionaries
     ranks_flat = _flatten(ranks)
