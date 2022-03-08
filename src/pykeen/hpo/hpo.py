@@ -616,6 +616,8 @@ def hpo_pipeline(
     :param training_loop:
         The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
         to pass to :func:`pykeen.pipeline.pipeline`
+    :param training_loop_kwargs:
+        additional keyword-based parameters passed to the training loop upon instantiation.
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class
         to pass to :func:`pykeen.pipeline.pipeline`. Only allowed when training with sLCWA.
@@ -655,10 +657,7 @@ def hpo_pipeline(
         The keyword arguments passed to the results tracker on instantiation
 
     :param metric:
-        The metric to optimize over. Defaults to :data:`ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX`.
-    :param direction:
-        The direction of optimization. Because the default metric is :data:`ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX`,
-        the default direction is ``maximize``.
+        The metric to optimize over. Defaults to mean reciprocal rank.
 
     :param n_jobs: The number of parallel jobs. If this argument is set to :obj:`-1`, the number is
                 set to CPU counts. If none, defaults to 1.
@@ -666,12 +665,46 @@ def hpo_pipeline(
     :param save_model_directory:
         If given, the final model of each trial is saved under this directory.
 
-    .. note::
+    :param storage:
+        the study's storage, cf. :func:`optuna.study.create_study`
 
-        The remaining parameters are passed to :func:`optuna.study.create_study`
-        or :meth:`optuna.study.Study.optimize`.
+    :param sampler:
+        the sampler, or a hint thereof, cf. :func:`optuna.study.create_study`
+    :param sampler_kwargs:
+        additional keyword-based parameters for the sampler
+
+    :param pruner:
+        the pruner, or a hint thereof, cf. :func:`optuna.study.create_study`
+    :param pruner_kwargs:
+        additional keyword-based parameters for the pruner
+
+    :param device:
+        the device to use.
+
+    :param study_name:
+        the study's name, cf. :func:`optuna.study.create_study`
+    :param direction:
+        The direction of optimization. Because the default metric is mean reciprocal rank,
+        the default direction is ``maximize``.
+        cf. :func:`optuna.study.create_study`
+    :param load_if_exists:
+        whether to load the study if it already exists, cf. :func:`optuna.study.create_study`
+
+    :param n_trials:
+        the number of trials, cf. :meth:`optuna.study.Study.optimize`.
+    :param timeout:
+        the timeout, cf. :meth:`optuna.study.Study.optimize`.
+    :param n_jobs:
+        the number of jobs, cf. :meth:`optuna.study.Study.optimize`. Defaults to 1.
+
+    :return:
+        the optimization result
+
+    :raises ValueError:
+        if early stopping is enabled, but the number of epochs is to be optimized, too.
     """
     if direction is None:
+        # TODO: use metric.increasing to determine default direction
         direction = "maximize"
 
     study = create_study(
