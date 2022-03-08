@@ -414,7 +414,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
 
     name = "Adjusted Inverse Harmonic Mean Rank"
     synonyms = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
-    # Actual lower bound is -E[MRR]
+    # FIXME Actual lower bound is -E[MRR]
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 
@@ -637,7 +637,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
         "ah_at_",
         "adjusted_hits_at_",
     )
-    # Actual lower bound is -E[H_k]
+    # FIXME Actual lower bound is -E[H_k]
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 
