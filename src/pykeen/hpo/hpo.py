@@ -663,6 +663,9 @@ def hpo_pipeline(
     :param n_jobs: The number of parallel jobs. If this argument is set to :obj:`-1`, the number is
                 set to CPU counts. If none, defaults to 1.
 
+    :param save_model_directory:
+        If given, the final model of each trial is saved under this directory.
+
     .. note::
 
         The remaining parameters are passed to :func:`optuna.study.create_study`
@@ -911,7 +914,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     """Suggest an integer in the given range [2^low, 2^high]."""
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
-    choices = [base**i for i in range(low, high + 1)]
+    choices = [base ** i for i in range(low, high + 1)]
     return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
 
