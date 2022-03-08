@@ -56,7 +56,6 @@ def _iter_ranks(
     ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
 ) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]]:
-    logger.debug(f"Keys: ranks:{list(ranks.keys())}, num_candidates:{list(num_candidates.keys())}")
     sides = sorted(num_candidates.keys())
     # flatten dictionaries
     ranks_flat = _flatten(ranks)
