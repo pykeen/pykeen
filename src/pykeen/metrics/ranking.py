@@ -134,6 +134,10 @@ class BaseZMixin(RankBasedMetric):
         return 1.0  # re-scaled
 
 
+def _safe_divide(x: float, y: float) -> float:
+    return x / max(y, EPSILON)
+
+
 class IncreasingZMixin(BaseZMixin):
     """A mixin to create a z-scored metric.
 
@@ -145,7 +149,7 @@ class IncreasingZMixin(BaseZMixin):
             ranks=ranks, num_candidates=num_candidates
         )
         variance = super().variance(num_candidates=num_candidates)
-        return v / max(math.sqrt(variance), EPSILON)
+        return _safe_divide(v, math.sqrt(variance))
 
 
 class DecreasingZMixin(BaseZMixin):
@@ -159,7 +163,7 @@ class DecreasingZMixin(BaseZMixin):
             num_candidates=num_candidates
         )
         variance = super().variance(num_candidates=num_candidates)
-        return v / max(math.sqrt(variance), EPSILON)
+        return _safe_divide(v, math.sqrt(variance))
 
 
 class ExpectationNormalizedMixin(RankBasedMetric):
@@ -360,8 +364,8 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         :return:
             the expected mean rank
         """
-        n = np.asanyarray(num_candidates).mean()
-        return (np.log(n) / max(n - 1, EPSILON)).item()
+        n = np.asanyarray(num_candidates).mean().item()
+        return _safe_divide(math.log(n), n - 1)
 
     def variance(
         self,
@@ -652,8 +656,9 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return 1.0 - (super().__call__(ranks=ranks, num_candidates=num_candidates) - 1.0) / max(
-            super().expected_value(num_candidates=num_candidates) - 1.0, EPSILON
+        return 1.0 - _safe_divide(
+            super().__call__(ranks=ranks, num_candidates=num_candidates) - 1.0,
+            super().expected_value(num_candidates=num_candidates) - 1.0,
         )
 
     def expected_value(
