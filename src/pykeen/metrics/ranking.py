@@ -117,7 +117,9 @@ class IncreasingZMixin(RankBasedMetric):
     value_range = ValueRange(lower=None, upper=None)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        v = super().expected_value(num_candidates=num_candidates) - super().__call__(ranks=ranks)
+        v = super().expected_value(num_candidates=num_candidates) - super().__call__(
+            ranks=ranks, num_candidates=num_candidates
+        )
         variance = super().variance(num_candidates=num_candidates)
         return v / max(math.sqrt(variance), EPSILON)
 
@@ -142,7 +144,9 @@ class DecreasingZMixin(RankBasedMetric):
     value_range = ValueRange(lower=None, upper=None)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        v = super().__call__(ranks=ranks) - super().expected_value(num_candidates=num_candidates)
+        v = super().__call__(ranks=ranks, num_candidates=num_candidates) - super().expected_value(
+            num_candidates=num_candidates
+        )
         variance = super().variance(num_candidates=num_candidates)
         return v / max(math.sqrt(variance), EPSILON)
 
@@ -165,14 +169,16 @@ class ExpectationNormalizedMixin(RankBasedMetric):
     """A mixin to create a an expectation-normalized metric."""
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return super().__call__(ranks) / super().expected_value(num_candidates=num_candidates)
+        return super().__call__(ranks=ranks, num_candidates=num_candidates) / super().expected_value(
+            num_candidates=num_candidates
+        )
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
-        return 0.0  # centered
+        return 1.0  # centered
 
 
 @parse_docdata
@@ -599,7 +605,7 @@ class AdjustedHitsAtK(HitsAtK):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         ev = super().expected_value(num_candidates=num_candidates)
-        return (super().__call__(ranks) - ev) / max(1 - ev, EPSILON)
+        return (super().__call__(ranks=ranks, num_candidates=num_candidates) - ev) / max(1 - ev, EPSILON)
 
 
 @parse_docdata
@@ -652,7 +658,7 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return 1.0 - (super().__call__(ranks=ranks) - 1.0) / (
+        return 1.0 - (super().__call__(ranks=ranks, num_candidates=num_candidates) - 1.0) / (
             super().expected_value(num_candidates=num_candidates) - 1.0
         )
 
