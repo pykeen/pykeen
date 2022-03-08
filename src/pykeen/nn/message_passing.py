@@ -14,7 +14,6 @@ from torch import nn
 from .init import uniform_norm_p1_
 from .representation import LowRankRepresentation, Representation
 from .weighting import EdgeWeighting, edge_weight_resolver
-from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 
 __all__ = [
@@ -601,8 +600,7 @@ class RGCNRepresentation(Representation):
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Hint[Regularizer] = None,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
     ):
         """Instantiate the R-GCN encoder.
 
@@ -635,10 +633,8 @@ class RGCNRepresentation(Representation):
             The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
         :param decomposition_kwargs:
             Additional keyword based arguments passed to the decomposition upon instantiation.
-        :param regularizer:
-            A regularizer, which is applied to the selected embeddings in forward pass
-        :param regularizer_kwargs:
-            Additional keyword arguments passed to the regularizer
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         if max_id:
             assert max_id == triples_factory.num_entities
@@ -651,7 +647,7 @@ class RGCNRepresentation(Representation):
             max_id=triples_factory.num_entities,
             pos_kwargs=entity_representations_kwargs,
         )
-        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape)
+        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
         self.entity_embeddings = base_embeddings
 
         if triples_factory.create_inverse_triples:
@@ -693,10 +689,6 @@ class RGCNRepresentation(Representation):
         # buffering of enriched representations
         self.enriched_embeddings = None
 
-        if regularizer is not None:
-            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
-        self.regularizer = regularizer
-
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
 
@@ -712,7 +704,7 @@ class RGCNRepresentation(Representation):
             elif any(p.requires_grad for p in m.parameters()):
                 logger.warning("Layers %s has parameters, but no reset_parameters.", m)
 
-    def _real_forward(self) -> torch.FloatTensor:
+    def _real_forward_all(self) -> torch.FloatTensor:
         if self.enriched_embeddings is not None:
             return self.enriched_embeddings
 
@@ -757,14 +749,12 @@ class RGCNRepresentation(Representation):
 
         return x
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
-        x = self._real_forward()
+        x = self._real_forward_all()
         if indices is not None:
             x = x[indices]
-        if self.regularizer is not None:
-            self.regularizer.update(x)
         return x
