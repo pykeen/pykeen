@@ -450,6 +450,9 @@ class HpoPipelineResult(Result):
         :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
         :param save_replicates: Should the artifacts of the replicates be saved?
         :param save_training: Should the training triples be saved?
+
+        :raises ValueError:
+            if :data:`"use_testing_data"` is provided in the best pipeline's `config`.
         """
         config = self._get_best_study_config()
 
