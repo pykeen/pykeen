@@ -643,8 +643,8 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return 1.0 - (super().__call__(ranks=ranks, num_candidates=num_candidates) - 1.0) / (
-            super().expected_value(num_candidates=num_candidates) - 1.0
+        return 1.0 - (super().__call__(ranks=ranks, num_candidates=num_candidates) - 1.0) / max(
+            super().expected_value(num_candidates=num_candidates) - 1.0, EPSILON
         )
 
     def expected_value(
