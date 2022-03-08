@@ -18,10 +18,36 @@ class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex
 
 
+class ZInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
+    """Tests for adjusted MRR."""
+
+    cls = pykeen.metrics.ranking.ZInverseHarmonicMeanRank
+
+
+class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
+    """Tests for adjusted hits at k."""
+
+    cls = pykeen.metrics.ranking.AdjustedHitsAtK
+
+
+class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
+    """Tests for adjusted MRR."""
+
+    cls = pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank
+
+
 class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.ArithmeticMeanRank
+    check_expectation = True
+    check_variance = True
+
+
+class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
+    """Tests for z-scored arithmetic mean rank."""
+
+    cls = pykeen.metrics.ranking.ZArithmeticMeanRank
 
 
 class CountTests(cases.RankBasedMetricTestCase):
@@ -46,6 +72,14 @@ class HitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for Hits at k."""
 
     cls = pykeen.metrics.ranking.HitsAtK
+    check_expectation = True
+    check_variance = True
+
+
+class ZHitsAtKTests(cases.RankBasedMetricTestCase):
+    """Tests for z-scored hits at k."""
+
+    cls = pykeen.metrics.ranking.ZHitsAtK
 
 
 class InverseArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
@@ -70,6 +104,8 @@ class InverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for inverse harmonic mean rank."""
 
     cls = pykeen.metrics.ranking.InverseHarmonicMeanRank
+    check_expectation = True
+    check_variance = True
 
 
 class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
@@ -82,6 +118,7 @@ class MedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for median rank."""
 
     cls = pykeen.metrics.ranking.MedianRank
+    check_expectation = True
 
 
 class StandardDeviationTests(cases.RankBasedMetricTestCase):
@@ -101,3 +138,10 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
 
     base_cls = pykeen.metrics.ranking.RankBasedMetric
     base_test = cases.RankBasedMetricTestCase
+    skip_cls = {
+        pykeen.metrics.ranking.BaseZMixin,
+        pykeen.metrics.ranking.IncreasingZMixin,
+        pykeen.metrics.ranking.DecreasingZMixin,
+        pykeen.metrics.ranking.ExpectationNormalizedMixin,
+        pykeen.metrics.ranking.ReindexMixin,
+    }

@@ -922,7 +922,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert set(id(np) for np in new_params) == set(id(p) for p in params)
 
         # check that the parameters where modified
-        num_equal_weights_after_re_init = sum(1 for np in new_params if (np.data == old_content[id(np)]).all())
+        num_equal_weights_after_re_init = sum(
+            1 for new_param in new_params if (new_param.data == old_content[id(new_param)]).all()
+        )
         self.assertEqual(num_equal_weights_after_re_init, self.num_constant_init)
 
     def _check_scores(self, batch, scores) -> None:
@@ -1999,6 +2001,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     #: the number of ranks
     num_ranks: int = 33
 
+    check_expectation: ClassVar[bool] = False
+    check_variance: ClassVar[bool] = False
+
     #: the number of candidates for each individual ranking task
     num_candidates: numpy.ndarray
 
@@ -2031,7 +2036,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # data type
         assert isinstance(x, float)
         # value range
-        assert x in self.instance.value_range
+        self.assertIn(x, self.instance.value_range)
 
     def test_call(self):
         """Test __call__."""
@@ -2066,6 +2071,36 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             self.assertLessEqual(x, y)
         else:
             self.assertLessEqual(y, x)
+
+    def test_expectation(self):
+        """Test the numeric expectation is close to the closed form one."""
+        if not self.check_expectation:
+            self.skipTest("no implementation of closed-form expectation")
+        generator = numpy.random.default_rng(seed=0)
+        simulated = self.instance.numeric_expected_value(
+            num_candidates=self.num_candidates,
+            num_samples=10000,
+            generator=generator,
+        )
+        closed = self.instance.expected_value(
+            num_candidates=self.num_candidates,
+        )
+        self.assertAlmostEqual(closed, simulated, delta=2)
+
+    def test_variance(self):
+        """Test the numeric variance is close to the closed form one."""
+        if not self.check_variance:
+            self.skipTest("no implementation of closed-form expectation")
+        generator = numpy.random.default_rng(seed=0)
+        simulated = self.instance.numeric_variance(
+            num_candidates=self.num_candidates,
+            num_samples=10000,
+            generator=generator,
+        )
+        closed = self.instance.variance(
+            num_candidates=self.num_candidates,
+        )
+        self.assertAlmostEqual(closed, simulated, delta=2)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
