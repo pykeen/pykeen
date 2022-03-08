@@ -742,7 +742,9 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
     def test_monotonicity_in_rank_type(self):
         """Test monotonicity for different rank-types."""
         hits_prefixes = [
-            "hits_at_","z_hits_at_","adjusted_hits_at_",
+            "hits_at_",
+            "z_hits_at_",
+            "adjusted_hits_at_",
         ]
         self.instance: RankBasedMetricResults
         metric_names, targets = [set(map(itemgetter(i), self.instance.data.keys())) for i in (0, 1)]

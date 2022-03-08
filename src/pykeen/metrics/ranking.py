@@ -584,7 +584,13 @@ class AdjustedHitsAtK(HitsAtK):
     # Maybe need to calculate this based on num_candidates
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms = (
-        "ahk", "ah@k", "ahits@k", "ah@", "ahits@", "ahits_at_", "ah_at_",
+        "ahk",
+        "ah@k",
+        "ahits@k",
+        "ah@",
+        "ahits@",
+        "ahits_at_",
+        "ah_at_",
         "adjusted_hits_at_",
     )
     increasing = True
