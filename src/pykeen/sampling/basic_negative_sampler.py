@@ -12,6 +12,7 @@ from ..typing import Target
 
 __all__ = [
     "BasicNegativeSampler",
+    "random_replacement_",
 ]
 
 
