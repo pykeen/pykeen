@@ -49,12 +49,12 @@ class ValueRange:
         """Get the math notation for the range of this metric."""
         left = "(" if self.lower is None or not self.lower_inclusive else "["
         right = ")" if self.upper is None or not self.upper_inclusive else "]"
-        return f"{left}{self._coerce(self.lower)}, {self._coerce(self.upper)}{right}"
+        return f"{left}{self._coerce(self.lower, low=True)}, {self._coerce(self.upper, low=False)}{right}"
 
     @staticmethod
-    def _coerce(n: Optional[float]) -> str:
+    def _coerce(n: Optional[float], low: bool) -> str:
         if n is None:
-            return "inf"  # ∞
+            return "-inf" if low else "inf"  # ∞
         if isinstance(n, int):
             return str(n)
         if n.is_integer():
