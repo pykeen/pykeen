@@ -52,7 +52,6 @@ class BasicNegativeSampler(NegativeSampler):
         self.corruption_scheme = corruption_scheme or (LABEL_HEAD, LABEL_TAIL)
         # Set the indices
         self._corruption_indices = [TARGET_TO_INDEX[side] for side in self.corruption_scheme]
-        self._n_corruptions = len(self._corruption_indices)
 
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
         if self.num_negs_per_pos > 1:
