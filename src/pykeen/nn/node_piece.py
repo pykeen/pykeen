@@ -15,6 +15,7 @@ import scipy.sparse.csgraph
 import torch
 import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from tqdm.auto import tqdm
 
 from .representation import Representation
 from ..constants import AGGREGATIONS, PYKEEN_MODULE
@@ -96,8 +97,8 @@ class RelationTokenizer(Tokenizer):
                 ],
                 dim=0,
             )
-                .unique(dim=0)
-                .tolist()
+            .unique(dim=0)
+            .tolist()
         ):
             e2r[e].add(r)
 
@@ -683,10 +684,10 @@ def _random_sample_no_replacement(
         fill_value=-1,
     )
     # TODO: vectorization?
-    for idx, this_pool in pool.items():
-        this_pool = torch.as_tensor(data=list(this_pool), dtype=torch.long)
-        this_pool = this_pool[torch.randperm(this_pool.shape[0])[:num_tokens]]
-        assignment[idx, : len(this_pool)] = this_pool
+    for idx, this_pool in tqdm(pool.items(), desc="sampling", leave=False, unit_scale=True):
+        this_pool_t = torch.as_tensor(data=list(this_pool), dtype=torch.long)
+        this_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
+        assignment[idx, : len(this_pool_t)] = this_pool
     return assignment
 
 
@@ -694,7 +695,7 @@ class PrecomputedTokenizerLoader:
     """A loader for precomputed tokenization."""
 
     @abstractmethod
-    def __call__(self, path: pathlib.Path) -> Mapping[int, Collection[int]]:
+    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:
         """Load tokenization from the given path."""
         raise NotImplementedError
 
@@ -702,17 +703,21 @@ class PrecomputedTokenizerLoader:
 class GalkinPickleLoader(PrecomputedTokenizerLoader):
     """A loader for pickle files provided by Galkin et al."""
 
-    def __call__(self, path: pathlib.Path) -> Mapping[int, Collection[int]]:
+    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         with path.open(mode="rb") as pickle_file:
             # contains: anchor_ids, entity_ids, mapping {entity_id -> {"ancs": anchors, "dists": distances}}
             anchor_ids, mapping = pickle.load(pickle_file)[0::2]
+        logger.info(f"Loaded precomputed pools with {len(anchor_ids)} anchors, and {len(mapping)} pools.")
         # normalize anchor_ids
         anchor_map = {a: i for i, a in enumerate(anchor_ids)}
         # map padding to padding
         anchor_map[-1] = -1
         # TODO: there are other padding tokens, e.g., -99
         # TODO: keep distances?
-        return {key: [anchor_map[a] for a in value["ancs"] if a in anchor_map] for key, value in mapping.items()}
+        return {
+            key: [anchor_map[a] for a in value["ancs"] if a in anchor_map]
+            for key, value in tqdm(mapping.items(), desc="Processing", unit_scale=True, leave=False)
+        }, len(anchor_map)
 
 
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
@@ -733,10 +738,10 @@ class PrecomputedPoolTokenizer(Tokenizer):
         download_kwargs: OptionalKwargs = None,
         pool: Optional[Mapping[int, Collection[int]]] = None,
         loader: HintOrType[PrecomputedTokenizerLoader] = None,
-    ) -> Mapping[int, Collection[int]]:
+    ) -> Tuple[Mapping[int, Collection[int]], int]:
         """Load a precomputed pool via one of the supported ways."""
         if pool is not None:
-            return pool
+            return pool, max(c for candidates in pool.values() for c in candidates) + 1 + 1  # +1 for padding
         if url is not None and path is None:
             module = PYKEEN_MODULE.submodule(__name__, tokenizer_resolver.normalize_cls(cls=cls))
             path = module.ensure(url=url, download_kwargs=download_kwargs)
@@ -755,7 +760,6 @@ class PrecomputedPoolTokenizer(Tokenizer):
         url: Optional[str] = None,
         download_kwargs: OptionalKwargs = None,
         pool: Optional[Mapping[int, Collection[int]]] = None,
-        vocabulary_size: Optional[int] = None,
     ):
         """
         Initialize the tokenizer.
@@ -773,16 +777,13 @@ class PrecomputedPoolTokenizer(Tokenizer):
         :param pool:
             the precomputed pools.
 
-        :param vocabulary_size:
-            the vocabulary size
         """
-        self.pool = self._load_pool(path=path, url=url, pool=pool, download_kwargs=download_kwargs)
+        self.pool, self.vocabulary_size = self._load_pool(
+            path=path, url=url, pool=pool, download_kwargs=download_kwargs
+        )
         # verify pool
         if set(self.pool.keys()) != set(range(len(self.pool))):
             raise ValueError("Expected pool to contain keys 0...(N-1)")
-        self.vocabulary_size = (
-            vocabulary_size or max(c for candidates in self.pool.values() for c in candidates) + 1 + 1
-        )  # +1 for padding
 
     def __call__(
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
