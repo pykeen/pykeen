@@ -681,7 +681,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
     r"""The adjusted Hits at K ($AH_k$).
 
     .. note ::
-        the actual lower bound is $-\mathbb{E}[H_k]$, and thus data dependent.
+        the actual lower bound is $-\frac{\mathbb{E}[H_k]}{1 - \mathbb{E}[H_k]}$, and thus data dependent.
 
     ---
     link: https://github.com/pykeen/pykeen/pull/814
