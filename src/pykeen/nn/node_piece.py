@@ -709,7 +709,7 @@ class GalkinPickleLoader(PrecomputedTokenizerLoader):
             anchor_ids, mapping = pickle.load(pickle_file)[0::2]
         logger.info(f"Loaded precomputed pools with {len(anchor_ids)} anchors, and {len(mapping)} pools.")
         # normalize anchor_ids
-        anchor_map = {a: i for i, a in enumerate(anchor_ids)}
+        anchor_map = {a: i for i, a in enumerate(anchor_ids) if a >= 0}
         # map padding to padding
         anchor_map[-1] = -1
         # TODO: there are other padding tokens, e.g., -99
