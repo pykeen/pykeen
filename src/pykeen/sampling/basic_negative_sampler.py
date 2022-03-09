@@ -63,7 +63,6 @@ class BasicNegativeSampler(NegativeSampler):
         # Equally corrupt all sides
         split_idx = int(math.ceil(num_negs / len(self._corruption_indices)))
 
-        batch_shape = positive_batch.shape[:-1]
         # Copy positive batch for corruption.
         # Do not detach, as no gradients should flow into the indices.
         negative_batch = positive_batch.clone()
