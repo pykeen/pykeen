@@ -1,6 +1,8 @@
 """Node Piece representations."""
 
 import logging
+import pathlib
+import pickle
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Callable, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Union
@@ -15,7 +17,7 @@ import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
 from .representation import Representation
-from ..constants import AGGREGATIONS
+from ..constants import AGGREGATIONS, PYKEEN_MODULE
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
@@ -693,12 +695,80 @@ def _random_sample_no_replacement(
     return assignment
 
 
+class PrecomputedTokenizerLoader:
+    """A loader for precomputed tokenization."""
+
+    @abstractmethod
+    def __call__(self, path: pathlib.Path) -> Mapping[int, Collection[int]]:
+        """Load tokenization from the given path."""
+        raise NotImplementedError
+
+
+class GalkinPickleLoader(PrecomputedTokenizerLoader):
+    """A loader for pickle files provided by Galkin et al."""
+
+    def __call__(self, path: pathlib.Path) -> Mapping[int, Collection[int]]:
+        with path.open(mode="rb") as pickle_file:
+            # contains: anchor_ids, entity_ids, mapping {entity_id -> {"ancs": anchors, "dists": distances}}
+            anchor_ids, mapping = pickle.load(pickle_file)[0::2]
+        # normalize anchor_ids
+        anchor_map = {a: i for i, a in enumerate(anchor_ids)}
+        # map padding to padding
+        anchor_map[-1] = -1
+        # TODO: there are other padding tokens, e.g., -99
+        # TODO: keep distances?
+        return {key: [anchor_map[a] for a in value["ancs"] if a in anchor_map] for key, value in mapping.items()}
+
+
+precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
+    base=PrecomputedTokenizerLoader,
+    default=GalkinPickleLoader,
+)
+
+
 class PrecomputedTokenizer(Tokenizer):
     """A tokenizer using externally precomputed tokenization."""
 
-    def __init__(self, pool: Mapping[int, Collection[int]], total_num_tokens: Optional[int] = None):
-        self.pool = pool
-        self.total_num_tokens = (total_num_tokens or (max(map(max, pool.values()))) + 1) + 1  # +1 for padding
+    @classmethod
+    def _load_pool(
+        cls,
+        *,
+        path: Optional[pathlib.Path] = None,
+        url: Optional[str] = None,
+        download_kwargs: OptionalKwargs = None,
+        pool: Optional[Mapping[int, Collection[int]]] = None,
+        loader: HintOrType[PrecomputedTokenizerLoader] = None,
+    ) -> Mapping[int, Collection[int]]:
+        """Helper method for obtaining a pool via one of the supported ways."""
+        if pool is not None:
+            return pool
+        if url is not None:
+            if path is not None:
+                raise ValueError
+            # url
+            module = PYKEEN_MODULE.submodule(__name__, tokenizer_resolver.normalize_cls(cls=cls))
+            path = module.ensure(url=url, download_kwargs=download_kwargs)
+        if path is None:
+            raise ValueError("Must provide at least one of pool, path, or url.")
+
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        logger.info(f"Loading from {path}")
+        return precomputed_tokenizer_loader_resolver.make(loader)(path=path)
+
+    def __init__(
+        self,
+        *,
+        path: Optional[pathlib.Path] = None,
+        url: Optional[str] = None,
+        download_kwargs: OptionalKwargs = None,
+        pool: Optional[Mapping[int, Collection[int]]] = None,
+        total_num_tokens: Optional[int] = None,
+    ):
+        self.pool = self._load_pool(path=path, url=url, pool=pool, download_kwargs=download_kwargs)
+        self.total_num_tokens = (
+            total_num_tokens or max(c for candidates in self.pool.values() for c in candidates) + 1 + 1
+        )  # +1 for padding
 
     def __call__(
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
