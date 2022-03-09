@@ -66,7 +66,6 @@ class BasicNegativeSampler(NegativeSampler):
         # Copy positive batch for corruption.
         # Do not detach, as no gradients should flow into the indices.
         negative_batch = positive_batch.clone()
-        # negative_batch = negative_batch.unsqueeze(dim=-2).repeat(*(1 for _ in batch_shape), self.num_negs_per_pos, 1)
         for index, start in zip(self._corruption_indices, range(0, num_negs, split_idx)):
             # Relations have a different index maximum than entities
             # At least make sure to not replace the triples by the original value
