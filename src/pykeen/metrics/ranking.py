@@ -483,7 +483,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
-    ) -> float:
+    ) -> float:  # noqa:D102
         n = np.asanyarray(num_candidates).mean()
         return (1 / n - (np.log(n) / (n - 1)) ** 2).item()
 
@@ -703,7 +703,7 @@ class HitsAtK(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
-    ) -> float:
+    ) -> float:  # noqa:D102
         e = self.expected_value(num_candidates=num_candidates, num_samples=num_samples)
         return e * (1 - e)
 
