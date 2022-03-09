@@ -15,8 +15,39 @@ from .utils import Metric, ValueRange
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 
 __all__ = [
-    "RankBasedMetric",
     "rank_based_metric_resolver",
+    # Base classes
+    "RankBasedMetric",
+    "BaseZMixin",
+    "IncreasingZMixin",
+    "DecreasingZMixin",
+    "ExpectationNormalizedMixin",
+    "ReindexMixin",
+    # Concrete classes
+    "ArithmeticMeanRank",
+    "AdjustedArithmeticMeanRank",
+    "AdjustedArithmeticMeanRankIndex",
+    "ZArithmeticMeanRank",
+    "InverseArithmeticMeanRank",
+    #
+    "GeometricMeanRank",
+    "InverseGeometricMeanRank",
+    #
+    "HarmonicMeanRank",
+    "InverseHarmonicMeanRank",
+    "AdjustedInverseHarmonicMeanRank",
+    "ZInverseHarmonicMeanRank",
+    #
+    "MedianRank",
+    "InverseMedianRank",
+    #
+    "HitsAtK",
+    "AdjustedHitsAtK",
+    "ZHitsAtK",
+    #
+    "StandardDeviation",
+    "Variance",
+    "Count",
 ]
 EPSILON = 1.0e-12
 
@@ -462,7 +493,8 @@ class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
     r"""The adjusted MRR index.
 
     .. note ::
-        the actual lower bound is $-\mathbb{E}[MRR]$, and thus data dependent.
+        the actual lower bound is $\frac{-\mathbb{E}[\text{MRR}]}{1-\mathbb{E}[\text{MRR}]}$,
+        and thus data dependent.
 
     ---
     link: https://github.com/pykeen/pykeen/pull/814
@@ -681,7 +713,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
     r"""The adjusted Hits at K ($AH_k$).
 
     .. note ::
-        the actual lower bound is $-\frac{\mathbb{E}[H_k]}{1 - \mathbb{E}[H_k]}$, and thus data dependent.
+        the actual lower bound is $\frac{-\mathbb{E}[H_k]}{1 - \mathbb{E}[H_k]}$, and thus data dependent.
 
     ---
     link: https://github.com/pykeen/pykeen/pull/814
