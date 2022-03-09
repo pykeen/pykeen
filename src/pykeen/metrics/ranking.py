@@ -675,7 +675,10 @@ class HitsAtK(RankBasedMetric):
 
 @parse_docdata
 class AdjustedHitsAtK(ReindexMixin, HitsAtK):
-    """The adjusted Hits at K ($AH_k$).
+    r"""The adjusted Hits at K ($AH_k$).
+
+    .. note ::
+        the actual lower bound is $-\mathbb{E}[H_k]$, and thus data dependent.
 
     ---
     link: https://github.com/pykeen/pykeen/pull/814
@@ -693,8 +696,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
         "ah_at_",
         "adjusted_hits_at_",
     )
-    # FIXME Actual lower bound is -E[H_k]
-    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
+    value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
 
 
 @parse_docdata
