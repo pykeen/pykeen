@@ -3,7 +3,7 @@
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
+from typing import Callable, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy.linalg
@@ -106,17 +106,7 @@ class RelationTokenizer(Tokenizer):
             e2r[e].add(r)
 
         # randomly sample without replacement num_tokens relations for each entity
-        assignment = torch.full(
-            size=(num_entities, num_tokens),
-            dtype=torch.long,
-            fill_value=-1,
-        )
-        for e, rs in e2r.items():
-            rs = torch.as_tensor(data=list(rs), dtype=torch.long)
-            rs = _sample(rs=rs, k=num_tokens)
-            assignment[e, : len(rs)] = rs
-
-        return 2 * num_relations + 1, assignment
+        return 2 * num_relations + 1, _random_sample_no_replacement(pool=e2r, num_tokens=num_tokens)
 
 
 def _edge_index_to_sparse_matrix(
@@ -684,6 +674,38 @@ class AnchorTokenizer(Tokenizer):
             )
         # convert to torch
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
+
+
+def _random_sample_no_replacement(
+    pool: Mapping[int, Collection[int]],
+    num_tokens: int,
+) -> torch.LongTensor:
+    # randomly sample without replacement num_tokens relations for each entity
+    assignment = torch.full(
+        size=(len(pool), num_tokens),
+        dtype=torch.long,
+        fill_value=-1,
+    )
+    # TODO: vectorization?
+    for idx, this_pool in pool.items():
+        this_pool = torch.as_tensor(data=list(this_pool), dtype=torch.long)
+        this_pool = _sample(rs=this_pool, k=num_tokens)
+        assignment[idx, : len(this_pool)] = this_pool
+    return assignment
+
+
+class PrecomputedTokenizer(Tokenizer):
+    """A tokenizer using externally precomputed tokenization."""
+
+    def __init__(self, pool: Mapping[int, Collection[int]], total_num_tokens: Optional[int] = None):
+        self.pool = pool
+        self.total_num_tokens = (total_num_tokens or (max(map(max, pool.values()))) + 1) + 1  # +1 for padding
+
+    def __call__(
+        self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
+    ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
+        # TODO: verification with mapped_triples / num_entities / num_relations?
+        return self.total_num_tokens, _random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
 
 
 tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
