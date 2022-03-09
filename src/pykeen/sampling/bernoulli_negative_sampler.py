@@ -74,14 +74,15 @@ class BernoulliNegativeSampler(NegativeSampler):
         batch_shape = positive_batch.shape[:-1]
 
         # Decide whether to corrupt head or tail
-        head_corruption_probability = self.corrupt_head_probability[positive_batch[..., 1]].unsqueeze(dim=-2)
+        head_corruption_probability = self.corrupt_head_probability[positive_batch[..., 1]].unsqueeze(dim=-1)
         head_mask = torch.rand(
             *batch_shape, self.num_negs_per_pos, device=positive_batch.device
         ) < head_corruption_probability.to(device=positive_batch.device)
 
         # clone positive batch for corruption (.repeat_interleave creates a copy)
         negative_batch = positive_batch.view(-1, 3).repeat_interleave(self.num_negs_per_pos, dim=0)
-        head_mask = head_mask.view(-1, 3)
+        # flatten mask
+        head_mask = head_mask.view(-1)
 
         for index, mask in (
             (COLUMN_HEAD, head_mask),
