@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Utilities for PyKEEN."""
+from __future__ import annotations
 
 import ftplib
 import functools
@@ -1363,6 +1364,11 @@ def camel_to_snake(name: str) -> str:
     """Convert camel-case to snake case."""
     # cf. https://stackoverflow.com/a/1176023
     return camel_to_snake_pattern.sub("_", name).lower()
+
+
+def make_ones_like(prefix: Sequence) -> Sequence[int]:
+    """Create a list of ones of same length as the input sequence."""
+    return [1 for _ in prefix]
 
 
 if __name__ == "__main__":
