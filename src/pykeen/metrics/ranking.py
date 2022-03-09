@@ -467,12 +467,12 @@ class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
     ---
     link: https://github.com/pykeen/pykeen/pull/814
     description: The re-indexed adjusted MRR
-    tight_lower: -E[f]
+    tight_lower: -E[f]/(1-E[f])
     """
 
     name = "Adjusted Inverse Harmonic Mean Rank"
     synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
-    value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
+    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 
 @parse_docdata
@@ -686,7 +686,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
     ---
     link: https://github.com/pykeen/pykeen/pull/814
     description: The re-indexed adjusted hits at K
-    tight_lower: -E[f]/(1 - E[f])
+    tight_lower: -E[f]/(1-E[f])
     """
 
     name = "Adjusted Hits at K"
