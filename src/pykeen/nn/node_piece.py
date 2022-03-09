@@ -768,6 +768,10 @@ class PrecomputedTokenizer(Tokenizer):
         """
         Initialize the tokenizer.
 
+        .. note ::
+            the preference order for loading the precomputed pools is (1) from the given pool (2) from the given path,
+            and (3) by downloading from the given url
+
         :param path:
             a path for a file containing the precomputed pools
         :param url:
