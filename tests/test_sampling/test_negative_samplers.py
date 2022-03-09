@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """Test that samplers can be executed."""
+import unittest_templates
 
-from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, PseudoTypedNegativeSampler
+from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler, PseudoTypedNegativeSampler
 from pykeen.sampling.pseudo_type import create_index
 from tests.test_sampling import cases
 
@@ -65,3 +66,10 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
                 index_entities = set(data[offsets[2 * r + i] : offsets[2 * r + i + 1]].tolist())
                 triple_entities = set(triples_with_r[:, entity_pos].tolist())
                 assert index_entities == triple_entities
+
+
+class NegativeSamplerMetaTestCase(unittest_templates.MetaTestCase):
+    """Meta test case for testing all negative samplers."""
+
+    base_cls = NegativeSampler
+    base_test = cases.NegativeSamplerGenericTestCase
