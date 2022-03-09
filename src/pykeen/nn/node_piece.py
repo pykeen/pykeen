@@ -781,7 +781,7 @@ class PrecomputedTokenizer(Tokenizer):
             the vocabulary size
         """
         self.pool = self._load_pool(path=path, url=url, pool=pool, download_kwargs=download_kwargs)
-        self.total_num_tokens = (
+        self.vocabulary_size = (
             vocabulary_size or max(c for candidates in self.pool.values() for c in candidates) + 1 + 1
         )  # +1 for padding
 
@@ -789,7 +789,7 @@ class PrecomputedTokenizer(Tokenizer):
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
     ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
         # TODO: verification with mapped_triples / num_entities / num_relations?
-        return self.total_num_tokens, _random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
+        return self.vocabulary_size, _random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
 
 
 tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
