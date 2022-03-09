@@ -11,11 +11,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import Embedding, representation_resolver
 from ...nn.modules import TripleREInteraction
-from ...nn.node_piece import (
-    AnchorTokenizer,
-    NodePieceRepresentation,
-    RelationTokenizer,
-)
+from ...nn.node_piece import AnchorTokenizer, NodePieceRepresentation, RelationTokenizer
 from ...triples import CoreTriplesFactory
 from ...typing import Hint, Initializer
 
