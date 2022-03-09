@@ -96,8 +96,8 @@ class RelationTokenizer(Tokenizer):
                 ],
                 dim=0,
             )
-            .unique(dim=0)
-            .tolist()
+                .unique(dim=0)
+                .tolist()
         ):
             e2r[e].add(r)
 
@@ -777,6 +777,9 @@ class PrecomputedPoolTokenizer(Tokenizer):
             the vocabulary size
         """
         self.pool = self._load_pool(path=path, url=url, pool=pool, download_kwargs=download_kwargs)
+        # verify pool
+        if set(self.pool.keys()) != set(range(len(self.pool))):
+            raise ValueError("Expected pool to contain keys 0...(N-1)")
         self.vocabulary_size = (
             vocabulary_size or max(c for candidates in self.pool.values() for c in candidates) + 1 + 1
         )  # +1 for padding
@@ -784,7 +787,8 @@ class PrecomputedPoolTokenizer(Tokenizer):
     def __call__(
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
     ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
-        # TODO: verification with mapped_triples / num_entities / num_relations?
+        if num_entities != len(self.pool):
+            raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
         return self.vocabulary_size, _random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
 
 
