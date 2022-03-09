@@ -15,8 +15,39 @@ from .utils import Metric, ValueRange
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 
 __all__ = [
-    "RankBasedMetric",
     "rank_based_metric_resolver",
+    # Base classes
+    "RankBasedMetric",
+    "BaseZMixin",
+    "IncreasingZMixin",
+    "DecreasingZMixin",
+    "ExpectationNormalizedMixin",
+    "ReindexMixin",
+    # Concrete classes
+    "ArithmeticMeanRank",
+    "AdjustedArithmeticMeanRank",
+    "AdjustedArithmeticMeanRankIndex",
+    "ZArithmeticMeanRank",
+    "InverseArithmeticMeanRank",
+    #
+    "GeometricMeanRank",
+    "InverseGeometricMeanRank",
+    #
+    "HarmonicMeanRank",
+    "InverseHarmonicMeanRank",
+    "AdjustedInverseHarmonicMeanRank",
+    "ZInverseHarmonicMeanRank",
+    #
+    "MedianRank",
+    "InverseMedianRank",
+    #
+    "HitsAtK",
+    "AdjustedHitsAtK",
+    "ZHitsAtK",
+    #
+    "StandardDeviation",
+    "Variance",
+    "Count",
 ]
 EPSILON = 1.0e-12
 
@@ -223,7 +254,7 @@ class DecreasingZMixin(BaseZMixin):
 
 
 class ExpectationNormalizedMixin(RankBasedMetric):
-    """A mixin to create a an expectation-normalized metric.
+    """A mixin to create an expectation-normalized metric.
 
     .. warning:: This requires a closed-form solution to the expected value
     """
@@ -452,23 +483,27 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
-    ) -> float:
+    ) -> float:  # noqa:D102
         n = np.asanyarray(num_candidates).mean()
         return (1 / n - (np.log(n) / (n - 1)) ** 2).item()
 
 
 @parse_docdata
 class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
-    """The adjusted MRR index.
+    r"""The adjusted MRR index.
+
+    .. note ::
+        the actual lower bound is $\frac{-\mathbb{E}[\text{MRR}]}{1-\mathbb{E}[\text{MRR}]}$,
+        and thus data dependent.
 
     ---
     link: https://github.com/pykeen/pykeen/pull/814
     description: The re-indexed adjusted MRR
+    tight_lower: -E[f]/(1-E[f])
     """
 
     name = "Adjusted Inverse Harmonic Mean Rank"
     synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
-    # FIXME Actual lower bound is -E[MRR]
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 
@@ -668,18 +703,22 @@ class HitsAtK(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
-    ) -> float:
+    ) -> float:  # noqa:D102
         e = self.expected_value(num_candidates=num_candidates, num_samples=num_samples)
         return e * (1 - e)
 
 
 @parse_docdata
 class AdjustedHitsAtK(ReindexMixin, HitsAtK):
-    """The adjusted Hits at K ($AH_k$).
+    r"""The adjusted Hits at K ($AH_k$).
+
+    .. note ::
+        the actual lower bound is $\frac{-\mathbb{E}[H_k]}{1 - \mathbb{E}[H_k]}$, and thus data dependent.
 
     ---
     link: https://github.com/pykeen/pykeen/pull/814
     description: The re-indexed adjusted hits at K
+    tight_lower: -E[f]/(1-E[f])
     """
 
     name = "Adjusted Hits at K"
@@ -693,7 +732,6 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
         "ah_at_",
         "adjusted_hits_at_",
     )
-    # FIXME Actual lower bound is -E[H_k]
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 
