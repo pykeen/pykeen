@@ -734,7 +734,7 @@ class PrecomputedTokenizer(Tokenizer):
         pool: Optional[Mapping[int, Collection[int]]] = None,
         loader: HintOrType[PrecomputedTokenizerLoader] = None,
     ) -> Mapping[int, Collection[int]]:
-        """Helper method for obtaining a pool via one of the supported ways."""
+        """Load a precomputed pool via one of the supported ways."""
         if pool is not None:
             return pool
         if url is not None:
