@@ -763,11 +763,26 @@ class PrecomputedTokenizer(Tokenizer):
         url: Optional[str] = None,
         download_kwargs: OptionalKwargs = None,
         pool: Optional[Mapping[int, Collection[int]]] = None,
-        total_num_tokens: Optional[int] = None,
+        vocabulary_size: Optional[int] = None,
     ):
+        """
+        Initialize the tokenizer.
+
+        :param path:
+            a path for a file containing the precomputed pools
+        :param url:
+            an url to download the file with precomputed pools from
+        :param download_kwargs:
+            additional download parameters, passed to pystow.Module.ensure
+        :param pool:
+            the precomputed pools.
+
+        :param vocabulary_size:
+            the vocabulary size
+        """
         self.pool = self._load_pool(path=path, url=url, pool=pool, download_kwargs=download_kwargs)
         self.total_num_tokens = (
-            total_num_tokens or max(c for candidates in self.pool.values() for c in candidates) + 1 + 1
+            vocabulary_size or max(c for candidates in self.pool.values() for c in candidates) + 1 + 1
         )  # +1 for padding
 
     def __call__(
