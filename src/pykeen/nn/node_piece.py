@@ -716,7 +716,7 @@ class GalkinPickleLoader(PrecomputedTokenizerLoader):
         # TODO: keep distances?
         return {
             key: [anchor_map[a] for a in value["ancs"] if a in anchor_map]
-            for key, value in tqdm(mapping.items(), desc="Processing", unit_scale=True, leave=False)
+            for key, value in tqdm(mapping.items(), desc="ID Mapping", unit_scale=True, leave=False)
         }, len(anchor_map)
 
 
