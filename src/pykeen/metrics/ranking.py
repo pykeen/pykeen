@@ -686,7 +686,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
     ---
     link: https://github.com/pykeen/pykeen/pull/814
     description: The re-indexed adjusted hits at K
-    tight_lower: -E[f]
+    tight_lower: -E[f]/(1 - E[f])
     """
 
     name = "Adjusted Hits at K"
