@@ -700,7 +700,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
         "ah_at_",
         "adjusted_hits_at_",
     )
-    value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
+    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
 
 @parse_docdata
