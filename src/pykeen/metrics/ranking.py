@@ -459,7 +459,10 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
 @parse_docdata
 class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
-    """The adjusted MRR index.
+    r"""The adjusted MRR index.
+
+    .. note ::
+        the actual lower bound is $-\mathbb{E}[MRR]$, and thus data dependent.
 
     ---
     link: https://github.com/pykeen/pykeen/pull/814
@@ -468,8 +471,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
 
     name = "Adjusted Inverse Harmonic Mean Rank"
     synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
-    # FIXME Actual lower bound is -E[MRR]
-    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
+    value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
 
 
 @parse_docdata
