@@ -20,13 +20,13 @@ from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution, Sign
 from ..utils import (
-    make_ones_like,
     boxe_kg_arity_position_score,
     broadcast_cat,
     clamp_norm,
     compute_box,
     estimate_cost_of_sequence,
     is_cudnn_error,
+    make_ones_like,
     negative_norm,
     negative_norm_of_sum,
     project_entity,
