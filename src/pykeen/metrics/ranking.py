@@ -316,7 +316,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n ** 2 - 1) / 12.0
+        return (n**2 - 1) / 12.0
 
 
 @parse_docdata
