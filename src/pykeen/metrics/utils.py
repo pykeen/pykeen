@@ -105,6 +105,16 @@ class Metric:
         """Return the key for use in metric result dictionaries."""
         return camel_to_snake(self.__class__.__name__)
 
+    @classmethod
+    def get_range(cls) -> str:
+        """Get the math notation for the range of this metric."""
+        docdata = get_docdata(cls) or {}
+        left_bracket = "(" if cls.value_range.lower is None or not cls.value_range.lower_inclusive else "["
+        left = docdata.get("tight_lower", cls.value_range._coerce(cls.value_range.lower, low=True))
+        right_bracket = ")" if cls.value_range.upper is None or not cls.value_range.upper_inclusive else "]"
+        right = docdata.get("tight_upper", cls.value_range._coerce(cls.value_range.upper, low=False))
+        return f"{left_bracket}{left}, {right}{right_bracket}"
+
     def _extra_repr(self) -> Iterable[str]:
         return []
 
