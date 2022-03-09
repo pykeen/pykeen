@@ -96,8 +96,8 @@ class RelationTokenizer(Tokenizer):
                 ],
                 dim=0,
             )
-            .unique(dim=0)
-            .tolist()
+                .unique(dim=0)
+                .tolist()
         ):
             e2r[e].add(r)
 
@@ -737,10 +737,7 @@ class PrecomputedTokenizer(Tokenizer):
         """Load a precomputed pool via one of the supported ways."""
         if pool is not None:
             return pool
-        if url is not None:
-            if path is not None:
-                raise ValueError
-            # url
+        if url is not None and path is None:
             module = PYKEEN_MODULE.submodule(__name__, tokenizer_resolver.normalize_cls(cls=cls))
             path = module.ensure(url=url, download_kwargs=download_kwargs)
         if path is None:
@@ -748,7 +745,7 @@ class PrecomputedTokenizer(Tokenizer):
 
         if not path.is_file():
             raise FileNotFoundError(path)
-        logger.info(f"Loading from {path}")
+        logger.info(f"Loading precomputed pools from {path}")
         return precomputed_tokenizer_loader_resolver.make(loader)(path=path)
 
     def __init__(
