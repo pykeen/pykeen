@@ -70,20 +70,19 @@ class BernoulliNegativeSampler(NegativeSampler):
             self.corrupt_head_probability[r] = tph / (tph + hpt)
 
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
-        if self.num_negs_per_pos > 1:
-            positive_batch = positive_batch.repeat_interleave(repeats=self.num_negs_per_pos, dim=0)
+        batch_shape = positive_batch.shape[:-1]
 
-        # Bind number of negatives to sample
-        num_negs = positive_batch.shape[0]
+        # clone positive batch for corruption (.repeat_interleave creates a copy)
+        negative_batch = positive_batch.view(-1, 3).repeat_interleave(self.num_negs_per_pos, dim=0)
 
-        # Copy positive batch for corruption.
-        # Do not detach, as no gradients should flow into the indices.
-        negative_batch = positive_batch.clone()
+        # Bind the total number of negatives to sample in this batch
+        total_num_negatives = negative_batch.shape[0]
 
         device = positive_batch.device
+
         # Decide whether to corrupt head or tail
         head_corruption_probability = self.corrupt_head_probability[positive_batch[:, 1]]
-        head_mask = torch.rand(num_negs, device=device) < head_corruption_probability.to(device=device)
+        head_mask = torch.rand(total_num_negatives, device=device) < head_corruption_probability.to(device=device)
 
         # Tails are corrupted if heads are not corrupted
         tail_mask = ~head_mask

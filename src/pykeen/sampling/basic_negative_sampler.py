@@ -15,6 +15,34 @@ __all__ = [
 ]
 
 
+def random_replacement_(batch: torch.LongTensor, index: int, selection: slice, size: int, max_index: int) -> None:
+    """
+    Replace a column of a batch of indices by random indices.
+
+    :param batch: shape: `(*batch_dims, d)`
+        the batch of indices
+    :param index:
+        the index (of the last axis) which to replace
+    :param selection:
+        a selection of the batch, e.g., a slice or a mask
+    :param size:
+        the size of the selection
+    :param max_index:
+        the maximum index value at the chosen position
+    """
+    # At least make sure to not replace the triples by the original value
+    # To make sure we don't replace the {head, relation, tail} by the
+    # original value we shift all values greater or equal than the original value by one up
+    # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
+    replacement = torch.randint(
+        high=max_index - 1,
+        size=(size,),
+        device=batch.device,
+    )
+    replacement += (replacement >= batch[selection, index]).long()
+    batch[selection, index] = replacement
+
+
 class BasicNegativeSampler(NegativeSampler):
     r"""A basic negative sampler.
 
@@ -68,20 +96,12 @@ class BasicNegativeSampler(NegativeSampler):
         # Do not detach, as no gradients should flow into the indices.
         for index, start in zip(self._corruption_indices, range(0, total_num_negatives, split_idx)):
             stop = min(start + split_idx, total_num_negatives)
-
-            # Relations have a different index maximum than entities
-            index_max = self.num_relations if index == 1 else self.num_entities
-
-            # At least make sure to not replace the triples by the original value
-            # To make sure we don't replace the {head, relation, tail} by the
-            # original value we shift all values greater or equal than the original value by one up
-            # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
-            replacement = torch.randint(
-                high=index_max - 1,
-                size=(stop - start,),
-                device=positive_batch.device,
+            random_replacement_(
+                batch=negative_batch,
+                index=index,
+                selection=slice(start, stop),
+                size=stop - start,
+                max_index=self.num_relations if index == 1 else self.num_entities,
             )
-            replacement += (replacement >= negative_batch[start:stop, index]).long()
-            negative_batch[start:stop, index] = replacement
 
         return negative_batch.view(*batch_shape, self.num_negs_per_pos, 3)
