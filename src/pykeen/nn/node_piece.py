@@ -44,11 +44,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
-    """Sample without replacement."""
-    return rs[torch.randperm(rs.shape[0])[:k]]
-
-
 class Tokenizer:
     """A base class for tokenizers for NodePiece representations."""
 
@@ -690,7 +685,7 @@ def _random_sample_no_replacement(
     # TODO: vectorization?
     for idx, this_pool in pool.items():
         this_pool = torch.as_tensor(data=list(this_pool), dtype=torch.long)
-        this_pool = _sample(rs=this_pool, k=num_tokens)
+        this_pool = this_pool[torch.randperm(this_pool.shape[0])[:num_tokens]]
         assignment[idx, : len(this_pool)] = this_pool
     return assignment
 
