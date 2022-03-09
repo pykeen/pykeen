@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
-
+import math
 from typing import Collection, Optional
 
 import torch
@@ -55,36 +55,37 @@ class BasicNegativeSampler(NegativeSampler):
         self._n_corruptions = len(self._corruption_indices)
 
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+        if self.num_negs_per_pos > 1:
+            positive_batch = positive_batch.repeat_interleave(repeats=self.num_negs_per_pos, dim=0)
+
+        # Bind number of negatives to sample
+        num_negs = positive_batch.shape[0]
+
+        # Equally corrupt all sides
+        split_idx = int(math.ceil(num_negs / len(self._corruption_indices)))
+
         batch_shape = positive_batch.shape[:-1]
         # Copy positive batch for corruption.
         # Do not detach, as no gradients should flow into the indices.
         negative_batch = positive_batch.clone()
-        negative_batch = negative_batch.unsqueeze(dim=-2).repeat(*(1 for _ in batch_shape), self.num_negs_per_pos, 1)
-
-        corruption_index = torch.randint(self._n_corruptions, size=(*batch_shape, self.num_negs_per_pos))
-        # split_idx = int(math.ceil(num_negs / len(self._corruption_indices)))
-        for index in self._corruption_indices:
+        # negative_batch = negative_batch.unsqueeze(dim=-2).repeat(*(1 for _ in batch_shape), self.num_negs_per_pos, 1)
+        for index, start in zip(self._corruption_indices, range(0, num_negs, split_idx)):
             # Relations have a different index maximum than entities
             # At least make sure to not replace the triples by the original value
             index_max = (self.num_relations if index == 1 else self.num_entities) - 1
 
-            mask = corruption_index == index
-            # To make sure we don't replace the {head, relation, tail} by the
-            # original value we shift all values greater or equal than the original value by one up
-            # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
-            negative_indices = torch.randint(
+            stop = min(start + split_idx, num_negs)
+            negative_batch[start:stop, index] = torch.randint(
                 high=index_max,
-                size=(mask.sum().item(),),
+                size=(stop - start,),
                 device=positive_batch.device,
             )
 
-            # determine shift *before* writing the negative indices
-            shift = (negative_indices >= negative_batch[mask][:, index]).long()
-            negative_indices += shift
+            # To make sure we don't replace the {head, relation, tail} by the
+            # original value we shift all values greater or equal than the original value by one up
+            # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
+            negative_batch[start:stop, index] += (
+                negative_batch[start:stop, index] >= positive_batch[start:stop, index]
+            ).long()
 
-            # write the negative indices
-            negative_batch[
-                mask.unsqueeze(dim=-1) & (torch.arange(3) == index).view(*(1 for _ in batch_shape), 1, 3)
-            ] = negative_indices
-
-        return negative_batch
+        return negative_batch.view(-1, self.num_negs_per_pos, 3)
