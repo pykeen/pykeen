@@ -96,8 +96,8 @@ class RelationTokenizer(Tokenizer):
                 ],
                 dim=0,
             )
-                .unique(dim=0)
-                .tolist()
+            .unique(dim=0)
+            .tolist()
         ):
             e2r[e].add(r)
 
@@ -721,7 +721,7 @@ precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader]
 )
 
 
-class PrecomputedTokenizer(Tokenizer):
+class PrecomputedPoolTokenizer(Tokenizer):
     """A tokenizer using externally precomputed tokenization."""
 
     @classmethod
