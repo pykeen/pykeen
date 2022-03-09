@@ -223,7 +223,7 @@ class DecreasingZMixin(BaseZMixin):
 
 
 class ExpectationNormalizedMixin(RankBasedMetric):
-    """A mixin to create a an expectation-normalized metric.
+    """A mixin to create an expectation-normalized metric.
 
     .. warning:: This requires a closed-form solution to the expected value
     """
@@ -316,7 +316,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
