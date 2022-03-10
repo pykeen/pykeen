@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
-
+import math
 from abc import ABC
 from typing import Callable, Generic, Iterable, Iterator, List, Mapping, NamedTuple, Optional, Tuple, TypeVar
 
@@ -196,13 +196,9 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         """
         # TODO: initialization for multi-processing
         self.mapped_triples = mapped_triples
-        self.batch_sampler = data.BatchSampler(
-            sampler=data.RandomSampler(data_source=mapped_triples)
-            if shuffle
-            else data.SequentialSampler(data_source=mapped_triples),
-            batch_size=batch_size,
-            drop_last=drop_last,
-        )
+        self.shuffle = shuffle
+        self.batch_size = batch_size
+        self.drop_last = drop_last
         self.negative_sampler = negative_sampler_resolver.make(
             negative_sampler,
             pos_kwargs=negative_sampler_kwargs,
@@ -219,11 +215,37 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
 
     def __iter__(self) -> Iterator[SLCWABatch]:
         """Iterate over batches."""
-        yield from (self[triple_ids] for triple_ids in self.batch_sampler)
+        # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
+        worker_info = torch.utils.data.get_worker_info()
+        worker_id = None
+        n = len(self.mapped_triples)
+        if worker_info is None:  # single-process data loading, return the full iterator
+            data_source = range(n)
+        else:
+            num_workers = worker_info.num_workers
+            worker_id = worker_info.id  # 1-based
+            start = math.ceil(n / num_workers * worker_id)
+            stop = math.ceil(n / num_workers * (worker_id + 1))
+            data_source = range(start, stop)
+        batch_sampler = data.BatchSampler(
+            sampler=(
+                data.RandomSampler(data_source=data_source)
+                if self.shuffle
+                else data.SequentialSampler(data_source=data_source)
+            ),
+            batch_size=self.batch_size,
+            drop_last=self.drop_last,
+        )
+        for tripe_ids in batch_sampler:
+            print(worker_id, tripe_ids)
+            yield self[tripe_ids]
 
     def __len__(self) -> int:
         """Return the number of batches."""
-        return len(self.batch_sampler)
+        num_batches, remainder = divmod(len(self.mapped_triples), self.batch_size)
+        if remainder and not self.drop_last:
+            num_batches += 1
+        return num_batches
 
 
 class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
