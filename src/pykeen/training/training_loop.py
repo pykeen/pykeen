@@ -472,9 +472,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         "Therefore, the batch_size will be set to the default value '{batch_size}'",
                     )
                 else:
-                    batch_size, batch_size_sufficient = self.batch_size_search(
-                        triples_factory=triples_factory,
-                    )
+                    batch_size, batch_size_sufficient = self.batch_size_search(triples_factory=triples_factory)
             else:
                 batch_size = 256
                 logger.info(f"No batch_size provided. Setting batch_size to '{batch_size}'.")
@@ -488,9 +486,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         ):
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(
-                batch_size=batch_size,
-                sampler=sampler,
-                triples_factory=triples_factory,
+                batch_size=batch_size, sampler=sampler, triples_factory=triples_factory
             )
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
@@ -502,13 +498,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if batch_size == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
 
-        training_instances = self._create_instances(triples_factory)
+        # TODO:
+        num_training_instances = ...
         if drop_last is None:
             drop_last = model_contains_batch_norm
             if drop_last and not only_size_probing:
                 logger.info(
                     "Dropping last (incomplete) batch each epoch (%s batches).",
-                    format_relative_comparison(part=1, total=len(training_instances)),
+                    format_relative_comparison(part=1, total=num_training_instances),
                 )
 
         # Force weight initialization if training continuation is not explicitly requested.
@@ -537,6 +534,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         # Create Sampler
         if sampler == "schlichtkrull":
+            # TODO:
+            training_instances = ...
             if triples_factory is None:
                 raise ValueError("need to pass triples_factory when using graph sampling")
             if not isinstance(training_instances, SLCWAInstances):
@@ -560,9 +559,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if num_workers is None:
             num_workers = 0
 
-        # Bind
-        num_training_instances = len(training_instances)
-
         _use_outer_tqdm = not only_size_probing and use_tqdm
         _use_inner_tqdm = _use_outer_tqdm and use_tqdm_batch
 
@@ -581,7 +577,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         logger.debug(f"using stopper: {stopper}")
 
         train_data_loader = self._create_training_data_loader(
-            training_instances, batch_size, drop_last, num_workers, pin_memory, shuffle
+            triples_factory, batch_size, drop_last, num_workers, pin_memory, shuffle
         )
 
         # Save the time to track when the saved point was available
@@ -760,24 +756,17 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         return self.losses_per_epochs
 
+    @abstractmethod
     def _create_training_data_loader(
         self,
-        dataset: Dataset[SampleType],
+        triples_factory: CoreTriplesFactory,
         batch_size: int,
         drop_last: bool,
         num_workers: int,
         pin_memory: bool,
         shuffle: bool,
     ) -> DataLoader[BatchType]:
-        return DataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            drop_last=drop_last,
-            shuffle=shuffle,
-            pin_memory=pin_memory,
-            collate_fn=dataset.get_collator(),
-        )
+        raise NotImplementedError
 
     def _forward_pass(
         self,

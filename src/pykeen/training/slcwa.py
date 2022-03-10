@@ -45,21 +45,19 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
 
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_slcwa_instances(
-            negative_sampler=self.negative_sampler,
-            negative_sampler_kwargs=self.negative_sampler_kwargs,
-        )
-
     def _create_training_data_loader(
         self,
-        dataset: Dataset[SLCWASampleType],
+        triples_factory: CoreTriplesFactory,
         batch_size: int,
         drop_last: bool,
         num_workers: int,
         pin_memory: bool,
         shuffle: bool,
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
+        dataset = triples_factory.create_slcwa_instances(
+            negative_sampler=self.negative_sampler,
+            negative_sampler_kwargs=self.negative_sampler_kwargs,
+        )
         return DataLoader(
             dataset=dataset,
             num_workers=num_workers,

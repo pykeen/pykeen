@@ -7,6 +7,7 @@ from math import ceil
 from typing import Optional, Union
 
 import torch
+from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
 from ..triples import CoreTriplesFactory, Instances
@@ -74,8 +75,25 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         # of total entities from another inductive inference factory
         self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode=self.mode)
 
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_lcwa_instances(target=self.target)
+    def _create_training_data_loader(
+        self,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        pin_memory: bool,
+        shuffle: bool,
+    ) -> DataLoader[LCWABatchType]:  # noqa: D102
+        dataset = triples_factory.create_lcwa_instances(target=self.target)
+        return DataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=batch_size,
+            drop_last=drop_last,
+            shuffle=shuffle,
+            pin_memory=pin_memory,
+            collate_fn=dataset.get_collator(),
+        )
 
     @staticmethod
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
