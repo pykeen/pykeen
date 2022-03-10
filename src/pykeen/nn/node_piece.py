@@ -701,7 +701,13 @@ class PrecomputedTokenizerLoader:
 
 
 class GalkinPickleLoader(PrecomputedTokenizerLoader):
-    """A loader for pickle files provided by Galkin et al."""
+    """
+    A loader for pickle files provided by Galkin et al.
+
+    .. seealso ::
+        https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/download_data.sh
+        https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/download.sh
+    """
 
     def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         with path.open(mode="rb") as pickle_file:
