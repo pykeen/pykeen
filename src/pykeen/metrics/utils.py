@@ -49,12 +49,12 @@ class ValueRange:
         """Get the math notation for the range of this metric."""
         left = "(" if self.lower is None or not self.lower_inclusive else "["
         right = ")" if self.upper is None or not self.upper_inclusive else "]"
-        return f"{left}{self._coerce(self.lower)}, {self._coerce(self.upper)}{right}"
+        return f"{left}{self._coerce(self.lower, low=True)}, {self._coerce(self.upper, low=False)}{right}"
 
     @staticmethod
-    def _coerce(n: Optional[float]) -> str:
+    def _coerce(n: Optional[float], low: bool) -> str:
         if n is None:
-            return "inf"  # ∞
+            return "-inf" if low else "inf"  # ∞
         if isinstance(n, int):
             return str(n)
         if n.is_integer():
@@ -104,6 +104,16 @@ class Metric:
     def key(self) -> str:
         """Return the key for use in metric result dictionaries."""
         return camel_to_snake(self.__class__.__name__)
+
+    @classmethod
+    def get_range(cls) -> str:
+        """Get the math notation for the range of this metric."""
+        docdata = get_docdata(cls) or {}
+        left_bracket = "(" if cls.value_range.lower is None or not cls.value_range.lower_inclusive else "["
+        left = docdata.get("tight_lower", cls.value_range._coerce(cls.value_range.lower, low=True))
+        right_bracket = ")" if cls.value_range.upper is None or not cls.value_range.upper_inclusive else "]"
+        right = docdata.get("tight_upper", cls.value_range._coerce(cls.value_range.upper, low=False))
+        return f"{left_bracket}{left}, {right}{right_bracket}"
 
     def _extra_repr(self) -> Iterable[str]:
         return []
