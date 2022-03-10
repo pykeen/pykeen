@@ -240,6 +240,7 @@ class RankBasedEvaluator(Evaluator):
         if add_defaults:
             hits_at_k_keys = ["hits_at_k", "z_hits_at_k", "adjusted_hits_at_k"]
             ks = (1, 3, 5, 10)
+            # TODO: options contains synonyms!
             metrics = [key for key in rank_based_metric_resolver.options if key not in hits_at_k_keys]
             metrics_kwargs = [None] * len(metrics)
             for hits_at_k_key in hits_at_k_keys:
