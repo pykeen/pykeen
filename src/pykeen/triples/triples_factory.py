@@ -31,8 +31,9 @@ import numpy as np
 import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
+from torch.utils.data import Dataset
 
-from .instances import Instances, LCWAInstances, SLCWAInstances
+from .instances import BatchedSLCWAInstances, Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
 from ..sampling import NegativeSampler
@@ -489,19 +490,19 @@ class CoreTriplesFactory:
         self,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
-    ) -> Instances:
+    ) -> Dataset:
         """Create sLCWA instances for this factory's triples."""
         return self._create_instances(
-            SLCWAInstances,
+            BatchedSLCWAInstances,
             negative_sampler=negative_sampler,
             negative_sampler_kwargs=negative_sampler_kwargs,
         )
 
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Instances:
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Dataset:
         """Create LCWA instances for this factory's triples."""
         return self._create_instances(LCWAInstances, target=target)
 
-    def _create_instances(self, instances_cls: Type[Instances], **kwargs) -> Instances:
+    def _create_instances(self, instances_cls: Type[Instances], **kwargs) -> Dataset:
         return instances_cls.from_triples(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,

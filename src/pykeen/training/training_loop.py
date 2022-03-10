@@ -18,7 +18,7 @@ from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Un
 import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from tqdm.autonotebook import tqdm, trange
 
 from .callbacks import (
@@ -36,7 +36,7 @@ from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
-from ..triples import CoreTriplesFactory, Instances, TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.instances import SLCWAInstances
 from ..typing import InductiveMode
 from ..utils import (
@@ -281,10 +281,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         """
         self._should_stop = False
 
-        # Create training instances. Use the _create_instances function to allow subclasses
-        # to modify this behavior
-        training_instances = self._create_instances(triples_factory)
-
         # In some cases, e.g. using Optuna for HPO, the cuda cache from a previous run is not cleared
         torch.cuda.empty_cache()
 
@@ -371,7 +367,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 gradient_clipping_norm_type=gradient_clipping_norm_type,
                 gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
                 triples_factory=triples_factory,
-                training_instances=training_instances,
                 pin_memory=pin_memory,
             )
 
@@ -388,7 +383,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     def _train(  # noqa: C901
         self,
         triples_factory: CoreTriplesFactory,
-        training_instances: torch.utils.data.Dataset[SampleType],
         num_epochs: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
@@ -480,7 +474,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 else:
                     batch_size, batch_size_sufficient = self.batch_size_search(
                         triples_factory=triples_factory,
-                        training_instances=training_instances,
                     )
             else:
                 batch_size = 256
@@ -498,7 +491,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 batch_size=batch_size,
                 sampler=sampler,
                 triples_factory=triples_factory,
-                training_instances=training_instances,
             )
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
@@ -509,6 +501,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         model_contains_batch_norm = bool(get_batchnorm_modules(self.model))
         if batch_size == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
+
+        training_instances = self._create_instances(triples_factory)
         if drop_last is None:
             drop_last = model_contains_batch_norm
             if drop_last and not only_size_probing:
@@ -586,7 +580,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         logger.debug(f"using stopper: {stopper}")
 
-        train_data_loader = self._get_data_loader(
+        train_data_loader = self._create_training_data_loader(
             training_instances, batch_size, drop_last, num_workers, pin_memory, shuffle
         )
 
@@ -766,15 +760,15 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         return self.losses_per_epochs
 
-    def _get_data_loader(
+    def _create_training_data_loader(
         self,
-        dataset: torch.utils.data.Dataset[SampleType],
+        dataset: Dataset[SampleType],
         batch_size: int,
         drop_last: bool,
         num_workers: int,
         pin_memory: bool,
         shuffle: bool,
-    ) -> torch.utils.data.DataLoader[BatchType]:
+    ) -> DataLoader[BatchType]:
         return DataLoader(
             dataset=dataset,
             num_workers=num_workers,
@@ -848,7 +842,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
         batch_size: Optional[int] = None,
     ) -> Tuple[int, bool]:
         """Find the maximum batch size for training with the current setting.
@@ -860,8 +853,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         :param triples_factory:
             The triples factory over which search is run
-        :param training_instances:
-            The training instances generated from the triples factory
         :param batch_size:
             The batch size to start the search with. If None, set batch_size=num_triples (i.e. full batch training).
 
@@ -888,7 +879,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     sub_batch_size=None,
                     only_size_probing=True,
                     triples_factory=triples_factory,
-                    training_instances=training_instances,
                 )
             except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
@@ -923,14 +913,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size: int,
         sampler: Optional[str],
         triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
     ) -> Tuple[int, Optional[int]]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
         sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(
             batch_size=batch_size,
             sampler=sampler,
             triples_factory=triples_factory,
-            training_instances=training_instances,
         )
         # If the sub_batch_size did not finish search with a possibility that fits the hardware, we have to try slicing
         if finished_search:
@@ -938,7 +926,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         slice_size = self._slice_size_search(
             triples_factory=triples_factory,
-            training_instances=training_instances,
             batch_size=batch_size,
             sub_batch_size=sub_batch_size,
             supports_sub_batching=supports_sub_batching,
@@ -947,13 +934,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     @abstractmethod
     def _slice_size_search(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
-        batch_size: int,
-        sub_batch_size: int,
-        supports_sub_batching: bool,
+        self, *, triples_factory: CoreTriplesFactory, batch_size: int, sub_batch_size: int, supports_sub_batching: bool
     ) -> int:
         """Find the maximum slice size for training with the current setting.
 
@@ -982,7 +963,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size: int,
         sampler: Optional[str],
         triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
     ) -> Tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
 
@@ -1007,7 +987,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             logger.debug(f"Trying batch_size {batch_size} for training now.")
             self._train(
                 triples_factory=triples_factory,
-                training_instances=training_instances,
                 num_epochs=1,
                 batch_size=batch_size,
                 sub_batch_size=sub_batch_size,
@@ -1042,7 +1021,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                             sampler=sampler,
                             only_size_probing=True,
                             triples_factory=triples_factory,
-                            training_instances=training_instances,
                         )
                     except RuntimeError as runtime_error:
                         self._free_graph_and_cache()

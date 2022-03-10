@@ -109,13 +109,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         )
 
     def _slice_size_search(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
-        batch_size: int,
-        sub_batch_size: int,
-        supports_sub_batching: bool,
+        self, *, triples_factory: CoreTriplesFactory, batch_size: int, sub_batch_size: int, supports_sub_batching: bool
     ) -> int:  # noqa: D102
         self._check_slicing_availability(supports_sub_batching)
         reached_max = False
@@ -129,7 +123,6 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 logger.debug(f"Trying slice size {slice_size} now.")
                 self._train(
                     triples_factory=triples_factory,
-                    training_instances=training_instances,
                     num_epochs=1,
                     batch_size=batch_size,
                     sub_batch_size=sub_batch_size,

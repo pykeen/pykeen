@@ -5,8 +5,9 @@
 import logging
 from typing import Optional
 
-import torch
+import torch.utils.data
 from class_resolver import HintOrType, OptionalKwargs
+from torch.utils.data import DataLoader, Dataset
 
 from .training_loop import TrainingLoop
 from ..sampling import NegativeSampler
@@ -48,6 +49,25 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         return triples_factory.create_slcwa_instances(
             negative_sampler=self.negative_sampler,
             negative_sampler_kwargs=self.negative_sampler_kwargs,
+        )
+
+    def _create_training_data_loader(
+        self,
+        dataset: Dataset[SLCWASampleType],
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        pin_memory: bool,
+        shuffle: bool,
+    ) -> DataLoader[SLCWABatch]:  # noqa: D102
+        return DataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=batch_size,
+            drop_last=drop_last,
+            shuffle=shuffle,
+            pin_memory=pin_memory,
+            collate_fn=dataset.get_collator(),
         )
 
     @staticmethod
@@ -99,13 +119,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         )
 
     def _slice_size_search(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
-        batch_size: int,
-        sub_batch_size: int,
-        supports_sub_batching: bool,
+        self, *, triples_factory: CoreTriplesFactory, batch_size: int, sub_batch_size: int, supports_sub_batching: bool
     ):  # noqa: D102
         # Slicing is not possible for sLCWA
         if supports_sub_batching:
