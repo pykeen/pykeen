@@ -194,6 +194,7 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         :param negative_sampler_kwargs:
             additional keyword-based parameters used to instantiate the negative sampler
         """
+        # TODO: initialization for multi-processing
         self.mapped_triples = mapped_triples
         self.batch_sampler = data.BatchSampler(
             sampler=data.RandomSampler(data_source=mapped_triples)
