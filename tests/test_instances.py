@@ -73,3 +73,15 @@ class BatchedSLCWAInstancesTestCase(unittest_templates.GenericTestCase[BatchedSL
     def test_length(self):
         """Test length."""
         assert len(self.instance) == len(list(iter(self.instance)))
+
+    def test_data_loader_multiprocessing(self):
+        """Test data loader with multiple workers."""
+        self.assertEqual(
+            sum(
+                (
+                    batch.positives.shape[0]
+                    for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
+                )
+            ),
+            self.factory.num_triples,
+        )
