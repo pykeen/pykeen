@@ -222,10 +222,7 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
 
     def __len__(self) -> int:
         """Return the number of batches."""
-        num_batches, remainder = divmod(len(self.mapped_triples), self.batch_sampler.batch_size)
-        if not self.batch_sampler.drop_last and remainder:
-            num_batches += 1
-        return num_batches
+        return len(self.batch_sampler)
 
 
 class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
