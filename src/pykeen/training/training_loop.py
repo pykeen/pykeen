@@ -668,7 +668,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                 # Track epoch loss
                 if self.model.loss.reduction == "mean":
-                    epoch_loss = current_epoch_loss / num_training_instances
+                    # epoch_loss = current_epoch_loss / num_training_instances
+                    epoch_loss = current_epoch_loss / len(train_data_loader)
                 else:
                     epoch_loss = current_epoch_loss / len(train_data_loader)
                 self.losses_per_epochs.append(epoch_loss)
@@ -808,11 +809,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     @abstractmethod
     def _get_batch_size(batch: BatchType) -> int:
         """Get the batch size from a (sub-) batch."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> torch.utils.data.Dataset[SampleType]:
-        """Create the training instances at the beginning of the training loop."""
         raise NotImplementedError
 
     @abstractmethod

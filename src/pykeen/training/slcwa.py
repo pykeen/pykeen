@@ -7,11 +7,11 @@ from typing import Optional
 
 import torch.utils.data
 from class_resolver import HintOrType, OptionalKwargs
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
 from ..sampling import NegativeSampler
-from ..triples import CoreTriplesFactory, Instances
+from ..triples import CoreTriplesFactory
 from ..triples.instances import SLCWABatch, SLCWASampleType
 
 __all__ = [
@@ -54,18 +54,19 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         pin_memory: bool,
         shuffle: bool,
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
-        dataset = triples_factory.create_slcwa_instances(
-            negative_sampler=self.negative_sampler,
-            negative_sampler_kwargs=self.negative_sampler_kwargs,
-        )
         return DataLoader(
-            dataset=dataset,
+            dataset=triples_factory.create_slcwa_instances(
+                batch_size=batch_size,
+                shuffle=shuffle,
+                drop_last=drop_last,
+                negative_sampler=self.negative_sampler,
+                negative_sampler_kwargs=self.negative_sampler_kwargs,
+            ),
             num_workers=num_workers,
-            batch_size=batch_size,
-            drop_last=drop_last,
-            shuffle=shuffle,
             pin_memory=pin_memory,
-            collate_fn=dataset.get_collator(),
+            # disable automatic batching
+            batch_size=None,
+            batch_sampler=None,
         )
 
     @staticmethod

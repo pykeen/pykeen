@@ -486,28 +486,22 @@ class CoreTriplesFactory:
             ]
         )
 
-    def create_slcwa_instances(
-        self,
-        negative_sampler: HintOrType[NegativeSampler] = None,
-        negative_sampler_kwargs: OptionalKwargs = None,
-    ) -> Dataset:
+    def create_slcwa_instances(self, **kwargs) -> Dataset:
         """Create sLCWA instances for this factory's triples."""
-        return self._create_instances(
-            BatchedSLCWAInstances,
-            negative_sampler=negative_sampler,
-            negative_sampler_kwargs=negative_sampler_kwargs,
-        )
-
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Dataset:
-        """Create LCWA instances for this factory's triples."""
-        return self._create_instances(LCWAInstances, target=target)
-
-    def _create_instances(self, instances_cls: Type[Instances], **kwargs) -> Dataset:
-        return instances_cls.from_triples(
+        return BatchedSLCWAInstances(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
             num_relations=self.num_relations,
             **kwargs,
+        )
+
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Dataset:
+        """Create LCWA instances for this factory's triples."""
+        return LCWAInstances.from_triples(
+            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            target=target,
         )
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:

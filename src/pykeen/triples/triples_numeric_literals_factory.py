@@ -103,15 +103,10 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def extra_repr(self) -> str:  # noqa: D102
         return super().extra_repr() + (f"num_literals={len(self.literals_to_id)}")
 
-    def create_slcwa_instances(
-        self,
-        negative_sampler: HintOrType[NegativeSampler] = None,
-        negative_sampler_kwargs: OptionalKwargs = None,
-    ) -> MultimodalSLCWAInstances:
+    def create_slcwa_instances(self, **kwargs) -> MultimodalSLCWAInstances:
         """Create multi-modal sLCWA instances for this factory's triples."""
-        slcwa_instances = super().create_slcwa_instances(
-            negative_sampler=negative_sampler, negative_sampler_kwargs=negative_sampler_kwargs
-        )
+        # TODO:
+        slcwa_instances = super().create_slcwa_instances(**kwargs)
         return MultimodalSLCWAInstances(
             mapped_triples=slcwa_instances.mapped_triples,
             numeric_literals=self.numeric_literals,
