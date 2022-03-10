@@ -236,9 +236,8 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
             batch_size=self.batch_size,
             drop_last=self.drop_last,
         )
-        for tripe_ids in batch_sampler:
-            print(worker_id, tripe_ids)
-            yield self[tripe_ids]
+        for triple_ids in batch_sampler:
+            yield self[triple_ids]
 
     def __len__(self) -> int:
         """Return the number of batches."""
