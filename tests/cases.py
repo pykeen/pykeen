@@ -2129,6 +2129,10 @@ class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
         self.factory = Nations().training
         return {}
 
+    @abstractmethod
+    def _get_expected_length(self) -> int:
+        raise NotImplementedError
+
     def test_getitem(self):
         """Test __getitem__."""
         self.instance: Instances
@@ -2136,7 +2140,7 @@ class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
 
     def test_len(self):
         """Test __len__."""
-        assert len(self.instance) > 0
+        self.assertEqual(len(self.instance), self._get_expected_length())
 
     def test_data_loader(self):
         """Test usage with data loader."""

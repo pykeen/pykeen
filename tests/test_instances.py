@@ -26,6 +26,9 @@ class LCWAInstancesTestCase(cases.TrainingInstancesTestCase):
         kwargs["compressed"] = other_instance.compressed
         return kwargs
 
+    def _get_expected_length(self) -> int:
+        return self.factory.mapped_triples[:, :2].unique(dim=0).shape[0]
+
 
 class SLCWAInstancesTestCase(cases.TrainingInstancesTestCase):
     """Tests for sLCWA training instances."""
@@ -36,6 +39,9 @@ class SLCWAInstancesTestCase(cases.TrainingInstancesTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["mapped_triples"] = self.factory.mapped_triples
         return kwargs
+
+    def _get_expected_length(self) -> int:
+        return self.factory.mapped_triples.shape
 
 
 class BatchedSLCWAInstancesTestCase(unittest_templates.GenericTestCase[BatchedSLCWAInstances]):
@@ -63,3 +69,7 @@ class BatchedSLCWAInstancesTestCase(unittest_templates.GenericTestCase[BatchedSL
             assert batch.positives.shape == (self.batch_size, 3)
             assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
             assert batch.masks is None
+
+    def test_length(self):
+        """Test length."""
+        assert len(self.instance) == len(list(iter(self.instance)))
