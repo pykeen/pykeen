@@ -217,7 +217,6 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         """Iterate over batches."""
         # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
         worker_info = torch.utils.data.get_worker_info()
-        worker_id = None
         n = len(self.mapped_triples)
         if worker_info is None:  # single-process data loading, return the full iterator
             data_source = range(n)
