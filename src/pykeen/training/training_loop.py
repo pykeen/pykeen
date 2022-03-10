@@ -388,7 +388,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     def _train(  # noqa: C901
         self,
         triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
+        training_instances: torch.utils.data.Dataset[SampleType],
         num_epochs: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
@@ -586,14 +586,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         logger.debug(f"using stopper: {stopper}")
 
-        train_data_loader = DataLoader(
-            dataset=training_instances,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            drop_last=drop_last,
-            shuffle=shuffle,
-            pin_memory=pin_memory,
-            collate_fn=training_instances.get_collator(),
+        train_data_loader = self._get_data_loader(
+            training_instances, batch_size, drop_last, num_workers, pin_memory, shuffle
         )
 
         # Save the time to track when the saved point was available
@@ -772,6 +766,25 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         return self.losses_per_epochs
 
+    def _get_data_loader(
+        self,
+        dataset: torch.utils.data.Dataset[SampleType],
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        pin_memory: bool,
+        shuffle: bool,
+    ) -> torch.utils.data.DataLoader[BatchType]:
+        return DataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=batch_size,
+            drop_last=drop_last,
+            shuffle=shuffle,
+            pin_memory=pin_memory,
+            collate_fn=dataset.get_collator(),
+        )
+
     def _forward_pass(
         self,
         batch: BatchType,
@@ -815,7 +828,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> torch.utils.data.Dataset[SampleType]:
         """Create the training instances at the beginning of the training loop."""
         raise NotImplementedError
 
