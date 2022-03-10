@@ -212,6 +212,7 @@ class RankBasedEvaluator(Evaluator):
         filtered: bool = True,
         metrics: Optional[Sequence[HintOrType[RankBasedMetric]]] = None,
         metrics_kwargs: OptionalKwargs = None,
+        add_defaults: bool = True,
         **kwargs,
     ):
         """Initialize rank-based evaluator.
@@ -223,6 +224,8 @@ class RankBasedEvaluator(Evaluator):
             the rank-based metrics to compute
         :param metrics_kwargs:
             additional keyword parameter
+        :param add_defaults:
+            whether to add all default metrics besides the ones specified by `metrics` / `metrics_kwargs`.
         :param kwargs: Additional keyword arguments that are passed to the base class.
         """
         super().__init__(
@@ -231,7 +234,10 @@ class RankBasedEvaluator(Evaluator):
             **kwargs,
         )
         if metrics is None:
-            assert metrics_kwargs is None
+            add_defaults = True
+            metrics = []
+        self.metrics = rank_based_metric_resolver.make_many(metrics, metrics_kwargs)
+        if add_defaults:
             hits_at_k_keys = ["hits_at_k", "z_hits_at_k", "adjusted_hits_at_k"]
             ks = (1, 3, 5, 10)
             metrics = [key for key in rank_based_metric_resolver.options if key not in hits_at_k_keys]
@@ -239,8 +245,7 @@ class RankBasedEvaluator(Evaluator):
             for hits_at_k_key in hits_at_k_keys:
                 metrics += [hits_at_k_key] * len(ks)
                 metrics_kwargs += [dict(k=k) for k in ks]
-
-        self.metrics = rank_based_metric_resolver.make_many(metrics, metrics_kwargs)
+            self.metrics.extend(rank_based_metric_resolver.make_many(metrics, metrics_kwargs))
         self.ranks = defaultdict(list)
         self.num_candidates = defaultdict(list)
         self.num_entities = None
