@@ -194,11 +194,10 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         :param negative_sampler_kwargs:
             additional keyword-based parameters used to instantiate the negative sampler
         """
-        # TODO: initialization for multi-processing
         self.mapped_triples = mapped_triples
-        self.shuffle = shuffle
         self.batch_size = batch_size
         self.drop_last = drop_last
+        self.base_sampler_cls = data.RandomSampler if shuffle else data.SequentialSampler
         self.negative_sampler = negative_sampler_resolver.make(
             negative_sampler,
             pos_kwargs=negative_sampler_kwargs,
@@ -226,16 +225,11 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
             start = math.ceil(n / num_workers * worker_id)
             stop = math.ceil(n / num_workers * (worker_id + 1))
             data_source = range(start, stop)
-        batch_sampler = data.BatchSampler(
-            sampler=(
-                data.RandomSampler(data_source=data_source)
-                if self.shuffle
-                else data.SequentialSampler(data_source=data_source)
-            ),
+        for triple_ids in data.BatchSampler(
+            sampler=self.base_sampler_cls(data_source=data_source),
             batch_size=self.batch_size,
             drop_last=self.drop_last,
-        )
-        for triple_ids in batch_sampler:
+        ):
             yield self[triple_ids]
 
     def __len__(self) -> int:
