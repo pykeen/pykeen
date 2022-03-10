@@ -18,7 +18,7 @@ from class_resolver import HintOrType, OptionalKwargs
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
-from ..metrics.ranking import RankBasedMetric, rank_based_metric_resolver
+from ..metrics.ranking import AdjustedHitsAtK, HitsAtK, RankBasedMetric, ZHitsAtK, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
@@ -238,10 +238,11 @@ class RankBasedEvaluator(Evaluator):
             metrics = []
         self.metrics = rank_based_metric_resolver.make_many(metrics, metrics_kwargs)
         if add_defaults:
-            hits_at_k_keys = ["hits_at_k", "z_hits_at_k", "adjusted_hits_at_k"]
+            hits_at_k_keys = [
+                rank_based_metric_resolver.normalize_cls(cls) for cls in (HitsAtK, ZHitsAtK, AdjustedHitsAtK)
+            ]
             ks = (1, 3, 5, 10)
-            # TODO: options contains synonyms!
-            metrics = [key for key in rank_based_metric_resolver.options if key not in hits_at_k_keys]
+            metrics = [key for key in rank_based_metric_resolver.lookup_dict if key not in hits_at_k_keys]
             metrics_kwargs = [None] * len(metrics)
             for hits_at_k_key in hits_at_k_keys:
                 metrics += [hits_at_k_key] * len(ks)
