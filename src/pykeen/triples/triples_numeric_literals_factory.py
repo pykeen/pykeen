@@ -9,7 +9,6 @@ from typing import Any, Dict, Optional, TextIO, Tuple, Union
 import numpy as np
 import torch
 
-from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples
@@ -100,30 +99,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
 
     def extra_repr(self) -> str:  # noqa: D102
         return super().extra_repr() + (f"num_literals={len(self.literals_to_id)}")
-
-    def create_slcwa_instances(self, **kwargs) -> MultimodalSLCWAInstances:
-        """Create multi-modal sLCWA instances for this factory's triples."""
-        # TODO:
-        slcwa_instances = super().create_slcwa_instances(**kwargs)
-        return MultimodalSLCWAInstances(
-            mapped_triples=slcwa_instances.mapped_triples,
-            numeric_literals=self.numeric_literals,
-            literals_to_id=self.literals_to_id,
-        )
-
-    def create_lcwa_instances(
-        self,
-        use_tqdm: Optional[bool] = None,
-        target: Optional[int] = None,
-    ) -> MultimodalLCWAInstances:
-        """Create multi-modal LCWA instances for this factory's triples."""
-        lcwa_instances = super().create_lcwa_instances(use_tqdm=use_tqdm, target=target)
-        return MultimodalLCWAInstances(
-            pairs=lcwa_instances.pairs,
-            compressed=lcwa_instances.compressed,
-            numeric_literals=self.numeric_literals,
-            literals_to_id=self.literals_to_id,
-        )
 
     def clone_and_exchange_triples(
         self,

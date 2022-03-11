@@ -3,7 +3,7 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 import math
 from abc import ABC
-from typing import Callable, Generic, Iterable, Iterator, List, Mapping, NamedTuple, Optional, Tuple, TypeVar
+from typing import Callable, Generic, Iterable, Iterator, List, NamedTuple, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -18,9 +18,6 @@ __all__ = [
     "Instances",
     "SLCWAInstances",
     "LCWAInstances",
-    "MultimodalInstances",
-    "MultimodalSLCWAInstances",
-    "MultimodalLCWAInstances",
 ]
 
 # TODO: the same
@@ -298,58 +295,3 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
 
     def __getitem__(self, item: int) -> LCWABatchType:  # noqa: D105
         return self.pairs[item], np.asarray(self.compressed[item, :].todense())[0, :]
-
-
-class MultimodalInstances:
-    """Triples and mappings to their indices as well as multimodal data."""
-
-    def __init__(self, *, numeric_literals: Mapping[str, np.ndarray], literals_to_id: Mapping[str, int]):
-        """Initialize the multimodal instances.
-
-        :param numeric_literals: A mapping from relations to numeric literals
-        :param literals_to_id: A mapping from literals to their identifiers
-        """
-        self.numeric_literals = numeric_literals
-        self.literals_to_id = literals_to_id
-
-
-class MultimodalSLCWAInstances(MultimodalInstances, SLCWAInstances):
-    """Triples and mappings to their indices as well as multimodal data for sLCWA."""
-
-    def __init__(
-        self,
-        *,
-        mapped_triples: MappedTriples,
-        numeric_literals: Mapping[str, np.ndarray],
-        literals_to_id: Mapping[str, int],
-    ):
-        """Initialize the multimodal sLCWA instances.
-
-        :param mapped_triples: The mapped triples, shape: (num_triples, 3)
-        :param numeric_literals: A mapping from relations to numeric literals
-        :param literals_to_id: A mapping from literals to their identifiers
-        """
-        SLCWAInstances.__init__(self, mapped_triples=mapped_triples)
-        MultimodalInstances.__init__(self, numeric_literals=numeric_literals, literals_to_id=literals_to_id)
-
-
-class MultimodalLCWAInstances(MultimodalInstances, LCWAInstances):
-    """Triples and mappings to their indices as well as multimodal data for LCWA."""
-
-    def __init__(
-        self,
-        *,
-        pairs: np.ndarray,
-        compressed: scipy.sparse.csr_matrix,
-        numeric_literals: Mapping[str, np.ndarray],
-        literals_to_id: Mapping[str, int],
-    ):
-        """Initialize the multimodal LCWA instances.
-
-        :param pairs: The unique pairs
-        :param compressed: The compressed triples in CSR format
-        :param numeric_literals: A mapping from relations to numeric literals
-        :param literals_to_id: A mapping from literals to their identifiers
-        """
-        LCWAInstances.__init__(self, pairs=pairs, compressed=compressed)
-        MultimodalInstances.__init__(self, numeric_literals=numeric_literals, literals_to_id=literals_to_id)
