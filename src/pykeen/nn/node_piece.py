@@ -810,7 +810,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
             # TODO: vectorization?
             for idx, this_pool in self.pool.items():
                 this_pool_t = torch.as_tensor(data=list(this_pool)[:num_tokens], dtype=torch.long)
-                assignment[idx, : len(this_pool_t)] = this_pool
+                assignment[idx, : len(this_pool_t)] = this_pool_t
         return self.vocabulary_size, assignment
 
 
