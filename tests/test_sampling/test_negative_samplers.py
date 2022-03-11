@@ -61,7 +61,6 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
 
     def test_corrupt_batch(self):
         """Additional test for corrupt_batch."""
-        positive_batch = self.positive_batch.unsqueeze(dim=1)
         negative_batch = self.instance.corrupt_batch(positive_batch=self.positive_batch)
         # check that corrupted entities co-occur with the relation in training data
         for entity_pos in (0, 2):

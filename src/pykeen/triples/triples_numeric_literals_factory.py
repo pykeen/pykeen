@@ -8,12 +8,10 @@ from typing import Any, Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
 import torch
-from class_resolver import HintOrType, OptionalKwargs
 
 from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..sampling import NegativeSampler
 from ..typing import EntityMapping, LabeledTriples, MappedTriples
 
 __all__ = [

@@ -37,7 +37,7 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.instances import BatchedSLCWAInstances, SLCWAInstances
+from ..triples.instances import SLCWAInstances
 from ..typing import InductiveMode
 from ..utils import (
     format_relative_comparison,
@@ -340,8 +340,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             result: Optional[List[float]] = self.losses_per_epochs
         else:
             # send model to device before going into the internal training loop
-            model1 = self.model
-            self.model = self.model.to(get_preferred_device(model1, allow_ambiguity=True))
+            self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
             result = self._train(
                 num_epochs=num_epochs,
                 batch_size=batch_size,
@@ -508,8 +507,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             # Reset the weights
             self.model.reset_parameters_()
             # afterwards, some parameters may be on the wrong device
-            model = self.model
-            self.model.to(get_preferred_device(model, allow_ambiguity=True))
+            self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
             # Create new optimizer
             optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)

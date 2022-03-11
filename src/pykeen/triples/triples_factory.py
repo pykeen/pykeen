@@ -21,7 +21,6 @@ from typing import (
     Sequence,
     Set,
     TextIO,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -30,13 +29,11 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
-from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import Dataset
 
-from .instances import BatchedSLCWAInstances, Instances, LCWAInstances, SLCWAInstances
+from .instances import BatchedSLCWAInstances, LCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
-from ..sampling import NegativeSampler
 from ..typing import (
     LABEL_HEAD,
     LABEL_RELATION,

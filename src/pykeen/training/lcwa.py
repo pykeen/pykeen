@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
-from ..triples import CoreTriplesFactory, Instances
+from ..triples import CoreTriplesFactory
 from ..triples.instances import LCWABatchType, LCWASampleType
 
 __all__ = [
@@ -127,7 +127,12 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         )
 
     def _slice_size_search(
-        self, *, triples_factory: CoreTriplesFactory, batch_size: int, sub_batch_size: int, supports_sub_batching: bool
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        sub_batch_size: int,
+        supports_sub_batching: bool,
     ) -> int:  # noqa: D102
         self._check_slicing_availability(supports_sub_batching)
         reached_max = False
