@@ -1,12 +1,8 @@
 """Tests for training instances."""
 from typing import Any, MutableMapping
 
-import torch.utils.data
-import unittest_templates
-
-from pykeen.datasets import Nations
 from pykeen.triples import LCWAInstances, SLCWAInstances
-from pykeen.triples.instances import BatchedSLCWAInstances, SLCWABatch
+from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from tests import cases
 
 
@@ -44,44 +40,13 @@ class SLCWAInstancesTestCase(cases.TrainingInstancesTestCase):
         return self.factory.mapped_triples.shape
 
 
-class BatchedSLCWAInstancesTestCase(unittest_templates.GenericTestCase[BatchedSLCWAInstances]):
+class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
     """Tests for batched sLCWA training instances."""
 
     cls = BatchedSLCWAInstances
-    batch_size: int = 2
-    num_negatives_per_positive: int = 3
-    kwargs = dict(
-        batch_size=batch_size,
-        negative_sampler_kwargs=dict(
-            num_negs_per_pos=num_negatives_per_positive,
-        ),
-    )
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        self.factory = Nations().training
-        kwargs["mapped_triples"] = self.factory.mapped_triples
-        return kwargs
 
-    def test_data_loader(self):
-        """Test data loader."""
-        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
-            assert isinstance(batch, SLCWABatch)
-            assert batch.positives.shape == (self.batch_size, 3)
-            assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
-            assert batch.masks is None
+class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
+    """Tests for subgraph sLCWA training instances."""
 
-    def test_length(self):
-        """Test length."""
-        assert len(self.instance) == len(list(iter(self.instance)))
-
-    def test_data_loader_multiprocessing(self):
-        """Test data loader with multiple workers."""
-        self.assertEqual(
-            sum(
-                (
-                    batch.positives.shape[0]
-                    for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
-                )
-            ),
-            self.factory.num_triples,
-        )
+    cls = SubGraphSLCWAInstances

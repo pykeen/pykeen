@@ -65,6 +65,7 @@ from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
+from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
@@ -2148,3 +2149,45 @@ class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
             dataset=self.instance, batch_size=2, shuffle=True, collate_fn=self.instance.get_collator()
         ):
             assert batch is not None
+
+
+class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[BaseBatchedSLCWAInstances]):
+    """Test for batched sLCWA training instances."""
+
+    batch_size: int = 2
+    num_negatives_per_positive: int = 3
+    kwargs = dict(
+        batch_size=batch_size,
+        negative_sampler_kwargs=dict(
+            num_negs_per_pos=num_negatives_per_positive,
+        ),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.factory = Nations().training
+        kwargs["mapped_triples"] = self.factory.mapped_triples
+        return kwargs
+
+    def test_data_loader(self):
+        """Test data loader."""
+        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
+            assert isinstance(batch, SLCWABatch)
+            assert batch.positives.shape == (self.batch_size, 3)
+            assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
+            assert batch.masks is None
+
+    def test_length(self):
+        """Test length."""
+        assert len(self.instance) == len(list(iter(self.instance)))
+
+    def test_data_loader_multiprocessing(self):
+        """Test data loader with multiple workers."""
+        self.assertEqual(
+            sum(
+                (
+                    batch.positives.shape[0]
+                    for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
+                )
+            ),
+            self.factory.num_triples,
+        )
