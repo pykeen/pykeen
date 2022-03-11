@@ -922,7 +922,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     @abstractmethod
     def _slice_size_search(
-        self, *, triples_factory: CoreTriplesFactory, batch_size: int, sub_batch_size: int, supports_sub_batching: bool
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        sub_batch_size: int,
+        supports_sub_batching: bool,
     ) -> int:
         """Find the maximum slice size for training with the current setting.
 
