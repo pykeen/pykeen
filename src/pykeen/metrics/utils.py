@@ -118,5 +118,5 @@ class Metric:
     def _extra_repr(self) -> Iterable[str]:
         return []
 
-    def __str__(self) -> str:  # noqa:D105
+    def __repr__(self) -> str:  # noqa:D105
         return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
