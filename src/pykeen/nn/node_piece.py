@@ -1,9 +1,11 @@
 """Node Piece representations."""
 
 import logging
+import pathlib
+import pickle
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
+from typing import Callable, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy.linalg
@@ -13,9 +15,10 @@ import scipy.sparse.csgraph
 import torch
 import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from tqdm.auto import tqdm
 
 from .representation import Representation
-from ..constants import AGGREGATIONS
+from ..constants import AGGREGATIONS, PYKEEN_MODULE
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
@@ -40,11 +43,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
-    """Sample without replacement."""
-    return rs[torch.randperm(rs.shape[0])[:k]]
 
 
 class Tokenizer:
@@ -105,17 +103,7 @@ class RelationTokenizer(Tokenizer):
             e2r[e].add(r)
 
         # randomly sample without replacement num_tokens relations for each entity
-        assignment = torch.full(
-            size=(num_entities, num_tokens),
-            dtype=torch.long,
-            fill_value=-1,
-        )
-        for e, rs in e2r.items():
-            rs = torch.as_tensor(data=list(rs), dtype=torch.long)
-            rs = _sample(rs=rs, k=num_tokens)
-            assignment[e, : len(rs)] = rs
-
-        return 2 * num_relations + 1, assignment
+        return 2 * num_relations + 1, _random_sample_no_replacement(pool=e2r, num_tokens=num_tokens)
 
 
 def _edge_index_to_sparse_matrix(
@@ -683,6 +671,147 @@ class AnchorTokenizer(Tokenizer):
             )
         # convert to torch
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
+
+
+def _random_sample_no_replacement(
+    pool: Mapping[int, Collection[int]],
+    num_tokens: int,
+) -> torch.LongTensor:
+    # randomly sample without replacement num_tokens relations for each entity
+    assignment = torch.full(
+        size=(len(pool), num_tokens),
+        dtype=torch.long,
+        fill_value=-1,
+    )
+    # TODO: vectorization?
+    for idx, this_pool in tqdm(pool.items(), desc="sampling", leave=False, unit_scale=True):
+        this_pool_t = torch.as_tensor(data=list(this_pool), dtype=torch.long)
+        this_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
+        assignment[idx, : len(this_pool_t)] = this_pool
+    return assignment
+
+
+class PrecomputedTokenizerLoader:
+    """A loader for precomputed tokenization."""
+
+    @abstractmethod
+    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:
+        """Load tokenization from the given path."""
+        raise NotImplementedError
+
+
+class GalkinPickleLoader(PrecomputedTokenizerLoader):
+    """
+    A loader for pickle files provided by Galkin et al.
+
+    .. seealso ::
+        https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/download_data.sh
+        https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/download.sh
+    """
+
+    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
+        with path.open(mode="rb") as pickle_file:
+            # contains: anchor_ids, entity_ids, mapping {entity_id -> {"ancs": anchors, "dists": distances}}
+            anchor_ids, mapping = pickle.load(pickle_file)[0::2]
+        logger.info(f"Loaded precomputed pools with {len(anchor_ids)} anchors, and {len(mapping)} pools.")
+        # normalize anchor_ids
+        anchor_map = {a: i for i, a in enumerate(anchor_ids) if a >= 0}
+        # cf. https://github.com/pykeen/pykeen/pull/822#discussion_r822889541
+        # TODO: keep distances?
+        return {
+            key: [anchor_map[a] for a in value["ancs"] if a in anchor_map]
+            for key, value in tqdm(mapping.items(), desc="ID Mapping", unit_scale=True, leave=False)
+        }, len(anchor_map)
+
+
+precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
+    base=PrecomputedTokenizerLoader,
+    default=GalkinPickleLoader,
+)
+
+
+class PrecomputedPoolTokenizer(Tokenizer):
+    """A tokenizer using externally precomputed tokenization."""
+
+    @classmethod
+    def _load_pool(
+        cls,
+        *,
+        path: Optional[pathlib.Path] = None,
+        url: Optional[str] = None,
+        download_kwargs: OptionalKwargs = None,
+        pool: Optional[Mapping[int, Collection[int]]] = None,
+        loader: HintOrType[PrecomputedTokenizerLoader] = None,
+    ) -> Tuple[Mapping[int, Collection[int]], int]:
+        """Load a precomputed pool via one of the supported ways."""
+        if pool is not None:
+            return pool, max(c for candidates in pool.values() for c in candidates) + 1 + 1  # +1 for padding
+        if url is not None and path is None:
+            module = PYKEEN_MODULE.submodule(__name__, tokenizer_resolver.normalize_cls(cls=cls))
+            path = module.ensure(url=url, download_kwargs=download_kwargs)
+        if path is None:
+            raise ValueError("Must provide at least one of pool, path, or url.")
+
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        logger.info(f"Loading precomputed pools from {path}")
+        return precomputed_tokenizer_loader_resolver.make(loader)(path=path)
+
+    def __init__(
+        self,
+        *,
+        path: Optional[pathlib.Path] = None,
+        url: Optional[str] = None,
+        download_kwargs: OptionalKwargs = None,
+        pool: Optional[Mapping[int, Collection[int]]] = None,
+        randomize_selection: bool = False,
+    ):
+        """
+        Initialize the tokenizer.
+
+        .. note ::
+            the preference order for loading the precomputed pools is (1) from the given pool (2) from the given path,
+            and (3) by downloading from the given url
+
+        :param path:
+            a path for a file containing the precomputed pools
+        :param url:
+            an url to download the file with precomputed pools from
+        :param download_kwargs:
+            additional download parameters, passed to pystow.Module.ensure
+        :param pool:
+            the precomputed pools.
+        :param randomize_selection:
+            whether to randomly choose from tokens, or always take the first `num_token` precomputed tokens.
+
+        """
+        self.pool, self.vocabulary_size = self._load_pool(
+            path=path, url=url, pool=pool, download_kwargs=download_kwargs
+        )
+        # verify pool
+        if set(self.pool.keys()) != set(range(len(self.pool))):
+            raise ValueError("Expected pool to contain keys 0...(N-1)")
+        self.randomize_selection = randomize_selection
+
+    def __call__(
+        self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
+    ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
+        if num_entities != len(self.pool):
+            raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
+        if self.randomize_selection:
+            assignment = _random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
+        else:
+            # choose first num_tokens
+            assignment = torch.full(
+                size=(len(self.pool), num_tokens),
+                dtype=torch.long,
+                fill_value=-1,
+            )
+            # TODO: vectorization?
+            for idx, this_pool in self.pool.items():
+                this_pool_t = torch.as_tensor(data=list(this_pool)[:num_tokens], dtype=torch.long)
+                assignment[idx, : len(this_pool_t)] = this_pool_t
+        return self.vocabulary_size, assignment
 
 
 tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
