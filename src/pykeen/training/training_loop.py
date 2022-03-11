@@ -18,7 +18,7 @@ from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Un
 import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from .callbacks import (
@@ -500,15 +500,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if batch_size == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
 
-        # TODO:
-        num_training_instances = ...
         if drop_last is None:
             drop_last = model_contains_batch_norm
-            if drop_last and not only_size_probing:
-                logger.info(
-                    "Dropping last (incomplete) batch each epoch (%s batches).",
-                    format_relative_comparison(part=1, total=num_training_instances),
-                )
 
         # Force weight initialization if training continuation is not explicitly requested.
         if not continue_training:
@@ -583,6 +576,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         train_data_loader = self._create_training_data_loader(
             triples_factory, batch_size, drop_last, num_workers, pin_memory, shuffle
         )
+        if drop_last and not only_size_probing:
+            logger.info(
+                "Dropping last (incomplete) batch each epoch (%s batches).",
+                format_relative_comparison(part=1, total=len(train_data_loader)),
+            )
 
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
@@ -612,6 +610,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # Flag to check when to quit the size probing
                 evaluated_once = False
 
+                num_training_instances = 0
                 for batch in batches:
                     # Recall that torch *accumulates* gradients. Before passing in a
                     # new instance, you need to zero out the gradients from the old instance
@@ -635,6 +634,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                             slice_size,
                         )
                         current_epoch_loss += batch_loss
+                        num_training_instances += stop - start
                         callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
 
                     # when called by batch_size_search(), the parameter update should not be applied.
@@ -672,8 +672,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                 # Track epoch loss
                 if self.model.loss.reduction == "mean":
-                    # epoch_loss = current_epoch_loss / num_training_instances
-                    epoch_loss = current_epoch_loss / len(train_data_loader)
+                    epoch_loss = current_epoch_loss / num_training_instances
                 else:
                     epoch_loss = current_epoch_loss / len(train_data_loader)
                 self.losses_per_epochs.append(epoch_loss)
