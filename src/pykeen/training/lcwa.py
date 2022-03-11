@@ -82,15 +82,18 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         drop_last: bool,
         num_workers: int,
         pin_memory: bool,
-        shuffle: bool,
+        sampler: Optional[str],
     ) -> DataLoader[LCWABatchType]:  # noqa: D102
+        if sampler:
+            raise NotImplementedError("Subgraph sampling is currently only supported for SLCWA training.")
+
         dataset = triples_factory.create_lcwa_instances(target=self.target)
         return DataLoader(
             dataset=dataset,
             num_workers=num_workers,
             batch_size=batch_size,
             drop_last=drop_last,
-            shuffle=shuffle,
+            shuffle=True,
             pin_memory=pin_memory,
             collate_fn=dataset.get_collator(),
         )

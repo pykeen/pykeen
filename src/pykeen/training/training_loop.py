@@ -35,9 +35,7 @@ from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
-from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.instances import SLCWAInstances
 from ..typing import InductiveMode
 from ..utils import (
     format_relative_comparison,
@@ -526,31 +524,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Ensure the model is on the correct device
         self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
-        # Create Sampler
-        if sampler == "schlichtkrull":
-            # TODO:
-            training_instances = ...
-            if triples_factory is None:
-                raise ValueError("need to pass triples_factory when using graph sampling")
-            raise NotImplementedError
-            if not isinstance(training_instances, SLCWAInstances):
-                raise NotImplementedError("Subgraph sampling is currently only supported for SLCWA training.")
-            # wrap training instances
-            training_instances = SLCWASubGraphInstances(
-                mapped_triples=triples_factory.mapped_triples,
-                sub_graph_size=sub_batch_size,
-            )
-            # disable automatic batching
-            batch_size = None
-            # no support for sub-batching
-            sub_batch_size = None
-            sampler = None
-            shuffle = False
-            # this is already done
-            drop_last = False
-        else:
-            shuffle = True
-
         if num_workers is None:
             num_workers = 0
 
@@ -572,7 +545,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         logger.debug(f"using stopper: {stopper}")
 
         train_data_loader = self._create_training_data_loader(
-            triples_factory, batch_size, drop_last, num_workers, pin_memory, shuffle
+            triples_factory,
+            batch_size,
+            drop_last,
+            num_workers,
+            pin_memory,
+            sampler=sampler,
         )
         if drop_last and not only_size_probing:
             logger.info(
@@ -766,7 +744,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         drop_last: bool,
         num_workers: int,
         pin_memory: bool,
-        shuffle: bool,
+        sampler: Optional[str],
     ) -> DataLoader[BatchType]:
         raise NotImplementedError
 

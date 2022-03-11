@@ -31,7 +31,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from .instances import BatchedSLCWAInstances, LCWAInstances
+from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
 from ..typing import (
@@ -483,9 +483,10 @@ class CoreTriplesFactory:
             ]
         )
 
-    def create_slcwa_instances(self, **kwargs) -> Dataset:
+    def create_slcwa_instances(self, *, sampler: Optional[str], **kwargs) -> Dataset:
         """Create sLCWA instances for this factory's triples."""
-        return BatchedSLCWAInstances(
+        cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
+        return cls(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
             num_relations=self.num_relations,

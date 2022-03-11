@@ -52,15 +52,16 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         drop_last: bool,
         num_workers: int,
         pin_memory: bool,
-        shuffle: bool,
+        sampler: Optional[str],
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
         return DataLoader(
             dataset=triples_factory.create_slcwa_instances(
                 batch_size=batch_size,
-                shuffle=shuffle,
+                shuffle=True,
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
+                sampler=sampler,
             ),
             num_workers=num_workers,
             pin_memory=pin_memory,

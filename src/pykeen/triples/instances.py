@@ -2,7 +2,7 @@
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 import math
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Callable, Generic, Iterable, Iterator, List, NamedTuple, Optional, Tuple, TypeVar
 
 import numpy as np
@@ -151,7 +151,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
         return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)
 
 
-class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
+class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
     """
     Pre-batched training instances for the sLCWA training loop.
 
@@ -164,12 +164,7 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         self,
         mapped_triples: MappedTriples,
         batch_size: int = 1,
-        shuffle: bool = True,
         drop_last: bool = True,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
-        negative_sampler: HintOrType[NegativeSampler] = None,
-        negative_sampler_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the dataset.
@@ -178,30 +173,12 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
             the mapped triples
         :param batch_size:
             the batch size
-        :param shuffle:
-            whether to shuffle the triples
         :param drop_last:
             whether to drop the last (incomplete) batch
-        :param num_entities: >0
-            the number of entities, passed to the negative sampler
-        :param num_relations: >0
-            the number of relations, passed to the negative sampler
-        :param negative_sampler:
-            the negative sampler, or a hint thereof
-        :param negative_sampler_kwargs:
-            additional keyword-based parameters used to instantiate the negative sampler
         """
         self.mapped_triples = mapped_triples
         self.batch_size = batch_size
         self.drop_last = drop_last
-        self.base_sampler_cls = data.RandomSampler if shuffle else data.SequentialSampler
-        self.negative_sampler = negative_sampler_resolver.make(
-            negative_sampler,
-            pos_kwargs=negative_sampler_kwargs,
-            mapped_triples=mapped_triples,
-            num_entities=num_entities,
-            num_relations=num_relations,
-        )
 
     def __getitem__(self, item: List[int]) -> SLCWABatch:
         """Get a batch from the given list of positive triple IDs."""
@@ -209,24 +186,28 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
         return SLCWABatch(positives=positive_batch, negatives=negative_batch, masks=masks)
 
-    def __iter__(self) -> Iterator[SLCWABatch]:
-        """Iterate over batches."""
+    def split_workload(self, n: int) -> range:
+        """Split workload for multi-processing."""
         # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
         worker_info = torch.utils.data.get_worker_info()
-        n = len(self.mapped_triples)
         if worker_info is None:  # single-process data loading, return the full iterator
-            data_source = range(n)
+            workload = range(n)
         else:
             num_workers = worker_info.num_workers
             worker_id = worker_info.id  # 1-based
             start = math.ceil(n / num_workers * worker_id)
             stop = math.ceil(n / num_workers * (worker_id + 1))
-            data_source = range(start, stop)
-        for triple_ids in data.BatchSampler(
-            sampler=self.base_sampler_cls(data_source=data_source),
-            batch_size=self.batch_size,
-            drop_last=self.drop_last,
-        ):
+            workload = range(start, stop)
+        return workload
+
+    @abstractmethod
+    def iter_triple_ids(self) -> Iterable[List[int]]:
+        """Iterate over batches of IDs of positive triples."""
+        raise NotImplementedError
+
+    def __iter__(self) -> Iterator[SLCWABatch]:
+        """Iterate over batches."""
+        for triple_ids in self.iter_triple_ids():
             yield self[triple_ids]
 
     def __len__(self) -> int:
@@ -235,6 +216,151 @@ class BatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         if remainder and not self.drop_last:
             num_batches += 1
         return num_batches
+
+
+class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
+    """Random pre-batched training instances for the sLCWA training loop."""
+
+    def __init__(
+        self,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the dataset.
+
+        :param num_entities: >0
+            the number of entities, passed to the negative sampler
+        :param num_relations: >0
+            the number of relations, passed to the negative sampler
+        :param negative_sampler:
+            the negative sampler, or a hint thereof
+        :param negative_sampler_kwargs:
+            additional keyword-based parameters used to instantiate the negative sampler
+        :param kwargs:
+            additional keyword-based parameters for :meth:`BaseBatchedSLCWAInstances.__init__`
+        """
+        super().__init__(**kwargs)
+        self.negative_sampler = negative_sampler_resolver.make(
+            negative_sampler,
+            pos_kwargs=negative_sampler_kwargs,
+            mapped_triples=self.mapped_triples,
+            num_entities=num_entities,
+            num_relations=num_relations,
+        )
+
+    def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
+        yield from data.BatchSampler(
+            sampler=data.RandomSampler(data_source=self.split_workload(len(self.mapped_triples))),
+            batch_size=self.batch_size,
+            drop_last=self.drop_last,
+        )
+
+
+def _compute_compressed_adjacency_list(
+    mapped_triples: MappedTriples,
+    num_entities: Optional[int] = None,
+) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
+    """Compute compressed undirected adjacency list representation for efficient sampling.
+
+    The compressed adjacency list format is inspired by CSR sparse matrix format.
+
+    :param mapped_triples:
+        the ID-based triples
+    :param num_entities:
+        the number of entities.
+
+    :return: a tuple (degrees, offsets, compressed_adj_lists)
+        where
+            degrees: shape: (num_entities,)
+            offsets: shape: (num_entities,)
+            compressed_adj_list: shape: (2*num_triples, 2)
+        with
+            adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
+    """
+    num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
+    num_triples = mapped_triples.shape[0]
+    adj_lists: List[List[Tuple[int, float]]] = [[] for _ in range(num_entities)]
+    for i, (s, _, o) in enumerate(mapped_triples):
+        adj_lists[s].append((i, o.item()))
+        adj_lists[o].append((i, s.item()))
+    degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
+    assert torch.sum(degrees) == 2 * num_triples
+
+    offset = torch.empty(num_entities, dtype=torch.long)
+    offset[0] = 0
+    offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
+    compressed_adj_lists = torch.cat([torch.as_tensor(adj_list, dtype=torch.long) for adj_list in adj_lists], dim=0)
+    return degrees, offset, compressed_adj_lists
+
+
+class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
+    """Pre-batched training instances for SLCWA of coherent subgraphs."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # indexing
+        self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(
+            mapped_triples=self.mapped_triples
+        )
+
+    def subgraph_sample(self) -> List[int]:
+        """Sample one subgraph."""
+        # initialize
+        node_weights = self.degrees.detach().clone()
+        edge_picked = torch.zeros(self.num_triples, dtype=torch.bool)
+        node_picked = torch.zeros(self.degrees.shape[0], dtype=torch.bool)
+
+        # sample iteratively
+        result = []
+        for _ in range(self.subgraph_size):
+            # determine weights
+            weights = node_weights * node_picked
+
+            if torch.sum(weights) == 0:
+                # randomly choose a vertex which has not been chosen yet
+                pool = (~node_picked).nonzero()
+                chosen_vertex = pool[torch.randint(pool.numel(), size=tuple())]
+            else:
+                # normalize to probabilities
+                probabilities = weights.float() / weights.sum().float()
+                chosen_vertex = torch.multinomial(probabilities, num_samples=1)[0]
+
+            # sample a start node
+            node_picked[chosen_vertex] = True
+
+            # get list of neighbors
+            start = self.offset[chosen_vertex]
+            chosen_node_degree = self.degrees[chosen_vertex].item()
+            stop = start + chosen_node_degree
+            adj_list = self.neighbors[start:stop, :]
+
+            # sample an outgoing edge at random which has not been chosen yet using rejection sampling
+            chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
+            chosen_edge = adj_list[chosen_edge_index]
+            edge_number = chosen_edge[0]
+            while edge_picked[edge_number]:
+                chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
+                chosen_edge = adj_list[chosen_edge_index]
+                edge_number = chosen_edge[0]
+            result.append(edge_number)
+
+            edge_picked[edge_number] = True
+
+            # visit target node
+            other_vertex = chosen_edge[1]
+            node_picked[other_vertex] = True
+
+            # decrease sample counts
+            node_weights[chosen_vertex] -= 1
+            node_weights[other_vertex] -= 1
+        return result
+
+    def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
+        yield from (self.subgraph_sample() for _ in self.split_workload(n=len(self)))
 
 
 class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
