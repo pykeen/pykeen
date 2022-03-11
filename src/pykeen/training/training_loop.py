@@ -37,7 +37,7 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.instances import SLCWAInstances
+from ..triples.instances import BatchedSLCWAInstances, SLCWAInstances
 from ..typing import InductiveMode
 from ..utils import (
     format_relative_comparison,
@@ -535,6 +535,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             training_instances = ...
             if triples_factory is None:
                 raise ValueError("need to pass triples_factory when using graph sampling")
+            raise NotImplementedError
             if not isinstance(training_instances, SLCWAInstances):
                 raise NotImplementedError("Subgraph sampling is currently only supported for SLCWA training.")
             # wrap training instances
