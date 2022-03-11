@@ -4,7 +4,7 @@
 
 import math
 from abc import abstractmethod
-from typing import ClassVar, Collection, Iterable, Optional
+from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type
 
 import numpy as np
 from class_resolver import ClassResolver
@@ -48,6 +48,8 @@ __all__ = [
     "StandardDeviation",
     "Variance",
     "Count",
+    #
+    "HITS_METRICS",
 ]
 EPSILON = 1.0e-12
 
@@ -805,3 +807,5 @@ rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_
     default=InverseHarmonicMeanRank,  # mrr
     skip={BaseZMixin, IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin, ReindexMixin},
 )
+
+HITS_METRICS: Tuple[Type[RankBasedMetric], ...] = (HitsAtK, ZHitsAtK, AdjustedHitsAtK)
