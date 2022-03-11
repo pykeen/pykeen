@@ -118,7 +118,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         )
 
     def _slice_size_search(
-        self, *, triples_factory: CoreTriplesFactory, batch_size: int, sub_batch_size: int, supports_sub_batching: bool
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        sub_batch_size: int,
+        supports_sub_batching: bool,
     ):  # noqa: D102
         # Slicing is not possible for sLCWA
         if supports_sub_batching:
