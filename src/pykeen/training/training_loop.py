@@ -524,8 +524,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError("Cannot continue_training without being trained once.")
 
         # Ensure the model is on the correct device
-        model1 = self.model
-        self.model.to(get_preferred_device(model1, allow_ambiguity=True))
+        self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
         # Create Sampler
         if sampler == "schlichtkrull":
