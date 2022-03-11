@@ -764,6 +764,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         url: Optional[str] = None,
         download_kwargs: OptionalKwargs = None,
         pool: Optional[Mapping[int, Collection[int]]] = None,
+        randomize_selection: bool = False,
     ):
         """
         Initialize the tokenizer.
@@ -780,6 +781,8 @@ class PrecomputedPoolTokenizer(Tokenizer):
             additional download parameters, passed to pystow.Module.ensure
         :param pool:
             the precomputed pools.
+        :param randomize_selection:
+            whether to randomly choose from tokens, or always take the first `num_token` precomputed tokens.
 
         """
         self.pool, self.vocabulary_size = self._load_pool(
@@ -788,13 +791,27 @@ class PrecomputedPoolTokenizer(Tokenizer):
         # verify pool
         if set(self.pool.keys()) != set(range(len(self.pool))):
             raise ValueError("Expected pool to contain keys 0...(N-1)")
+        self.randomize_selection = randomize_selection
 
     def __call__(
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
     ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
         if num_entities != len(self.pool):
             raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
-        return self.vocabulary_size, _random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
+        if self.randomize_selection:
+            assignment = _random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
+        else:
+            # choose first num_tokens
+            assignment = torch.full(
+                size=(len(self.pool), num_tokens),
+                dtype=torch.long,
+                fill_value=-1,
+            )
+            # TODO: vectorization?
+            for idx, this_pool in self.pool.items():
+                this_pool_t = torch.as_tensor(data=list(this_pool)[:num_tokens], dtype=torch.long)
+                assignment[idx, : len(this_pool_t)] = this_pool
+        return self.vocabulary_size, assignment
 
 
 tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
