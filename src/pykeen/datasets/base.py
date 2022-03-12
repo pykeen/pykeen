@@ -30,6 +30,7 @@ from ..typing import TorchRandomHint
 from ..utils import normalize_string
 
 __all__ = [
+    # Base classes
     "Dataset",
     "EagerDataset",
     "LazyDataset",
@@ -43,6 +44,7 @@ __all__ = [
     "ZipSingleDataset",
     "TabbedDataset",
     "SingleTabbedDataset",
+    # Utilities
     "dataset_similarity",
 ]
 
@@ -68,7 +70,7 @@ def dataset_similarity(a: Dataset, b: Dataset, metric: Optional[str] = None) -> 
 
 
 class Dataset:
-    """Contains a lazy reference to a training, testing, and validation dataset."""
+    """The base dataset class."""
 
     #: A factory wrapping the training triples
     training: CoreTriplesFactory
@@ -131,6 +133,11 @@ class Dataset:
     def triples_sort_key(cls: Type[Dataset]) -> int:
         """Get the number of triples for sorting."""
         return docdata.get_docdata(cls)["statistics"]["triples"]
+
+    @classmethod
+    def triples_pair_sort_key(cls, pair: Tuple[str, Type[Dataset]]) -> int:
+        """Get the number of triples for sorting in an iterator context."""
+        return cls.triples_sort_key(pair[1])
 
     def _summary_rows(self):
         return [
@@ -271,7 +278,7 @@ class Dataset:
 
 
 class EagerDataset(Dataset):
-    """A dataset that has already been loaded."""
+    """A dataset whose training, testing, and optional validation factories are pre-loaded."""
 
     def __init__(
         self,
@@ -304,7 +311,7 @@ class EagerDataset(Dataset):
 
 
 class LazyDataset(Dataset):
-    """A dataset that has lazy loading."""
+    """A dataset whose training, testing, and optional validation factories are lazily loaded."""
 
     #: The actual instance of the training factory, which is exposed to the user through `training`
     _training: Optional[TriplesFactory] = None
