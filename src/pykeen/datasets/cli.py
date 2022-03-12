@@ -8,7 +8,7 @@ import logging
 import math
 import pathlib
 from textwrap import dedent
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union
+from typing import List, Mapping, MutableMapping, Optional, Tuple, Union
 
 import click
 import docdata
@@ -16,9 +16,8 @@ import pandas as pd
 from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
 
-from . import dataset_resolver, get_dataset
+from .utils import get_dataset, iter_datasets, max_triples_option, min_triples_option
 from ..constants import PYKEEN_DATASETS
-from ..datasets.base import Dataset
 from ..evaluation.evaluator import get_candidate_set_size
 from ..metrics.ranking import (
     ArithmeticMeanRank,
@@ -43,45 +42,13 @@ def main():
 @verbose_option
 def summarize():
     """Load all datasets."""
-    for name, dataset in _iter_datasets():
+    for name, dataset in iter_datasets():
         click.secho(f"Loading {name}", fg="green", bold=True)
         try:
             dataset().summarize(show_examples=None)
         except Exception as e:
             click.secho(f"Failed {name}", fg="red", bold=True)
             click.secho(str(e), fg="red", bold=True)
-
-
-def _get_num_triples(pair: Tuple[str, Type[Dataset]]) -> int:
-    """Extract the number of triples from docdata."""
-    return docdata.get_docdata(pair[1])["statistics"]["triples"]
-
-
-def _iter_datasets(
-    regex_name_filter=None, *, max_triples: Optional[int] = None, min_triples: Optional[int] = None
-) -> Iterable[Tuple[str, Type[Dataset]]]:
-    it = sorted(
-        dataset_resolver.lookup_dict.items(),
-        key=_get_num_triples,
-    )
-    if max_triples is not None:
-        it = [pair for pair in it if _get_num_triples(pair) <= max_triples]
-    if min_triples is not None:
-        it = [pair for pair in it if _get_num_triples(pair) >= min_triples]
-    if regex_name_filter is not None:
-        if isinstance(regex_name_filter, str):
-            import re
-
-            regex_name_filter = re.compile(regex_name_filter)
-        it = [(name, dataset) for name, dataset in it if regex_name_filter.match(name)]
-    it_tqdm = tqdm(
-        it,
-        desc="Datasets",
-    )
-    for k, v in it_tqdm:
-        n_triples = docdata.get_docdata(v)["statistics"]["triples"]
-        it_tqdm.set_postfix(name=k, triples=f"{n_triples:,}")
-        yield k, v
 
 
 @main.command()
@@ -92,7 +59,7 @@ def _iter_datasets(
 @click.option("-d", "--directory", type=click.Path(dir_okay=True, file_okay=False, resolve_path=True))
 def analyze(dataset, force: bool, countplots: bool, directory):
     """Generate analysis."""
-    for _name, dataset in _iter_datasets(regex_name_filter=dataset):
+    for _name, dataset in iter_datasets(regex_name_filter=dataset):
         _analyze(dataset, force, countplots, directory=directory)
 
 
@@ -203,7 +170,7 @@ def verify(dataset: str):
     """Verify dataset integrity."""
     data = []
     keys = None
-    for name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
+    for name, dataset_cls in iter_datasets(regex_name_filter=dataset):
         dataset_instance = get_dataset(dataset=dataset_cls)
         data.append(
             list(
@@ -237,8 +204,8 @@ def verify(dataset: str):
 @main.command()
 @verbose_option
 @click.option("-d", "--dataset", help="Regex for filtering datasets by name")
-@click.option("-m", "--max-triples", type=int, default=None)
-@click.option("--min-triples", type=int, default=None)
+@max_triples_option
+@min_triples_option
 @click.option(
     "-s",
     "--samples",
@@ -262,11 +229,10 @@ def expected_metrics(
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
     df_data: List[Tuple[str, str, str, str, float]] = []
-    for _dataset_name, dataset_cls in _iter_datasets(
+    for dataset_name, dataset_cls in iter_datasets(
         regex_name_filter=dataset, max_triples=max_triples, min_triples=min_triples
     ):
         dataset_instance = get_dataset(dataset=dataset_cls)
-        dataset_name = dataset_resolver.normalize_inst(dataset_instance)
         adjustments_directory = output_directory.joinpath(dataset_name, "adjustments")
         adjustments_directory.mkdir(parents=True, exist_ok=True)
         expected_metrics_path = adjustments_directory.joinpath("expected_metrics.json")
@@ -344,7 +310,7 @@ def expected_metrics(
     results_path = output_directory.joinpath("metric_adjustments.tsv.gz")
     df.to_csv(results_path, sep="\t", index=False)
     click.secho(f"wrote {results_path}")
-    click.echo(df.to_markdown(index=False))
+    # click.echo(df.to_markdown(index=False))
 
     if max_triples is None and min_triples is None and dataset is None:
         try:
