@@ -2,7 +2,7 @@
 
 """Built-in datasets for PyKEEN.
 
-New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be registered with PyKEEN using the
+New datasets (inheriting from :class:`pykeen.datasets.Dataset`) can be registered with PyKEEN using the
 :mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
@@ -53,6 +53,7 @@ __all__ = [
     "dataset_resolver",
     "get_dataset",
     # Base Classes
+    "Dataset",
     # Concrete Classes
     "Hetionet",
     "Kinships",

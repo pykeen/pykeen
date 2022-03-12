@@ -96,7 +96,7 @@ def get_dataset(
     testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
     validation: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
 ) -> Dataset:
-    """Get a dataset.
+    """Get a dataset, cached based on the given kwargs.
 
     :param dataset: The name of a dataset, an instance of a dataset, or the class for a dataset.
     :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for
@@ -109,7 +109,7 @@ def get_dataset(
 
     :raises ValueError: for incorrect usage of the input of the function
     :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of
-        :class:`pykeen.datasets.base.Dataset`
+        :class:`pykeen.datasets.Dataset`
     """
     from . import has_dataset
 

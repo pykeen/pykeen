@@ -37,7 +37,7 @@ could be used as in:
 >>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the dataset was given as a string. A list of available datasets can be found in
-:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`pykeen.datasets.base.Dataset` could be
+:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`pykeen.datasets.Dataset` could be
 used as in:
 
 >>> from pykeen.pipeline import pipeline
