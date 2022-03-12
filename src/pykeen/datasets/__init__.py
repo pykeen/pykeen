@@ -52,6 +52,7 @@ __all__ = [
     # Utilities
     "dataset_resolver",
     "get_dataset",
+    "has_dataset",
     # Base Classes
     "Dataset",
     # Concrete Classes
