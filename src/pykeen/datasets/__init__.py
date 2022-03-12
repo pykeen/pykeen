@@ -8,11 +8,11 @@ They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
 import logging
-from textwrap import dedent
 
 from class_resolver import ClassResolver
 
 from .base import (  # noqa:F401
+    CompressedSingleDataset,
     Dataset,
     EagerDataset,
     LazyDataset,
@@ -20,8 +20,11 @@ from .base import (  # noqa:F401
     PathDataset,
     RemoteDataset,
     SingleTabbedDataset,
+    TabbedDataset,
     TarFileRemoteDataset,
+    TarFileSingleDataset,
     UnpackedRemoteDataset,
+    ZipSingleDataset,
 )
 from .biokg import BioKG
 from .ckg import CKG
@@ -35,8 +38,9 @@ from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
+from .literal_base import NumericPathDataset
 from .nations import Nations
-from .ogb import OGBBioKG, OGBWikiKG2
+from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .openea import OpenEA
 from .pharmkg import PharmKG, PharmKG8k
@@ -44,7 +48,7 @@ from .umls import UMLS
 from .utils import get_dataset
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
-from .wk3l import WK3l15k
+from .wk3l import MTransEDataset, WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 
@@ -90,28 +94,27 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-dataset_resolver = ClassResolver.from_entrypoint(group="pykeen.datasets", base=Dataset)
-if not dataset_resolver.lookup_dict:
-    raise RuntimeError(
-        dedent(
-            """\
-    Datasets have been loaded with entrypoints since PyKEEN v1.0.5, which is now a
-    very old version of PyKEEN.
-
-    If you simply use `python3 -m pip install --upgrade pykeen`, the entrypoints will
-    not be reloaded. Instead, please reinstall PyKEEN using the following commands:
-
-    $ python3 -m pip uninstall pykeen
-    $ python3 -m pip install pykeen
-
-    If you are on Kaggle or Google Colab, please follow these instructions:
-    https://pykeen.readthedocs.io/en/stable/installation.html#google-colab-and-kaggle-users
-
-    If issues with Kaggle or Colab persist, please join the conversation at
-    https://github.com/pykeen/pykeen/issues/373
-    """
-        )
-    )
+dataset_resolver: ClassResolver[Dataset] = ClassResolver.from_subclasses(
+    base=Dataset,
+    skip={
+        EagerDataset,
+        LazyDataset,
+        PathDataset,
+        RemoteDataset,
+        UnpackedRemoteDataset,
+        TarFileRemoteDataset,
+        PackedZipRemoteDataset,
+        CompressedSingleDataset,
+        TarFileSingleDataset,
+        ZipSingleDataset,
+        TabbedDataset,
+        SingleTabbedDataset,
+        NumericPathDataset,
+        MTransEDataset,
+        OGBLoader,
+    },
+)
+dataset_resolver.register_entrypoint("pykeen.datasets")
 
 
 def has_dataset(key: str) -> bool:
