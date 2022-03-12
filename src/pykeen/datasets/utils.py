@@ -16,21 +16,24 @@ from ..triples import CoreTriplesFactory
 
 logger = logging.getLogger(__name__)
 
-max_triples_option = click.option("-m", "--max-triples", type=int, default=None)
-min_triples_option = click.option("--min-triples", type=int, default=None)
+dataset_regex_option = click.option("--dataset-regex", help="Regex for filtering datasets by name")
+max_triples_option = click.option("--max-triples", type=int)
+min_triples_option = click.option("--min-triples", type=int)
 
 
-def iter_datasets(
+def iter_dataset_classes(
     regex_name_filter: Union[None, str, Pattern] = None,
     *,
     max_triples: Optional[int] = None,
     min_triples: Optional[int] = None,
+    use_tqdm: bool = True,
 ) -> Iterable[Tuple[str, Type[Dataset]]]:
-    """Iterate over datasets with size constraints.
+    """Iterate over dataset classes with given constraints.
 
     :param regex_name_filter: An optional regular expression string or pre-compiled regular expression
     :param max_triples: An optional maximum number of triples for the dataset
     :param min_triples: An optional minimum number of triples for the dataset
+    :param use_tqdm: Should a progress bar be shown?
     :yields: Pairs of dataset names and dataset classes
     """
     from . import dataset_resolver
@@ -52,11 +55,37 @@ def iter_datasets(
     it_tqdm = tqdm(
         it,
         desc="Datasets",
+        disable=not use_tqdm,
     )
     for k, v in it_tqdm:
         n_triples = docdata.get_docdata(v)["statistics"]["triples"]
         it_tqdm.set_postfix(name=k, triples=f"{n_triples:,}")
         yield k, v
+
+
+def iter_dataset_instances(
+    regex_name_filter: Union[None, str, Pattern] = None,
+    *,
+    max_triples: Optional[int] = None,
+    min_triples: Optional[int] = None,
+    use_tqdm: bool = True,
+) -> Iterable[Tuple[str, Dataset]]:
+    """Iterate over dataset instances with given constraints.
+
+    :param regex_name_filter: An optional regular expression string or pre-compiled regular expression
+    :param max_triples: An optional maximum number of triples for the dataset
+    :param min_triples: An optional minimum number of triples for the dataset
+    :param use_tqdm: Should a progress bar be shown?
+    :yields: Pairs of dataset names and dataset instances
+    """
+    for name, cls in iter_dataset_classes(
+        regex_name_filter=regex_name_filter,
+        max_triples=max_triples,
+        min_triples=min_triples,
+        use_tqdm=use_tqdm,
+    ):
+        instance = get_dataset(dataset=cls)
+        yield name, instance
 
 
 def get_dataset(
