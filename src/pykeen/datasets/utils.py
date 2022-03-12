@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """Dataset utilities."""
 
 import base64
