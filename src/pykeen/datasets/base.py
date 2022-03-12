@@ -132,6 +132,11 @@ class Dataset:
         """Get the number of triples for sorting."""
         return docdata.get_docdata(cls)["statistics"]["triples"]
 
+    @classmethod
+    def triples_pair_sort_key(cls, pair: Tuple[str, Type[Dataset]]) -> int:
+        """Get the number of triples for sorting in an iterator context."""
+        return cls.triples_sort_key(pair[1])
+
     def _summary_rows(self):
         return [
             (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
