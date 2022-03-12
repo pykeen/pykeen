@@ -6,10 +6,10 @@ import base64
 import hashlib
 import logging
 import pathlib
+import re
 from typing import Any, Collection, Iterable, Mapping, Optional, Pattern, Tuple, Type, Union
 
 import click
-import docdata
 from tqdm import tqdm
 
 from .base import Dataset, EagerDataset, PathDataset
@@ -50,19 +50,17 @@ def iter_dataset_classes(
         it = [pair for pair in it if Dataset.triples_pair_sort_key(pair) >= min_triples]
     if regex_name_filter is not None:
         if isinstance(regex_name_filter, str):
-            import re
-
             regex_name_filter = re.compile(regex_name_filter)
-        it = [(name, dataset) for name, dataset in it if regex_name_filter.match(name)]
+        it = [(name, dataset_cls) for name, dataset_cls in it if regex_name_filter.match(name)]
     it_tqdm = tqdm(
         it,
         desc="Datasets",
         disable=not use_tqdm,
     )
-    for k, v in it_tqdm:
-        n_triples = docdata.get_docdata(v)["statistics"]["triples"]
-        it_tqdm.set_postfix(name=k, triples=f"{n_triples:,}")
-        yield k, v
+    for name, dataset_cls in it_tqdm:
+        n_triples = dataset_cls.triples_sort_key()
+        it_tqdm.set_postfix(name=name, triples=f"{n_triples:,}")
+        yield name, dataset_cls
 
 
 def iter_dataset_instances(

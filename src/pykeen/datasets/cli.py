@@ -338,8 +338,7 @@ def expected_metrics(
     )
     results_path = output_directory.joinpath("metric_adjustments.tsv.gz")
     df.to_csv(results_path, sep="\t", index=False)
-    click.secho(f"wrote {results_path}")
-    # click.echo(df.to_markdown(index=False))
+    click.secho(f"wrote to {results_path}", fg="green")
 
     if max_triples is None and min_triples is None and dataset_regex is None:
         try:
