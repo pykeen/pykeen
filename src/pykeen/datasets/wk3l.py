@@ -22,7 +22,10 @@ from ..triples import TriplesFactory
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TorchRandomHint
 
 __all__ = [
+    "MTransEDataset",
     "WK3l15k",
+    "CN3l",
+    "WK3l120k",
 ]
 
 logger = logging.getLogger(__name__)
