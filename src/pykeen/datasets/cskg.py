@@ -38,6 +38,9 @@ class CSKG(SingleTabbedDataset):
         entities: 2087833
         relations: 58
         triples: 4598728
+        training: 4598728
+        testing: 574841
+        validation: 574842
     """
 
     def __init__(self, create_inverse_triples: bool = False, random_state: TorchRandomHint = 0, **kwargs):
@@ -59,7 +62,9 @@ class CSKG(SingleTabbedDataset):
 
 
 def _main():
-    ds = CSKG(eager=True)
+    from pykeen.datasets import get_dataset
+
+    ds = get_dataset(dataset=CSKG)
     ds.summarize()
 
 
