@@ -53,6 +53,8 @@ class TokenizationRepresentation(Representation):
             additional keyword-based parameters
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
+        :raises ValueError: if there's a mismatch between the representation size
+            and the vocabulary size
         """
         # needs to be lazily imported to avoid cyclic imports
         from .. import representation_resolver
@@ -115,6 +117,8 @@ class TokenizationRepresentation(Representation):
             the number of tokens to select for each entity.
         :param token_representation:
             the pre-instantiated token representations, or an EmbeddingSpecification to create them
+        :param token_representation_kwargs:
+            additional keyword-based parameters
         :param mapped_triples:
             the ID-based triples
         :param num_entities:
@@ -123,6 +127,8 @@ class TokenizationRepresentation(Representation):
             the number of relations
         :param kwargs:
             additional keyword-based parameters passed to TokenizationRepresentation.__init__
+        :return:
+            A tokenization representation by applying the tokenizer
         """
         # apply tokenizer
         vocabulary_size, assignment = tokenizer(
@@ -198,6 +204,8 @@ class NodePieceRepresentation(Representation):
             the triples factory
         :param token_representations:
             the token representation specification, or pre-instantiated representation module.
+        :param token_representation_kwargs:
+            additional keyword-based parameters
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
         :param tokenizers_kwargs:
@@ -218,6 +226,8 @@ class NodePieceRepresentation(Representation):
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
+        :raises ValueError: if the shapes for any vocabulary entry
+            in all token representations are inconsistent
         """
         if max_id:
             assert max_id == triples_factory.num_entities

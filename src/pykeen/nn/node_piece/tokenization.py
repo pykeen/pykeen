@@ -185,7 +185,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         pool: Optional[Mapping[int, Collection[int]]] = None,
         randomize_selection: bool = False,
     ):
-        """
+        r"""
         Initialize the tokenizer.
 
         .. note ::
@@ -202,14 +202,14 @@ class PrecomputedPoolTokenizer(Tokenizer):
             the precomputed pools.
         :param randomize_selection:
             whether to randomly choose from tokens, or always take the first `num_token` precomputed tokens.
-
+        :raises ValueError: If the pool's keys are not contiguous on $0 \dots N-1$.
         """
         self.pool, self.vocabulary_size = self._load_pool(
             path=path, url=url, pool=pool, download_kwargs=download_kwargs
         )
         # verify pool
         if set(self.pool.keys()) != set(range(len(self.pool))):
-            raise ValueError("Expected pool to contain keys 0...(N-1)")
+            raise ValueError("Expected pool to contain contiguous keys 0...(N-1)")
         self.randomize_selection = randomize_selection
 
     def __call__(

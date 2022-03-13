@@ -1,7 +1,7 @@
 """Utilities for NodePiece."""
 
 import logging
-from typing import Callable, Collection, Mapping, Optional, Union
+from typing import Collection, Mapping, Optional
 
 import numpy
 import scipy.sparse
