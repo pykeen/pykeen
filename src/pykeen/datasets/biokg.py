@@ -36,6 +36,9 @@ class BioKG(ZipSingleDataset):
         types: 13
         relations: 17
         triples: 2067997
+        training: 1654397
+        testing: 206800
+        validation: 206800
     """
 
     def __init__(
@@ -62,7 +65,8 @@ class BioKG(ZipSingleDataset):
 @click.command()
 @verbose_option
 def _main():
-    ds = BioKG()
+    from pykeen.datasets import get_dataset
+    ds = get_dataset(dataset=BioKG)
     ds.summarize()
 
 

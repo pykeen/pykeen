@@ -180,6 +180,9 @@ class WK3l15k(MTransEDataset):
         entities: 15126
         relations: 1841
         triples: 209041
+        training: 167232
+        testing: 20904
+        validation: 20905
     """
 
     DATASET_NAME = "WK3l-15k"
@@ -209,6 +212,9 @@ class WK3l120k(MTransEDataset):
         entities: 119748
         relations: 3109
         triples: 1375406
+        training: 499727
+        testing: 62466
+        validation: 62466
     """
 
     DATASET_NAME = "WK3l-120k"
@@ -235,6 +241,9 @@ class CN3l(MTransEDataset):
         entities: 3206
         relations: 42
         triples: 21777
+        training: 23492
+        testing: 2936
+        validation: 2937
     """
 
     DATASET_NAME = "CN3l"

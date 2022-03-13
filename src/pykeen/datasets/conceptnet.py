@@ -34,6 +34,9 @@ class ConceptNet(SingleTabbedDataset):
         entities: 28370083
         relations: 50
         triples: 34074917
+        training:
+        testing:
+        validation:
     """
 
     def __init__(
@@ -63,7 +66,8 @@ class ConceptNet(SingleTabbedDataset):
 @click.command()
 @verbose_option
 def _main():
-    ds = ConceptNet()
+    from pykeen.datasets import get_dataset
+    ds = get_dataset(dataset=ConceptNet)
     ds.summarize()
 
 

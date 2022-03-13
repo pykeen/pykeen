@@ -33,6 +33,9 @@ class DRKG(TarFileSingleDataset):
         types: 13
         relations: 107
         triples: 5874257
+        training: 4699405
+        testing: 587426
+        validation: 587426
     """
 
     def __init__(
@@ -59,7 +62,8 @@ class DRKG(TarFileSingleDataset):
 @click.command()
 @verbose_option
 def _main():
-    ds = DRKG()
+    from pykeen.datasets import get_dataset
+    ds = get_dataset(dataset=DRKG)
     ds.summarize()
 
 
