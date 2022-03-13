@@ -224,6 +224,11 @@ class NodePieceRepresentation(Representation):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
+        :param shape:
+            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
+            this will only be necessary if the aggregation is an *ad hoc* function.
+        :param max_id:
+            Only pass this to check if the number of entities in the triples factories is the same
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
         :raises ValueError: if the shapes for any vocabulary entry
