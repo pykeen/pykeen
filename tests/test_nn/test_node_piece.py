@@ -1,4 +1,7 @@
 """Tests for node piece."""
+import random
+from typing import Any, MutableMapping
+
 import numpy
 import numpy.testing
 import scipy.sparse.csgraph
@@ -103,6 +106,20 @@ class AnchorTokenizerTests(cases.TokenizerTestCase):
     """Tests for tokenization with anchor entities."""
 
     cls = pykeen.nn.node_piece.AnchorTokenizer
+
+
+class PrecomputedPoolTokenizerTests(cases.TokenizerTestCase):
+    """Tests for tokenization with precomputed token pools."""
+
+    cls = pykeen.nn.node_piece.PrecomputedPoolTokenizer
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        # generate random pool
+        kwargs["pool"] = {
+            i: random.sample(range(2 * self.num_tokens), k=self.num_tokens) for i in range(self.factory.num_entities)
+        }
+        return kwargs
 
 
 class TokenizerMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece.Tokenizer]):
