@@ -238,7 +238,7 @@ class MixtureAnchorSelection(AnchorSelection):
             eg, ['degree', 'pagerank'] will be executed differently from ['pagerank', 'degree']
         :param ratios:
             the ratios, cf. normalize_ratios. None means uniform ratios
-        :param selection_kwargs:
+        :param selections_kwargs:
             additional keyword-based arguments for the individual selection strategies
         :param kwargs:
             additional keyword-based arguments passed to AnchorSelection.__init__,
