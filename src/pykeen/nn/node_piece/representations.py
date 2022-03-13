@@ -7,9 +7,9 @@ from typing import Callable, Optional, Sequence, Union
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs
+from class_resolver.contrib.torch import aggregation_resolver
 
 from .tokenization import Tokenizer, tokenizer_resolver
-from .utils import resolve_aggregation
 from ..representation import Representation
 from ...triples import CoreTriplesFactory
 from ...typing import MappedTriples, OneOrSequence
@@ -265,7 +265,7 @@ class NodePieceRepresentation(Representation):
         self.token_representations = torch.nn.ModuleList(token_representations)
 
         # Assign default aggregation
-        self.aggregation = resolve_aggregation(aggregation=aggregation)
+        self.aggregation = aggregation_resolver.lookup(aggregation)
         self.aggregation_index = -(1 + len(shape))
 
     def extra_repr(self) -> str:  # noqa: D102

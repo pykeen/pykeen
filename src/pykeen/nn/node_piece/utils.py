@@ -8,9 +8,11 @@ import scipy.sparse
 import torch
 from tqdm.auto import tqdm
 
-from ...constants import AGGREGATIONS
-
-__all__ = ["page_rank", "edge_index_to_sparse_matrix", "random_sample_no_replacement", "resolve_aggregation"]
+__all__ = [
+    "page_rank",
+    "edge_index_to_sparse_matrix",
+    "random_sample_no_replacement",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -92,35 +94,3 @@ def random_sample_no_replacement(
         this_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
         assignment[idx, : len(this_pool_t)] = this_pool
     return assignment
-
-
-# TODO replace with function resolver
-def resolve_aggregation(
-    aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]],
-) -> Callable[[torch.FloatTensor, int], torch.FloatTensor]:
-    """
-    Resolve the aggregation function.
-
-    .. warning ::
-        This function does *not* check whether torch.<aggregation> is a method which is a valid aggregation.
-
-    :param aggregation:
-        the aggregation choice. Can be either
-        1. None, in which case the torch.mean is returned
-        2. a string, in which case torch.<aggregation> is returned
-        3. a callable, which is returned without change
-
-    :return:
-        the chosen aggregation function.
-    """
-    if aggregation is None:
-        return torch.mean
-
-    if isinstance(aggregation, str):
-        if aggregation not in AGGREGATIONS:
-            logger.warning(
-                f"aggregation={aggregation} is not one of the predefined ones ({sorted(AGGREGATIONS.keys())}).",
-            )
-        return getattr(torch, aggregation)
-
-    return aggregation
