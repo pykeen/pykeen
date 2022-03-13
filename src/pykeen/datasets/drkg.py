@@ -63,6 +63,7 @@ class DRKG(TarFileSingleDataset):
 @verbose_option
 def _main():
     from pykeen.datasets import get_dataset
+
     ds = get_dataset(dataset=DRKG)
     ds.summarize()
 

@@ -114,6 +114,7 @@ class PharmKG(SingleTabbedDataset):
 @verbose_option
 def _main():
     from pykeen.datasets import get_dataset
+
     for cls in [PharmKG8k, PharmKG]:
         get_dataset(dataset=cls).summarize()
 

@@ -66,6 +66,7 @@ class BioKG(ZipSingleDataset):
 @verbose_option
 def _main():
     from pykeen.datasets import get_dataset
+
     ds = get_dataset(dataset=BioKG)
     ds.summarize()
 

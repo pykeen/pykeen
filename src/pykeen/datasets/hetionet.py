@@ -68,6 +68,7 @@ class Hetionet(SingleTabbedDataset):
 @verbose_option
 def _main():
     from pykeen.datasets import get_dataset
+
     ds = get_dataset(dataset=Hetionet)
     ds.summarize()
 

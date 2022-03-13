@@ -63,6 +63,7 @@ class CSKG(SingleTabbedDataset):
 
 def _main():
     from pykeen.datasets import get_dataset
+
     ds = get_dataset(dataset=CSKG)
     ds.summarize()
 

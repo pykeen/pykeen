@@ -48,7 +48,7 @@ from .umls import UMLS
 from .utils import get_dataset
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
-from .wk3l import MTransEDataset, WK3l15k, WK3l120k, CN3l
+from .wk3l import CN3l, MTransEDataset, WK3l15k, WK3l120k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 

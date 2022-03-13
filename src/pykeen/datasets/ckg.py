@@ -101,6 +101,7 @@ class CKG(TabbedDataset):
 @verbose_option
 def _main():
     from pykeen.datasets import get_dataset
+
     d = get_dataset(dataset=CKG)
     d.summarize()
 

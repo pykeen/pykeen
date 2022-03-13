@@ -36,15 +36,9 @@ class TestAnnotated(unittest.TestCase):
                 self.assertIn("citation", docdata)
 
                 # Check minimal statistics
-                for k in ("entities", "relations", "triples"):
+                for k in ("entities", "relations", "triples", "training", "testing", "validation"):
                     self.assertIn(k, docdata["statistics"], msg=f"statistics are missing {k}")
                     self.assertIsInstance(docdata["statistics"][k], int)
-
-                # Check statistics for pre-stratified datasets
-                if not docdata.get("single"):
-                    for k in ("training", "testing", "validation"):
-                        self.assertIn(k, docdata["statistics"])
-                        self.assertIsInstance(docdata["statistics"][k], int)
 
                 # Check either a github link or author/publication information is given
                 citation = docdata["citation"]
