@@ -6,7 +6,7 @@ import logging
 from typing import Callable, Optional, Sequence, Union
 
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import aggregation_resolver
 
 from .tokenization import Tokenizer, tokenizer_resolver
@@ -187,10 +187,10 @@ class NodePieceRepresentation(Representation):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representations: OneOrSequence[HintOrType[Representation]] = None,
-        token_representation_kwargs: OneOrSequence[OptionalKwargs] = None,
-        tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
-        tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
+        token_representations: OneOrManyHintOrType[Representation] = None,
+        token_representations_kwargs: OneOrManyOptionalKwargs = None,
+        tokenizers: OneOrManyHintOrType[Tokenizer] = None,
+        tokenizers_kwargs: OneOrManyOptionalKwargs = None,
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         max_id: Optional[int] = None,
@@ -204,7 +204,7 @@ class NodePieceRepresentation(Representation):
             the triples factory
         :param token_representations:
             the token representation specification, or pre-instantiated representation module.
-        :param token_representation_kwargs:
+        :param token_representations_kwargs:
             additional keyword-based parameters
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
@@ -243,8 +243,8 @@ class NodePieceRepresentation(Representation):
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
-        token_representations, token_representation_kwargs, num_tokens = broadcast_upgrade_to_sequences(
-            token_representations, token_representation_kwargs, num_tokens
+        token_representations, token_representations_kwargs, num_tokens = broadcast_upgrade_to_sequences(
+            token_representations, token_representations_kwargs, num_tokens
         )
 
         # tokenize
@@ -261,7 +261,7 @@ class NodePieceRepresentation(Representation):
             for tokenizer_inst, token_representation, token_representation_kwargs, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
                 token_representations,
-                token_representation_kwargs,
+                token_representations_kwargs,
                 num_tokens,
             )
         ]
