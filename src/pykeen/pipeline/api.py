@@ -1183,7 +1183,7 @@ def pipeline(  # noqa: C901
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
-    if isinstance(evaluator_resolver.lookup(evaluator), SampledRankBasedEvaluator):
+    if issubclass(evaluator_resolver.lookup(evaluator), SampledRankBasedEvaluator):
         evaluator_kwargs["evaluation_factory"] = validation
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
     _result_tracker.log_params(
