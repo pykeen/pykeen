@@ -841,6 +841,11 @@ def resolve_aggregation(
         2. a string, in which case torch.<aggregation> is returned
         3. a callable, which is returned without change
 
+    :param total_num_tokens:
+        the total number of tokens. required by "mlp" aggregation
+    :param dim:
+        the dimension, required by "mlp" aggregation
+
     :return:
         the chosen aggregation function.
     """
@@ -850,6 +855,8 @@ def resolve_aggregation(
 
     if isinstance(aggregation, str):
         if aggregation == "mlp":
+            if total_num_tokens is None or dim is None:
+                raise ValueError("aggregation='mlp' requires total_num_tokens and dim to be provided.")
             return ConcatMLP(num_tokens=total_num_tokens, embedding_dim=dim)
         if aggregation not in AGGREGATIONS:
             logger.warning(

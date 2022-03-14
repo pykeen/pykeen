@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-# cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L196-L204
+# cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L196-L204  # noqa: E501
 
 
 class TripleRE(ERModel):
@@ -58,9 +58,14 @@ class TripleRE(ERModel):
     ) -> None:
         r"""Initialize TripleRE via the :class:`pykeen.nn.modules.TripleREInteraction` interaction.
 
-        :param embedding_dim: The entity embedding dimension $d$.
-        :param p: The $l_p$ norm.
-        :param power_norm: Should the power norm be used?
+        :param triples_factory:
+            the (training) triples factory
+        :param embedding_dim:
+            the entity embedding dimension $d$
+        :param p:
+            the $l_p$ norm.
+        :param power_norm:
+            should the power norm be used?
         :param initializer:
             the initializer used for anchor and relation representations.
         :param initializer_kwargs:
@@ -71,11 +76,10 @@ class TripleRE(ERModel):
             additional keyword-based parameters passed to the anchor tokenizer.
         :param num_tokens:
             the number of tokens to select for (1) the relation tokenizer and (2) the anchor tokenizer
-        :param entity_normalizer: Entity normalizer function. Defaults to :func:`torch.nn.functional.normalize`
-        :param entity_normalizer_kwargs: Keyword arguments to be used when calling the entity normalizer
-        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
-        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+        :param node_piece_kwargs:
+            keyword-based parameters for NodePieceRepresentation
+        :param kwargs:
+            remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         assert triples_factory.create_inverse_triples
         relation_mid_representation = representation_resolver.make(

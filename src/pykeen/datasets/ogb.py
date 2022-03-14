@@ -9,7 +9,6 @@ from typing import ClassVar, Optional
 
 import click
 import numpy as np
-import torch
 from docdata import parse_docdata
 from more_click import verbose_option
 

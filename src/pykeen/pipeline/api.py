@@ -977,6 +977,8 @@ def pipeline(  # noqa: C901
         If a negative sampler is specified with LCWA
     :raises TypeError:
         If an invalid argument type is given for ``evaluation_kwargs["additional_filter_triples"]``
+    :raises NotImplementedError:
+        when trying to evaluate on test data with the SampledRankBasedEvaluator
     """
     if training_kwargs is None:
         training_kwargs = {}
