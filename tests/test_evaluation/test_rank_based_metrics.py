@@ -60,7 +60,6 @@ class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.ZArithmeticMeanRank
     base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
-    base_factor = -1.0
     check_expectation = True
     check_variance = True
 

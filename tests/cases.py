@@ -2014,7 +2014,6 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     ranks: numpy.ndarray
 
     base_metric: ClassVar[Optional[Hint[RankBasedMetric]]] = None
-    base_factor: ClassVar[float] = 1.0
 
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
@@ -2113,9 +2112,10 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         if self.base_metric is None:
             self.skipTest("no base metric")
         base_instance = rank_based_metric_resolver.make(self.base_metric)
+        base_factor = 1 if base_instance.increasing else -1
         self.assertNotEqual(
             self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
-            self.base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
         )
 
 
