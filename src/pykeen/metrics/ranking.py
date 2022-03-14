@@ -88,7 +88,7 @@ class RankBasedMetric(Metric):
         if generator is None:
             generator = np.random.default_rng()
         for _ in range(num_samples):
-            yield self(generator.integers(low=1, high=num_candidates + 1))
+            yield self(ranks=generator.integers(low=1, high=num_candidates + 1), num_candidates=num_candidates)
 
     def numeric_expected_value(
         self,
@@ -262,8 +262,9 @@ class ExpectationNormalizedMixin(RankBasedMetric):
     """
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return super().__call__(ranks=ranks, num_candidates=num_candidates) / super().expected_value(
-            num_candidates=num_candidates
+        return _safe_divide(
+            super().__call__(ranks=ranks, num_candidates=num_candidates),
+            super().expected_value(num_candidates=num_candidates),
         )
 
     def expected_value(
@@ -356,7 +357,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
