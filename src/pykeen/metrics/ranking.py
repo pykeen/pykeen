@@ -326,10 +326,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        ranks = np.asanyarray(ranks)
-        if weights is None:
-            return ranks.mean().item()
-        return _safe_divide((ranks * weights).sum().item(), weights.sum().item())
+        return np.average(np.asanyarray(ranks), weights=weights)
 
     def expected_value(
         self,
@@ -370,7 +367,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
@@ -403,7 +400,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.reciprocal(np.asanyarray(ranks).mean()).item()
+        return np.reciprocal(_weighted_mean(a=np.asanyarray(ranks), weights=weights)).item()
 
 
 @parse_docdata
