@@ -396,6 +396,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
     synonyms: ClassVar[Collection[str]] = ("iamr",)
+    supports_weights = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
@@ -437,11 +438,12 @@ class InverseGeometricMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
     synonyms: ClassVar[Collection[str]] = ("igmr",)
+    supports_weights = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.reciprocal(stats.gmean(ranks)).item()
+        return np.reciprocal(stats.gmean(ranks, weights=weights)).item()
 
 
 def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
@@ -486,11 +488,12 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms: ClassVar[Collection[str]] = ("mean_reciprocal_rank", "mrr")
     increasing = True
+    supports_weights = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.reciprocal(stats.hmean(ranks)).item()
+        return np.reciprocal(weighted_harmonic_mean(a=ranks, weights=weights)).item()
 
     def expected_value(
         self,
@@ -591,7 +594,7 @@ class MedianRank(RankBasedMetric):
         if weights is None:
             return np.median(ranks).item()
 
-        return weighted_median(a=ranks, weights=weights)
+        return weighted_median(a=ranks, weights=weights).item()
 
     def expected_value(
         self,
@@ -634,11 +637,12 @@ class InverseMedianRank(RankBasedMetric):
     name = "Inverse Median Rank"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
+    supports_weights = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.reciprocal(np.median(ranks)).item()
+        return np.reciprocal(weighted_median(a=ranks, weights=weights)).item()
 
 
 @parse_docdata
@@ -691,11 +695,15 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_mad", "mad")
+    supports_weights = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return stats.median_abs_deviation(ranks, scale="normal").item()
+        if weights is None:
+            return stats.median_abs_deviation(ranks, scale="normal").item()
+
+        return weighted_median(a=np.abs(ranks - weighted_median(a=ranks, weights=weights)), weights=weights).item()
 
 
 @parse_docdata
