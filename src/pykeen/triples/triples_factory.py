@@ -7,6 +7,7 @@ import itertools
 import logging
 import pathlib
 import re
+import warnings
 from abc import abstractmethod
 from typing import (
     Any,
@@ -483,9 +484,14 @@ class CoreTriplesFactory:
             ]
         )
 
-    def create_slcwa_instances(self, *, sampler: Optional[str], **kwargs) -> Dataset:
+    def create_slcwa_instances(self, *, sampler: Optional[str] = None, **kwargs) -> Dataset:
         """Create sLCWA instances for this factory's triples."""
         cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
+        if "shuffle" in kwargs:
+            if kwargs.pop("shuffle"):
+                warnings.warn("Training instances are always shuffled.", DeprecationWarning)
+            else:
+                raise AssertionError("If shuffle is provided, it must be True.")
         return cls(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
