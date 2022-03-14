@@ -1148,11 +1148,7 @@ def pipeline(  # noqa: C901
     if training_loop_kwargs is None:
         training_loop_kwargs = {}
 
-    if negative_sampler is None:
-        negative_sampler_cls = None
-    elif not issubclass(training_loop_cls, SLCWATrainingLoop):
-        raise ValueError("Can not specify negative sampler with LCWA")
-    else:
+    if issubclass(training_loop_cls, SLCWATrainingLoop):
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
         training_loop_kwargs = dict(training_loop_kwargs)
         training_loop_kwargs.update(
@@ -1165,6 +1161,8 @@ def pipeline(  # noqa: C901
                 negative_sampler_kwargs=negative_sampler_kwargs,
             ),
         )
+    elif negative_sampler is not None:
+        raise ValueError("Can not specify negative sampler with LCWA")
     training_loop_instance = training_loop_cls(
         model=model_instance,
         triples_factory=training,
