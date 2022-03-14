@@ -17,6 +17,9 @@ pipeline:
     anchor_tokenizer: precomputed-pool
     anchor_tokenizer_kwargs:
       url: "https://nodepiece-data.s3.ca-central-1.amazonaws.com/ogb-wikikg2/ogbl-wikikg2_20000_anchors_20000_paths_d0.4_b0.0_p0.4_r0.2_pykeen_50sp_bfs.pkl"
+      download_kwargs:
+        hexdigests:
+          sha512: "bc28c26f58783699b7fc3e13feda01f136bdc8d7762c7ac294ed56e905283c5d0416986d22916e54dd7b1140a46f45a51092b7e346aca99bbed7b7d4687dd767"
       loader: galkin-pickle
       randomize_selection: false
     num_tokens: [ 12, 20 ]  # 12 relations, 20 anchors
