@@ -6,11 +6,12 @@ pipeline:
   dataset: OGBWikiKG2
   dataset_kwargs:
     create_inverse_triples: true
-    load_explicit_negatives: true
   evaluator: sampled-rankbased
   evaluator_kwargs:
     filtered: true
-    num_negatives: 1000  # TODO: use given set of negatives
+    # use the given set of negatives
+    head_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/test.pt"
+    tail_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/test.pt"
   loss: nssa
   model: TripleRE
   model_kwargs:

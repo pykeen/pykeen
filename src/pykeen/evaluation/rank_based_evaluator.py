@@ -6,18 +6,18 @@ import itertools
 import logging
 import math
 from collections import defaultdict
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import numpy.random
 import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
-from tqdm.auto import tqdm
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
+from ..constants import PYKEEN_DATASETS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
@@ -345,6 +345,18 @@ def sample_negatives(
     return negatives
 
 
+def normalize_negatives(negatives: Union[torch.LongTensor, str], target: Target) -> torch.Tensor:
+    """Normalize negative samples."""
+    if torch.is_tensor(negatives):
+        return negatives
+    assert isinstance(negatives, str)
+    path = PYKEEN_DATASETS.joinpath(negatives)
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    content = torch.load(path)
+    return torch.as_tensor(content[f"{target}_neg"])
+
+
 class SampledRankBasedEvaluator(RankBasedEvaluator):
     """
     A rank-based evaluator using sampled negatives instead of all negatives, cf. [teru2020]_.
@@ -361,8 +373,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         *,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         num_negatives: Optional[int] = None,
-        head_negatives: Optional[torch.LongTensor] = None,
-        tail_negatives: Optional[torch.LongTensor] = None,
+        head_negatives: Union[None, str, torch.LongTensor] = None,
+        tail_negatives: Union[None, str, torch.LongTensor] = None,
         random_seed: TorchRandomHint = None,
         **kwargs,
     ):
@@ -401,8 +413,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             raise ValueError("Either both, head and tail negatives must be provided, or none.")
         else:
             negatives = {
-                LABEL_HEAD: head_negatives,
-                LABEL_TAIL: tail_negatives,
+                normalize_negatives(negatives=target_negatives, target=target)
+                for target, target_negatives in zip([LABEL_HEAD, LABEL_TAIL], [head_negatives, tail_negatives])
             }
 
         # verify input
