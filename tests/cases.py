@@ -2103,10 +2103,11 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         )
         self.assertAlmostEqual(closed, simulated, delta=2)
 
-    def test_weights(self):
-        """Test weighting."""
+    def test_weights_direction(self):
+        """Test monotonicity of weighting."""
         if not self.instance.supports_weights:
             raise SkipTest(f"{self.instance} does not support weights")
+
         generator = numpy.random.default_rng(seed=0)
         weights = generator.random(size=self.ranks.size)
         # for sanity checking: give the largest weight to best rank => should improve
@@ -2118,6 +2119,30 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             self.assertLessEqual(unweighted, weighted)
         else:
             self.assertLessEqual(weighted, unweighted)
+
+    def test_weights_coherence(self):
+        """Test coherence for weighted metrics & metric in repeated array."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+
+        # generate two versions
+        generator = numpy.random.default_rng(seed=21)
+        repeats = generator.integers(low=1, high=10, size=self.ranks.shape)
+
+        # 1. repeat each rank/candidate pair a random number of times
+        repeated_ranks, repeated_num_candidates = [], []
+        for rank, num_candidates, repeat in zip(self.ranks, self.num_candidates, repeats):
+            repeated_ranks.append(numpy.full(shape=(repeat,), fill_value=rank))
+            repeated_num_candidates.append(numpy.full(shape=(repeat,), fill_value=num_candidates))
+        repeated_ranks = numpy.concatenate(repeated_ranks)
+        repeated_num_candidates = numpy.concatenate(repeated_num_candidates)
+        value_repeat = self.instance(ranks=repeated_ranks, num_candidates=repeated_num_candidates, weights=None)
+
+        # 2. do not repeat, but assign a corresponding weight
+        weights = repeats.astype(float)
+        value_weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
+
+        self.assertAlmostEqual(value_repeat, value_weighted, delta=2)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):

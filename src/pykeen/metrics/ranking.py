@@ -451,6 +451,9 @@ class InverseGeometricMeanRank(RankBasedMetric):
 
 def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """Calculate weighted harmonic mean."""
+    if weights is None:
+        return stats.hmean(a)
+
     return weights.sum() / np.average(np.reciprocal(a), weights=weights)
 
 
@@ -472,9 +475,6 @@ class HarmonicMeanRank(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        if weights is None:
-            return stats.hmean(ranks).item()
-
         return weighted_harmonic_mean(a=ranks, weights=weights).item()
 
 
@@ -566,8 +566,11 @@ class ZInverseHarmonicMeanRank(DecreasingZMixin, InverseHarmonicMeanRank):
     synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
 
 
-def weighted_median(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
+def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
     """Calculate weighted median."""
+    if weights is None:
+        return np.median(a)
+
     indices = np.argsort(a)
     s_ranks = a[indices]
     s_weights = weights[indices]
