@@ -319,13 +319,16 @@ class ArithmeticMeanRank(RankBasedMetric):
 
     name = "Mean Rank (MR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
-    increasing = False
+    increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("mean_rank", "mr")
+    supports_weights: ClassVar[bool] = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.asanyarray(ranks).mean().item()
+        if weights is None:
+            return np.asanyarray(ranks).mean().item()
+        return _safe_divide((ranks * weights).sum().item(), weights.sum().item())
 
     def expected_value(
         self,
