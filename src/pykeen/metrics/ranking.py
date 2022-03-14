@@ -208,6 +208,19 @@ class BaseZMixin(RankBasedMetric):
     needs_candidates = True
     value_range = ValueRange(lower=None, upper=None)
 
+    @staticmethod
+    @abstractmethod
+    def adjustment(metric: float, mean: float, std: float) -> float:
+        """Adjust the metric using the expected value and expected standard deviation."""
+        raise NotImplementedError
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return self.adjustment(
+            metric=super().__call__(ranks=ranks, num_candidates=num_candidates),
+            mean=super(BaseZMixin, self).expected_value(num_candidates=num_candidates),
+            std=super(BaseZMixin, self).std(num_candidates=num_candidates),
+        )
+
     def expected_value(
         self,
         num_candidates: np.ndarray,
@@ -233,12 +246,9 @@ class IncreasingZMixin(BaseZMixin):
     .. warning:: This requires a closed-form solution to the expected value and variance
     """
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        v = super(BaseZMixin, self).expected_value(num_candidates=num_candidates) - super().__call__(
-            ranks=ranks, num_candidates=num_candidates
-        )
-        std = super(BaseZMixin, self).std(num_candidates=num_candidates)
-        return _safe_divide(v, std)
+    @staticmethod
+    def adjustment(metric: float, mean: float, std: float) -> float:  # noqa: D102
+        return _safe_divide(metric - mean, std)
 
 
 class DecreasingZMixin(BaseZMixin):
@@ -247,12 +257,9 @@ class DecreasingZMixin(BaseZMixin):
     .. warning:: This requires a closed-form solution to the expected value and variance
     """
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        v = super().__call__(ranks=ranks, num_candidates=num_candidates) - super(BaseZMixin, self).expected_value(
-            num_candidates=num_candidates
-        )
-        std = super(BaseZMixin, self).std(num_candidates=num_candidates)
-        return _safe_divide(v, std)
+    @staticmethod
+    def adjustment(metric: float, mean: float, std: float) -> float:  # noqa: D102
+        return _safe_divide(mean - metric, std)
 
 
 class ExpectationNormalizedMixin(RankBasedMetric):
