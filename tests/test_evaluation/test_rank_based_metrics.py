@@ -23,6 +23,14 @@ class ZInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.ZInverseHarmonicMeanRank
 
+    def test_adjustment(self):
+        """Check that the adjustment happened."""
+        base_instance = pykeen.metrics.ranking.InverseHarmonicMeanRank()
+        self.assertNotEqual(
+            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
+        )
+
 
 class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted hits at k."""
@@ -48,6 +56,14 @@ class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for z-scored arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.ZArithmeticMeanRank
+
+    def test_adjustment(self):
+        """Check that the adjustment happened."""
+        base_instance = pykeen.metrics.ranking.ArithmeticMeanRank()
+        self.assertNotEqual(
+            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
+        )
 
 
 class CountTests(cases.RankBasedMetricTestCase):
@@ -80,6 +96,14 @@ class ZHitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for z-scored hits at k."""
 
     cls = pykeen.metrics.ranking.ZHitsAtK
+
+    def test_adjustment(self):
+        """Check that the adjustment happened."""
+        base_instance = pykeen.metrics.ranking.HitsAtK()
+        self.assertNotEqual(
+            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
+        )
 
 
 class InverseArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
