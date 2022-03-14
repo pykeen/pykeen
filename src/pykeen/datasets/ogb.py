@@ -9,6 +9,7 @@ from typing import ClassVar, Optional
 
 import click
 import numpy as np
+import torch
 from docdata import parse_docdata
 from more_click import verbose_option
 
@@ -28,7 +29,12 @@ class OGBLoader(LazyDataset):
     #: The name of the dataset to download
     name: ClassVar[str]
 
-    def __init__(self, cache_root: Optional[str] = None, create_inverse_triples: bool = False):
+    def __init__(
+        self,
+        cache_root: Optional[str] = None,
+        create_inverse_triples: bool = False,
+        load_explicit_negatives: bool = False,
+    ):
         """Initialize the OGB loader.
 
         :param cache_root: An optional override for where data should be cached.
@@ -37,6 +43,7 @@ class OGBLoader(LazyDataset):
         """
         self.cache_root = self._help_cache(cache_root)
         self.create_inverse_triples = create_inverse_triples
+        self.load_explicit_negatives = load_explicit_negatives
 
     def _load(self) -> None:
         try:
@@ -60,6 +67,17 @@ class OGBLoader(LazyDataset):
             entity_to_id=self._training.entity_to_id,
             relation_to_id=self._training.relation_to_id,
         )
+        # explicit negatives
+        if self.load_explicit_negatives:
+            self.head_negatives, self.tail_negatives = [
+                {
+                    key: torch.as_tensor(edge_split[source_key][target_key])
+                    for key, source_key in (("validation", "valid"), ("testing", "test"))
+                }
+                for target_key in ("head_neg", "tail_neg")
+            ]
+        else:
+            self.head_negatives = self.tail_negatives = None
 
     def _loaded_validation(self) -> bool:
         return self._loaded
