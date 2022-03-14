@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Test that samplers can be executed."""
+import numpy.testing
 import torch
 import unittest_templates
 
@@ -11,12 +12,12 @@ from tests.test_sampling import cases
 
 def _verify_entity_corruption(instance: NegativeSampler, positive_batch: torch.LongTensor):
     """Verify that at most one entity is corrupted."""
-    positive_batch = positive_batch.unsqueeze(dim=1)
     negative_batch = instance.corrupt_batch(positive_batch=positive_batch)
+    positive_batch = positive_batch.unsqueeze(dim=1).repeat(1, instance.num_negs_per_pos, 1)
     # same relation
-    assert (negative_batch[..., 1] == positive_batch[..., 1]).all()
+    numpy.testing.assert_array_equal(negative_batch[..., 1], positive_batch[..., 1])
     # only corruption of a single entity (note: we do not check for exactly 2, since we do not filter).
-    assert ((negative_batch == positive_batch).sum(dim=-1) >= 2).all()
+    numpy.testing.assert_array_less(1, (negative_batch == positive_batch).sum(dim=-1))
 
 
 class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):

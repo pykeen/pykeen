@@ -37,7 +37,7 @@ class SLCWAInstancesTestCase(cases.TrainingInstancesTestCase):
         return kwargs
 
     def _get_expected_length(self) -> int:
-        return self.factory.mapped_triples.shape
+        return self.factory.mapped_triples.shape[0]
 
 
 class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
