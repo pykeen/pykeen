@@ -6,6 +6,7 @@ pipeline:
   dataset: OGBWikiKG2
   dataset_kwargs:
     create_inverse_triples: true
+    load_explicit_negatives: true
   evaluator: sampled-rankbased
   evaluator_kwargs:
     filtered: true
