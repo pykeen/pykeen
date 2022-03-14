@@ -186,16 +186,27 @@ This is a good question with deep theoretical implications and NP-hard problems 
 `Vertex Cover Sets <https://en.wikipedia.org/wiki/Vertex_cover>`_ .
 
 We don't have a closed-form solution for each possible dataset, but we found some empirical heuristics:
-* keeping `num_anchors` as 1-10% of total nodes in the graph is a good start
-* graph density is a major factor: the denser the graph, the fewer `num_anchors` you'd need. For dense FB15k237 100 total anchors  (over 15k total nodes) seems to be good enough, while for sparser WN18RR we needed at least 500 anchors (over 40k total nodes). For dense OGB WikiKG2 of 2.5M nodes a vocab of 20K anchors (< 1%) already leads to SOTA results
-* the same applies to anchors per node: you'd need more tokens for sparser graphs and fewer for denser
-* the size of the relational context depends on the density and number of unique relations in the graph, eg, in FB15k237 we have 237 * 2 = 474 unique relations and only 11 * 2 = 22 in WN18RR. If we select a too large context, most tokens will be `PADDING_TOKEN` and we don't want that.
-* reported relational context sizes (relations per node) in the NodePiece paper `are 66th percentiles <https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/lp_rp/pykeen105/nodepiece_rotate.py#L173>`_ of the number of unique incident relations per node, eg 12 for FB15k237 and 5 for WN18RR
 
-In some tasks, you might not need anchors at all and could use RelationTokenizer only! Check the `paper <https://openreview.net/forum?id=xMJWUKJnFSw>`_ for more results.
+* keeping `num_anchors` as 1-10% of total nodes in the graph is a good start
+* graph density is a major factor: the denser the graph, the fewer `num_anchors` you'd need.
+  For dense FB15k237 100 total anchors  (over 15k total nodes) seems to be good enough,
+  while for sparser WN18RR we needed at least 500 anchors (over 40k total nodes).
+  For dense OGB WikiKG2 of 2.5M nodes a vocab of 20K anchors (< 1%) already leads to SOTA results
+* the same applies to anchors per node: you'd need more tokens for sparser graphs and fewer for denser
+* the size of the relational context depends on the density and number of unique relations in the graph,
+  eg, in FB15k237 we have 237 * 2 = 474 unique relations and only 11 * 2 = 22 in WN18RR.
+  If we select a too large context, most tokens will be `PADDING_TOKEN` and we don't want that.
+* reported relational context sizes (relations per node) in the NodePiece paper
+  `are 66th percentiles <https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/lp_rp/pykeen105/nodepiece_rotate.py#L173>`_
+  of the number of unique incident relations per node, eg 12 for FB15k237 and 5 for WN18RR
+
+In some tasks, you might not need anchors at all and could use RelationTokenizer only!
+Check the `paper <https://openreview.net/forum?id=xMJWUKJnFSw>`_ for more results.
+
 * In inductive link prediction tasks we don't use anchors as inference graphs are disconnected from training ones;
 * in relation prediction we found that just a relational context is better than anchors + relations;
-* in node classification (currently, this pipeline is not available in PyKEEN) on dense relation-rich graphs like Wikidata, we found that just a relational context is better than anchors + relations.
+* in node classification (currently, this pipeline is not available in PyKEEN) on dense relation-rich graphs
+  like Wikidata, we found that just a relational context is better than anchors + relations.
 
 Using NodePiece in a pipeline
 -----------------------------
@@ -206,8 +217,8 @@ Let's pack the last NodePiece model into the pipeline:
 
     import torch.nn
 
-    from pykeen.pipeline import pipeline
     from pykeen.models import NodePiece
+    from pykeen.pipeline import pipeline
 
     result = pipeline(
         dataset="fb15k237",
