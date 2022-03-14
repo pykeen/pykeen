@@ -18,6 +18,7 @@ from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from tqdm.auto import tqdm
 
+from .perceptron import ConcatMLP
 from .representation import Representation
 from ..constants import AGGREGATIONS, PYKEEN_MODULE
 from ..triples import CoreTriplesFactory
@@ -825,6 +826,8 @@ tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
 
 def resolve_aggregation(
     aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]],
+    total_num_tokens: Optional[int] = None,
+    dim: Optional[int] = None,
 ) -> Callable[[torch.FloatTensor, int], torch.FloatTensor]:
     """
     Resolve the aggregation function.
@@ -841,10 +844,13 @@ def resolve_aggregation(
     :return:
         the chosen aggregation function.
     """
+    # Create an MLP for string aggregation
     if aggregation is None:
         return torch.mean
 
     if isinstance(aggregation, str):
+        if aggregation == "mlp":
+            return ConcatMLP(num_tokens=total_num_tokens, embedding_dim=dim)
         if aggregation not in AGGREGATIONS:
             logger.warning(
                 f"aggregation={aggregation} is not one of the predefined ones ({sorted(AGGREGATIONS.keys())}).",
@@ -1096,7 +1102,7 @@ class NodePieceRepresentation(Representation):
         self.token_representations = torch.nn.ModuleList(token_representations)
 
         # Assign default aggregation
-        self.aggregation = resolve_aggregation(aggregation=aggregation)
+        self.aggregation = resolve_aggregation(aggregation=aggregation, total_num_tokens=sum(num_tokens), dim=shape[0])
         self.aggregation_index = -(1 + len(shape))
 
     def extra_repr(self) -> str:  # noqa: D102
