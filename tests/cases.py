@@ -1898,9 +1898,10 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
     num_tokens: int = 2
     factory: CoreTriplesFactory
 
-    def post_instantiation_hook(self) -> None:
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         """Prepare triples."""
         self.factory = Nations().training
+        return {}
 
     def test_call(self):
         """Test __call__."""

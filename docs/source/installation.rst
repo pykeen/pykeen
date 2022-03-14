@@ -37,17 +37,12 @@ hosted and local installations, change it slightly to check if PyKEEN is already
     ! python -c "import pykeen" || pip install git+https://github.com/pykeen/pykeen.git
     pykeen.env()
 
-If you're having trouble with imports related to the plugin systems, try adding the following lines:
+.. note::
 
-.. code-block:: python
-
-    from pkg_resources import require
-    require('pykeen')
-
-.. seealso::
-
-    `PyKEEN issue #373 <https://github.com/pykeen/pykeen/issues/373>`_ for more information or if you
-    would like to discuss further
+    Old versions of PyKEEN that used :mod:`class_resolve` version 0.3.4 and below loaded
+    datasets via entrypoints. This was unpredictable on Kaggle and Google Colab, so it was
+    removed in https://github.com/pykeen/pykeen/pull/832. More information can also be found
+    on `PyKEEN issue #373 <https://github.com/pykeen/pykeen/issues/373>`_.
 
 To enable GPU usage, go to the Runtime -> Change runtime type menu to enable a GPU with your notebook.
 
