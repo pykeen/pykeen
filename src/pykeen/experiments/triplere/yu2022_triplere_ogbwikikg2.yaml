@@ -10,8 +10,8 @@ pipeline:
   evaluator_kwargs:
     filtered: true
     # use the given set of negatives
-    head_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/test.pt"
-    tail_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/test.pt"
+    head_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/valid.pt"
+    tail_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/valid.pt"
   loss: nssa
   model: TripleRE
   model_kwargs:

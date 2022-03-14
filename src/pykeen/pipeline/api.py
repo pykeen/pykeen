@@ -1252,6 +1252,10 @@ def pipeline(  # noqa: C901
     _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
 
     if use_testing_data:
+        if isinstance(evaluator_instance, SampledRankBasedEvaluator):
+            raise NotImplementedError(
+                "SampledRankBasedEvaluator does support evaluation on different sets during one run"
+            )
         mapped_triples = testing.mapped_triples
     elif validation is None:
         raise ValueError("no validation triples available")
