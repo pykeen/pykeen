@@ -1187,7 +1187,7 @@ def pipeline(  # noqa: C901
         evaluator_kwargs["evaluation_factory"] = validation
         for key in ("head_negatives", "tail_negatives"):
             if hasattr(dataset_instance, key) and getattr(dataset_instance, key) is not None:
-                evaluation_kwargs[key] = getattr(dataset_instance, key)
+                evaluator_kwargs[key] = getattr(dataset_instance, key)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
     _result_tracker.log_params(
         params=dict(
