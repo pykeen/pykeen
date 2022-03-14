@@ -4,14 +4,14 @@
 
 from typing import Any, ClassVar, Mapping, Optional, Tuple
 
-from class_resolver import OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import Embedding, representation_resolver
 from ...nn.modules import TripleREInteraction
-from ...nn.node_piece import AnchorTokenizer, NodePieceRepresentation, RelationTokenizer
+from ...nn.node_piece import NodePieceRepresentation, PrecomputedPoolTokenizer, RelationTokenizer, Tokenizer
 from ...triples import CoreTriplesFactory
 from ...typing import Hint, Initializer
 
@@ -50,6 +50,7 @@ class TripleRE(ERModel):
         power_norm: bool = False,
         initializer: Hint[Initializer] = uniform_,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        anchor_tokenizer: HintOrType[Tokenizer] = PrecomputedPoolTokenizer,
         anchor_tokenizer_kwargs: OptionalKwargs = None,
         num_tokens: Tuple[int, int] = (20, 12),
         node_piece_kwargs: OptionalKwargs = None,
@@ -64,6 +65,8 @@ class TripleRE(ERModel):
             the initializer used for anchor and relation representations.
         :param initializer_kwargs:
             additional initializer keyword-based parameters
+        :param anchor_tokenizer:
+            the anchor tokenizer
         :param anchor_tokenizer_kwargs:
             additional keyword-based parameters passed to the anchor tokenizer.
         :param num_tokens:
@@ -105,8 +108,7 @@ class TripleRE(ERModel):
                 ],
                 tokenizers=[
                     RelationTokenizer,
-                    # TODO: use anchor distances
-                    AnchorTokenizer,
+                    anchor_tokenizer,
                 ],
                 tokenizers_kwargs=[
                     #   https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/run_ogb.py#L86-L88
