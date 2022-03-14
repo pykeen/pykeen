@@ -62,7 +62,7 @@ class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
         base_instance = pykeen.metrics.ranking.ArithmeticMeanRank()
         self.assertNotEqual(
             self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
-            base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            -base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
         )
 
 
