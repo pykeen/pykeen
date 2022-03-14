@@ -14,6 +14,7 @@ import numpy.random
 import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
+from tqdm.auto import tqdm
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
@@ -318,10 +319,17 @@ def sample_negatives(
     all_ids = set(range(num_entities))
     negatives = {}
     for side in [LABEL_HEAD, LABEL_TAIL]:
+        logger.debug(f"Sampling negatives for side={side}")
         this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
         other = [c for c in columns if c != side]
-        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
-            by=other,
+        for _, group in tqdm(
+            pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
+                by=other,
+            ),
+            desc=f"Sampling for {side}",
+            unit="key",
+            unit_scale=True,
+            leave=False,
         ):
             pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
             if len(pool) < num_samples:
