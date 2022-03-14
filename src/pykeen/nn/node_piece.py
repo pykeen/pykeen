@@ -14,7 +14,7 @@ import scipy.sparse
 import scipy.sparse.csgraph
 import torch
 import torch.nn
-from class_resolver import ClassResolver, HintOrType, OptionalKwargs, OneOrManyHintOrType, OneOrManyOptionalKwargs
+from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from tqdm.auto import tqdm
 
 from .representation import Representation
@@ -700,7 +700,7 @@ class PrecomputedTokenizerLoader:
         raise NotImplementedError
 
 
-class GalkinPickleLoader(PrecomputedTokenizerLoader):
+class GalkinPicklePrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
     """
     A loader for pickle files provided by Galkin et al.
 
@@ -726,7 +726,7 @@ class GalkinPickleLoader(PrecomputedTokenizerLoader):
 
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
     base=PrecomputedTokenizerLoader,
-    default=GalkinPickleLoader,
+    default=GalkinPicklePrecomputedTokenizerLoader,
 )
 
 
@@ -765,6 +765,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         download_kwargs: OptionalKwargs = None,
         pool: Optional[Mapping[int, Collection[int]]] = None,
         randomize_selection: bool = False,
+        loader: HintOrType[PrecomputedTokenizerLoader] = None,
     ):
         """
         Initialize the tokenizer.
@@ -783,10 +784,11 @@ class PrecomputedPoolTokenizer(Tokenizer):
             the precomputed pools.
         :param randomize_selection:
             whether to randomly choose from tokens, or always take the first `num_token` precomputed tokens.
-
+        :param loader:
+            the loader to use for loading the pool
         """
         self.pool, self.vocabulary_size = self._load_pool(
-            path=path, url=url, pool=pool, download_kwargs=download_kwargs
+            path=path, url=url, pool=pool, download_kwargs=download_kwargs, loader=loader
         )
         # verify pool
         if set(self.pool.keys()) != set(range(len(self.pool))):
