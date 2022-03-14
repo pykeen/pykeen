@@ -204,6 +204,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..evaluation.rank_based_evaluator import SampledRankBasedEvaluator
 from ..evaluation.ranking_metric_lookup import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
@@ -1182,6 +1183,8 @@ def pipeline(  # noqa: C901
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
+    if isinstance(evaluator_resolver.lookup(evaluator), SampledRankBasedEvaluator):
+        evaluator_kwargs["evaluation_factory"] = validation
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
     _result_tracker.log_params(
         params=dict(
