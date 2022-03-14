@@ -369,7 +369,8 @@ class LazyDataset(Dataset):
     def _load_validation(self) -> None:
         raise NotImplementedError
 
-    def _help_cache(self, cache_root: Union[None, str, pathlib.Path]) -> pathlib.Path:
+    @classmethod
+    def _help_cache(cls, cache_root: Union[None, str, pathlib.Path]) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
         :param cache_root: If none is passed, defaults to a subfolder of the
@@ -381,14 +382,15 @@ class LazyDataset(Dataset):
         if cache_root is None:
             cache_root = PYKEEN_DATASETS
         cache_root = pathlib.Path(cache_root).resolve()
-        cache_root = self._extend_cache_root(cache_root=cache_root)
+        cache_root = cls._extend_cache_root(cache_root=cache_root)
         cache_root.mkdir(parents=True, exist_ok=True)
         logger.debug("using cache root at %s", cache_root.as_uri())
         return cache_root
 
-    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:
+    @classmethod
+    def _extend_cache_root(cls, cache_root: pathlib.Path) -> pathlib.Path:
         """Get appropriate cache sub-directory."""
-        return cache_root.joinpath(self.__class__.__name__.lower())
+        return cache_root.joinpath(cls.__name__.lower())
 
 
 class PathDataset(LazyDataset):
