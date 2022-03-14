@@ -420,7 +420,10 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # verify input
         for side, side_negatives in negatives.items():
             if side_negatives.shape[0] != evaluation_factory.num_triples:
-                raise ValueError(f"Negatives for {side} are in wrong shape: {side_negatives.shape}")
+                raise ValueError(
+                    f"Negatives for {side} are in wrong shape: {side_negatives.shape}; "
+                    f"expected ({evaluation_factory.num_triples}, *)",
+                )
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
         self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
