@@ -67,7 +67,9 @@ class RankBasedMetric(Metric):
     needs_candidates: ClassVar[bool] = False
 
     @abstractmethod
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:
         """
         Evaluate the metric.
 
@@ -75,6 +77,8 @@ class RankBasedMetric(Metric):
             the individual ranks
         :param num_candidates: shape: s
             the number of candidates for each individual ranking task
+        :param weights: shape: s
+            the weights for the individual ranks
         """
         raise NotImplementedError
 
@@ -233,7 +237,9 @@ class IncreasingZMixin(BaseZMixin):
     .. warning:: This requires a closed-form solution to the expected value and variance
     """
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         v = super().expected_value(num_candidates=num_candidates) - super().__call__(
             ranks=ranks, num_candidates=num_candidates
         )
@@ -247,7 +253,9 @@ class DecreasingZMixin(BaseZMixin):
     .. warning:: This requires a closed-form solution to the expected value and variance
     """
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         v = super().__call__(ranks=ranks, num_candidates=num_candidates) - super().expected_value(
             num_candidates=num_candidates
         )
@@ -261,7 +269,9 @@ class ExpectationNormalizedMixin(RankBasedMetric):
     .. warning:: This requires a closed-form solution to the expected value
     """
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return super().__call__(ranks=ranks, num_candidates=num_candidates) / super().expected_value(
             num_candidates=num_candidates
         )
@@ -288,7 +298,9 @@ class ReindexMixin(RankBasedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         ev = super().expected_value(num_candidates=num_candidates)
         return _safe_divide(super().__call__(ranks=ranks, num_candidates=num_candidates) - ev, 1 - ev)
 
@@ -307,7 +319,9 @@ class ArithmeticMeanRank(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("mean_rank", "mr")
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.asanyarray(ranks).mean().item()
 
     def expected_value(
@@ -349,7 +363,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
@@ -379,7 +393,9 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     increasing = True
     synonyms: ClassVar[Collection[str]] = ("iamr",)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.reciprocal(np.asanyarray(ranks).mean()).item()
 
 
@@ -397,7 +413,9 @@ class GeometricMeanRank(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("gmr",)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return stats.gmean(ranks).item()
 
 
@@ -415,7 +433,9 @@ class InverseGeometricMeanRank(RankBasedMetric):
     increasing = True
     synonyms: ClassVar[Collection[str]] = ("igmr",)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.reciprocal(stats.gmean(ranks)).item()
 
 
@@ -433,7 +453,9 @@ class HarmonicMeanRank(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("hmr",)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return stats.hmean(ranks).item()
 
 
@@ -451,7 +473,9 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("mean_reciprocal_rank", "mrr")
     increasing = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.reciprocal(stats.hmean(ranks)).item()
 
     def expected_value(
@@ -535,7 +559,9 @@ class MedianRank(RankBasedMetric):
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.median(ranks).item()
 
     def expected_value(
@@ -580,7 +606,9 @@ class InverseMedianRank(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.reciprocal(np.median(ranks)).item()
 
 
@@ -597,7 +625,9 @@ class StandardDeviation(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_std", "std")
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.asanyarray(ranks).std().item()
 
 
@@ -614,7 +644,9 @@ class Variance(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_var", "var")
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.asanyarray(ranks).var().item()
 
 
@@ -631,7 +663,9 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_mad", "mad")
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return stats.median_abs_deviation(ranks, scale="normal").item()
 
 
@@ -649,7 +683,9 @@ class Count(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_count",)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return float(np.asanyarray(ranks).size)
 
 
@@ -674,7 +710,9 @@ class HitsAtK(RankBasedMetric):
     def _extra_repr(self) -> Iterable[str]:
         yield f"k={self.k}"
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.less_equal(ranks, self.k).mean().item()
 
     @property
@@ -786,7 +824,9 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return 1.0 - _safe_divide(
             super().__call__(ranks=ranks, num_candidates=num_candidates) - 1.0,
             # E[MR-1] is equivalent to E[MR]-1
