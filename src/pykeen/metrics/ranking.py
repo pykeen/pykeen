@@ -66,6 +66,9 @@ class RankBasedMetric(Metric):
     #: whether the metric requires the number of candidates for each ranking task
     needs_candidates: ClassVar[bool] = False
 
+    #: whether the metric supports weights
+    supports_weights: ClassVar[bool] = False
+
     @abstractmethod
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
