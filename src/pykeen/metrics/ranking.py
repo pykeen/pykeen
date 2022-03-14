@@ -241,7 +241,27 @@ def _safe_divide(x: float, y: float) -> float:
 
 
 class IncreasingZMixin(BaseZMixin):
-    """A mixin to create a z-scored metric.
+    r"""A mixin to create a z-scored metric.
+
+    .. math::
+
+        M* = \frac{\mathbb{E}[M] - M}{\sqrt{V}[M]}
+
+    .. warning::
+        This requires a closed-form solution to the expected value and variance
+    """
+
+    @staticmethod
+    def adjustment(metric: float, mean: float, std: float) -> float:  # noqa: D102
+        return _safe_divide(mean - metric, std)
+
+
+class DecreasingZMixin(BaseZMixin):
+    r"""A mixin to create a z-scored metric.
+
+    .. math::
+
+        M* = \frac{M - \mathbb{E}[M]}{\sqrt{V}[M]}
 
     .. warning:: This requires a closed-form solution to the expected value and variance
     """
@@ -249,17 +269,6 @@ class IncreasingZMixin(BaseZMixin):
     @staticmethod
     def adjustment(metric: float, mean: float, std: float) -> float:  # noqa: D102
         return _safe_divide(metric - mean, std)
-
-
-class DecreasingZMixin(BaseZMixin):
-    """A mixin to create a z-scored metric.
-
-    .. warning:: This requires a closed-form solution to the expected value and variance
-    """
-
-    @staticmethod
-    def adjustment(metric: float, mean: float, std: float) -> float:  # noqa: D102
-        return _safe_divide(mean - metric, std)
 
 
 class ExpectationNormalizedMixin(RankBasedMetric):
