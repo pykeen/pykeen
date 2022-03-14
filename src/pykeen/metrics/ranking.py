@@ -50,6 +50,9 @@ __all__ = [
     "Count",
     #
     "HITS_METRICS",
+    #
+    "weighted_harmonic_mean",
+    "weighted_median",
 ]
 EPSILON = 1.0e-12
 
