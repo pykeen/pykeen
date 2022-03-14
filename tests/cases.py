@@ -2103,6 +2103,22 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         )
         self.assertAlmostEqual(closed, simulated, delta=2)
 
+    def test_weights(self):
+        """Test weighting."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+        generator = numpy.random.default_rng(seed=0)
+        weights = generator.random(size=self.ranks.size)
+        # for sanity checking: give the largest weight to best rank => should improve
+        idx = self.ranks.argmin()
+        weights[idx] = 2.0
+        weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
+        unweighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=None)
+        if self.instance.increasing:
+            self.assertLessEqual(unweighted, weighted)
+        else:
+            self.assertLessEqual(weighted, unweighted)
+
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
     """Test for metric results."""
