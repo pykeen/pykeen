@@ -234,10 +234,10 @@ class IncreasingZMixin(BaseZMixin):
     """
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        v = super().expected_value(num_candidates=num_candidates) - super().__call__(
+        v = super(BaseZMixin, self).expected_value(num_candidates=num_candidates) - super().__call__(
             ranks=ranks, num_candidates=num_candidates
         )
-        std = super().std(num_candidates=num_candidates)
+        std = super(BaseZMixin, self).std(num_candidates=num_candidates)
         return _safe_divide(v, std)
 
 
@@ -248,10 +248,10 @@ class DecreasingZMixin(BaseZMixin):
     """
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        v = super().__call__(ranks=ranks, num_candidates=num_candidates) - super().expected_value(
+        v = super().__call__(ranks=ranks, num_candidates=num_candidates) - super(BaseZMixin, self).expected_value(
             num_candidates=num_candidates
         )
-        std = super().std(num_candidates=num_candidates)
+        std = super(BaseZMixin, self).std(num_candidates=num_candidates)
         return _safe_divide(v, std)
 
 
@@ -349,7 +349,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
