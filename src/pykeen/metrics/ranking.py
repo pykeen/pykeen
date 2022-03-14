@@ -550,6 +550,17 @@ class ZInverseHarmonicMeanRank(DecreasingZMixin, InverseHarmonicMeanRank):
     synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
 
 
+def weighted_median(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Calculate weighted median."""
+    indices = np.argsort(a)
+    s_ranks = a[indices]
+    s_weights = weights[indices]
+    cum_sum = np.cumsum(np.r_[0, s_weights])
+    cum_sum /= cum_sum[-1]
+    idx = np.searchsorted(cum_sum, v=0.5)
+    return s_ranks[idx]
+
+
 @parse_docdata
 class MedianRank(RankBasedMetric):
     """The median rank.
@@ -562,11 +573,15 @@ class MedianRank(RankBasedMetric):
     name = "Median Rank"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
+    supports_weights = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.median(ranks).item()
+        if weights is None:
+            return np.median(ranks).item()
+
+        return weighted_median(a=ranks, weights=weights)
 
     def expected_value(
         self,
