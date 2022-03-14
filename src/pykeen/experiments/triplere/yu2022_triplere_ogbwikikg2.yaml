@@ -42,14 +42,14 @@ pipeline:
     initializer_kwargs:
       a: -0.04
       b: 0.04
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 128
   optimizer: Adam
   optimizer_kwargs:
     lr: 0.001
   training_kwargs:
     batch_size: 512
-    negative_sampler: basic
-    negative_sampler_kwargs:
-      num_negs_per_pos: 128
     num_epochs: 121
     label_smoothing: 0.3
   training_loop: sLCWA
