@@ -416,11 +416,12 @@ class GeometricMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("gmr",)
+    supports_weights = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return stats.gmean(ranks).item()
+        return stats.gmean(ranks, weights=weights).item()
 
 
 @parse_docdata
@@ -443,6 +444,11 @@ class InverseGeometricMeanRank(RankBasedMetric):
         return np.reciprocal(stats.gmean(ranks)).item()
 
 
+def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Calculate weighted harmonic mean."""
+    return weights.sum() / np.average(np.reciprocal(a), weights=weights)
+
+
 @parse_docdata
 class HarmonicMeanRank(RankBasedMetric):
     """The harmonic mean rank.
@@ -456,11 +462,15 @@ class HarmonicMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("hmr",)
+    supports_weights = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return stats.hmean(ranks).item()
+        if weights is None:
+            return stats.hmean(ranks).item()
+
+        return weighted_harmonic_mean(a=ranks, weights=weights).item()
 
 
 @parse_docdata
@@ -705,6 +715,7 @@ class Count(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
+        # TODO: should we return the sum of weights?
         return float(np.asanyarray(ranks).size)
 
 
@@ -721,6 +732,7 @@ class HitsAtK(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms: ClassVar[Collection[str]] = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
     increasing = True
+    supports_weights = True
 
     def __init__(self, k: int = 10) -> None:
         super().__init__()
@@ -732,7 +744,7 @@ class HitsAtK(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.less_equal(ranks, self.k).mean().item()
+        return np.average(np.less_equal(ranks, self.k), weights=weights).item()
 
     @property
     def key(self) -> str:  # noqa: D102
