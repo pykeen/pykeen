@@ -287,6 +287,16 @@ class RankBasedEvaluator(Evaluator):
         return result
 
 
+def _sample(known: np.ndarray, num_entities: int, num_samples: int, generator: torch.Generator) -> torch.Tensor:
+    pool = list(set(range(num_entities)).difference(known.tolist()))
+    # repeat if too few
+    if len(pool) < num_samples:
+        logger.warning(f"There are less than num_samples={num_samples} candidates.")
+        pool = int(math.ceil(num_samples / len(pool))) * pool
+    pool = torch.as_tensor(data=pool, dtype=torch.long)
+    return pool[torch.randperm(len(pool), generator=generator)[:num_samples]]
+
+
 def sample_negatives(
     evaluation_triples: MappedTriples,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
@@ -317,39 +327,21 @@ def sample_negatives(
     )
     num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
     columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
-    num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
     all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
     id_df = df.reset_index()
-    all_ids = set(range(num_entities))
     negatives = {}
     generator = ensure_torch_random_state(random_state=random_seed)
     for side in [LABEL_HEAD, LABEL_TAIL]:
         logger.debug(f"Sampling negatives for side={side}")
-        this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
         other = [c for c in columns if c != side]
         candidates = all_df.groupby(by=other).agg({side: "unique"})
-        for _, group in tqdm(
-            pd.merge(id_df, candidates, on=other, suffixes=["_eval", "_all"]).groupby(
-                by=other,
-            ),
-            desc=f"Sampling for {side}",
-            unit="key",
-            unit_scale=True,
-            leave=False,
-        ):
-            # group.columns: index, side_eval, *others, side_all
-            pool = list(all_ids.difference(group[f"{side}_all"].iloc[0].tolist()))
-            if len(pool) < num_samples:
-                logger.warning(
-                    f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
-                )
-                # repeat
-                pool = int(math.ceil(num_samples / len(pool))) * pool
-            pool = torch.as_tensor(data=pool, dtype=torch.long)
-            for i in group["index"].unique():
-                this_negatives[i, :] = pool[torch.randperm(len(pool), generator=generator)[:num_samples]]
-        negatives[side] = this_negatives
+        df = pd.merge(id_df, candidates, on=other, how="left", suffixes=["_eval", "_all"])
+        negatives[side] = torch.stack(
+            df[f"{side}_all"]
+            .apply(_sample, num_samples=num_samples, num_entities=num_entities, generator=generator)
+            .tolist()
+        )
     return negatives
 
 
