@@ -14,7 +14,8 @@ import scipy.sparse
 import scipy.sparse.csgraph
 import torch
 import torch.nn
-from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from tqdm.auto import tqdm
 
 from .representation import Representation
