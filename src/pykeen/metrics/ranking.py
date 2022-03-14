@@ -400,7 +400,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.reciprocal(_weighted_mean(a=np.asanyarray(ranks), weights=weights)).item()
+        return np.reciprocal(np.average(np.asanyarray(ranks), weights=weights)).item()
 
 
 @parse_docdata
