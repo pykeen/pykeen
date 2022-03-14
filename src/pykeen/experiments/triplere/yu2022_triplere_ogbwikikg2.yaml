@@ -51,7 +51,6 @@ pipeline:
   training_kwargs:
     batch_size: 512
     num_epochs: 121
-    label_smoothing: 0.3
   training_loop: sLCWA
   stopper: early
   stopper_kwargs:
