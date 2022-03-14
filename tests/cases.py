@@ -34,6 +34,7 @@ import numpy.random
 import pytest
 import torch
 import unittest_templates
+from class_resolver import Hint
 from click.testing import CliRunner, Result
 from docdata import get_docdata
 from torch import optim
@@ -52,6 +53,7 @@ from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
+from pykeen.metrics import rank_based_metric_resolver
 from pykeen.metrics.ranking import RankBasedMetric
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
@@ -2011,6 +2013,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     #: the ranks for each individual ranking task
     ranks: numpy.ndarray
 
+    base_metric: ClassVar[Optional[Hint[RankBasedMetric]]] = None
+    base_factor: ClassVar[float] = 1.0
+
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
         self.ranks, self.num_candidates = generate_ranks(
@@ -2102,6 +2107,16 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             num_candidates=self.num_candidates,
         )
         self.assertAlmostEqual(closed, simulated, delta=2)
+
+    def test_different_to_base_metric(self):
+        """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
+        if self.base_metric is None:
+            self.skipTest("no base metric")
+        base_instance = rank_based_metric_resolver.make(self.base_metric)
+        self.assertNotEqual(
+            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            self.base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
+        )
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):

@@ -10,38 +10,41 @@ class AdjustedArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRank
+    base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
+    check_expectation = True
 
 
 class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted arithmetic mean rank index."""
 
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex
+    base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
+    check_expectation = True
 
 
 class ZInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted MRR."""
 
     cls = pykeen.metrics.ranking.ZInverseHarmonicMeanRank
-
-    def test_adjustment(self):
-        """Check that the adjustment happened."""
-        base_instance = pykeen.metrics.ranking.InverseHarmonicMeanRank()
-        self.assertNotEqual(
-            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
-            base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
-        )
+    base_metric = pykeen.metrics.ranking.InverseHarmonicMeanRank
+    check_expectation = True
+    check_variance = True
 
 
 class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted hits at k."""
 
     cls = pykeen.metrics.ranking.AdjustedHitsAtK
+    base_metric = pykeen.metrics.ranking.HitsAtK
+    check_expectation = True
 
 
 class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted MRR."""
 
     cls = pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank
+    base_metric = pykeen.metrics.ranking.InverseHarmonicMeanRank
+    check_expectation = True
 
 
 class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
@@ -56,14 +59,10 @@ class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for z-scored arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.ZArithmeticMeanRank
-
-    def test_adjustment(self):
-        """Check that the adjustment happened."""
-        base_instance = pykeen.metrics.ranking.ArithmeticMeanRank()
-        self.assertNotEqual(
-            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
-            -base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
-        )
+    base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
+    base_factor = -1.0
+    check_expectation = True
+    check_variance = True
 
 
 class CountTests(cases.RankBasedMetricTestCase):
@@ -96,14 +95,9 @@ class ZHitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for z-scored hits at k."""
 
     cls = pykeen.metrics.ranking.ZHitsAtK
-
-    def test_adjustment(self):
-        """Check that the adjustment happened."""
-        base_instance = pykeen.metrics.ranking.HitsAtK()
-        self.assertNotEqual(
-            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
-            base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
-        )
+    base_metric = pykeen.metrics.ranking.HitsAtK
+    check_expectation = True
+    check_variance = True
 
 
 class InverseArithmeticMeanRankTests(cases.RankBasedMetricTestCase):

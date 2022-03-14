@@ -292,6 +292,13 @@ class ReindexMixin(RankBasedMetric):
         ev = super().expected_value(num_candidates=num_candidates)
         return _safe_divide(super().__call__(ranks=ranks, num_candidates=num_candidates) - ev, 1 - ev)
 
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 0.0
+
 
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
@@ -768,6 +775,13 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMixin, ArithmeticMeanRank)
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     increasing = False
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 1.0
 
 
 @parse_docdata
