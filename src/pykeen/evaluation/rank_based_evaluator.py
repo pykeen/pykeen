@@ -22,17 +22,17 @@ from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_r
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
-    ExtendedTarget,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
-    MappedTriples,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
-    RankType,
     SIDE_BOTH,
+    ExtendedTarget,
+    MappedTriples,
+    RankType,
     Target,
     TorchRandomHint,
 )
@@ -328,8 +328,9 @@ def sample_negatives(
         logger.debug(f"Sampling negatives for side={side}")
         this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
         other = [c for c in columns if c != side]
+        candidates = all_df.groupby(by=other).agg({side: "unique"})
         for _, group in tqdm(
-            pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
+            pd.merge(id_df, candidates, on=other, suffixes=["_eval", "_all"]).groupby(
                 by=other,
             ),
             desc=f"Sampling for {side}",
@@ -337,7 +338,8 @@ def sample_negatives(
             unit_scale=True,
             leave=False,
         ):
-            pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+            # group.columns: index, side_eval, *others, side_all
+            pool = list(all_ids.difference(group[f"{side}_all"].iloc[0].tolist()))
             if len(pool) < num_samples:
                 logger.warning(
                     f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
