@@ -171,13 +171,16 @@ def importers():
 
 @ls.command()
 @tablefmt_option
-def datasets(tablefmt: str):
+@click.option("--sort-size", is_flag=True)
+def datasets(tablefmt: str, sort_size: bool):
     """List datasets."""
-    click.echo(_help_datasets(tablefmt))
+    click.echo(_help_datasets(tablefmt, sort_size=sort_size))
 
 
-def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None):
+def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None, sort_size: bool = False):
     lines = _get_dataset_lines(tablefmt=tablefmt, link_fmt=link_fmt)
+    if sort_size:
+        lines = sorted(lines, key=lambda line: line[5], reverse=True)
     return tabulate(
         lines,
         headers=["Name", "Documentation", "Citation", "Entities", "Relations", "Triples"],

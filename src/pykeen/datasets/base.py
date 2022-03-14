@@ -129,10 +129,18 @@ class Dataset:
         """The number of relations."""
         return self.training.num_relations
 
+    @classmethod
+    def docdata(cls, *parts: str) -> Any:
+        """Get docdata for this class."""
+        rv = docdata.get_docdata(cls)
+        for part in parts:
+            rv = rv[part]
+        return rv
+
     @staticmethod
     def triples_sort_key(cls: Type[Dataset]) -> int:
         """Get the number of triples for sorting."""
-        return docdata.get_docdata(cls)["statistics"]["triples"]
+        return cls.docdata("statistics", "triples")
 
     @classmethod
     def triples_pair_sort_key(cls, pair: Tuple[str, Type[Dataset]]) -> int:
