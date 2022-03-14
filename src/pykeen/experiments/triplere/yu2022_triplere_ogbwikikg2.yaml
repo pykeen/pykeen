@@ -5,7 +5,7 @@ metadata:
 pipeline:
   dataset: OGBWikiKG2
   dataset_kwargs:
-    create_inverse_triples: True
+    create_inverse_triples: true
   evaluator: sampled
   evaluator_kwargs:
     filtered: true
@@ -14,13 +14,12 @@ pipeline:
   model: TripleRE
   model_kwargs:
     embedding_dim: 200   # for both anchors and mid relations, as well as for head/tail relations
+    anchor_tokenizer: precomputed-pool
     anchor_tokenizer_kwargs:
-      selection: Mixture
-      selection_kwargs:
-        selections: [ Degree, PageRank, Random ]
-        ratios: [ 0.4, 0.4, 0.2 ]
-        num_anchors: 20000
-    num_tokens: [ 12, 20 ]  # 20 anchors, 12 relations
+      url: "https://nodepiece-data.s3.ca-central-1.amazonaws.com/ogb-wikikg2/ogbl-wikikg2_20000_anchors_20000_paths_d0.4_b0.0_p0.4_r0.2_pykeen_50sp_bfs.pkl"
+      loader: galkin-pickle
+      randomize_selection: false
+    num_tokens: [ 12, 20 ]  # 12 relations, 20 anchors
     node_piece_kwargs:
       aggregation: mlp
       # L2 normalization of entity representations, cf.
