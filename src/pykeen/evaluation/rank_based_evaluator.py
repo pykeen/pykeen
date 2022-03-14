@@ -413,7 +413,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             raise ValueError("Either both, head and tail negatives must be provided, or none.")
         else:
             negatives = {
-                normalize_negatives(negatives=target_negatives, target=target)
+                target: normalize_negatives(negatives=target_negatives, target=target)
                 for target, target_negatives in zip([LABEL_HEAD, LABEL_TAIL], [head_negatives, tail_negatives])
             }
 
