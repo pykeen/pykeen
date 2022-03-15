@@ -373,7 +373,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
@@ -387,6 +387,33 @@ class ZArithmeticMeanRank(IncreasingZMixin, ArithmeticMeanRank):
 
     name = "z-Mean Rank (ZMR)"
     synonyms: ClassVar[Collection[str]] = ("zamr", "zmr")
+
+
+@parse_docdata
+class ZArithmeticMeanRank2(RankBasedMetric):
+    """The z-scored arithmetic mean rank.
+
+    ---
+    link: https://github.com/pykeen/pykeen/pull/814
+    description: The z-scored mean rank
+    """
+
+    name = "z-Mean Rank (ZMR) - test"
+    value_range = ValueRange()
+    needs_candidates = True
+    increasing = True
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:
+        num_candidates = np.asanyarray(num_candidates)
+        mean = 0.5 * (1 + num_candidates.mean())
+        std = ((num_candidates.mean() ** 2 - 1) / 12.0) ** 0.5
+        return ((mean - np.asanyarray(ranks).mean()) / std).item()
+
+    def expected_value(self, num_candidates: np.ndarray, num_samples: Optional[int] = None) -> float:
+        return 0.0
+
+    def variance(self, num_candidates: np.ndarray, num_samples: Optional[int] = None) -> float:
+        return 1.0
 
 
 @parse_docdata
