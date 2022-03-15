@@ -1,9 +1,11 @@
 """Node Piece representations."""
 
 import logging
+import pathlib
+import pickle
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
+from typing import Callable, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy.linalg
@@ -13,13 +15,14 @@ import scipy.sparse.csgraph
 import torch
 import torch.nn
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from tqdm.auto import tqdm
 
-from .representation import EmbeddingSpecification, Representation
-from ..constants import AGGREGATIONS
+from .representation import Representation
+from ..constants import AGGREGATIONS, PYKEEN_MODULE
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import format_relative_comparison, upgrade_to_sequence
+from ..utils import broadcast_upgrade_to_sequences, format_relative_comparison
 
 __all__ = [
     "AnchorSelection",
@@ -40,11 +43,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
-    """Sample without replacement."""
-    return rs[torch.randperm(rs.shape[0])[:k]]
 
 
 class Tokenizer:
@@ -105,17 +103,7 @@ class RelationTokenizer(Tokenizer):
             e2r[e].add(r)
 
         # randomly sample without replacement num_tokens relations for each entity
-        assignment = torch.full(
-            size=(num_entities, num_tokens),
-            dtype=torch.long,
-            fill_value=-1,
-        )
-        for e, rs in e2r.items():
-            rs = torch.as_tensor(data=list(rs), dtype=torch.long)
-            rs = _sample(rs=rs, k=num_tokens)
-            assignment[e, : len(rs)] = rs
-
-        return 2 * num_relations + 1, assignment
+        return 2 * num_relations + 1, _random_sample_no_replacement(pool=e2r, num_tokens=num_tokens)
 
 
 def _edge_index_to_sparse_matrix(
@@ -685,6 +673,147 @@ class AnchorTokenizer(Tokenizer):
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
 
 
+def _random_sample_no_replacement(
+    pool: Mapping[int, Collection[int]],
+    num_tokens: int,
+) -> torch.LongTensor:
+    # randomly sample without replacement num_tokens relations for each entity
+    assignment = torch.full(
+        size=(len(pool), num_tokens),
+        dtype=torch.long,
+        fill_value=-1,
+    )
+    # TODO: vectorization?
+    for idx, this_pool in tqdm(pool.items(), desc="sampling", leave=False, unit_scale=True):
+        this_pool_t = torch.as_tensor(data=list(this_pool), dtype=torch.long)
+        this_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
+        assignment[idx, : len(this_pool_t)] = this_pool
+    return assignment
+
+
+class PrecomputedTokenizerLoader:
+    """A loader for precomputed tokenization."""
+
+    @abstractmethod
+    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:
+        """Load tokenization from the given path."""
+        raise NotImplementedError
+
+
+class GalkinPickleLoader(PrecomputedTokenizerLoader):
+    """
+    A loader for pickle files provided by Galkin et al.
+
+    .. seealso ::
+        https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/download_data.sh
+        https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/download.sh
+    """
+
+    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
+        with path.open(mode="rb") as pickle_file:
+            # contains: anchor_ids, entity_ids, mapping {entity_id -> {"ancs": anchors, "dists": distances}}
+            anchor_ids, mapping = pickle.load(pickle_file)[0::2]
+        logger.info(f"Loaded precomputed pools with {len(anchor_ids)} anchors, and {len(mapping)} pools.")
+        # normalize anchor_ids
+        anchor_map = {a: i for i, a in enumerate(anchor_ids) if a >= 0}
+        # cf. https://github.com/pykeen/pykeen/pull/822#discussion_r822889541
+        # TODO: keep distances?
+        return {
+            key: [anchor_map[a] for a in value["ancs"] if a in anchor_map]
+            for key, value in tqdm(mapping.items(), desc="ID Mapping", unit_scale=True, leave=False)
+        }, len(anchor_map)
+
+
+precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
+    base=PrecomputedTokenizerLoader,
+    default=GalkinPickleLoader,
+)
+
+
+class PrecomputedPoolTokenizer(Tokenizer):
+    """A tokenizer using externally precomputed tokenization."""
+
+    @classmethod
+    def _load_pool(
+        cls,
+        *,
+        path: Optional[pathlib.Path] = None,
+        url: Optional[str] = None,
+        download_kwargs: OptionalKwargs = None,
+        pool: Optional[Mapping[int, Collection[int]]] = None,
+        loader: HintOrType[PrecomputedTokenizerLoader] = None,
+    ) -> Tuple[Mapping[int, Collection[int]], int]:
+        """Load a precomputed pool via one of the supported ways."""
+        if pool is not None:
+            return pool, max(c for candidates in pool.values() for c in candidates) + 1 + 1  # +1 for padding
+        if url is not None and path is None:
+            module = PYKEEN_MODULE.submodule(__name__, tokenizer_resolver.normalize_cls(cls=cls))
+            path = module.ensure(url=url, download_kwargs=download_kwargs)
+        if path is None:
+            raise ValueError("Must provide at least one of pool, path, or url.")
+
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        logger.info(f"Loading precomputed pools from {path}")
+        return precomputed_tokenizer_loader_resolver.make(loader)(path=path)
+
+    def __init__(
+        self,
+        *,
+        path: Optional[pathlib.Path] = None,
+        url: Optional[str] = None,
+        download_kwargs: OptionalKwargs = None,
+        pool: Optional[Mapping[int, Collection[int]]] = None,
+        randomize_selection: bool = False,
+    ):
+        """
+        Initialize the tokenizer.
+
+        .. note ::
+            the preference order for loading the precomputed pools is (1) from the given pool (2) from the given path,
+            and (3) by downloading from the given url
+
+        :param path:
+            a path for a file containing the precomputed pools
+        :param url:
+            an url to download the file with precomputed pools from
+        :param download_kwargs:
+            additional download parameters, passed to pystow.Module.ensure
+        :param pool:
+            the precomputed pools.
+        :param randomize_selection:
+            whether to randomly choose from tokens, or always take the first `num_token` precomputed tokens.
+
+        """
+        self.pool, self.vocabulary_size = self._load_pool(
+            path=path, url=url, pool=pool, download_kwargs=download_kwargs
+        )
+        # verify pool
+        if set(self.pool.keys()) != set(range(len(self.pool))):
+            raise ValueError("Expected pool to contain keys 0...(N-1)")
+        self.randomize_selection = randomize_selection
+
+    def __call__(
+        self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
+    ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
+        if num_entities != len(self.pool):
+            raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
+        if self.randomize_selection:
+            assignment = _random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
+        else:
+            # choose first num_tokens
+            assignment = torch.full(
+                size=(len(self.pool), num_tokens),
+                dtype=torch.long,
+                fill_value=-1,
+            )
+            # TODO: vectorization?
+            for idx, this_pool in self.pool.items():
+                this_pool_t = torch.as_tensor(data=list(this_pool)[:num_tokens], dtype=torch.long)
+                assignment[idx, : len(this_pool_t)] = this_pool_t
+        return self.vocabulary_size, assignment
+
+
 tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
     base=Tokenizer,
     default=RelationTokenizer,
@@ -739,6 +868,7 @@ class TokenizationRepresentation(Representation):
         assignment: torch.LongTensor,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
+        **kwargs,
     ) -> None:
         """
         Initialize the tokenization.
@@ -749,6 +879,8 @@ class TokenizationRepresentation(Representation):
             the token representations
         :param token_representation_kwargs:
             additional keyword-based parameters
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         # needs to be lazily imported to avoid cyclic imports
         from . import representation_resolver
@@ -760,7 +892,7 @@ class TokenizationRepresentation(Representation):
         self.vocabulary_size = (
             token_representation.max_id
             if isinstance(token_representation, Representation)
-            else assignment.max().item() + 1
+            else assignment.max().item() + 2  # exclusive (+1) and including padding (+1)
         )
 
         assignment[padding] = self.vocabulary_size - 1  # = assignment.max().item() + 1
@@ -770,10 +902,9 @@ class TokenizationRepresentation(Representation):
         token_representation = representation_resolver.make(
             token_representation,
             token_representation_kwargs,
-            # TODO: Embedding uses a different name
-            num_embeddings=self.vocabulary_size,
+            max_id=self.vocabulary_size,
         )
-        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
+        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape, **kwargs)
 
         # input validation
         if token_representation.max_id < self.vocabulary_size:
@@ -796,10 +927,12 @@ class TokenizationRepresentation(Representation):
         cls,
         tokenizer: Tokenizer,
         num_tokens: int,
-        token_representation: Union[EmbeddingSpecification, Representation],
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
+        token_representation: HintOrType[Representation] = None,
+        token_representation_kwargs: OptionalKwargs = None,
+        **kwargs,
     ) -> "TokenizationRepresentation":
         """
         Create a tokenization from applying a tokenizer.
@@ -816,6 +949,8 @@ class TokenizationRepresentation(Representation):
             the number of entities
         :param num_relations:
             the number of relations
+        :param kwargs:
+            additional keyword-based parameters passed to TokenizationRepresentation.__init__
         """
         # apply tokenizer
         vocabulary_size, assignment = tokenizer(
@@ -824,10 +959,12 @@ class TokenizationRepresentation(Representation):
             num_entities=num_entities,
             num_relations=num_relations,
         )
-        # create token representations if necessary
-        if isinstance(token_representation, EmbeddingSpecification):
-            token_representation = token_representation.make(num_embeddings=vocabulary_size)
-        return TokenizationRepresentation(assignment=assignment, token_representation=token_representation)
+        return TokenizationRepresentation(
+            assignment=assignment,
+            token_representation=token_representation,
+            token_representation_kwargs=token_representation_kwargs,
+            **kwargs,
+        )
 
     def extra_repr(self) -> str:  # noqa: D102
         return "\n".join(
@@ -838,7 +975,7 @@ class TokenizationRepresentation(Representation):
             )
         )
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -866,18 +1003,21 @@ class NodePieceRepresentation(Representation):
     """
 
     #: the token representations
-    tokenizations: Sequence[TokenizationRepresentation]
+    token_representations: Sequence[TokenizationRepresentation]
 
     def __init__(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representations: OneOrSequence[Union[EmbeddingSpecification, Representation]],
+        token_representations: OneOrSequence[HintOrType[Representation]] = None,
+        token_representation_kwargs: OneOrSequence[OptionalKwargs] = None,
         tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
         tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
+        max_id: Optional[int] = None,
         shape: Optional[Sequence[int]] = None,
+        **kwargs,
     ):
         """
         Initialize the representation.
@@ -888,7 +1028,7 @@ class NodePieceRepresentation(Representation):
             the token representation specification, or pre-instantiated representation module.
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
-        :param tokenizer_kwargs:
+        :param tokenizers_kwargs:
             additional keyword-based parameters passed to the tokenizer upon construction.
         :param num_tokens:
             the number of tokens for each entity.
@@ -904,43 +1044,53 @@ class NodePieceRepresentation(Representation):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
+        if max_id:
+            assert max_id == triples_factory.num_entities
+
         # normalize triples
         mapped_triples = triples_factory.mapped_triples
         if triples_factory.create_inverse_triples:
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
+        token_representations, token_representation_kwargs, num_tokens = broadcast_upgrade_to_sequences(
+            token_representations, token_representation_kwargs, num_tokens
+        )
+
         # tokenize
-        tokenizations = [
+        token_representations = [
             TokenizationRepresentation.from_tokenizer(
                 tokenizer=tokenizer_inst,
                 num_tokens=num_tokens_,
                 token_representation=token_representation,
+                token_representation_kwargs=token_representation_kwargs,
                 mapped_triples=mapped_triples,
                 num_entities=triples_factory.num_entities,
                 num_relations=triples_factory.real_num_relations,
             )
-            for tokenizer_inst, token_representation, num_tokens_ in zip(
+            for tokenizer_inst, token_representation, token_representation_kwargs, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
-                upgrade_to_sequence(token_representations),
-                upgrade_to_sequence(num_tokens),
+                token_representations,
+                token_representation_kwargs,
+                num_tokens,
             )
         ]
 
         # determine shape
-        shapes = {t.vocabulary.shape for t in tokenizations}
-        if len(shapes) != 1:
-            raise ValueError(f"Inconsistent token shapes: {shapes}")
-        shape = list(shapes)[0]
+        if shape is None:
+            shapes = {t.vocabulary.shape for t in token_representations}
+            if len(shapes) != 1:
+                raise ValueError(f"Inconsistent token shapes: {shapes}")
+            shape = list(shapes)[0]
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape, **kwargs)
 
         # assign module
-        self.tokenizations = torch.nn.ModuleList(tokenizations)
+        self.token_representations = torch.nn.ModuleList(token_representations)
 
         # Assign default aggregation
         self.aggregation = resolve_aggregation(aggregation=aggregation)
@@ -950,13 +1100,13 @@ class NodePieceRepresentation(Representation):
         aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
         return f"aggregation={aggregation_str}, "
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return self.aggregation(
             torch.cat(
-                [tokenization(indices=indices) for tokenization in self.tokenizations],
+                [tokenization(indices=indices) for tokenization in self.token_representations],
                 dim=self.aggregation_index,
             ),
             self.aggregation_index,

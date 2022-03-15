@@ -30,10 +30,12 @@ from unittest.case import SkipTest
 from unittest.mock import patch
 
 import numpy
+import numpy.random
 import pytest
 import torch
 import unittest_templates
 from click.testing import CliRunner, Result
+from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
 from torch.optim import Adagrad, SGD
@@ -51,7 +53,8 @@ from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL, TransE
+from pykeen.metrics.ranking import RankBasedMetric
+from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.mocks import FixedModel
 from pykeen.models.nbase import ERModel
@@ -80,6 +83,7 @@ from pykeen.typing import (
 from pykeen.utils import (
     all_in_bounds,
     get_batchnorm_modules,
+    getattr_or_docdata,
     is_triple_tensor_subset,
     resolve_device,
     set_random_seed,
@@ -920,7 +924,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert set(id(np) for np in new_params) == set(id(p) for p in params)
 
         # check that the parameters where modified
-        num_equal_weights_after_re_init = sum(1 for np in new_params if (np.data == old_content[id(np)]).all())
+        num_equal_weights_after_re_init = sum(
+            1 for new_param in new_params if (new_param.data == old_content[id(new_param)]).all()
+        )
         self.assertEqual(num_equal_weights_after_re_init, self.num_constant_init)
 
     def _check_scores(self, batch, scores) -> None:
@@ -1473,6 +1479,20 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         """Test with all indices."""
         self._test_indices(indices=torch.arange(self.instance.max_id))
 
+    def test_dropout(self):
+        """Test dropout layer."""
+        # create a new instance with guaranteed dropout
+        kwargs = self.instance_kwargs
+        kwargs.pop("dropout", None)
+        dropout_instance = self.cls(**kwargs, dropout=0.1)
+        # set to training mode
+        dropout_instance.train()
+        # check for different output
+        indices = torch.arange(2)
+        # use more samples to make sure that enough values can be dropped
+        a = torch.stack([dropout_instance(indices) for _ in range(20)])
+        assert not (a[0:1] == a).all()
+
 
 class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
     """Tests for message weighting."""
@@ -1878,9 +1898,10 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
     num_tokens: int = 2
     factory: CoreTriplesFactory
 
-    def post_instantiation_hook(self) -> None:
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         """Prepare triples."""
         self.factory = Nations().training
+        return {}
 
     def test_call(self):
         """Test __call__."""
@@ -1967,6 +1988,141 @@ class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.mode
         scores = self.instance.score_h(rt_batch=rt_batch)
         assert scores.shape == (self.batch_size, self.factory.num_entities)
         self._verify(scores)
+
+
+def generate_ranks(
+    num_ranks: int,
+    max_num_candidates: int,
+    seed: Optional[int] = None,
+) -> Tuple[numpy.ndarray, numpy.ndarray]:
+    """
+    Generate random number of candidates, and coherent ranks.
+
+    :param num_ranks:
+        the number of ranks to generate
+    :param max_num_candidates:
+        the maximum number of candidates (e.g., the number of entities)
+    :param seed:
+        the random seed.
+
+    :return: shape: (num_ranks,)
+        a pair of integer arrays, ranks and num_candidates for each individual ranking task
+    """
+    generator = numpy.random.default_rng(seed=seed)
+    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
+    ranks = generator.integers(low=1, high=num_candidates + 1)
+    return ranks, num_candidates
+
+
+class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric]):
+    """A test for rank-based metrics."""
+
+    #: the maximum number of candidates
+    max_num_candidates: int = 17
+
+    #: the number of ranks
+    num_ranks: int = 33
+
+    check_expectation: ClassVar[bool] = False
+    check_variance: ClassVar[bool] = False
+
+    #: the number of candidates for each individual ranking task
+    num_candidates: numpy.ndarray
+
+    #: the ranks for each individual ranking task
+    ranks: numpy.ndarray
+
+    def post_instantiation_hook(self) -> None:
+        """Generate a coherent rank & candidate pair."""
+        self.ranks, self.num_candidates = generate_ranks(
+            num_ranks=self.num_ranks,
+            max_num_candidates=self.max_num_candidates,
+            seed=42,
+        )
+
+    def test_docdata(self):
+        """Test the docdata contents of the metric."""
+        self.assertTrue(hasattr(self.instance, "increasing"))
+        self.assertNotEqual(
+            "", self.cls.__doc__.splitlines()[0].strip(), msg="First line of docstring should not be blank"
+        )
+        self.assertIsNotNone(get_docdata(self.instance), msg="No docdata available")
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "link"))
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "name"))
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "description"))
+        self.assertIsNotNone(self.instance.key)
+
+    def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
+        """Verify call."""
+        x = self.instance(ranks=ranks, num_candidates=num_candidates)
+        # data type
+        assert isinstance(x, float)
+        # value range
+        self.assertIn(x, self.instance.value_range)
+
+    def test_call(self):
+        """Test __call__."""
+        self._test_call(ranks=self.ranks, num_candidates=self.num_candidates)
+
+    def test_call_best(self):
+        """Test __call__ with optimal ranks."""
+        self._test_call(ranks=numpy.ones(shape=(self.num_ranks,)), num_candidates=self.num_candidates)
+
+    def test_call_worst(self):
+        """Test __call__ with worst ranks."""
+        self._test_call(ranks=self.num_candidates, num_candidates=self.num_candidates)
+
+    def test_call_no_candidates(self):
+        """Test __call__ without candidates."""
+        if self.instance.needs_candidates:
+            raise SkipTest(f"{self.instance} requires candidates.")
+        self._test_call(ranks=self.ranks, num_candidates=None)
+
+    def test_increasing(self):
+        """Test correct increasing annotation."""
+        x, y = [
+            self.instance(ranks=ranks, num_candidates=self.num_candidates)
+            for ranks in [
+                # original ranks
+                self.ranks,
+                # better ranks
+                numpy.clip(self.ranks - 1, a_min=1, a_max=None),
+            ]
+        ]
+        if self.instance.increasing:
+            self.assertLessEqual(x, y)
+        else:
+            self.assertLessEqual(y, x)
+
+    def test_expectation(self):
+        """Test the numeric expectation is close to the closed form one."""
+        if not self.check_expectation:
+            self.skipTest("no implementation of closed-form expectation")
+        generator = numpy.random.default_rng(seed=0)
+        simulated = self.instance.numeric_expected_value(
+            num_candidates=self.num_candidates,
+            num_samples=10000,
+            generator=generator,
+        )
+        closed = self.instance.expected_value(
+            num_candidates=self.num_candidates,
+        )
+        self.assertAlmostEqual(closed, simulated, delta=2)
+
+    def test_variance(self):
+        """Test the numeric variance is close to the closed form one."""
+        if not self.check_variance:
+            self.skipTest("no implementation of closed-form expectation")
+        generator = numpy.random.default_rng(seed=0)
+        simulated = self.instance.numeric_variance(
+            num_candidates=self.num_candidates,
+            num_samples=10000,
+            generator=generator,
+        )
+        closed = self.instance.variance(
+            num_candidates=self.num_candidates,
+        )
+        self.assertAlmostEqual(closed, simulated, delta=2)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):

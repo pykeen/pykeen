@@ -44,6 +44,9 @@ class OpenEA(LazyDataset):
         entities: 15000
         relations: 248
         triples: 38265
+        training: 30612
+        testing: 3826
+        validation: 3827
     """
 
     #: The link to the zip file

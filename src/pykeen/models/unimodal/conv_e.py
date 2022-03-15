@@ -13,9 +13,9 @@ from torch.nn import functional as F  # noqa: N812
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import representation_resolver
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
-from ...nn.representation import Embedding, EmbeddingSpecification
 from ...triples import CoreTriplesFactory
 from ...typing import Hint, Initializer
 from ...utils import is_cudnn_error
@@ -152,22 +152,22 @@ class ConvE(EntityRelationEmbeddingModel):
 
         super().__init__(
             triples_factory=triples_factory,
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
         )
 
         # ConvE uses one bias for each entity
-        self.bias_term = Embedding.init_with_device(
-            num_embeddings=self.num_entities,
-            embedding_dim=1,
-            device=self.device,
+        self.bias_term = representation_resolver.make(
+            query=None,
+            max_id=self.num_entities,
+            shape=(1,),  # TODO: switch to scalar?
             initializer=nn.init.zeros_,
         )
 

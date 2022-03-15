@@ -81,6 +81,9 @@ class PharmKG(SingleTabbedDataset):
         entities: 188296
         relations: 39
         triples: 1093236
+        training: 874588
+        testing: 109324
+        validation: 109324
     """
 
     def __init__(
@@ -110,8 +113,10 @@ class PharmKG(SingleTabbedDataset):
 @click.command()
 @verbose_option
 def _main():
+    from pykeen.datasets import get_dataset
+
     for cls in [PharmKG8k, PharmKG]:
-        cls.summarize()
+        get_dataset(dataset=cls).summarize()
 
 
 if __name__ == "__main__":

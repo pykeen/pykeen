@@ -101,3 +101,6 @@ References
 
 .. [zheng2020] Zheng, S., *et al* (2020). `PharmKG: a dedicated knowledge graph benchmark for bomedical data mining
    <https://doi.org/10.1093/bib/bbaa344>`_. *Briefings in Bioinformatics 2020*
+
+.. [berrendorf2020] Berrendorf, M., *et al.* (2020). `On the Ambiguity of Rank-Based Evaluation of Entity Alignment
+   or Link Prediction Methods <http://arxiv.org/abs/2002.06914>`_.

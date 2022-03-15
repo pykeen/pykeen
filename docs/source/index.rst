@@ -53,6 +53,7 @@ PyKEEN
    reference/trackers
    reference/negative_sampling
    reference/evaluation
+   reference/metrics
    reference/hpo
    reference/ablation
    reference/lookup

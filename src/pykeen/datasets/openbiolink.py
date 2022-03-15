@@ -67,7 +67,7 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
     """The low-quality variant of the OpenBioLink dataset.
 
     ---
-    name: OpenBioLink
+    name: OpenBioLink LQ
     citation:
         author: Breit
         year: 2020

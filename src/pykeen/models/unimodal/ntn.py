@@ -9,7 +9,6 @@ from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification
 from ...nn.modules import NTNInteraction
 from ...typing import Initializer
 
@@ -90,21 +89,21 @@ class NTN(ERModel):
                 activation=non_linearity,
                 activation_kwargs=non_linearity_kwargs,
             ),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=[
+            relation_representations_kwargs=[
                 # w: (k, d, d)
-                EmbeddingSpecification(shape=(num_slices, embedding_dim, embedding_dim)),
+                dict(shape=(num_slices, embedding_dim, embedding_dim)),
                 # vh: (k, d)
-                EmbeddingSpecification(shape=(num_slices, embedding_dim)),
+                dict(shape=(num_slices, embedding_dim)),
                 # vt: (k, d)
-                EmbeddingSpecification(shape=(num_slices, embedding_dim)),
+                dict(shape=(num_slices, embedding_dim)),
                 # b: (k,)
-                EmbeddingSpecification(shape=(num_slices,)),
+                dict(shape=(num_slices,)),
                 # u: (k,)
-                EmbeddingSpecification(shape=(num_slices,)),
+                dict(shape=(num_slices,)),
             ],
             **kwargs,
         )

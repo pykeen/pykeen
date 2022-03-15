@@ -12,6 +12,7 @@ import operator
 import os
 import pathlib
 import random
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
@@ -41,6 +42,7 @@ import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
 from class_resolver import normalize_string
+from docdata import get_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -50,6 +52,7 @@ from .version import get_git_hash
 
 __all__ = [
     "at_least_eps",
+    "broadcast_upgrade_to_sequences",
     "compose",
     "clamp_norm",
     "compact_mapping",
@@ -877,6 +880,38 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
 
 
+def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    """Apply upgrade_to_sequence to each input, and afterwards repeat singletons to match the maximum length.
+
+    :param xs: length: m
+        the inputs.
+
+    :return:
+        a sequence of length m, where each element is a sequence and all elements have the same length.
+
+    :raises ValueError:
+        if there is a non-singleton sequence input with length different from the maximum sequence length.
+
+    >>> broadcast_upgrade_to_sequences(1)
+    ((1,),)
+    >>> broadcast_upgrade_to_sequences(1, 2)
+    ((1,), (2,))
+    >>> broadcast_upgrade_to_sequences(1, (2, 3))
+    ((1, 1), (2, 3))
+    """
+    # upgrade to sequence
+    xs_ = [upgrade_to_sequence(x) for x in xs]
+    # broadcast
+    max_len = max(map(len, xs_))
+    for i in range(len(xs_)):
+        x = xs_[i]
+        if len(x) < max_len:
+            if len(x) != 1:
+                raise ValueError(f"Length mismatch: maximum length: {max_len}, but encountered length {len(x)}, too.")
+            xs_[i] = tuple(list(x) * max_len)
+    return tuple(xs_)
+
+
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
     """Ensure that all elements in the sequence are upgraded to sequences.
 
@@ -1278,6 +1313,19 @@ def boxe_kg_arity_position_score(
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
 
 
+def getattr_or_docdata(cls, key: str) -> str:
+    """Get the attr or data inside docdata."""
+    if hasattr(cls, key):
+        return getattr(cls, key)
+    getter_key = f"get_{key}"
+    if hasattr(cls, getter_key):
+        return getattr(cls, getter_key)()
+    docdata = get_docdata(cls)
+    if key in docdata:
+        return docdata[key]
+    raise KeyError
+
+
 def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
     """Convert a tensor of triples to a set of int-tuples."""
     return set(map(tuple, tensor.tolist()))
@@ -1306,6 +1354,15 @@ def create_relation_to_entity_set_mapping(
         heads[r].add(h)
         tails[r].add(t)
     return heads, tails
+
+
+camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def camel_to_snake(name: str) -> str:
+    """Convert camel-case to snake case."""
+    # cf. https://stackoverflow.com/a/1176023
+    return camel_to_snake_pattern.sub("_", name).lower()
 
 
 if __name__ == "__main__":
