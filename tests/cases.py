@@ -854,7 +854,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     create_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
-    sampler = "default"
+    sampler: Optional[str] = None
 
     #: The batch size for use when testing training procedures
     train_batch_size = 400

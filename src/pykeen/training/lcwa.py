@@ -85,7 +85,10 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         sampler: Optional[str],
     ) -> DataLoader[LCWABatchType]:  # noqa: D102
         if sampler:
-            raise NotImplementedError("Subgraph sampling is currently only supported for SLCWA training.")
+            raise NotImplementedError(
+                f"LCWA training does not support non-default batch sampling. Expected sampler=None, but got "
+                f"sampler='{sampler}'.",
+            )
 
         dataset = triples_factory.create_lcwa_instances(target=self.target)
         return DataLoader(
