@@ -58,7 +58,7 @@ def iter_dataset_classes(
         disable=not use_tqdm,
     )
     for name, dataset_cls in it_tqdm:
-        n_triples = dataset_cls.triples_sort_key()
+        n_triples = Dataset.triples_sort_key(dataset_cls)
         it_tqdm.set_postfix(name=name, triples=f"{n_triples:,}")
         yield name, dataset_cls
 

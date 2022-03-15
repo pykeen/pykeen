@@ -39,6 +39,9 @@ class Hetionet(SingleTabbedDataset):
         entities: 45158
         relations: 24
         triples: 2250197
+        training: 1800157
+        testing: 225020
+        validation: 225020
     """
 
     def __init__(
@@ -64,7 +67,9 @@ class Hetionet(SingleTabbedDataset):
 @click.command()
 @verbose_option
 def _main():
-    ds = Hetionet()
+    from pykeen.datasets import get_dataset
+
+    ds = get_dataset(dataset=Hetionet)
     ds.summarize()
 
 
