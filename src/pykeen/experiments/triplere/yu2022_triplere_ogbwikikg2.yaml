@@ -52,6 +52,7 @@ pipeline:
   optimizer: Adam
   optimizer_kwargs:
     lr: 0.001
+  random_seed: 0
   training_kwargs:
     batch_size: 512
     num_epochs: 121
