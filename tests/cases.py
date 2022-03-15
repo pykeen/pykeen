@@ -1045,7 +1045,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             loop,
             num_epochs=self.train_num_epochs,
             batch_size=self.train_batch_size,
-            sampler="default",
+            sampler=None,
         )
         self.assertIsInstance(losses, list)
 
