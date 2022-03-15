@@ -21,9 +21,9 @@ illustrating purposes.
    dataset = FB15k237(create_inverse_triples=True)
 
 The simplest case of using only relations for tokenization: we put
-:class:`pykeen.nn.node_piece.RelationTokenizer` in the `tokenizers` args
+:class:`pykeen.nn.node_piece.RelationTokenizer` in the ``tokenizers`` args
 (it will automatically get resolved to the correct tokenizer via
-:mod:`class_resolver` and specify `num_tokens=12` to sample 12 unique
+:mod:`class_resolver` and specify ``num_tokens=12`` to sample 12 unique
 relations per node (if for some entities there are less than 12 unique
 relations, the difference will be padded with the auxiliary padding
 token):
@@ -40,8 +40,8 @@ token):
 Next up, we could use both :class:`pykeen.nn.node_piece.AnchorTokenizer`
 and :class:`pykeen.nn.node_piece.RelationTokenizer` to replicate the
 full NodePiece tokenization with `k` anchors and `m` relational context.
-It's as easy as sending a list of tokenizers to `tokenizers` and sending
-a list of arguments to `num_tokens`:
+It's as easy as sending a list of tokenizers to ``tokenizers`` and sending
+a list of arguments to ``num_tokens``:
 
 .. code:: python
 
@@ -55,7 +55,7 @@ a list of arguments to `num_tokens`:
 Class resolver will automatically instantiate
 :class:`pykeen.nn.node_piece.AnchorTokenizer` with 20 anchors per node
 and :class:`pykeen.nn.node_piece.RelationTokenizer` with 12 relations
-per node, so the order of specifying `tokenizers` and `num_tokens`
+per node, so the order of specifying ``tokenizers`` and ``num_tokens``
 matters here.
 
 ********************************
@@ -65,9 +65,9 @@ matters here.
 The :class:`pykeen.nn.node_piece.AnchorTokenizer` has two fields:
 `selection` and `searcher`.
 
--  `selection` controls how we sample anchors from the graph (32 anchors
+-  ``selection`` controls how we sample anchors from the graph (32 anchors
    by default)
--  `searcher` controls how we tokenize nodes using selected anchors
+-  ``searcher`` controls how we tokenize nodes using selected anchors
    (:class:`pykeen.nn.node_piece.CSGraphAnchorSearcher` by default)
 
 By default, our models above use 32 anchors selected as top-degree nodes
@@ -87,7 +87,7 @@ graphs of size like :class:`pykeen.datasets.OGBWikiKG2`.
 32 unique anchors might be a bit too small for FB15k237 with 15k nodes -
 so let's create a :class:`pykeen.models.NodePiece` model with 100
 anchors selected with the top degree strategy by sending the
-`tokenizers_kwargs` list:
+``tokenizers_kwargs`` list:
 
 .. code:: python
 
@@ -108,13 +108,13 @@ anchors selected with the top degree strategy by sending the
        embedding_dim=64,
    )
 
-`tokenizers_kwargs` expects the same number dictionaries as the number
+``tokenizers_kwargs`` expects the same number dictionaries as the number
 of tokenizers you used, so we have 2 dicts here - one for
-`AnchorTokenizer` and another one for `RelationTokenizer` (but this one
+``AnchorTokenizer`` and another one for ``RelationTokenizer`` (but this one
 doesn't need any kwargs so we just put an empty dict there).
 
 Let's create a model with 500 top-pagerank anchors selected with the BFS
-strategy - we'll just modify the `selection` and `searcher` args:
+strategy - we'll just modify the ``selection`` and ``searcher`` args:
 
 .. code:: python
 
@@ -164,14 +164,14 @@ have a :class:`pykeen.nn.node_piece.MixtureAnchorSelection` class!
        embedding_dim=64,
    )
 
-Now the `selection_kwargs` controls which strategies we'll be using and
+Now the ``selection_kwargs`` controls which strategies we'll be using and
 how many anchors each of them will sample - in our case
-`selections=['degree', 'pagerank']`. Using the `ratios` argument we
+``selections=['degree', 'pagerank']``. Using the ``ratios`` argument we
 control the ratio of those sampled anchors in the total pool - in our
-case `ratios=[0.5, 0.5]` which means that both `degree` and `pagerank`
+case ``ratios=[0.5, 0.5]`` which means that both ``degree`` and ``pagerank``
 strategies each will sample 50% from the total number of anchors. Since
 the total number is 500, there will be 250 top-degree anchors and 250
-top-pagerank anchors. `ratios` **must** sum up to 1.0
+top-pagerank anchors. ``ratios`` **must** sum up to 1.0
 
 **Important**: sampled anchors are **unique** - that is, if a node
 appears to be in top-K degree and top-K pagerank, it will be used only
@@ -217,11 +217,11 @@ problems like `k-Dominating Sets
 closed-form solution for each possible dataset, but we found some
 empirical heuristics:
 
--  keeping `num_anchors` as 1-10% of total nodes in the graph is a good
+-  keeping ``num_anchors`` as 1-10% of total nodes in the graph is a good
    start
 
 -  graph density is a major factor: the denser the graph, the fewer
-   `num_anchors` you'd need. For dense FB15k237 100 total anchors (over
+   ``num_anchors`` you'd need. For dense FB15k237 100 total anchors (over
    15k total nodes) seems to be good enough, while for sparser WN18RR we
    needed at least 500 anchors (over 40k total nodes). For dense OGB
    WikiKG2 of 2.5M nodes a vocab of 20K anchors (< 1%) already leads to
@@ -233,7 +233,7 @@ empirical heuristics:
 -  the size of the relational context depends on the density and number
    of unique relations in the graph, eg, in FB15k237 we have 237 * 2 =
    474 unique relations and only 11 * 2 = 22 in WN18RR. If we select a
-   too large context, most tokens will be `PADDING_TOKEN` and we don't
+   too large context, most tokens will be ``PADDING_TOKEN`` and we don't
    want that.
 
 -  reported relational context sizes (relations per node) in the
@@ -303,7 +303,7 @@ We have a :class:`pykeen.nn.node_piece.PrecomputedPoolTokenizer` that
 can be instantiated with a precomputed vocabulary either from a local
 file or using a downloadable link.
 
-For a local file, specify `path`:
+For a local file, specify ``path``:
 
 .. code:: python
 
@@ -317,7 +317,7 @@ For a local file, specify `path`:
        tokenizers=[precomputed_tokenizer, "RelationTokenizer"],
    )
 
-For a remote file, specify the `url`:
+For a remote file, specify the ``url``:
 
 .. code:: python
 
@@ -325,8 +325,8 @@ For a remote file, specify the `url`:
        "precomputedpool", url="http://link/to/vocab.pkl"
    )
 
-Generally, `PrecomputedPoolTokenizer` can use any
-`PrecomputedTokenizerLoader` as a custom processor of vocabulary
+Generally, :class:`pykeen.nn.node_piece.PrecomputedPoolTokenizer` can use any
+:class:`pykeen.nn.node_piece.PrecomputedTokenizerLoader` as a custom processor of vocabulary
 formats. Right now there is one such loader,
 :class:`pykeen.nn.node_piece.GalkinPickleLoader` that expects a
 dictionary of the following format:
@@ -339,7 +339,7 @@ dictionary of the following format:
    }
 
 As of now, we don't use anchor distances, but we expect the anchors in
-`ancs` to be already sorted from nearest to farthest, so the example of
+``ancs`` to be already sorted from nearest to farthest, so the example of
 a precomputed vocab can be:
 
 .. code::
@@ -348,8 +348,8 @@ a precomputed vocab can be:
    2: {'ancs': [22, 37, 14, 10, ...]}  # anchors 22 is the nearest for node 2
 
 **Unmapped** anchors means that anchor IDs are the same node IDs from
-the total set of entities `0... N-1`. In the pickle processing we'll
-convert them to a contiguous range `0 ... num_anchors-1`. Any negative
+the total set of entities ``0... N-1``. In the pickle processing we'll
+convert them to a contiguous range ``0 ... num_anchors-1``. Any negative
 indices in the lists will be treated as padding tokens (we used -99 in
 the precomputed vocabularies).
 
@@ -359,7 +359,7 @@ the precomputed vocabularies).
 
 you can use literally any interaction function available in PyKEEN as a
 scoring function! By default, NodePiece uses DistMult, but it's easy to
-change as in any `ERModel`, let's use the RotatE interaction:
+change as in any :class:`pykeen.models.ERModel`, let's use the RotatE interaction:
 
 .. code:: python
 
@@ -372,8 +372,8 @@ change as in any `ERModel`, let's use the RotatE interaction:
    )
 
 Well, for RotatE we might want to initialize relations as phases
-(`init_phases`) and use an additional relation constrainer to keep the
-`|r| = 1` (`complex_normalize`), and use `xavier_uniform` for anchor
+(``init_phases``) and use an additional relation constrainer to keep
+``|r| = 1`` (``complex_normalize``), and use ``xavier_uniform_`` for anchor
 embedding initialization - let's add that, too:
 
 .. code:: python
@@ -393,7 +393,7 @@ embedding initialization - let's add that, too:
  Configuring the Aggregation Function
 **************************************
 
-This section is about the `aggregation` keyword argument. This is an
+This section is about the ``aggregation`` keyword argument. This is an
 encoder function that actually builds entity representations from token
 embeddings. It is supposed to be a function that maps a set of tokens
 (anchors, relations, or both) to a single vector:
@@ -509,5 +509,5 @@ It is also possible to add a message passing GNN on top of obtained
 NodePiece representations to further enrich node states - we found it
 shows even better results in inductive LP tasks. We have that
 implemented with :class:`pykeen.models.InductiveNodePieceGNN` that uses
-a 2-layer `CompGCN` encoder - please check the Inductive Link Prediction
-tutorial.
+a 2-layer `CompGCN <https://arxiv.org/abs/1911.03082>`_ encoder - please
+check the Inductive Link Prediction tutorial.
