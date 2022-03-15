@@ -40,6 +40,9 @@ class CKG(TabbedDataset):
         entities: 7617419
         relations: 11
         triples: 26691525
+        training: 21353220
+        testing: 2669152
+        validation: 2669153
     """
 
     def __init__(
@@ -97,7 +100,9 @@ class CKG(TabbedDataset):
 @click.command()
 @verbose_option
 def _main():
-    d = CKG()
+    from pykeen.datasets import get_dataset
+
+    d = get_dataset(dataset=CKG)
     d.summarize()
 
 
