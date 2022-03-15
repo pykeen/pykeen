@@ -1185,9 +1185,6 @@ def pipeline(  # noqa: C901
     evaluator_kwargs = dict(evaluator_kwargs)
     if issubclass(evaluator_resolver.lookup(evaluator), SampledRankBasedEvaluator):
         evaluator_kwargs["evaluation_factory"] = validation
-        for key in ("head_negatives", "tail_negatives"):
-            if hasattr(dataset_instance, key) and getattr(dataset_instance, key) is not None:
-                evaluator_kwargs[key] = getattr(dataset_instance, key)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
     _result_tracker.log_params(
         params=dict(
@@ -1253,9 +1250,14 @@ def pipeline(  # noqa: C901
 
     if use_testing_data:
         if isinstance(evaluator_instance, SampledRankBasedEvaluator):
-            raise NotImplementedError(
-                "SampledRankBasedEvaluator does support evaluation on different sets during one run"
+            # recreate evaluator instance; this is required for sampled evaluation, and evaluation on test data.
+            logger.info(
+                f"Recreating evaluator instance, since {evaluator_instance.__class__} required access to the evaluation"
+                f"triples factory.",
             )
+            evaluator_kwargs["evaluation_factory"] = testing
+            # TODO: head / tail negatives are different
+            evaluator_instance = evaluator_resolver.make(evaluator, evaluator_kwargs)
         mapped_triples = testing.mapped_triples
     elif validation is None:
         raise ValueError("no validation triples available")
