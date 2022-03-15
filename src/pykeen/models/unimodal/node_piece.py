@@ -162,7 +162,7 @@ class NodePiece(ERModel):
             entity_representations_kwargs=dict(
                 triples_factory=triples_factory,
                 token_representations=token_representations,
-                token_representation_kwargs=token_representation_kwargs,
+                token_representations_kwargs=token_representation_kwargs,
                 tokenizers=tokenizers,
                 tokenizers_kwargs=tokenizers_kwargs,
                 aggregation=aggregation,
