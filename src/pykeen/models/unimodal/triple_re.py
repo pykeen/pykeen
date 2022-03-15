@@ -9,7 +9,7 @@ from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import Embedding, representation_resolver
+from ...nn import Embedding, SubsetRepresentation, representation_resolver
 from ...nn.modules import TripleREInteraction
 from ...nn.node_piece import NodePieceRepresentation, PrecomputedPoolTokenizer, RelationTokenizer, Tokenizer
 from ...triples import CoreTriplesFactory
@@ -122,14 +122,17 @@ class TripleRE(ERModel):
                 num_tokens=num_tokens,
                 **(node_piece_kwargs or {}),
             ),
-            relation_representations=[None, relation_mid_representation, None],
+            relation_representations=[None, SubsetRepresentation, None],
             relation_representations_kwargs=[
                 dict(
                     shape=embedding_dim,
                     initializer=initializer,
                     initializer_kwargs=initializer_kwargs,
                 ),
-                None,  # already instantiated for NodePiece
+                dict(  # hide padding relation
+                    # max_id=triples_factory.num_relations,  # will get added by ERModel
+                    base=relation_mid_representation,
+                ),
                 dict(
                     shape=embedding_dim,
                     initializer=initializer,
