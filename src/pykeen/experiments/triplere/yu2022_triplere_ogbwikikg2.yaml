@@ -13,6 +13,10 @@ pipeline:
     head_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/valid.pt"
     tail_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/valid.pt"
   loss: nssa
+  loss_kwargs:
+    adversarial_temperature: 1.0
+    margin: 6.0
+    reduction: "mean"
   model: TripleRE
   model_kwargs:
     embedding_dim: 200   # for both anchors and mid relations, as well as for head/tail relations
