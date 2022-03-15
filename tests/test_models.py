@@ -5,6 +5,7 @@
 import importlib
 import itertools
 import os
+import random
 import unittest
 from typing import Any, Iterable, MutableMapping, Optional, Set, Type, Union
 
@@ -142,7 +143,7 @@ class TestDistMult(cases.ModelTestCase):
         actual_k, n_cols = top_triples.shape
         assert n_cols == 3
         if k is None:
-            assert actual_k == self.factory.num_entities**2 * self.factory.num_relations
+            assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
         else:
             assert actual_k == min(k, self.factory.num_triples)
         assert top_scores.shape == (actual_k,)
@@ -685,6 +686,34 @@ class TestTransR(cases.DistanceModelTestCase):
         """
         for emb in (self.instance.entity_embeddings, self.instance.relation_embeddings):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=1.0e-06)
+
+
+class TestTripleRE(cases.ModelTestCase):
+    """Test the TripleRE model."""
+
+    cls = pykeen.models.TripleRE
+    create_inverse_triples = True
+    kwargs = dict(
+        num_tokens=[2, 3],
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+
+        # prepare some precomputed anchors
+        total_num_anchors = self.factory.num_entities // 2
+        anchor_pool = list(range(total_num_anchors))
+        num_precomputed_anchors = 2 * kwargs["num_tokens"][1]
+        pool = {i: random.sample(anchor_pool, k=num_precomputed_anchors) for i in range(self.factory.num_entities)}
+        kwargs["anchor_tokenizer_kwargs"] = dict(pool=pool)
+
+        return kwargs
+
+    def _help_test_cli(self, args):  # noqa: D102
+        num_tokens = self.instance_kwargs.get("num_tokens")
+        if num_tokens is not None and not isinstance(num_tokens, int):
+            self.skipTest(f"CLI only supports integer `num_tokens`, but not {type(num_tokens)}")
+        return super()._help_test_cli(args)
 
 
 class TestTuckEr(cases.ModelTestCase):
