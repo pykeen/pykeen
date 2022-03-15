@@ -403,7 +403,7 @@ embeddings. It is supposed to be a function that maps a set of tokens
    f([a_1, a_2, ...., a_k, r_1, r_2, ..., r_m]) \in \mathbb{R}^{(k+m) \times d} \rightarrow  \mathbb{R}^{d}
 
 Right now, by default we use a simple 2-layer MLP
-(:class`pykeen.nn.perceptron.ConcatMLP`) that concatenates all tokens to
+(:class:`pykeen.nn.perceptron.ConcatMLP`) that concatenates all tokens to
 one long vector and projects it down to model's embedding dimension:
 
 .. code:: python
@@ -417,7 +417,7 @@ one long vector and projects it down to model's embedding dimension:
    )
 
 Aggregation can be parameterized with any neural network
-(`torch.nn.Module`) that would return a single vector from a set of
+(:class:`torch.nn.Module`) that would return a single vector from a set of
 inputs. Let's be fancy 😎 and create a `DeepSet
 <https://arxiv.org/abs/1703.06114>`_ encoder:
 
