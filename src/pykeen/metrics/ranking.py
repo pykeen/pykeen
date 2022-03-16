@@ -268,7 +268,7 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
     ) -> float:  # noqa: D102
         return _safe_divide(
             self.base.variance(num_candidates=num_candidates, num_samples=num_samples),
-            self.base.expected_value(num_candidates=num_candidates, num_samples=num_samples),
+            self.base.expected_value(num_candidates=num_candidates, num_samples=num_samples) ** 2.0,
         )
 
 

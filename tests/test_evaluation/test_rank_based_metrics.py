@@ -38,6 +38,7 @@ class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedHitsAtK
     base_metric = pykeen.metrics.ranking.HitsAtK
     check_expectation = True
+    check_variance = True
 
 
 class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
@@ -46,6 +47,7 @@ class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank
     base_metric = pykeen.metrics.ranking.InverseHarmonicMeanRank
     check_expectation = True
+    check_variance = True
 
 
 class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
