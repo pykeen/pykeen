@@ -156,9 +156,7 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
     base_cls = pykeen.metrics.ranking.RankBasedMetric
     base_test = cases.RankBasedMetricTestCase
     skip_cls = {
-        pykeen.metrics.ranking.BaseZMixin,
-        pykeen.metrics.ranking.IncreasingZMixin,
-        pykeen.metrics.ranking.DecreasingZMixin,
         pykeen.metrics.ranking.ExpectationNormalizedMixin,
         pykeen.metrics.ranking.ReindexMixin,
+        pykeen.metrics.ranking.ZMetric,
     }

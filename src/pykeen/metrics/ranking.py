@@ -18,9 +18,6 @@ __all__ = [
     "rank_based_metric_resolver",
     # Base classes
     "RankBasedMetric",
-    "BaseZMixin",
-    "IncreasingZMixin",
-    "DecreasingZMixin",
     "ExpectationNormalizedMixin",
     "ReindexMixin",
     # Concrete classes
@@ -238,73 +235,6 @@ class ZMetric(RankBasedMetric):
         return 1.0  # re-scaled
 
 
-class BaseZMixin(RankBasedMetric):
-    """A base class for creating a z-scored metric."""
-
-    increasing = True
-    supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
-    value_range = ValueRange(lower=None, upper=None)
-
-    @staticmethod
-    @abstractmethod
-    def adjustment(metric: float, mean: float, std: float) -> float:
-        """Adjust the metric using the expected value and expected standard deviation."""
-        raise NotImplementedError
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return self.adjustment(
-            metric=super().__call__(ranks=ranks, num_candidates=num_candidates),
-            mean=super(BaseZMixin, self).expected_value(num_candidates=num_candidates),
-            std=super(BaseZMixin, self).std(num_candidates=num_candidates),
-        )
-
-    def expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        return 0.0  # centered
-
-    def variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        return 1.0  # re-scaled
-
-
-class IncreasingZMixin(BaseZMixin):
-    r"""A mixin to create a z-scored metric.
-
-    .. math::
-
-        M* = \frac{\mathbb{E}[M] - M}{\sqrt{V}[M]}
-
-    .. warning::
-        This requires a closed-form solution to the expected value and variance
-    """
-
-    @staticmethod
-    def adjustment(metric: float, mean: float, std: float) -> float:  # noqa: D102
-        return _safe_divide(mean - metric, std)
-
-
-class DecreasingZMixin(BaseZMixin):
-    r"""A mixin to create a z-scored metric.
-
-    .. math::
-
-        M* = \frac{M - \mathbb{E}[M]}{\sqrt{V}[M]}
-
-    .. warning:: This requires a closed-form solution to the expected value and variance
-    """
-
-    @staticmethod
-    def adjustment(metric: float, mean: float, std: float) -> float:  # noqa: D102
-        return _safe_divide(metric - mean, std)
-
-
 class ExpectationNormalizedMixin(RankBasedMetric):
     """A mixin to create an expectation-normalized metric.
 
@@ -407,7 +337,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n ** 2 - 1) / 12.0
+        return (n**2 - 1) / 12.0
 
 
 @parse_docdata
@@ -572,7 +502,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
 
 
 @parse_docdata
-class ZInverseHarmonicMeanRank(DecreasingZMixin, InverseHarmonicMeanRank):
+class ZInverseHarmonicMeanRank(ZMetric):
     """The z-inverse harmonic mean rank (ZIHMR).
 
     ---
@@ -582,6 +512,10 @@ class ZInverseHarmonicMeanRank(DecreasingZMixin, InverseHarmonicMeanRank):
 
     name = "z-Mean Reciprocal Rank (ZMRR)"
     synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
+
+    def __init__(self):
+        """Initialize the metric."""
+        super().__init__(base=InverseHarmonicMeanRank)
 
 
 @parse_docdata
@@ -800,7 +734,7 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
 
 
 @parse_docdata
-class ZHitsAtK(DecreasingZMixin, HitsAtK):
+class ZHitsAtK(ZMetric):
     """The z-scored hits at k ($ZAH_k$).
 
     ---
@@ -813,6 +747,10 @@ class ZHitsAtK(DecreasingZMixin, HitsAtK):
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
+
+    def __init__(self, k: int = 10):
+        """Initialize the metri"""
+        super().__init__(base=HitsAtK, base_kwargs=dict(k=k))
 
 
 @parse_docdata
@@ -874,7 +812,7 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
-    skip={BaseZMixin, IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin, ReindexMixin, ZMetric},
+    skip={ExpectationNormalizedMixin, ReindexMixin, ZMetric},
 )
 
 HITS_METRICS: Tuple[Type[RankBasedMetric], ...] = (HitsAtK, ZHitsAtK, AdjustedHitsAtK)
