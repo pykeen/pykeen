@@ -209,7 +209,7 @@ class DerivedRankBasedMetric(RankBasedMetric):
 
     def __init__(self, **kwargs):
         """Initialize the derived metric."""
-        self.base = rank_based_metric_resolver.make(self.__class__.base_cls, kwargs)
+        self.base = self.base_cls(**kwargs)
         self.factor = 1 if self.base.increasing else -1
 
 
