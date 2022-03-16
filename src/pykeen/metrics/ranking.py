@@ -789,13 +789,6 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
         """Initialize the metric."""
         super().__init__(base=ArithmeticMeanRank)
 
-    def expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        return 1.0
-
 
 @parse_docdata
 class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
