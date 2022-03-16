@@ -297,7 +297,14 @@ class ReindexedMetric(DerivedRankBasedMetric):
     ) -> float:  # noqa: D102
         return 0.0
 
-    # TODO add variance based on base expectation?
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        expectation = self.base.expected_value(num_candidates=num_candidates)
+        variance = self.base.variance(num_candidates=num_candidates, num_samples=num_samples)
+        return variance * (1 - expectation)
 
 
 @parse_docdata
