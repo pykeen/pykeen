@@ -344,43 +344,6 @@ class TestSplit(unittest.TestCase):
 class TestLiterals(unittest.TestCase):
     """Class for testing utils for processing numeric literals.tsv."""
 
-    def test_create_lcwa_instances(self):
-        """Test creating LCWA instances."""
-        factory = TriplesNumericLiteralsFactory(triples=triples, numeric_triples=numeric_triples)
-        instances = factory.create_lcwa_instances()
-
-        id_peter = factory.entity_to_id["peter"]
-        id_age = instances.literals_to_id["/lit/hasAge"]
-        id_height = instances.literals_to_id["/lit/hasHeight"]
-        id_num_children = instances.literals_to_id["/lit/hasChildren"]
-
-        self.assertEqual(instances.numeric_literals[id_peter, id_age], 30)
-        self.assertEqual(instances.numeric_literals[id_peter, id_height], 185)
-        self.assertEqual(instances.numeric_literals[id_peter, id_num_children], 2)
-
-        id_susan = factory.entity_to_id["susan"]
-        id_age = instances.literals_to_id["/lit/hasAge"]
-        id_height = instances.literals_to_id["/lit/hasHeight"]
-        id_num_children = instances.literals_to_id["/lit/hasChildren"]
-
-        self.assertEqual(instances.numeric_literals[id_susan, id_age], 28)
-        self.assertEqual(instances.numeric_literals[id_susan, id_height], 170)
-        self.assertEqual(instances.numeric_literals[id_susan, id_num_children], 0)
-
-        id_chocolate_cake = factory.entity_to_id["chocolate_cake"]
-        id_age = instances.literals_to_id["/lit/hasAge"]
-        id_height = instances.literals_to_id["/lit/hasHeight"]
-        id_num_children = instances.literals_to_id["/lit/hasChildren"]
-
-        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_age], 0)
-        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_height], 0)
-        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_num_children], 0)
-
-        # Check if multilabels are working correctly
-        self.assertTrue((instance_mapped_triples == instances.pairs).all())
-        for i, exp in enumerate(instance_labels):
-            self.assertTrue((exp == instances.compressed[i].nonzero()[-1]).all())
-
     def test_triples(self):
         """Test properties of the triples factory."""
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
