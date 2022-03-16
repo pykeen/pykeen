@@ -160,4 +160,5 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
         pykeen.metrics.ranking.ExpectationNormalizedMetric,
         pykeen.metrics.ranking.ReindexedMetric,
         pykeen.metrics.ranking.ZMetric,
+        pykeen.metrics.ranking.DerivedRankBasedMetric,
     }

@@ -201,18 +201,27 @@ def _safe_divide(x: float, y: float) -> float:
     return x / max(y, EPSILON)
 
 
-class ZMetric(RankBasedMetric):
+class DerivedRankBasedMetric(RankBasedMetric):
+    """A derived rank-based metric."""
+
+    base_cls: ClassVar[RankBasedMetric]
+    base: RankBasedMetric
+
+    def __init__(self, **kwargs):
+        """Initialize the derived metric."""
+        self.base = rank_based_metric_resolver.make(self.__class__.base_cls, kwargs)
+        self.factor = 1 if self.base.increasing else -1
+
+
+class ZMetric(DerivedRankBasedMetric):
     """A z-score adjusted metrics."""
 
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     value_range = ValueRange(lower=None, upper=None)
-
-    def __init__(self, base: HintOrType[RankBasedMetric], base_kwargs: OptionalKwargs = None):
-        """Initialize the z-metric."""
-        self.base = rank_based_metric_resolver.make(query=base, pos_kwargs=base_kwargs)
-        self.factor = 1 if self.base.increasing else -1
+    base_cls: ClassVar[RankBasedMetric]
+    base: RankBasedMetric
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         metric = self.base(ranks=ranks, num_candidates=num_candidates)
@@ -235,15 +244,11 @@ class ZMetric(RankBasedMetric):
         return 1.0  # re-scaled
 
 
-class ExpectationNormalizedMetric(RankBasedMetric):
+class ExpectationNormalizedMetric(DerivedRankBasedMetric):
     """A mixin to create an expectation-normalized metric.
 
     .. warning:: This requires a closed-form solution to the expected value
     """
-
-    def __init__(self, base: HintOrType[RankBasedMetric], base_kwargs: OptionalKwargs = None):
-        """Initialize the metric."""
-        self.base = rank_based_metric_resolver.make(query=base, pos_kwargs=base_kwargs)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return _safe_divide(
@@ -265,11 +270,11 @@ class ExpectationNormalizedMetric(RankBasedMetric):
     ) -> float:  # noqa: D102
         return _safe_divide(
             self.base.variance(num_candidates=num_candidates, num_samples=num_samples),
-            self.base.expected_value(num_candidates=num_candidates),
+            self.base.expected_value(num_candidates=num_candidates, num_samples=num_samples),
         )
 
 
-class ReindexedMetric(RankBasedMetric):
+class ReindexedMetric(DerivedRankBasedMetric):
     r"""A mixin to create an expectation normalized metric with max of 1 and expectation of 0.
 
     .. math::
@@ -283,10 +288,6 @@ class ReindexedMetric(RankBasedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
 
-    def __init__(self, base: HintOrType[RankBasedMetric], base_kwargs: OptionalKwargs = None):
-        """Initialize the metric."""
-        self.base = rank_based_metric_resolver.make(query=base, pos_kwargs=base_kwargs)
-
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         expectation = self.base.expected_value(num_candidates=num_candidates)
         return _safe_divide(self.base(ranks=ranks, num_candidates=num_candidates) - expectation, 1 - expectation)
@@ -297,6 +298,8 @@ class ReindexedMetric(RankBasedMetric):
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
         return 0.0
+
+    # TODO add variance based on base expectation?
 
 
 @parse_docdata
@@ -369,10 +372,7 @@ class ZArithmeticMeanRank(ZMetric):
 
     name = "z-Mean Rank (ZMR)"
     synonyms: ClassVar[Collection[str]] = ("zamr", "zmr")
-
-    def __init__(self):
-        """Initialize the metric."""
-        super().__init__(base=ArithmeticMeanRank)
+    base_cls = ArithmeticMeanRank
 
 
 @parse_docdata
@@ -517,10 +517,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexedMetric):
     name = "Adjusted Inverse Harmonic Mean Rank"
     synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
-
-    def __init__(self):
-        """Initialize the metric."""
-        super().__init__(base=InverseHarmonicMeanRank)
+    base_cls = InverseHarmonicMeanRank
 
 
 @parse_docdata
@@ -534,10 +531,7 @@ class ZInverseHarmonicMeanRank(ZMetric):
 
     name = "z-Mean Reciprocal Rank (ZMRR)"
     synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
-
-    def __init__(self):
-        """Initialize the metric."""
-        super().__init__(base=InverseHarmonicMeanRank)
+    base_cls = InverseHarmonicMeanRank
 
 
 @parse_docdata
@@ -753,10 +747,7 @@ class AdjustedHitsAtK(ReindexedMetric):
         "adjusted_hits_at_",
     )
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
-
-    def __init__(self, k: int = 10):
-        """Initialize the module."""
-        super().__init__(base=HitsAtK, base_kwargs=dict(k=k))
+    base_cls = InverseHarmonicMeanRank
 
 
 @parse_docdata
@@ -773,10 +764,7 @@ class ZHitsAtK(ZMetric):
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
-
-    def __init__(self, k: int = 10):
-        """Initialize the metric."""
-        super().__init__(base=HitsAtK, base_kwargs=dict(k=k))
+    base_cls = HitsAtK
 
 
 @parse_docdata
@@ -794,10 +782,7 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     increasing = False
-
-    def __init__(self):
-        """Initialize the metric."""
-        super().__init__(base=ArithmeticMeanRank)
+    base_cls = ArithmeticMeanRank
 
 
 @parse_docdata
@@ -835,7 +820,7 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
-    skip={ExpectationNormalizedMetric, ReindexedMetric, ZMetric},
+    skip={ExpectationNormalizedMetric, ReindexedMetric, ZMetric, DerivedRankBasedMetric},
 )
 
 HITS_METRICS: Tuple[Type[RankBasedMetric], ...] = (HitsAtK, ZHitsAtK, AdjustedHitsAtK)
