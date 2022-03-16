@@ -274,10 +274,6 @@ class BaseZMixin(RankBasedMetric):
         return 1.0  # re-scaled
 
 
-def _safe_divide(x: float, y: float) -> float:
-    return x / max(y, EPSILON)
-
-
 class IncreasingZMixin(BaseZMixin):
     r"""A mixin to create a z-scored metric.
 
