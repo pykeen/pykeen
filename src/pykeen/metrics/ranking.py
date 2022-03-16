@@ -18,8 +18,10 @@ __all__ = [
     "rank_based_metric_resolver",
     # Base classes
     "RankBasedMetric",
+    "DerivedRankBasedMetric",
     "ExpectationNormalizedMetric",
     "ReindexedMetric",
+    "ZMetric",
     # Concrete classes
     "ArithmeticMeanRank",
     "AdjustedArithmeticMeanRank",
@@ -313,7 +315,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
-        expectation = self.base.expected_value(num_candidates=num_candidates)
+        expectation = self.base.expected_value(num_candidates=num_candidates, num_samples=num_samples)
         variance = self.base.variance(num_candidates=num_candidates, num_samples=num_samples)
         return _safe_divide(variance, (1 - expectation) ** 2.0)
 

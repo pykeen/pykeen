@@ -10,7 +10,6 @@ class AdjustedArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRank
-    base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
     check_expectation = True
     check_variance = True
 
@@ -19,7 +18,6 @@ class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted arithmetic mean rank index."""
 
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex
-    base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
     check_expectation = True
 
 
@@ -27,7 +25,6 @@ class ZInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted MRR."""
 
     cls = pykeen.metrics.ranking.ZInverseHarmonicMeanRank
-    base_metric = pykeen.metrics.ranking.InverseHarmonicMeanRank
     check_expectation = True
     check_variance = True
 
@@ -36,7 +33,6 @@ class AdjustedHitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted hits at k."""
 
     cls = pykeen.metrics.ranking.AdjustedHitsAtK
-    base_metric = pykeen.metrics.ranking.HitsAtK
     check_expectation = True
     check_variance = True
 
@@ -45,7 +41,6 @@ class AdjustedInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted MRR."""
 
     cls = pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank
-    base_metric = pykeen.metrics.ranking.InverseHarmonicMeanRank
     check_expectation = True
     check_variance = True
 
@@ -62,7 +57,6 @@ class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for z-scored arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.ZArithmeticMeanRank
-    base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
     check_expectation = True
     check_variance = True
 
@@ -97,7 +91,6 @@ class ZHitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for z-scored hits at k."""
 
     cls = pykeen.metrics.ranking.ZHitsAtK
-    base_metric = pykeen.metrics.ranking.HitsAtK
     check_expectation = True
     check_variance = True
 

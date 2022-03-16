@@ -775,6 +775,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                         model_names.add(value.__name__)
 
         star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
+        # FIXME definitely a type mismatch going on here
         model_names = _remove_non_models(model_names - SKIP_MODULES)
 
         self.assertEqual(model_names, star_model_names, msg="Forgot to add some imports")

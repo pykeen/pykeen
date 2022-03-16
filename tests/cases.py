@@ -55,7 +55,7 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.metrics import rank_based_metric_resolver
-from pykeen.metrics.ranking import RankBasedMetric
+from pykeen.metrics.ranking import RankBasedMetric, DerivedRankBasedMetric
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
@@ -2111,9 +2111,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_different_to_base_metric(self):
         """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
-        if self.base_metric is None:
+        if not isinstance(self.instance, DerivedRankBasedMetric):
             self.skipTest("no base metric")
-        base_instance = rank_based_metric_resolver.make(self.base_metric)
+        base_instance = rank_based_metric_resolver.make(self.instance.base_cls)
         base_factor = 1 if base_instance.increasing else -1
         self.assertNotEqual(
             self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
