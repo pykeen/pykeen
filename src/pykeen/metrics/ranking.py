@@ -286,14 +286,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
     .. warning:: This requires a closed-form solution to the expected value
 
-    Expectation
-    -----------
-
     Since $\mathbb{E}[\mathbb{M} - \mathbb{E}[\mathbb{M}]] = 0$, the expectation of the re-index metric is $0$.
-
-
-    Variance
-    --------
 
     Since $\mathbb{E}[\mathbb{M}$ is constant for a given evaluation set, we abbreviate it as
     $c = \mathbb{E}[\mathbb{M}$. Consequently, we have $\mathbb{M}^{*} = \frac{1}{1-c} \mathbb{M} - \frac{1}{1-c}$, and
