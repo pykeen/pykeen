@@ -7,7 +7,7 @@ from abc import abstractmethod
 from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type
 
 import numpy as np
-from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from class_resolver import ClassResolver
 from docdata import parse_docdata
 from scipy import stats
 
@@ -304,7 +304,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
     ) -> float:  # noqa: D102
         expectation = self.base.expected_value(num_candidates=num_candidates)
         variance = self.base.variance(num_candidates=num_candidates, num_samples=num_samples)
-        return variance * (1 - expectation)
+        return variance * (1 - expectation) ** 2.0
 
 
 @parse_docdata
