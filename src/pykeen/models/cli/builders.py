@@ -38,6 +38,7 @@ _SKIP_ARGS = {
     "activation_kwargs",
     "edge_weighting",
     "relation_representations",
+    "coefficients",  # from AutoSF
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],
