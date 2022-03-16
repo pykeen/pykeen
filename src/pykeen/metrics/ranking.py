@@ -304,7 +304,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
     ) -> float:  # noqa: D102
         expectation = self.base.expected_value(num_candidates=num_candidates)
         variance = self.base.variance(num_candidates=num_candidates, num_samples=num_samples)
-        return variance * (1 - expectation) ** 2.0
+        return variance / (1 - expectation) ** 2.0
 
 
 @parse_docdata
