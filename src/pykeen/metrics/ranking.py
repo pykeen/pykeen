@@ -754,9 +754,9 @@ class AdjustedHitsAtK(ReindexedMetric):
     )
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
-    def __init__(self):
+    def __init__(self, k: int = 10):
         """Initialize the module."""
-        super().__init__(base=HitsAtK)
+        super().__init__(base=HitsAtK, base_kwargs=dict(k=k))
 
 
 @parse_docdata
