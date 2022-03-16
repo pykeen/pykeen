@@ -3,7 +3,7 @@
 """Ranking metrics."""
 
 import math
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type
 
 import numpy as np
@@ -201,10 +201,10 @@ def _safe_divide(x: float, y: float) -> float:
     return x / max(y, EPSILON)
 
 
-class DerivedRankBasedMetric(RankBasedMetric):
+class DerivedRankBasedMetric(RankBasedMetric, ABC):
     """A derived rank-based metric."""
 
-    base_cls: ClassVar[RankBasedMetric]
+    base_cls: ClassVar[Type[RankBasedMetric]]
     base: RankBasedMetric
 
     def __init__(self, **kwargs):
