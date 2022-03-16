@@ -206,6 +206,13 @@ paper for FB15k237 with 40% top degree anchors, 40% top pagerank, and
        embedding_dim=64,
    )
 
+**Note on Anchor Distances**: As of now, the anchor distances are
+considered implicitly, i.e., when performing actual tokenization
+via shortest paths or BFS we do sort anchors by proximity and
+keep top-K nearest.
+The anchor distance embedding as a positional feature to be
+added to anchor embedding is not yet implemented.
+
 ***************************************************************************************************
  How many total anchors `num_anchors` and anchors & relations `num_tokens` do I need for my graph?
 ***************************************************************************************************
@@ -353,6 +360,9 @@ convert them to a contiguous range ``0 ... num_anchors-1``. Any negative
 indices in the lists will be treated as padding tokens (we used -99 in
 the precomputed vocabularies).
 
+The original NodePiece repo has `an example <https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/ogb_tokenizer.py#L180>`_
+of building such a vocabulary format for OGB WikiKG 2.
+
 **************************************
  Configuring the Interaction Function
 **************************************
@@ -464,6 +474,11 @@ in mind is the complexity of the encoder - we found
 :class:`pykeen.nn.perceptron.ConcatMLP` to be a good balance between
 speed and final performance, although at the cost of being not
 permutation invariant to the input set of tokens.
+
+The aggregation function resembles that of GNNs. Non-parametric
+avg/min/max did not work that well in the current tokenization setup,
+so some non-linearity is definitely useful - hence the choice for
+MLP / DeepSets / Transformer as an aggregation function.
 
 Let's wrap our cool NodePiece model with 40/40/20 degree/pagerank/random
 tokenization with the BFS searcher and DeepSet aggregation into a
