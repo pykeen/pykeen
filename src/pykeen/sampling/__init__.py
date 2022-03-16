@@ -125,7 +125,7 @@ __all__ = [
     "negative_sampler_resolver",
 ]
 
-negative_sampler_resolver = ClassResolver.from_subclasses(
+negative_sampler_resolver: ClassResolver[NegativeSampler] = ClassResolver.from_subclasses(
     NegativeSampler,
     default=BasicNegativeSampler,
 )
