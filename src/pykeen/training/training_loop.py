@@ -746,6 +746,25 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         pin_memory: bool,
         sampler: Optional[str],
     ) -> DataLoader[BatchType]:
+        """
+        Create a data loader over training instances.
+
+        :param triples_factory:
+            the training triples' factory
+        :param batch_size:
+            the batch size to use
+        :param drop_last:
+            whether to drop the last (incomplete) batch, cf. torch.utils.data.DataLoader
+        :param num_workers:
+            the number of CPU workers to use for preparing batches, cf. torch.utils.data.DataLoader
+        :param pin_memory:
+            whether to pin the memory, cf. torch.utils.data.DataLoader
+        :param sampler:
+            the batch sampler to use. Either None, or "schlichtkrull".
+
+        :return:
+            a data loader over training instances.
+        """
         raise NotImplementedError
 
     def _forward_pass(
