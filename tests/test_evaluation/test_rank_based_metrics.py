@@ -58,7 +58,7 @@ class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
 class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for z-scored arithmetic mean rank."""
 
-    cls = pykeen.metrics.ranking.ZArithmeticMeanRank2
+    cls = pykeen.metrics.ranking.ZArithmeticMeanRank
     base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
     check_expectation = True
     check_variance = True

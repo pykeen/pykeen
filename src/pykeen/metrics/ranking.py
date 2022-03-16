@@ -7,7 +7,7 @@ from abc import abstractmethod
 from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type
 
 import numpy as np
-from class_resolver import ClassResolver
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from docdata import parse_docdata
 from scipy import stats
 
@@ -200,6 +200,44 @@ class RankBasedMetric(Metric):
         return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples))
 
 
+def _safe_divide(x: float, y: float) -> float:
+    return x / max(y, EPSILON)
+
+
+class ZMetric(RankBasedMetric):
+    """A z-score adjusted metrics."""
+
+    increasing = True
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
+    value_range = ValueRange(lower=None, upper=None)
+
+    def __init__(self, base: HintOrType[RankBasedMetric], base_kwargs: OptionalKwargs = None):
+        """Initialize the z-metric."""
+        self.base = rank_based_metric_resolver.make(query=base, pos_kwargs=base_kwargs)
+        self.factor = 1 if self.base.increasing else -1
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        metric = self.base(ranks=ranks, num_candidates=num_candidates)
+        mean = self.base.expected_value(num_candidates=num_candidates)
+        std = self.base.std(num_candidates=num_candidates)
+        return self.factor * _safe_divide(metric - mean, std)
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 0.0  # centered
+
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return 1.0  # re-scaled
+
+
 class BaseZMixin(RankBasedMetric):
     """A base class for creating a z-scored metric."""
 
@@ -377,7 +415,7 @@ class ArithmeticMeanRank(RankBasedMetric):
 
 
 @parse_docdata
-class ZArithmeticMeanRank(IncreasingZMixin, ArithmeticMeanRank):
+class ZArithmeticMeanRank(ZMetric):
     """The z-scored arithmetic mean rank.
 
     ---
@@ -388,35 +426,9 @@ class ZArithmeticMeanRank(IncreasingZMixin, ArithmeticMeanRank):
     name = "z-Mean Rank (ZMR)"
     synonyms: ClassVar[Collection[str]] = ("zamr", "zmr")
 
-
-@parse_docdata
-class ZArithmeticMeanRank2(ArithmeticMeanRank):
-    """The z-scored arithmetic mean rank.
-
-    ---
-    link: https://github.com/pykeen/pykeen/pull/814
-    description: The z-scored mean rank
-    """
-
-    name = "z-Mean Rank (ZMR) - test"
-    value_range = ValueRange()
-    needs_candidates = True
-    increasing = True
-    synonyms: ClassVar[Collection[str]] = ("zamr2", "zmr2")
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:
-        return IncreasingZMixin.adjustment(
-            metric=super().__call__(ranks=ranks, num_candidates=num_candidates),
-            mean=super().expected_value(num_candidates=num_candidates),
-            std=super().std(num_candidates=num_candidates),  # fails
-            # std=super().variance(num_candidates=num_candidates) ** 0.5,   # works
-        )
-
-    def expected_value(self, num_candidates: np.ndarray, num_samples: Optional[int] = None) -> float:
-        return 0.0
-
-    def variance(self, num_candidates: np.ndarray, num_samples: Optional[int] = None) -> float:
-        return 1.0
+    def __init__(self):
+        """Initialize the metric."""
+        super().__init__(base=ArithmeticMeanRank)
 
 
 @parse_docdata
@@ -866,7 +878,7 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
-    skip={BaseZMixin, IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin, ReindexMixin},
+    skip={BaseZMixin, IncreasingZMixin, DecreasingZMixin, ExpectationNormalizedMixin, ReindexMixin, ZMetric},
 )
 
 HITS_METRICS: Tuple[Type[RankBasedMetric], ...] = (HitsAtK, ZHitsAtK, AdjustedHitsAtK)
