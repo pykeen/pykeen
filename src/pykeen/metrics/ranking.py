@@ -277,7 +277,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
     .. math::
 
-        \mathbb{M}^{*} = $\frac{\mathbb{M} - \mathbb{E}[\mathbb{M}]}{1 - \mathbb{E}[\mathbb{M}]}
+        \mathbb{M}^{*} = \frac{\mathbb{M} - \mathbb{E}[\mathbb{M}]}{1 - \mathbb{E}[\mathbb{M}]}
 
     .. note::
 
@@ -285,6 +285,19 @@ class ReindexedMetric(DerivedRankBasedMetric):
         transformation of the metric, and permits post-hoc re-indexing of published results.
 
     .. warning:: This requires a closed-form solution to the expected value
+
+    Expectation
+    -----------
+
+    Since $\mathbb{E}[\mathbb{M} - \mathbb{E}[\mathbb{M}]] = 0$, the expectation of the re-index metric is $0$.
+
+
+    Variance
+    --------
+
+    Since $\mathbb{E}[\mathbb{M}$ is constant for a given evaluation set, we abbreviate it as
+    $c = \mathbb{E}[\mathbb{M}$. Consequently, we have $\mathbb{M}^{*} = \frac{1}{1-c} \mathbb{M} - \frac{1}{1-c}$, and
+    thus $\mathbb{V}[\mathbb{M}^{*}] = \frac{1}{(1-c)^2} \mathbb{V}[\mathbb{M}]$.
     """
 
     increasing = True
