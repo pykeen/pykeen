@@ -763,7 +763,7 @@ class AdjustedHitsAtK(ReindexedMetric):
         "adjusted_hits_at_",
     )
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
-    base_cls = InverseHarmonicMeanRank
+    base_cls = HitsAtK
 
 
 @parse_docdata
