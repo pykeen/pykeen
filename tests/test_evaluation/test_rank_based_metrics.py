@@ -12,6 +12,7 @@ class AdjustedArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRank
     base_metric = pykeen.metrics.ranking.ArithmeticMeanRank
     check_expectation = True
+    check_variance = True
 
 
 class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):

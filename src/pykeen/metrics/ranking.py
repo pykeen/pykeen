@@ -258,6 +258,17 @@ class ExpectationNormalizedMetric(RankBasedMetric):
     ) -> float:  # noqa: D102
         return 1.0  # centered
 
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        return _safe_divide(
+            self.base.variance(num_candidates=num_candidates, num_samples=num_samples),
+            self.base.expected_value(num_candidates=num_candidates),
+        )
+
+
 
 class ReindexedMetric(RankBasedMetric):
     r"""A mixin to create an expectation normalized metric with max of 1 and expectation of 0.
