@@ -220,8 +220,6 @@ class ZMetric(DerivedRankBasedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     value_range = ValueRange(lower=None, upper=None)
-    base_cls: ClassVar[RankBasedMetric]
-    base: RankBasedMetric
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         metric = self.base(ranks=ranks, num_candidates=num_candidates)
