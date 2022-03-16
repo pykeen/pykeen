@@ -33,6 +33,7 @@ import numpy
 import numpy.random
 import pytest
 import torch
+import torch.utils.data
 import unittest_templates
 from click.testing import CliRunner, Result
 from docdata import get_docdata
@@ -63,7 +64,8 @@ from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples import TriplesFactory, generation
+from pykeen.triples import Instances, TriplesFactory, generation
+from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
@@ -852,7 +854,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     create_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
-    sampler = "default"
+    sampler: Optional[str] = None
 
     #: The batch size for use when testing training procedures
     train_batch_size = 400
@@ -1043,7 +1045,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             loop,
             num_epochs=self.train_num_epochs,
             batch_size=self.train_batch_size,
-            sampler="default",
+            sampler=None,
         )
         self.assertIsInstance(losses, list)
 
@@ -2120,3 +2122,73 @@ class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
         pass
+
+
+class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
+    """Test for training instances."""
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.factory = Nations().training
+        return {}
+
+    @abstractmethod
+    def _get_expected_length(self) -> int:
+        raise NotImplementedError
+
+    def test_getitem(self):
+        """Test __getitem__."""
+        self.instance: Instances
+        assert self.instance[0] is not None
+
+    def test_len(self):
+        """Test __len__."""
+        self.assertEqual(len(self.instance), self._get_expected_length())
+
+    def test_data_loader(self):
+        """Test usage with data loader."""
+        for batch in torch.utils.data.DataLoader(
+            dataset=self.instance, batch_size=2, shuffle=True, collate_fn=self.instance.get_collator()
+        ):
+            assert batch is not None
+
+
+class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[BaseBatchedSLCWAInstances]):
+    """Test for batched sLCWA training instances."""
+
+    batch_size: int = 2
+    num_negatives_per_positive: int = 3
+    kwargs = dict(
+        batch_size=batch_size,
+        negative_sampler_kwargs=dict(
+            num_negs_per_pos=num_negatives_per_positive,
+        ),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.factory = Nations().training
+        kwargs["mapped_triples"] = self.factory.mapped_triples
+        return kwargs
+
+    def test_data_loader(self):
+        """Test data loader."""
+        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
+            assert isinstance(batch, SLCWABatch)
+            assert batch.positives.shape == (self.batch_size, 3)
+            assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
+            assert batch.masks is None
+
+    def test_length(self):
+        """Test length."""
+        assert len(self.instance) == len(list(iter(self.instance)))
+
+    def test_data_loader_multiprocessing(self):
+        """Test data loader with multiple workers."""
+        self.assertEqual(
+            sum(
+                (
+                    batch.positives.shape[0]
+                    for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
+                )
+            ),
+            self.factory.num_triples,
+        )

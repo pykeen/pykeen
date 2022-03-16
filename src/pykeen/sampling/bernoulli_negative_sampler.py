@@ -4,8 +4,9 @@
 
 import torch
 
+from .basic_negative_sampler import random_replacement_
 from .negative_sampler import NegativeSampler
-from ..typing import MappedTriples
+from ..typing import COLUMN_HEAD, COLUMN_TAIL, MappedTriples
 
 __all__ = [
     "BernoulliNegativeSampler",
@@ -70,45 +71,30 @@ class BernoulliNegativeSampler(NegativeSampler):
             self.corrupt_head_probability[r] = tph / (tph + hpt)
 
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
-        if self.num_negs_per_pos > 1:
-            positive_batch = positive_batch.repeat_interleave(repeats=self.num_negs_per_pos, dim=0)
+        batch_shape = positive_batch.shape[:-1]
 
-        # Bind number of negatives to sample
-        num_negs = positive_batch.shape[0]
-
-        # Copy positive batch for corruption.
-        # Do not detach, as no gradients should flow into the indices.
-        negative_batch = positive_batch.clone()
-
-        device = positive_batch.device
         # Decide whether to corrupt head or tail
-        head_corruption_probability = self.corrupt_head_probability[positive_batch[:, 1]]
-        head_mask = torch.rand(num_negs, device=device) < head_corruption_probability.to(device=device)
+        head_corruption_probability = self.corrupt_head_probability[positive_batch[..., 1]].unsqueeze(dim=-1)
+        head_mask = torch.rand(
+            *batch_shape, self.num_negs_per_pos, device=positive_batch.device
+        ) < head_corruption_probability.to(device=positive_batch.device)
 
-        # Tails are corrupted if heads are not corrupted
-        tail_mask = ~head_mask
+        # clone positive batch for corruption (.repeat_interleave creates a copy)
+        negative_batch = positive_batch.view(-1, 3).repeat_interleave(self.num_negs_per_pos, dim=0)
+        # flatten mask
+        head_mask = head_mask.view(-1)
 
-        # We at least make sure to not replace the triples by the original value
-        # See below for explanation of why this is on a range of [0, num_entities - 1]
-        index_max = self.num_entities - 1
+        for index, mask in (
+            (COLUMN_HEAD, head_mask),
+            # Tails are corrupted if heads are not corrupted
+            (COLUMN_TAIL, ~head_mask),
+        ):
+            random_replacement_(
+                batch=negative_batch,
+                index=index,
+                selection=mask,
+                size=mask.sum(),
+                max_index=self.num_entities,
+            )
 
-        # Randomly sample corruption.
-        negative_entities = torch.randint(
-            index_max,
-            size=(num_negs,),
-            device=positive_batch.device,
-        )
-
-        # Replace heads
-        negative_batch[head_mask, 0] = negative_entities[head_mask]
-
-        # Replace tails
-        negative_batch[tail_mask, 2] = negative_entities[tail_mask]
-
-        # To make sure we don't replace the head by the original value
-        # we shift all values greater or equal than the original value by one up
-        # for that reason we choose the random value from [0, num_entities -1]
-        negative_batch[head_mask, 0] += (negative_batch[head_mask, 0] >= positive_batch[head_mask, 0]).long()
-        negative_batch[tail_mask, 2] += (negative_batch[tail_mask, 2] >= positive_batch[tail_mask, 2]).long()
-
-        return negative_batch.view(-1, self.num_negs_per_pos, 3)
+        return negative_batch.view(*batch_shape, self.num_negs_per_pos, 3)

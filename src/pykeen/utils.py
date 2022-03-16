@@ -1365,6 +1365,11 @@ def camel_to_snake(name: str) -> str:
     return camel_to_snake_pattern.sub("_", name).lower()
 
 
+def make_ones_like(prefix: Sequence) -> Sequence[int]:
+    """Create a list of ones of same length as the input sequence."""
+    return [1 for _ in prefix]
+
+
 if __name__ == "__main__":
     import doctest
 
