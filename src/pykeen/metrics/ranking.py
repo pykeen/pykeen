@@ -775,7 +775,7 @@ class ZHitsAtK(ZMetric):
     needs_candidates = True
 
     def __init__(self, k: int = 10):
-        """Initialize the metri"""
+        """Initialize the metric."""
         super().__init__(base=HitsAtK, base_kwargs=dict(k=k))
 
 
