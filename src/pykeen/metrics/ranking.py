@@ -18,8 +18,8 @@ __all__ = [
     "rank_based_metric_resolver",
     # Base classes
     "RankBasedMetric",
-    "ExpectationNormalizedMixin",
-    "ReindexMixin",
+    "ExpectationNormalizedMetric",
+    "ReindexedMetric",
     # Concrete classes
     "ArithmeticMeanRank",
     "AdjustedArithmeticMeanRank",
@@ -235,16 +235,20 @@ class ZMetric(RankBasedMetric):
         return 1.0  # re-scaled
 
 
-class ExpectationNormalizedMixin(RankBasedMetric):
+class ExpectationNormalizedMetric(RankBasedMetric):
     """A mixin to create an expectation-normalized metric.
 
     .. warning:: This requires a closed-form solution to the expected value
     """
 
+    def __init__(self, base: HintOrType[RankBasedMetric], base_kwargs: OptionalKwargs = None):
+        """Initialize the metric."""
+        self.base = rank_based_metric_resolver.make(query=base, pos_kwargs=base_kwargs)
+
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return _safe_divide(
-            super().__call__(ranks=ranks, num_candidates=num_candidates),
-            super().expected_value(num_candidates=num_candidates),
+            self.base(ranks=ranks, num_candidates=num_candidates),
+            self.base.expected_value(num_candidates=num_candidates),
         )
 
     def expected_value(
@@ -255,7 +259,7 @@ class ExpectationNormalizedMixin(RankBasedMetric):
         return 1.0  # centered
 
 
-class ReindexMixin(RankBasedMetric):
+class ReindexedMetric(RankBasedMetric):
     r"""A mixin to create an expectation normalized metric with max of 1 and expectation of 0.
 
     .. math::
@@ -269,9 +273,13 @@ class ReindexMixin(RankBasedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
 
+    def __init__(self, base: HintOrType[RankBasedMetric], base_kwargs: OptionalKwargs = None):
+        """Initialize the metric."""
+        self.base = rank_based_metric_resolver.make(query=base, pos_kwargs=base_kwargs)
+
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        ev = super().expected_value(num_candidates=num_candidates)
-        return _safe_divide(super().__call__(ranks=ranks, num_candidates=num_candidates) - ev, 1 - ev)
+        expectation = self.base.expected_value(num_candidates=num_candidates)
+        return _safe_divide(self.base(ranks=ranks, num_candidates=num_candidates) - expectation, 1 - expectation)
 
     def expected_value(
         self,
@@ -337,7 +345,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
@@ -483,7 +491,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
 
 @parse_docdata
-class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
+class AdjustedInverseHarmonicMeanRank(ReindexedMetric):
     r"""The adjusted MRR index.
 
     .. note ::
@@ -499,6 +507,10 @@ class AdjustedInverseHarmonicMeanRank(ReindexMixin, InverseHarmonicMeanRank):
     name = "Adjusted Inverse Harmonic Mean Rank"
     synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
+
+    def __init__(self):
+        """Initialize the metric."""
+        super().__init__(base=InverseHarmonicMeanRank)
 
 
 @parse_docdata
@@ -707,7 +719,7 @@ class HitsAtK(RankBasedMetric):
 
 
 @parse_docdata
-class AdjustedHitsAtK(ReindexMixin, HitsAtK):
+class AdjustedHitsAtK(ReindexedMetric):
     r"""The adjusted Hits at K ($AH_k$).
 
     .. note ::
@@ -732,6 +744,10 @@ class AdjustedHitsAtK(ReindexMixin, HitsAtK):
     )
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
 
+    def __init__(self):
+        """Initialize the module."""
+        super().__init__(base=HitsAtK)
+
 
 @parse_docdata
 class ZHitsAtK(ZMetric):
@@ -754,7 +770,7 @@ class ZHitsAtK(ZMetric):
 
 
 @parse_docdata
-class AdjustedArithmeticMeanRank(ExpectationNormalizedMixin, ArithmeticMeanRank):
+class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     """The adjusted arithmetic mean rank (AMR).
 
     ---
@@ -768,6 +784,10 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMixin, ArithmeticMeanRank)
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     increasing = False
+
+    def __init__(self):
+        """Initialize the metric."""
+        super().__init__(base=ArithmeticMeanRank)
 
     def expected_value(
         self,
@@ -812,7 +832,7 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
-    skip={ExpectationNormalizedMixin, ReindexMixin, ZMetric},
+    skip={ExpectationNormalizedMetric, ReindexedMetric, ZMetric},
 )
 
 HITS_METRICS: Tuple[Type[RankBasedMetric], ...] = (HitsAtK, ZHitsAtK, AdjustedHitsAtK)
