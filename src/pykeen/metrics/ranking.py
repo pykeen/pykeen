@@ -390,7 +390,7 @@ class ZArithmeticMeanRank(IncreasingZMixin, ArithmeticMeanRank):
 
 
 @parse_docdata
-class ZArithmeticMeanRank2(RankBasedMetric):
+class ZArithmeticMeanRank2(ArithmeticMeanRank):
     """The z-scored arithmetic mean rank.
 
     ---
@@ -402,12 +402,15 @@ class ZArithmeticMeanRank2(RankBasedMetric):
     value_range = ValueRange()
     needs_candidates = True
     increasing = True
+    synonyms: ClassVar[Collection[str]] = ("zamr2", "zmr2")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:
-        num_candidates = np.asanyarray(num_candidates)
-        mean = 0.5 * (1 + num_candidates.mean())
-        std = ((num_candidates.mean() ** 2 - 1) / 12.0) ** 0.5
-        return ((mean - np.asanyarray(ranks).mean()) / std).item()
+        return IncreasingZMixin.adjustment(
+            metric=super().__call__(ranks=ranks, num_candidates=num_candidates),
+            mean=super().expected_value(num_candidates=num_candidates),
+            std=super().std(num_candidates=num_candidates),  # fails
+            # std=super().variance(num_candidates=num_candidates) ** 0.5,   # works
+        )
 
     def expected_value(self, num_candidates: np.ndarray, num_samples: Optional[int] = None) -> float:
         return 0.0
