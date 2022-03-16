@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
+
 import math
 from abc import ABC, abstractmethod
 from typing import Callable, Generic, Iterable, Iterator, List, NamedTuple, Optional, Tuple, TypeVar

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Utilities for PyKEEN."""
+
 import ftplib
 import functools
 import itertools as itt

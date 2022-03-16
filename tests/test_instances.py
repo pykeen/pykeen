@@ -1,4 +1,5 @@
 """Tests for training instances."""
+
 from typing import Any, MutableMapping
 
 from pykeen.triples import LCWAInstances, SLCWAInstances
