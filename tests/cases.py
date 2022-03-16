@@ -55,7 +55,7 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.metrics import rank_based_metric_resolver
-from pykeen.metrics.ranking import RankBasedMetric, DerivedRankBasedMetric
+from pykeen.metrics.ranking import DerivedRankBasedMetric, RankBasedMetric
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
