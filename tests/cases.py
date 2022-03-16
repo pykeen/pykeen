@@ -2015,8 +2015,6 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     #: the ranks for each individual ranking task
     ranks: numpy.ndarray
 
-    base_metric: ClassVar[Optional[Hint[RankBasedMetric]]] = None
-
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
         self.ranks, self.num_candidates = generate_ranks(
