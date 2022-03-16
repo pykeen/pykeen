@@ -12,6 +12,7 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils import data
 
+from .utils import compute_compressed_adjacency_list
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..typing import MappedTriples
 
@@ -249,50 +250,13 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
         )
 
 
-def _compute_compressed_adjacency_list(
-    mapped_triples: MappedTriples,
-    num_entities: Optional[int] = None,
-) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
-    """Compute compressed undirected adjacency list representation for efficient sampling.
-
-    The compressed adjacency list format is inspired by CSR sparse matrix format.
-
-    :param mapped_triples:
-        the ID-based triples
-    :param num_entities:
-        the number of entities.
-
-    :return: a tuple (degrees, offsets, compressed_adj_lists)
-        where
-            degrees: shape: (num_entities,)
-            offsets: shape: (num_entities,)
-            compressed_adj_list: shape: (2*num_triples, 2)
-        with
-            adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
-    """
-    num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
-    num_triples = mapped_triples.shape[0]
-    adj_lists: List[List[Tuple[int, float]]] = [[] for _ in range(num_entities)]
-    for i, (s, _, o) in enumerate(mapped_triples):
-        adj_lists[s].append((i, o.item()))
-        adj_lists[o].append((i, s.item()))
-    degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
-    assert torch.sum(degrees) == 2 * num_triples
-
-    offset = torch.empty(num_entities, dtype=torch.long)
-    offset[0] = 0
-    offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
-    compressed_adj_lists = torch.cat([torch.as_tensor(adj_list, dtype=torch.long) for adj_list in adj_lists], dim=0)
-    return degrees, offset, compressed_adj_lists
-
-
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # indexing
-        self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(
+        self.degrees, self.offset, self.neighbors = compute_compressed_adjacency_list(
             mapped_triples=self.mapped_triples
         )
 
