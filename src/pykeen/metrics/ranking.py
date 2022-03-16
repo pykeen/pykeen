@@ -279,6 +279,11 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
         \mathbb{M}^{*} = $\frac{\mathbb{M} - \mathbb{E}[\mathbb{M}]}{1 - \mathbb{E}[\mathbb{M}]}
 
+    .. note::
+
+        Since $\mathbb{E}[\mathbb{M}$ is a constant for a given evaluation set, this metric is a constant affine
+        transformation of the metric, and permits post-hoc re-indexing of published results.
+
     .. warning:: This requires a closed-form solution to the expected value
     """
 
