@@ -157,12 +157,16 @@ def compute_compressed_adjacency_list(
     :param num_entities:
         the number of entities.
 
-    :return: a tuple (degrees, offsets, compressed_adj_lists)
-        where
-            degrees: shape: (num_entities,)
-            offsets: shape: (num_entities,)
-            compressed_adj_list: shape: (2*num_triples, 2)
+    :return: a tuple `(degrees, offsets, compressed_adj_lists)` where
+
+            - degrees: shape: `(num_entities,)`
+            - offsets: shape: `(num_entities,)`
+            - compressed_adj_list: shape: `(2 * num_triples, 2)`
+
         with
+
+        .. code::
+
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
     num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
