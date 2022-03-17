@@ -560,10 +560,12 @@ class GeometricMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
         m = num_candidates.size
+        # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
         max_val = num_candidates.max()
         x = np.arange(1, max_val + 1, dtype=float)
         x = np.log(x) / m
         x = _log_cumsum_exp(x)
+        # now select from precomputed cumulative sums and aggregate
         x = x[num_candidates - 1] - np.log(num_candidates)
         return np.exp(x.sum())
 
