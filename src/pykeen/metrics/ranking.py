@@ -543,10 +543,11 @@ class GeometricMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         m = num_candidates.size
         max_val = num_candidates.max()
-        vs = np.arange(max_val + 1).astype(float)
-        vs = np.log(vs) / m
-        vs = vs[num_candidates]
-        return scipy.special.logsumexp(vs)
+        x = np.arange(1, max_val + 1, dtype=float)
+        x = np.log(x) / m
+        x = _log_cumsum_exp(x)
+        x = x[num_candidates - 1] - np.log(num_candidates)
+        return np.exp(x.sum())
 
 
 @parse_docdata
