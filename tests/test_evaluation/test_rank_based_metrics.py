@@ -19,6 +19,7 @@ class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex
     check_expectation = True
+    check_variance = True
 
 
 class ZInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
