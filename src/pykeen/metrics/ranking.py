@@ -810,7 +810,7 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
 
 
 @parse_docdata
-class AdjustedArithmeticMeanRankIndex(DerivedRankBasedMetric):
+class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     """The adjusted arithmetic mean rank index (AMRI).
 
     ---
@@ -821,27 +821,7 @@ class AdjustedArithmeticMeanRankIndex(DerivedRankBasedMetric):
     name = "Adjusted Arithmetic Mean Rank Index (AAMRI)"
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms: ClassVar[Collection[str]] = ("adjusted_mean_rank_index", "amri", "aamri")
-    increasing = True
-    supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
     base_cls = ArithmeticMeanRank
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return 1.0 - _safe_divide(
-            self.base(ranks=ranks, num_candidates=num_candidates) - 1.0,
-            # E[MR-1] is equivalent to E[MR]-1
-            self.base.expected_value(num_candidates=num_candidates) - 1.0,
-        )
-
-    def expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:
-        """Analytically calculate the expected value."""
-        return 0.0
-
-    # TODO variance?
 
 
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(

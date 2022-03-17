@@ -20,37 +20,6 @@ class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex
     check_expectation = True
 
-    def test_equivalence(self):
-        """
-        Verify equivalence between original implementation and implementation via re-indexed.
-
-        .. math ::
-
-            AMRI = 1 - (MR - 1) / (E[MR - 1])
-                 = 1 - (MR - 1) / (E[MR] - 1)
-                 = ((E[MR] - 1) - (MR - 1)) / (E[MR] - 1)
-                 = (E[MR] - MR) / (E[MR] - 1)
-                 = -(E[MR] - MR) / -(E[MR] - 1)
-                 = (MR - E[MR]) / (1 - E[MR])
-
-        .. math ::
-
-            M*   = (M - E[M]) / (1 - E[M])
-        """
-
-        class AdjustedArithmeticMeanRankIndex(pykeen.metrics.ranking.ReindexedMetric):
-            """AMRI as re-indexed metric."""
-
-            # TODO: this would be easier if base_class were no class attribute
-
-            base_cls = pykeen.metrics.ranking.ArithmeticMeanRank
-
-        instance = AdjustedArithmeticMeanRankIndex()
-        self.assertAlmostEqual(
-            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
-            instance(ranks=self.ranks, num_candidates=self.num_candidates),
-        )
-
 
 class ZInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted MRR."""
