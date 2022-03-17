@@ -210,13 +210,33 @@ def _safe_divide(x: float, y: float) -> float:
 
 
 class DerivedRankBasedMetric(RankBasedMetric, ABC):
-    """
+    r"""
     A derived rank-based metric.
 
     The derivation is based on an affine transformation of the metric, where scale and bias may depend on the number
     of candidates. Since the transformation only depends on the number of candidates, but not the ranks of the
     predictions, this method can also be used to adjust published results without access to the trained models.
     Moreover, we can obtain closed form solutions for expected value and variance.
+
+    Let $\alpha, \beta$ denote the scale and offset of the affine transformation, i.e.,
+
+    .. math ::
+
+        M^* = \alpha \cdot M + \beta
+
+    Then we have for the expectation
+
+    .. math ::
+
+        \mathbb{E}[M^*] = \mathbb{E}[\alpha \cdot M + \beta]
+                        = \alpha \cdot \mathbb{E}[M] + \beta
+
+    and for the variance
+
+    .. math ::
+
+        \mathbb{V}[M^*] = \mathbb{V}[\alpha \cdot M + \beta]
+                        = \alpha^2 \cdot \mathbb{V}[M]
     """
 
     base_cls: ClassVar[Type[RankBasedMetric]]
@@ -288,6 +308,22 @@ class ZMetric(DerivedRankBasedMetric):
     .. math ::
 
         M^* = \frac{M - \mathbb{E}[M]}{\sqrt{\mathbb{V}[M]}}
+
+    In terms of the affine transformation from DerivedRankBasedMetric, we obtain the following coefficients:
+
+    .. math ::
+
+        \alpha = (\mathbb{V}[M])^{-\frac{1}{2}}
+
+        \beta = -\alpha \cdot \mathbb{E}[M]
+
+    .. note ::
+
+        For non-increasing metrics, i.e., where larger values correspond to better results, we additionally change the
+        sign of the result such that a larger z-value always corresponds to a better result irrespective of the base
+        metric's direction.
+
+    .. warning:: This requires a closed-form solution to the expected value and the variance
     """
 
     increasing = True
@@ -327,14 +363,19 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
 
         M^* = \frac{M}{\mathbb{E}[M]}
 
-    .. warning:: This requires a closed-form solution to the expected value
+    In terms of the affine transformation from DerivedRankBasedMetric, we obtain the following coefficients:
 
-    Since $\mathbb{E}[M]$ does not depend on the input, this is an affine transformation of the metric.
+    .. math ::
+
+        \alpha = (\mathbb{E}[M])^{-1}
+
+        \beta = 0
+
+    .. warning:: This requires a closed-form solution to the expected value
     """
 
     def get_coefficients(self, num_candidates: np.ndarray) -> Tuple[float, float]:  # noqa: D102
-        scale = _safe_divide(1, self.base.expected_value(num_candidates=num_candidates))
-        return scale, 0.0
+        return _safe_divide(1, self.base.expected_value(num_candidates=num_candidates)), 0.0
 
     def expected_value(
         self,
@@ -351,18 +392,15 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
         \mathbb{M}^{*} = \frac{\mathbb{M} - \mathbb{E}[\mathbb{M}]}{1 - \mathbb{E}[\mathbb{M}]}
 
-    .. note::
+    In terms of the affine transformation from DerivedRankBasedMetric, we obtain the following coefficients:
 
-        Since $\mathbb{E}[\mathbb{M}$ is a constant for a given evaluation set, this metric is a constant affine
-        transformation of the metric, and permits post-hoc re-indexing of published results.
+    .. math ::
+
+        \alpha = (1 - \mathbb{E}[M])^{-1}
+
+        \beta = -\alpha \cdot \mathbb{E}[\mathbb{M}]
 
     .. warning:: This requires a closed-form solution to the expected value
-
-    Since $\mathbb{E}[\mathbb{M} - \mathbb{E}[\mathbb{M}]] = 0$, the expectation of the re-index metric is $0$.
-
-    Since $\mathbb{E}[\mathbb{M}$ is constant for a given evaluation set, we abbreviate it as
-    $c = \mathbb{E}[\mathbb{M}$. Consequently, we have $\mathbb{M}^{*} = \frac{1}{1-c} \mathbb{M} - \frac{c}{1-c}$, and
-    thus $\mathbb{V}[\mathbb{M}^{*}] = \frac{1}{(1-c)^2} \mathbb{V}[\mathbb{M}]$.
     """
 
     increasing = True
