@@ -2006,9 +2006,6 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     #: the number of ranks
     num_ranks: int = 33
 
-    check_expectation: ClassVar[bool] = False
-    check_variance: ClassVar[bool] = False
-
     #: the number of candidates for each individual ranking task
     num_candidates: numpy.ndarray
 
@@ -2079,31 +2076,31 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_expectation(self):
         """Test the numeric expectation is close to the closed form one."""
-        if not self.check_expectation:
-            self.skipTest("no implementation of closed-form expectation")
+        try:
+            closed = self.instance.expected_value(num_candidates=self.num_candidates)
+        except ValueError as error:
+            raise SkipTest("no implementation of closed-form expectation") from error
+
         generator = numpy.random.default_rng(seed=0)
         simulated = self.instance.numeric_expected_value(
             num_candidates=self.num_candidates,
             num_samples=10000,
             generator=generator,
         )
-        closed = self.instance.expected_value(
-            num_candidates=self.num_candidates,
-        )
         self.assertAlmostEqual(closed, simulated, delta=2)
 
     def test_variance(self):
         """Test the numeric variance is close to the closed form one."""
-        if not self.check_variance:
-            self.skipTest("no implementation of closed-form expectation")
+        try:
+            closed = self.instance.variance(num_candidates=self.num_candidates)
+        except ValueError as error:
+            raise SkipTest("no implementation of closed-form variance") from error
+
         generator = numpy.random.default_rng(seed=0)
         simulated = self.instance.numeric_variance(
             num_candidates=self.num_candidates,
             num_samples=10000,
             generator=generator,
-        )
-        closed = self.instance.variance(
-            num_candidates=self.num_candidates,
         )
         self.assertAlmostEqual(closed, simulated, delta=2)
 
