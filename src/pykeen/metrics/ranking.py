@@ -210,14 +210,72 @@ def _safe_divide(x: float, y: float) -> float:
 
 
 class DerivedRankBasedMetric(RankBasedMetric, ABC):
-    """A derived rank-based metric."""
+    """
+    A derived rank-based metric.
+
+    The derivation is based on an affine transformation of the metric, where scale and bias may depend on the number
+    of candidates. Since the transformation only depends on the number of candidates, but not the ranks of the
+    predictions, this method can also be used to adjust published results without access to the trained models.
+    Moreover, we can obtain closed form solutions for expected value and variance.
+    """
 
     base_cls: ClassVar[Type[RankBasedMetric]]
     base: RankBasedMetric
+    needs_candidates = True
 
     def __init__(self, **kwargs):
         """Initialize the derived metric."""
         self.base = self.base_cls(**kwargs)
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        if num_candidates is None:
+            raise ValueError(f"{self.__class__.__name__} requires number of candidates.")
+        return self.adjust(
+            base_metric_result=self.base(ranks=ranks, num_candidates=num_candidates), num_candidates=num_candidates
+        )
+
+    def adjust(self, base_metric_result: float, num_candidates: np.ndarray) -> float:
+        """
+        Adjust base metric results based on the number of candidates.
+
+        .. note ::
+
+            since the adjustment only depends on the number of candidates, but not the ranks of the predictions, this
+            method can also be used to adjust published results without access to the trained models.
+        """
+        return self.scale(num_candidates=num_candidates) * (
+            base_metric_result + self.offset(num_candidates=num_candidates)
+        )
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        # since scale and offset are constant for a given number of candidates, we have
+        # E[scale * (M + offset)] = scale * E[M] + scale * offset
+        alpha = self.scale(num_candidates=num_candidates)
+        beta = self.offset(num_candidates=num_candidates)
+        return alpha * self.base.expected_value(num_candidates=num_candidates) + alpha * beta
+
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        # since scale and offset are constant for a given number of candidates, we have
+        # V[scale * (M + offset)] = scale^2 * V[M + offset] = scale^2 * V[M]
+        return self.scale(num_candidates=num_candidates) ** 2.0 * self.base.expected_value(
+            num_candidates=num_candidates
+        )
+
+    def scale(self, num_candidates: np.ndarray) -> float:
+        """Compute the scaling factor."""
+        return 1.0
+
+    def offset(self, num_candidates: np.ndarray) -> float:
+        """Compute the offset."""
+        return 0.0
 
 
 class ZMetric(DerivedRankBasedMetric):
@@ -225,23 +283,23 @@ class ZMetric(DerivedRankBasedMetric):
 
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
     value_range = ValueRange(lower=None, upper=None)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        metric = self.base(ranks=ranks, num_candidates=num_candidates)
-        mean = self.base.expected_value(num_candidates=num_candidates)
-        std = self.base.std(num_candidates=num_candidates)
-        result = _safe_divide(metric - mean, std)
+    def scale(self, num_candidates: np.ndarray) -> float:  # noqa: D102
+        factor = _safe_divide(1.0, self.base.std(num_candidates=num_candidates))
         if self.base.increasing:
-            return result
-        return -result
+            return factor
+        return -factor
+
+    def offset(self, num_candidates: np.ndarray) -> float:  # noqa: D102
+        return -self.base.expected_value(num_candidates=num_candidates)
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
+        # should be exactly 0.0
         return 0.0  # centered
 
     def variance(
@@ -249,20 +307,24 @@ class ZMetric(DerivedRankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
+        # should be exactly 1.0
         return 1.0  # re-scaled
 
 
 class ExpectationNormalizedMetric(DerivedRankBasedMetric):
-    """A mixin to create an expectation-normalized metric.
+    r"""A mixin to create an expectation-normalized metric.
+
+    .. math ::
+
+        M^* = \frac{M}{\mathbb{E}[M]}
 
     .. warning:: This requires a closed-form solution to the expected value
+
+    Since $\mathbb{E}[M]$ does not depend on the input, this is an affine transformation of the metric.
     """
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return _safe_divide(
-            self.base(ranks=ranks, num_candidates=num_candidates),
-            self.base.expected_value(num_candidates=num_candidates),
-        )
+    def scale(self, num_candidates: np.ndarray) -> float:  # noqa: D102
+        return _safe_divide(1, self.base.expected_value(num_candidates=num_candidates))
 
     def expected_value(
         self,
@@ -270,16 +332,6 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
         return 1.0  # centered
-
-    def variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        return _safe_divide(
-            self.base.variance(num_candidates=num_candidates, num_samples=num_samples),
-            self.base.expected_value(num_candidates=num_candidates, num_samples=num_samples) ** 2.0,
-        )
 
 
 class ReindexedMetric(DerivedRankBasedMetric):
@@ -305,27 +357,20 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        expectation = self.base.expected_value(num_candidates=num_candidates)
-        return _safe_divide(self.base(ranks=ranks, num_candidates=num_candidates) - expectation, 1 - expectation)
+    def offset(self, num_candidates: np.ndarray) -> float:  # noqa: D102
+        return -self.base.expected_value(num_candidates=num_candidates)
+
+    def scale(self, num_candidates: np.ndarray) -> float:  # noqa: D102
+        return _safe_divide(1.0, 1 - self.base.expected_value(num_candidates=num_candidates))
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
+        # should be exactly 0.0
         return 0.0
-
-    def variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:  # noqa: D102
-        expectation = self.base.expected_value(num_candidates=num_candidates, num_samples=num_samples)
-        variance = self.base.variance(num_candidates=num_candidates, num_samples=num_samples)
-        return _safe_divide(variance, (1 - expectation) ** 2.0)
 
 
 @parse_docdata
