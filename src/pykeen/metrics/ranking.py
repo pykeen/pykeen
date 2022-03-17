@@ -523,13 +523,9 @@ class InverseArithmeticMeanRank(RankBasedMetric):
 class GeometricMeanRank(RankBasedMetric):
     r"""The geometric mean rank.
 
-    ---
-    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
-    description: The geometric mean over all ranks.
-
     For computing the expected value, we first observe that
 
-    .. math ::
+    .. math::
 
         \mathbb{E}[M] = \mathbb{E}[\sqrt[m]{\prod \limits_{i=1}^{m} r_i}]
                       = \prod \limits_{i=1}^{m} \mathbb{E}[\sqrt[m]{r_i}]
@@ -537,13 +533,16 @@ class GeometricMeanRank(RankBasedMetric):
 
     Moreover, we have
 
-    .. math ::
+    .. math::
 
         \log \mathbb{E}[\sqrt[m]{r_i}]
             = \log \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \sqrt[m]{i}
             = -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \sqrt[m]{i}
             = -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp \log \sqrt[m]{i}
             = -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp ( \frac{1}{m} \cdot \log i )
+    ---
+    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    description: The geometric mean over all ranks.
     """
 
     name = "Geometric Mean Rank (GMR)"
