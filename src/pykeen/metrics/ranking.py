@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type
 
 import numpy as np
+import scipy.special
 from class_resolver import ClassResolver
 from docdata import parse_docdata
 from scipy import stats
@@ -291,7 +292,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         scale = self.get_coefficients(num_candidates=num_candidates)[0]
-        return scale**2.0 * self.base.variance(num_candidates=num_candidates)
+        return scale ** 2.0 * self.base.variance(num_candidates=num_candidates)
 
     @abstractmethod
     def get_coefficients(self, num_candidates: np.ndarray) -> Tuple[float, float]:
@@ -483,7 +484,7 @@ class ArithmeticMeanRank(RankBasedMetric):
             the variance of the mean rank
         """
         n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        return (n ** 2 - 1) / 12.0
 
 
 @parse_docdata
@@ -570,6 +571,18 @@ class HarmonicMeanRank(RankBasedMetric):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return stats.hmean(ranks).item()
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:  # noqa: D102
+        m = num_candidates.size
+        max_val = num_candidates.max()
+        vs = np.arange(max_val + 1).astype(float)
+        vs = np.log(vs) / m
+        vs = vs[num_candidates]
+        return scipy.special.logsumexp(vs)
 
 
 @parse_docdata
