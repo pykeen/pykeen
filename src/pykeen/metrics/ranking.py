@@ -291,7 +291,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
     Since $\mathbb{E}[\mathbb{M} - \mathbb{E}[\mathbb{M}]] = 0$, the expectation of the re-index metric is $0$.
 
     Since $\mathbb{E}[\mathbb{M}$ is constant for a given evaluation set, we abbreviate it as
-    $c = \mathbb{E}[\mathbb{M}$. Consequently, we have $\mathbb{M}^{*} = \frac{1}{1-c} \mathbb{M} - \frac{1}{1-c}$, and
+    $c = \mathbb{E}[\mathbb{M}$. Consequently, we have $\mathbb{M}^{*} = \frac{1}{1-c} \mathbb{M} - \frac{c}{1-c}$, and
     thus $\mathbb{V}[\mathbb{M}^{*}] = \frac{1}{(1-c)^2} \mathbb{V}[\mathbb{M}]$.
     """
 
