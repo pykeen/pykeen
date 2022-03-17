@@ -200,7 +200,13 @@ class RankBasedMetric(Metric):
 
 
 def _safe_divide(x: float, y: float) -> float:
-    return x / max(y, EPSILON)
+    """Divide x by y making sure that abs(y) > epsilon."""
+    # cf. https://stackoverflow.com/questions/1986152/why-doesnt-python-have-a-sign-function
+    y_sign = math.copysign(1.0, y)
+    y_abs = abs(y)
+    y_abs = max(y_abs, EPSILON)
+    y = y_abs * y_sign
+    return x / y
 
 
 class DerivedRankBasedMetric(RankBasedMetric, ABC):
