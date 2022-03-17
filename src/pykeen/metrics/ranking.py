@@ -218,7 +218,6 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
     def __init__(self, **kwargs):
         """Initialize the derived metric."""
         self.base = self.base_cls(**kwargs)
-        self.factor = 1 if self.base.increasing else -1
 
 
 class ZMetric(DerivedRankBasedMetric):
@@ -233,7 +232,10 @@ class ZMetric(DerivedRankBasedMetric):
         metric = self.base(ranks=ranks, num_candidates=num_candidates)
         mean = self.base.expected_value(num_candidates=num_candidates)
         std = self.base.std(num_candidates=num_candidates)
-        return self.factor * _safe_divide(metric - mean, std)
+        result = _safe_divide(metric - mean, std)
+        if self.base.increasing:
+            return result
+        return -result
 
     def expected_value(
         self,
