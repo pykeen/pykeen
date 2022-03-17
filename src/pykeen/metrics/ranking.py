@@ -48,9 +48,15 @@ __all__ = [
     "Variance",
     "Count",
     #
+    "NoClosedFormError",
+    #
     "HITS_METRICS",
 ]
 EPSILON = 1.0e-12
+
+
+class NoClosedFormError(ValueError):
+    """The metric does not provide a closed-form implementation for the requested operation."""
 
 
 class RankBasedMetric(Metric):
@@ -141,7 +147,7 @@ class RankBasedMetric(Metric):
             estimation via summation, cf. :func:`numeric_expected_value`.
         """
         if num_samples is None:
-            raise ValueError("Numeric estimation requires to specify a number of samples.")
+            raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
         return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples)
 
     def numeric_variance(
@@ -187,7 +193,7 @@ class RankBasedMetric(Metric):
             estimation via summation, cf. :func:`numeric_variance`.
         """
         if num_samples is None:
-            raise ValueError("Numeric estimation requires to specify a number of samples.")
+            raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
         return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples)
 
     def std(

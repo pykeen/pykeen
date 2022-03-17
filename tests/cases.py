@@ -35,7 +35,6 @@ import pytest
 import torch
 import torch.utils.data
 import unittest_templates
-from class_resolver import Hint
 from click.testing import CliRunner, Result
 from docdata import get_docdata
 from torch import optim
@@ -55,7 +54,7 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.metrics import rank_based_metric_resolver
-from pykeen.metrics.ranking import DerivedRankBasedMetric, RankBasedMetric
+from pykeen.metrics.ranking import DerivedRankBasedMetric, NoClosedFormError, RankBasedMetric
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
@@ -2078,7 +2077,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         """Test the numeric expectation is close to the closed form one."""
         try:
             closed = self.instance.expected_value(num_candidates=self.num_candidates)
-        except ValueError as error:
+        except NoClosedFormError as error:
             raise SkipTest("no implementation of closed-form expectation") from error
 
         generator = numpy.random.default_rng(seed=0)
@@ -2093,7 +2092,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         """Test the numeric variance is close to the closed form one."""
         try:
             closed = self.instance.variance(num_candidates=self.num_candidates)
-        except ValueError as error:
+        except NoClosedFormError as error:
             raise SkipTest("no implementation of closed-form variance") from error
 
         generator = numpy.random.default_rng(seed=0)
