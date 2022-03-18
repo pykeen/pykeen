@@ -112,6 +112,7 @@ __all__ = [
     "get_preferred_device",
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
+    "logcumsumexp",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1368,6 +1369,20 @@ def camel_to_snake(name: str) -> str:
 def make_ones_like(prefix: Sequence) -> Sequence[int]:
     """Create a list of ones of same length as the input sequence."""
     return [1 for _ in prefix]
+
+
+def logcumsumexp(a: np.ndarray) -> np.ndarray:
+    """Compute ``log(cumsum(exp(a)))``.
+
+    .. seealso ::
+        :func:`scipy.special.logsumexp`
+    """
+    a_max = np.amax(a)
+    tmp = np.exp(a - a_max)
+    s = np.cumsum(tmp)
+    out = np.log(s)
+    out += a_max
+    return out
 
 
 if __name__ == "__main__":

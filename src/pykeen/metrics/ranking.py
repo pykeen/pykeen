@@ -7,12 +7,12 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type
 
 import numpy as np
-import scipy.special
 from class_resolver import ClassResolver
 from docdata import parse_docdata
 from scipy import stats
 
 from .utils import Metric, ValueRange
+from ..utils import logcumsumexp
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 
 __all__ = [
@@ -563,7 +563,7 @@ class GeometricMeanRank(RankBasedMetric):
         max_val = num_candidates.max()
         x = np.arange(1, max_val + 1, dtype=float)
         x = np.log(x) / m
-        x = _log_cumsum_exp(x)
+        x = logcumsumexp(x)
         # now select from precomputed cumulative sums and aggregate
         x = x[num_candidates - 1] - np.log(num_candidates)
         return np.exp(x.sum())
@@ -585,21 +585,6 @@ class InverseGeometricMeanRank(RankBasedMetric):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(stats.gmean(ranks)).item()
-
-
-def _log_cumsum_exp(a: np.ndarray):
-    """
-    Compute log(cumsum(exp(a))).
-
-    .. seealso ::
-        scipy.special.logsumexp
-    """
-    a_max = np.amax(a)
-    tmp = np.exp(a - a_max)
-    s = np.cumsum(tmp)
-    out = np.log(s)
-    out += a_max
-    return out
 
 
 @parse_docdata
