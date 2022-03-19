@@ -9,8 +9,8 @@ NodePiece.
  Basic Usage
 *************
 
-Here and below we'll use :class:`pykeen.datasets.FB15k237` for
-illustrating purposes.
+We'll use :class:`pykeen.datasets.FB15k237` for illustrating purposes
+throughout the following examples.
 
 .. code:: python
 
@@ -20,13 +20,21 @@ illustrating purposes.
    # inverses are necessary for the current version of NodePiece
    dataset = FB15k237(create_inverse_triples=True)
 
-The simplest case of using only relations for tokenization: we put
-:class:`pykeen.nn.node_piece.RelationTokenizer` in the ``tokenizers`` args
-(it will automatically get resolved to the correct tokenizer via
-:mod:`class_resolver` and specify ``num_tokens=12`` to sample 12 unique
-relations per node (if for some entities there are less than 12 unique
-relations, the difference will be padded with the auxiliary padding
-token):
+In the simplest usage of :class:`pykeen.models.NodePiece`, we'll only
+use relations for tokenization. We can do this by with the following
+arguments:
+
+#. Set the ``tokenizers="RelationTokenizer"`` to
+   :class:`pykeen.nn.node_piece.RelationTokenizer`. We can simply refer
+   to the class name and it gets automatically resolved to the correct
+   subclass of :class:`pykeen.nn.node_piece.Tokenizer` by the
+   :mod:`class_resolver`.
+
+#. Set the ``num_tokens=12`` to sample 12 unique relations per node. If,
+   for some entities, there are less than 12 unique relations, the
+   difference will be padded with the auxiliary padding token.
+
+Here's how the code looks:
 
 .. code:: python
 
@@ -37,11 +45,12 @@ token):
        embedding_dim=64,
    )
 
-Next up, we could use both :class:`pykeen.nn.node_piece.AnchorTokenizer`
-and :class:`pykeen.nn.node_piece.RelationTokenizer` to replicate the
-full NodePiece tokenization with `k` anchors and `m` relational context.
-It's as easy as sending a list of tokenizers to ``tokenizers`` and sending
-a list of arguments to ``num_tokens``:
+Next, we'll use a combination of tokenizers
+(:class:`pykeen.nn.node_piece.AnchorTokenizer` and
+:class:`pykeen.nn.node_piece.RelationTokenizer`) to replicate the full
+NodePiece tokenization with $k$ anchors and $m$ relational context. It's
+as easy as sending a list of tokenizers to ``tokenizers`` and sending a
+list of arguments to ``num_tokens``:
 
 .. code:: python
 
@@ -63,11 +72,10 @@ matters here.
 ********************************
 
 The :class:`pykeen.nn.node_piece.AnchorTokenizer` has two fields:
-`selection` and `searcher`.
 
--  ``selection`` controls how we sample anchors from the graph (32 anchors
-   by default)
--  ``searcher`` controls how we tokenize nodes using selected anchors
+#. ``selection`` controls how we sample anchors from the graph (32
+   anchors by default)
+#. ``searcher`` controls how we tokenize nodes using selected anchors
    (:class:`pykeen.nn.node_piece.CSGraphAnchorSearcher` by default)
 
 By default, our models above use 32 anchors selected as top-degree nodes
@@ -110,8 +118,8 @@ anchors selected with the top degree strategy by sending the
 
 ``tokenizers_kwargs`` expects the same number dictionaries as the number
 of tokenizers you used, so we have 2 dicts here - one for
-``AnchorTokenizer`` and another one for ``RelationTokenizer`` (but this one
-doesn't need any kwargs so we just put an empty dict there).
+``AnchorTokenizer`` and another one for ``RelationTokenizer`` (but this
+one doesn't need any kwargs so we just put an empty dict there).
 
 Let's create a model with 500 top-pagerank anchors selected with the BFS
 strategy - we'll just modify the ``selection`` and ``searcher`` args:
@@ -164,14 +172,14 @@ have a :class:`pykeen.nn.node_piece.MixtureAnchorSelection` class!
        embedding_dim=64,
    )
 
-Now the ``selection_kwargs`` controls which strategies we'll be using and
-how many anchors each of them will sample - in our case
+Now the ``selection_kwargs`` controls which strategies we'll be using
+and how many anchors each of them will sample - in our case
 ``selections=['degree', 'pagerank']``. Using the ``ratios`` argument we
 control the ratio of those sampled anchors in the total pool - in our
-case ``ratios=[0.5, 0.5]`` which means that both ``degree`` and ``pagerank``
-strategies each will sample 50% from the total number of anchors. Since
-the total number is 500, there will be 250 top-degree anchors and 250
-top-pagerank anchors. ``ratios`` **must** sum up to 1.0
+case ``ratios=[0.5, 0.5]`` which means that both ``degree`` and
+``pagerank`` strategies each will sample 50% from the total number of
+anchors. Since the total number is 500, there will be 250 top-degree
+anchors and 250 top-pagerank anchors. ``ratios`` **must** sum up to 1.0
 
 **Important**: sampled anchors are **unique** - that is, if a node
 appears to be in top-K degree and top-K pagerank, it will be used only
@@ -207,10 +215,9 @@ paper for FB15k237 with 40% top degree anchors, 40% top pagerank, and
    )
 
 **Note on Anchor Distances**: As of now, the anchor distances are
-considered implicitly, i.e., when performing actual tokenization
-via shortest paths or BFS we do sort anchors by proximity and
-keep top-K nearest.
-The anchor distance embedding as a positional feature to be
+considered implicitly, i.e., when performing actual tokenization via
+shortest paths or BFS we do sort anchors by proximity and keep top-K
+nearest. The anchor distance embedding as a positional feature to be
 added to anchor embedding is not yet implemented.
 
 ***************************************************************************************************
@@ -224,15 +231,15 @@ problems like `k-Dominating Sets
 closed-form solution for each possible dataset, but we found some
 empirical heuristics:
 
--  keeping ``num_anchors`` as 1-10% of total nodes in the graph is a good
-   start
+-  keeping ``num_anchors`` as 1-10% of total nodes in the graph is a
+   good start
 
 -  graph density is a major factor: the denser the graph, the fewer
-   ``num_anchors`` you'd need. For dense FB15k237 100 total anchors (over
-   15k total nodes) seems to be good enough, while for sparser WN18RR we
-   needed at least 500 anchors (over 40k total nodes). For dense OGB
-   WikiKG2 of 2.5M nodes a vocab of 20K anchors (< 1%) already leads to
-   SOTA results
+   ``num_anchors`` you'd need. For dense FB15k237 100 total anchors
+   (over 15k total nodes) seems to be good enough, while for sparser
+   WN18RR we needed at least 500 anchors (over 40k total nodes). For
+   dense OGB WikiKG2 of 2.5M nodes a vocab of 20K anchors (< 1%) already
+   leads to SOTA results
 
 -  the same applies to anchors per node: you'd need more tokens for
    sparser graphs and fewer for denser
@@ -332,10 +339,10 @@ For a remote file, specify the ``url``:
        "precomputedpool", url="http://link/to/vocab.pkl"
    )
 
-Generally, :class:`pykeen.nn.node_piece.PrecomputedPoolTokenizer` can use any
-:class:`pykeen.nn.node_piece.PrecomputedTokenizerLoader` as a custom processor of vocabulary
-formats. Right now there is one such loader,
-:class:`pykeen.nn.node_piece.GalkinPickleLoader` that expects a
+Generally, :class:`pykeen.nn.node_piece.PrecomputedPoolTokenizer` can
+use any :class:`pykeen.nn.node_piece.PrecomputedTokenizerLoader` as a
+custom processor of vocabulary formats. Right now there is one such
+loader, :class:`pykeen.nn.node_piece.GalkinPickleLoader` that expects a
 dictionary of the following format:
 
 .. code::
@@ -346,8 +353,8 @@ dictionary of the following format:
    }
 
 As of now, we don't use anchor distances, but we expect the anchors in
-``ancs`` to be already sorted from nearest to farthest, so the example of
-a precomputed vocab can be:
+``ancs`` to be already sorted from nearest to farthest, so the example
+of a precomputed vocab can be:
 
 .. code::
 
@@ -360,7 +367,8 @@ convert them to a contiguous range ``0 ... num_anchors-1``. Any negative
 indices in the lists will be treated as padding tokens (we used -99 in
 the precomputed vocabularies).
 
-The original NodePiece repo has `an example <https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/ogb_tokenizer.py#L180>`_
+The original NodePiece repo has `an example
+<https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/ogb_tokenizer.py#L180>`_
 of building such a vocabulary format for OGB WikiKG 2.
 
 **************************************
@@ -369,7 +377,8 @@ of building such a vocabulary format for OGB WikiKG 2.
 
 you can use literally any interaction function available in PyKEEN as a
 scoring function! By default, NodePiece uses DistMult, but it's easy to
-change as in any :class:`pykeen.models.ERModel`, let's use the RotatE interaction:
+change as in any :class:`pykeen.models.ERModel`, let's use the RotatE
+interaction:
 
 .. code:: python
 
@@ -383,8 +392,8 @@ change as in any :class:`pykeen.models.ERModel`, let's use the RotatE interactio
 
 Well, for RotatE we might want to initialize relations as phases
 (``init_phases``) and use an additional relation constrainer to keep
-``|r| = 1`` (``complex_normalize``), and use ``xavier_uniform_`` for anchor
-embedding initialization - let's add that, too:
+``|r| = 1`` (``complex_normalize``), and use ``xavier_uniform_`` for
+anchor embedding initialization - let's add that, too:
 
 .. code:: python
 
@@ -413,8 +422,8 @@ embeddings. It is supposed to be a function that maps a set of tokens
    f([a_1, a_2, ...., a_k, r_1, r_2, ..., r_m]) \in \mathbb{R}^{(k+m) \times d} \rightarrow  \mathbb{R}^{d}
 
 Right now, by default we use a simple 2-layer MLP
-(:class:`pykeen.nn.perceptron.ConcatMLP`) that concatenates all tokens to
-one long vector and projects it down to model's embedding dimension:
+(:class:`pykeen.nn.perceptron.ConcatMLP`) that concatenates all tokens
+to one long vector and projects it down to model's embedding dimension:
 
 .. code:: python
 
@@ -427,8 +436,8 @@ one long vector and projects it down to model's embedding dimension:
    )
 
 Aggregation can be parameterized with any neural network
-(:class:`torch.nn.Module`) that would return a single vector from a set of
-inputs. Let's be fancy 😎 and create a `DeepSet
+(:class:`torch.nn.Module`) that would return a single vector from a set
+of inputs. Let's be fancy 😎 and create a `DeepSet
 <https://arxiv.org/abs/1703.06114>`_ encoder:
 
 .. code:: python
@@ -476,9 +485,9 @@ speed and final performance, although at the cost of being not
 permutation invariant to the input set of tokens.
 
 The aggregation function resembles that of GNNs. Non-parametric
-avg/min/max did not work that well in the current tokenization setup,
-so some non-linearity is definitely useful - hence the choice for
-MLP / DeepSets / Transformer as an aggregation function.
+avg/min/max did not work that well in the current tokenization setup, so
+some non-linearity is definitely useful - hence the choice for MLP /
+DeepSets / Transformer as an aggregation function.
 
 Let's wrap our cool NodePiece model with 40/40/20 degree/pagerank/random
 tokenization with the BFS searcher and DeepSet aggregation into a
