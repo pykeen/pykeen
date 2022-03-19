@@ -17,7 +17,7 @@ __all__ = [
     # Base classes
     "PrecomputedTokenizerLoader",
     # Concrete classes
-    "GalkinPickleLoader",
+    "GalkinPrecomputedTokenizerLoader",
 ]
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class PrecomputedTokenizerLoader(ABC):
         raise NotImplementedError
 
 
-class GalkinPickleLoader(PrecomputedTokenizerLoader):
+class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
     """
     A loader for pickle files provided by Galkin *et al*.
 
@@ -58,5 +58,5 @@ class GalkinPickleLoader(PrecomputedTokenizerLoader):
 
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
     base=PrecomputedTokenizerLoader,
-    default=GalkinPickleLoader,
+    default=GalkinPrecomputedTokenizerLoader,
 )

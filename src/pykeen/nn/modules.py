@@ -1623,7 +1623,7 @@ class TripleREInteraction(
         FloatTensor,
     ]
 ):
-    """A stateful module for the TripleRE interaction function.
+    """A stateful module for the TripleRE interaction function from [yu2021]_.
 
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
 
@@ -1647,8 +1647,11 @@ class TripleREInteraction(
 
         :param u:
             the relation factor offset. can be set to None to disable it.
-        :param kwargs:
-            additional keyword-based arguments passed to :class:`NormBasedInteraction`
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`. Defaults to 1 for TripleRE.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable. Defaults to False for TripleRE.
         """
         super().__init__(p=p, power_norm=power_norm)
         self.u = u

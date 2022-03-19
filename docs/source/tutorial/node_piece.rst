@@ -342,8 +342,8 @@ For a remote file, specify the ``url``:
 Generally, :class:`pykeen.nn.node_piece.PrecomputedPoolTokenizer` can
 use any :class:`pykeen.nn.node_piece.PrecomputedTokenizerLoader` as a
 custom processor of vocabulary formats. Right now there is one such
-loader, :class:`pykeen.nn.node_piece.GalkinPickleLoader` that expects a
-dictionary of the following format:
+loader, :class:`pykeen.nn.node_piece.GalkinPrecomputedTokenizerLoader`
+that expects a dictionary of the following format:
 
 .. code::
 
