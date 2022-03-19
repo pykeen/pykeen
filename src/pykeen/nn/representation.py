@@ -104,6 +104,8 @@ class Representation(nn.Module, ABC):
             An output regularizer, which is applied to the selected representations in forward pass
         :param regularizer_kwargs:
             Additional keyword arguments passed to the regularizer
+        :param dropout:
+            The optional dropout probability
         """
         super().__init__()
         self.max_id = max_id
@@ -215,6 +217,8 @@ class SubsetRepresentation(Representation):
             additional keyword arguments for the base representation
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
+
+        :raises ValueError: if ``max_id`` is larger than the base representation's mad_id
         """
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
@@ -289,12 +293,14 @@ class Embedding(Representation):
     ):
         """Instantiate an embedding with extended functionality.
 
-        :param num_embeddings: >0
-            The number of embeddings.
         :param max_id: >0
+            The number of embeddings.
+        :param num_embeddings: >0
             The number of embeddings.
         :param embedding_dim: >0
             The embedding dimensionality.
+        :param shape:
+            The shape of an individual representation.
         :param initializer:
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
@@ -324,6 +330,8 @@ class Embedding(Representation):
             - ``'clamp_norm'``
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
+        :param trainable: Should the wrapped embeddings be marked to require gradient. Defaults to True.
+        :param dtype: The datatype (otherwise uses :func:`torch.get_default_dtype` to look up)
         :param kwargs:
             additional keyword-based parameters passed to Representation.__init__
         """
@@ -532,6 +540,9 @@ class CompGCNLayer(nn.Module):
             The activation to use.
         :param activation_kwargs:
             Additional key-word based arguments passed to the activation.
+        :param edge_weighting:
+            A pre-instantiated :class:`EdgeWeighting`, a class, or name to look
+            up with :class:`class_resolver`.
         """
         super().__init__()
 
@@ -720,6 +731,10 @@ class CombinedCompGCNRepresentations(nn.Module):
             the base entity representations
         :param entity_representations_kwargs:
             additional keyword parameters for the base entity representations
+        :param relation_representations:
+            the base relation representations
+        :param relation_representations_kwargs:
+            additional keyword parameters for the base relation representations
         :param num_layers:
             The number of message passing layers to use. If None, will be inferred by len(dims), i.e., requires dims to
             be a sequence / list.
@@ -728,6 +743,9 @@ class CombinedCompGCNRepresentations(nn.Module):
             If an integer, is the same for all layers. The last dimension is equal to the output dimension.
         :param layer_kwargs:
             Additional key-word based parameters passed to the individual layers; cf. CompGCNLayer.
+        :raises ValueError: for several invalid combinations of arguments:
+            1. If the dimensions were given as an integer but no number of layers were given
+            2. If the dimensions were given as a ist but it does not match the number of layers that were given
         """
         super().__init__()
         # TODO: Check
@@ -830,6 +848,7 @@ class SingleCompGCNRepresentation(Representation):
             The position, either 0 for entities, or 1 for relations.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
+        :raises ValueError: If an invalid value is given for the position
         """
         if position == 0:  # entity
             max_id = combined.entity_representations.max_id
@@ -927,6 +946,9 @@ class LabelBasedTransformerRepresentation(Representation):
             whether to create the initializer for entities (or relations)
         :param kwargs:
             additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
+
+        :returns:
+            A label-based transformer from the triples factory
 
         :raise ImportError:
             if the transformers library could not be imported

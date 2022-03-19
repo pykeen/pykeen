@@ -77,7 +77,6 @@ class TokenizationRepresentation(Representation):
             token_representation,
             token_representation_kwargs,
             max_id=self.vocabulary_size,
-            # FIXME @mberr not sure why there's neither ``embedding_dim`` nor ``shape`` here, but that's the issue
         )
         super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape, **kwargs)
 

@@ -175,6 +175,7 @@ class BasesDecomposition(Decomposition):
         :param memory_intense:
             Enable memory-intense forward pass which may be faster, in particular if the number of different relations
             is small.
+        :raises ValueError: If the ``num_bases`` is greater than ``num_relations``
         """
         super().__init__(
             input_dim=input_dim,
@@ -333,6 +334,7 @@ class BlockDecomposition(Decomposition):
             The number of blocks to use. Has to be a divisor of input_dim.
         :param output_dim: >0
             The output dimension. If None is given, defaults to input_dim.
+        :raises NotImplementedError: If ``input_dim`` is not divisible by ``num_blocks``
         """
         super().__init__(
             input_dim=input_dim,
@@ -634,7 +636,8 @@ class RGCNRepresentation(Representation):
         :param decomposition_kwargs:
             Additional keyword based arguments passed to the decomposition upon instantiation.
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+        :raises ValueError: If the triples factory creates inverse triples.
         """
         if max_id:
             assert max_id == triples_factory.num_entities

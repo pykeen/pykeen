@@ -1388,6 +1388,9 @@ def auto_sf_interaction(
         2. relation_representation_index,
         3. tail_representation_index,
         4. sign
+
+    :return:
+        The scores
     """
     return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
@@ -1419,6 +1422,9 @@ def transformer_interaction(
         the positional embeddings, one for head and one for relation
     :param final:
         the final (linear) transformation
+
+    :return:
+        The scores.
     """
     # stack h & r (+ broadcast) => shape: (2, *batch_dims, dim)
     x = torch.stack(broadcast_tensors(h, r), dim=0)

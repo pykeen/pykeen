@@ -95,8 +95,7 @@ def parallel_slice_batches(
     :param dim:
         the dimension along which to slice
 
-    :yield:
-        batches of sliced representations
+    :yields: batches of sliced representations
     """
     # normalize input
     rs: Sequence[Sequence[torch.FloatTensor]] = ensure_tuple(*representations)
@@ -1623,7 +1622,7 @@ class TripleREInteraction(
         FloatTensor,
     ]
 ):
-    """A stateful module for the TripleRE interaction function.
+    """A stateful module for the TripleRE interaction function from [yu2021]_.
 
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
 
@@ -1647,8 +1646,11 @@ class TripleREInteraction(
 
         :param u:
             the relation factor offset. can be set to None to disable it.
-        :param kwargs:
-            additional keyword-based arguments passed to :class:`NormBasedInteraction`
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`. Defaults to 1 for TripleRE.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable. Defaults to False for TripleRE.
         """
         super().__init__(p=p, power_norm=power_norm)
         self.u = u
@@ -1691,7 +1693,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
                 3. tail_representation_index,
                 4. sign
 
-        :raise ValueError:
+        :raises ValueError:
             if there are duplicate coefficients
         """
         super().__init__()
@@ -1717,8 +1719,11 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
         :param coefficients:
             the coefficients in the "official" serialization format.
+        :returns:
+            An AutoSF interaction module
 
-        cf. https://github.com/AutoML-Research/AutoSF/blob/07b7243ccf15e579176943c47d6e65392cd57af3/searched_SFs.txt
+        .. seealso::
+            https://github.com/AutoML-Research/AutoSF/blob/07b7243ccf15e579176943c47d6e65392cd57af3/searched_SFs.txt
         """
         return cls(
             coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
