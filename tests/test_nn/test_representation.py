@@ -115,7 +115,7 @@ class NodePieceRelationTests(cases.NodePieceTestCase):
     """Tests for node piece representation."""
 
     kwargs = dict(
-        token_representation_kwargs=dict(
+        token_representations_kwargs=dict(
             shape=(3,),
         )
     )
@@ -125,7 +125,7 @@ class NodePieceAnchorTests(cases.NodePieceTestCase):
     """Tests for node piece representation with anchor nodes."""
 
     kwargs = dict(
-        token_representation_kwargs=dict(
+        token_representations_kwargs=dict(
             shape=(3,),
         ),
         tokenizers="anchor",
@@ -139,7 +139,7 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
     """Tests for node piece representation with mixed tokenizers."""
 
     kwargs = dict(
-        token_representation_kwargs=(
+        token_representations_kwargs=(
             dict(
                 shape=(3,),
             ),
