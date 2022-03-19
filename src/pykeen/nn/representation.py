@@ -215,6 +215,8 @@ class SubsetRepresentation(Representation):
             additional keyword arguments for the base representation
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
+
+        :raises ValueError: if ``max_id`` is larger than the base representation's mad_id
         """
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
@@ -289,12 +291,14 @@ class Embedding(Representation):
     ):
         """Instantiate an embedding with extended functionality.
 
-        :param num_embeddings: >0
-            The number of embeddings.
         :param max_id: >0
+            The number of embeddings.
+        :param num_embeddings: >0
             The number of embeddings.
         :param embedding_dim: >0
             The embedding dimensionality.
+        :param shape:
+            The shape of an individual representation.
         :param initializer:
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
@@ -324,6 +328,8 @@ class Embedding(Representation):
             - ``'clamp_norm'``
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
+        :param trainable: Should the wrapped embeddings be marked to require gradient. Defaults to True.
+        :param dtype: The datatype (otherwise uses :func:`torch.get_default_dtype` to look up)
         :param kwargs:
             additional keyword-based parameters passed to Representation.__init__
         """
@@ -532,6 +538,9 @@ class CompGCNLayer(nn.Module):
             The activation to use.
         :param activation_kwargs:
             Additional key-word based arguments passed to the activation.
+        :param edge_weighting:
+            A pre-instantiated :class:`EdgeWeighting`, a class, or name to look
+            up with :class:`class_resolver`.
         """
         super().__init__()
 
