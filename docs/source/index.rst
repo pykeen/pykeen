@@ -18,6 +18,7 @@ PyKEEN
    tutorial/running_ablation
    tutorial/performance
    tutorial/representations
+   tutorial/node_piece
    tutorial/inductive_lp
 
 .. toctree::
