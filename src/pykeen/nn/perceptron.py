@@ -53,6 +53,7 @@ class ConcatMLP(nn.Sequential):
         :param xs: The tensor to forward
         :param dim: Only a parameter to match the signature of torch.mean / torch.sum
             this class is not thought to be usable from outside
+        :returns: The tensor after applying this MLP
         """
         assert dim == -2
         return super().forward(xs.view(*xs.shape[:-2], -1))

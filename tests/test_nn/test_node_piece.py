@@ -1,4 +1,5 @@
 """Tests for node piece."""
+
 import random
 from typing import Any, MutableMapping
 
@@ -8,6 +9,7 @@ import scipy.sparse.csgraph
 import unittest_templates
 
 import pykeen.nn.node_piece
+from pykeen.nn.node_piece.utils import page_rank
 from tests import cases
 
 
@@ -138,7 +140,7 @@ def test_page_rank():
             (numpy.arange(n) + 1) % n,
         ],
     )
-    result = pykeen.nn.node_piece.page_rank(
+    result = page_rank(
         edge_index=edge_index,
         epsilon=1.0e-08,
     )
