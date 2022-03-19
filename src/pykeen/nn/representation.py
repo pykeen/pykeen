@@ -104,6 +104,8 @@ class Representation(nn.Module, ABC):
             An output regularizer, which is applied to the selected representations in forward pass
         :param regularizer_kwargs:
             Additional keyword arguments passed to the regularizer
+        :param dropout:
+            The optional dropout probability
         """
         super().__init__()
         self.max_id = max_id
@@ -729,6 +731,10 @@ class CombinedCompGCNRepresentations(nn.Module):
             the base entity representations
         :param entity_representations_kwargs:
             additional keyword parameters for the base entity representations
+        :param relation_representations:
+            the base relation representations
+        :param relation_representations_kwargs:
+            additional keyword parameters for the base relation representations
         :param num_layers:
             The number of message passing layers to use. If None, will be inferred by len(dims), i.e., requires dims to
             be a sequence / list.
@@ -737,6 +743,9 @@ class CombinedCompGCNRepresentations(nn.Module):
             If an integer, is the same for all layers. The last dimension is equal to the output dimension.
         :param layer_kwargs:
             Additional key-word based parameters passed to the individual layers; cf. CompGCNLayer.
+        :raises ValueError: for several invalid combinations of arguments:
+            1. If the dimensions were given as an integer but no number of layers were given
+            2. If the dimensions were given as a ist but it does not match the number of layers that were given
         """
         super().__init__()
         # TODO: Check
@@ -839,6 +848,7 @@ class SingleCompGCNRepresentation(Representation):
             The position, either 0 for entities, or 1 for relations.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
+        :raises ValueError: If an invalid value is given for the position
         """
         if position == 0:  # entity
             max_id = combined.entity_representations.max_id
@@ -936,6 +946,9 @@ class LabelBasedTransformerRepresentation(Representation):
             whether to create the initializer for entities (or relations)
         :param kwargs:
             additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
+
+        :returns:
+            A label-based transformer from the triples factory
 
         :raise ImportError:
             if the transformers library could not be imported
