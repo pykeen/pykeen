@@ -13,6 +13,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import NodePieceRepresentation, SubsetRepresentation, representation_resolver
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
+from ...nn.perceptron import ConcatMLP
 from ...regularizers import Regularizer
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import Constrainer, Initializer, Normalizer, OneOrSequence
@@ -122,6 +123,13 @@ class NodePiece(ERModel):
             raise ValueError(
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
+            )
+
+        # Create an MLP for string aggregation
+        if aggregation == "mlp":
+            aggregation = ConcatMLP(
+                num_tokens=num_tokens if isinstance(num_tokens, int) else sum(num_tokens),
+                embedding_dim=embedding_dim,
             )
 
         # always create representations for normal and inverse relations and padding
