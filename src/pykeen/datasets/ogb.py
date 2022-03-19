@@ -28,11 +28,7 @@ class OGBLoader(LazyDataset):
     #: The name of the dataset to download
     name: ClassVar[str]
 
-    def __init__(
-        self,
-        cache_root: Optional[str] = None,
-        create_inverse_triples: bool = False,
-    ):
+    def __init__(self, cache_root: Optional[str] = None, create_inverse_triples: bool = False):
         """Initialize the OGB loader.
 
         :param cache_root: An optional override for where data should be cached.
