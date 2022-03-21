@@ -59,6 +59,7 @@ EPSILON = 1.0e-12
 
 def generate_ranks(
     num_candidates: np.ndarray,
+    prefix_shape: Tuple[int, ...] = tuple(),
     seed: Union[None, int, np.random.Generator] = None,
 ) -> np.ndarray:
     """
@@ -66,14 +67,16 @@ def generate_ranks(
 
     :param num_candidates: shape: s
         the number of candidates
+    :param prefix_shape:
+        additional dimensions for broadcasted sampling
     :param seed:
         the random seed
 
-    :return: shape: s
+    :return: shape: dims + s
         an array of sampled rank values
     """
     generator = np.random.default_rng(seed=seed)
-    return generator.integers(low=1, high=num_candidates + 1)
+    return generator.integers(low=1, high=num_candidates + 1, size=prefix_shape + num_candidates.shape)
 
 
 def generate_num_candidates_and_ranks(
@@ -157,14 +160,7 @@ class RankBasedMetric(Metric):
             return np.apply_along_axis(
                 self,
                 axis=1,
-                arr=generate_ranks(
-                    num_candidates=np.repeat(
-                        num_candidates[None],
-                        repeats=num_samples,
-                        axis=0,
-                    ),
-                    seed=generator,
-                ),
+                arr=generate_ranks(prefix_shape=(num_samples,), num_candidates=num_candidates, seed=generator),
                 num_candidates=num_candidates,
             )
         return np.asanyarray(
