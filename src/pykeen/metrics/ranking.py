@@ -4,7 +4,7 @@
 
 import math
 from abc import ABC, abstractmethod
-from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type, Union
+from typing import ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
 
 import numpy as np
 from class_resolver import ClassResolver
@@ -307,6 +307,13 @@ def _safe_divide(x: float, y: float) -> float:
     return x / y
 
 
+class AffineTransformationParameters(NamedTuple):
+    """Parameters of an affine transformation"""
+
+    scale: float = 1.0
+    offset: float = 0.0
+
+
 class DerivedRankBasedMetric(RankBasedMetric, ABC):
     r"""
     A derived rank-based metric.
@@ -361,8 +368,8 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
             since the adjustment only depends on the number of candidates, but not the ranks of the predictions, this
             method can also be used to adjust published results without access to the trained models.
         """
-        scale, offset = self.get_coefficients(num_candidates=num_candidates)
-        return scale * base_metric_result + offset
+        parameters = self.get_coefficients(num_candidates=num_candidates)
+        return parameters.scale * base_metric_result + parameters.offset
 
     def expected_value(
         self,
@@ -387,11 +394,13 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
     ) -> float:  # noqa: D102
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
-        scale = self.get_coefficients(num_candidates=num_candidates)[0]
-        return scale**2.0 * self.base.variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
+        parameters = self.get_coefficients(num_candidates=num_candidates)
+        return parameters.scale**2.0 * self.base.variance(
+            num_candidates=num_candidates, num_samples=num_samples, **kwargs
+        )
 
     @abstractmethod
-    def get_coefficients(self, num_candidates: np.ndarray) -> Tuple[float, float]:
+    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:
         """
         Compute the scaling coefficients.
 
@@ -440,7 +449,7 @@ class ZMetric(DerivedRankBasedMetric):
         if not self.base.increasing:
             scale = -scale
         offset = -scale * mean
-        return scale, offset
+        return AffineTransformationParameters(scale=scale, offset=offset)
 
     def expected_value(
         self,
@@ -480,7 +489,9 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
     """
 
     def get_coefficients(self, num_candidates: np.ndarray) -> Tuple[float, float]:  # noqa: D102
-        return _safe_divide(1, self.base.expected_value(num_candidates=num_candidates)), 0.0
+        return AffineTransformationParameters(
+            scale=_safe_divide(1, self.base.expected_value(num_candidates=num_candidates))
+        )
 
     def expected_value(
         self,
@@ -516,7 +527,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
         mean = self.base.expected_value(num_candidates=num_candidates)
         scale = _safe_divide(1.0, 1.0 - mean)
         offset = -scale * mean
-        return scale, offset
+        return AffineTransformationParameters(scale=scale, offset=offset)
 
     def expected_value(
         self,
