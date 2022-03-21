@@ -814,7 +814,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        x = np.asanyarray(num_candidates)
+        x = np.asanyarray(num_candidates, dtype=float)
         # individual ranks' expectation
         x = np.log(x) / np.clip(x - 1, a_min=EPSILON, a_max=None)
         return x.mean().item()
@@ -825,9 +825,9 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa:D102
-        x = np.asanyarray(num_candidates)
+        x = np.asanyarray(num_candidates, dtype=float)
         # individual inverse ranks' variance
-        x = np.reciprocal(x) - (np.log(x) / (x - 1)) ** 2
+        x = (1 / x) - (np.log(x) / (x - 1)) ** 2
         # rank aggregation
         n = x.size
         return x.sum().item() / n**2
