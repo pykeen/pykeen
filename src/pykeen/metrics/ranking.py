@@ -923,12 +923,33 @@ class Count(RankBasedMetric):
 class HitsAtK(RankBasedMetric):
     r"""The Hits @ k.
 
-    For the expected values, we have
+    For the expected values, we first note that
 
     .. math::
+
+        \mathbb{I}[r_i \leq k] \sim \textit{Bernoulli}(p_i)
+
+    with $p_i = \min\{\frac{k}{N_i}, 1\}$. Thus, we have
+
+    .. math::
+
+        \mathbb{E}[\mathbb{I}[r_i \leq k]] = p_i = \min \{\frac{k}{N_i}, 1\}
+
+    Hence, we obtain
+
+    .. math::
+
         \mathbb{E}[Hits@k] = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right]
                            = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[\mathbb{I}[r_i \leq k]]
                            = \frac{1}{n} \sum \limits_{i=1}^{n} \min \{\frac{k}{N_i}, 1\}
+
+    For the variance, we have
+
+    .. math::
+
+        \mathbb{V}[Hits@k] = \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right]
+                           = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{V}\left[\mathbb{I}[r_i \leq k]\right]
+                           = \frac{1}{n} \sum \limits_{i=1}^{n} p_i(1 - p_i)
     ---
     description: The relative frequency of ranks not larger than a given k.
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k
@@ -959,9 +980,8 @@ class HitsAtK(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        return (
-            self.k * np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1.0 / self.k).mean()
-        ).item()
+        num_candidates = np.asanyarray(num_candidates, dtype=float)
+        return np.minimum(self.k / num_candidates, 1.0).mean().item()
 
     def variance(
         self,
