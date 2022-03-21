@@ -6,7 +6,7 @@ import numpy as np
 import unittest_templates
 
 import pykeen.metrics.ranking
-from pykeen.metrics.ranking import generate_ranks
+from pykeen.metrics.ranking import _harmonic_variances, generalized_harmonic_numbers, generate_ranks
 from tests import cases
 
 
@@ -166,12 +166,10 @@ class BaseExpectationTests(unittest.TestCase):
 
     def test_inverse_rank_mean(self):
         """Verify the expectation of the inverse rank."""
-        # fixme: expectation = (log n) / (n - 1) -> wrong?
         mean = np.reciprocal(self.ranks).mean()
-        numpy.testing.assert_allclose(mean, np.log(self.n) / (self.n - 1))
+        numpy.testing.assert_allclose(mean, generalized_harmonic_numbers(n=self.n, p=-1)[-1] / self.n)
 
     def test_inverse_rank_var(self):
         """Verify the variance of the inverse rank."""
-        # fixme: expectation = 1/n - ((log n) / (n - 1)) ** 2 -> wrong?
         var = np.reciprocal(self.ranks).var()
-        numpy.testing.assert_allclose(var, 1 / self.n - (np.log(self.n) / (self.n - 1)) ** 2)
+        numpy.testing.assert_allclose(var, _harmonic_variances(n=self.n)[-1])
