@@ -170,7 +170,6 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        num_candidates = np.asarray(num_candidates)
         return np.var(
             np.asarray(
                 list(
