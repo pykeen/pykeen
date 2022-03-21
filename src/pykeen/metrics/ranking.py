@@ -134,6 +134,7 @@ class RankBasedMetric(Metric):
         num_candidates: np.ndarray,
         num_samples: int,
         generator: Optional[np.random.Generator] = None,
+        memory_intense: bool = True,
     ) -> np.ndarray:
         """
         Calculate the metric on sampled rank arrays.
@@ -144,6 +145,8 @@ class RankBasedMetric(Metric):
             the number of samples
         :param generator:
             a random state for reproducibility
+        :param memory_intense:
+            whether to use a more memory-intense, but more time-efficient variant
 
         :return: shape: (num_samples,)
             the metric evaluated on `num_samples` sampled rank arrays
@@ -151,7 +154,20 @@ class RankBasedMetric(Metric):
         num_candidates = np.asarray(num_candidates)
         if generator is None:
             generator = np.random.default_rng()
-        # memory-hungry alternative: np.apply_along_axis
+        if memory_intense:
+            return np.apply_along_axis(
+                self,
+                axis=1,
+                arr=generate_ranks(
+                    num_candidates=np.repeat(
+                        num_candidates[None],
+                        repeats=num_samples,
+                        axis=0,
+                    ),
+                    seed=generator,
+                ),
+                num_candidates=num_candidates,
+            )
         return np.asanyarray(
             a=[
                 self(ranks=generate_ranks(num_candidates=num_candidates, seed=generator), num_candidates=num_candidates)
