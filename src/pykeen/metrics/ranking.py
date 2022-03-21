@@ -129,7 +129,7 @@ class RankBasedMetric(Metric):
         """
         raise NotImplementedError
 
-    def _get_sampled_values(
+    def get_sampled_values(
         self,
         num_candidates: np.ndarray,
         num_samples: int,
@@ -175,13 +175,7 @@ class RankBasedMetric(Metric):
             ]
         )
 
-    def numeric_expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: int,
-        generator: Optional[np.random.Generator] = None,
-        memory_intense: bool = True,
-    ) -> float:
+    def numeric_expected_value(self, num_candidates: np.ndarray, num_samples: int, **kwargs) -> float:
         """
         Compute expected metric value by summation.
 
@@ -189,10 +183,8 @@ class RankBasedMetric(Metric):
             the number of candidates for each individual rank computation
         :param num_samples:
             the number of samples to use for simulation
-        :param generator:
-            A random number generator
-        :param memory_intense:
-            whether to use a more memory-intense, but more time-efficient variant
+        :param kwargs:
+            additional keyword-based parameters passed to `get_sampled_values`
 
         :return:
             The estimated expected value of this metric
@@ -202,22 +194,9 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return (
-            self._get_sampled_values(
-                num_candidates=num_candidates,
-                num_samples=num_samples,
-                generator=generator,
-                memory_intense=memory_intense,
-            )
-            .mean()
-            .item()
-        )
+        return self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).mean().item()
 
-    def expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:
+    def expected_value(self, num_candidates: np.ndarray, num_samples: Optional[int] = None, **kwargs) -> float:
         """Compute expected metric value.
 
         :param num_candidates:
@@ -225,6 +204,9 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation, if no closed form
             expected value is implemented
+        :param kwargs:
+            additional keyword-based parameters passed to `get_sampled_values`, if no closed form solution is available
+
         :return:
             The expected value of this metric
         :raises ValueError:
@@ -238,25 +220,17 @@ class RankBasedMetric(Metric):
         """
         if num_samples is None:
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
-        return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples)
+        return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
 
-    def numeric_variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: int,
-        generator: Optional[np.random.Generator] = None,
-        memory_intense: bool = True,
-    ) -> float:
+    def numeric_variance(self, num_candidates: np.ndarray, num_samples: int, **kwargs) -> float:
         """Compute variance by summation.
 
         :param num_candidates:
             the number of candidates for each individual rank computation
         :param num_samples:
             the number of samples to use for simulation
-        :param generator:
-            A random number generator#
-        :param memory_intense:
-            whether to use a more memory-intense, but more time-efficient variant
+        :param kwargs:
+            additional keyword-based parameters passed to `get_sampled_values`
 
         :return:
             The estimated variance of this metric
@@ -266,22 +240,9 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return (
-            self._get_sampled_values(
-                num_candidates=num_candidates,
-                num_samples=num_samples,
-                generator=generator,
-                memory_intense=memory_intense,
-            )
-            .var()
-            .item()
-        )
+        return self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).var().item()
 
-    def variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:
+    def variance(self, num_candidates: np.ndarray, num_samples: Optional[int] = None, **kwargs) -> float:
         """Compute variance.
 
         :param num_candidates:
@@ -289,8 +250,12 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation, if no closed form
             expected value is implemented
+        :param kwargs:
+            additional keyword-based parameters passed to `get_sampled_values`, if no closed form solution is available
+
         :return:
             The variance of this metric
+
         :raises ValueError:
             Raised if a closed form variance has not been implemented and no
             number of samples are given
@@ -301,15 +266,11 @@ class RankBasedMetric(Metric):
         """
         if num_samples is None:
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
-        return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples)
+        return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
 
-    def std(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-    ) -> float:
+    def std(self, num_candidates: np.ndarray, num_samples: Optional[int] = None, **kwargs) -> float:
         """Compute the standard deviation."""
-        return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples))
+        return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs))
 
 
 def _safe_divide(x: float, y: float) -> float:
