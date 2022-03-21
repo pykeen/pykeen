@@ -147,7 +147,6 @@ def test_generate_ranks():
     ranks = generate_ranks(num_candidates=num_candidates, prefix_shape=(10_000,), seed=42)
     assert ranks.min().item() >= 1
     assert ranks.max().item() <= num_candidates_scalar
-    print(ranks.min(), ranks.max(), numpy.unique(ranks, return_counts=True)[1])
 
     # mean
     mean = ranks.mean().item()
