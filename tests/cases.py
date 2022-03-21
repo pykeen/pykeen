@@ -54,7 +54,12 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.metrics import rank_based_metric_resolver
-from pykeen.metrics.ranking import DerivedRankBasedMetric, NoClosedFormError, RankBasedMetric
+from pykeen.metrics.ranking import (
+    DerivedRankBasedMetric,
+    NoClosedFormError,
+    RankBasedMetric,
+    generate_num_candidates_and_ranks,
+)
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
@@ -1972,30 +1977,6 @@ class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.mode
         self._verify(scores)
 
 
-def generate_ranks(
-    num_ranks: int,
-    max_num_candidates: int,
-    seed: Optional[int] = None,
-) -> Tuple[numpy.ndarray, numpy.ndarray]:
-    """
-    Generate random number of candidates, and coherent ranks.
-
-    :param num_ranks:
-        the number of ranks to generate
-    :param max_num_candidates:
-        the maximum number of candidates (e.g., the number of entities)
-    :param seed:
-        the random seed.
-
-    :return: shape: (num_ranks,)
-        a pair of integer arrays, ranks and num_candidates for each individual ranking task
-    """
-    generator = numpy.random.default_rng(seed=seed)
-    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
-    ranks = generator.integers(low=1, high=num_candidates + 1)
-    return ranks, num_candidates
-
-
 class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric]):
     """A test for rank-based metrics."""
 
@@ -2013,7 +1994,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
-        self.ranks, self.num_candidates = generate_ranks(
+        self.ranks, self.num_candidates = generate_num_candidates_and_ranks(
             num_ranks=self.num_ranks,
             max_num_candidates=self.max_num_candidates,
             seed=42,

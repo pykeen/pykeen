@@ -4,8 +4,9 @@
 
 import math
 from abc import ABC, abstractmethod
-from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type
+from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type, Union
 
+import numpy
 import numpy as np
 from class_resolver import ClassResolver
 from docdata import parse_docdata
@@ -50,10 +51,54 @@ __all__ = [
     "Count",
     #
     "NoClosedFormError",
+    "generate_num_candidates_and_ranks",
     #
     "HITS_METRICS",
 ]
 EPSILON = 1.0e-12
+
+
+def generate_ranks(
+    num_candidates: np.ndarray,
+    seed: Union[None, int, np.random.Generator] = None,
+) -> np.ndarray:
+    """
+    Generate random ranks from a given array of the number of candidates for each ranking task.
+
+    :param num_candidates: shape: s
+        the number of candidates
+    :param seed:
+        the random seed
+
+    :return: shape: s
+        an array of sampled rank values
+    """
+    generator = np.random.default_rng(seed=seed)
+    return generator.integers(low=1, high=num_candidates + 1)
+
+
+def generate_num_candidates_and_ranks(
+    num_ranks: int,
+    max_num_candidates: int,
+    seed: Optional[int] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Generate random number of candidates, and coherent ranks.
+
+    :param num_ranks:
+        the number of ranks to generate
+    :param max_num_candidates:
+        the maximum number of candidates (e.g., the number of entities)
+    :param seed:
+        the random seed.
+
+    :return: shape: (num_ranks,)
+        a pair of integer arrays, ranks and num_candidates for each individual ranking task
+    """
+    generator = np.random.default_rng(seed=seed)
+    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
+    ranks = generate_ranks(num_candidates=num_candidates, seed=generator)
+    return ranks, num_candidates
 
 
 class NoClosedFormError(ValueError):
@@ -109,7 +154,7 @@ class RankBasedMetric(Metric):
         # memory-hungry alternative: np.apply_along_axis
         return np.asanyarray(
             a=[
-                self(ranks=generator.integers(low=1, high=num_candidates + 1), num_candidates=num_candidates)
+                self(ranks=generate_ranks(num_candidates=num_candidates, seed=generator), num_candidates=num_candidates)
                 for _ in range(num_samples)
             ]
         )
