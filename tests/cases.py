@@ -1986,6 +1986,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     #: the number of ranks
     num_ranks: int = 33
 
+    #: the number of samples to use for monte-carlo estimation
+    num_samples: int = 10000
+
     #: the number of candidates for each individual ranking task
     num_candidates: numpy.ndarray
 
@@ -2064,7 +2067,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         generator = numpy.random.default_rng(seed=0)
         simulated = self.instance.numeric_expected_value(
             num_candidates=self.num_candidates,
-            num_samples=10000,
+            num_samples=self.num_samples,
             generator=generator,
         )
         self.assertAlmostEqual(closed, simulated, delta=2)
@@ -2079,7 +2082,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         generator = numpy.random.default_rng(seed=0)
         simulated = self.instance.numeric_variance(
             num_candidates=self.num_candidates,
-            num_samples=10000,
+            num_samples=self.num_samples,
             generator=generator,
         )
         self.assertAlmostEqual(closed, simulated, delta=2)
