@@ -146,33 +146,29 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
 class BaseExpectationTests(unittest.TestCase):
     """Verification of expectation and variance of individual ranks."""
 
-    n: int = 32
-    num_samples: int = 10_000
+    n: int = 1_000
+    num_samples: int = 1_000_000
 
     def setUp(self) -> None:
         """Prepare ranks."""
-        num_candidates = numpy.asarray([self.n])
-        self.ranks = generate_ranks(num_candidates=num_candidates, prefix_shape=(self.num_samples,), seed=42)
-        assert self.ranks.min().item() >= 1
-        assert self.ranks.max().item() <= self.n
+        self.ranks = numpy.arange(1, self.n + 1).astype(float)
 
     def test_rank_mean(self):
         """Verify expectation of individual ranks."""
         mean = self.ranks.mean()
-        numpy.testing.assert_allclose(mean, 0.5 * (1 + self.n), rtol=1.0e-02)
+        numpy.testing.assert_allclose(mean, 0.5 * (1 + self.n))
 
     def test_rank_var(self):
         """Verify variance of individual ranks."""
-        # variance, slower convergence
-        variance = self.ranks.var(ddof=1)
-        numpy.testing.assert_allclose(variance, (1 + self.n**2) / 12, rtol=5.0e-02)
+        variance = self.ranks.var()
+        numpy.testing.assert_allclose(variance, (1 + self.n**2) / 12.0, rtol=1.0e-05)
 
     def test_inverse_rank_mean(self):
         """Verify the expectation of the inverse rank."""
-        mean = np.reciprocal(self.ranks.astype(float)).mean()
-        numpy.testing.assert_allclose(mean, np.log(self.n) / (self.n - 1), rtol=1.0e-02)
+        mean = np.reciprocal(self.ranks).mean()
+        numpy.testing.assert_allclose(mean, np.log(self.n) / (self.n - 1))
 
     def test_inverse_rank_var(self):
         """Verify the variance of the inverse rank."""
-        var = np.reciprocal(self.ranks.astype(float)).var(ddof=1)
-        numpy.testing.assert_allclose(var, 1 / self.n - (np.log(self.n) / (self.n - 1)) ** 2, rtol=1.0e-02)
+        var = np.reciprocal(self.ranks).var()
+        numpy.testing.assert_allclose(var, 1 / self.n - (np.log(self.n) / (self.n - 1)) ** 2)
