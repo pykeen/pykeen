@@ -826,8 +826,11 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         **kwargs,
     ) -> float:  # noqa:D102
         x = np.asanyarray(num_candidates)
+        # individual inverse ranks' variance
+        x = np.reciprocal(x) - (np.log(x) / (x - 1)) ** 2
+        # rank aggregation
         n = x.size
-        return (np.reciprocal(x) - (np.log(x) / (x - 1)) ** 2).sum().item() / n**2
+        return x.sum().item() / n**2
 
 
 @parse_docdata
