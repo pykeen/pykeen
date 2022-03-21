@@ -166,10 +166,15 @@ class RankBasedMetric(Metric):
             The estimated variance of this metric
         """
         num_candidates = np.asarray(num_candidates)
-        if generator is None:
-            generator = np.random.default_rng()
-        ranks = generator.integers(low=1, high=num_candidates + 1, size=(num_samples, *num_candidates.shape))
-        return np.apply_along_axis(self, 1, ranks, num_candidates=num_candidates).var().item()
+        return np.var(
+            np.asarray(
+                list(
+                    self._yield_sampled_values(
+                        num_candidates=num_candidates, num_samples=num_samples, generator=generator
+                    ),
+                )
+            )
+        ).item()
 
     def variance(
         self,
