@@ -559,9 +559,11 @@ class ArithmeticMeanRank(RankBasedMetric):
     .. math::
 
         \mathbb{V}[MR] = \mathbb{V}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i]
-                       = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{V}[r_i]
-                       = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{N_i^2 + 1}{12}
-                       = \frac{1}{12} \cdot \left(1 + \frac{1}{n} \sum \limits_{i=1}^{n} N_i \right)
+                       = \mathbb{V}[\sum \limits_{i=1}^{n} \frac{1}{n} r_i]
+                       = \sum \limits_{i=1}^{n} \mathbb{V}[\frac{1}{n} r_i]
+                       = \sum \limits_{i=1}^{n} \frac{1}{n^2} \mathbb{V}[r_i]
+                       = \sum \limits_{i=1}^{n} \frac{1}{n^2} \frac{N_i^2 - 1}{12}
+                       = \frac{1}{12 n^2} \cdot \left(-n + \sum \limits_{i=1}^{n} N_i \right)
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
@@ -590,7 +592,9 @@ class ArithmeticMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        return ((np.asanyarray(num_candidates) ** 2.0).mean().item() - 1) / 12.0
+        x = np.asanyarray(num_candidates)
+        n = x.size
+        return ((x**2).sum().item() - n) / (12 * n**2)
 
 
 @parse_docdata
