@@ -180,6 +180,7 @@ class RankBasedMetric(Metric):
         num_candidates: np.ndarray,
         num_samples: int,
         generator: Optional[np.random.Generator] = None,
+        memory_intense: bool = True,
     ) -> float:
         """
         Compute expected metric value by summation.
@@ -190,6 +191,9 @@ class RankBasedMetric(Metric):
             the number of samples to use for simulation
         :param generator:
             A random number generator
+        :param memory_intense:
+            whether to use a more memory-intense, but more time-efficient variant
+
         :return:
             The estimated expected value of this metric
 
@@ -199,7 +203,12 @@ class RankBasedMetric(Metric):
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
         return (
-            self._get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, generator=generator)
+            self._get_sampled_values(
+                num_candidates=num_candidates,
+                num_samples=num_samples,
+                generator=generator,
+                memory_intense=memory_intense,
+            )
             .mean()
             .item()
         )
@@ -232,7 +241,11 @@ class RankBasedMetric(Metric):
         return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples)
 
     def numeric_variance(
-        self, num_candidates: np.ndarray, num_samples: int, generator: Optional[np.random.Generator] = None
+        self,
+        num_candidates: np.ndarray,
+        num_samples: int,
+        generator: Optional[np.random.Generator] = None,
+        memory_intense: bool = True,
     ) -> float:
         """Compute variance by summation.
 
@@ -241,7 +254,10 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation
         :param generator:
-            A random number generator
+            A random number generator#
+        :param memory_intense:
+            whether to use a more memory-intense, but more time-efficient variant
+
         :return:
             The estimated variance of this metric
 
@@ -251,7 +267,12 @@ class RankBasedMetric(Metric):
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
         return (
-            self._get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, generator=generator)
+            self._get_sampled_values(
+                num_candidates=num_candidates,
+                num_samples=num_samples,
+                generator=generator,
+                memory_intense=memory_intense,
+            )
             .var()
             .item()
         )
