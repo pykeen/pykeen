@@ -754,7 +754,46 @@ class HarmonicMeanRank(RankBasedMetric):
 
 @parse_docdata
 class InverseHarmonicMeanRank(RankBasedMetric):
-    """The inverse harmonic mean rank.
+    r"""The inverse harmonic mean rank.
+
+    For the expected value, we first observe that
+
+    .. math::
+
+        \mathbb{E}\left[r_i^{-1}\right]
+            = \frac{\ln N_i - \ln 1}{N_i - 1}
+            = \frac{\ln N_i}{N_i - 1}
+
+    Thus, we have
+
+    .. math::
+
+        \mathbb{E}\left[\textrm{MRR}\right]
+            = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
+            = \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right]
+            = \frac{1}{n} \sum \limits_{i=1}^n \frac{\ln N_i}{N_i - 1}
+            \stackrel{*}{=} \frac{\ln N}{N - 1}
+
+    For the variance, we have for the individual ranks
+
+    .. math::
+
+        \mathbb{V}\left[r_i^{-1}\right]
+            = \frac{1}{1 \cdot N_i} - \left \frac{\ln N_i - \ln 1}{N_i - 1} \right)^2
+            = \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2
+
+    and thus overall
+
+    .. math::
+
+        \mathbb{V}\left[\textrm{MRR}\right]
+            = \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
+            = \frac{1}{n^2} \sum \limits_{i=1}^n \mathbb{V}\left[r_i^{-1}\right]
+            = \frac{1}{n^2} \sum \limits_{i=1}^n \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2
+            \stackrel{*}{=} \frac{1}{n} \frac{1}{N} - \left( \frac{\ln N}{N - 1} \right)^2
+
+    .. seealso::
+        https://en.wikipedia.org/wiki/Inverse_distribution#Inverse_uniform_distribution
 
     ---
     link: https://en.wikipedia.org/wiki/Mean_reciprocal_rank
@@ -774,28 +813,11 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
         **kwargs,
-    ) -> float:
-        r"""
-        Calculate the expected mean rank under random ordering.
-
-        .. math ::
-
-            \mathbb{E}\left[\textrm{MRR}\right]
-            = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
-            = \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right]
-            = \mathbb{E}\left[r_i^{-1}\right]
-            \stackrel{*}{=} \frac{\ln n}{n - 1}
-
-        :param num_candidates:
-            the number of candidates for each individual rank computation
-        :param num_samples:
-            the number of samples to use for simulation
-
-        :return:
-            the expected mean rank
-        """
-        n = np.asanyarray(num_candidates).mean().item()
-        return _safe_divide(math.log(n), n - 1)
+    ) -> float:  # noqa: D102
+        x = np.asanyarray(num_candidates)
+        # individual ranks' expectation
+        x = np.log(x) / np.clip(x - 1, a_min=EPSILON, a_max=None)
+        return x.mean().item()
 
     def variance(
         self,
@@ -803,8 +825,9 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa:D102
-        n = np.asanyarray(num_candidates).mean()
-        return (1 / n - (np.log(n) / (n - 1)) ** 2).item()
+        x = np.asanyarray(num_candidates)
+        n = x.size
+        return (np.reciprocal(x) - (np.log(x) / (x - 1)) ** 2).sum().item() / n**2
 
 
 @parse_docdata
