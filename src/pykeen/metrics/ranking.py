@@ -806,7 +806,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     increasing = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(stats.hmean(ranks)).item()
+        return np.reciprocal(ranks.astype(float)).mean().item()
 
     def expected_value(
         self,
