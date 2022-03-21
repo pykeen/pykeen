@@ -50,6 +50,7 @@ __all__ = [
     "Count",
     #
     "NoClosedFormError",
+    "generate_ranks",
     "generate_num_candidates_and_ranks",
     #
     "HITS_METRICS",

@@ -1,8 +1,9 @@
 """Tests for rank-based metrics."""
-
+import numpy
 import unittest_templates
 
 import pykeen.metrics.ranking
+from pykeen.metrics.ranking import generate_ranks
 from tests import cases
 
 
@@ -137,3 +138,21 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
         pykeen.metrics.ranking.ZMetric,
         pykeen.metrics.ranking.DerivedRankBasedMetric,
     }
+
+
+def test_generate_ranks():
+    """Verifies the expectation and variance of generated ranks."""
+    num_candidates_scalar = 32
+    num_candidates = numpy.asarray([num_candidates_scalar])
+    ranks = generate_ranks(num_candidates=num_candidates, prefix_shape=(10_000,), seed=42)
+    assert ranks.min().item() >= 1
+    assert ranks.max().item() <= num_candidates_scalar
+    print(ranks.min(), ranks.max(), numpy.unique(ranks, return_counts=True)[1])
+
+    # mean
+    mean = ranks.mean().item()
+    numpy.testing.assert_allclose(mean, 0.5 * (1 + num_candidates_scalar), rtol=1.0e-02)
+
+    # variance, slower convergence
+    variance = ranks.var().item()
+    numpy.testing.assert_allclose(variance, (1 + num_candidates_scalar**2) / 12, rtol=5.0e-02)
