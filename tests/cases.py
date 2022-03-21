@@ -1981,10 +1981,12 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     """A test for rank-based metrics."""
 
     #: the maximum number of candidates
-    max_num_candidates: int = 17
+    # max_num_candidates: int = 17
+    max_num_candidates: int = 255
 
     #: the number of ranks
-    num_ranks: int = 33
+    # num_ranks: int = 33
+    num_ranks: int = 1337
 
     #: the number of samples to use for monte-carlo estimation
     num_samples: int = 10000
@@ -2065,12 +2067,13 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest("no implementation of closed-form expectation") from error
 
         generator = numpy.random.default_rng(seed=0)
-        simulated = self.instance.numeric_expected_value(
+        low, simulated, high = self.instance.numeric_expected_value_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
         )
-        self.assertAlmostEqual(closed, simulated, delta=2)
+        self.assertLessEqual(low, closed)
+        self.assertLessEqual(closed, high)
 
     def test_variance(self):
         """Test the numeric variance is close to the closed form one."""
@@ -2080,12 +2083,13 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest("no implementation of closed-form variance") from error
 
         generator = numpy.random.default_rng(seed=0)
-        simulated = self.instance.numeric_variance(
+        low, simulated, high = self.instance.numeric_variance_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
         )
-        self.assertAlmostEqual(closed, simulated, delta=2)
+        self.assertLessEqual(low, closed)
+        self.assertLessEqual(closed, high)
 
     def test_different_to_base_metric(self):
         """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
