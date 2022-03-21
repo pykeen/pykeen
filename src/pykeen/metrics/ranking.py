@@ -4,7 +4,7 @@
 
 import math
 from abc import ABC, abstractmethod
-from typing import ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
+from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
 
 import numpy as np
 from class_resolver import ClassResolver
@@ -175,6 +175,33 @@ class RankBasedMetric(Metric):
             ]
         )
 
+    def _bootstrap(
+        self,
+        func: Callable[[np.ndarray], np.ndarray],
+        num_candidates: np.ndarray,
+        num_samples: int,
+        confidence_level: float = 95.0,
+        n_boot: int = 1_000,
+        generator: Optional[np.random.Generator] = None,
+        **kwargs,
+    ) -> np.ndarray:
+        """Bootstrap a metric's confidence intervals."""
+        # normalize confidence level
+        if not (50 < confidence_level < 100):
+            raise ValueError(f"Invalid confidence_level={confidence_level}. Should be in (50, 100).")
+        p = 50 - confidence_level / 2, 50, 50 + confidence_level / 2
+
+        # sample metric values
+        generator = np.random.default_rng(generator)
+        xs = self.get_sampled_values(
+            num_candidates=num_candidates, num_samples=num_samples, generator=generator, **kwargs
+        )
+
+        # bootstrap estimator (i.e., compute on sample with replacement)
+        n = xs.shape[0]
+        vs = np.asanyarray([func(xs[generator.integers(n, size=(n,))]) for _ in range(n_boot)])
+        return np.percentile(vs, p)
+
     def numeric_expected_value(
         self,
         num_candidates: np.ndarray,
@@ -200,6 +227,10 @@ class RankBasedMetric(Metric):
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
         return self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).mean().item()
+
+    def numeric_expected_value_with_ci(self, **kwargs) -> np.ndarray:
+        """Estimate expected value with confidence intervals."""
+        return self._bootstrap(func=np.mean, **kwargs)
 
     def expected_value(
         self,
@@ -258,6 +289,10 @@ class RankBasedMetric(Metric):
         return (
             self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).var(ddof=1).item()
         )
+
+    def numeric_variance_with_ci(self, **kwargs) -> np.ndarray:
+        """Estimate variance with confidence intervals."""
+        return self._bootstrap(func=np.var, **kwargs)
 
     def variance(
         self,
