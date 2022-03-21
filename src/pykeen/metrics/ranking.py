@@ -753,9 +753,9 @@ class HarmonicMeanRank(RankBasedMetric):
 
 
 @functools.lru_cache()
-def _harmonic_numbers(n: int) -> np.ndarray:
+def _harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
     """Calculate the harmonic numbers to n."""
-    return np.r_[0, np.cumsum(np.reciprocal(np.arange(1, n + 1, dtype=float)))]
+    return np.r_[0, np.cumsum(np.power(np.arange(1, n + 1, dtype=float), p))]
 
 
 @functools.lru_cache()
@@ -766,12 +766,8 @@ def _harmonic_variances(n: int) -> np.ndarray:
     .. math::
 
         \textit{V}[n]
-            = \frac{1}{n} \sum \limits_{i=1}^n \left( \frac{1}{i} - H_n \right)^2
-            = \frac{1}{n} \sum \limits_{i=1}^n \left( \frac{1}{i^2} - 2 \cdot H_n \cdot \frac{1}{i} + H_n^2 \right)
-            = H_n^2 - 2 \cdot H_n \cdot \frac{1}{n} \left(\sum \limits_{i=1}^n \frac{1}{i}\right)
-                + \frac{1}{n} \sum \limits_{i=1}^n \frac{1}{i^2}
-            = H_n^2 - \frac{2}{n} \cdot H_n^2 + \frac{1}{n} \sum \limits_{i=1}^n \frac{1}{i^2}
-            = \frac{n - 2}{n} \cdot H_n^2 + \frac{1}{n} \sum \limits_{i=1}^n \frac{1}{i^2}
+            = \frac{1}{n} \sum \limits_{i=1}^n \left( i^{-1} - \frac{H_n}{n} \right)^2
+            = -\frac{H_n^2}{n^2} + \frac{1}{n} \sum \limits_{i=1}^n i^{-2}
 
     where $H_n$ denotes the n-th harmonic number.
 
@@ -782,8 +778,9 @@ def _harmonic_variances(n: int) -> np.ndarray:
         the variances for the discrete uniform distribution over `{1/1, ..., 1/k}`
     """
     h = _harmonic_numbers(n)[1:]
+    h2 = _harmonic_numbers(n, p=-2)[1:]
     n = np.arange(1, n + 1)
-    v = (n - 2) / n * h**2 + np.cumsum(np.reciprocal(n) ** 2) / n
+    v = (n * h2 - h**2) / n**2
     return np.r_[0, v]
 
 
