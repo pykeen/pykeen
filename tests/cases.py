@@ -39,7 +39,7 @@ from click.testing import CliRunner, Result
 from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
-from torch.optim import Adagrad, SGD
+from torch.optim import SGD, Adagrad
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -53,14 +53,14 @@ from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.metrics import rank_based_metric_resolver
+from pykeen.metrics import ValueRange, rank_based_metric_resolver
 from pykeen.metrics.ranking import (
     DerivedRankBasedMetric,
     NoClosedFormError,
     RankBasedMetric,
     generate_num_candidates_and_ranks,
 )
-from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL, TransE
+from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -76,14 +76,14 @@ from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
 from pykeen.typing import (
+    LABEL_HEAD,
+    LABEL_TAIL,
+    TRAINING,
     HeadRepresentation,
     InductiveMode,
     Initializer,
-    LABEL_HEAD,
-    LABEL_TAIL,
     MappedTriples,
     RelationRepresentation,
-    TRAINING,
     TailRepresentation,
 )
 from pykeen.utils import (
@@ -2023,7 +2023,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # data type
         assert isinstance(x, float)
         # value range
-        self.assertIn(x, self.instance.value_range)
+        self.assertIn(x, self.instance.value_range.approximate(epsilon=1.0e-08))
 
     def test_call(self):
         """Test __call__."""
