@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Ranking metrics."""
-import functools
 import math
 from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
@@ -252,7 +251,7 @@ class RankBasedMetric(Metric):
 
         :return:
             The expected value of this metric
-        :raises ValueError:
+        :raises NoClosedFormError:
             Raised if a closed form variance has not been implemented and no
             number of samples are given
 
@@ -315,7 +314,7 @@ class RankBasedMetric(Metric):
         :return:
             The variance of this metric
 
-        :raises ValueError:
+        :raises NoClosedFormError:
             Raised if a closed form variance has not been implemented and no
             number of samples are given
 
@@ -348,7 +347,7 @@ def _safe_divide(x: float, y: float) -> float:
 
 
 class AffineTransformationParameters(NamedTuple):
-    """Parameters of an affine transformation"""
+    """The parameters of an affine transformation."""
 
     scale: float = 1.0
     offset: float = 0.0
@@ -402,6 +401,14 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
     def adjust(self, base_metric_result: float, num_candidates: np.ndarray) -> float:
         """
         Adjust base metric results based on the number of candidates.
+
+        :param base_metric_result:
+            the result of the base metric
+        :param num_candidates:
+            the number of candidates
+
+        :return:
+            the adjusted metric
 
         .. note ::
 
@@ -482,7 +489,7 @@ class ZMetric(DerivedRankBasedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     value_range = ValueRange(lower=None, upper=None)
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> Tuple[float, float]:  # noqa: D102
+    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
         mean = self.base.expected_value(num_candidates=num_candidates)
         std = self.base.std(num_candidates=num_candidates)
         scale = _safe_divide(1.0, std)
@@ -528,7 +535,7 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
     .. warning:: This requires a closed-form solution to the expected value
     """
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> Tuple[float, float]:  # noqa: D102
+    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
         return AffineTransformationParameters(
             scale=_safe_divide(1, self.base.expected_value(num_candidates=num_candidates))
         )
@@ -563,7 +570,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> Tuple[float, float]:  # noqa: D102
+    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
         mean = self.base.expected_value(num_candidates=num_candidates)
         scale = _safe_divide(1.0, 1.0 - mean)
         offset = -scale * mean
@@ -765,6 +772,9 @@ def generalized_harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
         the maximum number for which the generalized harmonic numbers are calculated
     :param p:
         the power, typically negative
+
+    :return: shape: (n,)
+        the first $n$ generalized harmonic numbers
 
     .. seealso::
         https://en.wikipedia.org/wiki/Harmonic_number#Generalizations

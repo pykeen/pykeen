@@ -53,7 +53,7 @@ from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.metrics import ValueRange, rank_based_metric_resolver
+from pykeen.metrics import rank_based_metric_resolver
 from pykeen.metrics.ranking import (
     DerivedRankBasedMetric,
     NoClosedFormError,

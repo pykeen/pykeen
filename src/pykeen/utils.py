@@ -1374,6 +1374,12 @@ def make_ones_like(prefix: Sequence) -> Sequence[int]:
 def logcumsumexp(a: np.ndarray) -> np.ndarray:
     """Compute ``log(cumsum(exp(a)))``.
 
+    :param a: shape: s
+        the array
+
+    :return: shape s
+        the log-cumsum-exp of the array
+
     .. seealso ::
         :func:`scipy.special.logsumexp` and :func:`torch.logcumsumexp`
     """
