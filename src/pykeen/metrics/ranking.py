@@ -758,6 +758,35 @@ def _harmonic_numbers(n: int) -> np.ndarray:
     return np.r_[0, np.cumsum(np.reciprocal(np.arange(1, n + 1, dtype=float)))]
 
 
+@functools.lru_cache()
+def _harmonic_variances(n: int) -> np.ndarray:
+    r"""
+    Pre-calculate variances of inverse rank distributions.
+
+    .. math::
+
+        \textit{V}[n]
+            = \frac{1}{n} \sum \limits_{i=1}^n \left( \frac{1}{i} - H_n \right)^2
+            = \frac{1}{n} \sum \limits_{i=1}^n \left( \frac{1}{i^2} - 2 \cdot H_n \cdot \frac{1}{i} + H_n^2 \right)
+            = H_n^2 - 2 \cdot H_n \cdot \frac{1}{n} \left(\sum \limits_{i=1}^n \frac{1}{i}\right)
+                + \frac{1}{n} \sum \limits_{i=1}^n \frac{1}{i^2}
+            = H_n^2 - \frac{2}{n} \cdot H_n^2 + \frac{1}{n} \sum \limits_{i=1}^n \frac{1}{i^2}
+            = \frac{n - 2}{n} \cdot H_n^2 + \frac{1}{n} \sum \limits_{i=1}^n \frac{1}{i^2}
+
+    where $H_n$ denotes the n-th harmonic number.
+
+    :param n:
+        the maximum rank number
+
+    :return: shape: (n+1,)
+        the variances for the discrete uniform distribution over `{1/1, ..., 1/k}`
+    """
+    h = _harmonic_numbers(n)[1:]
+    n = np.arange(1, n + 1)
+    v = (n - 2) / n * h**2 + np.cumsum(np.reciprocal(n) ** 2) / n
+    return np.r_[0, v]
+
+
 @parse_docdata
 class InverseHarmonicMeanRank(RankBasedMetric):
     r"""The inverse harmonic mean rank.
@@ -833,9 +862,11 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa:D102
-        x = np.asanyarray(num_candidates, dtype=float)
+        x = np.asanyarray(num_candidates)
+        n = x.max().item()
+        vs = _harmonic_variances(n)
         # individual inverse ranks' variance
-        x = (1 / x) - (np.log(x) / (x - 1)) ** 2
+        x = vs[x]
         # rank aggregation
         return x.sum().item() / x.size**2
 
