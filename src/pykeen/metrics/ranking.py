@@ -255,7 +255,9 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).var().item()
+        return (
+            self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).var(ddof=1).item()
+        )
 
     def variance(
         self,
