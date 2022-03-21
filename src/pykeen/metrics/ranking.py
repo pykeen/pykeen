@@ -829,8 +829,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         # individual inverse ranks' variance
         x = (1 / x) - (np.log(x) / (x - 1)) ** 2
         # rank aggregation
-        n = x.size
-        return x.sum().item() / n**2
+        return x.sum().item() / x.size**2
 
 
 @parse_docdata
