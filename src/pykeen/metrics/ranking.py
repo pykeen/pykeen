@@ -175,7 +175,12 @@ class RankBasedMetric(Metric):
             ]
         )
 
-    def numeric_expected_value(self, num_candidates: np.ndarray, num_samples: int, **kwargs) -> float:
+    def numeric_expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: int,
+        **kwargs,
+    ) -> float:
         """
         Compute expected metric value by summation.
 
@@ -196,7 +201,12 @@ class RankBasedMetric(Metric):
         """
         return self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).mean().item()
 
-    def expected_value(self, num_candidates: np.ndarray, num_samples: Optional[int] = None, **kwargs) -> float:
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+        **kwargs,
+    ) -> float:
         """Compute expected metric value.
 
         :param num_candidates:
@@ -222,7 +232,12 @@ class RankBasedMetric(Metric):
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
         return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
 
-    def numeric_variance(self, num_candidates: np.ndarray, num_samples: int, **kwargs) -> float:
+    def numeric_variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: int,
+        **kwargs,
+    ) -> float:
         """Compute variance by summation.
 
         :param num_candidates:
@@ -242,7 +257,12 @@ class RankBasedMetric(Metric):
         """
         return self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).var().item()
 
-    def variance(self, num_candidates: np.ndarray, num_samples: Optional[int] = None, **kwargs) -> float:
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+        **kwargs,
+    ) -> float:
         """Compute variance.
 
         :param num_candidates:
@@ -268,7 +288,12 @@ class RankBasedMetric(Metric):
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
         return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
 
-    def std(self, num_candidates: np.ndarray, num_samples: Optional[int] = None, **kwargs) -> float:
+    def std(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+        **kwargs,
+    ) -> float:
         """Compute the standard deviation."""
         return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs))
 
@@ -344,22 +369,27 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         # since scale and offset are constant for a given number of candidates, we have
         # E[scale * M + offset] = scale * E[M] + offset
         return self.adjust(
-            base_metric_result=self.base.expected_value(num_candidates=num_candidates), num_candidates=num_candidates
+            base_metric_result=self.base.expected_value(
+                num_candidates=num_candidates, num_samples=num_samples, **kwargs
+            ),
+            num_candidates=num_candidates,
         )
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         scale = self.get_coefficients(num_candidates=num_candidates)[0]
-        return scale**2.0 * self.base.variance(num_candidates=num_candidates)
+        return scale**2.0 * self.base.variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
 
     @abstractmethod
     def get_coefficients(self, num_candidates: np.ndarray) -> Tuple[float, float]:
