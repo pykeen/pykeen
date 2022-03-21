@@ -147,7 +147,6 @@ class BaseExpectationTests(unittest.TestCase):
     """Verification of expectation and variance of individual ranks."""
 
     n: int = 1_000
-    num_samples: int = 1_000_000
 
     def setUp(self) -> None:
         """Prepare ranks."""
@@ -155,13 +154,15 @@ class BaseExpectationTests(unittest.TestCase):
 
     def test_rank_mean(self):
         """Verify expectation of individual ranks."""
+        # expectation = (1 + n) / 2
         mean = self.ranks.mean()
         numpy.testing.assert_allclose(mean, 0.5 * (1 + self.n))
 
     def test_rank_var(self):
         """Verify variance of individual ranks."""
+        # variance = (n**2 - 1) / 12
         variance = self.ranks.var()
-        numpy.testing.assert_allclose(variance, (1 + self.n**2) / 12.0, rtol=1.0e-05)
+        numpy.testing.assert_allclose(variance, (self.n**2 - 1) / 12.0)
 
     def test_inverse_rank_mean(self):
         """Verify the expectation of the inverse rank."""
