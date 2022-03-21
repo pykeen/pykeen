@@ -6,7 +6,6 @@ import math
 from abc import ABC, abstractmethod
 from typing import ClassVar, Collection, Iterable, Optional, Tuple, Type, Union
 
-import numpy
 import numpy as np
 from class_resolver import ClassResolver
 from docdata import parse_docdata
@@ -447,6 +446,7 @@ class ZMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 0.0
         return 0.0  # centered
@@ -455,6 +455,7 @@ class ZMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 1.0
         return 1.0  # re-scaled
@@ -485,6 +486,7 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         return 1.0  # centered
 
@@ -520,6 +522,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 0.0
         return 0.0
@@ -563,6 +566,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         return 0.5 * (1 + np.asanyarray(num_candidates).mean().item())
 
@@ -570,6 +574,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         return ((np.asanyarray(num_candidates) ** 2.0).mean().item() - 1) / 12.0
 
@@ -644,6 +649,7 @@ class GeometricMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         m = num_candidates.size
         # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
@@ -713,6 +719,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:
         r"""
         Calculate the expected mean rank under random ordering.
@@ -740,6 +747,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa:D102
         n = np.asanyarray(num_candidates).mean()
         return (1 / n - (np.log(n) / (n - 1)) ** 2).item()
@@ -799,6 +807,7 @@ class MedianRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa: D102
         # TODO: not proven (yet)
         m = num_candidates.max()
@@ -938,7 +947,12 @@ class HitsAtK(RankBasedMetric):
     def key(self) -> str:  # noqa: D102
         return super().key[:-1] + str(self.k)
 
-    def expected_value(self, num_candidates: np.ndarray, num_samples: Optional[int] = None) -> float:
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+        **kwargs,
+    ) -> float:
         r"""
         Calculate the expected Hits@k under random ordering.
 
@@ -962,6 +976,7 @@ class HitsAtK(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        **kwargs,
     ) -> float:  # noqa:D102
         e = self.expected_value(num_candidates=num_candidates, num_samples=num_samples)
         return e * (1 - e)
