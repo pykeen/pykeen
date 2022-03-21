@@ -439,7 +439,24 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
-    """The (arithmetic) mean rank.
+    r"""The (arithmetic) mean rank.
+
+    For the expected value, we have
+
+    .. math::
+
+        \mathbb{E}[MR] = \mathbb{E}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i]
+                       = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[r_i]
+                       = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{N_i + 1}{2}
+
+    For the variance, we have
+
+    .. math::
+
+        \mathbb{V}[MR] = \mathbb{V}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i]
+                       = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{V}[r_i]
+                       = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{N_i^2 + 1}{12}
+                       = \frac{1}{12} \cdot \left(1 + \frac{1}{n} \sum \limits_{i=1}^{n} N_i \right)
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
@@ -458,23 +475,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
-    ) -> float:
-        r"""
-        Calculate the expected mean rank under random ordering.
-
-        .. math ::
-
-            E[MR] = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{1 + CSS[i]}{2}
-                = \frac{1}{2}(1 + \frac{1}{n} \sum \limits_{i=1}^{n} CSS[i])
-
-        :param num_candidates:
-            the number of candidates for each individual rank computation
-        :param num_samples:
-            the number of samples to use for simulation
-
-        :return:
-            the expected value of the mean rank
-        """
+    ) -> float:  # noqa: D102
         return 0.5 * (1 + np.asanyarray(num_candidates).mean().item())
 
     def variance(
@@ -482,8 +483,9 @@ class ArithmeticMeanRank(RankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
-        n = np.asanyarray(num_candidates).mean().item()
-        return (n**2 - 1) / 12.0
+        # 1/n sum (N_i^2 - 1)/12 = ((num_candidates**2).mean() - 1)/12
+        num_candidates = np.asanyarray(num_candidates)
+        return ((num_candidates**2.0).mean().item() - 1) / 12.0
 
 
 @parse_docdata
