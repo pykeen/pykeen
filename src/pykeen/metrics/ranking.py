@@ -61,6 +61,7 @@ def generate_ranks(
     num_candidates: np.ndarray,
     prefix_shape: Tuple[int, ...] = tuple(),
     seed: Union[None, int, np.random.Generator] = None,
+    dtype: Optional[Type[np.number]] = None,
 ) -> np.ndarray:
     """
     Generate random ranks from a given array of the number of candidates for each ranking task.
@@ -71,12 +72,16 @@ def generate_ranks(
         additional dimensions for broadcasted sampling
     :param seed:
         the random seed
+    :param dtype:
+        the data type
 
     :return: shape: dims + s
         an array of sampled rank values
     """
+    if dtype is None:
+        dtype = int
     generator = np.random.default_rng(seed=seed)
-    return generator.integers(low=1, high=num_candidates + 1, size=prefix_shape + num_candidates.shape)
+    return generator.integers(low=1, high=num_candidates + 1, size=prefix_shape + num_candidates.shape, dtype=dtype)
 
 
 def generate_num_candidates_and_ranks(
