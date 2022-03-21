@@ -989,8 +989,9 @@ class HitsAtK(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa:D102
-        e = self.expected_value(num_candidates=num_candidates, num_samples=num_samples)
-        return e * (1 - e)
+        num_candidates = np.asanyarray(num_candidates, dtype=float)
+        p = np.minimum(self.k / num_candidates, 1.0)
+        return (p * (1.0 - p)).mean().item()
 
 
 @parse_docdata
