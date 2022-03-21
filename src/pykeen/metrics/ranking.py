@@ -483,7 +483,6 @@ class ArithmeticMeanRank(RankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
     ) -> float:  # noqa: D102
-        # 1/n sum (N_i^2 - 1)/12 = ((num_candidates**2).mean() - 1)/12
         num_candidates = np.asanyarray(num_candidates)
         return ((num_candidates**2.0).mean().item() - 1) / 12.0
 
