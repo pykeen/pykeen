@@ -772,7 +772,6 @@ def generalized_harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
     return np.cumsum(np.power(np.arange(1, n + 1, dtype=float), p))
 
 
-@functools.lru_cache()
 def _harmonic_variances(n: int) -> np.ndarray:
     r"""
     Pre-calculate variances of inverse rank distributions.
@@ -875,7 +874,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     ) -> float:  # noqa:D102
         x = np.asanyarray(num_candidates)
         n = x.max().item()
-        vs = np.r[0, _harmonic_variances(n)]
+        vs = np.r_[0, _harmonic_variances(n)]
         # individual inverse ranks' variance
         x = vs[x]
         # rank aggregation
