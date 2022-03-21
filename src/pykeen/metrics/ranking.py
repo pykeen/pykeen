@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Ranking metrics."""
-
+import functools
 import math
 from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
@@ -752,6 +752,12 @@ class HarmonicMeanRank(RankBasedMetric):
         return stats.hmean(ranks).item()
 
 
+@functools.lru_cache()
+def _harmonic_numbers(n: int) -> np.ndarray:
+    """Calculate the harmonic numbers to n."""
+    return np.r_[0, np.cumsum(np.reciprocal(np.arange(1, n + 1, dtype=float)))]
+
+
 @parse_docdata
 class InverseHarmonicMeanRank(RankBasedMetric):
     r"""The inverse harmonic mean rank.
@@ -814,9 +820,11 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        x = np.asanyarray(num_candidates, dtype=float)
+        x = np.asanyarray(num_candidates)
+        n = x.max().item()
+        h = _harmonic_numbers(n)
         # individual ranks' expectation
-        x = np.log(x) / np.clip(x - 1, a_min=EPSILON, a_max=None)
+        x = h[num_candidates] / num_candidates
         return x.mean().item()
 
     def variance(
