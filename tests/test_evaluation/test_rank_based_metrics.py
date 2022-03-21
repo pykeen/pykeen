@@ -1,5 +1,8 @@
 """Tests for rank-based metrics."""
+import unittest
+
 import numpy
+import numpy as np
 import unittest_templates
 
 import pykeen.metrics.ranking
@@ -140,18 +143,36 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
     }
 
 
-def test_generate_ranks():
-    """Verifies the expectation and variance of generated ranks."""
-    num_candidates_scalar = 32
-    num_candidates = numpy.asarray([num_candidates_scalar])
-    ranks = generate_ranks(num_candidates=num_candidates, prefix_shape=(10_000,), seed=42)
-    assert ranks.min().item() >= 1
-    assert ranks.max().item() <= num_candidates_scalar
+class BaseExpectationTests(unittest.TestCase):
+    """Verification of expectation and variance of individual ranks."""
 
-    # mean
-    mean = ranks.mean().item()
-    numpy.testing.assert_allclose(mean, 0.5 * (1 + num_candidates_scalar), rtol=1.0e-02)
+    n: int = 32
+    num_samples: int = 10_000
 
-    # variance, slower convergence
-    variance = ranks.var().item()
-    numpy.testing.assert_allclose(variance, (1 + num_candidates_scalar**2) / 12, rtol=5.0e-02)
+    def setUp(self) -> None:
+        """Prepare ranks."""
+        num_candidates = numpy.asarray([self.n])
+        self.ranks = generate_ranks(num_candidates=num_candidates, prefix_shape=(self.num_samples,), seed=42)
+        assert self.ranks.min().item() >= 1
+        assert self.ranks.max().item() <= self.n
+
+    def test_rank_mean(self):
+        """Verify expectation of individual ranks."""
+        mean = self.ranks.mean()
+        numpy.testing.assert_allclose(mean, 0.5 * (1 + self.n), rtol=1.0e-02)
+
+    def test_rank_var(self):
+        """Verify variance of individual ranks."""
+        # variance, slower convergence
+        variance = self.ranks.var(ddof=1)
+        numpy.testing.assert_allclose(variance, (1 + self.n**2) / 12, rtol=5.0e-02)
+
+    def test_inverse_rank_mean(self):
+        """Verify the expectation of the inverse rank."""
+        mean = np.reciprocal(self.ranks.astype(float)).mean()
+        numpy.testing.assert_allclose(mean, np.log(self.n) / (self.n - 1), rtol=1.0e-02)
+
+    def test_inverse_rank_var(self):
+        """Verify the variance of the inverse rank."""
+        var = np.reciprocal(self.ranks.astype(float)).var(ddof=1)
+        numpy.testing.assert_allclose(var, 1 / self.n - (np.log(self.n) / (self.n - 1)) ** 2, rtol=1.0e-02)
