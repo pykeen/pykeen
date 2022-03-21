@@ -12,8 +12,8 @@ from docdata import parse_docdata
 from scipy import stats
 
 from .utils import Metric, ValueRange
-from ..utils import logcumsumexp
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
+from ..utils import logcumsumexp
 
 __all__ = [
     "rank_based_metric_resolver",
@@ -169,7 +169,7 @@ class RankBasedMetric(Metric):
         if generator is None:
             generator = np.random.default_rng()
         ranks = generator.integers(low=1, high=num_candidates + 1, size=(num_samples, *num_candidates.shape))
-        return np.apply_along_axis(self, 0, ranks, num_candidates=num_candidates).var().item()
+        return np.apply_along_axis(self, 1, ranks, num_candidates=num_candidates).var().item()
 
     def variance(
         self,
