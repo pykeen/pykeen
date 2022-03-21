@@ -166,10 +166,12 @@ class BaseExpectationTests(unittest.TestCase):
 
     def test_inverse_rank_mean(self):
         """Verify the expectation of the inverse rank."""
+        # fixme: expectation = (log n) / (n - 1) -> wrong?
         mean = np.reciprocal(self.ranks).mean()
         numpy.testing.assert_allclose(mean, np.log(self.n) / (self.n - 1))
 
     def test_inverse_rank_var(self):
         """Verify the variance of the inverse rank."""
+        # fixme: expectation = 1/n - ((log n) / (n - 1)) ** 2 -> wrong?
         var = np.reciprocal(self.ranks).var()
         numpy.testing.assert_allclose(var, 1 / self.n - (np.log(self.n) / (self.n - 1)) ** 2)
