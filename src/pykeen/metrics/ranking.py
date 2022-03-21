@@ -481,17 +481,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
-    ) -> float:
-        """Calculate the variance under random ordering.
-
-        :param num_candidates:
-            the number of candidates for each individual rank computation
-        :param num_samples:
-            the number of samples to use for simulation
-
-        :return:
-            the variance of the mean rank
-        """
+    ) -> float:  # noqa: D102
         n = np.asanyarray(num_candidates).mean().item()
         return (n**2 - 1) / 12.0
 
