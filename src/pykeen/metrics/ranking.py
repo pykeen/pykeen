@@ -84,17 +84,35 @@ class RankBasedMetric(Metric):
         """
         raise NotImplementedError
 
-    def _yield_sampled_values(
+    def _get_sampled_values(
         self,
         num_candidates: np.ndarray,
         num_samples: int,
         generator: Optional[np.random.Generator] = None,
-    ) -> Iterable[float]:
+    ) -> np.ndarray:
+        """
+        Calculate the metric on sampled rank arrays.
+
+        :param num_candidates: shape: s
+            the number of candidates for each ranking task
+        :param num_samples:
+            the number of samples
+        :param generator:
+            a random state for reproducibility
+
+        :return: shape: (num_samples,)
+            the metric evaluated on `num_samples` sampled rank arrays
+        """
         num_candidates = np.asarray(num_candidates)
         if generator is None:
             generator = np.random.default_rng()
-        for _ in range(num_samples):
-            yield self(ranks=generator.integers(low=1, high=num_candidates + 1), num_candidates=num_candidates)
+        # memory-hungry alternative: np.apply_along_axis
+        return np.asanyarray(
+            a=[
+                self(ranks=generator.integers(low=1, high=num_candidates + 1), num_candidates=num_candidates)
+                for _ in range(num_samples)
+            ]
+        )
 
     def numeric_expected_value(
         self,
@@ -120,8 +138,9 @@ class RankBasedMetric(Metric):
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
         return (
-            sum(self._yield_sampled_values(num_candidates=num_candidates, num_samples=num_samples, generator=generator))
-            / num_samples
+            self._get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, generator=generator)
+            .mean()
+            .item()
         )
 
     def expected_value(
@@ -170,15 +189,11 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return np.var(
-            np.asarray(
-                list(
-                    self._yield_sampled_values(
-                        num_candidates=num_candidates, num_samples=num_samples, generator=generator
-                    ),
-                )
-            )
-        ).item()
+        return (
+            self._get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, generator=generator)
+            .var()
+            .item()
+        )
 
     def variance(
         self,
