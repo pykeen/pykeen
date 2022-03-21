@@ -52,6 +52,7 @@ __all__ = [
     "NoClosedFormError",
     "generate_ranks",
     "generate_num_candidates_and_ranks",
+    "generalized_harmonic_numbers",
     #
     "HITS_METRICS",
 ]
@@ -752,10 +753,23 @@ class HarmonicMeanRank(RankBasedMetric):
         return stats.hmean(ranks).item()
 
 
-@functools.lru_cache()
-def _harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
-    """Calculate the harmonic numbers to n."""
-    return np.r_[0, np.cumsum(np.power(np.arange(1, n + 1, dtype=float), p))]
+def generalized_harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
+    r"""
+    Calculate the generalized harmonic numbers from 1 to n (both inclusive).
+
+    .. math::
+
+        H(n, p) = \sum \limits_{i=1}^{n} i^{-p}
+
+    :param n:
+        the maximum number for which the generalized harmonic numbers are calculated
+    :param p:
+        the power, typically negative
+
+    .. seealso::
+        https://en.wikipedia.org/wiki/Harmonic_number#Generalizations
+    """
+    return np.cumsum(np.power(np.arange(1, n + 1, dtype=float), p))
 
 
 @functools.lru_cache()
@@ -777,11 +791,11 @@ def _harmonic_variances(n: int) -> np.ndarray:
     :return: shape: (n+1,)
         the variances for the discrete uniform distribution over `{1/1, ..., 1/k}`
     """
-    h = _harmonic_numbers(n)[1:]
-    h2 = _harmonic_numbers(n, p=-2)[1:]
+    h = generalized_harmonic_numbers(n)
+    h2 = generalized_harmonic_numbers(n, p=-2)
     n = np.arange(1, n + 1)
     v = (n * h2 - h**2) / n**2
-    return np.r_[0, v]
+    return v
 
 
 @parse_docdata
@@ -848,7 +862,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         x = np.asanyarray(num_candidates)
         n = x.max().item()
-        h = _harmonic_numbers(n)
+        h = np.r_[0, generalized_harmonic_numbers(n)]
         # individual ranks' expectation
         x = h[num_candidates] / num_candidates
         return x.mean().item()
@@ -861,7 +875,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     ) -> float:  # noqa:D102
         x = np.asanyarray(num_candidates)
         n = x.max().item()
-        vs = _harmonic_variances(n)
+        vs = np.r[0, _harmonic_variances(n)]
         # individual inverse ranks' variance
         x = vs[x]
         # rank aggregation
