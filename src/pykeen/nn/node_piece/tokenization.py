@@ -78,7 +78,7 @@ class RelationTokenizer(Tokenizer):
 
         # collect candidates
         e2r = defaultdict(set)
-        for e, r_ in (
+        for e, r in (
             torch.cat(
                 [
                     torch.stack([h, r], dim=1),
@@ -89,7 +89,7 @@ class RelationTokenizer(Tokenizer):
             .unique(dim=0)
             .tolist()
         ):
-            e2r[e].add(r_)
+            e2r[e].add(r)
 
         # randomly sample without replacement num_tokens relations for each entity
         return 2 * num_relations + 1, random_sample_no_replacement(pool=e2r, num_tokens=num_tokens)
