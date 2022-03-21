@@ -921,8 +921,14 @@ class Count(RankBasedMetric):
 
 @parse_docdata
 class HitsAtK(RankBasedMetric):
-    """The Hits @ k.
+    r"""The Hits @ k.
 
+    For the expected values, we have
+
+    .. math::
+        \mathbb{E}[Hits@k] = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right]
+                           = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[\mathbb{I}[r_i \leq k]]
+                           = \frac{1}{n} \sum \limits_{i=1}^{n} \min \{\frac{k}{N_i}, 1\}
     ---
     description: The relative frequency of ranks not larger than a given k.
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k
@@ -952,22 +958,7 @@ class HitsAtK(RankBasedMetric):
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
         **kwargs,
-    ) -> float:
-        r"""
-        Calculate the expected Hits@k under random ordering.
-
-        .. math ::
-
-            E[Hits@k] = \frac{1}{n} \sum \limits_{i=1}^{n} min(\frac{k}{CSS[i]}, 1.0)
-
-        :param num_candidates:
-            the number of candidates for each individual rank computation
-        :param num_samples:
-            the number of samples to use for simulation
-
-        :return:
-            the expected Hits@k value
-        """
+    ) -> float:  # noqa: D102
         return (
             self.k * np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1.0 / self.k).mean()
         ).item()
