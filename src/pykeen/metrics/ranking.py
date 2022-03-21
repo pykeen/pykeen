@@ -834,7 +834,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     .. math::
 
         \mathbb{V}\left[r_i^{-1}\right]
-            = \frac{1}{1 \cdot N_i} - \left \frac{\ln N_i - \ln 1}{N_i - 1} \right)^2
+            = \frac{1}{1 \cdot N_i} - \left( \frac{\ln N_i - \ln 1}{N_i - 1} \right)^2
             = \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2
 
     and thus overall
