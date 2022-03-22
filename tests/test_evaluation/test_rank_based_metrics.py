@@ -6,7 +6,7 @@ import numpy as np
 import unittest_templates
 
 import pykeen.metrics.ranking
-from pykeen.metrics.ranking import harmonic_variances, generalized_harmonic_numbers
+from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
 from tests import cases
 
 
