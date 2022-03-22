@@ -692,7 +692,7 @@ class ZArithmeticMeanRank(ZMetric):
     """The z-scored arithmetic mean rank.
 
     ---
-    link: https://github.com/pykeen/pykeen/pull/814
+    link: https://arxiv.org/abs/2203.07544
     description: The z-scored mean rank
     """
 
@@ -706,7 +706,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     """The inverse arithmetic mean rank.
 
     ---
-    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    link: https://arxiv.org/abs/2203.07544
     description: The inverse of the arithmetic mean over all ranks.
     """
 
@@ -741,7 +741,7 @@ class GeometricMeanRank(RankBasedMetric):
             &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp \log \sqrt[m]{i} \\
             &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp ( \frac{1}{m} \cdot \log i )
     ---
-    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    link: https://arxiv.org/abs/2203.07544
     description: The geometric mean over all ranks.
     """
 
@@ -775,7 +775,7 @@ class InverseGeometricMeanRank(RankBasedMetric):
     """The inverse geometric mean rank.
 
     ---
-    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    link: https://arxiv.org/abs/2203.07544
     description: The inverse of the geometric mean over all ranks.
     """
 
@@ -793,7 +793,7 @@ class HarmonicMeanRank(RankBasedMetric):
     """The harmonic mean rank.
 
     ---
-    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    link: https://arxiv.org/abs/2203.07544
     description: The harmonic mean over all ranks.
     """
 
@@ -955,7 +955,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexedMetric):
         and thus data dependent.
 
     ---
-    link: https://github.com/pykeen/pykeen/pull/814
+    link: https://arxiv.org/abs/2203.07544
     description: The re-indexed adjusted MRR
     tight_lower: -E[f]/(1-E[f])
     """
@@ -971,7 +971,7 @@ class ZInverseHarmonicMeanRank(ZMetric):
     """The z-inverse harmonic mean rank (ZIHMR).
 
     ---
-    link: https://github.com/pykeen/pykeen/pull/814
+    link: https://arxiv.org/abs/2203.07544
     description: The z-scored mean reciprocal rank
     """
 
@@ -985,7 +985,7 @@ class MedianRank(RankBasedMetric):
     """The median rank.
 
     ---
-    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    link: https://arxiv.org/abs/2203.07544
     description: The median over all ranks.
     """
 
@@ -1002,7 +1002,7 @@ class InverseMedianRank(RankBasedMetric):
     """The inverse median rank.
 
     ---
-    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    link: https://arxiv.org/abs/2203.07544
     description: The inverse of the median over all ranks.
     """
 
@@ -1172,7 +1172,7 @@ class AdjustedHitsAtK(ReindexedMetric):
         the actual lower bound is $\frac{-\mathbb{E}[H_k]}{1 - \mathbb{E}[H_k]}$, and thus data dependent.
 
     ---
-    link: https://github.com/pykeen/pykeen/pull/814
+    link: https://arxiv.org/abs/2203.07544
     description: The re-indexed adjusted hits at K
     tight_lower: -E[f]/(1-E[f])
     """
@@ -1197,7 +1197,7 @@ class ZHitsAtK(ZMetric):
     """The z-scored hits at k ($ZAH_k$).
 
     ---
-    link: https://github.com/pykeen/pykeen/pull/814
+    link: https://arxiv.org/abs/2203.07544
     description: The z-scored hits at K
     """
 
