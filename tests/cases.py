@@ -53,7 +53,13 @@ from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.metrics.ranking import RankBasedMetric
+from pykeen.metrics import rank_based_metric_resolver
+from pykeen.metrics.ranking import (
+    DerivedRankBasedMetric,
+    NoClosedFormError,
+    RankBasedMetric,
+    generate_num_candidates_and_ranks,
+)
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
@@ -1971,30 +1977,6 @@ class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.mode
         self._verify(scores)
 
 
-def generate_ranks(
-    num_ranks: int,
-    max_num_candidates: int,
-    seed: Optional[int] = None,
-) -> Tuple[numpy.ndarray, numpy.ndarray]:
-    """
-    Generate random number of candidates, and coherent ranks.
-
-    :param num_ranks:
-        the number of ranks to generate
-    :param max_num_candidates:
-        the maximum number of candidates (e.g., the number of entities)
-    :param seed:
-        the random seed.
-
-    :return: shape: (num_ranks,)
-        a pair of integer arrays, ranks and num_candidates for each individual ranking task
-    """
-    generator = numpy.random.default_rng(seed=seed)
-    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
-    ranks = generator.integers(low=1, high=num_candidates + 1)
-    return ranks, num_candidates
-
-
 class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric]):
     """A test for rank-based metrics."""
 
@@ -2004,8 +1986,8 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     #: the number of ranks
     num_ranks: int = 33
 
-    check_expectation: ClassVar[bool] = False
-    check_variance: ClassVar[bool] = False
+    #: the number of samples to use for monte-carlo estimation
+    num_samples: int = 1_000
 
     #: the number of candidates for each individual ranking task
     num_candidates: numpy.ndarray
@@ -2015,7 +1997,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
-        self.ranks, self.num_candidates = generate_ranks(
+        self.ranks, self.num_candidates = generate_num_candidates_and_ranks(
             num_ranks=self.num_ranks,
             max_num_candidates=self.max_num_candidates,
             seed=42,
@@ -2039,7 +2021,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # data type
         assert isinstance(x, float)
         # value range
-        self.assertIn(x, self.instance.value_range)
+        self.assertIn(x, self.instance.value_range.approximate(epsilon=1.0e-08))
 
     def test_call(self):
         """Test __call__."""
@@ -2077,33 +2059,49 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_expectation(self):
         """Test the numeric expectation is close to the closed form one."""
-        if not self.check_expectation:
-            self.skipTest("no implementation of closed-form expectation")
+        try:
+            closed = self.instance.expected_value(num_candidates=self.num_candidates)
+        except NoClosedFormError as error:
+            raise SkipTest("no implementation of closed-form expectation") from error
+
         generator = numpy.random.default_rng(seed=0)
-        simulated = self.instance.numeric_expected_value(
+        low, simulated, high = self.instance.numeric_expected_value_with_ci(
             num_candidates=self.num_candidates,
-            num_samples=10000,
+            num_samples=self.num_samples,
             generator=generator,
         )
-        closed = self.instance.expected_value(
-            num_candidates=self.num_candidates,
-        )
-        self.assertAlmostEqual(closed, simulated, delta=2)
+        self.assertLessEqual(low, closed)
+        self.assertLessEqual(closed, high)
 
     def test_variance(self):
         """Test the numeric variance is close to the closed form one."""
-        if not self.check_variance:
-            self.skipTest("no implementation of closed-form expectation")
+        try:
+            closed = self.instance.variance(num_candidates=self.num_candidates)
+        except NoClosedFormError as error:
+            raise SkipTest("no implementation of closed-form variance") from error
+
+        # variances are non-negative
+        self.assertLessEqual(0, closed)
+
         generator = numpy.random.default_rng(seed=0)
-        simulated = self.instance.numeric_variance(
+        low, simulated, high = self.instance.numeric_variance_with_ci(
             num_candidates=self.num_candidates,
-            num_samples=10000,
+            num_samples=self.num_samples,
             generator=generator,
         )
-        closed = self.instance.variance(
-            num_candidates=self.num_candidates,
+        self.assertLessEqual(low, closed)
+        self.assertLessEqual(closed, high)
+
+    def test_different_to_base_metric(self):
+        """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
+        if not isinstance(self.instance, DerivedRankBasedMetric):
+            self.skipTest("no base metric")
+        base_instance = rank_based_metric_resolver.make(self.instance.base_cls)
+        base_factor = 1 if base_instance.increasing else -1
+        self.assertNotEqual(
+            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
         )
-        self.assertAlmostEqual(closed, simulated, delta=2)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):

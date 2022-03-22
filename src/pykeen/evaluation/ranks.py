@@ -87,7 +87,7 @@ class Ranks:
 
         # We set values which should be ignored to NaN, hence the number of options
         # which should be considered is given by
-        number_of_options = torch.isfinite(all_scores).sum(dim=1).float()
+        number_of_options = torch.isfinite(all_scores).sum(dim=1)
 
         return cls(
             optimistic=optimistic_rank,

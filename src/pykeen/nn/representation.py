@@ -779,10 +779,10 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         # Create message passing layers
         layers = []
-        for input_dim, output_dim in zip(itertools.chain([input_dim], dims), dims):
+        for input_dim_, output_dim in zip(itertools.chain([input_dim], dims), dims):
             layers.append(
                 CompGCNLayer(
-                    input_dim=input_dim,
+                    input_dim=input_dim_,
                     output_dim=output_dim,
                     **(layer_kwargs or {}),
                 )
