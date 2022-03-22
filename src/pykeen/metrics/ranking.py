@@ -211,11 +211,12 @@ class RankBasedMetric(Metric):
         num_samples: int,
         **kwargs,
     ) -> float:
-        """
+        r"""
         Compute expected metric value by summation.
 
         The expectation is computed under the assumption that each individual rank follows a discrete uniform
-        distribution $U[1, N_i]$, where $N_i$ denotes the number of candidates for the $i$th ranking task.
+        distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
+        ranking task $r_i$.
 
         :param num_candidates:
             the number of candidates for each individual rank computation
@@ -244,10 +245,11 @@ class RankBasedMetric(Metric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:
-        """Compute expected metric value.
+        r"""Compute expected metric value.
 
-        The expectation is computed under the assumption that each individual rank follows a discrete uniform
-        distribution $U[1, N_i]$, where $N_i$ denotes the number of candidates for the $i$th ranking task.
+        The expectation is computed under the assumption that each individual rank follows a
+        discrete uniform distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes
+        the number of candidates for ranking task $r_i$.
 
         :param num_candidates:
             the number of candidates for each individual rank computation
@@ -265,7 +267,6 @@ class RankBasedMetric(Metric):
             raised if a closed form expectation has not been implemented and no number of samples are given
 
         .. note::
-
             Prefers analytical solution, if available, but falls back to numeric
             estimation via summation, cf. :func:`RankBasedMetric.numeric_expected_value`.
         """
@@ -279,10 +280,11 @@ class RankBasedMetric(Metric):
         num_samples: int,
         **kwargs,
     ) -> float:
-        """Compute variance by summation.
+        r"""Compute variance by summation.
 
         The variance is computed under the assumption that each individual rank follows a discrete uniform
-        distribution $U[1, N_i]$, where $N_i$ denotes the number of candidates for the $i$th ranking task.
+        distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
+        ranking task $r_i$.
 
         :param num_candidates:
             the number of candidates for each individual rank computation
@@ -313,10 +315,11 @@ class RankBasedMetric(Metric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:
-        """Compute variance.
+        r"""Compute variance.
 
         The variance is computed under the assumption that each individual rank follows a discrete uniform
-        distribution $U[1, N_i]$, where $N_i$ denotes the number of candidates for the $i$th ranking task.
+        distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
+        ranking task $r_i$.
 
         :param num_candidates:
             the number of candidates for each individual rank computation
