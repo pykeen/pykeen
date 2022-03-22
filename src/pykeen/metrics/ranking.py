@@ -815,31 +815,35 @@ def harmonic_variances(n: int) -> np.ndarray:
 class InverseHarmonicMeanRank(RankBasedMetric):
     r"""The inverse harmonic mean rank.
 
-    For the expected value, we first observe that
+    Let
 
     .. math::
 
-        \mathbb{E}\left[r_i^{-1}\right]
-            = \frac{\ln N_i - \ln 1}{N_i - 1}
-            = \frac{\ln N_i}{N_i - 1}
+        H_m(n) = \sum \limits_{i=1}^{n} i^{-m}
 
+    denote the generalized harmonic number, with $H(n) := H_{1}(n)$ for brevity.
     Thus, we have
+
+    .. math::
+
+        \mathbb{E}\left[r_i^{-1}\right] = \frac{H(N_i)}{N_i}
+
+    and hence
 
     .. math::
 
         \mathbb{E}\left[\textrm{MRR}\right]
             &= \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right] \\
             &= \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right] \\
-            &= \frac{1}{n} \sum \limits_{i=1}^n \frac{\ln N_i}{N_i - 1} \\
-            &\stackrel{*}{=} \frac{\ln N}{N - 1}
+            &= \frac{1}{n} \sum \limits_{i=1}^n \frac{H(N_i)}{N_i}
 
     For the variance, we have for the individual ranks
 
     .. math::
 
         \mathbb{V}\left[r_i^{-1}\right]
-            &= \frac{1}{1 \cdot N_i} - \left( \frac{\ln N_i - \ln 1}{N_i - 1} \right)^2 \\
-            &= \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2
+            &= \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \left(\frac{H(N_i)}{N_i} - \frac{1}{i}\right)^2
+            &= \frac{N_i \cdot H_2(N_i) - H(N_i)^2}{N_i^2}
 
     and thus overall
 
@@ -848,8 +852,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         \mathbb{V}\left[\textrm{MRR}\right]
             &= \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right] \\
             &= \frac{1}{n^2} \sum \limits_{i=1}^n \mathbb{V}\left[r_i^{-1}\right] \\
-            &= \frac{1}{n^2} \sum \limits_{i=1}^n \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2 \\
-            &\stackrel{*}{=} \frac{1}{n} \frac{1}{N} - \left( \frac{\ln N}{N - 1} \right)^2
+            &= \frac{1}{n^2} \sum \limits_{i=1}^n \frac{N_i \cdot H_2(N_i) - H(N_i)^2}{N_i^2} \\
 
     .. seealso::
         https://en.wikipedia.org/wiki/Inverse_distribution#Inverse_uniform_distribution
@@ -1046,7 +1049,7 @@ class HitsAtK(RankBasedMetric):
 
     .. math::
 
-        \mathbb{E}[\mathbb{I}[r_i \leq k]] = p_i = \min \{\frac{k}{N_i}, 1\}
+        \mathbb{E}[\mathbb{I}[r_i \leq k]] = p_i
 
     Hence, we obtain
 
@@ -1054,7 +1057,7 @@ class HitsAtK(RankBasedMetric):
 
         \mathbb{E}[Hits@k] &= \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right] \\
                            &= \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[\mathbb{I}[r_i \leq k]] \\
-                           &= \frac{1}{n} \sum \limits_{i=1}^{n} \min \{\frac{k}{N_i}, 1\}
+                           &= \frac{1}{n} \sum \limits_{i=1}^{n} p_i
 
     For the variance, we have
 
