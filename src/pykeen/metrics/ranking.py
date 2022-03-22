@@ -442,7 +442,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         parameters = self.get_coefficients(num_candidates=num_candidates)
-        return parameters.scale**2.0 * self.base.variance(
+        return parameters.scale ** 2.0 * self.base.variance(
             num_candidates=num_candidates, num_samples=num_samples, **kwargs
         )
 
@@ -638,7 +638,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         x = np.asanyarray(num_candidates)
         n = x.size
-        return ((x**2).sum().item() - n) / (12 * n**2)
+        return ((x ** 2).sum().item() - n) / (12 * n ** 2)
 
 
 @parse_docdata
@@ -803,7 +803,7 @@ def _harmonic_variances(n: int) -> np.ndarray:
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
     n = np.arange(1, n + 1)
-    v = (n * h2 - h**2) / n**2
+    v = (n * h2 - h ** 2) / n ** 2
     return v
 
 
@@ -888,7 +888,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         # individual inverse ranks' variance
         x = vs[x]
         # rank aggregation
-        return x.sum().item() / x.size**2
+        return x.sum().item() / x.size ** 2
 
 
 @parse_docdata
@@ -925,31 +925,6 @@ class ZInverseHarmonicMeanRank(ZMetric):
     base_cls = InverseHarmonicMeanRank
 
 
-def _median_expectation(num_candidates: np.ndarray) -> float:
-    # TODO: not proven (yet), but also slightly off
-    m = num_candidates.max()
-    # performance trick: O(num_triples * max_count) => O(num_unique_candidates * max_count)
-    uniq, count = np.unique(num_candidates, return_counts=True)
-    ps = np.zeros(shape=(m,))
-    for c, w in zip(uniq, count):
-        ps[:c] += w * np.full(shape=(c,), fill_value=1 / c)
-    # normalize cdf
-    ps = np.cumsum(ps)
-    ps /= ps[-1]
-    # find median
-    idx = np.searchsorted(ps, v=0.5, side="left")
-    # special case
-    if idx == 0:
-        # zero- to one-based
-        return idx + 1
-    # linear interpolation
-    p_upper = ps[idx]
-    p_lower = ps[idx - 1]
-    idx = idx - (0.5 - p_lower) / (p_upper - p_lower)
-    # zero- to one-based
-    return idx + 1
-
-
 @parse_docdata
 class MedianRank(RankBasedMetric):
     """The median rank.
@@ -965,14 +940,6 @@ class MedianRank(RankBasedMetric):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.median(ranks).item()
-
-    def expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: Optional[int] = None,
-        **kwargs,
-    ) -> float:  # noqa: D102
-        return super().expected_value(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
 
 
 @parse_docdata
