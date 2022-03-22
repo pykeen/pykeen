@@ -214,6 +214,9 @@ class RankBasedMetric(Metric):
         """
         Compute expected metric value by summation.
 
+        The expectation is computed under the assumption that each individual rank follows a discrete uniform
+        distribution $U[1, N_i]$, where $N_i$ denotes the number of candidates for the $i$th ranking task.
+
         :param num_candidates:
             the number of candidates for each individual rank computation
         :param num_samples:
@@ -278,6 +281,9 @@ class RankBasedMetric(Metric):
     ) -> float:
         """Compute variance by summation.
 
+        The variance is computed under the assumption that each individual rank follows a discrete uniform
+        distribution $U[1, N_i]$, where $N_i$ denotes the number of candidates for the $i$th ranking task.
+
         :param num_candidates:
             the number of candidates for each individual rank computation
         :param num_samples:
@@ -309,6 +315,9 @@ class RankBasedMetric(Metric):
     ) -> float:
         """Compute variance.
 
+        The variance is computed under the assumption that each individual rank follows a discrete uniform
+        distribution $U[1, N_i]$, where $N_i$ denotes the number of candidates for the $i$th ranking task.
+
         :param num_candidates:
             the number of candidates for each individual rank computation
         :param num_samples:
@@ -339,7 +348,11 @@ class RankBasedMetric(Metric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:
-        """Compute the standard deviation."""
+        """
+        Compute the standard deviation.
+
+        For a detailed explanation, cf. :func:`RankBasedMetric.variance`.
+        """
         return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs))
 
 
