@@ -1079,6 +1079,12 @@ class HitsAtK(RankBasedMetric):
 
         \mathbb{E}[\mathbb{I}[r_i \leq k]] = p_i
 
+    and
+
+    .. math::
+
+        \mathbb{V}[\mathbb{I}[r_i \leq k]] = p_i \cdot (1 - p_i)
+
     Hence, we obtain
 
     .. math::
