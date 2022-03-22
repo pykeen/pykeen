@@ -447,7 +447,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         parameters = self.get_coefficients(num_candidates=num_candidates)
-        return parameters.scale ** 2.0 * self.base.variance(
+        return parameters.scale**2.0 * self.base.variance(
             num_candidates=num_candidates, num_samples=num_samples, **kwargs
         )
 
@@ -609,10 +609,8 @@ class ArithmeticMeanRank(RankBasedMetric):
     .. math::
 
         \mathbb{V}[MR] &= \mathbb{V}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i] \\
-                       &= \mathbb{V}[\sum \limits_{i=1}^{n} \frac{1}{n} r_i] \\
-                       &= \sum \limits_{i=1}^{n} \mathbb{V}[\frac{1}{n} r_i] \\
-                       &= \sum \limits_{i=1}^{n} \frac{1}{n^2} \mathbb{V}[r_i] \\
-                       &= \sum \limits_{i=1}^{n} \frac{1}{n^2} \frac{N_i^2 - 1}{12} \\
+                       &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \mathbb{V}[r_i] \\
+                       &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \frac{N_i^2 - 1}{12} \\
                        &= \frac{1}{12 n^2} \cdot \left(-n + \sum \limits_{i=1}^{n} N_i \right)
 
     ---
@@ -644,7 +642,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         x = np.asanyarray(num_candidates)
         n = x.size
-        return ((x ** 2).sum().item() - n) / (12 * n ** 2)
+        return ((x**2).sum().item() - n) / (12 * n**2)
 
 
 @parse_docdata
@@ -809,7 +807,7 @@ def harmonic_variances(n: int) -> np.ndarray:
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
     n = np.arange(1, n + 1)
-    v = (n * h2 - h ** 2) / n ** 2
+    v = (n * h2 - h**2) / n**2
     return v
 
 
@@ -894,7 +892,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         # individual inverse ranks' variance
         x = vs[x]
         # rank aggregation
-        return x.sum().item() / x.size ** 2
+        return x.sum().item() / x.size**2
 
 
 @parse_docdata
