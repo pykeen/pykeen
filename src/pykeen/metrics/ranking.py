@@ -798,7 +798,7 @@ def generalized_harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
 
     .. math::
 
-        H(n, p) = \sum \limits_{i=1}^{n} i^{-p}
+        H_p(n) = \sum \limits_{i=1}^{n} i^{-p}
 
     :param n:
         the maximum number for which the generalized harmonic numbers are calculated
@@ -818,13 +818,19 @@ def harmonic_variances(n: int) -> np.ndarray:
     r"""
     Pre-calculate variances of inverse rank distributions.
 
+    With
+
+    .. math::
+
+        H_p(n) = \sum \limits_{i=1}^{n} i^{-p}
+
+    denoting the generalized harmonic numbers, and abbreviating $H(n) := H_1(n)$, we have
+
     .. math::
 
         \textit{V}[n]
-            &= \frac{1}{n} \sum \limits_{i=1}^n \left( i^{-1} - \frac{H_n}{n} \right)^2 \\
-            &= -\frac{H_n^2}{n^2} + \frac{1}{n} \sum \limits_{i=1}^n i^{-2}
-
-    where $H_n$ denotes the n-th harmonic number.
+            &= \frac{1}{n} \sum \limits_{i=1}^n \left( i^{-1} - \frac{H(n)}{n} \right)^2 \\
+            &= \frac{n \cdot H_2(n) - H(n)^2}{n^2}
 
     :param n:
         the maximum rank number
