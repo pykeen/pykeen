@@ -354,6 +354,17 @@ class RankBasedMetric(Metric):
         """
         Compute the standard deviation.
 
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+        :param num_samples:
+            the number of samples to use for simulation, if no closed form
+            expected value is implemented
+        :param kwargs:
+            additional keyword-based parameters passed to :func:`variance`,
+
+        :return:
+            The standard deviation (i.e. the square root of the variance) of this metric
+
         For a detailed explanation, cf. :func:`RankBasedMetric.variance`.
         """
         return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs))
