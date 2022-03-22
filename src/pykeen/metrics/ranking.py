@@ -243,6 +243,9 @@ class RankBasedMetric(Metric):
     ) -> float:
         """Compute expected metric value.
 
+        The expectation is computed under the assumption that each individual rank follows a discrete uniform
+        distribution $U[1, N_i]$, where $N_i$ denotes the number of candidates for the $i$th ranking task.
+
         :param num_candidates:
             the number of candidates for each individual rank computation
         :param num_samples:
@@ -253,10 +256,10 @@ class RankBasedMetric(Metric):
             if no closed form solution is available
 
         :return:
-            The expected value of this metric
+            the expected value of this metric
+
         :raises NoClosedFormError:
-            Raised if a closed form variance has not been implemented and no
-            number of samples are given
+            raised if a closed form expectation has not been implemented and no number of samples are given
 
         .. note::
 
