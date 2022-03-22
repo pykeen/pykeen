@@ -842,7 +842,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     .. math::
 
         \mathbb{V}\left[r_i^{-1}\right]
-            &= \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \left(\frac{H(N_i)}{N_i} - \frac{1}{i}\right)^2
+            &= \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \left(\frac{H(N_i)}{N_i} - \frac{1}{i}\right)^2 \\
             &= \frac{N_i \cdot H_2(N_i) - H(N_i)^2}{N_i^2}
 
     and thus overall
