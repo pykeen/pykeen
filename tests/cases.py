@@ -1981,15 +1981,13 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     """A test for rank-based metrics."""
 
     #: the maximum number of candidates
-    # max_num_candidates: int = 17
-    max_num_candidates: int = 255
+    max_num_candidates: int = 17
 
     #: the number of ranks
-    # num_ranks: int = 33
-    num_ranks: int = 1337
+    num_ranks: int = 33
 
     #: the number of samples to use for monte-carlo estimation
-    num_samples: int = 10000
+    num_samples: int = 1_000
 
     #: the number of candidates for each individual ranking task
     num_candidates: numpy.ndarray
