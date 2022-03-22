@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
 
 import numpy as np
-from class_resolver import ClassResolver
+from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
 
@@ -403,14 +403,26 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
                         = \alpha^2 \cdot \mathbb{V}[M]
     """
 
-    #: The rank-based metric class that this derived metric extends
-    base_cls: ClassVar[Type[RankBasedMetric]]
     base: RankBasedMetric
     needs_candidates: ClassVar[bool] = True
 
-    def __init__(self, **kwargs):
-        """Initialize the derived metric."""
-        self.base = self.base_cls(**kwargs)
+    #: The rank-based metric class that this derived metric extends
+    base_cls: ClassVar[Optional[Type[RankBasedMetric]]] = None
+
+    def __init__(
+        self,
+        base_cls: HintOrType[RankBasedMetric] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the derived metric.
+
+        :param base_cls:
+            the base class, or a hint thereof. If None, use the class-attribute
+        :param kwargs:
+            additional keyword-based parameters used to instantiate the base metric
+        """
+        self.base = rank_based_metric_resolver.make(base_cls or self.base_cls, pos_kwargs=kwargs)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         if num_candidates is None:
