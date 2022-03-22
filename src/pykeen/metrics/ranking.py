@@ -47,11 +47,13 @@ __all__ = [
     "StandardDeviation",
     "Variance",
     "Count",
-    #
+    # Misc
     "NoClosedFormError",
     "generate_ranks",
     "generate_num_candidates_and_ranks",
     "generalized_harmonic_numbers",
+    "AffineTransformationParameters",
+    "harmonic_variances",
     #
     "HITS_METRICS",
 ]
@@ -217,7 +219,7 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation
         :param kwargs:
-            additional keyword-based parameters passed to `get_sampled_values`
+            additional keyword-based parameters passed to :func:`get_sampled_values`
 
         :return:
             The estimated expected value of this metric
@@ -247,7 +249,8 @@ class RankBasedMetric(Metric):
             the number of samples to use for simulation, if no closed form
             expected value is implemented
         :param kwargs:
-            additional keyword-based parameters passed to `get_sampled_values`, if no closed form solution is available
+            additional keyword-based parameters passed to :func:`get_sampled_values`,
+            if no closed form solution is available
 
         :return:
             The expected value of this metric
@@ -258,7 +261,7 @@ class RankBasedMetric(Metric):
         .. note::
 
             Prefers analytical solution, if available, but falls back to numeric
-            estimation via summation, cf. :func:`numeric_expected_value`.
+            estimation via summation, cf. :func:`RankBasedMetric.numeric_expected_value`.
         """
         if num_samples is None:
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
@@ -277,7 +280,7 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation
         :param kwargs:
-            additional keyword-based parameters passed to `get_sampled_values`
+            additional keyword-based parameters passed to :func:`get_sampled_values`
 
         :return:
             The estimated variance of this metric
@@ -309,7 +312,8 @@ class RankBasedMetric(Metric):
             the number of samples to use for simulation, if no closed form
             expected value is implemented
         :param kwargs:
-            additional keyword-based parameters passed to `get_sampled_values`, if no closed form solution is available
+            additional keyword-based parameters passed to :func:`get_sampled_values`,
+            if no closed form solution is available
 
         :return:
             The variance of this metric
@@ -320,7 +324,7 @@ class RankBasedMetric(Metric):
 
         .. note::
             Prefers analytical solution, if available, but falls back to numeric
-            estimation via summation, cf. :func:`numeric_variance`.
+            estimation via summation, cf. :func:`RankBasedMetric.numeric_variance`.
         """
         if num_samples is None:
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
@@ -383,9 +387,10 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
                         = \alpha^2 \cdot \mathbb{V}[M]
     """
 
+    #: The rank-based metric class that this derived metric extends
     base_cls: ClassVar[Type[RankBasedMetric]]
     base: RankBasedMetric
-    needs_candidates = True
+    needs_candidates: ClassVar[bool] = True
 
     def __init__(self, **kwargs):
         """Initialize the derived metric."""
@@ -466,15 +471,14 @@ class ZMetric(DerivedRankBasedMetric):
 
     .. math ::
 
-        M^* = \frac{M - \mathbb{E}[M]}{\sqrt{\mathbb{V}[M]}}
+        \mathbb{M}^* = \frac{\mathbb{M} - \mathbb{E}[\mathbb{M}]}{\sqrt{\mathbb{V}[\mathbb{M}]}}
 
     In terms of the affine transformation from DerivedRankBasedMetric, we obtain the following coefficients:
 
     .. math ::
 
-        \alpha = (\mathbb{V}[M])^{-\frac{1}{2}}
-
-        \beta = -\alpha \cdot \mathbb{E}[M]
+        \alpha &= \frac{1}{\sqrt{\mathbb{V}[\mathbb{M}]}} \\
+        \beta  &= -\alpha \cdot \mathbb{E}[\mathbb{M}]
 
     .. note ::
 
@@ -485,7 +489,9 @@ class ZMetric(DerivedRankBasedMetric):
     .. warning:: This requires a closed-form solution to the expected value and the variance
     """
 
+    #: Z-adjusted metrics are formulated to be increasing
     increasing = True
+    #: Z-adjusted metrics can only be applied to realistic ranks
     supported_rank_types = (RANK_REALISTIC,)
     value_range = ValueRange(lower=None, upper=None)
 
@@ -518,19 +524,18 @@ class ZMetric(DerivedRankBasedMetric):
 
 
 class ExpectationNormalizedMetric(DerivedRankBasedMetric):
-    r"""A mixin to create an expectation-normalized metric.
+    r"""An adjustment to create an expectation-normalized metric.
 
     .. math ::
 
         M^* = \frac{M}{\mathbb{E}[M]}
 
-    In terms of the affine transformation from DerivedRankBasedMetric, we obtain the following coefficients:
+    In terms of the affine transformation from :class:`DerivedRankBasedMetric`, we obtain the following coefficients:
 
     .. math ::
 
-        \alpha = (\mathbb{E}[M])^{-1}
-
-        \beta = 0
+        \alpha &= \frac{1}{\mathbb{E}[M]} \\
+        \beta  &= 0
 
     .. warning:: This requires a closed-form solution to the expected value
     """
@@ -560,14 +565,15 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
     .. math ::
 
-        \alpha = (1 - \mathbb{E}[M])^{-1}
-
-        \beta = -\alpha \cdot \mathbb{E}[\mathbb{M}]
+        \alpha &= \frac{1}{1 - \mathbb{E}[\mathbb{M}]} \\
+        \beta  &= -\alpha \cdot \mathbb{E}[\mathbb{M}]
 
     .. warning:: This requires a closed-form solution to the expected value
     """
 
+    #: Expectation/maximum reindexed metrics are formulated to be increasing
     increasing = True
+    #: Expectation/maximum reindexed metrics can only be applied to realistic ranks
     supported_rank_types = (RANK_REALISTIC,)
 
     def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
@@ -594,20 +600,20 @@ class ArithmeticMeanRank(RankBasedMetric):
 
     .. math::
 
-        \mathbb{E}[MR] = \mathbb{E}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i]
-                       = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[r_i]
-                       = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{N_i + 1}{2}
+        \mathbb{E}[MR] &= \mathbb{E}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i] \\
+                       &= \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[r_i] \\
+                       &= \frac{1}{n} \sum \limits_{i=1}^{n} \frac{N_i + 1}{2}
 
     For the variance, we have
 
     .. math::
 
-        \mathbb{V}[MR] = \mathbb{V}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i]
-                       = \mathbb{V}[\sum \limits_{i=1}^{n} \frac{1}{n} r_i]
-                       = \sum \limits_{i=1}^{n} \mathbb{V}[\frac{1}{n} r_i]
-                       = \sum \limits_{i=1}^{n} \frac{1}{n^2} \mathbb{V}[r_i]
-                       = \sum \limits_{i=1}^{n} \frac{1}{n^2} \frac{N_i^2 - 1}{12}
-                       = \frac{1}{12 n^2} \cdot \left(-n + \sum \limits_{i=1}^{n} N_i \right)
+        \mathbb{V}[MR] &= \mathbb{V}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i] \\
+                       &= \mathbb{V}[\sum \limits_{i=1}^{n} \frac{1}{n} r_i] \\
+                       &= \sum \limits_{i=1}^{n} \mathbb{V}[\frac{1}{n} r_i] \\
+                       &= \sum \limits_{i=1}^{n} \frac{1}{n^2} \mathbb{V}[r_i] \\
+                       &= \sum \limits_{i=1}^{n} \frac{1}{n^2} \frac{N_i^2 - 1}{12} \\
+                       &= \frac{1}{12 n^2} \cdot \left(-n + \sum \limits_{i=1}^{n} N_i \right)
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
@@ -681,19 +687,19 @@ class GeometricMeanRank(RankBasedMetric):
 
     .. math::
 
-        \mathbb{E}[M] = \mathbb{E}[\sqrt[m]{\prod \limits_{i=1}^{m} r_i}]
-                      = \prod \limits_{i=1}^{m} \mathbb{E}[\sqrt[m]{r_i}]
-                      = \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[\sqrt[m]{r_i}]
+        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[m]{\prod \limits_{i=1}^{m} r_i}\right] \\
+                      &= \prod \limits_{i=1}^{m} \mathbb{E}[\sqrt[m]{r_i}] \\
+                      &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[\sqrt[m]{r_i}]
 
     Moreover, we have
 
     .. math::
 
         \log \mathbb{E}[\sqrt[m]{r_i}]
-            = \log \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \sqrt[m]{i}
-            = -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \sqrt[m]{i}
-            = -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp \log \sqrt[m]{i}
-            = -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp ( \frac{1}{m} \cdot \log i )
+            &= \log \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \sqrt[m]{i} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \sqrt[m]{i} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp \log \sqrt[m]{i} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp ( \frac{1}{m} \cdot \log i )
     ---
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
     description: The geometric mean over all ranks.
@@ -782,15 +788,15 @@ def generalized_harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
     return np.cumsum(np.power(np.arange(1, n + 1, dtype=float), p))
 
 
-def _harmonic_variances(n: int) -> np.ndarray:
+def harmonic_variances(n: int) -> np.ndarray:
     r"""
     Pre-calculate variances of inverse rank distributions.
 
     .. math::
 
         \textit{V}[n]
-            = \frac{1}{n} \sum \limits_{i=1}^n \left( i^{-1} - \frac{H_n}{n} \right)^2
-            = -\frac{H_n^2}{n^2} + \frac{1}{n} \sum \limits_{i=1}^n i^{-2}
+            &= \frac{1}{n} \sum \limits_{i=1}^n \left( i^{-1} - \frac{H_n}{n} \right)^2 \\
+            &= -\frac{H_n^2}{n^2} + \frac{1}{n} \sum \limits_{i=1}^n i^{-2}
 
     where $H_n$ denotes the n-th harmonic number.
 
@@ -798,7 +804,7 @@ def _harmonic_variances(n: int) -> np.ndarray:
         the maximum rank number
 
     :return: shape: (n+1,)
-        the variances for the discrete uniform distribution over `{1/1, ..., 1/k}`
+        the variances for the discrete uniform distribution over $\{\frac{1}{1}, \dots, \frac{1}{k}\}$`
     """
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
@@ -824,28 +830,28 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     .. math::
 
         \mathbb{E}\left[\textrm{MRR}\right]
-            = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
-            = \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right]
-            = \frac{1}{n} \sum \limits_{i=1}^n \frac{\ln N_i}{N_i - 1}
-            \stackrel{*}{=} \frac{\ln N}{N - 1}
+            &= \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right] \\
+            &= \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right] \\
+            &= \frac{1}{n} \sum \limits_{i=1}^n \frac{\ln N_i}{N_i - 1} \\
+            &\stackrel{*}{=} \frac{\ln N}{N - 1}
 
     For the variance, we have for the individual ranks
 
     .. math::
 
         \mathbb{V}\left[r_i^{-1}\right]
-            = \frac{1}{1 \cdot N_i} - \left( \frac{\ln N_i - \ln 1}{N_i - 1} \right)^2
-            = \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2
+            &= \frac{1}{1 \cdot N_i} - \left( \frac{\ln N_i - \ln 1}{N_i - 1} \right)^2 \\
+            &= \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2
 
     and thus overall
 
     .. math::
 
         \mathbb{V}\left[\textrm{MRR}\right]
-            = \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
-            = \frac{1}{n^2} \sum \limits_{i=1}^n \mathbb{V}\left[r_i^{-1}\right]
-            = \frac{1}{n^2} \sum \limits_{i=1}^n \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2
-            \stackrel{*}{=} \frac{1}{n} \frac{1}{N} - \left( \frac{\ln N}{N - 1} \right)^2
+            &= \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right] \\
+            &= \frac{1}{n^2} \sum \limits_{i=1}^n \mathbb{V}\left[r_i^{-1}\right] \\
+            &= \frac{1}{n^2} \sum \limits_{i=1}^n \frac{1}{N_i} - \left( \frac{\ln N_i}{N_i - 1} \right)^2 \\
+            &\stackrel{*}{=} \frac{1}{n} \frac{1}{N} - \left( \frac{\ln N}{N - 1} \right)^2
 
     .. seealso::
         https://en.wikipedia.org/wiki/Inverse_distribution#Inverse_uniform_distribution
@@ -884,7 +890,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     ) -> float:  # noqa:D102
         x = np.asanyarray(num_candidates)
         n = x.max().item()
-        vs = np.r_[0, _harmonic_variances(n)]
+        vs = np.r_[0, harmonic_variances(n)]
         # individual inverse ranks' variance
         x = vs[x]
         # rank aggregation
@@ -1048,17 +1054,17 @@ class HitsAtK(RankBasedMetric):
 
     .. math::
 
-        \mathbb{E}[Hits@k] = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right]
-                           = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[\mathbb{I}[r_i \leq k]]
-                           = \frac{1}{n} \sum \limits_{i=1}^{n} \min \{\frac{k}{N_i}, 1\}
+        \mathbb{E}[Hits@k] &= \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right] \\
+                           &= \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[\mathbb{I}[r_i \leq k]] \\
+                           &= \frac{1}{n} \sum \limits_{i=1}^{n} \min \{\frac{k}{N_i}, 1\}
 
     For the variance, we have
 
     .. math::
 
-        \mathbb{V}[Hits@k] = \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right]
-                           = \frac{1}{n^2} \sum \limits_{i=1}^{n} \mathbb{V}\left[\mathbb{I}[r_i \leq k]\right]
-                           = \frac{1}{n^2} \sum \limits_{i=1}^{n} p_i(1 - p_i)
+        \mathbb{V}[Hits@k] &= \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right] \\
+                           &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \mathbb{V}\left[\mathbb{I}[r_i \leq k]\right] \\
+                           &= \frac{1}{n^2} \sum \limits_{i=1}^{n} p_i(1 - p_i)
     ---
     description: The relative frequency of ranks not larger than a given k.
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k
@@ -1186,5 +1192,8 @@ rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_
     default=InverseHarmonicMeanRank,  # mrr
     skip={ExpectationNormalizedMetric, ReindexedMetric, ZMetric, DerivedRankBasedMetric},
 )
+"""The rank-based metric resolver allows for the lookup and instantiation of classes
+deriving from :class:`RankBasedMetric` via the :mod:`class_resolver`.
+"""
 
 HITS_METRICS: Tuple[Type[RankBasedMetric], ...] = (HitsAtK, ZHitsAtK, AdjustedHitsAtK)

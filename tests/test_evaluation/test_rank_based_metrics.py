@@ -6,7 +6,7 @@ import numpy as np
 import unittest_templates
 
 import pykeen.metrics.ranking
-from pykeen.metrics.ranking import _harmonic_variances, generalized_harmonic_numbers
+from pykeen.metrics.ranking import harmonic_variances, generalized_harmonic_numbers
 from tests import cases
 
 
@@ -172,4 +172,4 @@ class BaseExpectationTests(unittest.TestCase):
     def test_inverse_rank_var(self):
         """Verify the variance of the inverse rank."""
         var = np.reciprocal(self.ranks).var()
-        numpy.testing.assert_allclose(var, _harmonic_variances(n=self.n)[-1])
+        numpy.testing.assert_allclose(var, harmonic_variances(n=self.n)[-1])
