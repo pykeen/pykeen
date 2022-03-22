@@ -2080,6 +2080,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         except NoClosedFormError as error:
             raise SkipTest("no implementation of closed-form variance") from error
 
+        # variances are non-negative
+        self.assertLessEqual(0, closed)
+
         generator = numpy.random.default_rng(seed=0)
         low, simulated, high = self.instance.numeric_variance_with_ci(
             num_candidates=self.num_candidates,
