@@ -30,7 +30,7 @@ with datasets, triples factories, and models using the labels
 of the entities and relations.
 
 We can map a triples factory's entities to identifiers using
-:data:`TriplesFactory.entities_to_ids` like in the following
+:func:`TriplesFactory.entities_to_ids` like in the following
 example:
 
 .. code-block:: python
