@@ -628,14 +628,30 @@ class CoreTriplesFactory:
         ]
 
     def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
-        """Normalize entities to IDs."""
+        """Normalize entities to IDs.
+
+        :param entities: A collection of either integer identifiers for entities or
+            string labels for entities (that will get auto-converted)
+        :returns: Integer identifiers for entities
+        :raises ValueError: If the ``entities`` passed are string labels
+            and this triples factory does not have an entity label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
         for e in entities:
             if not isinstance(e, int):
                 raise ValueError(f"{self.__class__.__name__} cannot convert entity IDs from {type(e)} to int.")
         return cast(Collection[int], entities)
 
     def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:
-        """Normalize relations to IDs."""
+        """Normalize relations to IDs.
+
+        :param relations: A collection of either integer identifiers for relations or
+            string labels for relations (that will get auto-converted)
+        :returns: Integer identifiers for relations
+        :raises ValueError: If the ``relations`` passed are string labels
+            and this triples factory does not have a relation label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
         for e in relations:
             if not isinstance(e, int):
                 raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")

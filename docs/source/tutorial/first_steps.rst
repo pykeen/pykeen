@@ -30,7 +30,7 @@ with datasets, triples factories, and models using the labels
 of the entities and relations.
 
 We can map a triples factory's entities to identifiers using
-:data:`TriplesFactory.entity_to_ids` like in the following
+:func:`TriplesFactory.entities_to_ids` like in the following
 example:
 
 .. code-block:: python
@@ -40,7 +40,7 @@ example:
     triples_factory = Nations().training
 
     # Get tensor of entity identifiers
-    entity_ids = torch.as_tensor(triples_factory.entity_to_ids(["china", "egypt"]))
+    entity_ids = torch.as_tensor(triples_factory.entities_to_ids(["china", "egypt"]))
 
 Similarly, we can map a triples factory's relations to identifiers
 using :data:`TriplesFactory.relation_to_ids` like in the following
