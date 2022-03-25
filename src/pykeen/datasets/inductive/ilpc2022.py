@@ -35,7 +35,7 @@ class ILPC2022Small(DisjointInductivePathDataset):
             inductive_testing_path=DATA.joinpath(size, "inference_test.txt"),
             create_inverse_triples=True,
             eager=True,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -64,5 +64,5 @@ class ILPC2022Large(DisjointInductivePathDataset):
             inductive_testing_path=DATA.joinpath(size, "inference_test.txt"),
             create_inverse_triples=True,
             eager=True,
-            **kwargs
+            **kwargs,
         )
