@@ -1035,13 +1035,18 @@ def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.n
     if weights is None:
         return np.median(a)
 
+    # calculate cdf
     indices = np.argsort(a)
     s_ranks = a[indices]
     s_weights = weights[indices]
-    cum_sum = np.cumsum(np.r_[0, s_weights])
-    cum_sum /= cum_sum[-1]
-    l_idx, r_idx = [np.searchsorted(cum_sum, v=0.5, side=side) for side in ("left", "right")]
-    return 0.5 * (s_ranks[l_idx] + s_ranks[r_idx])
+    cdf = np.cumsum(s_weights)
+    cdf /= cdf[-1]
+    # determine value at p=0.5
+    idx = np.searchsorted(cdf, v=0.5)
+    # special case for exactly 0.5
+    if cdf[idx] == 0.5:
+        return s_ranks[idx : idx + 2].mean()
+    return s_ranks[idx]
 
 
 @parse_docdata

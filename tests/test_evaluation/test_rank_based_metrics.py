@@ -1,4 +1,5 @@
 """Tests for rank-based metrics."""
+from typing import Callable, Optional
 import unittest
 
 import numpy
@@ -6,7 +7,12 @@ import numpy as np
 import unittest_templates
 
 import pykeen.metrics.ranking
-from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances, weighted_harmonic_mean
+from pykeen.metrics.ranking import (
+    generalized_harmonic_numbers,
+    harmonic_variances,
+    weighted_harmonic_mean,
+    weighted_median,
+)
 from tests import cases
 
 
@@ -182,10 +188,15 @@ class WeightedTests(unittest.TestCase):
         generator = np.random.default_rng()
         self.array = generator.random(size=(10,))
 
-    def test_weighted_harmonic_mean(self):
-        # verify that equal weights lead to unweighted results
+    def _test_equal_weights(self, func: Callable[[numpy.ndarray, Optional[numpy.ndarray]], float]):
+        """Verify that equal weights lead to unweighted results."""
         weights = np.full_like(self.array, fill_value=2.0)
-        self.assertAlmostEqual(
-            weighted_harmonic_mean(a=self.array, weights=None),
-            weighted_harmonic_mean(a=self.array, weights=weights),
-        )
+        self.assertAlmostEqual(func(self.array, weights=None), func(self.array, weights=weights))
+
+    def test_weighted_harmonic_mean(self):
+        """Test weighted harmonic mean."""
+        self._test_equal_weights(weighted_harmonic_mean)
+
+    def test_weighted_median(self):
+        """Test weighted median."""
+        self._test_equal_weights(weighted_median)
