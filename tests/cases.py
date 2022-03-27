@@ -817,6 +817,15 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         """Compute expected penalty for given tensor."""
         return None
 
+    def test_pop_regularization_term(self):
+        """Verify popping a regularization term."""
+        # update term
+        x = torch.rand(self.batch_size, 10, generator=self.generator, device=self.device, requires_grad=True)
+        self.instance.update(x)
+        # assert self.instance.regularization_term.item() != 0
+        exp = (self.instance.weight * self.instance.regularization_term).item()
+        self.assertEqual(exp, self.instance.pop_regularization_term().item())
+
 
 class LpRegularizerTest(RegularizerTestCase):
     """Common test for L_p regularizers."""
