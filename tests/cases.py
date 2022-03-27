@@ -822,7 +822,8 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # update term
         x = torch.rand(self.batch_size, 10, generator=self.generator, device=self.device, requires_grad=True)
         self.instance.update(x)
-        # assert self.instance.regularization_term.item() != 0
+
+        # check that the expected term is returned
         exp = (self.instance.weight * self.instance.regularization_term).item()
         self.assertEqual(exp, self.instance.pop_regularization_term().item())
 
