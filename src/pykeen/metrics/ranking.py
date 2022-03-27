@@ -124,7 +124,7 @@ def weighted_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> 
     n = individual.size
     if weights is None:
         return individual.mean() / n
-    return (individual * weights**2).sum()
+    return (individual * weights**2).sum().item()
 
 
 class NoClosedFormError(ValueError):
@@ -719,7 +719,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
-        return np.average(np.asanyarray(ranks), weights=weights)
+        return np.average(np.asanyarray(ranks), weights=weights).item()
 
     def expected_value(
         self,
