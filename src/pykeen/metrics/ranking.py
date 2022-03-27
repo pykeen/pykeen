@@ -827,7 +827,7 @@ def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
     weights = weights.astype(float)
     weights = weights / weights.sum()
     # calculate weighted harmonic mean
-    return np.reciprocal(np.average(np.reciprocal(a), weights=weights))
+    return np.reciprocal(np.average(np.reciprocal(a.astype(float)), weights=weights))
 
 
 @parse_docdata
