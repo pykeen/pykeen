@@ -685,21 +685,25 @@ class ArithmeticMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # TODO: weights
-        return 0.5 * (1 + np.asanyarray(num_candidates).mean().item())
+        num_candidates = np.asanyarray(num_candidates)
+        individual_expectation = 0.5 * (num_candidates + 1)
+        return np.average(individual_expectation, weights=weights)
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # TODO: weights
-        x = np.asanyarray(num_candidates)
-        n = x.size
-        return ((x**2).sum().item() - n) / (12 * n**2)
+        num_candidates = np.asanyarray(num_candidates)
+        individual_variance = (num_candidates**2 - 1) / 12
+        if weights is None:
+            weights = np.full_like(num_candidates, fill_value=1 / num_candidates.size, dtype=float)
+        return (individual_variance * weights**2).sum()
 
 
 @parse_docdata
