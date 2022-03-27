@@ -125,6 +125,7 @@ class LinearDropout(nn.Sequential):
         :param literal_embedding_dim: The dimension of the literals that are concatenated
         :param input_dropout: The dropout probability of an element to be zeroed.
         :param activation: An optional, pre-instantiated activation module, like :class:`torch.nn.Tanh`.
+        :param activation_kwargs: Keyword arguments to pass during instantiation of the activation module
         """
         linear = nn.Linear(entity_embedding_dim + literal_embedding_dim, entity_embedding_dim)
         dropout = nn.Dropout(input_dropout)
@@ -222,10 +223,21 @@ class GatedCombination(Combination):
 
         :param entity_embedding_dim: The dimension of the entity representations.
         :param literal_embedding_dim: The dimension of the literals.
+        :param input_dropout: The dropout to use
         :param gate_activation: An optional, pre-instantiated activation module,
-            like :class:`torch.nn.Sigmoid`, used on the gate output.
-        :param linlayer_activation_kwargs: An optional, pre-instantiated activation module,
-            like :class:`torch.nn.Tanh`, used on the linear layer output.
+            like :class:`torch.nn.Sigmoid`, the class
+            for an activation to instantiate, or the name of an activation to
+            look up and instantiate to be used on the gate output
+        :param gate_activation_kwargs:
+            The keyword arguments to be used to instantiate the gate_activation if
+            a class or name is given instead of a pre-instantiated activation module
+        :param linlayer_activation: An optional, pre-instantiated activation module,
+            like :class:`torch.nn.Tanh`, the class
+            for an activation to instantiate, or the name of an activation to
+            look up and instantiate to be used on the gate output
+        :param linlayer_activation_kwargs:
+            The keyword arguments to be used to instantiate the linlayer_activation if
+            a class or name is given instead of a pre-instantiated activation module
         """
         super().__init__()
         self.gate_activation = activation_resolver.make(gate_activation, gate_activation_kwargs)

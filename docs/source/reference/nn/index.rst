@@ -14,4 +14,6 @@
    message_passing
    weighting
    combinations
+   perceptron
    utils
+   node_piece

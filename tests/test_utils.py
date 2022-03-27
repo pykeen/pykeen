@@ -26,6 +26,7 @@ from pykeen.utils import (
     flatten_dictionary,
     get_optimal_sequence,
     get_until_first_blank,
+    logcumsumexp,
     project_entity,
     set_random_seed,
     split_complex,
@@ -345,3 +346,11 @@ class TestUtils(unittest.TestCase):
                 assert result.shape == tuple(
                     sum(dims) if i == dim else max(dims) for i, dims in enumerate(zip(*shapes))
                 )
+
+    def test_logcumsumexp(self):
+        """Verify that our numpy implementation gives the same results as the torch variant."""
+        generator = numpy.random.default_rng(seed=42)
+        a = generator.random(size=(21,))
+        r1 = logcumsumexp(a)
+        r2 = torch.logcumsumexp(torch.as_tensor(a), dim=0).numpy()
+        numpy.testing.assert_allclose(r1, r2)

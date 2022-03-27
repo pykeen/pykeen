@@ -26,6 +26,7 @@ from ..utils import (
     compute_box,
     estimate_cost_of_sequence,
     is_cudnn_error,
+    make_ones_like,
     negative_norm,
     negative_norm_of_sum,
     project_entity,
@@ -202,10 +203,6 @@ def conve_interaction(
     return x + t_bias.squeeze(dim=-1)
 
 
-def _make_ones_like(prefix: Sequence) -> Sequence[int]:
-    return [1 for _ in prefix]
-
-
 def convkb_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -254,7 +251,7 @@ def convkb_interaction(
     # -> conv_head, conv_rel, conv_tail shapes: (num_filters,)
     # reshape to (..., f, 1)
     conv_head, conv_rel, conv_tail, conv_bias = [
-        c.view(*_make_ones_like(h.shape[:-2]), num_filters, 1) for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
+        c.view(*make_ones_like(h.shape[:-2]), num_filters, 1) for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
     ]
 
     # convolve -> output.shape: (*, embedding_dim, num_filters)
@@ -350,7 +347,7 @@ def ermlp_interaction(
 
     # split, shape: (embedding_dim, hidden_dim)
     head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
-    bias = hidden.bias.view(*_make_ones_like(prefix), -1)
+    bias = hidden.bias.view(*make_ones_like(prefix), -1)
     h = torch.einsum("...i,ij->...j", h, head_to_hidden)
     r = torch.einsum("...i,ij->...j", r, rel_to_hidden)
     t = torch.einsum("...i,ij->...j", t, tail_to_hidden)
@@ -567,8 +564,8 @@ def proje_interaction(
         The scores.
     """
     # global projections
-    h = h * d_e.view(*_make_ones_like(h.shape[:-1]), -1)
-    r = r * d_r.view(*_make_ones_like(h.shape[:-1]), -1)
+    h = h * d_e.view(*make_ones_like(h.shape[:-1]), -1)
+    r = r * d_r.view(*make_ones_like(h.shape[:-1]), -1)
 
     # combination, shape: (*batch_dims, d)
     x = activation(tensor_sum(h, r, b_c))
@@ -1181,7 +1178,7 @@ def cross_e_interaction(
     # relation interaction (notice that h has been updated)
     r = h * r
     # combination
-    x = activation(h + r + bias.view(*_make_ones_like(h.shape[:-1]), -1))
+    x = activation(h + r + bias.view(*make_ones_like(h.shape[:-1]), -1))
     if dropout is not None:
         x = dropout(x)
     # similarity
@@ -1391,6 +1388,9 @@ def auto_sf_interaction(
         2. relation_representation_index,
         3. tail_representation_index,
         4. sign
+
+    :return:
+        The scores
     """
     return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
@@ -1422,6 +1422,9 @@ def transformer_interaction(
         the positional embeddings, one for head and one for relation
     :param final:
         the final (linear) transformation
+
+    :return:
+        The scores.
     """
     # stack h & r (+ broadcast) => shape: (2, *batch_dims, dim)
     x = torch.stack(broadcast_tensors(h, r), dim=0)
