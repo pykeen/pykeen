@@ -57,7 +57,7 @@ class ILPC2022Large(UnpackedRemoteDisjointInductiveDataset):
     """An inductive link prediction dataset for the ILPC 2022 Challenge.
 
     ---
-    name: ILPC2022 Small
+    name: ILPC2022 Large
     citation:
         author: Galkin
         year: 2022
@@ -79,3 +79,13 @@ class ILPC2022Large(UnpackedRemoteDisjointInductiveDataset):
             eager=True,
             **kwargs,
         )
+
+
+def _main():
+    for cls in ILPC2022Small, ILPC2022Large:
+        dataset = cls()
+        dataset.summarize()
+
+
+if __name__ == '__main__':
+    _main()

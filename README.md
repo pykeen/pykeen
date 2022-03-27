@@ -42,6 +42,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-33">Datasets</a> •
+  <a href="#inductive-datasets">Inductive Datasets (5)</a> •
   <a href="#models-42">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -149,6 +150,18 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18                         | [`pykeen.datasets.WN18`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18.html)                     | [Bordes *et al*., 2014](https://arxiv.org/abs/1301.3485)                                                                |      40943 |          18 |    151442 |
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)                 | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)               | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
+
+### Inductive Datasets
+
+The following inductive datasets are built in to PyKEEN.
+
+| Name            | Documentation                                                                                                             | Citation                                                  |
+|-----------------|---------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| ILPC2022 Large  | [`pykeen.datasets.ILPC2022Large`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ILPC2022Large.html)         | [Galkin *et al*., 2022](https://arxiv.org/abs/2203.01520) |
+| ILPC2022 Small  | [`pykeen.datasets.ILPC2022Small`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ILPC2022Small.html)         | [Galkin *et al*., 2022](https://arxiv.org/abs/2203.01520) |
+| FB15k-237       | [`pykeen.datasets.InductiveFB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveFB15k237.html) | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
+| NELL            | [`pykeen.datasets.InductiveNELL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveNELL.html)         | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
+| WordNet-18 (RR) | [`pykeen.datasets.InductiveWN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveWN18RR.html)     | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 
 ### Models (42)
 
