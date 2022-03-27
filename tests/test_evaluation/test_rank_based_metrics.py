@@ -1,6 +1,6 @@
 """Tests for rank-based metrics."""
-from typing import Callable, Optional
 import unittest
+from typing import Callable, Optional
 
 import numpy
 import numpy as np
@@ -185,6 +185,7 @@ class WeightedTests(unittest.TestCase):
     """Tests for weighted aggregations."""
 
     def setUp(self) -> None:
+        """Prepare input."""
         generator = np.random.default_rng()
         self.array = generator.random(size=(10,))
 
