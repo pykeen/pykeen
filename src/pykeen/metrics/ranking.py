@@ -537,6 +537,8 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
 
         :param num_candidates:
             the number of candidates
+        :param weights:
+            the weights for the individual ranking tasks
 
 
         :return:
@@ -852,9 +854,17 @@ class InverseGeometricMeanRank(RankBasedMetric):
         return np.reciprocal(stats.gmean(ranks, weights=weights)).item()
 
 
-def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
+def weighted_harmonic_mean(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
     """
     Calculate weighted harmonic mean.
+
+    :param a:
+        the array
+    :param weights:
+        the weight for individual array members
+
+    :return:
+        the weighted harmonic mean over the array
 
     .. seealso::
         https://en.wikipedia.org/wiki/Harmonic_mean#Weighted_harmonic_mean
