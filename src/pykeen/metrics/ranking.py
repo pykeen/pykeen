@@ -114,6 +114,19 @@ def generate_num_candidates_and_ranks(
     return ranks, num_candidates
 
 
+def weighted_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
+    """Calculate the expectation of a weighted sum of variables with given individual expected value."""
+    return np.average(individual, weights=weights).item()
+
+
+def weighted_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
+    """Calculate the variance of a weighted sum of variables with given individual variances."""
+    n = individual.size
+    if weights is None:
+        return individual.mean() / n
+    return (individual * weights**2).sum()
+
+
 class NoClosedFormError(ValueError):
     """The metric does not provide a closed-form implementation for the requested operation."""
 
@@ -711,7 +724,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates)
         individual_expectation = 0.5 * (num_candidates + 1)
-        return np.average(individual_expectation, weights=weights)
+        return weighted_expectation(individual=individual_expectation, weights=weights)
 
     def variance(
         self,
@@ -722,9 +735,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates)
         individual_variance = (num_candidates**2 - 1) / 12
-        if weights is None:
-            weights = np.full_like(num_candidates, fill_value=1 / num_candidates.size, dtype=float)
-        return (individual_variance * weights**2).sum()
+        return weighted_variance(individual=individual_variance, weights=weights)
 
 
 @parse_docdata
@@ -803,9 +814,12 @@ class GeometricMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # TODO: weights
+        if weights is not None:
+            raise NotImplementedError
         m = num_candidates.size
         # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
         max_val = num_candidates.max()
@@ -995,9 +1009,12 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # TODO: weights
+        if weights is not None:
+            raise NotImplementedError
         x = np.asanyarray(num_candidates)
         n = x.max().item()
         h = np.r_[0, generalized_harmonic_numbers(n)]
@@ -1009,9 +1026,12 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa:D102
         # TODO: weights
+        if weights is not None:
+            raise NotImplementedError
         x = np.asanyarray(num_candidates)
         n = x.max().item()
         vs = np.r_[0, harmonic_variances(n)]
@@ -1273,7 +1293,7 @@ class HitsAtK(RankBasedMetric):
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
         individual = np.minimum(self.k / num_candidates, 1.0)
-        return np.average(individual, weights=weights).item()
+        return weighted_expectation(individual=individual, weights=weights)
 
     def variance(
         self,
@@ -1286,9 +1306,7 @@ class HitsAtK(RankBasedMetric):
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)
         individual_variance = p * (1 - p)
-        if weights is None:
-            weights = np.full_like(num_candidates, fill_value=1 / num_candidates.size, dtype=float)
-        return (individual_variance * weights**2).sum()
+        return weighted_variance(individual=individual_variance, weights=weights)
 
 
 @parse_docdata
