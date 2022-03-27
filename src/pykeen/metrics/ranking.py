@@ -687,6 +687,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
+        # TODO: weights
         return 0.5 * (1 + np.asanyarray(num_candidates).mean().item())
 
     def variance(
@@ -695,6 +696,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
+        # TODO: weights
         x = np.asanyarray(num_candidates)
         n = x.size
         return ((x**2).sum().item() - n) / (12 * n**2)
@@ -778,6 +780,7 @@ class GeometricMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
+        # TODO: weights
         m = num_candidates.size
         # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
         max_val = num_candidates.max()
@@ -960,6 +963,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
+        # TODO: weights
         x = np.asanyarray(num_candidates)
         n = x.max().item()
         h = np.r_[0, generalized_harmonic_numbers(n)]
@@ -973,6 +977,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa:D102
+        # TODO: weights
         x = np.asanyarray(num_candidates)
         n = x.max().item()
         vs = np.r_[0, harmonic_variances(n)]
@@ -1225,6 +1230,7 @@ class HitsAtK(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa: D102
+        # TODO: weights
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         return np.minimum(self.k / num_candidates, 1.0).mean().item()
 
@@ -1234,6 +1240,7 @@ class HitsAtK(RankBasedMetric):
         num_samples: Optional[int] = None,
         **kwargs,
     ) -> float:  # noqa:D102
+        # TODO: weights
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)
         return (p * (1.0 - p)).mean().item() / num_candidates.size
