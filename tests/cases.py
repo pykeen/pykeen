@@ -2108,12 +2108,10 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         if not self.instance.supports_weights:
             raise SkipTest(f"{self.instance} does not support weights")
 
-        generator = numpy.random.default_rng(seed=0)
-        weights = generator.random(size=self.ranks.size)
         # for sanity checking: give the largest weight to best rank => should improve
         idx = self.ranks.argmin()
+        weights = numpy.ones_like(self.ranks, dtype=float)
         weights[idx] = 2.0
-        assert weights.argmax() == idx
         weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
         unweighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=None)
         if self.instance.increasing:  # increasing = larger is better => weighted should be better
