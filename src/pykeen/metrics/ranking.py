@@ -814,11 +814,20 @@ class InverseGeometricMeanRank(RankBasedMetric):
 
 
 def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray) -> np.ndarray:
-    """Calculate weighted harmonic mean."""
+    """
+    Calculate weighted harmonic mean.
+
+    .. seealso::
+        https://en.wikipedia.org/wiki/Harmonic_mean#Weighted_harmonic_mean
+    """
     if weights is None:
         return stats.hmean(a)
 
-    return weights.sum() / np.average(np.reciprocal(a), weights=weights)
+    # normalize weights
+    weights = weights.astype(float)
+    weights = weights / weights.sum()
+    # calculate weighted harmonic mean
+    return np.reciprocal(np.average(np.reciprocal(a), weights=weights))
 
 
 @parse_docdata

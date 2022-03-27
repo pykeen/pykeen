@@ -6,7 +6,7 @@ import numpy as np
 import unittest_templates
 
 import pykeen.metrics.ranking
-from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
+from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances, weighted_harmonic_mean
 from tests import cases
 
 
@@ -173,3 +173,19 @@ class BaseExpectationTests(unittest.TestCase):
         """Verify the variance of the inverse rank."""
         var = np.reciprocal(self.ranks).var()
         numpy.testing.assert_allclose(var, harmonic_variances(n=self.n)[-1])
+
+
+class WeightedTests(unittest.TestCase):
+    """Tests for weighted aggregations."""
+
+    def setUp(self) -> None:
+        generator = np.random.default_rng()
+        self.array = generator.random(size=(10,))
+
+    def test_weighted_harmonic_mean(self):
+        # verify that equal weights lead to unweighted results
+        weights = np.full_like(self.array, fill_value=2.0)
+        self.assertAlmostEqual(
+            weighted_harmonic_mean(a=self.array, weights=None),
+            weighted_harmonic_mean(a=self.array, weights=weights),
+        )
