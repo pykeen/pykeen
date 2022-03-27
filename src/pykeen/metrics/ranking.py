@@ -1267,22 +1267,28 @@ class HitsAtK(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # TODO: weights
         num_candidates = np.asanyarray(num_candidates, dtype=float)
-        return np.minimum(self.k / num_candidates, 1.0).mean().item()
+        # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
+        individual = np.minimum(self.k / num_candidates, 1.0)
+        return np.average(individual, weights=weights).item()
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa:D102
-        # TODO: weights
+        # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)
-        return (p * (1.0 - p)).mean().item() / num_candidates.size
+        individual_variance = p * (1 - p)
+        if weights is None:
+            weights = np.full_like(num_candidates, fill_value=1 / num_candidates.size, dtype=float)
+        return (individual_variance * weights**2).sum()
 
 
 @parse_docdata
