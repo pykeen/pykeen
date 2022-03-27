@@ -153,6 +153,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: int,
+        weights: Optional[np.ndarray] = None,
         generator: Optional[np.random.Generator] = None,
         memory_intense: bool = True,
     ) -> np.ndarray:
@@ -163,6 +164,8 @@ class RankBasedMetric(Metric):
             the number of candidates for each ranking task
         :param num_samples:
             the number of samples
+        :param weights: shape: s
+            the weights for the individual ranking tasks
         :param generator:
             a random state for reproducibility
         :param memory_intense:
@@ -180,10 +183,15 @@ class RankBasedMetric(Metric):
                 axis=1,
                 arr=generate_ranks(prefix_shape=(num_samples,), num_candidates=num_candidates, seed=generator),
                 num_candidates=num_candidates,
+                weights=weights,
             )
         return np.asanyarray(
             a=[
-                self(ranks=generate_ranks(num_candidates=num_candidates, seed=generator), num_candidates=num_candidates)
+                self(
+                    ranks=generate_ranks(num_candidates=num_candidates, seed=generator),
+                    num_candidates=num_candidates,
+                    weights=weights,
+                )
                 for _ in range(num_samples)
             ]
         )
@@ -215,12 +223,7 @@ class RankBasedMetric(Metric):
         vs = np.asanyarray([func(xs[generator.integers(n, size=(n,))]) for _ in range(n_boot)])
         return np.percentile(vs, p)
 
-    def numeric_expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: int,
-        **kwargs,
-    ) -> float:
+    def numeric_expected_value(self, **kwargs) -> float:
         r"""
         Compute expected metric value by summation.
 
@@ -228,12 +231,8 @@ class RankBasedMetric(Metric):
         distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
         ranking task $r_i$.
 
-        :param num_candidates:
-            the number of candidates for each individual rank computation
-        :param num_samples:
-            the number of samples to use for simulation
         :param kwargs:
-            additional keyword-based parameters passed to :func:`get_sampled_values`
+            keyword-based parameters passed to :func:`get_sampled_values`
 
         :return:
             The estimated expected value of this metric
@@ -243,7 +242,7 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).mean().item()
+        return self.get_sampled_values(**kwargs).mean().item()
 
     def numeric_expected_value_with_ci(self, **kwargs) -> np.ndarray:
         """Estimate expected value with confidence intervals."""
@@ -253,6 +252,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:
         r"""Compute expected metric value.
@@ -266,6 +266,8 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation, if no closed form
             expected value is implemented
+        :param weights: shape: s
+            the weights for the individual ranking tasks
         :param kwargs:
             additional keyword-based parameters passed to :func:`get_sampled_values`,
             if no closed form solution is available
@@ -282,26 +284,19 @@ class RankBasedMetric(Metric):
         """
         if num_samples is None:
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
-        return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
+        return self.numeric_expected_value(
+            num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
+        )
 
-    def numeric_variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: int,
-        **kwargs,
-    ) -> float:
+    def numeric_variance(self, **kwargs) -> float:
         r"""Compute variance by summation.
 
         The variance is computed under the assumption that each individual rank follows a discrete uniform
         distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
         ranking task $r_i$.
 
-        :param num_candidates:
-            the number of candidates for each individual rank computation
-        :param num_samples:
-            the number of samples to use for simulation
         :param kwargs:
-            additional keyword-based parameters passed to :func:`get_sampled_values`
+            keyword-based parameters passed to :func:`get_sampled_values`
 
         :return:
             The estimated variance of this metric
@@ -311,9 +306,7 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return (
-            self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).var(ddof=1).item()
-        )
+        return self.get_sampled_values(**kwargs).var(ddof=1).item()
 
     def numeric_variance_with_ci(self, **kwargs) -> np.ndarray:
         """Estimate variance with confidence intervals."""
@@ -323,6 +316,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:
         r"""Compute variance.
@@ -336,6 +330,8 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation, if no closed form
             expected value is implemented
+        :param weights: shape: s
+            the weights for the individual ranking tasks
         :param kwargs:
             additional keyword-based parameters passed to :func:`get_sampled_values`,
             if no closed form solution is available
@@ -353,12 +349,13 @@ class RankBasedMetric(Metric):
         """
         if num_samples is None:
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
-        return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
+        return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
 
     def std(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:
         """
@@ -369,6 +366,8 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation, if no closed form
             expected value is implemented
+        :param weights: shape: s
+            the weights for the individual ranking tasks
         :param kwargs:
             additional keyword-based parameters passed to :func:`variance`,
 
@@ -377,7 +376,9 @@ class RankBasedMetric(Metric):
 
         For a detailed explanation, cf. :func:`RankBasedMetric.variance`.
         """
-        return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs))
+        return math.sqrt(
+            self.variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
+        )
 
 
 def _safe_divide(x: float, y: float) -> float:
@@ -448,14 +449,20 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         """
         self.base = rank_based_metric_resolver.make(base_cls or self.base_cls, pos_kwargs=kwargs)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         if num_candidates is None:
             raise ValueError(f"{self.__class__.__name__} requires number of candidates.")
         return self.adjust(
-            base_metric_result=self.base(ranks=ranks, num_candidates=num_candidates), num_candidates=num_candidates
+            base_metric_result=self.base(ranks=ranks, num_candidates=num_candidates, weights=weights),
+            num_candidates=num_candidates,
+            weights=weights,
         )
 
-    def adjust(self, base_metric_result: float, num_candidates: np.ndarray) -> float:
+    def adjust(
+        self, base_metric_result: float, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> float:
         """
         Adjust base metric results based on the number of candidates.
 
@@ -463,6 +470,8 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
             the result of the base metric
         :param num_candidates:
             the number of candidates
+        :param weights: shape: s
+            the weights for the individual ranking tasks
 
         :return:
             the adjusted metric
@@ -472,44 +481,50 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
             since the adjustment only depends on the number of candidates, but not the ranks of the predictions, this
             method can also be used to adjust published results without access to the trained models.
         """
-        parameters = self.get_coefficients(num_candidates=num_candidates)
+        parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
         return parameters.scale * base_metric_result + parameters.offset
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # since scale and offset are constant for a given number of candidates, we have
         # E[scale * M + offset] = scale * E[M] + offset
         return self.adjust(
             base_metric_result=self.base.expected_value(
-                num_candidates=num_candidates, num_samples=num_samples, **kwargs
+                num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
             ),
             num_candidates=num_candidates,
+            weights=weights,
         )
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
-        parameters = self.get_coefficients(num_candidates=num_candidates)
+        parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
         return parameters.scale**2.0 * self.base.variance(
-            num_candidates=num_candidates, num_samples=num_samples, **kwargs
+            num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
         )
 
     @abstractmethod
-    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:
+    def get_coefficients(
+        self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> AffineTransformationParameters:
         """
         Compute the scaling coefficients.
 
         :param num_candidates:
             the number of candidates
+
 
         :return:
             a tuple (scale, offset)
@@ -547,9 +562,11 @@ class ZMetric(DerivedRankBasedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     value_range = ValueRange(lower=None, upper=None)
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
-        mean = self.base.expected_value(num_candidates=num_candidates)
-        std = self.base.std(num_candidates=num_candidates)
+    def get_coefficients(
+        self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> AffineTransformationParameters:  # noqa: D102
+        mean = self.base.expected_value(num_candidates=num_candidates, weights=weights)
+        std = self.base.std(num_candidates=num_candidates, weights=weights)
         scale = _safe_divide(1.0, std)
         if not self.base.increasing:
             scale = -scale
@@ -592,9 +609,11 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
     .. warning:: This requires a closed-form solution to the expected value
     """
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
+    def get_coefficients(
+        self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> AffineTransformationParameters:  # noqa: D102
         return AffineTransformationParameters(
-            scale=_safe_divide(1, self.base.expected_value(num_candidates=num_candidates))
+            scale=_safe_divide(1, self.base.expected_value(num_candidates=num_candidates, weights=weights))
         )
 
     def expected_value(
@@ -628,8 +647,10 @@ class ReindexedMetric(DerivedRankBasedMetric):
     #: Expectation/maximum reindexed metrics can only be applied to realistic ranks
     supported_rank_types = (RANK_REALISTIC,)
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
-        mean = self.base.expected_value(num_candidates=num_candidates)
+    def get_coefficients(
+        self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> AffineTransformationParameters:  # noqa: D102
+        mean = self.base.expected_value(num_candidates=num_candidates, weights=weights)
         scale = _safe_divide(1.0, 1.0 - mean)
         offset = -scale * mean
         return AffineTransformationParameters(scale=scale, offset=offset)
