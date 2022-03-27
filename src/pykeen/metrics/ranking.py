@@ -592,6 +592,7 @@ class ZMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 0.0
@@ -601,6 +602,7 @@ class ZMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 1.0
@@ -635,6 +637,7 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         return 1.0  # centered
@@ -674,6 +677,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 0.0
