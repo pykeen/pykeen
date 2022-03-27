@@ -106,9 +106,9 @@ class Regularizer(nn.Module, ABC):
         if self.tracked_parameters:
             self.update(*self.tracked_parameters)
 
-        term = self.regularization_term
+        result = self.weight * self.regularization_term
         self.reset()
-        return self.weight * term
+        return result
 
 
 class NoRegularizer(Regularizer):
