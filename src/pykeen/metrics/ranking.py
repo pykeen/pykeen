@@ -125,7 +125,7 @@ def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]
     if weights is None:
         return individual.mean() / n
     weights = weights / weights.sum()
-    return (individual * weights**2).sum().item()
+    return (individual * weights ** 2).sum().item()
 
 
 class NoClosedFormError(ValueError):
@@ -525,7 +525,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
-        return parameters.scale**2.0 * self.base.variance(
+        return parameters.scale ** 2.0 * self.base.variance(
             num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
         )
 
@@ -741,7 +741,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         **kwargs,
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates)
-        individual_variance = (num_candidates**2 - 1) / 12.0
+        individual_variance = (num_candidates ** 2 - 1) / 12.0
         return weighted_mean_variance(individual=individual_variance, weights=weights)
 
 
@@ -854,7 +854,9 @@ class GeometricMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         if weights is None:
             return self.unweighted_expectation(num_candidates=num_candidates)
-        raise NoClosedFormError
+        return np.prod(
+            [generalized_harmonic_numbers(n, p=w)[-1] / n for n, w in zip(num_candidates, weights / weights.sum())]
+        ).item()
 
     @staticmethod
     def unweighted_expectation(num_candidates: np.ndarray) -> float:
@@ -868,6 +870,26 @@ class GeometricMeanRank(RankBasedMetric):
         # now select from precomputed cumulative sums and aggregate
         x = x[num_candidates - 1] - np.log(num_candidates)
         return np.exp(x.sum()).item()
+
+    @staticmethod
+    def unweighted_variance(num_candidates: np.ndarray) -> float:
+        """Compute the variance for the unweighted GMR."""
+        m = num_candidates.size
+        n = num_candidates.max()
+        individual_expectations = generalized_harmonic_numbers(n, p=1.0 / m)
+        individual_variances = generalized_harmonic_variances(n, p=1.0 / m)
+        raise NoClosedFormError
+
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
+        **kwargs,
+    ) -> float:  # noqa: D102
+        if weights is None:
+            return self.unweighted_variance(num_candidates=num_candidates)
+        raise NoClosedFormError
 
 
 @parse_docdata
@@ -959,6 +981,22 @@ def generalized_harmonic_numbers(n: int, p: float = -1.0) -> np.ndarray:
     return np.cumsum(np.power(np.arange(1, n + 1, dtype=float), p))
 
 
+def generalized_harmonic_variances(n: int, p: float = -1.0) -> np.ndarray:
+    """
+    Pre-calculate variances of uniform distributions over {i^p | i=1, ..., m} for m=1..n.
+
+    .. note::
+        the implementation has quadratic complexity in $n$.
+    """
+    # expectations, shape: (n,)
+    e = generalized_harmonic_numbers(n, p=p)
+    # individual entries, shape: (n,)
+    x = np.power(np.arange(1, n + 1, dtype=float), p)
+    # variances
+    # V[k] = 1/(k+1) sum (x[:k] - e[k])^2
+    return np.tril((x[:, None] - e[None, :]) ** 2).sum(axis=-1) / np.arange(1, n + 1)
+
+
 def harmonic_variances(n: int) -> np.ndarray:
     r"""
     Pre-calculate variances of inverse rank distributions.
@@ -986,7 +1024,7 @@ def harmonic_variances(n: int) -> np.ndarray:
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
     n = np.arange(1, n + 1)
-    v = (n * h2 - h**2) / n**2
+    v = (n * h2 - h ** 2) / n ** 2
     return v
 
 
@@ -1129,7 +1167,7 @@ def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.n
     idx = np.searchsorted(cdf, v=0.5)
     # special case for exactly 0.5
     if cdf[idx] == 0.5:
-        return s_ranks[idx : idx + 2].mean()
+        return s_ranks[idx: idx + 2].mean()
     return s_ranks[idx]
 
 
