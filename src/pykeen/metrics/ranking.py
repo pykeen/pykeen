@@ -157,6 +157,12 @@ class RankBasedMetric(Metric):
     #: whether the metric supports weights
     supports_weights: ClassVar[bool] = False
 
+    #: whether there is a closed-form solution of the expectation
+    closed_expectation: ClassVar[bool] = False
+
+    #: whether there is a closed-form solution of the variance
+    closed_variance: ClassVar[bool] = False
+
     @abstractmethod
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
@@ -587,6 +593,8 @@ class ZMetric(DerivedRankBasedMetric):
     #: Z-adjusted metrics can only be applied to realistic ranks
     supported_rank_types = (RANK_REALISTIC,)
     value_range = ValueRange(lower=None, upper=None)
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
     def get_coefficients(
         self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
@@ -637,6 +645,8 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
     .. warning:: This requires a closed-form solution to the expected value
     """
 
+    closed_expectation: ClassVar[bool] = True
+
     def get_coefficients(
         self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
     ) -> AffineTransformationParameters:  # noqa: D102
@@ -675,6 +685,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
     increasing = True
     #: Expectation/maximum reindexed metrics can only be applied to realistic ranks
     supported_rank_types = (RANK_REALISTIC,)
+    closed_expectation: ClassVar[bool] = True
 
     def get_coefficients(
         self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
@@ -726,6 +737,8 @@ class ArithmeticMeanRank(RankBasedMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("mean_rank", "mr")
     supports_weights: ClassVar[bool] = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
@@ -849,6 +862,8 @@ class GeometricMeanRank(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("gmr",)
     supports_weights = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
@@ -1108,6 +1123,8 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("mean_reciprocal_rank", "mrr")
     increasing = True
     supports_weights = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
@@ -1382,6 +1399,8 @@ class HitsAtK(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
     increasing = True
     supports_weights = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
     def __init__(self, k: int = 10) -> None:
         super().__init__()
