@@ -1083,7 +1083,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         # TODO: weights
         if weights is not None:
-            raise NotImplementedError
+            raise NoClosedFormError
         x = np.asanyarray(num_candidates)
         n = x.max().item()
         h = np.r_[0, generalized_harmonic_numbers(n)]
@@ -1100,7 +1100,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     ) -> float:  # noqa:D102
         # TODO: weights
         if weights is not None:
-            raise NotImplementedError
+            raise NoClosedFormError
         x = np.asanyarray(num_candidates)
         n = x.max().item()
         vs = np.r_[0, harmonic_variances(n)]
