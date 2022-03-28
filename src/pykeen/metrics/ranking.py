@@ -937,7 +937,7 @@ class HarmonicMeanRank(RankBasedMetric):
         return weighted_harmonic_mean(a=ranks, weights=weights).item()
 
 
-def generalized_harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
+def generalized_harmonic_numbers(n: int, p: float = -1.0) -> np.ndarray:
     r"""
     Calculate the generalized harmonic numbers from 1 to n (both inclusive).
 
@@ -1059,15 +1059,11 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # TODO: weights
-        if weights is not None:
-            raise NoClosedFormError
-        x = np.asanyarray(num_candidates)
-        n = x.max().item()
-        h = np.r_[0, generalized_harmonic_numbers(n)]
-        # individual ranks' expectation
-        x = h[num_candidates] / num_candidates
-        return x.mean().item()
+        num_candidates = np.asanyarray(num_candidates)
+        n = num_candidates.max().item()
+        expectation = generalized_harmonic_numbers(n, p=-1.0) / np.arange(1, n + 1)
+        individual = expectation[num_candidates - 1]
+        return weighted_mean_expectation(individual, weights)
 
     def variance(
         self,
@@ -1076,16 +1072,10 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa:D102
-        # TODO: weights
-        if weights is not None:
-            raise NoClosedFormError
-        x = np.asanyarray(num_candidates)
-        n = x.max().item()
-        vs = np.r_[0, harmonic_variances(n)]
-        # individual inverse ranks' variance
-        x = vs[x]
-        # rank aggregation
-        return x.sum().item() / x.size**2
+        num_candidates = np.asanyarray(num_candidates)
+        n = num_candidates.max().item()
+        individual = harmonic_variances(n)[num_candidates - 1]
+        return weighted_mean_variance(individual, weights)
 
 
 @parse_docdata
