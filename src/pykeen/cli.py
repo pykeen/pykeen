@@ -378,8 +378,8 @@ def _help_metrics(tablefmt):
         "Direction",
         "Description",
         "Type",
-        "Closed-Form Expectation",
-        "Closed-Form Variance",
+        # "Closed-Form Expectation",
+        # "Closed-Form Variance",
     ]
     if tablefmt != "github":
         headers.append("Reference")
@@ -449,8 +449,8 @@ def _get_metrics_lines(tablefmt: str):
             "📈" if metric.increasing else "📉",
             getattr_or_docdata(metric, "description"),
             METRIC_NAMES[metric_results_cls],
-            "✓" if metric.closed_expectation else "",
-            "✓" if metric.closed_variance else "",
+            # "✓" if metric.closed_expectation else "",
+            # "✓" if metric.closed_variance else "",
         ]
         if tablefmt != "github":
             yv.append(f"pykeen.evaluation.{metric_results_cls.__name__}")
