@@ -834,9 +834,14 @@ class GeometricMeanRank(RankBasedMetric):
         weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
+        if weights is None:
+            return self.unweighted_expectation(num_candidates)
         # TODO: weights
-        if weights is not None:
-            raise NotImplementedError
+        raise NotImplementedError
+
+    @staticmethod
+    def unweighted_expectation(num_candidates: np.ndarray) -> float:
+        """Compute the expectation for the unweighted GMR."""
         m = num_candidates.size
         # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
         max_val = num_candidates.max()
@@ -845,7 +850,7 @@ class GeometricMeanRank(RankBasedMetric):
         x = logcumsumexp(x)
         # now select from precomputed cumulative sums and aggregate
         x = x[num_candidates - 1] - np.log(num_candidates)
-        return np.exp(x.sum())
+        return np.exp(x.sum()).item()
 
 
 @parse_docdata
