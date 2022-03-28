@@ -1130,7 +1130,8 @@ class AdjustedInverseHarmonicMeanRank(ReindexedMetric):
     synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
     base_cls = InverseHarmonicMeanRank
-    supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
+    # TODO: no support for weights, since IHMR does not support weighted expectation
+    # supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
 
 
 @parse_docdata
@@ -1145,7 +1146,8 @@ class ZInverseHarmonicMeanRank(ZMetric):
     name = "z-Mean Reciprocal Rank (ZMRR)"
     synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
     base_cls = InverseHarmonicMeanRank
-    supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
+    # TODO: no support for weights, since IHMR does not support weighted expectation / variance
+    # supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
 
 
 def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
