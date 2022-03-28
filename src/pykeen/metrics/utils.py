@@ -92,6 +92,15 @@ class Metric:
     #: synonyms for this metric
     synonyms: ClassVar[Collection[str]] = tuple()
 
+    #: whether the metric supports weights
+    supports_weights: ClassVar[bool] = False
+
+    #: whether there is a closed-form solution of the expectation
+    closed_expectation: ClassVar[bool] = False
+
+    #: whether there is a closed-form solution of the variance
+    closed_variance: ClassVar[bool] = False
+
     @classmethod
     def get_description(cls) -> str:
         """Get the description."""

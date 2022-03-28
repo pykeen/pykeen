@@ -154,15 +154,6 @@ class RankBasedMetric(Metric):
     #: whether the metric requires the number of candidates for each ranking task
     needs_candidates: ClassVar[bool] = False
 
-    #: whether the metric supports weights
-    supports_weights: ClassVar[bool] = False
-
-    #: whether there is a closed-form solution of the expectation
-    closed_expectation: ClassVar[bool] = False
-
-    #: whether there is a closed-form solution of the variance
-    closed_variance: ClassVar[bool] = False
-
     @abstractmethod
     def __call__(
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
