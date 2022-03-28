@@ -25,6 +25,7 @@ from click_default_group import DefaultGroup
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
+from .datasets.inductive import inductive_dataset_resolver
 from .evaluation import (
     ClassificationMetricResults,
     MetricResults,
@@ -184,6 +185,15 @@ def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None, sort_size: boo
     return tabulate(
         lines,
         headers=["Name", "Documentation", "Citation", "Entities", "Relations", "Triples"],
+        tablefmt=tablefmt,
+    )
+
+
+def _help_inductive_datasets(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_inductive_dataset_lines(tablefmt=tablefmt, link_fmt=link_fmt)
+    return tabulate(
+        lines,
+        headers=["Name", "Documentation", "Citation"],
         tablefmt=tablefmt,
     )
 
@@ -509,6 +519,40 @@ def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
         yield name, reference, citation_str, entities, relations, triples
 
 
+def _get_inductive_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
+    for name, value in sorted(inductive_dataset_resolver.lookup_dict.items()):
+        reference = f"pykeen.datasets.{value.__name__}"
+        if tablefmt == "rst":
+            reference = f":class:`{reference}`"
+        elif link_fmt is not None:
+            reference = f"[`{reference}`]({link_fmt.format(reference)})"
+        else:
+            reference = f"`{reference}`"
+
+        try:
+            docdata = value.__docdata__
+        except AttributeError:
+            yield name, reference, "", "", "", ""
+            continue
+
+        name = docdata["name"]
+
+        citation_str = ""
+        citation = docdata.get("citation")
+        if citation is not None:
+            author = citation and citation.get("author")
+            year = citation and citation.get("year")
+            link = citation and citation.get("link")
+            github = citation and citation.get("github")
+            if author and year and link:
+                _citation_txt = f"{author.capitalize()} *et al*., {year}"
+                citation_str = _link(_citation_txt, link, tablefmt)
+            elif github:
+                link = f"https://github.com/{github}"
+                citation_str = _link(github if tablefmt == "rst" else f"`{github}`", link, tablefmt)
+        yield name, reference, citation_str
+
+
 def _link(text: str, link: str, fmt: str) -> str:
     if fmt == "rst":
         return f"`{text} <{link}>`_"
@@ -575,6 +619,8 @@ def get_readme() -> str:
         n_losses=len(loss_resolver.lookup_dict),
         datasets=_help_datasets(tablefmt, link_fmt=api_link_fmt),
         n_datasets=len(dataset_resolver.lookup_dict),
+        inductive_datasets=_help_inductive_datasets(tablefmt, link_fmt=api_link_fmt),
+        n_inductive_datasets=len(inductive_dataset_resolver.lookup_dict),
         training_loops=_help_training(
             tablefmt,
             link_fmt="https://pykeen.readthedocs.io/en/latest/reference/training.html#{}",

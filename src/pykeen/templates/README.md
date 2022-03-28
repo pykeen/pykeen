@@ -42,6 +42,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-{{ n_datasets }}">Datasets</a> •
+  <a href="#inductive-datasets">Inductive Datasets ({{ n_inductive_datasets }})</a> •
   <a href="#models-{{ n_models }}">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -115,6 +116,12 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 [here](https://github.com/pykeen/pykeen/issues/new?assignees=cthoyt&labels=New+Dataset&template=dataset-request.md&title=Add+%5BDATASET+NAME%5D).
 
 {{ datasets }}
+
+### Inductive Datasets
+
+The following inductive datasets are built in to PyKEEN.
+
+{{ inductive_datasets }}
 
 ### Models ({{ n_models }})
 
