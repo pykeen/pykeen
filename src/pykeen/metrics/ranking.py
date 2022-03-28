@@ -125,7 +125,7 @@ def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]
     if weights is None:
         return individual.mean() / n
     weights = weights / weights.sum()
-    return (individual * weights ** 2).sum().item()
+    return (individual * weights**2).sum().item()
 
 
 class NoClosedFormError(ValueError):
@@ -525,7 +525,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
-        return parameters.scale ** 2.0 * self.base.variance(
+        return parameters.scale**2.0 * self.base.variance(
             num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
         )
 
@@ -741,7 +741,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         **kwargs,
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates)
-        individual_variance = (num_candidates ** 2 - 1) / 12.0
+        individual_variance = (num_candidates**2 - 1) / 12.0
         return weighted_mean_variance(individual=individual_variance, weights=weights)
 
 
@@ -854,6 +854,8 @@ class GeometricMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         if weights is None:
             return self.unweighted_expectation(num_candidates=num_candidates)
+        # TODO: use log-trick to increase stability
+        # TODO: re-use calculation for same w
         return np.prod(
             [generalized_harmonic_numbers(n, p=w)[-1] / n for n, w in zip(num_candidates, weights / weights.sum())]
         ).item()
@@ -1024,7 +1026,7 @@ def harmonic_variances(n: int) -> np.ndarray:
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
     n = np.arange(1, n + 1)
-    v = (n * h2 - h ** 2) / n ** 2
+    v = (n * h2 - h**2) / n**2
     return v
 
 
@@ -1167,7 +1169,7 @@ def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.n
     idx = np.searchsorted(cdf, v=0.5)
     # special case for exactly 0.5
     if cdf[idx] == 0.5:
-        return s_ranks[idx: idx + 2].mean()
+        return s_ranks[idx : idx + 2].mean()
     return s_ranks[idx]
 
 
