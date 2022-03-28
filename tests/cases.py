@@ -2079,6 +2079,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
+            weights=weights,
         )
         self.assertLessEqual(low, closed)
         self.assertLessEqual(closed, high)
