@@ -855,10 +855,7 @@ class GeometricMeanRank(RankBasedMetric):
         if weights is None:
             return self.unweighted_expectation(num_candidates=num_candidates)
         # TODO: use log-trick to increase stability
-        # TODO: re-use calculation for same w
-        return np.prod(
-            [generalized_harmonic_numbers(n, p=w)[-1] / n for n, w in zip(num_candidates, weights / weights.sum())]
-        ).item()
+        return np.prod(self._individual_expectation(num_candidates=num_candidates, weights=weights)).item()
 
     @staticmethod
     def unweighted_expectation(num_candidates: np.ndarray) -> float:
@@ -873,15 +870,6 @@ class GeometricMeanRank(RankBasedMetric):
         x = x[num_candidates - 1] - np.log(num_candidates)
         return np.exp(x.sum()).item()
 
-    @staticmethod
-    def unweighted_variance(num_candidates: np.ndarray) -> float:
-        """Compute the variance for the unweighted GMR."""
-        m = num_candidates.size
-        n = num_candidates.max()
-        individual_expectations = generalized_harmonic_numbers(n, p=1.0 / m)
-        individual_variances = generalized_harmonic_variances(n, p=1.0 / m)
-        raise NoClosedFormError
-
     def variance(
         self,
         num_candidates: np.ndarray,
@@ -889,9 +877,39 @@ class GeometricMeanRank(RankBasedMetric):
         weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
+        # TODO: optimize for weights = None
         if weights is None:
-            return self.unweighted_variance(num_candidates=num_candidates)
-        raise NoClosedFormError
+            weights = np.ones_like(num_candidates, dtype=float)
+        weights = weights / weights.sum()
+        # V (prod x_i) = prod (V[x_i] - E[x_i]^2) - prod(E[x_i])^2
+        individual_expectation = self._individual_expectation(num_candidates=num_candidates, weights=weights)
+        individual_variance = self._individual_variance(
+            num_candidates=num_candidates, weights=weights, individual_expectation=individual_expectation
+        )
+        return np.prod(individual_variance + individual_expectation**2) - np.prod(individual_expectation) ** 2
+
+    @staticmethod
+    def _individual_variance(
+        num_candidates: np.ndarray, weights: np.ndarray, individual_expectation: np.ndarray
+    ) -> np.ndarray:
+        # TODO: re-use calculation for same w, vectorize
+        # V[x] = E[x^2] - E[x]^2
+        return (
+            np.asarray(
+                [
+                    generalized_harmonic_numbers(n, p=2 * w)[-1] / n
+                    for n, w in zip(num_candidates, weights / weights.sum())
+                ]
+            )
+            - individual_expectation**2
+        )
+
+    @staticmethod
+    def _individual_expectation(num_candidates: np.ndarray, weights: np.ndarray) -> np.ndarray:
+        # TODO: re-use calculation for same w
+        return np.asarray(
+            [generalized_harmonic_numbers(n, p=w)[-1] / n for n, w in zip(num_candidates, weights / weights.sum())]
+        )
 
 
 @parse_docdata
@@ -981,22 +999,6 @@ def generalized_harmonic_numbers(n: int, p: float = -1.0) -> np.ndarray:
         https://en.wikipedia.org/wiki/Harmonic_number#Generalizations
     """
     return np.cumsum(np.power(np.arange(1, n + 1, dtype=float), p))
-
-
-def generalized_harmonic_variances(n: int, p: float = -1.0) -> np.ndarray:
-    """
-    Pre-calculate variances of uniform distributions over {i^p | i=1, ..., m} for m=1..n.
-
-    .. note::
-        the implementation has quadratic complexity in $n$.
-    """
-    # expectations, shape: (n,)
-    e = generalized_harmonic_numbers(n, p=p)
-    # individual entries, shape: (n,)
-    x = np.power(np.arange(1, n + 1, dtype=float), p)
-    # variances
-    # V[k] = 1/(k+1) sum (x[:k] - e[k])^2
-    return np.tril((x[:, None] - e[None, :]) ** 2).sum(axis=-1) / np.arange(1, n + 1)
 
 
 def harmonic_variances(n: int) -> np.ndarray:
