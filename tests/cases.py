@@ -2096,10 +2096,10 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         weights = generator.random(size=self.num_candidates.shape)
         self._test_expectation(weights=weights)
 
-    def test_variance(self):
+    def _test_variance(self, weights: Optional[numpy.ndarray]):
         """Test the numeric variance is close to the closed form one."""
         try:
-            closed = self.instance.variance(num_candidates=self.num_candidates)
+            closed = self.instance.variance(num_candidates=self.num_candidates, weights=weights)
         except NoClosedFormError as error:
             raise SkipTest("no implementation of closed-form variance") from error
 
@@ -2111,9 +2111,22 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
+            weights=weights,
         )
         self.assertLessEqual(low, closed)
         self.assertLessEqual(closed, high)
+
+    def test_variance(self):
+        """Test the numeric variance is close to the closed form one."""
+        self._test_variance(weights=None)
+
+    def test_variance_weighted(self):
+        """Test the weighted numeric variance is close to the closed form one."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+        generator = numpy.random.default_rng(seed=21)
+        weights = generator.random(size=self.num_candidates.shape)
+        self._test_variance(weights=weights)
 
     def test_different_to_base_metric(self):
         """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
