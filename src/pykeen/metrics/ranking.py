@@ -909,10 +909,10 @@ class GeometricMeanRank(RankBasedMetric):
         num_candidates: np.ndarray, weights: np.ndarray, factor: float = 1.0
     ) -> np.ndarray:
         weights = factor * weights / weights.sum()
-        # group by same weight -> compute H_w(n) for multiple n at once
-        weights, inverse = np.unique(weights, return_inverse=True)
         x = np.empty_like(weights)
-        for i, w in enumerate(weights):
+        # group by same weight -> compute H_w(n) for multiple n at once
+        unique_weights, inverse = np.unique(weights, return_inverse=True)
+        for i, w in enumerate(unique_weights):
             mask = inverse == i
             nc = num_candidates[mask]
             h = generalized_harmonic_numbers(nc.max(), p=w)
@@ -1505,6 +1505,22 @@ class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     synonyms: ClassVar[Collection[str]] = ("adjusted_mean_rank_index", "amri", "aamri")
     base_cls = ArithmeticMeanRank
     supports_weights: ClassVar[bool] = ArithmeticMeanRank.supports_weights
+
+
+@parse_docdata
+class AdjustedGeometricMeanRankIndex(ReindexedMetric):
+    """The adjusted geometric mean rank index (AGMRI).
+
+    ---
+    link: https://arxiv.org/abs/2002.06914
+    description: The re-indexed adjusted geometric mean rank (AGMRI)
+    """
+
+    name = "Adjusted Geometric Mean Rank Index (AGMRI)"
+    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
+    synonyms: ClassVar[Collection[str]] = ("gmri", "agmri")
+    base_cls = GeometricMeanRank
+    supports_weights: ClassVar[bool] = GeometricMeanRank.supports_weights
 
 
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
