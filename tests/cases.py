@@ -2070,7 +2070,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     def _test_expectation(self, weights: Optional[numpy.ndarray]):
         """Test the numeric expectation is close to the closed form one."""
         try:
-            closed = self.instance.expected_value(num_candidates=self.num_candidates)
+            closed = self.instance.expected_value(num_candidates=self.num_candidates, weights=weights)
         except NoClosedFormError as error:
             raise SkipTest("no implementation of closed-form expectation") from error
 
