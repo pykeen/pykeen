@@ -30,7 +30,7 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
+from pykeen.evaluation.rank_based_evaluator import MacroRankBasedEvaluator, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranking_metric_lookup import MetricKey
 from pykeen.evaluation.ranks import Ranks
 from pykeen.metrics.ranking import (
@@ -79,7 +79,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
             self.assertIn(side, SIDES)
             self.assertIn(rank_type, RANK_TYPES)
             self.assertIsInstance(metric, str)
-            self.assertIsInstance(value, float)
+            self.assertIsInstance(value, (float, int))
 
 
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
@@ -92,6 +92,17 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["evaluation_factory"] = self.factory
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
+        return kwargs
+
+
+class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
+    """unittest for the MacroRankBasedEvaluator."""
+
+    cls = MacroRankBasedEvaluator
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["evaluation_factory"] = self.factory
         return kwargs
 
 
