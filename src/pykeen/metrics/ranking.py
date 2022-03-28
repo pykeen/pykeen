@@ -30,6 +30,8 @@ __all__ = [
     "InverseArithmeticMeanRank",
     #
     "GeometricMeanRank",
+    "AdjustedGeometricMeanRankIndex",
+    "ZGeometricMeanRank",
     "InverseGeometricMeanRank",
     #
     "HarmonicMeanRank",
@@ -833,13 +835,13 @@ class GeometricMeanRank(RankBasedMetric):
     .. math::
         \log \mathbb{E}[r_i^{w_i/w}]
             &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
-            &= \log \frac{H_{-w_i/w}(N_i)}{N_i}
+            &= \log \frac{H_{-w_i/w}(N_i)}{N_i} \\
             &= \log H_{-w_i/w}(N_i) - \log N_i
 
     .. math::
         \mathbb{E}[M]
-            &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}]
-            &= \exp \sum \limits_{i=1}^{m} (\log H_{-w_i/w}(N_i) - \log N_i)
+            &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}] \\
+            &= \exp \sum \limits_{i=1}^{m} (\log H_{-w_i/w}(N_i) - \log N_i) \\
             &= \exp \sum \limits_{i=1}^{m} \log H_{-w_i/w}(N_i) - \exp \sum \limits_{i=1}^{m} \log N_i
 
     where $H_p(n)$ denotes the generalized harmonic number, cf. :func:`generalized_harmonic_numbers`.
