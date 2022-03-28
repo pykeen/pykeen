@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
 
 import numpy as np
+import pandas
+import scipy.special
 from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
@@ -124,7 +126,7 @@ def weighted_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> 
     n = individual.size
     if weights is None:
         return individual.mean() / n
-    return (individual * weights ** 2).sum().item()
+    return (individual * weights**2).sum().item()
 
 
 class NoClosedFormError(ValueError):
@@ -524,7 +526,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
-        return parameters.scale ** 2.0 * self.base.variance(
+        return parameters.scale**2.0 * self.base.variance(
             num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
         )
 
@@ -740,7 +742,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         **kwargs,
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates)
-        individual_variance = (num_candidates ** 2 - 1) / 12
+        individual_variance = (num_candidates**2 - 1) / 12
         return weighted_variance(individual=individual_variance, weights=weights)
 
 
@@ -804,13 +806,29 @@ class GeometricMeanRank(RankBasedMetric):
     .. math::
 
         \log \mathbb{E}[r_i^{w_i/w}]
-            &= \log \frac{1}{N_i} \sum \limits_{i=1}^{N_i} i^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} i^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp \log i^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp ( \frac{w_i}{w} \cdot \log i )
+            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp \log j^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp ( \frac{w_i}{w} \cdot \log j )
 
     For the second summand in the last line, we observe a log-sum-exp term, with known numerically stable
     implementation.
+
+    Alternatively, we can write
+
+    .. math::
+        \log \mathbb{E}[r_i^{w_i/w}]
+            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
+            &= \log \frac{H_{-w_i/w}(N_i)}{N_i}
+            &= \log H_{-w_i/w}(N_i) - \log N_i
+
+    .. math::
+        \mathbb{E}[M]
+            &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}]
+            &= \exp \sum \limits_{i=1}^{m} (\log H_{-w_i/w}(N_i) - \log N_i)
+            &= \exp \sum \limits_{i=1}^{m} \log H_{-w_i/w}(N_i) - \exp \sum \limits_{i=1}^{m} \log N_i
+
+    where $H_p(n)$ denotes the generalized harmonic number, cf. :func:`generalized_harmonic_numbers`.
     ---
     link: https://arxiv.org/abs/2203.07544
     description: The geometric mean over all ranks.
@@ -841,8 +859,22 @@ class GeometricMeanRank(RankBasedMetric):
     @staticmethod
     def weighted_expectation(num_candidates: np.ndarray, weights: np.ndarray) -> float:
         """Compute the expectation for the weighted GMR."""
-        # TODO: weights
-        raise NotImplementedError
+        # TODO: this operation is quite expensive (~loop over unique weights)
+        # a = \exp \sum \limits_{i=1}^{m} \log H_{-w_i/w}(N_i) = \exp \sum \limits_{i=1}^{m} \log H_{-w_i'}(N_i)
+        # normalize weights, w' = w_i / sum w_j
+        weights = weights / weights.sum()
+        # only compute for unique (w_i, N_i) pairs
+        weights, counts, inverse = weights.unique(return_counts=True, return_inverse=True)
+        s = 0.0
+        for i, (w, c) in enumerate(zip(weights, counts)):
+            mask = inverse == i
+            nc = num_candidates[mask]
+            h = generalized_harmonic_numbers(nc.max(), p=-w)
+            s += c * h[nc].sum()
+        a = np.exp(s)
+        # b = \exp \sum \limits_{i=1}^{m} \log N_i
+        b = np.exp(np.log(num_candidates).sum())
+        return a - b
 
     @staticmethod
     def unweighted_expectation(num_candidates: np.ndarray) -> float:
@@ -974,7 +1006,7 @@ def harmonic_variances(n: int) -> np.ndarray:
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
     n = np.arange(1, n + 1)
-    v = (n * h2 - h ** 2) / n ** 2
+    v = (n * h2 - h**2) / n**2
     return v
 
 
@@ -1073,7 +1105,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         # individual inverse ranks' variance
         x = vs[x]
         # rank aggregation
-        return x.sum().item() / x.size ** 2
+        return x.sum().item() / x.size**2
 
 
 @parse_docdata
@@ -1125,7 +1157,7 @@ def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.n
     idx = np.searchsorted(cdf, v=0.5)
     # special case for exactly 0.5
     if cdf[idx] == 0.5:
-        return s_ranks[idx: idx + 2].mean()
+        return s_ranks[idx : idx + 2].mean()
     return s_ranks[idx]
 
 
