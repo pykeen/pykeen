@@ -133,7 +133,7 @@ def stable_product(a: np.ndarray, axis: Optional[int] = None, is_log: bool = Fal
     if is_log:
         sign = 1
     else:
-        sign = np.prod(np.copysign(a, np.ones_like(a)))
+        sign = np.prod(np.copysign(np.ones_like(a), a))
         a = np.log(np.abs(a))
     return sign * np.exp(np.sum(a, axis=axis))
 
