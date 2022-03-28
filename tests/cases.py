@@ -2090,11 +2090,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_expectation_weighted(self):
         """Test for weighted expectation."""
-        if not self.instance.supports_weights:
-            raise SkipTest(f"{self.instance} does not support weights")
-        generator = numpy.random.default_rng(seed=21)
-        weights = generator.random(size=self.num_candidates.shape)
-        self._test_expectation(weights=weights)
+        self._test_expectation(weights=self._generate_weights())
 
     def _test_variance(self, weights: Optional[numpy.ndarray]):
         """Test the numeric variance is close to the closed form one."""
@@ -2122,11 +2118,17 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_variance_weighted(self):
         """Test the weighted numeric variance is close to the closed form one."""
+        self._test_variance(weights=self._generate_weights())
+
+    def _generate_weights(self):
+        """Generate weights."""
         if not self.instance.supports_weights:
             raise SkipTest(f"{self.instance} does not support weights")
+        # generate random weights such that sum = n
         generator = numpy.random.default_rng(seed=21)
         weights = generator.random(size=self.num_candidates.shape)
-        self._test_variance(weights=weights)
+        weights = self.num_ranks * weights / weights.sum()
+        return weights
 
     def test_different_to_base_metric(self):
         """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
