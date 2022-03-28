@@ -779,7 +779,7 @@ def _evaluate_batch(
             hrt_batch=batch,
             all_pos_triples=all_pos_triples,
             relation_filter=relation_filter,
-            filter_col=column,
+            filter_col=TARGET_TO_INDEX[target],
         )
         positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
     else:
