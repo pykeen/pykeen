@@ -63,7 +63,7 @@ class ValueRange:
     @staticmethod
     def _coerce(n: Optional[float], low: bool) -> str:
         if n is None:
-            return "-inf" if low else "inf"  # ∞
+            return "-∞" if low else "∞"  # ∞
         if isinstance(n, int):
             return str(n)
         if n.is_integer():
