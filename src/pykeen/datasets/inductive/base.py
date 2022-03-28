@@ -16,7 +16,10 @@ from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
 
 __all__ = [
+    # Base class
     "InductiveDataset",
+    # Mid-level classes
+    "EagerInductiveDataset",
     "LazyInductiveDataset",
     "DisjointInductivePathDataset",
     "UnpackedRemoteDisjointInductiveDataset",
