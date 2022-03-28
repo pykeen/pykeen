@@ -864,7 +864,7 @@ class GeometricMeanRank(RankBasedMetric):
         # normalize weights, w' = w_i / sum w_j
         weights = weights / weights.sum()
         # only compute for unique (w_i, N_i) pairs
-        weights, counts, inverse = weights.unique(return_counts=True, return_inverse=True)
+        weights, counts, inverse = np.unique(weights, return_counts=True, return_inverse=True)
         s = 0.0
         for i, (w, c) in enumerate(zip(weights, counts)):
             mask = inverse == i
