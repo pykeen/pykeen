@@ -68,6 +68,7 @@ def _iter_ranks(
     # flatten dictionaries
     ranks_flat = _flatten(ranks)
     num_candidates_flat = _flatten(num_candidates)
+    weights_flat: Mapping[Target, np.ndarray]
     if weights is None:
         weights_flat = dict()
     else:
@@ -460,6 +461,8 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
     ):
         super().__init__(**kwargs)
         if evaluation_triples is None:
+            if evaluation_factory is None:
+                raise ValueError("Need to provide either evaluation_triples or evaluation_factory.")
             evaluation_triples = evaluation_factory.mapped_triples
         # compute macro weights
         df = pandas.DataFrame(data=evaluation_triples.numpy(), columns=list(self.COLUMNS))
@@ -467,8 +470,9 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         for target in (LABEL_HEAD, LABEL_TAIL):
             key = self._get_key(target)
             counts = df.groupby(by=key).nunique()[target]
+            key_list = cast(Iterable[Tuple[int, int]], map(tuple, counts.index.tolist()))
             self.precomputed_weights[target] = dict(
-                zip(map(tuple, counts.index.tolist()), numpy.reciprocal(counts.values.astype(float)).tolist())
+                zip(key_list, numpy.reciprocal(counts.values.astype(float)).tolist())
             )
         self.weights = defaultdict(list)
 
@@ -490,12 +494,10 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             true_scores=true_scores,
             dense_positive_mask=dense_positive_mask,
         )
-        keys = list(
-            map(
-                tuple,
-                hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().numpy().tolist(),
-            )
+        key_list = (
+            hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().numpy().tolist()
         )
+        keys = cast(List[Tuple[int, int]], list(map(tuple, key_list)))
         self.weights[target].append(numpy.asarray([self.precomputed_weights[target][k] for k in keys]))
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
