@@ -11,6 +11,7 @@ from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, 
 
 import numpy as np
 import numpy.random
+import pandas
 import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -18,6 +19,7 @@ from class_resolver import HintOrType, OptionalKwargs
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
+from ..constants import TARGET_TO_INDEX
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
@@ -55,7 +57,8 @@ def _flatten(nested: Mapping[K, Sequence[np.ndarray]]) -> Mapping[K, np.ndarray]
 def _iter_ranks(
     ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
-) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]]:
+    weights: Optional[Mapping[Target, Sequence[np.ndarray]]] = None,
+) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]]:
     # terminate early if there are no ranks
     if not ranks:
         logger.debug("Empty ranks. This should only happen during size probing.")
@@ -65,15 +68,20 @@ def _iter_ranks(
     # flatten dictionaries
     ranks_flat = _flatten(ranks)
     num_candidates_flat = _flatten(num_candidates)
+    if weights is None:
+        weights_flat = dict()
+    else:
+        weights_flat = _flatten(weights)
     for rank_type in RANK_TYPES:
         # individual side
         for side in sides:
-            yield side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side]
+            yield side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side], weights_flat.get(side)
 
         # combined
         c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in sides])
         c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
-        yield SIDE_BOTH, rank_type, c_ranks, c_num_candidates
+        c_weights = None if weights is None else np.concatenate([weights_flat[side] for side in sides])
+        yield SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights
 
 
 class RankBasedMetricResults(MetricResults):
@@ -92,13 +100,13 @@ class RankBasedMetricResults(MetricResults):
     def from_ranks(
         cls,
         metrics: Iterable[RankBasedMetric],
-        rank_and_candidates: Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]],
+        rank_and_candidates: Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]],
     ) -> "RankBasedMetricResults":
         """Create rank-based metric results from the given rank/candidate sets."""
         return cls(
             data={
-                (metric.key, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates)
-                for metric, (target, rank_type, ranks, num_candidates) in itertools.product(
+                (metric.key, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates, weights=weights)
+                for metric, (target, rank_type, ranks, num_candidates, weights) in itertools.product(
                     metrics, rank_and_candidates
                 )
             }
@@ -434,3 +442,72 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # write back correct num_entities
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
         self.num_entities = num_entities
+
+
+class MacroRankBasedEvaluator(RankBasedEvaluator):
+    """Macro-average rank-based evaluation."""
+
+    COLUMNS = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
+    precomputed_weights: Mapping[Target, Mapping[Tuple[int, int], float]]
+    weights: MutableMapping[Target, List[numpy.ndarray]]
+
+    def __init__(
+        self,
+        *,
+        evaluation_factory: Optional[CoreTriplesFactory] = None,
+        evaluation_triples: Optional[MappedTriples] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if evaluation_triples is None:
+            evaluation_triples = evaluation_factory.mapped_triples
+        # compute macro weights
+        df = pandas.DataFrame(data=evaluation_triples.numpy(), columns=list(self.COLUMNS))
+        self.precomputed_weights = dict()
+        for target in (LABEL_HEAD, LABEL_TAIL):
+            key = self._get_key(target)
+            counts = df.groupby(by=key).nunique()[target]
+            self.precomputed_weights[target] = dict(
+                zip(map(tuple, counts.index.tolist()), numpy.reciprocal(counts.values.astype(float)).tolist())
+            )
+        self.weights = defaultdict(list)
+
+    def _get_key(self, target: Target) -> List[Target]:
+        return [c for c in self.COLUMNS if c != target]
+
+    def process_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        target: Target,
+        scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:
+        super().process_scores_(
+            hrt_batch=hrt_batch,
+            target=target,
+            scores=scores,
+            true_scores=true_scores,
+            dense_positive_mask=dense_positive_mask,
+        )
+        keys = list(
+            map(
+                tuple,
+                hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().numpy().tolist(),
+            )
+        )
+        self.weights[target].append(numpy.asarray([self.precomputed_weights[target][k] for k in keys]))
+
+    def finalize(self) -> RankBasedMetricResults:  # noqa: D102
+        if self.num_entities is None:
+            raise ValueError
+        result = RankBasedMetricResults.from_ranks(
+            metrics=self.metrics,
+            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=self.weights),
+        )
+        # Clear buffers
+        self.weights.clear()
+        self.ranks.clear()
+        self.num_candidates.clear()
+
+        return result
