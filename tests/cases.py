@@ -2067,7 +2067,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         else:
             self.assertLessEqual(y, x)
 
-    def test_expectation(self):
+    def _test_expectation(self, weights: Optional[numpy.ndarray]):
         """Test the numeric expectation is close to the closed form one."""
         try:
             closed = self.instance.expected_value(num_candidates=self.num_candidates)
@@ -2082,6 +2082,18 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         )
         self.assertLessEqual(low, closed)
         self.assertLessEqual(closed, high)
+
+    def test_expectation(self):
+        """Test the numeric expectation is close to the closed form one."""
+        self._test_expectation(weights=None)
+
+    def test_expectation_weighted(self):
+        """Test for weighted expectation."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+        generator = numpy.random.default_rng(seed=21)
+        weights = generator.random(size=self.num_candidates.shape)
+        self._test_expectation(weights=weights)
 
     def test_variance(self):
         """Test the numeric variance is close to the closed form one."""
