@@ -862,22 +862,8 @@ class GeometricMeanRank(RankBasedMetric):
         weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        if weights is None:
-            return self.unweighted_expectation(num_candidates=num_candidates)
-        return stable_product(self._individual_expectation(num_candidates=num_candidates, weights=weights)).item()
-
-    @staticmethod
-    def unweighted_expectation(num_candidates: np.ndarray) -> float:
-        """Compute the expectation for the unweighted GMR."""
-        m = num_candidates.size
-        # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
-        max_val = num_candidates.max()
-        x = np.arange(1, max_val + 1, dtype=float)
-        x = np.log(x) / m
-        x = logcumsumexp(x)
-        # now select from precomputed cumulative sums and aggregate
-        x = x[num_candidates - 1] - np.log(num_candidates)
-        return stable_product(x, is_log=True).item()
+        is_log, individual = self._individual_expectation(num_candidates=num_candidates, weights=weights)
+        return stable_product(individual, is_log=is_log).item()
 
     def variance(
         self,
@@ -886,12 +872,10 @@ class GeometricMeanRank(RankBasedMetric):
         weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # TODO: optimize for weights = None
-        if weights is None:
-            weights = np.ones_like(num_candidates, dtype=float)
-        weights = weights / weights.sum()
         # V (prod x_i) = prod (V[x_i] - E[x_i]^2) - prod(E[x_i])^2
-        individual_expectation = self._individual_expectation(num_candidates=num_candidates, weights=weights)
+        is_log, individual_expectation = self._individual_expectation(num_candidates=num_candidates, weights=weights)
+        if is_log:
+            individual_expectation = np.exp(individual_expectation)
         individual_variance = self._individual_variance(
             num_candidates=num_candidates, weights=weights, individual_expectation=individual_expectation
         )
@@ -904,24 +888,48 @@ class GeometricMeanRank(RankBasedMetric):
     def _individual_variance(
         num_candidates: np.ndarray, weights: np.ndarray, individual_expectation: np.ndarray
     ) -> np.ndarray:
-        # TODO: re-use calculation for same w, vectorize
-        # V[x] = E[x^2] - E[x]^2
-        return (
-            np.asarray(
-                [
-                    generalized_harmonic_numbers(n, p=2 * w)[-1] / n
-                    for n, w in zip(num_candidates, weights / weights.sum())
-                ]
+        # use V[x] = E[x^2] - E[x]^2
+        x2 = (
+            np.exp(GeometricMeanRank._log_individual_expectation_no_weight(num_candidates=num_candidates, factor=2.0))
+            if weights is None
+            else GeometricMeanRank._individual_expectation_weighted(
+                num_candidates=num_candidates, weights=weights, factor=2.0
             )
-            - individual_expectation**2
         )
+        return x2 - individual_expectation**2
 
     @staticmethod
-    def _individual_expectation(num_candidates: np.ndarray, weights: np.ndarray) -> np.ndarray:
-        # TODO: re-use calculation for same w
-        return np.asarray(
-            [generalized_harmonic_numbers(n, p=w)[-1] / n for n, w in zip(num_candidates, weights / weights.sum())]
-        )
+    def _individual_expectation(num_candidates: np.ndarray, weights: Optional[np.ndarray]) -> Tuple[bool, np.ndarray]:
+        if weights is None:
+            return True, GeometricMeanRank._log_individual_expectation_no_weight(num_candidates=num_candidates)
+        return False, GeometricMeanRank._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)
+
+    @staticmethod
+    def _individual_expectation_weighted(
+        num_candidates: np.ndarray, weights: np.ndarray, factor: float = 1.0
+    ) -> np.ndarray:
+        weights = factor * weights / weights.sum()
+        # group by same weight -> compute H_w(n) for multiple n at once
+        weights, inverse = np.unique(weights, return_inverse=True)
+        x = np.empty_like(weights)
+        for i, w in enumerate(weights):
+            mask = inverse == i
+            nc = num_candidates[mask]
+            h = generalized_harmonic_numbers(nc.max(), p=w)
+            x[mask] = h[nc - 1] / nc
+        return x
+
+    @staticmethod
+    def _log_individual_expectation_no_weight(num_candidates: np.ndarray, factor: float = 1.0) -> np.ndarray:
+        m = num_candidates.size
+        # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
+        max_val = num_candidates.max()
+        x = np.arange(1, max_val + 1, dtype=float)
+        x = factor * np.log(x) / m
+        x = logcumsumexp(x)
+        # now select from precomputed cumulative sums and aggregate
+        x = x[num_candidates - 1] - np.log(num_candidates)
+        return x
 
 
 @parse_docdata
