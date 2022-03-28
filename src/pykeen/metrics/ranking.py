@@ -128,6 +128,16 @@ def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]
     return (individual * weights**2).sum().item()
 
 
+def stable_product(a: np.ndarray, axis: Optional[int] = None, is_log: bool = False) -> np.ndarray:
+    """Compute product using the log-trick for increased numerical stability."""
+    if is_log:
+        sign = 1
+    else:
+        sign = np.prod(np.copysign(a, np.ones_like(a)))
+        a = np.log(np.abs(a))
+    return sign * np.exp(np.sum(a, axis=axis))
+
+
 class NoClosedFormError(ValueError):
     """The metric does not provide a closed-form implementation for the requested operation."""
 
@@ -854,8 +864,7 @@ class GeometricMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         if weights is None:
             return self.unweighted_expectation(num_candidates=num_candidates)
-        # TODO: use log-trick to increase stability
-        return np.prod(self._individual_expectation(num_candidates=num_candidates, weights=weights)).item()
+        return stable_product(self._individual_expectation(num_candidates=num_candidates, weights=weights)).item()
 
     @staticmethod
     def unweighted_expectation(num_candidates: np.ndarray) -> float:
@@ -868,7 +877,7 @@ class GeometricMeanRank(RankBasedMetric):
         x = logcumsumexp(x)
         # now select from precomputed cumulative sums and aggregate
         x = x[num_candidates - 1] - np.log(num_candidates)
-        return np.exp(x.sum()).item()
+        return stable_product(x, is_log=True).item()
 
     def variance(
         self,
@@ -886,7 +895,10 @@ class GeometricMeanRank(RankBasedMetric):
         individual_variance = self._individual_variance(
             num_candidates=num_candidates, weights=weights, individual_expectation=individual_expectation
         )
-        return np.prod(individual_variance + individual_expectation**2) - np.prod(individual_expectation) ** 2
+        return (
+            stable_product(individual_variance + individual_expectation**2)
+            - stable_product(individual_expectation) ** 2
+        )
 
     @staticmethod
     def _individual_variance(
