@@ -1156,6 +1156,21 @@ class ZInverseHarmonicMeanRank(ZMetric):
     supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
 
 
+@parse_docdata
+class ZGeometricMeanRank(ZMetric):
+    """The z geometric mean rank (zGMR).
+
+    ---
+    link: https://arxiv.org/abs/2203.07544
+    description: The z-scored geometric mean rank
+    """
+
+    name = "z-Geometric Mean Rank (zGMR)"
+    synonyms: ClassVar[Collection[str]] = ("zgmr",)
+    base_cls = GeometricMeanRank
+    supports_weights: ClassVar[bool] = GeometricMeanRank.supports_weights
+
+
 def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
     """Calculate weighted median."""
     if weights is None:

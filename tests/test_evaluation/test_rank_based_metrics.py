@@ -70,6 +70,12 @@ class GeometricMeanRankTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.GeometricMeanRank
 
 
+class ZGeometricMeanRankTests(cases.RankBasedMetricTestCase):
+    """Tests for z-geometric mean rank."""
+
+    cls = pykeen.metrics.ranking.ZGeometricMeanRank
+
+
 class HarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for harmonic mean rank."""
 
