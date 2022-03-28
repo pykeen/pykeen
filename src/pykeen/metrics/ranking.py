@@ -116,16 +116,17 @@ def generate_num_candidates_and_ranks(
     return ranks, num_candidates
 
 
-def weighted_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
+def weighted_mean_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
     """Calculate the expectation of a weighted sum of variables with given individual expected value."""
     return np.average(individual, weights=weights).item()
 
 
-def weighted_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
+def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
     """Calculate the variance of a weighted sum of variables with given individual variances."""
     n = individual.size
     if weights is None:
         return individual.mean() / n
+    weights = weights / weights.sum()
     return (individual * weights**2).sum().item()
 
 
@@ -732,7 +733,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates)
         individual_expectation = 0.5 * (num_candidates + 1)
-        return weighted_expectation(individual=individual_expectation, weights=weights)
+        return weighted_mean_expectation(individual=individual_expectation, weights=weights)
 
     def variance(
         self,
@@ -742,8 +743,8 @@ class ArithmeticMeanRank(RankBasedMetric):
         **kwargs,
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates)
-        individual_variance = (num_candidates**2 - 1) / 12
-        return weighted_variance(individual=individual_variance, weights=weights)
+        individual_variance = (num_candidates**2 - 1) / 12.0
+        return weighted_mean_variance(individual=individual_variance, weights=weights)
 
 
 @parse_docdata
@@ -1365,7 +1366,7 @@ class HitsAtK(RankBasedMetric):
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
         individual = np.minimum(self.k / num_candidates, 1.0)
-        return weighted_expectation(individual=individual, weights=weights)
+        return weighted_mean_expectation(individual=individual, weights=weights)
 
     def variance(
         self,
@@ -1378,7 +1379,7 @@ class HitsAtK(RankBasedMetric):
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)
         individual_variance = p * (1 - p)
-        return weighted_variance(individual=individual_variance, weights=weights)
+        return weighted_mean_variance(individual=individual_variance, weights=weights)
 
 
 @parse_docdata
