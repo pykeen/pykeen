@@ -781,25 +781,36 @@ class InverseArithmeticMeanRank(RankBasedMetric):
 
 @parse_docdata
 class GeometricMeanRank(RankBasedMetric):
-    r"""The geometric mean rank.
+    r"""The (weighted) geometric mean rank.
+
+    It is given by
+
+    .. math::
+
+        M = \left(\prod \limits_{i=1}^{m} r_i^{w_i}\right)^{1/w}
+
+    with $w = \sum \limits_{i=1}^{m} w_i$. The unweighted GMR is obtained by setting $w_i = 1$.
 
     For computing the expected value, we first observe that
 
     .. math::
 
-        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[m]{\prod \limits_{i=1}^{m} r_i}\right] \\
-                      &= \prod \limits_{i=1}^{m} \mathbb{E}[\sqrt[m]{r_i}] \\
-                      &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[\sqrt[m]{r_i}]
+        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[w]{\prod \limits_{i=1}^{m} r_i^{w_i}}\right] \\
+                      &= \prod \limits_{i=1}^{m} \mathbb{E}[r_i^{w_i/w}] \\
+                      &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}]
 
-    Moreover, we have
+    where the last steps permits a numerically more stable computation. Moreover, we have
 
     .. math::
 
-        \log \mathbb{E}[\sqrt[m]{r_i}]
-            &= \log \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \sqrt[m]{i} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \sqrt[m]{i} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp \log \sqrt[m]{i} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp ( \frac{1}{m} \cdot \log i )
+        \log \mathbb{E}[r_i^{w_i/w}]
+            &= \log \frac{1}{N_i} \sum \limits_{i=1}^{N_i} i^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} i^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp \log i^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp ( \frac{w_i}{w} \cdot \log i )
+
+    For the second summand in the last line, we observe a log-sum-exp term, with known numerically stable
+    implementation.
     ---
     link: https://arxiv.org/abs/2203.07544
     description: The geometric mean over all ranks.
