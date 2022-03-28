@@ -758,6 +758,7 @@ class ZArithmeticMeanRank(ZMetric):
     name = "z-Mean Rank (ZMR)"
     synonyms: ClassVar[Collection[str]] = ("zamr", "zmr")
     base_cls = ArithmeticMeanRank
+    supports_weights: ClassVar[bool] = ArithmeticMeanRank.supports_weights
 
 
 @parse_docdata
@@ -1128,6 +1129,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexedMetric):
     synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
     base_cls = InverseHarmonicMeanRank
+    supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
 
 
 @parse_docdata
@@ -1142,6 +1144,7 @@ class ZInverseHarmonicMeanRank(ZMetric):
     name = "z-Mean Reciprocal Rank (ZMRR)"
     synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
     base_cls = InverseHarmonicMeanRank
+    supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
 
 
 def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
@@ -1404,6 +1407,7 @@ class AdjustedHitsAtK(ReindexedMetric):
     )
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
     base_cls = HitsAtK
+    supports_weights: ClassVar[bool] = HitsAtK.supports_weights
 
 
 @parse_docdata
@@ -1421,6 +1425,7 @@ class ZHitsAtK(ZMetric):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     base_cls = HitsAtK
+    supports_weights: ClassVar[bool] = HitsAtK.supports_weights
 
 
 @parse_docdata
@@ -1439,6 +1444,7 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     needs_candidates = True
     increasing = False
     base_cls = ArithmeticMeanRank
+    supports_weights: ClassVar[bool] = ArithmeticMeanRank.supports_weights
 
 
 @parse_docdata
@@ -1454,6 +1460,7 @@ class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms: ClassVar[Collection[str]] = ("adjusted_mean_rank_index", "amri", "aamri")
     base_cls = ArithmeticMeanRank
+    supports_weights: ClassVar[bool] = ArithmeticMeanRank.supports_weights
 
 
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
