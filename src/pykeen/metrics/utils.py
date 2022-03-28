@@ -63,7 +63,7 @@ class ValueRange:
     @staticmethod
     def _coerce(n: Optional[float], low: bool) -> str:
         if n is None:
-            return "-∞" if low else "∞"  # ∞
+            return "-inf" if low else "inf"  # ∞
         if isinstance(n, int):
             return str(n)
         if n.is_integer():
@@ -131,7 +131,7 @@ class Metric:
         left = docdata.get("tight_lower", cls.value_range._coerce(cls.value_range.lower, low=True))
         right_bracket = ")" if cls.value_range.upper is None or not cls.value_range.upper_inclusive else "]"
         right = docdata.get("tight_upper", cls.value_range._coerce(cls.value_range.upper, low=False))
-        return f"{left_bracket}{left}, {right}{right_bracket}"
+        return f"{left_bracket}{left}, {right}{right_bracket}".replace("inf", "∞")
 
     def _extra_repr(self) -> Iterable[str]:
         return []
