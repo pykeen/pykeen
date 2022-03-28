@@ -6,8 +6,6 @@ from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
 
 import numpy as np
-import pandas
-import scipy.special
 from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
@@ -856,29 +854,7 @@ class GeometricMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         if weights is None:
             return self.unweighted_expectation(num_candidates=num_candidates)
-        return self.weighted_expectation(num_candidates=num_candidates, weights=weights)
-
-    @staticmethod
-    def weighted_expectation(num_candidates: np.ndarray, weights: np.ndarray) -> float:
-        """Compute the expectation for the weighted GMR."""
-        # TODO: this operation is quite expensive (~loop over unique weights)
-        # a = \exp \sum \limits_{i=1}^{m} \log H_{-w_i/w}(N_i) = \exp \sum \limits_{i=1}^{m} \log H_{-w_i'}(N_i)
-        # normalize weights, w_i' = w_i / sum w_j
-        weights = weights / weights.sum()
-        # only compute for unique (w_i', N_i) pairs
-        # we can compute H_{w}(n) for different n, but same w at once
-        weights, inverse, counts = np.unique(weights, return_counts=True, return_inverse=True)
-        s = 0.0
-        for i, (w, c) in enumerate(zip(weights, counts)):
-            mask = inverse == i
-            nc = num_candidates[mask]
-            h = generalized_harmonic_numbers(nc.max(), p=-w)
-            # h[i] = H_{-w}(i+1)
-            s += c * np.log(h[nc - 1]).sum()
-        a = np.exp(s)
-        # b = \exp \sum \limits_{i=1}^{m} \log N_i
-        b = np.exp(np.log(num_candidates).sum())
-        return a - b
+        raise NoClosedFormError
 
     @staticmethod
     def unweighted_expectation(num_candidates: np.ndarray) -> float:
