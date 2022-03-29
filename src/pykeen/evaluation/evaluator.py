@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from math import ceil
 from textwrap import dedent
-from typing import Any, ClassVar, Collection, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import pandas
