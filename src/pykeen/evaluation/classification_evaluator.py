@@ -49,6 +49,12 @@ class ClassificationEvaluator(Evaluator):
     all_positives: MutableMapping[Tuple[Target, int, int], np.ndarray]
 
     def __init__(self, **kwargs):
+        """
+        Initialize the evaluator.
+
+        :param kwargs:
+            keyword-based parameters passed to :meth:`Evaluator.__init__`.
+        """
         super().__init__(
             filtered=False,
             requires_positive_mask=True,
