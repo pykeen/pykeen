@@ -310,8 +310,8 @@ The following inductive datasets are built in to PyKEEN.
 | [Median Rank](https://arxiv.org/abs/2203.07544)                                                                        | [1, ∞)              | 📉          | The median over all ranks.                                  | Ranking        |
 | [z-Geometric Mean Rank (zGMR)](https://arxiv.org/abs/2203.07544)                                                       | (-∞, ∞)             | 📈          | The z-scored geometric mean rank                            | Ranking        |
 | [z-Hits at K](https://arxiv.org/abs/2203.07544)                                                                        | (-∞, ∞)             | 📈          | The z-scored hits at K                                      | Ranking        |
-| [z-Mean Rank (ZMR)](https://arxiv.org/abs/2203.07544)                                                                  | (-∞, ∞)             | 📈          | The z-scored mean rank                                      | Ranking        |
-| [z-Mean Reciprocal Rank (ZMRR)](https://arxiv.org/abs/2203.07544)                                                      | (-∞, ∞)             | 📈          | The z-scored mean reciprocal rank                           | Ranking        |
+| [z-Mean Rank (zMR)](https://arxiv.org/abs/2203.07544)                                                                  | (-∞, ∞)             | 📈          | The z-scored mean rank                                      | Ranking        |
+| [z-Mean Reciprocal Rank (zMRR)](https://arxiv.org/abs/2203.07544)                                                      | (-∞, ∞)             | 📈          | The z-scored mean reciprocal rank                           | Ranking        |
 
 ### Trackers (8)
 
