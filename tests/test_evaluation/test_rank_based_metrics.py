@@ -5,6 +5,7 @@ from typing import Callable, Optional
 import numpy
 import numpy as np
 import unittest_templates
+from scipy.stats import bootstrap
 
 import pykeen.metrics.ranking
 from pykeen.metrics.ranking import (
@@ -13,6 +14,7 @@ from pykeen.metrics.ranking import (
     weighted_harmonic_mean,
     weighted_median,
 )
+from pykeen.metrics.utils import stable_product, weighted_mean_expectation, weighted_mean_variance
 from tests import cases
 
 
@@ -201,10 +203,10 @@ class WeightedTests(unittest.TestCase):
         generator = np.random.default_rng()
         self.array = generator.random(size=(10,))
 
-    def _test_equal_weights(self, func: Callable[[numpy.ndarray, Optional[numpy.ndarray]], float]):
+    def _test_equal_weights(self, func: Callable[[numpy.ndarray, Optional[numpy.ndarray]], numpy.ndarray]):
         """Verify that equal weights lead to unweighted results."""
         weights = np.full_like(self.array, fill_value=2.0)
-        self.assertAlmostEqual(func(self.array, weights=None), func(self.array, weights=weights))
+        self.assertAlmostEqual(func(self.array, None).item(), func(self.array, weights).item())
 
     def test_weighted_harmonic_mean(self):
         """Test weighted harmonic mean."""
@@ -213,3 +215,48 @@ class WeightedTests(unittest.TestCase):
     def test_weighted_median(self):
         """Test weighted median."""
         self._test_equal_weights(weighted_median)
+
+    def _test_weighted_mean_moment(
+        self,
+        closed_form: Callable[[numpy.ndarray, Optional[numpy.ndarray]], numpy.ndarray],
+        statistic: Callable[[numpy.ndarray], numpy.ndarray],
+        key: str,
+    ):
+        """Check the analytic expectation / variance of weighted mean against bootstrapped confidence intervals."""
+        generator = numpy.random.default_rng(seed=0)
+        individual = generator.random(size=(13,))
+        # x_i ~ N(mu_i, 1)
+        value = individual if key == "loc" else numpy.sqrt(individual)
+        samples = generator.normal(size=(1_000,) + individual.shape, **{key: value})
+
+        for weights in (None, generator.random(size=individual.shape)):
+            # closed-form solution
+            closed = closed_form(individual, weights)
+            # sampled confidence interval
+            result = numpy.average(samples, weights=weights, axis=-1)
+            low, high = bootstrap((result,), statistic=statistic).confidence_interval
+            # check that closed-form is in confidence interval of sampled
+            self.assertLessEqual(low, closed)
+            self.assertLessEqual(closed, high)
+
+    def test_weighted_mean_expectation(self):
+        """Test weighted mean expectation."""
+        self._test_weighted_mean_moment(closed_form=weighted_mean_expectation, statistic=numpy.mean, key="loc")
+
+    def test_weighted_mean_variance(self):
+        """Test weighted mean variance."""
+        self._test_weighted_mean_moment(closed_form=weighted_mean_variance, statistic=numpy.var, key="scale")
+
+
+def test_stable_product():
+    """Test stable_product."""
+    generator = numpy.random.default_rng(seed=0)
+    array = generator.random(size=(13,))
+
+    # positive values only
+    numpy.testing.assert_almost_equal(stable_product(array), numpy.prod(array))
+    numpy.testing.assert_almost_equal(stable_product(np.log(array), is_log=True), numpy.prod(array))
+
+    # positive and negative values
+    array = 2 * array - 1
+    numpy.testing.assert_almost_equal(stable_product(array), numpy.prod(array))
