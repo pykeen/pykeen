@@ -1,5 +1,4 @@
 """Tests for rank-based metrics."""
-import functools
 import unittest
 from typing import Callable, Optional
 
