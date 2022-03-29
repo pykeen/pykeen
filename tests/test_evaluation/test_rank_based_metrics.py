@@ -15,7 +15,7 @@ from pykeen.metrics.ranking import (
     weighted_harmonic_mean,
     weighted_median,
 )
-from pykeen.metrics.utils import stable_product, weighted_mean_expectation
+from pykeen.metrics.utils import stable_product, weighted_mean_expectation, weighted_mean_variance
 from tests import cases
 
 
@@ -217,25 +217,36 @@ class WeightedTests(unittest.TestCase):
         """Test weighted median."""
         self._test_equal_weights(weighted_median)
 
-    def test_weighted_mean_expectation(self):
-        """Test weighted mean expectation."""
+    def _test_weighted_mean_moment(
+        self,
+        closed_form: Callable[[numpy.ndarray, Optional[numpy.ndarray]], numpy.ndarray],
+        statistic: Callable[[numpy.ndarray], numpy.ndarray],
+        key: str,
+    ):
+        """Check the analytic expectation / variance of weighted mean against bootstrapped confidence intervals."""
         generator = numpy.random.default_rng(seed=0)
-        individual = 2 * generator.random(size=(13,)) - 1
+        individual = generator.random(size=(13,))
         # x_i ~ N(mu_i, 1)
-        samples = generator.normal(loc=individual, size=(1_000,) + individual.shape)
+        value = individual if key == "loc" else numpy.sqrt(individual)
+        samples = generator.normal(size=(1_000,) + individual.shape, **{key: value})
 
         for weights in (None, generator.random(size=individual.shape)):
             # closed-form solution
-            closed = weighted_mean_expectation(individual=individual, weights=weights)
+            closed = closed_form(individual, weights)
             # sampled confidence interval
             result = numpy.average(samples, weights=weights, axis=-1)
-            low, high = np.percentile(
-                result,
-                q=(5, 95),
-            )
+            low, high = bootstrap((result,), statistic=statistic).confidence_interval
             # check that closed-form is in confidence interval of sampled
             self.assertLessEqual(low, closed)
             self.assertLessEqual(closed, high)
+
+    def test_weighted_mean_expectation(self):
+        """Test weighted mean expectation."""
+        self._test_weighted_mean_moment(closed_form=weighted_mean_expectation, statistic=numpy.mean, key="loc")
+
+    def test_weighted_mean_variance(self):
+        """Test weighted mean variance."""
+        self._test_weighted_mean_moment(closed_form=weighted_mean_variance, statistic=numpy.var, key="scale")
 
 
 def test_stable_product():
