@@ -1502,6 +1502,7 @@ class AdjustedGeometricMeanRankIndex(ReindexedMetric):
     ---
     link: https://arxiv.org/abs/2002.06914
     description: The re-indexed adjusted geometric mean rank (AGMRI)
+    tight_lower: -E[f]/(1-E[f])
     """
 
     name = "Adjusted Geometric Mean Rank Index (AGMRI)"
