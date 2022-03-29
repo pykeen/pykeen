@@ -206,6 +206,14 @@ By default, "both" is often used in publications. The side-specific scores can h
 interesting insights, such as the difference in difficulty of predicting a head/tail given the rest, or the model's
 incapability to solve of one the tasks.
 
+Ranking Aggregation Scope
+~~~~~~~~~~~~~~~~~~~~~~~~~
+.. todo::  @mberr this is the place to describe macro vs. micro evaluation in ~2 paragraphs answering the following
+
+1. What are the issues caused by micro evaluation?
+2. How does macro evaluation work, and why does it address those issues?
+3. A bit of insight into how implementing weighted variants of the ranks allows this
+
 Filtering
 ~~~~~~~~~
 The rank-based evaluation allows using the "filtered setting", proposed by [bordes2013]_, which is enabled by default.
