@@ -10,7 +10,15 @@ from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
 
-from .utils import Metric, ValueRange, stable_product, weighted_mean_expectation, weighted_mean_variance
+from .utils import (
+    Metric,
+    ValueRange,
+    stable_product,
+    weighted_harmonic_mean,
+    weighted_mean_expectation,
+    weighted_mean_variance,
+    weighted_median,
+)
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 from ..utils import logcumsumexp
 
@@ -58,10 +66,8 @@ __all__ = [
     "harmonic_variances",
     #
     "HITS_METRICS",
-    #
-    "weighted_harmonic_mean",
-    "weighted_median",
 ]
+
 EPSILON = 1.0e-12
 
 
@@ -746,7 +752,7 @@ class ZArithmeticMeanRank(ZMetric):
     description: The z-scored mean rank
     """
 
-    name = "z-Mean Rank (ZMR)"
+    name = "z-Mean Rank (zMR)"
     synonyms: ClassVar[Collection[str]] = ("zamr", "zmr")
     base_cls = ArithmeticMeanRank
     supports_weights: ClassVar[bool] = ArithmeticMeanRank.supports_weights
@@ -868,25 +874,25 @@ class GeometricMeanRank(RankBasedMetric):
             - stable_product(individual_expectation) ** 2
         )
 
-    @staticmethod
+    @classmethod
     def _individual_variance(
-        num_candidates: np.ndarray, weights: np.ndarray, individual_expectation: np.ndarray
+        cls, num_candidates: np.ndarray, weights: np.ndarray, individual_expectation: np.ndarray
     ) -> np.ndarray:
         # use V[x] = E[x^2] - E[x]^2
         x2 = (
-            np.exp(GeometricMeanRank._log_individual_expectation_no_weight(num_candidates=num_candidates, factor=2.0))
+            np.exp(cls._log_individual_expectation_no_weight(num_candidates=num_candidates, factor=2.0))
             if weights is None
-            else GeometricMeanRank._individual_expectation_weighted(
-                num_candidates=num_candidates, weights=weights, factor=2.0
-            )
+            else cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights, factor=2.0)
         )
         return x2 - individual_expectation**2
 
-    @staticmethod
-    def _individual_expectation(num_candidates: np.ndarray, weights: Optional[np.ndarray]) -> Tuple[bool, np.ndarray]:
+    @classmethod
+    def _individual_expectation(
+        cls, num_candidates: np.ndarray, weights: Optional[np.ndarray]
+    ) -> Tuple[bool, np.ndarray]:
         if weights is None:
-            return True, GeometricMeanRank._log_individual_expectation_no_weight(num_candidates=num_candidates)
-        return False, GeometricMeanRank._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)
+            return True, cls._log_individual_expectation_no_weight(num_candidates=num_candidates)
+        return False, cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)
 
     @staticmethod
     def _individual_expectation_weighted(
@@ -935,31 +941,6 @@ class InverseGeometricMeanRank(RankBasedMetric):
         self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
     ) -> float:  # noqa: D102
         return np.reciprocal(stats.gmean(ranks, weights=weights)).item()
-
-
-def weighted_harmonic_mean(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
-    """
-    Calculate weighted harmonic mean.
-
-    :param a:
-        the array
-    :param weights:
-        the weight for individual array members
-
-    :return:
-        the weighted harmonic mean over the array
-
-    .. seealso::
-        https://en.wikipedia.org/wiki/Harmonic_mean#Weighted_harmonic_mean
-    """
-    if weights is None:
-        return stats.hmean(a)
-
-    # normalize weights
-    weights = weights.astype(float)
-    weights = weights / weights.sum()
-    # calculate weighted harmonic mean
-    return np.reciprocal(np.average(np.reciprocal(a.astype(float)), weights=weights))
 
 
 @parse_docdata
@@ -1156,7 +1137,7 @@ class ZInverseHarmonicMeanRank(ZMetric):
     description: The z-scored mean reciprocal rank
     """
 
-    name = "z-Mean Reciprocal Rank (ZMRR)"
+    name = "z-Mean Reciprocal Rank (zMRR)"
     synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
     base_cls = InverseHarmonicMeanRank
     supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
@@ -1175,25 +1156,6 @@ class ZGeometricMeanRank(ZMetric):
     synonyms: ClassVar[Collection[str]] = ("zgmr",)
     base_cls = GeometricMeanRank
     supports_weights: ClassVar[bool] = GeometricMeanRank.supports_weights
-
-
-def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
-    """Calculate weighted median."""
-    if weights is None:
-        return np.median(a)
-
-    # calculate cdf
-    indices = np.argsort(a)
-    s_ranks = a[indices]
-    s_weights = weights[indices]
-    cdf = np.cumsum(s_weights)
-    cdf /= cdf[-1]
-    # determine value at p=0.5
-    idx = np.searchsorted(cdf, v=0.5)
-    # special case for exactly 0.5
-    if cdf[idx] == 0.5:
-        return s_ranks[idx : idx + 2].mean()
-    return s_ranks[idx]
 
 
 @parse_docdata

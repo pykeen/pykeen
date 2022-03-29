@@ -8,13 +8,14 @@ import unittest_templates
 from scipy.stats import bootstrap
 
 import pykeen.metrics.ranking
-from pykeen.metrics.ranking import (
-    generalized_harmonic_numbers,
-    harmonic_variances,
+from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
+from pykeen.metrics.utils import (
+    stable_product,
     weighted_harmonic_mean,
+    weighted_mean_expectation,
+    weighted_mean_variance,
     weighted_median,
 )
-from pykeen.metrics.utils import stable_product, weighted_mean_expectation, weighted_mean_variance
 from tests import cases
 
 
