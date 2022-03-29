@@ -32,13 +32,42 @@ def _hasher(d: Mapping[str, Any]) -> int:
 
     This means that we can have separate batch sizes for different evaluation datasets.
     """
-    obj = d["self"]
+    obj = d["loop"]
     assert hasattr(obj, "dataset")
     obj = obj.dataset
     return id(obj)
 
 
 evaluation_batch_size_maximizer = MemoryUtilizationMaximizer(hasher=_hasher)
+
+
+@evaluation_batch_size_maximizer
+def _evaluate(
+    loop: "EvaluationLoop",
+    batch_size: int,
+    use_tqdm: bool,
+    tqdm_kwargs: OptionalKwargs,
+    only_size_probing: bool = False,
+    **kwargs,
+) -> MetricResults:
+    loop.model.eval()
+    loader = loop.get_loader(batch_size=batch_size)
+    total = len(loader)
+    if only_size_probing:
+        loader = itertools.islice(loader, 1)
+        total = 1
+    if use_tqdm:
+        loader = tqdm(
+            loader,
+            desc="evaluation",
+            total=total,
+            unit="batch",
+            unit_scale=True,
+            **(tqdm_kwargs or {}),
+        )
+    for batch in loader:
+        loop.process_batch(batch=batch)
+    return loop.evaluator.finalize()
 
 
 class EvaluationLoop(Generic[BatchType]):
@@ -87,40 +116,18 @@ class EvaluationLoop(Generic[BatchType]):
         **kwargs,
     ) -> MetricResults:
         """Evaluate."""
-        return self._evaluate(
-            batch_size=batch_size or len(self.dataset),
+        if not batch_size:
+            if self.model.device.type == "cpu":
+                batch_size = 32
+            else:
+                batch_size = len(self.dataset)
+        return _evaluate(
+            loop=self,
+            batch_size=batch_size,
             use_tqdm=use_tqdm,
             tqdm_kwargs=tqdm_kwargs,
             **kwargs,
         )
-
-    @evaluation_batch_size_maximizer
-    def _evaluate(
-        self,
-        batch_size: int,
-        use_tqdm: bool,
-        tqdm_kwargs: OptionalKwargs,
-        only_size_probing: bool,
-        **kwargs,
-    ) -> MetricResults:
-        self.model.eval()
-        loader = self.get_loader(batch_size=batch_size)
-        total = len(loader)
-        if only_size_probing:
-            loader = itertools.islice(loader, 1)
-            total = 1
-        if use_tqdm:
-            loader = tqdm(
-                loader,
-                desc="evaluation",
-                total=total,
-                unit="batch",
-                unit_scale=True,
-                **tqdm_kwargs,
-            )
-        for batch in loader:
-            self.process_batch(batch=batch)
-        return self.evaluator.finalize()
 
 
 @dataclasses.dataclass
@@ -164,12 +171,14 @@ class LinkPredictionEvaluationDataset(Dataset):
     def __init__(
         self,
         factory: CoreTriplesFactory,
-        targets: Collection[Target],
+        targets: Optional[Collection[Target]] = None,
         filtered: bool = True,
     ) -> None:
         super().__init__()
         self.mapped_triples = factory.mapped_triples
         self.num_triples = factory.num_triples
+        if targets is None:
+            targets = [LABEL_HEAD, LABEL_TAIL]
         self.targets = list(targets)
         if filtered:
             df = pandas.DataFrame(data=factory.mapped_triples.numpy(), columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
