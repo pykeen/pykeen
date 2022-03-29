@@ -13,6 +13,7 @@ from pykeen.metrics.ranking import (
     weighted_harmonic_mean,
     weighted_median,
 )
+from pykeen.metrics.utils import stable_product
 from tests import cases
 
 
@@ -213,3 +214,10 @@ class WeightedTests(unittest.TestCase):
     def test_weighted_median(self):
         """Test weighted median."""
         self._test_equal_weights(weighted_median)
+
+
+def test_stable_product():
+    """Test stable_product."""
+    generator = numpy.random.default_rng(seed=0)
+    array = generator.random(size=(100,))
+    numpy.testing.assert_almost_equal(stable_product(array), numpy.prod(array))
