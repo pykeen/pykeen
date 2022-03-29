@@ -66,6 +66,7 @@ class MetricResults:
             raise AttributeError
         return self.data[item]
 
+    @abstractmethod
     def get_metric(self, name: str) -> float:
         """Get the given metric from the results.
 
@@ -108,6 +109,8 @@ class Evaluator(ABC):
         :param slice_size: >0. The divisor for the scoring function when using slicing
         :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
             evaluation with regards to the hardware at hand.
+        :param mode:
+            the inductive mode, or None for transductive evaluation
         """
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
@@ -236,6 +239,8 @@ class Evaluator(ABC):
             Should a progress bar be displayed?
         :param restrict_entities_to:
             Whether to restrict the evaluation to certain entities of interest.
+        :param do_time_consuming_checks:
+            whether to perform time-consuming input validation for restricted evaluation
         :param additional_filter_triples:
             Additional true triples to filter out during filtered evaluation. Only needed if the evaluator is in
             filtered mode.
@@ -420,6 +425,9 @@ def create_sparse_positive_filter_(
         - positives, shape: (2, m)
             The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
+
+    :raises NotImplementedError:
+        if the `filter_col` is not in `{0, 2}`
     """
     if filter_col not in {0, 2}:
         raise NotImplementedError(
@@ -540,7 +548,7 @@ def evaluate(
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     *,
     mode: Optional[InductiveMode],
-) -> Union[MetricResults, List[MetricResults]]:
+) -> MetricResults:
     """Evaluate metrics for model on mapped triples.
 
     The model is used to predict scores for all tails and all heads for each triple. Subsequently, each abstract
@@ -588,10 +596,20 @@ def evaluate(
         Whether the triples have been pre-filtered to adhere to restrict_entities_to / restrict_relations_to. When set
         to True, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the triples
         accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
-    :param additional_filtered_triples:
-        Additional true triples to filter out during filtered evaluation.
+    :param additional_filter_triples:
+        additional true triples to filter out during filtered evaluation.
     :param targets:
         the prediction targets
+    :param mode:
+        the inductive mode, or None for transductive evaluation
+
+    :raises NotImplementedError:
+        if relation prediction evaluation is requested
+    :raises ValueError:
+        if the pre_filtered_triples contain unwanted entities (can only be detected with the time-consuming checks).
+
+    :return:
+        the evaluation results
     """
     if LABEL_RELATION in targets:
         raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
@@ -740,13 +758,18 @@ def _evaluate_batch(
         The relation filter. Can be re-used.
     :param restrict_entities_to:
         Restriction to evaluate only for these entities.
+    :param mode:
+        the inductive mode, or None for transductive evaluation
+
+    :raises ValueError:
+        if all positive triples are required (either due to filtered evaluation, or requiring dense masks).
 
     :return:
         The relation filter, which can be re-used for the same batch.
     """
     scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
 
-    if evaluator.filtered:
+    if evaluator.filtered or evaluator.requires_positive_mask:
         column = TARGET_TO_INDEX[target]
         if all_pos_triples is None:
             raise ValueError(
@@ -761,7 +784,11 @@ def _evaluate_batch(
             relation_filter=relation_filter,
             filter_col=column,
         )
+    else:
+        positive_filter = relation_filter = None
 
+    if evaluator.filtered:
+        assert positive_filter is not None
         # Select scores of true
         true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]]
         # overwrite filtered scores
@@ -775,12 +802,7 @@ def _evaluate_batch(
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:
-        positive_filter, relation_filter = create_sparse_positive_filter_(
-            hrt_batch=batch,
-            all_pos_triples=all_pos_triples,
-            relation_filter=relation_filter,
-            filter_col=TARGET_TO_INDEX[target],
-        )
+        assert positive_filter is not None
         positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
     else:
         positive_mask = None
@@ -815,6 +837,10 @@ def get_candidate_set_size(
 
     :param mapped_triples: shape: (n, 3)
         the evaluation triples
+    :param restrict_entities_to:
+        The entity IDs of interest. If None, defaults to all entities. cf. :func:`restrict_triples`.
+    :param restrict_relations_to:
+        The relations IDs of interest. If None, defaults to all relations. cf. :func:`restrict_triples`.
     :param additional_filter_triples: shape: (n, 3)
         additional filter triples besides the evaluation triples themselves. cf. `_prepare_filter_triples`.
     :param num_entities:
@@ -823,7 +849,7 @@ def get_candidate_set_size(
     :return: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates"
         a dataframe of all evaluation triples, with the number of head and tail candidates
     """
-    # optinally restrict triples (nop if no restriction)
+    # optionally restrict triples (nop if no restriction)
     mapped_triples = restrict_triples(
         mapped_triples=mapped_triples,
         entities=restrict_entities_to,
