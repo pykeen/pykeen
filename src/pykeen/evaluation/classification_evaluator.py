@@ -38,6 +38,7 @@ class ClassificationMetricResults(MetricResults):
             data[key] = value
         return ClassificationMetricResults(data=data)
 
+    # docstr-coverage:inherited
     def get_metric(self, name: str) -> float:  # noqa: D102
         return self.data[name]
 
@@ -63,6 +64,7 @@ class ClassificationEvaluator(Evaluator):
         self.all_scores = {}
         self.all_positives = {}
 
+    # docstr-coverage:inherited
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -90,6 +92,7 @@ class ClassificationEvaluator(Evaluator):
             self.all_scores[key] = scores[i]
             self.all_positives[key] = dense_positive_mask[i]
 
+    # docstr-coverage:inherited
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Because the order of the values of an dictionary is not guaranteed,
         # we need to retrieve scores and masks using the exact same key order.
