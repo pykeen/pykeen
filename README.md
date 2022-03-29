@@ -262,12 +262,12 @@ The following inductive datasets are built in to PyKEEN.
 
 ### Evaluators (4)
 
-| Name             | Reference                                                                                                                                     | Description                                      |
-|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| classification   | [`pykeen.evaluation.ClassificationEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.ClassificationEvaluator.html)     | An evaluator that uses a classification metrics. |
-| macrorankbased   | [`pykeen.evaluation.MacroRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.MacroRankBasedEvaluator.html)     | Macro-average rank-based evaluation.             |
-| rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.           |
-| sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) |                                                  |
+| Name             | Reference                                                                                                                                     | Description                                                              |
+|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| classification   | [`pykeen.evaluation.ClassificationEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.ClassificationEvaluator.html)     | An evaluator that uses a classification metrics.                         |
+| macrorankbased   | [`pykeen.evaluation.MacroRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.MacroRankBasedEvaluator.html)     | Macro-average rank-based evaluation.                                     |
+| rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.                                   |
+| sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) | A rank-based evaluator using sampled negatives instead of all negatives. |
 
 ### Metrics (44)
 
