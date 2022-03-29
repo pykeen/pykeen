@@ -36,7 +36,7 @@ from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
-from ..trackers import ResultTracker
+from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import InductiveMode
 from ..utils import (
@@ -120,11 +120,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         triples_factory: CoreTriplesFactory,
         optimizer: HintOrType[Optimizer] = None,
         optimizer_kwargs: OptionalKwargs = None,
-        lr_scheduler: Optional[LRScheduler] = None,
+        lr_scheduler: HintOrType[LRScheduler] = None,
         lr_scheduler_kwargs: OptionalKwargs = None,
         automatic_memory_optimization: bool = True,
         mode: Optional[InductiveMode] = None,
-        result_tracker: Optional[ResultTracker] = None,
+        result_tracker: HintOrType[ResultTracker] = None,
+        result_tracker_kwargs: OptionalKwargs = None,
     ) -> None:
         """Initialize the training loop.
 
@@ -142,7 +143,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
         :param result_tracker:
-            The result tracker.
+            the result tracker
+        :param result_tracker_kwargs:
+            additional keyword-based parameters to instantiate the result tracker
         """
         self.model = model
         self.optimizer = optimizer_resolver.make(optimizer, pos_kwargs=optimizer_kwargs, params=model.get_grad_params())
@@ -153,7 +156,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
         self.mode = mode
-        self.result_tracker = result_tracker
+        self.result_tracker = tracker_resolver.make(query=result_tracker, pos_kwargs=result_tracker_kwargs)
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
 
