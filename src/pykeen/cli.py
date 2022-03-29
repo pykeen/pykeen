@@ -372,19 +372,21 @@ def metrics(tablefmt: str):
 
 
 def _help_metrics(tablefmt):
+    headers = [
+        "Name",
+        "Interval",
+        "Direction",
+        "Description",
+        "Type",
+        # "Closed-Form Expectation",
+        # "Closed-Form Variance",
+    ]
+    if tablefmt != "github":
+        headers.append("Reference")
+        headers[0] = "Metric"
     return tabulate(
         sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[4], t[0])),
-        headers=(
-            [
-                "Name",
-                "Interval",
-                "Direction",
-                "Description",
-                "Type",
-            ]
-            if tablefmt == "github"
-            else ["Metric", "Interval", "Direction", "Description", "Type", "Reference"]
-        ),
+        headers=headers,
         tablefmt=tablefmt,
     )
 
@@ -447,6 +449,8 @@ def _get_metrics_lines(tablefmt: str):
             "📈" if metric.increasing else "📉",
             getattr_or_docdata(metric, "description"),
             METRIC_NAMES[metric_results_cls],
+            # "✓" if metric.closed_expectation else "",
+            # "✓" if metric.closed_variance else "",
         ]
         if tablefmt != "github":
             yv.append(f"pykeen.evaluation.{metric_results_cls.__name__}")
