@@ -59,6 +59,7 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
+from ..evaluation.evaluation_loop import LinkPredictionEvaluationLoop
 from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
@@ -258,6 +259,45 @@ class EvaluationTrainingCallback(TrainingCallback):
             device=self.training_loop.device,
             **self.kwargs,
         )
+        self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
+
+
+class EvaluationLoopTrainingCallback(TrainingCallback):
+    """A callback for regular evaluation using new-style evaluation loops."""
+
+    def __init__(
+        self,
+        factory: CoreTriplesFactory,
+        frequency: int = 1,
+        prefix: Optional[str] = None,
+        evaluator: HintOrType[Evaluator] = None,
+        evaluator_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        super().__init__()
+        self.frequency = frequency
+        self.prefix = prefix
+
+        self.factory = factory
+        self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+        # lazy init
+        self._evaluation_loop = None
+        self.kwargs = kwargs
+
+    @property
+    def evaluation_loop(self):
+        if self._evaluation_loop is None:
+            self._evaluation_loop = LinkPredictionEvaluationLoop(
+                triples_factory=self.factory,
+                evaluator=self.evaluator,
+                model=self.model,
+            )
+        return self._evaluation_loop
+
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+        if epoch % self.frequency:
+            return
+        result = self.evaluation_loop.evaluate(**self.kwargs)
         self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
