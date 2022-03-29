@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 @contextmanager
 def optional_context_manager(condition, context_manager):
-    """An optional context manager based on the given condition."""
+    """Return an optional context manager based on the given condition."""
     if condition:
         with context_manager:
             yield context_manager
