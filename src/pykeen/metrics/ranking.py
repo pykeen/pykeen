@@ -10,7 +10,7 @@ from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
 
-from .utils import Metric, ValueRange
+from .utils import Metric, ValueRange, stable_product, weighted_mean_expectation, weighted_mean_variance
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 from ..utils import logcumsumexp
 
@@ -114,30 +114,6 @@ def generate_num_candidates_and_ranks(
     num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
     ranks = generate_ranks(num_candidates=num_candidates, seed=generator)
     return ranks, num_candidates
-
-
-def weighted_mean_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
-    """Calculate the expectation of a weighted sum of variables with given individual expected value."""
-    return np.average(individual, weights=weights).item()
-
-
-def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
-    """Calculate the variance of a weighted sum of variables with given individual variances."""
-    n = individual.size
-    if weights is None:
-        return individual.mean() / n
-    weights = weights / weights.sum()
-    return (individual * weights**2).sum().item()
-
-
-def stable_product(a: np.ndarray, axis: Optional[int] = None, is_log: bool = False) -> np.ndarray:
-    """Compute product using the log-trick for increased numerical stability."""
-    if is_log:
-        sign = 1
-    else:
-        sign = np.prod(np.copysign(np.ones_like(a), a))
-        a = np.log(np.abs(a))
-    return sign * np.exp(np.sum(a, axis=axis))
 
 
 class NoClosedFormError(ValueError):
