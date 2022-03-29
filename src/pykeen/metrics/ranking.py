@@ -10,7 +10,15 @@ from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
 
-from .utils import Metric, ValueRange, stable_product, weighted_mean_expectation, weighted_mean_variance
+from .utils import (
+    Metric,
+    ValueRange,
+    stable_product,
+    weighted_harmonic_mean,
+    weighted_mean_expectation,
+    weighted_mean_variance,
+    weighted_median,
+)
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 from ..utils import logcumsumexp
 
@@ -59,8 +67,6 @@ __all__ = [
     #
     "HITS_METRICS",
     #
-    "weighted_harmonic_mean",
-    "weighted_median",
 ]
 EPSILON = 1.0e-12
 
@@ -937,31 +943,6 @@ class InverseGeometricMeanRank(RankBasedMetric):
         return np.reciprocal(stats.gmean(ranks, weights=weights)).item()
 
 
-def weighted_harmonic_mean(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
-    """
-    Calculate weighted harmonic mean.
-
-    :param a:
-        the array
-    :param weights:
-        the weight for individual array members
-
-    :return:
-        the weighted harmonic mean over the array
-
-    .. seealso::
-        https://en.wikipedia.org/wiki/Harmonic_mean#Weighted_harmonic_mean
-    """
-    if weights is None:
-        return stats.hmean(a)
-
-    # normalize weights
-    weights = weights.astype(float)
-    weights = weights / weights.sum()
-    # calculate weighted harmonic mean
-    return np.reciprocal(np.average(np.reciprocal(a.astype(float)), weights=weights))
-
-
 @parse_docdata
 class HarmonicMeanRank(RankBasedMetric):
     """The harmonic mean rank.
@@ -1175,25 +1156,6 @@ class ZGeometricMeanRank(ZMetric):
     synonyms: ClassVar[Collection[str]] = ("zgmr",)
     base_cls = GeometricMeanRank
     supports_weights: ClassVar[bool] = GeometricMeanRank.supports_weights
-
-
-def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
-    """Calculate weighted median."""
-    if weights is None:
-        return np.median(a)
-
-    # calculate cdf
-    indices = np.argsort(a)
-    s_ranks = a[indices]
-    s_weights = weights[indices]
-    cdf = np.cumsum(s_weights)
-    cdf /= cdf[-1]
-    # determine value at p=0.5
-    idx = np.searchsorted(cdf, v=0.5)
-    # special case for exactly 0.5
-    if cdf[idx] == 0.5:
-        return s_ranks[idx : idx + 2].mean()
-    return s_ranks[idx]
 
 
 @parse_docdata
