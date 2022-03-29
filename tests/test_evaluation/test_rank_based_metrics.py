@@ -1,10 +1,12 @@
 """Tests for rank-based metrics."""
+import functools
 import unittest
 from typing import Callable, Optional
 
 import numpy
 import numpy as np
 import unittest_templates
+from scipy.stats import bootstrap
 
 import pykeen.metrics.ranking
 from pykeen.metrics.ranking import (
@@ -13,7 +15,7 @@ from pykeen.metrics.ranking import (
     weighted_harmonic_mean,
     weighted_median,
 )
-from pykeen.metrics.utils import stable_product
+from pykeen.metrics.utils import stable_product, weighted_mean_expectation
 from tests import cases
 
 
@@ -214,6 +216,26 @@ class WeightedTests(unittest.TestCase):
     def test_weighted_median(self):
         """Test weighted median."""
         self._test_equal_weights(weighted_median)
+
+    def test_weighted_mean_expectation(self):
+        """Test weighted mean expectation."""
+        generator = numpy.random.default_rng(seed=0)
+        individual = 2 * generator.random(size=(13,)) - 1
+        # x_i ~ N(mu_i, 1)
+        samples = generator.normal(loc=individual, size=(1_000,) + individual.shape)
+
+        for weights in (None, generator.random(size=individual.shape)):
+            # closed-form solution
+            closed = weighted_mean_expectation(individual=individual, weights=weights)
+            # sampled confidence interval
+            result = numpy.average(samples, weights=weights, axis=-1)
+            low, high = np.percentile(
+                result,
+                q=(5, 95),
+            )
+            # check that closed-form is in confidence interval of sampled
+            self.assertLessEqual(low, closed)
+            self.assertLessEqual(closed, high)
 
 
 def test_stable_product():
