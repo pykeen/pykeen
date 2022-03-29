@@ -1,8 +1,12 @@
 """Tests for rank-based metrics."""
+import unittest
 
+import numpy
+import numpy as np
 import unittest_templates
 
 import pykeen.metrics.ranking
+from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
 from tests import cases
 
 
@@ -40,8 +44,6 @@ class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.ArithmeticMeanRank
-    check_expectation = True
-    check_variance = True
 
 
 class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
@@ -72,8 +74,6 @@ class HitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for Hits at k."""
 
     cls = pykeen.metrics.ranking.HitsAtK
-    check_expectation = True
-    check_variance = True
 
 
 class ZHitsAtKTests(cases.RankBasedMetricTestCase):
@@ -104,8 +104,6 @@ class InverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for inverse harmonic mean rank."""
 
     cls = pykeen.metrics.ranking.InverseHarmonicMeanRank
-    check_expectation = True
-    check_variance = True
 
 
 class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
@@ -118,7 +116,6 @@ class MedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for median rank."""
 
     cls = pykeen.metrics.ranking.MedianRank
-    check_expectation = True
 
 
 class StandardDeviationTests(cases.RankBasedMetricTestCase):
@@ -139,9 +136,40 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
     base_cls = pykeen.metrics.ranking.RankBasedMetric
     base_test = cases.RankBasedMetricTestCase
     skip_cls = {
-        pykeen.metrics.ranking.BaseZMixin,
-        pykeen.metrics.ranking.IncreasingZMixin,
-        pykeen.metrics.ranking.DecreasingZMixin,
-        pykeen.metrics.ranking.ExpectationNormalizedMixin,
-        pykeen.metrics.ranking.ReindexMixin,
+        pykeen.metrics.ranking.ExpectationNormalizedMetric,
+        pykeen.metrics.ranking.ReindexedMetric,
+        pykeen.metrics.ranking.ZMetric,
+        pykeen.metrics.ranking.DerivedRankBasedMetric,
     }
+
+
+class BaseExpectationTests(unittest.TestCase):
+    """Verification of expectation and variance of individual ranks."""
+
+    n: int = 1_000
+
+    def setUp(self) -> None:
+        """Prepare ranks."""
+        self.ranks = numpy.arange(1, self.n + 1).astype(float)
+
+    def test_rank_mean(self):
+        """Verify expectation of individual ranks."""
+        # expectation = (1 + n) / 2
+        mean = self.ranks.mean()
+        numpy.testing.assert_allclose(mean, 0.5 * (1 + self.n))
+
+    def test_rank_var(self):
+        """Verify variance of individual ranks."""
+        # variance = (n**2 - 1) / 12
+        variance = self.ranks.var()
+        numpy.testing.assert_allclose(variance, (self.n**2 - 1) / 12.0)
+
+    def test_inverse_rank_mean(self):
+        """Verify the expectation of the inverse rank."""
+        mean = np.reciprocal(self.ranks).mean()
+        numpy.testing.assert_allclose(mean, generalized_harmonic_numbers(n=self.n, p=-1)[-1] / self.n)
+
+    def test_inverse_rank_var(self):
+        """Verify the variance of the inverse rank."""
+        var = np.reciprocal(self.ranks).var()
+        numpy.testing.assert_allclose(var, harmonic_variances(n=self.n)[-1])

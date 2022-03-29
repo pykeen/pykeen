@@ -45,6 +45,15 @@ class ValueRange:
                 return False
         return True
 
+    def approximate(self, epsilon: float) -> "ValueRange":
+        """Create a slightly enlarged value range for approximate checks."""
+        return ValueRange(
+            lower=self.lower if self.lower is None else self.lower - epsilon,
+            lower_inclusive=self.lower_inclusive,
+            upper=self.upper if self.upper is None else self.upper + epsilon,
+            upper_inclusive=self.upper_inclusive,
+        )
+
     def notate(self) -> str:
         """Get the math notation for the range of this metric."""
         left = "(" if self.lower is None or not self.lower_inclusive else "["

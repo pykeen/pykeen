@@ -33,6 +33,7 @@ import numpy
 import numpy.random
 import pytest
 import torch
+import torch.utils.data
 import unittest_templates
 from click.testing import CliRunner, Result
 from docdata import get_docdata
@@ -53,7 +54,13 @@ from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.metrics.ranking import RankBasedMetric
+from pykeen.metrics import rank_based_metric_resolver
+from pykeen.metrics.ranking import (
+    DerivedRankBasedMetric,
+    NoClosedFormError,
+    RankBasedMetric,
+    generate_num_candidates_and_ranks,
+)
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.mocks import FixedModel
@@ -65,7 +72,8 @@ from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples import TriplesFactory, generation
+from pykeen.triples import Instances, TriplesFactory, generation
+from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
@@ -811,6 +819,16 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         """Compute expected penalty for given tensor."""
         return None
 
+    def test_pop_regularization_term(self):
+        """Verify popping a regularization term."""
+        # update term
+        x = torch.rand(self.batch_size, 10, generator=self.generator, device=self.device, requires_grad=True)
+        self.instance.update(x)
+
+        # check that the expected term is returned
+        exp = (self.instance.weight * self.instance.regularization_term).item()
+        self.assertEqual(exp, self.instance.pop_regularization_term().item())
+
 
 class LpRegularizerTest(RegularizerTestCase):
     """Common test for L_p regularizers."""
@@ -854,7 +872,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     create_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
-    sampler = "default"
+    sampler: Optional[str] = None
 
     #: The batch size for use when testing training procedures
     train_batch_size = 400
@@ -1045,7 +1063,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             loop,
             num_epochs=self.train_num_epochs,
             batch_size=self.train_batch_size,
-            sampler="default",
+            sampler=None,
         )
         self.assertIsInstance(losses, list)
 
@@ -1990,30 +2008,6 @@ class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.mode
         self._verify(scores)
 
 
-def generate_ranks(
-    num_ranks: int,
-    max_num_candidates: int,
-    seed: Optional[int] = None,
-) -> Tuple[numpy.ndarray, numpy.ndarray]:
-    """
-    Generate random number of candidates, and coherent ranks.
-
-    :param num_ranks:
-        the number of ranks to generate
-    :param max_num_candidates:
-        the maximum number of candidates (e.g., the number of entities)
-    :param seed:
-        the random seed.
-
-    :return: shape: (num_ranks,)
-        a pair of integer arrays, ranks and num_candidates for each individual ranking task
-    """
-    generator = numpy.random.default_rng(seed=seed)
-    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
-    ranks = generator.integers(low=1, high=num_candidates + 1)
-    return ranks, num_candidates
-
-
 class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric]):
     """A test for rank-based metrics."""
 
@@ -2023,8 +2017,8 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     #: the number of ranks
     num_ranks: int = 33
 
-    check_expectation: ClassVar[bool] = False
-    check_variance: ClassVar[bool] = False
+    #: the number of samples to use for monte-carlo estimation
+    num_samples: int = 1_000
 
     #: the number of candidates for each individual ranking task
     num_candidates: numpy.ndarray
@@ -2034,7 +2028,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
-        self.ranks, self.num_candidates = generate_ranks(
+        self.ranks, self.num_candidates = generate_num_candidates_and_ranks(
             num_ranks=self.num_ranks,
             max_num_candidates=self.max_num_candidates,
             seed=42,
@@ -2058,7 +2052,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # data type
         assert isinstance(x, float)
         # value range
-        self.assertIn(x, self.instance.value_range)
+        self.assertIn(x, self.instance.value_range.approximate(epsilon=1.0e-08))
 
     def test_call(self):
         """Test __call__."""
@@ -2096,33 +2090,49 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_expectation(self):
         """Test the numeric expectation is close to the closed form one."""
-        if not self.check_expectation:
-            self.skipTest("no implementation of closed-form expectation")
+        try:
+            closed = self.instance.expected_value(num_candidates=self.num_candidates)
+        except NoClosedFormError as error:
+            raise SkipTest("no implementation of closed-form expectation") from error
+
         generator = numpy.random.default_rng(seed=0)
-        simulated = self.instance.numeric_expected_value(
+        low, simulated, high = self.instance.numeric_expected_value_with_ci(
             num_candidates=self.num_candidates,
-            num_samples=10000,
+            num_samples=self.num_samples,
             generator=generator,
         )
-        closed = self.instance.expected_value(
-            num_candidates=self.num_candidates,
-        )
-        self.assertAlmostEqual(closed, simulated, delta=2)
+        self.assertLessEqual(low, closed)
+        self.assertLessEqual(closed, high)
 
     def test_variance(self):
         """Test the numeric variance is close to the closed form one."""
-        if not self.check_variance:
-            self.skipTest("no implementation of closed-form expectation")
+        try:
+            closed = self.instance.variance(num_candidates=self.num_candidates)
+        except NoClosedFormError as error:
+            raise SkipTest("no implementation of closed-form variance") from error
+
+        # variances are non-negative
+        self.assertLessEqual(0, closed)
+
         generator = numpy.random.default_rng(seed=0)
-        simulated = self.instance.numeric_variance(
+        low, simulated, high = self.instance.numeric_variance_with_ci(
             num_candidates=self.num_candidates,
-            num_samples=10000,
+            num_samples=self.num_samples,
             generator=generator,
         )
-        closed = self.instance.variance(
-            num_candidates=self.num_candidates,
+        self.assertLessEqual(low, closed)
+        self.assertLessEqual(closed, high)
+
+    def test_different_to_base_metric(self):
+        """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
+        if not isinstance(self.instance, DerivedRankBasedMetric):
+            self.skipTest("no base metric")
+        base_instance = rank_based_metric_resolver.make(self.instance.base_cls)
+        base_factor = 1 if base_instance.increasing else -1
+        self.assertNotEqual(
+            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
         )
-        self.assertAlmostEqual(closed, simulated, delta=2)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
@@ -2141,3 +2151,73 @@ class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
         pass
+
+
+class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
+    """Test for training instances."""
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.factory = Nations().training
+        return {}
+
+    @abstractmethod
+    def _get_expected_length(self) -> int:
+        raise NotImplementedError
+
+    def test_getitem(self):
+        """Test __getitem__."""
+        self.instance: Instances
+        assert self.instance[0] is not None
+
+    def test_len(self):
+        """Test __len__."""
+        self.assertEqual(len(self.instance), self._get_expected_length())
+
+    def test_data_loader(self):
+        """Test usage with data loader."""
+        for batch in torch.utils.data.DataLoader(
+            dataset=self.instance, batch_size=2, shuffle=True, collate_fn=self.instance.get_collator()
+        ):
+            assert batch is not None
+
+
+class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[BaseBatchedSLCWAInstances]):
+    """Test for batched sLCWA training instances."""
+
+    batch_size: int = 2
+    num_negatives_per_positive: int = 3
+    kwargs = dict(
+        batch_size=batch_size,
+        negative_sampler_kwargs=dict(
+            num_negs_per_pos=num_negatives_per_positive,
+        ),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.factory = Nations().training
+        kwargs["mapped_triples"] = self.factory.mapped_triples
+        return kwargs
+
+    def test_data_loader(self):
+        """Test data loader."""
+        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
+            assert isinstance(batch, SLCWABatch)
+            assert batch.positives.shape == (self.batch_size, 3)
+            assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
+            assert batch.masks is None
+
+    def test_length(self):
+        """Test length."""
+        assert len(self.instance) == len(list(iter(self.instance)))
+
+    def test_data_loader_multiprocessing(self):
+        """Test data loader with multiple workers."""
+        self.assertEqual(
+            sum(
+                (
+                    batch.positives.shape[0]
+                    for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
+                )
+            ),
+            self.factory.num_triples,
+        )

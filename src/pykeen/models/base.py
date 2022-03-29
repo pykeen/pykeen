@@ -133,12 +133,7 @@ class Model(nn.Module, ABC):
     @property
     def device(self) -> torch.device:
         """Return the model's device."""
-        return self.get_preferred_device(allow_ambiguity=False)
-
-    def get_preferred_device(self, allow_ambiguity: bool = True) -> torch.device:
-        """Return the preferred device."""
-        warnings.warn("directly use get_preferred_device(model)", DeprecationWarning)
-        return get_preferred_device(self, allow_ambiguity=allow_ambiguity)
+        return get_preferred_device(self, allow_ambiguity=False)
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
