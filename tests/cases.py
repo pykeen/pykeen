@@ -39,7 +39,7 @@ from click.testing import CliRunner, Result
 from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
-from torch.optim import Adagrad, SGD
+from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
@@ -78,14 +78,14 @@ from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
 from pykeen.typing import (
+    LABEL_HEAD,
+    LABEL_TAIL,
+    TRAINING,
     HeadRepresentation,
     InductiveMode,
     Initializer,
-    LABEL_HEAD,
-    LABEL_TAIL,
     MappedTriples,
     RelationRepresentation,
-    TRAINING,
     TailRepresentation,
 )
 from pykeen.utils import (

@@ -21,7 +21,7 @@ from .evaluator import Evaluator, MetricResults, filter_scores_
 from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples import CoreTriplesFactory
-from ..typing import InductiveMode, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 
 BatchType = TypeVar("BatchType")
 
