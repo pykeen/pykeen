@@ -145,12 +145,46 @@ class Metric:
 
 
 def weighted_mean_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
-    """Calculate the expectation of a weighted sum of variables with given individual expected value."""
+    r"""
+    Calculate the expectation of a weighted sum of variables with given individual expected value.
+
+    .. math::
+        \mathbb{E}\left[\sum \limits_{i=1}^{n} w_i x_i\right]
+            = \sum \limits_{i=1}^{n} w_i \mathbb{E}\left[x_i\right]
+
+    where $w_i = \frac{1}{n}$, if no explicit weights are given. Moreover, the weights are normalized such that
+    $\sum w_i = 1$.
+
+    :param individual:
+        the individual variables' expectations, $\mathbb{E}[x_i]$
+    :param weights:
+        the individual variables' weights
+
+    :return:
+        the variance of the weighted mean
+    """
     return np.average(individual, weights=weights).item()
 
 
 def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
-    """Calculate the variance of a weighted sum of variables with given individual variances."""
+    r"""
+    Calculate the variance of a weighted mean of variables with given individual variances.
+
+    .. math::
+        \mathbb{V}\left[\sum \limits_{i=1}^{n} w_i x_i\right]
+            = \sum \limits_{i=1}^{n} w_i^2 \mathbb{V}\left[x_i\right]
+
+    where $w_i = \frac{1}{n}$, if no explicit weights are given. Moreover, the weights are normalized such that
+    $\sum w_i = 1$.
+
+    :param individual:
+        the individual variables' variances, $\mathbb{V}[x_i]$
+    :param weights:
+        the individual variables' weights
+
+    :return:
+        the variance of the weighted mean
+    """
     n = individual.size
     if weights is None:
         return individual.mean() / n
