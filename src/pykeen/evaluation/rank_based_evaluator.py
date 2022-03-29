@@ -41,6 +41,9 @@ from ..typing import (
 __all__ = [
     "RankBasedEvaluator",
     "RankBasedMetricResults",
+    "sample_negatives",
+    "SampledRankBasedEvaluator",
+    "MacroRankBasedEvaluator",
 ]
 
 logger = logging.getLogger(__name__)
@@ -505,6 +508,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # compute macro weights
         df = pandas.DataFrame(data=evaluation_triples.numpy(), columns=list(self.COLUMNS))
         self.precomputed_weights = dict()
+        self.weights = {}
         for target in (LABEL_HEAD, LABEL_TAIL):
             key = self._get_key(target)
             counts = df.groupby(by=key).nunique()[target]
@@ -512,7 +516,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             self.precomputed_weights[target] = dict(
                 zip(key_list, numpy.reciprocal(counts.values.astype(float)).tolist())
             )
-        self.weights = defaultdict(list)
+            self.weights[target] = []
 
     def _get_key(self, target: Target) -> List[Target]:
         return [c for c in self.COLUMNS if c != target]
