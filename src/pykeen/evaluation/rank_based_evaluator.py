@@ -483,6 +483,19 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         evaluation_triples: Optional[MappedTriples] = None,
         **kwargs,
     ):
+        """
+        Initialize the evaluator.
+
+        :param evaluation_factory:
+            the evaluation triples' factory. Must be provided, if no explicit triples are provided.
+        :param evaluation_triples:
+            the evaluation triples. If given, takes precedence over extracting triples from a factory.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`RankBasedEvaluator.__init__`.
+
+        :raises ValueError:
+            if neither evaluation triples nor a factory are provided
+        """
         super().__init__(**kwargs)
         if evaluation_triples is None:
             if evaluation_factory is None:
