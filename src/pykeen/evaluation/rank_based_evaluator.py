@@ -158,7 +158,9 @@ class RankBasedMetricResults(MetricResults):
             optimistic and pessimistic case scenarios is still an active area of research and therefore has no
             implementation yet.
         :return: The value for the metric
-        :raises ValueError: if an invalid name is given.
+
+        :raises: ValueError
+            if an invalid name is given.
 
         Get the average MR
 
@@ -184,6 +186,18 @@ class RankBasedMetricResults(MetricResults):
         return self._get_metric(MetricKey.lookup(name))
 
     def _get_metric(self, metric_key: MetricKey) -> float:
+        """
+        Get the value of the metric corresponding to the given metric key.
+
+        :param metric_key:
+            the metric key.
+
+        :return:
+            the metric value.
+
+        :raises KeyError:
+            if no metric could be found matching the given key
+        """
         for (metric_key_, target, rank_type), value in self.data.items():
             if MetricKey(metric=metric_key_, side=target, rank_type=rank_type) == metric_key:
                 return value
@@ -373,12 +387,22 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 
         :param evaluation_factory:
             the factory with evaluation triples
+        :param additional_filter_triples:
+            additional true triples to use for filtering; only relevant if not explicit negatives are given.
+            cf. :func:`pykeen.evaluation.rank_based_evaluator.sample_negatives`
+        :param num_negatives:
+            the number of negatives to sample; only relevant if not explicit negatives are given.
+            cf. :func:`pykeen.evaluation.rank_based_evaluator.sample_negatives`
         :param head_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for head prediction for each evaluation triple
         :param tail_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for tail prediction for each evaluation triple
         :param kwargs:
-            additional keyword-based arguments passed to RankBasedEvaluator.__init__
+            additional keyword-based arguments passed to
+            :meth:`pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
+
+        :raises ValueError:
+            if only a single side's negatives are given, or the negatives are in wrong shape
         """
         super().__init__(**kwargs)
         if head_negatives is None and tail_negatives is None:
