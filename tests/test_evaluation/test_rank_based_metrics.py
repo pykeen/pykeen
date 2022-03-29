@@ -219,5 +219,12 @@ class WeightedTests(unittest.TestCase):
 def test_stable_product():
     """Test stable_product."""
     generator = numpy.random.default_rng(seed=0)
-    array = generator.random(size=(100,))
+    array = generator.random(size=(13,))
+
+    # positive values only
+    numpy.testing.assert_almost_equal(stable_product(array), numpy.prod(array))
+    numpy.testing.assert_almost_equal(stable_product(np.log(array), is_log=True), numpy.prod(array))
+
+    # positive and negative values
+    array = 2 * array - 1
     numpy.testing.assert_almost_equal(stable_product(array), numpy.prod(array))
