@@ -95,14 +95,28 @@ class RankBasedMetricResults(MetricResults):
         rank_and_candidates: Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]],
     ) -> "RankBasedMetricResults":
         """Create rank-based metric results from the given rank/candidate sets."""
-        return cls(
-            data={
-                (metric.key, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates)
-                for metric, (target, rank_type, ranks, num_candidates) in itertools.product(
-                    metrics, rank_and_candidates
-                )
-            }
-        )
+        rank_and_candidates = list(rank_and_candidates)
+        data = {
+            (metric.key, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates)
+            for metric, (target, rank_type, ranks, num_candidates) in itertools.product(metrics, rank_and_candidates)
+        }
+        target_type_rank_dict = {}
+        target_candidate_dict = {}
+        for (target, rank_type, ranks, num_candidates) in rank_and_candidates:
+            target_type_rank_dict.setdefault(target, dict())
+            target_type_rank_dict[target][rank_type] = ranks
+            target_candidate_dict[target] = num_candidates
+        for target, rank_dict in target_type_rank_dict.items():
+            optimistic = rank_dict.get(RANK_OPTIMISTIC)
+            pessimistic = rank_dict.get(RANK_PESSIMISTIC)
+            nc = target_candidate_dict.get(target)
+            if optimistic is None or pessimistic is None or nc is None:
+                continue
+            # TODO: no real rank-type
+            delta = pessimistic - optimistic
+            data["mean_rank_width", target, RANK_REALISTIC] = delta.mean().item()
+            data["relative_mean_rank_width", target, RANK_REALISTIC] = (delta / nc).mean().item()
+        return cls(data=data)
 
     @classmethod
     def create_random(cls, random_state: Optional[int] = None) -> "RankBasedMetricResults":
