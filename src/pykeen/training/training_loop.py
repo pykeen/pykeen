@@ -17,6 +17,8 @@ from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Un
 
 import numpy as np
 import torch
+from class_resolver import HintOrType, OptionalKwargs
+from class_resolver.contrib.torch import optimizer_resolver
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
@@ -116,7 +118,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         model: Model,
         triples_factory: CoreTriplesFactory,
-        optimizer: Optional[Optimizer] = None,
+        optimizer: HintOrType[Optimizer] = None,
+        optimizer_kwargs: OptionalKwargs = None,
         lr_scheduler: Optional[LRScheduler] = None,
         automatic_memory_optimization: bool = True,
         mode: Optional[InductiveMode] = None,
@@ -127,6 +130,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param model: The model to train
         :param triples_factory: The training triples factory
         :param optimizer: The optimizer to use while training the model
+        :param optimizer_kwargs:
+            additional keyword-based parameters to instantiate the optimizer (if necessary). `params` will be added
+            automatically based on the `model`
         :param lr_scheduler: The learning rate scheduler you want to use while training the model
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
@@ -135,7 +141,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             The result tracker.
         """
         self.model = model
-        self.optimizer = optimizer
+        self.optimizer = optimizer_resolver.make(optimizer, pos_kwargs=optimizer_kwargs, params=model.get_grad_params())
         self.lr_scheduler = lr_scheduler
         self.losses_per_epochs = []
         self._should_stop = False
