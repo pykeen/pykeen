@@ -158,11 +158,43 @@ def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]
     return (individual * weights**2).sum().item()
 
 
-def stable_product(a: np.ndarray, axis: Optional[int] = None, is_log: bool = False) -> np.ndarray:
-    """Compute product using the log-trick for increased numerical stability."""
+def stable_product(a: np.ndarray, is_log: bool = False) -> np.ndarray:
+    r"""
+    Compute the product using the log-trick for increased numerical stability.
+
+    .. math::
+
+        \prod \limits_{i=1}^{n} a_i
+            = \exp \log \prod \limits_{i=1}^{n} a_i
+            = \exp \sum \limits_{i=1}^{n} \log a_i
+
+    To support negative values, we additionally use
+
+    .. math::
+
+        a_i = \textit{sign}(a_i) * \textit{abs}(a_i)
+
+    and
+
+    .. math::
+
+        \prod \limits_{i=1}^{n} a_i
+            = \left(\prod \limits_{i=1}^{n} \textit{sign}(a_i)\right)
+                \cdot \left(\prod \limits_{i=1}^{n} \textit{abs}(a_i)\right)
+
+    where the first part is computed without the log-trick.
+
+    :param a:
+        the array
+    :param is_log:
+        whether the array already contains the logarithm of the elements
+
+    :return:
+        the product of elements
+    """
     if is_log:
         sign = 1
     else:
         sign = np.prod(np.copysign(np.ones_like(a), a))
         a = np.log(np.abs(a))
-    return sign * np.exp(np.sum(a, axis=axis))
+    return sign * np.exp(np.sum(a))
