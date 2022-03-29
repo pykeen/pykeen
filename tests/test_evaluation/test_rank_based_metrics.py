@@ -201,10 +201,10 @@ class WeightedTests(unittest.TestCase):
         generator = np.random.default_rng()
         self.array = generator.random(size=(10,))
 
-    def _test_equal_weights(self, func: Callable[[numpy.ndarray, Optional[numpy.ndarray]], float]):
+    def _test_equal_weights(self, func: Callable[[numpy.ndarray, Optional[numpy.ndarray]], numpy.ndarray]):
         """Verify that equal weights lead to unweighted results."""
         weights = np.full_like(self.array, fill_value=2.0)
-        self.assertAlmostEqual(func(self.array, weights=None), func(self.array, weights=weights))
+        self.assertAlmostEqual(func(self.array, None).item(), func(self.array, weights).item())
 
     def test_weighted_harmonic_mean(self):
         """Test weighted harmonic mean."""
