@@ -93,11 +93,6 @@ class RankBasedMetricResults(MetricResults):
     metrics = RANKING_METRICS
 
     @classmethod
-    def from_dict(cls, **kwargs):
-        """Create an instance from kwargs."""
-        return cls(kwargs)
-
-    @classmethod
     def from_ranks(
         cls,
         metrics: Iterable[RankBasedMetric],
