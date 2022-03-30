@@ -214,8 +214,9 @@ while the majority of nodes has only a few neighbors. This also impacts the eval
 occur in a large number of triples, they are also more likely to be part of evaluation triples.
 Thus, performing well on triples containing hub entities contributes strongly to the overall performance.
 
-As an example, we can inspect the WD50kT dataset, where a single (relation, tail)-combination is present in 699
-evaluation triples.
+As an example, we can inspect the WD50kT dataset, where a single (relation, tail)-combination,
+(`"instance of" <https://www.wikidata.org/wiki/Property:P31>`_, `"human" <https://www.wikidata.org/wiki/Q5>`_),
+is present in 699 evaluation triples.
 
 .. code-block:: python
 
