@@ -210,7 +210,7 @@ Ranking Aggregation Scope
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 Real graphs often are `scale-free <https://en.wikipedia.org/wiki/Scale-free_network>`_, i.e., there are a few
 nodes / entities which have a high degree, often called `hub <https://en.wikipedia.org/wiki/Hub_(network_science)>`_,
-while the majority of nodes has only a few neighbors. This also impacts the evaluation triples, since the hub nodes
+while the majority of nodes has only a few neighbors. This also impacts the evaluation triples: since the hub nodes
 occur in a large number of triples, they are also more likely to be part of evaluation triples.
 Thus, performing well on triples containing hub entities contributes strongly to the overall performance.
 
