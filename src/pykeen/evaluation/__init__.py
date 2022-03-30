@@ -6,7 +6,12 @@ from class_resolver import ClassResolver
 
 from .classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from .evaluator import Evaluator, MetricResults, evaluate
-from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
+from .rank_based_evaluator import (
+    MacroRankBasedEvaluator,
+    RankBasedEvaluator,
+    RankBasedMetricResults,
+    SampledRankBasedEvaluator,
+)
 
 __all__ = [
     "evaluate",
@@ -14,6 +19,8 @@ __all__ = [
     "MetricResults",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
+    "MacroRankBasedEvaluator",
+    "SampledRankBasedEvaluator",
     "ClassificationEvaluator",
     "ClassificationMetricResults",
     "evaluator_resolver",
