@@ -208,11 +208,41 @@ incapability to solve of one the tasks.
 
 Ranking Aggregation Scope
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-.. todo::  @mberr this is the place to describe macro vs. micro evaluation in ~2 paragraphs answering the following
+Real graphs often are `scale-free <https://en.wikipedia.org/wiki/Scale-free_network>`_, i.e., there are a few
+nodes / entities which have a high degree, often called `hub <https://en.wikipedia.org/wiki/Hub_(network_science)>`_,
+while the majority of nodes has only a few neighbors. This also impacts the evaluation triples, since the hub nodes
+occur in a large number of triples, they are also more likely to be part of evaluation triples.
+Thus, performing well on triples containing hub entities contributes strongly to the overall performance.
 
-1. What are the issues caused by micro evaluation?
-2. How does macro evaluation work, and why does it address those issues?
-3. A bit of insight into how implementing weighted variants of the ranks allows this
+As an example, we can inspect the WD50kT dataset, where a single (relation, tail)-combination is present in 699
+evaluation triples.
+
+.. code-block:: python
+
+    from pykeen.datasets import get_dataset
+    ds = get_dataset(dataset="wd50kt")
+    unique_relation_tail, counts = dataset.testing.mapped_triples[:, 1:].unique(return_counts=True, dim=0)
+    # c = 699
+    c = counts.max()
+    r, t = unique_relation_tail[counts.argmax()]
+    # https://www.wikidata.org/wiki/Q5 -> "human"
+    t = dataset.testing.entity_id_to_label[t.item()]
+    # https://www.wikidata.org/wiki/Property:P31 -> "instance of"
+    r = dataset.testing.relation_id_to_label[r.item()]
+
+
+There are arguments that we want these entities to have a strong effect on evaluation: since they occur often, they
+are seemingly important, and thus evaluation should reflect that. However, sometimes we also do *not* want to have
+this effect, but rather measure the performance evenly across nodes. A similar phenomenon also exists in multi-class
+classification with imbalanced classes, where frequent classes can dominate performance measures.
+In similar vein to the macro :math:`F_1`-score (cf. :func:`sklearn.metrics.f1_score`) known from this area, PyKEEN
+implements a :class:`pykeen.evaluation.MacroRankBasedEvaluator`, which ensure that triples are weighted such that each
+unique ranking task, e.g., a (head, relation)-pair for tail prediction, contributes evenly.
+
+Technically, we solve the task by implemented variants of existing rank-based metrics which support weighting
+individual ranks differently. Moreover, the evaluator computes weights inversely proportional to the "query" part
+of the ranking task, i.e., e.g., (head, relation) for tail prediction.
+
 
 Filtering
 ~~~~~~~~~
