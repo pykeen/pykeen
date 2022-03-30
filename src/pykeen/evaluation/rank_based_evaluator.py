@@ -529,7 +529,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         scores: torch.FloatTensor,
         true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:
+    ) -> None:  # noqa: D102
         super().process_scores_(
             hrt_batch=hrt_batch,
             target=target,
