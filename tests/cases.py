@@ -51,7 +51,7 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
-from pykeen.evaluation import Evaluator, MetricResults
+from pykeen.evaluation import Evaluator, MetricResults, evaluator_resolver
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.metrics import rank_based_metric_resolver
 from pykeen.metrics.ranking import (
@@ -1846,6 +1846,19 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         data: Dict[str, torch.Tensor],
     ):
         logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
+
+    def test_pipeline(self):
+        """Test interaction with pipeline."""
+        pipeline(
+            training=self.factory,
+            testing=self.factory,
+            model="distmult",
+            evaluator=evaluator_resolver.normalize_cls(self.cls),
+            evaluator_kwargs=self.instance_kwargs,
+            training_kwargs=dict(
+                num_epochs=1,
+            ),
+        )
 
 
 class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelection]):

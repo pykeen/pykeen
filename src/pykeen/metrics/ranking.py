@@ -1,6 +1,89 @@
 # -*- coding: utf-8 -*-
 
-"""Ranking metrics."""
+"""
+Ranking metrics.
+
+This module comprises various rank-based metrics, which get an array of individual ranks as input, as summarize them
+into a single-figure metric measuring different aspects of ranking performance.
+
+We can generally distinguish:
+
+Base Metrics
+------------
+These metrics directly operate on the ranks:
+
+The following metrics measures summarize the central tendency of ranks
+
+- :class:`pykeen.metrics.ranking.ArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.GeometricMeanRank`
+- :class:`pykeen.metrics.ranking.HarmonicMeanRank`
+- :class:`pykeen.metrics.ranking.MedianRank`
+
+The Hits at K metric is closely related to information retrieval and measures the fraction of times when the correct
+result is in the top-$k$ ranked entries, i.e., the rank is at most $k$
+
+- :class:`pykeen.metrics.ranking.HitsAtK`
+
+The next metrics summarize the dispersion of ranks
+
+- :class:`pykeen.metrics.ranking.MedianAbsoluteDeviation`
+- :class:`pykeen.metrics.ranking.Variance`
+- :class:`pykeen.metrics.ranking.StandardDeviation`
+
+and finally there is a simple metric to store the number of ranks which where aggregated
+
+- :class:`pykeen.metrics.ranking.Count`
+
+Inverse Metrics
+---------------
+The inverse metrics are reciprocals of the central tendency measures. They offer the advantage of having a fixed value
+range of $(0, 1]$, with a known optimal value of $1$:
+
+- :class:`pykeen.metrics.ranking.InverseArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.InverseGeometricMeanRank`
+- :class:`pykeen.metrics.ranking.InverseHarmonicMeanRank`
+- :class:`pykeen.metrics.ranking.InverseMedianRank`
+
+Adjusted Metrics
+----------------
+Adjusted metrics build upon base metrics, but adjust them for chance, cf. [berrendorf2020]_ and [hoyt2022]_. All
+adjusted metrics derive from :class:`pykeen.metrics.ranking.DerivedRankBasedMetric` and, for a given evaluation set,
+are affine transformations of the base metric with dataset-dependent, but fixed transformation constants. Thus, they
+can also be computed when the model predictions are not available anymore, but the evaluation set is known.
+
+Expectation-Normalized Metrics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+These metrics divide the metric by its expected value under random ordering. Thus, their expected value is always 1
+irrespective of the evaluation set. They derive from :class:`pykeen.metrics.ranking.ExpectationNormalizedMetric`, and
+there is currently only a single implementation:
+
+- :class:`pykeen.metrics.ranking.AdjustedArithmeticMeanRank`
+
+Re-indexed Metrics
+~~~~~~~~~~~~~~~~~~
+Re-indexed metrics subtract the expected value, and then normalize the optimal value to be 1. Thus, their expected value
+under random ordering is 0, their optimal value is 1, and larger values indicate better results. The classes derive from
+:class:`pykeen.metrics.ranking.ReindexedMetric`, and the following implementations are available:
+
+- :class:`pykeen.metrics.ranking.AdjustedHitsAtK`
+- :class:`pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex`
+- :class:`pykeen.metrics.ranking.AdjustedGeometricMeanRankIndex`
+- :class:`pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank`
+
+z-Adjusted Metrics
+~~~~~~~~~~~~~~~~~~
+The final type of adjusted metrics uses the expected value as well as the variance of the metric under random ordering
+to normalize the metrics similar to `z-score normalization <https://en.wikipedia.org/wiki/Standard_score>`_.
+The z-score normalized metrics have an expected value of 0, and a variance of 1, and positive values indicate better
+results. While their value range is unbound, it can be interpreted through the lens of the inverse cumulative
+density function of the standard Gaussian distribution to retrieve a *p*-value. The classes derive from
+:class:`pykeen.metrics.ranking.ZMetric`, and the following implementations are available:
+
+- :class:`pykeen.metrics.ranking.ZArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.ZGeometricMeanRank`
+- :class:`pykeen.metrics.ranking.ZHitsAtK`
+- :class:`pykeen.metrics.ranking.ZInverseHarmonicMeanRank`
+"""
 import math
 from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
@@ -685,6 +768,23 @@ class ReindexedMetric(DerivedRankBasedMetric):
 class ArithmeticMeanRank(RankBasedMetric):
     r"""The (arithmetic) mean rank.
 
+    The mean rank (MR) computes the arithmetic mean over all individual ranks.
+    Denoting the set of individual ranks as $\mathcal{I}$, it is given as:
+
+    .. math::
+
+        MR =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
+
+    It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
+    under a certain cutoff and therefore reflects average performance. With PyKEEN's standard 1-based indexing,
+    the mean rank lies on the interval $[1, \infty)$ where lower is better.
+
+    .. warning::
+
+        While the arithmetic mean rank is interpretable, the mean rank is dependent on the number of candidates.
+        A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
+        but incredibly poor performance for a candidate set size of 20.
+
     For the expected value, we have
 
     .. math::
@@ -924,7 +1024,18 @@ class GeometricMeanRank(RankBasedMetric):
 
 @parse_docdata
 class InverseGeometricMeanRank(RankBasedMetric):
-    """The inverse geometric mean rank.
+    r"""The inverse geometric mean rank.
+
+    The mean rank corresponds to the arithmetic mean, and tends to be more affected by high rank values.
+    The mean reciprocal rank corresponds to the harmonic mean, and tends to be more affected by low rank values.
+    The remaining Pythagorean mean, the geometric mean, lies in the center and therefore could better balance these
+    biases. Therefore, the inverse geometric mean rank (IGMR) is defined as:
+
+    .. math::
+
+        IGMR = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
+
+    .. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
 
     ---
     link: https://arxiv.org/abs/2203.07544
@@ -1020,6 +1131,25 @@ def harmonic_variances(n: int) -> np.ndarray:
 @parse_docdata
 class InverseHarmonicMeanRank(RankBasedMetric):
     r"""The inverse harmonic mean rank.
+
+    The mean reciprocal rank (MRR) is the arithmetic mean of reciprocal ranks, and thus the inverse of the harmonic mean
+    of the ranks. It is defined as:
+
+    .. math::
+
+        IHMR = MRR =\frac{1}{|\mathcal{I}|} \sum_{r \in \mathcal{I}} r^{-1}
+
+    .. warning::
+
+        It has been argued that the mean reciprocal rank has theoretical flaws by [fuhr2018]_. However, this opinion
+        is not undisputed, cf. [sakai2021]_.
+
+    Despite its flaws, MRR is still often used during early stopping due to its behavior related to low rank values.
+    While the hits @ k ignores changes among high rank values completely and the mean rank changes uniformly
+    across the full value range, the mean reciprocal rank is more affected by changes of low rank values than high ones
+    (without disregarding them completely like hits @ k does for low rank values)
+    Therefore, it can be considered as soft a version of hits @ k that is less sensitive to outliers.
+    It is bound on $(0, 1]$ where closer to 1 is better.
 
     Let
 
@@ -1287,6 +1417,23 @@ class Count(RankBasedMetric):
 class HitsAtK(RankBasedMetric):
     r"""The Hits @ k.
 
+    The hits @ k describes the fraction of true entities that appear in the first $k$ entities of the sorted rank list.
+    Denoting the set of individual ranks as $\mathcal{I}$, it is given as:
+
+    .. math::
+
+        H_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
+
+    For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
+    hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
+
+    .. warning::
+
+        This metric does not differentiate between cases when the rank is larger than $k$.
+        This means that a miss with rank $k+1$ and $k+d$ where $d \gg 1$ have the same
+        effect on the final score. Therefore, it is less suitable for the comparison of different
+        models.
+
     For the expected values, we first note that
 
     .. math::
@@ -1426,6 +1573,9 @@ class ZHitsAtK(ZMetric):
 class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     """The adjusted arithmetic mean rank (AMR).
 
+    The adjusted (arithmetic) mean rank (AMR) was introduced by [berrendorf2020]. It is defined as the ratio of the
+    mean rank to the expected mean rank. It lies on the open interval $(0, 2)$ where lower is better.
+
     ---
     description: The mean over all ranks divided by its expected value.
     link: https://arxiv.org/abs/2002.06914
@@ -1444,6 +1594,9 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
 @parse_docdata
 class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     """The adjusted arithmetic mean rank index (AMRI).
+
+    The adjusted (arithmetic) mean rank index (AMRI) was introduced by [berrendorf2020] to make the AMR more intuitive.
+    The AMRI has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
     ---
     link: https://arxiv.org/abs/2002.06914
