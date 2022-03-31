@@ -1490,6 +1490,9 @@ class ZHitsAtK(ZMetric):
 class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     """The adjusted arithmetic mean rank (AMR).
 
+    The adjusted (arithmetic) mean rank (AMR) was introduced by [berrendorf2020]. It is defined as the ratio of the
+    mean rank to the expected mean rank. It lies on the open interval $(0, 2)$ where lower is better.
+
     ---
     description: The mean over all ranks divided by its expected value.
     link: https://arxiv.org/abs/2002.06914
@@ -1508,6 +1511,9 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
 @parse_docdata
 class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     """The adjusted arithmetic mean rank index (AMRI).
+
+    The adjusted (arithmetic) mean rank index (AMRI) was introduced by [berrendorf2020] to make the AMR more intuitive.
+    The AMRI has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
     ---
     link: https://arxiv.org/abs/2002.06914
