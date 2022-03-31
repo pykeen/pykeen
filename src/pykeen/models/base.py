@@ -54,7 +54,7 @@ def _restrict_to(
         return scores
     if ids.ndim == 1:
         return scores[:, ids]
-    return scores[ids[:, 0], ids[:, 1]]
+    return scores.gather(dim=1, index=ids)
 
 
 class Model(nn.Module, ABC):
