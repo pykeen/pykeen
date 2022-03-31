@@ -102,8 +102,5 @@ References
 .. [zheng2020] Zheng, S., *et al* (2020). `PharmKG: a dedicated knowledge graph benchmark for biomedical data mining
    <https://doi.org/10.1093/bib/bbaa344>`_. *Briefings in Bioinformatics 2020*
 
-.. [berrendorf2020] Berrendorf, M., *et al.* (2020). `On the Ambiguity of Rank-Based Evaluation of Entity Alignment
-   or Link Prediction Methods <http://arxiv.org/abs/2002.06914>`_.
-
 .. [yu2021] Yu, L., *et al* (2021). `TripleRE: Knowledge Graph Embeddings via triple Relation Vectors
    <https://vixra.org/abs/2112.0095>`_. *viXra*, 2112.0095.
