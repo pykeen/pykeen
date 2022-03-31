@@ -3,25 +3,6 @@
 r"""
 Ranking metrics.
 
-Hits @ K
-********
-The hits @ k describes the fraction of true entities that appear in the first $k$ entities of the sorted rank list.
-It is given as:
-
-.. math::
-
-    \text{score}_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
-
-For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
-hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
-
-.. warning::
-
-    This metric does not differentiate between cases when the rank is larger than $k$.
-    This means that a miss with rank $k+1$ and $k+d$ where $d \gg 1$ have the same
-    effect on the final score. Therefore, it is less suitable for the comparison of different
-    models.
-
 Mean Rank
 *********
 The mean rank (MR) computes the arithmetic mean over all individual ranks. It is given as:
@@ -1418,6 +1399,23 @@ class Count(RankBasedMetric):
 @parse_docdata
 class HitsAtK(RankBasedMetric):
     r"""The Hits @ k.
+
+    The hits @ k describes the fraction of true entities that appear in the first $k$ entities of the sorted rank list.
+    Denoting the set of individual ranks as $\mathcal{I}$, it is given as:
+
+    .. math::
+
+        H_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
+
+    For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
+    hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
+
+    .. warning::
+
+        This metric does not differentiate between cases when the rank is larger than $k$.
+        This means that a miss with rank $k+1$ and $k+d$ where $d \gg 1$ have the same
+        effect on the final score. Therefore, it is less suitable for the comparison of different
+        models.
 
     For the expected values, we first note that
 
