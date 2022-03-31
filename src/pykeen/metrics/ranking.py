@@ -46,10 +46,10 @@ range of $(0, 1]$, with a known optimal value of $1$:
 
 Adjusted Metrics
 ----------------
-Adjusted metrics build upon base metrics, but adjust them for chance, cf. [berrendorf2020, hoyt2022]_. All adjusted
-metrics derive from :class:`pykeen.metrics.ranking.DerivedRankBasedMetric` and, for a given evaluation set, are affine
-transformations of the base metric with dataset-dependent, but fixed transformation constants. Thus, they can also be
-computed when the model predictions are not available anymore, but the evaluation set is known.
+Adjusted metrics build upon base metrics, but adjust them for chance, cf. [berrendorf2020]_ and [hoyt2022]_. All
+adjusted metrics derive from :class:`pykeen.metrics.ranking.DerivedRankBasedMetric` and, for a given evaluation set,
+are affine transformations of the base metric with dataset-dependent, but fixed transformation constants. Thus, they
+can also be computed when the model predictions are not available anymore, but the evaluation set is known.
 
 Expectation-Normalized Metrics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
