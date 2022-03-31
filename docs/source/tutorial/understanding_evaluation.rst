@@ -116,7 +116,7 @@ while the majority of nodes has only a few neighbors. This also impacts the eval
 occur in a large number of triples, they are also more likely to be part of evaluation triples.
 Thus, performing well on triples containing hub entities contributes strongly to the overall performance.
 
-As an example, we can inspect the WD50kT dataset, where a single (relation, tail)-combination,
+As an example, we can inspect the :class:`pykeen.datasets.WD50KT` dataset, where a single (relation, tail)-combination,
 (`"instance of" <https://www.wikidata.org/wiki/Property:P31>`_, `"human" <https://www.wikidata.org/wiki/Q5>`_),
 is present in 699 evaluation triples.
 
@@ -133,7 +133,6 @@ is present in 699 evaluation triples.
     # https://www.wikidata.org/wiki/Property:P31 -> "instance of"
     r = dataset.testing.relation_id_to_label[r.item()]
 
-
 There are arguments that we want these entities to have a strong effect on evaluation: since they occur often, they
 are seemingly important, and thus evaluation should reflect that. However, sometimes we also do *not* want to have
 this effect, but rather measure the performance evenly across nodes. A similar phenomenon also exists in multi-class
@@ -145,7 +144,6 @@ unique ranking task, e.g., a (head, relation)-pair for tail prediction, contribu
 Technically, we solve the task by implemented variants of existing rank-based metrics which support weighting
 individual ranks differently. Moreover, the evaluator computes weights inversely proportional to the "query" part
 of the ranking task, i.e., e.g., (head, relation) for tail prediction.
-
 
 Filtering
 ~~~~~~~~~
