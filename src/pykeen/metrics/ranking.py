@@ -69,6 +69,18 @@ under random ordering is 0, their optimal value is 1, and larger values indicate
 - :class:`pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex`
 - :class:`pykeen.metrics.ranking.AdjustedGeometricMeanRankIndex`
 - :class:`pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank`
+
+Z-Score Metrics
+~~~~~~~~~~~~~~~
+The final type of adjusted metrics uses the expected value as well as the variance of the metric under random ordering
+to normalize the metrics similar to `z-score normalization <https://en.wikipedia.org/wiki/Standard_score>`_.
+The z-score normalized metrics have an expected value of 0, and a variance of 1, and positive values indicate better
+results. Their value range is unbound. All implementations derive from :class:`pykeen.metrics.ranking.ZMetric`.
+
+- :class:`pykeen.metrics.ranking.ZArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.ZGeometricMeanRank`
+- :class:`pykeen.metrics.ranking.ZHitsAtK`
+- :class:`pykeen.metrics.ranking.ZInverseHarmonicMeanRank`
 """
 import math
 from abc import ABC, abstractmethod
