@@ -80,79 +80,6 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         raise NotImplementedError
 
 
-class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
-    """Training instances for the sLCWA."""
-
-    def __init__(
-        self,
-        *,
-        mapped_triples: MappedTriples,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
-        negative_sampler: HintOrType[NegativeSampler] = None,
-        negative_sampler_kwargs: OptionalKwargs = None,
-    ):
-        """Initialize the sLCWA instances.
-
-        :param mapped_triples: shape: (num_triples, 3)
-            the ID-based triples, passed to the negative sampler
-        :param num_entities: >0
-            the number of entities, passed to the negative sampler
-        :param num_relations: >0
-            the number of relations, passed to the negative sampler
-        :param negative_sampler:
-            the negative sampler, or a hint thereof
-        :param negative_sampler_kwargs:
-            additional keyword-based arguments passed to the negative sampler
-        """
-        self.mapped_triples = mapped_triples
-        self.sampler = negative_sampler_resolver.make(
-            negative_sampler,
-            pos_kwargs=negative_sampler_kwargs,
-            mapped_triples=mapped_triples,
-            num_entities=num_entities,
-            num_relations=num_relations,
-        )
-
-    def __len__(self) -> int:  # noqa: D105
-        return self.mapped_triples.shape[0]
-
-    def __getitem__(self, item: int) -> SLCWASampleType:  # noqa: D105
-        positive = self.mapped_triples[item].unsqueeze(dim=0)
-        # TODO: some negative samplers require batches
-        negative, mask = self.sampler.sample(positive_batch=positive)
-        # shape: (1, 3), (1, k, 3), (1, k, 3)?
-        return positive, negative, mask
-
-    @staticmethod
-    def collate(samples: Iterable[SLCWASampleType]) -> SLCWABatch:
-        """Collate samples."""
-        # each shape: (1, 3), (1, k, 3), (1, k, 3)?
-        positives, negatives, masks = zip(*samples)
-        positives = torch.cat(positives, dim=0)
-        negatives = torch.cat(negatives, dim=0)
-        if masks[0] is None:
-            assert all(m is None for m in masks)
-            masks = None
-        else:
-            masks = torch.cat(masks, dim=0)
-        return SLCWABatch(positives, negatives, masks)
-
-    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatch]]:  # noqa: D102
-        return self.collate
-
-    @classmethod
-    def from_triples(
-        cls,
-        mapped_triples: MappedTriples,
-        *,
-        num_entities: int,
-        num_relations: int,
-        **kwargs,
-    ) -> Instances:  # noqa:D102
-        return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)
-
-
 class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
     """
     Pre-batched training instances for the sLCWA training loop.
@@ -374,3 +301,6 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
 
     def __getitem__(self, item: int) -> LCWABatchType:  # noqa: D105
         return self.pairs[item], np.asarray(self.compressed[item, :].todense())[0, :]
+
+
+SLCWAInstances = BatchedSLCWAInstances
