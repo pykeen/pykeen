@@ -44,10 +44,13 @@ class OpenEA(LazyDataset):
         entities: 15000
         relations: 248
         triples: 38265
+        training: 30612
+        testing: 3826
+        validation: 3827
     """
 
     #: The link to the zip file
-    DROPBOX_LINK: str = "https://www.dropbox.com/s/xfehqm4pcd9yw0v/OpenEA_dataset_v2.0.zip?dl=1"
+    FIGSHARE_LINK: str = "https://figshare.com/ndownloader/files/34234391"
 
     #: The hex digest for the zip file
     SHA512: str = "c1589f185f86e05c497de147b4d6c243c66775cb4b50c6b41ecc71b36cfafb4c9f86fbee94e1e78a7ee056dd69df1ce3fc210ae07dc64955ad2bfda7450545ef"  # noqa: E501
@@ -130,8 +133,8 @@ class OpenEA(LazyDataset):
 
         # ensure file is present
         if not path.is_file() or self.force:
-            logger.info(f"Downloading file from Dropbox (Link: {self.__class__.DROPBOX_LINK})")
-            download(url=self.__class__.DROPBOX_LINK, path=path, hexdigests={"sha512": self.SHA512})
+            logger.info(f"Downloading file from Figshare (Link: {self.__class__.FIGSHARE_LINK})")
+            download(url=self.__class__.FIGSHARE_LINK, path=path, hexdigests={"sha512": self.SHA512})
 
         df = read_zipfile_csv(
             path=path,

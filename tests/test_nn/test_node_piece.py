@@ -1,10 +1,15 @@
 """Tests for node piece."""
+
+import random
+from typing import Any, MutableMapping
+
 import numpy
 import numpy.testing
 import scipy.sparse.csgraph
 import unittest_templates
 
 import pykeen.nn.node_piece
+from pykeen.nn.node_piece.utils import page_rank
 from tests import cases
 
 
@@ -105,6 +110,20 @@ class AnchorTokenizerTests(cases.TokenizerTestCase):
     cls = pykeen.nn.node_piece.AnchorTokenizer
 
 
+class PrecomputedPoolTokenizerTests(cases.TokenizerTestCase):
+    """Tests for tokenization with precomputed token pools."""
+
+    cls = pykeen.nn.node_piece.PrecomputedPoolTokenizer
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        # generate random pool
+        kwargs["pool"] = {
+            i: random.sample(range(2 * self.num_tokens), k=self.num_tokens) for i in range(self.factory.num_entities)
+        }
+        return kwargs
+
+
 class TokenizerMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece.Tokenizer]):
     """Test for tests for tokenizers."""
 
@@ -121,7 +140,7 @@ def test_page_rank():
             (numpy.arange(n) + 1) % n,
         ],
     )
-    result = pykeen.nn.node_piece.page_rank(
+    result = page_rank(
         edge_index=edge_index,
         epsilon=1.0e-08,
     )

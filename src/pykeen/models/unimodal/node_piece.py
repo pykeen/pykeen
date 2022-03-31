@@ -154,14 +154,14 @@ class NodePiece(ERModel):
 
         # prepare token representations & kwargs
         token_representations = []
-        token_representation_kwargs: List[OptionalKwargs] = []
+        token_representations_kwargs: List[OptionalKwargs] = []
         for tokenizer in upgrade_to_sequence(tokenizers):
             if tokenizer_resolver.lookup(tokenizer) is RelationTokenizer:
                 token_representations.append(relation_representations)
-                token_representation_kwargs.append(None)
+                token_representations_kwargs.append(None)
             else:
                 token_representations.append(None)  # Embedding
-                token_representation_kwargs.append(anchor_kwargs)
+                token_representations_kwargs.append(anchor_kwargs)
 
         super().__init__(
             triples_factory=triples_factory,
@@ -170,7 +170,7 @@ class NodePiece(ERModel):
             entity_representations_kwargs=dict(
                 triples_factory=triples_factory,
                 token_representations=token_representations,
-                token_representation_kwargs=token_representation_kwargs,
+                token_representations_kwargs=token_representations_kwargs,
                 tokenizers=tokenizers,
                 tokenizers_kwargs=tokenizers_kwargs,
                 aggregation=aggregation,

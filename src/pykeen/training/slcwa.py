@@ -5,13 +5,14 @@
 import logging
 from typing import Optional
 
-import torch
+import torch.utils.data
 from class_resolver import HintOrType, OptionalKwargs
+from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
 from ..sampling import NegativeSampler
-from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import SLCWABatchType, SLCWASampleType
+from ..triples import CoreTriplesFactory
+from ..triples.instances import SLCWABatch, SLCWASampleType
 
 __all__ = [
     "SLCWATrainingLoop",
@@ -20,7 +21,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
+class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
     """A training loop that uses the stochastic local closed world assumption training approach.
 
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
@@ -44,19 +45,38 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
 
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_slcwa_instances(
-            negative_sampler=self.negative_sampler,
-            negative_sampler_kwargs=self.negative_sampler_kwargs,
+    def _create_training_data_loader(
+        self,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        pin_memory: bool,
+        sampler: Optional[str],
+    ) -> DataLoader[SLCWABatch]:  # noqa: D102
+        return DataLoader(
+            dataset=triples_factory.create_slcwa_instances(
+                batch_size=batch_size,
+                shuffle=True,
+                drop_last=drop_last,
+                negative_sampler=self.negative_sampler,
+                negative_sampler_kwargs=self.negative_sampler_kwargs,
+                sampler=sampler,
+            ),
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            # disable automatic batching
+            batch_size=None,
+            batch_sampler=None,
         )
 
     @staticmethod
-    def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102
+    def _get_batch_size(batch: SLCWABatch) -> int:  # noqa: D102
         return batch[0].shape[0]
 
     def _process_batch(
         self,
-        batch: SLCWABatchType,
+        batch: SLCWABatch,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
@@ -103,7 +123,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,

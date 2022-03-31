@@ -61,8 +61,26 @@ class Nations(PathDataset):
         )
 
 
+@parse_docdata
 class NationsLiteral(NumericPathDataset):
-    """The Nations dataset with literals."""
+    """The Nations dataset with literals.
+
+    ---
+    name: NationsL
+    statistics:
+        entities: 14
+        relations: 55
+        training: 1592
+        testing: 201
+        validation: 199
+        triples: 1992
+        literal_relations: 2
+        literal_triples: 26
+    citation:
+        author: Hoyt
+        year: 2020
+        github: pykeen/pykeen
+    """
 
     training: TriplesNumericLiteralsFactory
 

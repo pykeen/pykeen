@@ -99,8 +99,14 @@ References
 .. [teru2020] Teru, K., *et al* (2020). `Inductive Relation Prediction by Subgraph Reasoning
    <https://arxiv.org/abs/1911.06962>`_. *ICML 2020*
 
-.. [zheng2020] Zheng, S., *et al* (2020). `PharmKG: a dedicated knowledge graph benchmark for bomedical data mining
+.. [zheng2020] Zheng, S., *et al* (2020). `PharmKG: a dedicated knowledge graph benchmark for biomedical data mining
    <https://doi.org/10.1093/bib/bbaa344>`_. *Briefings in Bioinformatics 2020*
 
 .. [berrendorf2020] Berrendorf, M., *et al.* (2020). `On the Ambiguity of Rank-Based Evaluation of Entity Alignment
    or Link Prediction Methods <http://arxiv.org/abs/2002.06914>`_.
+
+.. [yu2021] Yu, L., *et al* (2021). `TripleRE: Knowledge Graph Embeddings via triple Relation Vectors
+   <https://vixra.org/abs/2112.0095>`_. *viXra*, 2112.0095.
+
+.. [hoyt2022] Hoyt, C.T., *et al.* (2022) `A Unified Framework for Rank-based Evaluation Metrics for
+   Link Prediction in Knowledge Graphs <https://arxiv.org/abs/2203.07544>`_. *arXiv*, 2203.07544.
