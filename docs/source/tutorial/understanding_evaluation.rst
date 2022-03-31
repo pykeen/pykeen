@@ -70,7 +70,7 @@ Rank-Based Metrics
 ~~~~~~~~~~~~~~~~~~
 Given the set of individual rank scores for each head/tail entity from evaluation triples, there are various
 aggregation metrics which summarize different aspects of the set of ranks into a single-figure number.
-For more details, please refer to their `documentation <../reference/metrics>`_.
+For more details, please refer to their `documentation <../reference/metrics.html>`_.
 
 Ranking Types
 ~~~~~~~~~~~~~
