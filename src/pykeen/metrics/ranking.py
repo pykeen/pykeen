@@ -75,7 +75,9 @@ z-Adjusted Metrics
 The final type of adjusted metrics uses the expected value as well as the variance of the metric under random ordering
 to normalize the metrics similar to `z-score normalization <https://en.wikipedia.org/wiki/Standard_score>`_.
 The z-score normalized metrics have an expected value of 0, and a variance of 1, and positive values indicate better
-results. Their value range is unbound. All implementations derive from :class:`pykeen.metrics.ranking.ZMetric`.
+results. While their value range is unbound, it can be interpreted through the lens of the inverse cumulative
+density function of the standard Gaussian distribution to retrieve a *p*-value. The classes derive from
+:class:`pykeen.metrics.ranking.ZMetric`, and the following implementations are available:
 
 - :class:`pykeen.metrics.ranking.ZArithmeticMeanRank`
 - :class:`pykeen.metrics.ranking.ZGeometricMeanRank`
