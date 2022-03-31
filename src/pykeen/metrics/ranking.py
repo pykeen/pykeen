@@ -1,6 +1,138 @@
 # -*- coding: utf-8 -*-
 
-"""Ranking metrics."""
+r"""
+Ranking metrics.
+
+Hits @ K
+********
+The hits @ k describes the fraction of true entities that appear in the first $k$ entities of the sorted rank list.
+It is given as:
+
+.. math::
+
+    \text{score}_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
+
+For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
+hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
+
+.. warning::
+
+    This metric does not differentiate between cases when the rank is larger than $k$.
+    This means that a miss with rank $k+1$ and $k+d$ where $d \gg 1$ have the same
+    effect on the final score. Therefore, it is less suitable for the comparison of different
+    models.
+
+Mean Rank
+*********
+The mean rank (MR) computes the arithmetic mean over all individual ranks. It is given as:
+
+.. math::
+
+    \text{score} =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
+
+It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
+under a certain cutoff and therefore reflects average performance. With PyKEEN's standard 1-based indexing,
+the mean rank lies on the interval $[1, \infty)$ where lower is better.
+
+.. warning::
+
+    While it remains interpretable, the mean rank is dependent on the number of candidates.
+    A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
+    but incredibly poor performance for a candidate set size of 20.
+
+Mean Reciprocal Rank
+********************
+The mean reciprocal rank (MRR) is the arithmetic mean of reciprocal ranks, and thus the inverse of the harmonic mean
+of the ranks. It is defined as:
+
+.. math::
+
+    \text{score} =\frac{1}{|\mathcal{I}|} \sum_{r \in \mathcal{I}} r^{-1}
+
+.. warning::
+
+    It has been argued that the mean reciprocal rank has theoretical flaws by [fuhr2018]_. However, this opinion
+    is not undisputed, cf. [sakai2021]_.
+
+Despite its flaws, MRR is still often used during early stopping due to its behavior related to low rank values.
+While the hits @ k ignores changes among high rank values completely and the mean rank changes uniformly
+across the full value range, the mean reciprocal rank is more affected by changes of low rank values than high ones
+(without disregarding them completely like hits @ k does for low rank values)
+Therefore, it can be considered as soft a version of hits @ k that is less sensitive to outliers.
+It is bound on $(0, 1]$ where closer to 1 is better.
+
+Inverse Geometric Mean Rank
+***************************
+The mean rank corresponds to the arithmetic mean, and tends to be more affected by high rank values.
+The mean reciprocal rank corresponds to the harmonic mean, and tends to be more affected by low rank values.
+The remaining Pythagorean mean, the geometric mean, lies in the center and therefore could better balance these biases.
+Therefore, the inverse geometric mean rank (IGMR) is defined as:
+
+.. math::
+
+    \text{score} = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
+
+.. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
+
+Adjusted Rank-Based Metrics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Typical rank-based metrics are affected by the number of entities in knowledge graphs, therefore
+making results not comparable. The following adjustments were proposed or inspired by [berrendorf2020]_
+in order to make the metrics invariant to number of entities.
+
+The expectation and variance of a discrete uniform variable $X \sim \mathcal{U}(a, b)$ are respectively
+$\mathbb{E}\left[X\right] = \frac{b+a}{2}$ and $\text{Var}\left[X\right] = \frac{\left( b-a+1\right)^2}{12}$.
+We assume discrete uniform distribution over the ranks such that
+$r_i \sim \mathcal{U}(1, N_i) \in [1,\ldots,N_i]$.
+While the upper bound $N_i$ *may* vary by ranking task $i$, e.g., due to filtered evaluation, we assume
+it remains constant throughout the following derivations such that $\forall i: N_i = n$.
+We use $\doteq$ to denote equivalences asserted under this assumption.
+
+Adjusted Mean Rank
+******************
+The expectation of an inverse-uniform distributed variable $\frac{1}{X} \sim \mathcal{U}(\frac{1}{a},\frac{1}{b})$
+is $\mathbb{E}\left[\frac{1}{X}\right] = \frac{\ln b - \ln a}{b - a}$.
+Given our uniformly distributed variable $r_i$  with parameters $a=1$ and $b=N_i$ and its corresponding
+inverse-uniform distributed variable $r_i^{-1}$, we get:
+
+.. math::
+
+    \mathbb{E}\left[r_i^{-1}\right]
+    = \frac{\ln 1 - \ln N_i}{N_i - 1}
+    = \frac{\ln N_i}{N_i - 1}
+    \doteq \frac{\ln n}{n - 1}
+
+
+The expected value of the mean rank is then derived like:
+
+.. math::
+
+    \mathbb{E}\left[\text{MRR}\right]
+    = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
+    = \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right]
+    = \mathbb{E}\left[r_i^{-1}\right]
+    \doteq \frac{\ln n}{n - 1}
+
+The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as the ratio
+of the mean rank to the expected mean rank
+
+.. math::
+
+    \text{MRR}^{*}(r_1,\ldots,r_n) = \frac{\text{MRR}(r_1,\ldots,r_n)}{\mathbb{E}\left[\text{MRR}\right] }
+
+It lies on the open interval $(0, 2)$ where lower is better.
+
+Adjusted Mean Rank Index
+************************
+The adjusted mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
+more intuitive.
+
+.. math::
+
+    \text{score} = 1 - \frac{MR - 1}{\mathbb{E}\left[MR - 1\right]} = \frac{2 \sum_{i=1}^{n} (r_{i} - 1)}{\sum_{i=1}^{n} (|\mathcal{S}_i|)}
+
+The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
+"""
 import math
 from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
