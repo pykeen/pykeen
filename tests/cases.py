@@ -52,7 +52,7 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
-from pykeen.evaluation import Evaluator, MetricResults
+from pykeen.evaluation import Evaluator, MetricResults, evaluator_resolver
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.metrics import rank_based_metric_resolver
 from pykeen.metrics.ranking import (
@@ -1849,6 +1849,19 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     ):
         logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
 
+    def test_pipeline(self):
+        """Test interaction with pipeline."""
+        pipeline(
+            training=self.factory,
+            testing=self.factory,
+            model="distmult",
+            evaluator=evaluator_resolver.normalize_cls(self.cls),
+            evaluator_kwargs=self.instance_kwargs,
+            training_kwargs=dict(
+                num_epochs=1,
+            ),
+        )
+
 
 class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelection]):
     """Tests for anchor selection."""
@@ -2088,10 +2101,10 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         else:
             self.assertLessEqual(y, x)
 
-    def test_expectation(self):
+    def _test_expectation(self, weights: Optional[numpy.ndarray]):
         """Test the numeric expectation is close to the closed form one."""
         try:
-            closed = self.instance.expected_value(num_candidates=self.num_candidates)
+            closed = self.instance.expected_value(num_candidates=self.num_candidates, weights=weights)
         except NoClosedFormError as error:
             raise SkipTest("no implementation of closed-form expectation") from error
 
@@ -2100,14 +2113,23 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
+            weights=weights,
         )
         self.assertLessEqual(low, closed)
         self.assertLessEqual(closed, high)
 
-    def test_variance(self):
+    def test_expectation(self):
+        """Test the numeric expectation is close to the closed form one."""
+        self._test_expectation(weights=None)
+
+    def test_expectation_weighted(self):
+        """Test for weighted expectation."""
+        self._test_expectation(weights=self._generate_weights())
+
+    def _test_variance(self, weights: Optional[numpy.ndarray]):
         """Test the numeric variance is close to the closed form one."""
         try:
-            closed = self.instance.variance(num_candidates=self.num_candidates)
+            closed = self.instance.variance(num_candidates=self.num_candidates, weights=weights)
         except NoClosedFormError as error:
             raise SkipTest("no implementation of closed-form variance") from error
 
@@ -2119,9 +2141,28 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
+            weights=weights,
         )
         self.assertLessEqual(low, closed)
         self.assertLessEqual(closed, high)
+
+    def test_variance(self):
+        """Test the numeric variance is close to the closed form one."""
+        self._test_variance(weights=None)
+
+    def test_variance_weighted(self):
+        """Test the weighted numeric variance is close to the closed form one."""
+        self._test_variance(weights=self._generate_weights())
+
+    def _generate_weights(self):
+        """Generate weights."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+        # generate random weights such that sum = n
+        generator = numpy.random.default_rng(seed=21)
+        weights = generator.random(size=self.num_candidates.shape)
+        weights = self.num_ranks * weights / weights.sum()
+        return weights
 
     def test_different_to_base_metric(self):
         """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
@@ -2133,6 +2174,46 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
             base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
         )
+
+    def test_weights_direction(self):
+        """Test monotonicity of weighting."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+
+        # for sanity checking: give the largest weight to best rank => should improve
+        idx = self.ranks.argmin()
+        weights = numpy.ones_like(self.ranks, dtype=float)
+        weights[idx] = 2.0
+        weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
+        unweighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=None)
+        if self.instance.increasing:  # increasing = larger is better => weighted should be better
+            self.assertLessEqual(unweighted, weighted)
+        else:
+            self.assertLessEqual(weighted, unweighted)
+
+    def test_weights_coherence(self):
+        """Test coherence for weighted metrics & metric in repeated array."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+
+        # generate two versions
+        generator = numpy.random.default_rng(seed=21)
+        repeats = generator.integers(low=1, high=10, size=self.ranks.shape)
+
+        # 1. repeat each rank/candidate pair a random number of times
+        repeated_ranks, repeated_num_candidates = [], []
+        for rank, num_candidates, repeat in zip(self.ranks, self.num_candidates, repeats):
+            repeated_ranks.append(numpy.full(shape=(repeat,), fill_value=rank))
+            repeated_num_candidates.append(numpy.full(shape=(repeat,), fill_value=num_candidates))
+        repeated_ranks = numpy.concatenate(repeated_ranks)
+        repeated_num_candidates = numpy.concatenate(repeated_num_candidates)
+        value_repeat = self.instance(ranks=repeated_ranks, num_candidates=repeated_num_candidates, weights=None)
+
+        # 2. do not repeat, but assign a corresponding weight
+        weights = repeats.astype(float)
+        value_weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
+
+        self.assertAlmostEqual(value_repeat, value_weighted, delta=2)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):

@@ -107,3 +107,6 @@ References
 
 .. [yu2021] Yu, L., *et al* (2021). `TripleRE: Knowledge Graph Embeddings via triple Relation Vectors
    <https://vixra.org/abs/2112.0095>`_. *viXra*, 2112.0095.
+
+.. [hoyt2022] Hoyt, C.T., *et al.* (2022) `A Unified Framework for Rank-based Evaluation Metrics for
+   Link Prediction in Knowledge Graphs <https://arxiv.org/abs/2203.07544>`_. *arXiv*, 2203.07544.

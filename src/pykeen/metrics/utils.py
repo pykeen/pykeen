@@ -5,13 +5,20 @@
 from dataclasses import dataclass
 from typing import ClassVar, Collection, Iterable, Optional
 
+import numpy as np
 from docdata import get_docdata
+from scipy import stats
 
 from ..utils import camel_to_snake
 
 __all__ = [
     "Metric",
     "ValueRange",
+    "stable_product",
+    "weighted_mean_expectation",
+    "weighted_mean_variance",
+    "weighted_harmonic_mean",
+    "weighted_median",
 ]
 
 
@@ -92,6 +99,15 @@ class Metric:
     #: synonyms for this metric
     synonyms: ClassVar[Collection[str]] = tuple()
 
+    #: whether the metric supports weights
+    supports_weights: ClassVar[bool] = False
+
+    #: whether there is a closed-form solution of the expectation
+    closed_expectation: ClassVar[bool] = False
+
+    #: whether there is a closed-form solution of the variance
+    closed_variance: ClassVar[bool] = False
+
     @classmethod
     def get_description(cls) -> str:
         """Get the description."""
@@ -122,10 +138,144 @@ class Metric:
         left = docdata.get("tight_lower", cls.value_range._coerce(cls.value_range.lower, low=True))
         right_bracket = ")" if cls.value_range.upper is None or not cls.value_range.upper_inclusive else "]"
         right = docdata.get("tight_upper", cls.value_range._coerce(cls.value_range.upper, low=False))
-        return f"{left_bracket}{left}, {right}{right_bracket}"
+        return f"{left_bracket}{left}, {right}{right_bracket}".replace("inf", "∞")
 
     def _extra_repr(self) -> Iterable[str]:
         return []
 
     def __repr__(self) -> str:  # noqa:D105
         return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
+
+
+def weighted_mean_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
+    r"""
+    Calculate the expectation of a weighted sum of variables with given individual expected value.
+
+    .. math::
+        \mathbb{E}\left[\sum \limits_{i=1}^{n} w_i x_i\right]
+            = \sum \limits_{i=1}^{n} w_i \mathbb{E}\left[x_i\right]
+
+    where $w_i = \frac{1}{n}$, if no explicit weights are given. Moreover, the weights are normalized such that
+    $\sum w_i = 1$.
+
+    :param individual:
+        the individual variables' expectations, $\mathbb{E}[x_i]$
+    :param weights:
+        the individual variables' weights
+
+    :return:
+        the variance of the weighted mean
+    """
+    return np.average(individual, weights=weights).item()
+
+
+def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
+    r"""
+    Calculate the variance of a weighted mean of variables with given individual variances.
+
+    .. math::
+        \mathbb{V}\left[\sum \limits_{i=1}^{n} w_i x_i\right]
+            = \sum \limits_{i=1}^{n} w_i^2 \mathbb{V}\left[x_i\right]
+
+    where $w_i = \frac{1}{n}$, if no explicit weights are given. Moreover, the weights are normalized such that
+    $\sum w_i = 1$.
+
+    :param individual:
+        the individual variables' variances, $\mathbb{V}[x_i]$
+    :param weights:
+        the individual variables' weights
+
+    :return:
+        the variance of the weighted mean
+    """
+    n = individual.size
+    if weights is None:
+        return individual.mean() / n
+    weights = weights / weights.sum()
+    return (individual * weights**2).sum().item()
+
+
+def stable_product(a: np.ndarray, is_log: bool = False) -> np.ndarray:
+    r"""
+    Compute the product using the log-trick for increased numerical stability.
+
+    .. math::
+
+        \prod \limits_{i=1}^{n} a_i
+            = \exp \log \prod \limits_{i=1}^{n} a_i
+            = \exp \sum \limits_{i=1}^{n} \log a_i
+
+    To support negative values, we additionally use
+
+    .. math::
+
+        a_i = \textit{sign}(a_i) * \textit{abs}(a_i)
+
+    and
+
+    .. math::
+
+        \prod \limits_{i=1}^{n} a_i
+            = \left(\prod \limits_{i=1}^{n} \textit{sign}(a_i)\right)
+                \cdot \left(\prod \limits_{i=1}^{n} \textit{abs}(a_i)\right)
+
+    where the first part is computed without the log-trick.
+
+    :param a:
+        the array
+    :param is_log:
+        whether the array already contains the logarithm of the elements
+
+    :return:
+        the product of elements
+    """
+    if is_log:
+        sign = 1
+    else:
+        sign = np.prod(np.copysign(np.ones_like(a), a))
+        a = np.log(np.abs(a))
+    return sign * np.exp(np.sum(a))
+
+
+def weighted_harmonic_mean(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
+    """
+    Calculate weighted harmonic mean.
+
+    :param a:
+        the array
+    :param weights:
+        the weight for individual array members
+
+    :return:
+        the weighted harmonic mean over the array
+
+    .. seealso::
+        https://en.wikipedia.org/wiki/Harmonic_mean#Weighted_harmonic_mean
+    """
+    if weights is None:
+        return stats.hmean(a)
+
+    # normalize weights
+    weights = weights.astype(float)
+    weights = weights / weights.sum()
+    # calculate weighted harmonic mean
+    return np.reciprocal(np.average(np.reciprocal(a.astype(float)), weights=weights))
+
+
+def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
+    """Calculate weighted median."""
+    if weights is None:
+        return np.median(a)
+
+    # calculate cdf
+    indices = np.argsort(a)
+    s_ranks = a[indices]
+    s_weights = weights[indices]
+    cdf = np.cumsum(s_weights)
+    cdf /= cdf[-1]
+    # determine value at p=0.5
+    idx = np.searchsorted(cdf, v=0.5)
+    # special case for exactly 0.5
+    if cdf[idx] == 0.5:
+        return s_ranks[idx : idx + 2].mean()
+    return s_ranks[idx]

@@ -1,6 +1,89 @@
 # -*- coding: utf-8 -*-
 
-"""Ranking metrics."""
+"""
+Ranking metrics.
+
+This module comprises various rank-based metrics, which get an array of individual ranks as input, as summarize them
+into a single-figure metric measuring different aspects of ranking performance.
+
+We can generally distinguish:
+
+Base Metrics
+------------
+These metrics directly operate on the ranks:
+
+The following metrics measures summarize the central tendency of ranks
+
+- :class:`pykeen.metrics.ranking.ArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.GeometricMeanRank`
+- :class:`pykeen.metrics.ranking.HarmonicMeanRank`
+- :class:`pykeen.metrics.ranking.MedianRank`
+
+The Hits at K metric is closely related to information retrieval and measures the fraction of times when the correct
+result is in the top-$k$ ranked entries, i.e., the rank is at most $k$
+
+- :class:`pykeen.metrics.ranking.HitsAtK`
+
+The next metrics summarize the dispersion of ranks
+
+- :class:`pykeen.metrics.ranking.MedianAbsoluteDeviation`
+- :class:`pykeen.metrics.ranking.Variance`
+- :class:`pykeen.metrics.ranking.StandardDeviation`
+
+and finally there is a simple metric to store the number of ranks which where aggregated
+
+- :class:`pykeen.metrics.ranking.Count`
+
+Inverse Metrics
+---------------
+The inverse metrics are reciprocals of the central tendency measures. They offer the advantage of having a fixed value
+range of $(0, 1]$, with a known optimal value of $1$:
+
+- :class:`pykeen.metrics.ranking.InverseArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.InverseGeometricMeanRank`
+- :class:`pykeen.metrics.ranking.InverseHarmonicMeanRank`
+- :class:`pykeen.metrics.ranking.InverseMedianRank`
+
+Adjusted Metrics
+----------------
+Adjusted metrics build upon base metrics, but adjust them for chance, cf. [berrendorf2020]_ and [hoyt2022]_. All
+adjusted metrics derive from :class:`pykeen.metrics.ranking.DerivedRankBasedMetric` and, for a given evaluation set,
+are affine transformations of the base metric with dataset-dependent, but fixed transformation constants. Thus, they
+can also be computed when the model predictions are not available anymore, but the evaluation set is known.
+
+Expectation-Normalized Metrics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+These metrics divide the metric by its expected value under random ordering. Thus, their expected value is always 1
+irrespective of the evaluation set. They derive from :class:`pykeen.metrics.ranking.ExpectationNormalizedMetric`, and
+there is currently only a single implementation:
+
+- :class:`pykeen.metrics.ranking.AdjustedArithmeticMeanRank`
+
+Re-indexed Metrics
+~~~~~~~~~~~~~~~~~~
+Re-indexed metrics subtract the expected value, and then normalize the optimal value to be 1. Thus, their expected value
+under random ordering is 0, their optimal value is 1, and larger values indicate better results. The classes derive from
+:class:`pykeen.metrics.ranking.ReindexedMetric`, and the following implementations are available:
+
+- :class:`pykeen.metrics.ranking.AdjustedHitsAtK`
+- :class:`pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex`
+- :class:`pykeen.metrics.ranking.AdjustedGeometricMeanRankIndex`
+- :class:`pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank`
+
+z-Adjusted Metrics
+~~~~~~~~~~~~~~~~~~
+The final type of adjusted metrics uses the expected value as well as the variance of the metric under random ordering
+to normalize the metrics similar to `z-score normalization <https://en.wikipedia.org/wiki/Standard_score>`_.
+The z-score normalized metrics have an expected value of 0, and a variance of 1, and positive values indicate better
+results. While their value range is unbound, it can be interpreted through the lens of the inverse cumulative
+density function of the standard Gaussian distribution to retrieve a *p*-value. The classes derive from
+:class:`pykeen.metrics.ranking.ZMetric`, and the following implementations are available:
+
+- :class:`pykeen.metrics.ranking.ZArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.ZGeometricMeanRank`
+- :class:`pykeen.metrics.ranking.ZHitsAtK`
+- :class:`pykeen.metrics.ranking.ZInverseHarmonicMeanRank`
+"""
 import math
 from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
@@ -10,7 +93,15 @@ from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
 
-from .utils import Metric, ValueRange
+from .utils import (
+    Metric,
+    ValueRange,
+    stable_product,
+    weighted_harmonic_mean,
+    weighted_mean_expectation,
+    weighted_mean_variance,
+    weighted_median,
+)
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 from ..utils import logcumsumexp
 
@@ -30,6 +121,8 @@ __all__ = [
     "InverseArithmeticMeanRank",
     #
     "GeometricMeanRank",
+    "AdjustedGeometricMeanRankIndex",
+    "ZGeometricMeanRank",
     "InverseGeometricMeanRank",
     #
     "HarmonicMeanRank",
@@ -57,6 +150,7 @@ __all__ = [
     #
     "HITS_METRICS",
 ]
+
 EPSILON = 1.0e-12
 
 
@@ -128,7 +222,9 @@ class RankBasedMetric(Metric):
     needs_candidates: ClassVar[bool] = False
 
     @abstractmethod
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:
         """
         Evaluate the metric.
 
@@ -136,6 +232,8 @@ class RankBasedMetric(Metric):
             the individual ranks
         :param num_candidates: shape: s
             the number of candidates for each individual ranking task
+        :param weights: shape: s
+            the weights for the individual ranks
         """
         raise NotImplementedError
 
@@ -143,6 +241,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: int,
+        weights: Optional[np.ndarray] = None,
         generator: Optional[np.random.Generator] = None,
         memory_intense: bool = True,
     ) -> np.ndarray:
@@ -153,6 +252,8 @@ class RankBasedMetric(Metric):
             the number of candidates for each ranking task
         :param num_samples:
             the number of samples
+        :param weights: shape: s
+            the weights for the individual ranking tasks
         :param generator:
             a random state for reproducibility
         :param memory_intense:
@@ -170,10 +271,15 @@ class RankBasedMetric(Metric):
                 axis=1,
                 arr=generate_ranks(prefix_shape=(num_samples,), num_candidates=num_candidates, seed=generator),
                 num_candidates=num_candidates,
+                weights=weights,
             )
         return np.asanyarray(
             a=[
-                self(ranks=generate_ranks(num_candidates=num_candidates, seed=generator), num_candidates=num_candidates)
+                self(
+                    ranks=generate_ranks(num_candidates=num_candidates, seed=generator),
+                    num_candidates=num_candidates,
+                    weights=weights,
+                )
                 for _ in range(num_samples)
             ]
         )
@@ -205,12 +311,7 @@ class RankBasedMetric(Metric):
         vs = np.asanyarray([func(xs[generator.integers(n, size=(n,))]) for _ in range(n_boot)])
         return np.percentile(vs, p)
 
-    def numeric_expected_value(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: int,
-        **kwargs,
-    ) -> float:
+    def numeric_expected_value(self, **kwargs) -> float:
         r"""
         Compute expected metric value by summation.
 
@@ -218,12 +319,8 @@ class RankBasedMetric(Metric):
         distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
         ranking task $r_i$.
 
-        :param num_candidates:
-            the number of candidates for each individual rank computation
-        :param num_samples:
-            the number of samples to use for simulation
         :param kwargs:
-            additional keyword-based parameters passed to :func:`get_sampled_values`
+            keyword-based parameters passed to :func:`get_sampled_values`
 
         :return:
             The estimated expected value of this metric
@@ -233,7 +330,7 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).mean().item()
+        return self.get_sampled_values(**kwargs).mean().item()
 
     def numeric_expected_value_with_ci(self, **kwargs) -> np.ndarray:
         """Estimate expected value with confidence intervals."""
@@ -243,6 +340,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:
         r"""Compute expected metric value.
@@ -256,6 +354,8 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation, if no closed form
             expected value is implemented
+        :param weights: shape: s
+            the weights for the individual ranking tasks
         :param kwargs:
             additional keyword-based parameters passed to :func:`get_sampled_values`,
             if no closed form solution is available
@@ -272,26 +372,19 @@ class RankBasedMetric(Metric):
         """
         if num_samples is None:
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
-        return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
+        return self.numeric_expected_value(
+            num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
+        )
 
-    def numeric_variance(
-        self,
-        num_candidates: np.ndarray,
-        num_samples: int,
-        **kwargs,
-    ) -> float:
+    def numeric_variance(self, **kwargs) -> float:
         r"""Compute variance by summation.
 
         The variance is computed under the assumption that each individual rank follows a discrete uniform
         distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
         ranking task $r_i$.
 
-        :param num_candidates:
-            the number of candidates for each individual rank computation
-        :param num_samples:
-            the number of samples to use for simulation
         :param kwargs:
-            additional keyword-based parameters passed to :func:`get_sampled_values`
+            keyword-based parameters passed to :func:`get_sampled_values`
 
         :return:
             The estimated variance of this metric
@@ -301,9 +394,7 @@ class RankBasedMetric(Metric):
             Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
-        return (
-            self.get_sampled_values(num_candidates=num_candidates, num_samples=num_samples, **kwargs).var(ddof=1).item()
-        )
+        return self.get_sampled_values(**kwargs).var(ddof=1).item()
 
     def numeric_variance_with_ci(self, **kwargs) -> np.ndarray:
         """Estimate variance with confidence intervals."""
@@ -313,6 +404,7 @@ class RankBasedMetric(Metric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:
         r"""Compute variance.
@@ -326,6 +418,8 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation, if no closed form
             expected value is implemented
+        :param weights: shape: s
+            the weights for the individual ranking tasks
         :param kwargs:
             additional keyword-based parameters passed to :func:`get_sampled_values`,
             if no closed form solution is available
@@ -343,12 +437,13 @@ class RankBasedMetric(Metric):
         """
         if num_samples is None:
             raise NoClosedFormError("Numeric estimation requires to specify a number of samples.")
-        return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs)
+        return self.numeric_variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
 
     def std(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:
         """
@@ -359,6 +454,8 @@ class RankBasedMetric(Metric):
         :param num_samples:
             the number of samples to use for simulation, if no closed form
             expected value is implemented
+        :param weights: shape: s
+            the weights for the individual ranking tasks
         :param kwargs:
             additional keyword-based parameters passed to :func:`variance`,
 
@@ -367,7 +464,9 @@ class RankBasedMetric(Metric):
 
         For a detailed explanation, cf. :func:`RankBasedMetric.variance`.
         """
-        return math.sqrt(self.variance(num_candidates=num_candidates, num_samples=num_samples, **kwargs))
+        return math.sqrt(
+            self.variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
+        )
 
 
 def _safe_divide(x: float, y: float) -> float:
@@ -438,14 +537,20 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         """
         self.base = rank_based_metric_resolver.make(base_cls or self.base_cls, pos_kwargs=kwargs)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         if num_candidates is None:
             raise ValueError(f"{self.__class__.__name__} requires number of candidates.")
         return self.adjust(
-            base_metric_result=self.base(ranks=ranks, num_candidates=num_candidates), num_candidates=num_candidates
+            base_metric_result=self.base(ranks=ranks, num_candidates=num_candidates, weights=weights),
+            num_candidates=num_candidates,
+            weights=weights,
         )
 
-    def adjust(self, base_metric_result: float, num_candidates: np.ndarray) -> float:
+    def adjust(
+        self, base_metric_result: float, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> float:
         """
         Adjust base metric results based on the number of candidates.
 
@@ -453,6 +558,8 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
             the result of the base metric
         :param num_candidates:
             the number of candidates
+        :param weights: shape: s
+            the weights for the individual ranking tasks
 
         :return:
             the adjusted metric
@@ -462,44 +569,52 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
             since the adjustment only depends on the number of candidates, but not the ranks of the predictions, this
             method can also be used to adjust published results without access to the trained models.
         """
-        parameters = self.get_coefficients(num_candidates=num_candidates)
+        parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
         return parameters.scale * base_metric_result + parameters.offset
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # since scale and offset are constant for a given number of candidates, we have
         # E[scale * M + offset] = scale * E[M] + offset
         return self.adjust(
             base_metric_result=self.base.expected_value(
-                num_candidates=num_candidates, num_samples=num_samples, **kwargs
+                num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
             ),
             num_candidates=num_candidates,
+            weights=weights,
         )
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
-        parameters = self.get_coefficients(num_candidates=num_candidates)
+        parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
         return parameters.scale**2.0 * self.base.variance(
-            num_candidates=num_candidates, num_samples=num_samples, **kwargs
+            num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
         )
 
     @abstractmethod
-    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:
+    def get_coefficients(
+        self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> AffineTransformationParameters:
         """
         Compute the scaling coefficients.
 
         :param num_candidates:
             the number of candidates
+        :param weights:
+            the weights for the individual ranking tasks
+
 
         :return:
             a tuple (scale, offset)
@@ -536,10 +651,14 @@ class ZMetric(DerivedRankBasedMetric):
     #: Z-adjusted metrics can only be applied to realistic ranks
     supported_rank_types = (RANK_REALISTIC,)
     value_range = ValueRange(lower=None, upper=None)
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
-        mean = self.base.expected_value(num_candidates=num_candidates)
-        std = self.base.std(num_candidates=num_candidates)
+    def get_coefficients(
+        self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> AffineTransformationParameters:  # noqa: D102
+        mean = self.base.expected_value(num_candidates=num_candidates, weights=weights)
+        std = self.base.std(num_candidates=num_candidates, weights=weights)
         scale = _safe_divide(1.0, std)
         if not self.base.increasing:
             scale = -scale
@@ -550,6 +669,7 @@ class ZMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 0.0
@@ -559,6 +679,7 @@ class ZMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 1.0
@@ -582,15 +703,20 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
     .. warning:: This requires a closed-form solution to the expected value
     """
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
+    closed_expectation: ClassVar[bool] = True
+
+    def get_coefficients(
+        self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> AffineTransformationParameters:  # noqa: D102
         return AffineTransformationParameters(
-            scale=_safe_divide(1, self.base.expected_value(num_candidates=num_candidates))
+            scale=_safe_divide(1, self.base.expected_value(num_candidates=num_candidates, weights=weights))
         )
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         return 1.0  # centered
@@ -617,9 +743,12 @@ class ReindexedMetric(DerivedRankBasedMetric):
     increasing = True
     #: Expectation/maximum reindexed metrics can only be applied to realistic ranks
     supported_rank_types = (RANK_REALISTIC,)
+    closed_expectation: ClassVar[bool] = True
 
-    def get_coefficients(self, num_candidates: np.ndarray) -> AffineTransformationParameters:  # noqa: D102
-        mean = self.base.expected_value(num_candidates=num_candidates)
+    def get_coefficients(
+        self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> AffineTransformationParameters:  # noqa: D102
+        mean = self.base.expected_value(num_candidates=num_candidates, weights=weights)
         scale = _safe_divide(1.0, 1.0 - mean)
         offset = -scale * mean
         return AffineTransformationParameters(scale=scale, offset=offset)
@@ -628,6 +757,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         # should be exactly 0.0
@@ -637,6 +767,23 @@ class ReindexedMetric(DerivedRankBasedMetric):
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
     r"""The (arithmetic) mean rank.
+
+    The mean rank (MR) computes the arithmetic mean over all individual ranks.
+    Denoting the set of individual ranks as $\mathcal{I}$, it is given as:
+
+    .. math::
+
+        MR =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
+
+    It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
+    under a certain cutoff and therefore reflects average performance. With PyKEEN's standard 1-based indexing,
+    the mean rank lies on the interval $[1, \infty)$ where lower is better.
+
+    .. warning::
+
+        While the arithmetic mean rank is interpretable, the mean rank is dependent on the number of candidates.
+        A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
+        but incredibly poor performance for a candidate set size of 20.
 
     For the expected value, we have
 
@@ -662,29 +809,38 @@ class ArithmeticMeanRank(RankBasedMetric):
 
     name = "Mean Rank (MR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
-    increasing = False
+    increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("mean_rank", "mr")
+    supports_weights: ClassVar[bool] = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.asanyarray(ranks).mean().item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        return np.average(np.asanyarray(ranks), weights=weights).item()
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        return 0.5 * (1 + np.asanyarray(num_candidates).mean().item())
+        num_candidates = np.asanyarray(num_candidates)
+        individual_expectation = 0.5 * (num_candidates + 1)
+        return weighted_mean_expectation(individual=individual_expectation, weights=weights)
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        x = np.asanyarray(num_candidates)
-        n = x.size
-        return ((x**2).sum().item() - n) / (12 * n**2)
+        num_candidates = np.asanyarray(num_candidates)
+        individual_variance = (num_candidates**2 - 1) / 12.0
+        return weighted_mean_variance(individual=individual_variance, weights=weights)
 
 
 @parse_docdata
@@ -696,9 +852,10 @@ class ZArithmeticMeanRank(ZMetric):
     description: The z-scored mean rank
     """
 
-    name = "z-Mean Rank (ZMR)"
+    name = "z-Mean Rank (zMR)"
     synonyms: ClassVar[Collection[str]] = ("zamr", "zmr")
     base_cls = ArithmeticMeanRank
+    supports_weights: ClassVar[bool] = ArithmeticMeanRank.supports_weights
 
 
 @parse_docdata
@@ -714,32 +871,62 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
     synonyms: ClassVar[Collection[str]] = ("iamr",)
+    supports_weights = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(np.asanyarray(ranks).mean()).item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        return np.reciprocal(np.average(np.asanyarray(ranks), weights=weights)).item()
 
 
 @parse_docdata
 class GeometricMeanRank(RankBasedMetric):
-    r"""The geometric mean rank.
+    r"""The (weighted) geometric mean rank.
+
+    It is given by
+
+    .. math::
+
+        M = \left(\prod \limits_{i=1}^{m} r_i^{w_i}\right)^{1/w}
+
+    with $w = \sum \limits_{i=1}^{m} w_i$. The unweighted GMR is obtained by setting $w_i = 1$.
 
     For computing the expected value, we first observe that
 
     .. math::
 
-        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[m]{\prod \limits_{i=1}^{m} r_i}\right] \\
-                      &= \prod \limits_{i=1}^{m} \mathbb{E}[\sqrt[m]{r_i}] \\
-                      &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[\sqrt[m]{r_i}]
+        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[w]{\prod \limits_{i=1}^{m} r_i^{w_i}}\right] \\
+                      &= \prod \limits_{i=1}^{m} \mathbb{E}[r_i^{w_i/w}] \\
+                      &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}]
 
-    Moreover, we have
+    where the last steps permits a numerically more stable computation. Moreover, we have
 
     .. math::
 
-        \log \mathbb{E}[\sqrt[m]{r_i}]
-            &= \log \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \sqrt[m]{i} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \sqrt[m]{i} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp \log \sqrt[m]{i} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{i=1}^{N_i} \exp ( \frac{1}{m} \cdot \log i )
+        \log \mathbb{E}[r_i^{w_i/w}]
+            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp \log j^{w_i/w} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp ( \frac{w_i}{w} \cdot \log j )
+
+    For the second summand in the last line, we observe a log-sum-exp term, with known numerically stable
+    implementation.
+
+    Alternatively, we can write
+
+    .. math::
+        \log \mathbb{E}[r_i^{w_i/w}]
+            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
+            &= \log \frac{H_{-w_i/w}(N_i)}{N_i} \\
+            &= \log H_{-w_i/w}(N_i) - \log N_i
+
+    .. math::
+        \mathbb{E}[M]
+            &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}] \\
+            &= \exp \sum \limits_{i=1}^{m} (\log H_{-w_i/w}(N_i) - \log N_i) \\
+            &= \exp \sum \limits_{i=1}^{m} \log H_{-w_i/w}(N_i) - \exp \sum \limits_{i=1}^{m} \log N_i
+
+    where $H_p(n)$ denotes the generalized harmonic number, cf. :func:`generalized_harmonic_numbers`.
     ---
     link: https://arxiv.org/abs/2203.07544
     description: The geometric mean over all ranks.
@@ -749,30 +936,106 @@ class GeometricMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("gmr",)
+    supports_weights = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return stats.gmean(ranks).item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        return stats.gmean(ranks, weights=weights).item()
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
+        is_log, individual = self._individual_expectation(num_candidates=num_candidates, weights=weights)
+        return stable_product(individual, is_log=is_log).item()
+
+    def variance(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
+        **kwargs,
+    ) -> float:  # noqa: D102
+        # V (prod x_i) = prod (V[x_i] - E[x_i]^2) - prod(E[x_i])^2
+        is_log, individual_expectation = self._individual_expectation(num_candidates=num_candidates, weights=weights)
+        if is_log:
+            individual_expectation = np.exp(individual_expectation)
+        individual_variance = self._individual_variance(
+            num_candidates=num_candidates, weights=weights, individual_expectation=individual_expectation
+        )
+        return (
+            stable_product(individual_variance + individual_expectation**2)
+            - stable_product(individual_expectation) ** 2
+        )
+
+    @classmethod
+    def _individual_variance(
+        cls, num_candidates: np.ndarray, weights: np.ndarray, individual_expectation: np.ndarray
+    ) -> np.ndarray:
+        # use V[x] = E[x^2] - E[x]^2
+        x2 = (
+            np.exp(cls._log_individual_expectation_no_weight(num_candidates=num_candidates, factor=2.0))
+            if weights is None
+            else cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights, factor=2.0)
+        )
+        return x2 - individual_expectation**2
+
+    @classmethod
+    def _individual_expectation(
+        cls, num_candidates: np.ndarray, weights: Optional[np.ndarray]
+    ) -> Tuple[bool, np.ndarray]:
+        if weights is None:
+            return True, cls._log_individual_expectation_no_weight(num_candidates=num_candidates)
+        return False, cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)
+
+    @staticmethod
+    def _individual_expectation_weighted(
+        num_candidates: np.ndarray, weights: np.ndarray, factor: float = 1.0
+    ) -> np.ndarray:
+        weights = factor * weights / weights.sum()
+        x = np.empty_like(weights)
+        # group by same weight -> compute H_w(n) for multiple n at once
+        unique_weights, inverse = np.unique(weights, return_inverse=True)
+        for i, w in enumerate(unique_weights):
+            mask = inverse == i
+            nc = num_candidates[mask]
+            h = generalized_harmonic_numbers(nc.max(), p=w)
+            x[mask] = h[nc - 1] / nc
+        return x
+
+    @staticmethod
+    def _log_individual_expectation_no_weight(num_candidates: np.ndarray, factor: float = 1.0) -> np.ndarray:
         m = num_candidates.size
         # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
         max_val = num_candidates.max()
         x = np.arange(1, max_val + 1, dtype=float)
-        x = np.log(x) / m
+        x = factor * np.log(x) / m
         x = logcumsumexp(x)
         # now select from precomputed cumulative sums and aggregate
         x = x[num_candidates - 1] - np.log(num_candidates)
-        return np.exp(x.sum())
+        return x
 
 
 @parse_docdata
 class InverseGeometricMeanRank(RankBasedMetric):
-    """The inverse geometric mean rank.
+    r"""The inverse geometric mean rank.
+
+    The mean rank corresponds to the arithmetic mean, and tends to be more affected by high rank values.
+    The mean reciprocal rank corresponds to the harmonic mean, and tends to be more affected by low rank values.
+    The remaining Pythagorean mean, the geometric mean, lies in the center and therefore could better balance these
+    biases. Therefore, the inverse geometric mean rank (IGMR) is defined as:
+
+    .. math::
+
+        IGMR = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
+
+    .. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
 
     ---
     link: https://arxiv.org/abs/2203.07544
@@ -783,9 +1046,12 @@ class InverseGeometricMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
     synonyms: ClassVar[Collection[str]] = ("igmr",)
+    supports_weights = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(stats.gmean(ranks)).item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        return np.reciprocal(stats.gmean(ranks, weights=weights)).item()
 
 
 @parse_docdata
@@ -801,12 +1067,15 @@ class HarmonicMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("hmr",)
+    supports_weights = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return stats.hmean(ranks).item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        return weighted_harmonic_mean(a=ranks, weights=weights).item()
 
 
-def generalized_harmonic_numbers(n: int, p: int = -1) -> np.ndarray:
+def generalized_harmonic_numbers(n: int, p: float = -1.0) -> np.ndarray:
     r"""
     Calculate the generalized harmonic numbers from 1 to n (both inclusive).
 
@@ -863,6 +1132,25 @@ def harmonic_variances(n: int) -> np.ndarray:
 class InverseHarmonicMeanRank(RankBasedMetric):
     r"""The inverse harmonic mean rank.
 
+    The mean reciprocal rank (MRR) is the arithmetic mean of reciprocal ranks, and thus the inverse of the harmonic mean
+    of the ranks. It is defined as:
+
+    .. math::
+
+        IHMR = MRR =\frac{1}{|\mathcal{I}|} \sum_{r \in \mathcal{I}} r^{-1}
+
+    .. warning::
+
+        It has been argued that the mean reciprocal rank has theoretical flaws by [fuhr2018]_. However, this opinion
+        is not undisputed, cf. [sakai2021]_.
+
+    Despite its flaws, MRR is still often used during early stopping due to its behavior related to low rank values.
+    While the hits @ k ignores changes among high rank values completely and the mean rank changes uniformly
+    across the full value range, the mean reciprocal rank is more affected by changes of low rank values than high ones
+    (without disregarding them completely like hits @ k does for low rank values)
+    Therefore, it can be considered as soft a version of hits @ k that is less sensitive to outliers.
+    It is bound on $(0, 1]$ where closer to 1 is better.
+
     Let
 
     .. math::
@@ -914,36 +1202,39 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms: ClassVar[Collection[str]] = ("mean_reciprocal_rank", "mrr")
     increasing = True
+    supports_weights = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(ranks.astype(float)).mean().item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        return np.reciprocal(weighted_harmonic_mean(a=ranks, weights=weights)).item()
 
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        x = np.asanyarray(num_candidates)
-        n = x.max().item()
-        h = np.r_[0, generalized_harmonic_numbers(n)]
-        # individual ranks' expectation
-        x = h[num_candidates] / num_candidates
-        return x.mean().item()
+        num_candidates = np.asanyarray(num_candidates)
+        n = num_candidates.max().item()
+        expectation = generalized_harmonic_numbers(n, p=-1.0) / np.arange(1, n + 1)
+        individual = expectation[num_candidates - 1]
+        return weighted_mean_expectation(individual, weights)
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa:D102
-        x = np.asanyarray(num_candidates)
-        n = x.max().item()
-        vs = np.r_[0, harmonic_variances(n)]
-        # individual inverse ranks' variance
-        x = vs[x]
-        # rank aggregation
-        return x.sum().item() / x.size**2
+        num_candidates = np.asanyarray(num_candidates)
+        n = num_candidates.max().item()
+        individual = harmonic_variances(n)[num_candidates - 1]
+        return weighted_mean_variance(individual, weights)
 
 
 @parse_docdata
@@ -964,6 +1255,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexedMetric):
     synonyms: ClassVar[Collection[str]] = ("amrr", "aihmr", "adjusted_mrr", "adjusted_mean_reciprocal_rank")
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
     base_cls = InverseHarmonicMeanRank
+    supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
 
 
 @parse_docdata
@@ -975,9 +1267,25 @@ class ZInverseHarmonicMeanRank(ZMetric):
     description: The z-scored mean reciprocal rank
     """
 
-    name = "z-Mean Reciprocal Rank (ZMRR)"
+    name = "z-Mean Reciprocal Rank (zMRR)"
     synonyms: ClassVar[Collection[str]] = ("zmrr", "zihmr")
     base_cls = InverseHarmonicMeanRank
+    supports_weights: ClassVar[bool] = InverseHarmonicMeanRank.supports_weights
+
+
+@parse_docdata
+class ZGeometricMeanRank(ZMetric):
+    """The z geometric mean rank (zGMR).
+
+    ---
+    link: https://arxiv.org/abs/2203.07544
+    description: The z-scored geometric mean rank
+    """
+
+    name = "z-Geometric Mean Rank (zGMR)"
+    synonyms: ClassVar[Collection[str]] = ("zgmr",)
+    base_cls = GeometricMeanRank
+    supports_weights: ClassVar[bool] = GeometricMeanRank.supports_weights
 
 
 @parse_docdata
@@ -992,9 +1300,15 @@ class MedianRank(RankBasedMetric):
     name = "Median Rank"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
+    supports_weights = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.median(ranks).item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        if weights is None:
+            return np.median(ranks).item()
+
+        return weighted_median(a=ranks, weights=weights).item()
 
 
 @parse_docdata
@@ -1009,9 +1323,12 @@ class InverseMedianRank(RankBasedMetric):
     name = "Inverse Median Rank"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
+    supports_weights = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(np.median(ranks)).item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        return np.reciprocal(weighted_median(a=ranks, weights=weights)).item()
 
 
 @parse_docdata
@@ -1027,7 +1344,9 @@ class StandardDeviation(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_std", "std")
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.asanyarray(ranks).std().item()
 
 
@@ -1044,7 +1363,9 @@ class Variance(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_var", "var")
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
         return np.asanyarray(ranks).var().item()
 
 
@@ -1060,9 +1381,15 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_mad", "mad")
+    supports_weights = True
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return stats.median_abs_deviation(ranks, scale="normal").item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        if weights is None:
+            return stats.median_abs_deviation(ranks, scale="normal").item()
+
+        return weighted_median(a=np.abs(ranks - weighted_median(a=ranks, weights=weights)), weights=weights).item()
 
 
 @parse_docdata
@@ -1079,13 +1406,33 @@ class Count(RankBasedMetric):
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_count",)
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        # TODO: should we return the sum of weights?
         return float(np.asanyarray(ranks).size)
 
 
 @parse_docdata
 class HitsAtK(RankBasedMetric):
     r"""The Hits @ k.
+
+    The hits @ k describes the fraction of true entities that appear in the first $k$ entities of the sorted rank list.
+    Denoting the set of individual ranks as $\mathcal{I}$, it is given as:
+
+    .. math::
+
+        H_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
+
+    For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
+    hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
+
+    .. warning::
+
+        This metric does not differentiate between cases when the rank is larger than $k$.
+        This means that a miss with rank $k+1$ and $k+d$ where $d \gg 1$ have the same
+        effect on the final score. Therefore, it is less suitable for the comparison of different
+        models.
 
     For the expected values, we first note that
 
@@ -1129,6 +1476,9 @@ class HitsAtK(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms: ClassVar[Collection[str]] = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
     increasing = True
+    supports_weights = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
     def __init__(self, k: int = 10) -> None:
         super().__init__()
@@ -1137,8 +1487,10 @@ class HitsAtK(RankBasedMetric):
     def _extra_repr(self) -> Iterable[str]:
         yield f"k={self.k}"
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.less_equal(ranks, self.k).mean().item()
+    def __call__(
+        self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None, weights: Optional[np.ndarray] = None
+    ) -> float:  # noqa: D102
+        return np.average(np.less_equal(ranks, self.k), weights=weights).item()
 
     @property
     def key(self) -> str:  # noqa: D102
@@ -1148,20 +1500,26 @@ class HitsAtK(RankBasedMetric):
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates, dtype=float)
-        return np.minimum(self.k / num_candidates, 1.0).mean().item()
+        # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
+        individual = np.minimum(self.k / num_candidates, 1.0)
+        return weighted_mean_expectation(individual=individual, weights=weights)
 
     def variance(
         self,
         num_candidates: np.ndarray,
         num_samples: Optional[int] = None,
+        weights: Optional[np.ndarray] = None,
         **kwargs,
     ) -> float:  # noqa:D102
+        # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)
-        return (p * (1.0 - p)).mean().item() / num_candidates.size
+        individual_variance = p * (1 - p)
+        return weighted_mean_variance(individual=individual_variance, weights=weights)
 
 
 @parse_docdata
@@ -1190,6 +1548,7 @@ class AdjustedHitsAtK(ReindexedMetric):
     )
     value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
     base_cls = HitsAtK
+    supports_weights: ClassVar[bool] = HitsAtK.supports_weights
 
 
 @parse_docdata
@@ -1207,11 +1566,15 @@ class ZHitsAtK(ZMetric):
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
     base_cls = HitsAtK
+    supports_weights: ClassVar[bool] = HitsAtK.supports_weights
 
 
 @parse_docdata
 class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     """The adjusted arithmetic mean rank (AMR).
+
+    The adjusted (arithmetic) mean rank (AMR) was introduced by [berrendorf2020]. It is defined as the ratio of the
+    mean rank to the expected mean rank. It lies on the open interval $(0, 2)$ where lower is better.
 
     ---
     description: The mean over all ranks divided by its expected value.
@@ -1225,11 +1588,15 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     needs_candidates = True
     increasing = False
     base_cls = ArithmeticMeanRank
+    supports_weights: ClassVar[bool] = ArithmeticMeanRank.supports_weights
 
 
 @parse_docdata
 class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     """The adjusted arithmetic mean rank index (AMRI).
+
+    The adjusted (arithmetic) mean rank index (AMRI) was introduced by [berrendorf2020] to make the AMR more intuitive.
+    The AMRI has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
     ---
     link: https://arxiv.org/abs/2002.06914
@@ -1240,6 +1607,24 @@ class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms: ClassVar[Collection[str]] = ("adjusted_mean_rank_index", "amri", "aamri")
     base_cls = ArithmeticMeanRank
+    supports_weights: ClassVar[bool] = ArithmeticMeanRank.supports_weights
+
+
+@parse_docdata
+class AdjustedGeometricMeanRankIndex(ReindexedMetric):
+    """The adjusted geometric mean rank index (AGMRI).
+
+    ---
+    link: https://arxiv.org/abs/2002.06914
+    description: The re-indexed adjusted geometric mean rank (AGMRI)
+    tight_lower: -E[f]/(1-E[f])
+    """
+
+    name = "Adjusted Geometric Mean Rank Index (AGMRI)"
+    value_range = ValueRange(lower=None, lower_inclusive=False, upper=1, upper_inclusive=True)
+    synonyms: ClassVar[Collection[str]] = ("gmri", "agmri")
+    base_cls = GeometricMeanRank
+    supports_weights: ClassVar[bool] = GeometricMeanRank.supports_weights
 
 
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
