@@ -1,6 +1,75 @@
 # -*- coding: utf-8 -*-
 
-"""Ranking metrics."""
+"""
+Ranking metrics.
+
+This module comprises various rank-based metrics, which get an array of individual ranks as input, as summarize them
+into a single-figure metric measuring different aspects of ranking performance.
+
+We can generally distinguish:
+
+Base Metrics
+------------
+These metrics directly operate on the ranks:
+
+The following metrics measures summarize the central tendency of ranks
+
+- :class:`pykeen.metrics.ranking.ArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.GeometricMeanRank`
+- :class:`pykeen.metrics.ranking.HarmonicMeanRank`
+- :class:`pykeen.metrics.ranking.MedianRank`
+
+The Hits at K metric is closely related to information retrieval and measures the fraction of times when the correct
+result is in the top-$k$ ranked entries, i.e., the rank is at most $k$
+
+- :class:`pykeen.metrics.ranking.HitsAtK`
+
+The next metrics summarize the dispersion of ranks
+
+- :class:`pykeen.metrics.ranking.MedianAbsoluteDeviation`
+- :class:`pykeen.metrics.ranking.Variance`
+- :class:`pykeen.metrics.ranking.StandardDeviation`
+
+and finally there is a simple metric to store the number of ranks which where aggregated
+
+- :class:`pykeen.metrics.ranking.Count`
+
+Inverse Metrics
+---------------
+The inverse metrics are reciprocals of the central tendency measures. They offer the advantage of having a fixed value
+range of $(0, 1]$, with a known optimal value of $1$:
+
+- :class:`pykeen.metrics.ranking.InverseArithmeticMeanRank`
+- :class:`pykeen.metrics.ranking.InverseGeometricMeanRank`
+- :class:`pykeen.metrics.ranking.InverseHarmonicMeanRank`
+- :class:`pykeen.metrics.ranking.InverseMedianRank`
+
+Adjusted Metrics
+----------------
+Adjusted metrics build upon base metrics, but adjust them for chance, cf. [berrendorf2020, hoyt2022]_. All adjusted
+metrics derive from :class:`pykeen.metrics.ranking.DerivedRankBasedMetric` and, for a given evaluation set, are affine
+transformations of the base metric with dataset-dependent, but fixed transformation constants. Thus, they can also be
+computed when the model predictions are not available anymore, but the evaluation set is known.
+
+Expectation-Normalized Metrics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+These metrics divide the metric by its expected value under random ordering. Thus, their expected value is always 1
+irrespective of the evaluation set. They derive from :class:`pykeen.metrics.ranking.ExpectationNormalizedMetric`, and
+there is currently only a single implementation:
+
+- :class:`pykeen.metrics.ranking.AdjustedArithmeticMeanRank`
+
+Re-indexed Metrics
+~~~~~~~~~~~~~~~~~~
+Re-indexed metrics subtract the expected value, and then normalize the optimal value to be 1. Thus, their expected value
+under random ordering is 0, their optimal value is 1, and larger values indicate better results. The classes derive from
+:class:`pykeen.metrics.ranking.ReindexedMetric`, and the following implementations are available:
+
+- :class:`pykeen.metrics.ranking.AdjustedHitsAtK`
+- :class:`pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex`
+- :class:`pykeen.metrics.ranking.AdjustedGeometricMeanRankIndex`
+- :class:`pykeen.metrics.ranking.AdjustedInverseHarmonicMeanRank`
+"""
 import math
 from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
