@@ -394,6 +394,7 @@ def degree(
     output_root: pathlib.Path,
 ):
     """Analyze degree distributions."""
+    output_root.mkdir(exist_ok=True, parents=True)
     path = output_root.joinpath("degree-distributions.tsv.gz")
     if path.is_file() and not force:
         df = pd.read_csv(path, sep="\t")
@@ -451,7 +452,7 @@ def degree(
     )
     grid.tight_layout()
     grid.set(xscale="log", yscale="log")
-    grid.savefig("./plot.pdf")
+    grid.savefig(path.with_suffix(suffix=".pdf"))
 
 
 if __name__ == "__main__":
