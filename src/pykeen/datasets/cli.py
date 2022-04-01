@@ -426,7 +426,7 @@ def degree(
         )
         # only save full data
         if dataset_regex is None and min_triples is None and max_triples is None and restrict_split is None:
-            df.to_csv(path.with_suffix(suffix=suffix), sep="\t", index=False)
+            df.to_csv(path, sep="\t", index=False)
             logger.info(f"Written degree statistics to {path}")
     if not plot:
         return
