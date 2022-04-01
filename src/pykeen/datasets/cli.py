@@ -8,11 +8,12 @@ import logging
 import math
 import pathlib
 from textwrap import dedent
-from typing import List, Mapping, MutableMapping, Optional, Tuple, Union
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
 import click
 import docdata
 import pandas as pd
+import scipy.stats
 from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
 
@@ -31,7 +32,10 @@ from ..metrics.ranking import (
     InverseMedianRank,
     MedianRank,
 )
-from ..typing import LABEL_HEAD, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
+from ..triples import CoreTriplesFactory
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
+
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -95,23 +99,7 @@ def _analyze(
 ):
     from . import analysis
 
-    try:
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-    except ImportError:
-        raise ImportError(
-            dedent(
-                """\
-            Please install plotting dependencies by
-
-                pip install pykeen[plotting]
-
-            or directly by
-
-                pip install matplotlib seaborn
-        """
-            )
-        )
+    plt, sns = _get_plotting_libraries()
 
     # Raise matplotlib level
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
@@ -188,6 +176,27 @@ def _analyze(
         fig.tight_layout()
         fig.savefig(d.joinpath("relation_counts.svg"))
         plt.close(fig)
+
+
+def _get_plotting_libraries():
+    try:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+    except ImportError:
+        raise ImportError(
+            dedent(
+                """\
+            Please install plotting dependencies by
+
+                pip install pykeen[plotting]
+
+            or directly by
+
+                pip install matplotlib seaborn
+        """
+            )
+        )
+    return plt, sns
 
 
 @main.command()
@@ -350,6 +359,99 @@ def expected_metrics(
             # See https://zenodo.org/record/6331629
             rv = update_zenodo(zenodo_record, results_path)
             click.secho(f"Updated Zenodo record {zenodo_record}: {rv}", fg="green")
+
+
+def _summarize_degree_distribution(factory: CoreTriplesFactory) -> Iterable[List]:
+    df = pd.DataFrame(data=factory.mapped_triples.numpy(), columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    for target in [LABEL_HEAD, LABEL_TAIL]:
+        key = [LABEL_TAIL if target == LABEL_HEAD else LABEL_HEAD, LABEL_RELATION]
+        unique_targets = df.groupby(by=key)[target].nunique()
+        yield [target, *scipy.stats.describe(unique_targets)]
+
+
+# TODO: maybe merge into analyze / make sub-command
+@main.command()
+@verbose_option
+@dataset_regex_option
+@min_triples_option
+@max_triples_option
+@click.option(
+    "-r",
+    "--restrict-split",
+    type=click.Choice(["testing", "training", "validation"], case_sensitive=False),
+    default=None,
+)
+@click.option("-f", "--force", is_flag=True)
+@click.option("--plot", is_flag=True)
+@click.option("-o", "--output-root", type=pathlib.Path, default=PYKEEN_DATASETS.joinpath("analysis"))
+def degree(
+    dataset_regex: Optional[str],
+    min_triples: Optional[int],
+    max_triples: Optional[int],
+    restrict_split: Optional[str],
+    force: bool,
+    plot: bool,
+    output_root: pathlib.Path,
+):
+    """Analyze degree distributions."""
+    path = output_root.joinpath("degree-distributions.tsv.gz")
+    if path.is_file() and not force:
+        df = pd.read_csv(path, sep="\t")
+        logger.info(f"Loaded degree statistics from {path}")
+    else:
+        df = pd.DataFrame(
+            data=[
+                (name, split, factory.num_triples, *row)
+                for name, dataset in iter_dataset_instances(
+                    regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
+                )
+                for split, factory in dataset.factory_dict.items()
+                if (restrict_split is None or split == restrict_split)
+                for row in _summarize_degree_distribution(factory=factory)
+            ],
+            columns=[
+                "dataset",
+                "split",
+                "num_triples",
+                "target",
+                "nobs",
+                "minmax",
+                "mean",
+                "variance",
+                "skewness",
+                "kurtosis",
+            ],
+        )
+        # only save full data
+        if dataset_regex is None and min_triples is None and max_triples is None and restrict_split is None:
+            df.to_csv(path, sep="\t", index=False)
+            logger.info(f"Written degree statistics to {path}")
+    if not plot:
+        return
+    plt, sns = _get_plotting_libraries()
+    df = df.melt(
+        id_vars=["dataset", "split", "num_triples", "target"],
+        value_vars=["mean", "variance", "skewness", "kurtosis"],
+        var_name="statistic",
+    )
+    grid: sns.FacetGrid = sns.relplot(
+        data=df,
+        hue="dataset",
+        x="num_triples",
+        style=None if restrict_split is not None else "split",
+        col="statistic",
+        row="target",
+        y="value",
+        facet_kws=dict(
+            margin_titles=True,
+            sharey="col",
+        ),
+        # height=3,
+        hue_order=sorted(df["dataset"].unique()),
+    )
+    grid.tight_layout()
+    grid.set(xscale="log", yscale="log")
+    grid.savefig("./plot.pdf")
 
 
 if __name__ == "__main__":
