@@ -453,7 +453,9 @@ def degree(
     )
     grid.tight_layout()
     grid.set(xscale="log", yscale="log")
-    grid.savefig(base_path.with_suffix(suffix=".pdf"))
+    path = base_path.with_suffix(suffix=".pdf")
+    grid.savefig(path)
+    logger.info(f"Saved plot to {path}")
 
 
 if __name__ == "__main__":
