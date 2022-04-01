@@ -395,7 +395,8 @@ def degree(
 ):
     """Analyze degree distributions."""
     output_root.mkdir(exist_ok=True, parents=True)
-    path = output_root.joinpath("degree-distributions.tsv.gz")
+    base_path = output_root.joinpath("degree-distributions")
+    path = base_path.with_suffix(suffix=".tsv.gz")
     if path.is_file() and not force:
         df = pd.read_csv(path, sep="\t")
         logger.info(f"Loaded degree statistics from {path}")
@@ -425,7 +426,7 @@ def degree(
         )
         # only save full data
         if dataset_regex is None and min_triples is None and max_triples is None and restrict_split is None:
-            df.to_csv(path, sep="\t", index=False)
+            df.to_csv(path.with_suffix(suffix=suffix), sep="\t", index=False)
             logger.info(f"Written degree statistics to {path}")
     if not plot:
         return
@@ -452,7 +453,7 @@ def degree(
     )
     grid.tight_layout()
     grid.set(xscale="log", yscale="log")
-    grid.savefig(path.with_suffix(suffix=".pdf"))
+    grid.savefig(base_path.with_suffix(suffix=".pdf"))
 
 
 if __name__ == "__main__":
