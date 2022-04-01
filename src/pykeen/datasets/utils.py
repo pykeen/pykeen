@@ -111,7 +111,7 @@ def get_dataset(
     :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of
         :class:`pykeen.datasets.Dataset`
     """
-    from . import has_dataset
+    from . import dataset_resolver, has_dataset
 
     if dataset is None and (training is None or testing is None):
         raise ValueError("Must specify either dataset or both training/testing triples factories")
@@ -127,15 +127,16 @@ def get_dataset(
     if isinstance(dataset, pathlib.Path):
         return Dataset.from_path(dataset)
 
+    # convert class to string to use caching
+    if isinstance(dataset, type) and issubclass(dataset, Dataset):
+        dataset = dataset_resolver.normalize_cls(cls=dataset)
+
     if isinstance(dataset, str):
         if has_dataset(dataset):
             return _cached_get_dataset(dataset, dataset_kwargs)
         else:
             # Assume it's a file path
             return Dataset.from_path(dataset)
-
-    if isinstance(dataset, type) and issubclass(dataset, Dataset):
-        return dataset(**(dataset_kwargs or {}))  # type: ignore
 
     if dataset is not None:
         raise TypeError(f"Dataset is invalid type: {type(dataset)}")
