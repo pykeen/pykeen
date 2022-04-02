@@ -16,6 +16,7 @@ import pandas as pd
 import scipy.stats
 from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from .base import Dataset
 from .utils import dataset_regex_option, iter_dataset_instances, max_triples_option, min_triples_option
@@ -36,6 +37,10 @@ from ..triples import CoreTriplesFactory
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
 
 logger = logging.getLogger(__name__)
+
+
+ROOT = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
+IMG_DIR = ROOT.joinpath("docs", "source", "img")
 
 
 @click.group()
@@ -66,7 +71,7 @@ def summarize(dataset_regex: Optional[str], min_triples: Optional[int], max_trip
 @dataset_regex_option
 @min_triples_option
 @max_triples_option
-@click.option("-f", "--force", is_flag=True)
+@force_option
 @click.option("--countplots", is_flag=True)
 @click.option("-d", "--directory", type=click.Path(dir_okay=True, file_okay=False, resolve_path=True))
 def analyze(
@@ -381,7 +386,7 @@ def _summarize_degree_distribution(factory: CoreTriplesFactory) -> Iterable[List
     type=click.Choice(["testing", "training", "validation"], case_sensitive=False),
     default=None,
 )
-@click.option("-f", "--force", is_flag=True)
+@force_option
 @click.option("--plot", is_flag=True)
 @click.option("-o", "--output-root", type=pathlib.Path, default=PYKEEN_DATASETS.joinpath("analysis"))
 def degree(
@@ -401,8 +406,8 @@ def degree(
         df = pd.read_csv(path, sep="\t")
         logger.info(f"Loaded degree statistics from {path}")
     else:
-        df = pd.DataFrame(
-            data=[
+        with logging_redirect_tqdm():
+            rows = [
                 (name, split, factory.num_triples, *row)
                 for name, dataset in iter_dataset_instances(
                     regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
@@ -410,7 +415,9 @@ def degree(
                 for split, factory in dataset.factory_dict.items()
                 if (restrict_split is None or split == restrict_split)
                 for row in _summarize_degree_distribution(factory=factory)
-            ],
+            ]
+        df = pd.DataFrame(
+            data=rows,
             columns=[
                 "dataset",
                 "split",
@@ -455,6 +462,7 @@ def degree(
     grid.set(xscale="log", yscale="log")
     path = base_path.with_suffix(suffix=".pdf")
     grid.savefig(path)
+    grid.savefig(IMG_DIR.joinpath("dataset_degree_distributions.svg"))
     logger.info(f"Saved plot to {path}")
 
 
