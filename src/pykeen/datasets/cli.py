@@ -38,7 +38,6 @@ from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, SIDE_MAPPING, Exten
 
 logger = logging.getLogger(__name__)
 
-
 ROOT = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
 IMG_DIR = ROOT.joinpath("docs", "source", "img")
 
@@ -455,11 +454,21 @@ def degree(
             margin_titles=True,
             sharey="col",
         ),
-        # height=3,
+        height=2.5,
         hue_order=sorted(df["dataset"].unique()),
     )
+    grid.fig.suptitle("Dataset Degree Distributions", x=0.4, y=0.98)
+    plt.subplots_adjust(top=0.85)
+    sns.move_legend(
+        grid,
+        "lower center",
+        bbox_to_anchor=(0.45, -0.35),
+        ncol=6,
+        title=None,
+        frameon=False,
+    )
     grid.tight_layout()
-    grid.set(xscale="log", yscale="log")
+    grid.set(xscale="log", yscale="log", xlabel="Triples")
     path = base_path.with_suffix(suffix=".pdf")
     grid.savefig(path)
     grid.savefig(IMG_DIR.joinpath("dataset_degree_distributions.svg"))
