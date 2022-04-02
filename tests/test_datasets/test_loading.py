@@ -46,6 +46,11 @@ class TestAnnotated(unittest.TestCase):
                     ("author" in citation and "link" in citation and "year" in citation) or "github" in citation,
                 )
 
+            signature = dataset_resolver.signature(cls)
+            random_state_param = signature.parameters.get("random_state")
+            if random_state_param is not None:
+                self.assertEqual(0, random_state_param.default)
+
 
 class MockSingleTabbedDataset(SingleTabbedDataset):
     """Mock downloading a single file."""
