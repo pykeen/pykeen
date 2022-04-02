@@ -64,7 +64,7 @@ class OpenEA(LazyDataset):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        random_state: TorchRandomHint = None,
+        random_state: TorchRandomHint = 0,
         split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
         force: bool = False,
     ):
