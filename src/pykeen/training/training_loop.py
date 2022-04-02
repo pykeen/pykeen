@@ -1292,8 +1292,8 @@ class AcceleratedTrainingLoop(TrainingLoop, ABC):
     def _train(self, **kwargs):
         # If the accelerator is running, it makes several processes. If it's not the main one,
         # intercept the kwargs for _train() to force turning off the tqdm logging per batch
-        if not self.accelerator.is_local_main_process:
-            kwargs['use_tqdm_batch'] = False
+        #if not self.accelerator.is_local_main_process:
+        kwargs['use_tqdm_batch'] = False
         return super()._train(**kwargs)
 
     def _save_state(self, **kwargs):
