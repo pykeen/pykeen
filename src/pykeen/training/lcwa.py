@@ -9,12 +9,13 @@ from typing import Optional, Union
 import torch
 from torch.utils.data import DataLoader
 
-from .training_loop import TrainingLoop
+from .training_loop import TrainingLoop, AcceleratedTrainingLoop
 from ..triples import CoreTriplesFactory
 from ..triples.instances import LCWABatchType, LCWASampleType
 
 __all__ = [
     "LCWATrainingLoop",
+    "AcceleratedLCWATrainingLoop"
 ]
 
 logger = logging.getLogger(__name__)
@@ -202,3 +203,21 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             report = "This model doesn't support sub-batching and slicing is not" " implemented for this model yet."
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+class AcceleratedLCWATrainingLoop(AcceleratedTrainingLoop, LCWATrainingLoop):
+    """A distributed version of :class:`LCWATrainingLoop` enabled by the :class:`accelerate.Accelerator`.
+    While you can still write typical PyKEEN code like:
+    .. code-block:: python
+        # train.py
+        from pykeen.pipeline import pipeline
+        result = pipeline(
+            dataset='YAGO3',
+            model='PairRE',
+            training_loop='AcceleratedLCWA',
+        )
+    you will need to run this code in a special way using 🤗 Accelerate's launcher.
+    .. code-block:: sh
+        $ accelerate launch train.py
+    .. note:: You also need to run ``accelerate config`` and answer the questions the first time.
+    """
