@@ -8,13 +8,22 @@ import pathlib
 import shutil
 import sys
 import time
-from typing import Optional, Union
+from collections import defaultdict
+from typing import Any, Iterable, List, Mapping, Optional, Tuple, Type, Union
 from uuid import uuid4
 
 import click
+import numpy
+import pandas
 import tabulate
+from class_resolver import get_subclasses
 from more_click import verbose_option
 
+from pykeen.datasets import get_dataset
+from pykeen.evaluation.evaluator import get_candidate_set_size
+from pykeen.evaluation.ranking_metric_lookup import MetricKey, normalize_flattened_metric_results
+from pykeen.metrics import RankBasedMetric, rank_based_metric_resolver
+from pykeen.metrics.ranking import DerivedRankBasedMetric, HitsAtK
 from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration
 
 __all__ = [
@@ -275,6 +284,66 @@ def validate():
             click.secho(error, err=True, color=True)
             has_error = True
     exit(-1 if has_error else 0)
+
+
+def _iter_results(configuration: Mapping[str, Any]) -> Iterable[Tuple[RankBasedMetric, float]]:
+    for metric, value in normalize_flattened_metric_results(configuration.get("results", {})).items():
+        key = MetricKey.lookup(metric)
+        kwargs = {}
+        metric_name = key.metric
+        if metric_name.startswith("hits_at_"):
+            kwargs["k"] = int(metric_name[len("hits_at_") :])
+            metric_name = "hits_at_k"
+        metric_instance = rank_based_metric_resolver.make(metric_name, pos_kwargs=kwargs)
+        yield metric_instance, value
+
+
+@experiments.command(name="post-adjust")
+def post_adjust():
+    """Calculate adjusted metrics from published raw metrics without access to the model."""
+    from .validate import iterate_config_paths
+
+    # index adjusted metrics
+    index: Mapping[Type[RankBasedMetric], List[Type[DerivedRankBasedMetric]]] = defaultdict(list)
+    for cls in get_subclasses(cls=DerivedRankBasedMetric):
+        base = cls.base_cls
+        if base is not None:
+            index[base].append(cls)
+
+    data = []
+    for _directory_name, _config_name, path in iterate_config_paths():
+        config = load_configuration(path)
+        if not config:
+            logger.error(f"Invalid configuration at {path}")
+            continue
+        dataset = get_dataset(dataset=config.get("pipeline", {}).get("dataset", None))
+        _kwargs = config.get("pipeline", {}).get("evaluator_kwargs", {}) or {}
+        if _kwargs.get("filtered", True):
+            additional_filter_triples = [
+                dataset.training.mapped_triples,
+                dataset.validation.mapped_triples,
+            ]
+        else:
+            raise ValueError
+        css = get_candidate_set_size(
+            mapped_triples=dataset.testing.mapped_triples,
+            additional_filter_triples=additional_filter_triples,
+        )
+        num_candidates = numpy.concatenate([css["head_candidates"].values, css["tail_candidates"].values])
+        model = path.parent.name
+        for metric, value in _iter_results(configuration=config):
+            adjustments = index[type(metric)]
+            if not adjustments:
+                continue
+            kwargs = dict(k=metric.k) if isinstance(metric, HitsAtK) else {}
+            data.append([model, dataset.get_normalized_name(), metric.key, value, path.name])
+            for adjusted_metric_cls in adjustments:
+                adjusted_metric = rank_based_metric_resolver.make(adjusted_metric_cls, pos_kwargs=kwargs)
+                assert isinstance(adjusted_metric, DerivedRankBasedMetric)
+                adjusted_value = adjusted_metric.adjust(base_metric_result=value, num_candidates=num_candidates)
+                data.append([model, dataset.get_normalized_name(), adjusted_metric.key, adjusted_value, path.name])
+    df = pandas.DataFrame(data=data, columns=["model", "dataset", "metric", "value", "path"])
+    df.to_csv("/tmp/post_adjustments.tsv", sep="\t", index=False)
 
 
 if __name__ == "__main__":
