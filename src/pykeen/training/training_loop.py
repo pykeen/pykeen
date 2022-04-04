@@ -647,6 +647,15 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                     evaluated_once = True
 
+                if num_training_instances == 0:
+                    raise ValueError(
+                        "Did not have a single training batch! This typically happens if the batch_size is set larger"
+                        " than the number of training instances, and drop_last is set to True (i.e., its default). You"
+                        " can try to fix this problem, by explicitly setting drop_last=False. If you are using the"
+                        " pipeline, you find the parameter in the training_kwargs. Further information can be found at"
+                        " https://github.com/pykeen/pykeen/issues/828 ."
+                    )
+
                 del batch
                 del batches
                 gc.collect()
