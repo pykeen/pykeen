@@ -317,6 +317,7 @@ def post_adjust():
             logger.error(f"Invalid configuration at {path}")
             continue
         dataset = get_dataset(dataset=config.get("pipeline", {}).get("dataset", None))
+        # TODO: hotfix for broken BoxE configurations, cf. https://github.com/pykeen/pykeen/pull/631
         _kwargs = config.get("pipeline", {}).get("evaluator_kwargs", {}) or {}
         if _kwargs.get("filtered", True):
             additional_filter_triples = [
