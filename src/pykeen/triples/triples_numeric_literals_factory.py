@@ -4,7 +4,7 @@
 
 import logging
 import pathlib
-from typing import Any, ClassVar, Dict, MutableMapping, Optional, TextIO, Tuple, Union
+from typing import Any, ClassVar, Dict, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
@@ -56,6 +56,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples: Optional[LabeledTriples] = None,
         path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
         numeric_triples: Optional[np.ndarray] = None,
+        numeric_literals: np.ndarray = None,
+        literals_to_id: Mapping[str, int] = None,
         **kwargs,
     ) -> None:
         """Initialize the multi-modal triples factory.
@@ -81,21 +83,22 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             mapped_triples=base.mapped_triples,
             create_inverse_triples=base.create_inverse_triples,
         )
-
-        if path_to_numeric_triples is None and numeric_triples is None:
-            raise ValueError("Must specify one of path_to_numeric_triples or numeric_triples")
-        elif path_to_numeric_triples is not None and numeric_triples is not None:
-            raise ValueError("Must not specify both path_to_numeric_triples and numeric_triples")
-        elif path_to_numeric_triples is not None:
-            self.numeric_triples = load_triples(path_to_numeric_triples)
-        else:
-            self.numeric_triples = numeric_triples
-
-        assert self.entity_to_id is not None
-        self.numeric_literals, self.literals_to_id = create_matrix_of_literals(
-            numeric_triples=self.numeric_triples,
-            entity_to_id=self.entity_to_id,
-        )
+        if numeric_literals is None or literals_to_id is None:
+            if path_to_numeric_triples is None and numeric_triples is None:
+                raise ValueError("Must specify one of path_to_numeric_triples or numeric_triples")
+            elif path_to_numeric_triples is not None and numeric_triples is not None:
+                raise ValueError("Must not specify both path_to_numeric_triples and numeric_triples")
+            elif path_to_numeric_triples is not None:
+                numeric_triples = load_triples(path_to_numeric_triples)
+            else:
+                numeric_triples = numeric_triples
+            assert self.entity_to_id is not None
+            numeric_literals, literals_to_id = create_matrix_of_literals(
+                numeric_triples=numeric_triples,
+                entity_to_id=self.entity_to_id,
+            )
+        self.numeric_literals = numeric_literals
+        self.literals_to_id = literals_to_id
 
     def get_numeric_literals_tensor(self) -> torch.FloatTensor:
         """Return the numeric literals as a tensor."""
@@ -114,7 +117,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(
-            numeric_triples=self.numeric_triples,
             mapped_triples=mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
@@ -146,7 +148,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             path.joinpath(f"{cls.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )
-        data["literal_to_id"] = dict(zip(df["label"], df["id"]))
+        data["literals_to_id"] = dict(zip(df["label"], df["id"]))
         # load literals
         data["numeric_literals"] = np.load(
             str(path.joinpath(cls.file_name_numeric_literals).with_suffix(suffix=".npy"))
