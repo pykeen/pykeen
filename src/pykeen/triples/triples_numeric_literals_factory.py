@@ -4,7 +4,7 @@
 
 import logging
 import pathlib
-from typing import Any, ClassVar, Dict, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
+from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
@@ -107,8 +107,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """Return the numeric literals as a tensor."""
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 
-    def extra_repr(self) -> str:  # noqa: D102
-        return super().extra_repr() + (f"num_literals={len(self.literals_to_id)}")
+    def _iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super()._iter_extra_repr()
+        yield f"num_literals={len(self.literals_to_id)}"
 
     def clone_and_exchange_triples(
         self,
