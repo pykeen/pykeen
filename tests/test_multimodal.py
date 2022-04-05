@@ -15,7 +15,7 @@ class TestLiteralModel(unittest.TestCase):
 
     def _help(self, model):
         rv = pipeline(
-            dataset=NationsLiteral,
+            dataset=NationsLiteral(),
             model=model,
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
