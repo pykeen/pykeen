@@ -201,7 +201,8 @@ def _cached_get_dataset(
     digest = _digest_kwargs(dataset_kwargs, ignore={"create_inverse_triples"})
 
     # normalize dataset name
-    dataset = dataset_resolver.normalize(dataset)
+    dataset_cls = dataset_resolver.lookup(dataset)
+    dataset = dataset_resolver.normalize_cls(dataset_cls)
 
     # get canonic path
     path = PYKEEN_DATASETS.joinpath(dataset, "cache", digest)
@@ -210,7 +211,7 @@ def _cached_get_dataset(
     if path.is_dir() and not force:
         logger.info(f"Loading cached preprocessed dataset from {path.as_uri()}")
         return _set_inverse_triples_(
-            Dataset.from_directory_binary(path),
+            dataset_cls.from_directory_binary(path),
             create_inverse_triples=dataset_kwargs.get("create_inverse_triples", False),
         )
 
