@@ -3,10 +3,10 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from typing import ClassVar, TextIO, Type, Union
+from typing import TextIO, Union
 
 from .base import LazyDataset
-from ..triples import CoreTriplesFactory, TriplesNumericLiteralsFactory
+from ..triples import TriplesNumericLiteralsFactory
 
 __all__ = [
     "NumericPathDataset",
@@ -16,7 +16,7 @@ __all__ = [
 class NumericPathDataset(LazyDataset):
     """Contains a lazy reference to a training, testing, and validation dataset."""
 
-    triples_factory_cls: ClassVar[Type[CoreTriplesFactory]] = TriplesNumericLiteralsFactory
+    triples_factory_cls = TriplesNumericLiteralsFactory
 
     def __init__(
         self,
