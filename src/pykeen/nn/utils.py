@@ -9,7 +9,7 @@ from more_itertools import chunked
 from torch import nn
 from tqdm.auto import tqdm
 
-from ..utils import get_preferred_device, upgrade_to_sequence
+from ..utils import get_preferred_device
 
 __all__ = [
     "TransformerEncoder",
