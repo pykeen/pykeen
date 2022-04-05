@@ -9,6 +9,8 @@ from more_itertools import chunked
 from torch import nn
 from tqdm.auto import tqdm
 
+from ..utils import get_preferred_device
+
 __all__ = [
     "TransformerEncoder",
 ]
@@ -35,16 +37,18 @@ class TransformerEncoder(nn.Module):
         """
         super().__init__()
         try:
-            from transformers import AutoModel, AutoTokenizer
+            from transformers import AutoModel, AutoTokenizer, PreTrainedTokenizer
         except ImportError as error:
             raise ImportError(
                 "Please install the `transformers` library, use the _transformers_ extra"
-                " for PyKEEN iwth `pip install pykeen[transformers] when installing, or "
+                " for PyKEEN with `pip install pykeen[transformers] when installing, or "
                 " see the PyKEEN installation docs at https://pykeen.readthedocs.io/en/stable/installation.html"
                 " for more information."
             ) from error
 
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name_or_path=pretrained_model_name_or_path
+        )
         self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
         self.max_length = max_length or 512
 
@@ -59,7 +63,7 @@ class TransformerEncoder(nn.Module):
                 padding=True,
                 truncation=True,
                 max_length=self.max_length,
-            )
+            ).to(get_preferred_device(self.model))
         ).pooler_output
 
     @torch.inference_mode()
