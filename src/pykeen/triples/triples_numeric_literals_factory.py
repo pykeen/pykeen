@@ -52,10 +52,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def __init__(
         self,
         *,
-        path: Union[None, str, pathlib.Path, TextIO] = None,
-        triples: Optional[LabeledTriples] = None,
-        path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
-        numeric_triples: Optional[np.ndarray] = None,
         numeric_literals: np.ndarray = None,
         literals_to_id: Mapping[str, int] = None,
         **kwargs,
@@ -71,34 +67,41 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         :param numeric_triples:  A 3-column numpy array with numeric triples in it. If not
          specified, you should specify ``path_to_numeric_triples``.
         """
-        if path is not None:
-            base = TriplesFactory.from_path(path=path, **kwargs)
-        elif triples is None:
-            base = TriplesFactory(**kwargs)
-        else:
-            base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
-        super().__init__(
+        super().__init__(**kwargs)
+        self.numeric_literals = numeric_literals
+        self.literals_to_id = literals_to_id
+
+    @classmethod
+    def from_path(
+        cls,
+        path: Union[str, pathlib.Path, TextIO],
+        path_to_numeric_triples: Union[str, pathlib.Path, TextIO],
+        **kwargs,
+    ) -> "TriplesNumericLiteralsFactory":
+        """Create a numeric triples factory from a pair of paths."""
+        numeric_triples = load_triples(path_to_numeric_triples)
+        triples = load_triples(path)
+        return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
+
+    @classmethod
+    def from_labeled_triples(
+        cls,
+        triples: LabeledTriples,
+        numeric_triples: LabeledTriples,
+        **kwargs,
+    ) -> "TriplesNumericLiteralsFactory":
+        base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
+        numeric_literals, literals_to_id = create_matrix_of_literals(
+            numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
+        )
+        return cls(
             entity_to_id=base.entity_to_id,
             relation_to_id=base.relation_to_id,
             mapped_triples=base.mapped_triples,
             create_inverse_triples=base.create_inverse_triples,
+            numeric_literals=numeric_literals,
+            literals_to_id=literals_to_id,
         )
-        if numeric_literals is None or literals_to_id is None:
-            if path_to_numeric_triples is None and numeric_triples is None:
-                raise ValueError("Must specify one of path_to_numeric_triples or numeric_triples")
-            elif path_to_numeric_triples is not None and numeric_triples is not None:
-                raise ValueError("Must not specify both path_to_numeric_triples and numeric_triples")
-            elif path_to_numeric_triples is not None:
-                numeric_triples = load_triples(path_to_numeric_triples)
-            else:
-                numeric_triples = numeric_triples
-            assert self.entity_to_id is not None
-            numeric_literals, literals_to_id = create_matrix_of_literals(
-                numeric_triples=numeric_triples,
-                entity_to_id=self.entity_to_id,
-            )
-        self.numeric_literals = numeric_literals
-        self.literals_to_id = literals_to_id
 
     def get_numeric_literals_tensor(self) -> torch.FloatTensor:
         """Return the numeric literals as a tensor."""
