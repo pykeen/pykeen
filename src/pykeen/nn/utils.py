@@ -9,11 +9,11 @@ from more_itertools import chunked
 from torch import nn
 from tqdm.auto import tqdm
 
+from ..utils import get_preferred_device, upgrade_to_sequence
+
 __all__ = [
     "TransformerEncoder",
 ]
-
-from pykeen.utils import get_preferred_device, upgrade_to_sequence
 
 
 class TransformerEncoder(nn.Module):
