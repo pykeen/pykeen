@@ -132,6 +132,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore
             },
+            numeric_literals=self.numeric_literals,
+            literals_to_id=self.literals_to_id,
         )
 
     def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
