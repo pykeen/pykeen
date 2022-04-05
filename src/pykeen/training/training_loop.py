@@ -74,11 +74,11 @@ class NoTrainingBatchError(RuntimeError):
     def __init__(self):
         """Initialize the error."""
         super().__init__(
-            "Did not have a single training batch! This typically happens if the batch_size is set larger"
-            " than the number of training instances, and drop_last is set to True (i.e., its default). You"
-            " can try to fix this problem, by explicitly setting drop_last=False. If you are using the"
-            " pipeline, you find the parameter in the training_kwargs. Further information can be found at"
-            " https://github.com/pykeen/pykeen/issues/828 ."
+            "Did not have a single training batch! This typically happens if the batch_size is set larger "
+            "than the number of training instances, and drop_last is set to True. The latter happens by default, if "
+            "the model uses batch norm layers. You can try to fix this problem, by explicitly setting drop_last=False. "
+            "If you are using the pipeline, you find the parameter in the training_kwargs. Further information can be "
+            "found at https://github.com/pykeen/pykeen/issues/828 ."
         )
 
 
