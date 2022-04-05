@@ -47,12 +47,10 @@ pipeline:
   training_loop: SLCWA
 
 results:
-  hits_at_k:
-    best:
-      '10': 0.691
+  best:
+    hits_at_k:
       '1': 0.484
       '3': 0.608
-  mean_rank:
-    best: 1022
-  mean_reciprocal_rank:
-    best: 0.560
+      '10': 0.691
+    mean_rank: 1022
+    mean_reciprocal_rank: 0.560

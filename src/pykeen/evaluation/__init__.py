@@ -2,14 +2,16 @@
 
 """Evaluation."""
 
-import dataclasses
-from typing import Set, Type
-
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from .classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from .evaluator import Evaluator, MetricResults, evaluate
-from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
+from .rank_based_evaluator import (
+    MacroRankBasedEvaluator,
+    RankBasedEvaluator,
+    RankBasedMetricResults,
+    SampledRankBasedEvaluator,
+)
 
 __all__ = [
     "evaluate",
@@ -17,34 +19,17 @@ __all__ = [
     "MetricResults",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
+    "MacroRankBasedEvaluator",
+    "SampledRankBasedEvaluator",
     "ClassificationEvaluator",
     "ClassificationMetricResults",
     "evaluator_resolver",
     "metric_resolver",
-    "get_metric_list",
 ]
 
-evaluator_resolver: Resolver[Evaluator] = Resolver.from_subclasses(
-    base=Evaluator,  # type: ignore
+evaluator_resolver: ClassResolver[Evaluator] = ClassResolver.from_subclasses(
+    base=Evaluator,
     default=RankBasedEvaluator,
 )
 
-_METRICS_SUFFIX = "MetricResults"
-_METRICS: Set[Type[MetricResults]] = {
-    RankBasedMetricResults,
-    ClassificationMetricResults,
-}
-metric_resolver = Resolver(
-    _METRICS,
-    suffix=_METRICS_SUFFIX,
-    base=MetricResults,
-)
-
-
-def get_metric_list():
-    """Get info about all metrics across all evaluators."""
-    return [
-        (field, name, value)
-        for name, value in metric_resolver.lookup_dict.items()
-        for field in dataclasses.fields(value)
-    ]
+metric_resolver: ClassResolver[MetricResults] = ClassResolver.from_subclasses(MetricResults)

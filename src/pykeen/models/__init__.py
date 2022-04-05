@@ -6,10 +6,11 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from class_resolver import Resolver, get_subclasses
+from class_resolver import ClassResolver, get_subclasses
 
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
-from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline
+from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
+from .inductive import InductiveNodePiece, InductiveNodePieceGNN
 from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
@@ -97,7 +98,11 @@ __all__ = [
     "TransR",
     "TuckER",
     "UM",
+    # Inductive Models
+    "InductiveNodePiece",
+    "InductiveNodePieceGNN",
     # Evaluation-only models
+    "SoftInverseTripleBaseline",
     "MarginalDistributionBaseline",
     # Utils
     "model_resolver",
@@ -105,7 +110,7 @@ __all__ = [
     "make_model_cls",
 ]
 
-model_resolver = Resolver.from_subclasses(
+model_resolver = ClassResolver.from_subclasses(
     base=Model,
     skip={
         # Abstract Models

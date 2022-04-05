@@ -1,10 +1,15 @@
 """Tests for node piece."""
+
+import random
+from typing import Any, MutableMapping
+
 import numpy
 import numpy.testing
 import scipy.sparse.csgraph
 import unittest_templates
 
 import pykeen.nn.node_piece
+from pykeen.nn.node_piece.utils import page_rank
 from tests import cases
 
 
@@ -18,6 +23,12 @@ class PageRankAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
     """Tests for page rank anchor selection."""
 
     cls = pykeen.nn.node_piece.PageRankAnchorSelection
+
+
+class RandomAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
+    """Tests for random anchor selection."""
+
+    cls = pykeen.nn.node_piece.RandomAnchorSelection
 
 
 class MixtureAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
@@ -37,6 +48,7 @@ class AnchorSelectionMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node
 
     base_cls = pykeen.nn.node_piece.AnchorSelection
     base_test = cases.AnchorSelectionTestCase
+    skip_cls = {pykeen.nn.node_piece.SingleSelection}
 
 
 class CSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):
@@ -98,8 +110,38 @@ class AnchorTokenizerTests(cases.TokenizerTestCase):
     cls = pykeen.nn.node_piece.AnchorTokenizer
 
 
+class PrecomputedPoolTokenizerTests(cases.TokenizerTestCase):
+    """Tests for tokenization with precomputed token pools."""
+
+    cls = pykeen.nn.node_piece.PrecomputedPoolTokenizer
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        # generate random pool
+        kwargs["pool"] = {
+            i: random.sample(range(2 * self.num_tokens), k=self.num_tokens) for i in range(self.factory.num_entities)
+        }
+        return kwargs
+
+
 class TokenizerMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece.Tokenizer]):
     """Test for tests for tokenizers."""
 
     base_cls = pykeen.nn.node_piece.Tokenizer
     base_test = cases.TokenizerTestCase
+
+
+def test_page_rank():
+    """Test for page-rank code."""
+    n = 10
+    edge_index = numpy.stack(
+        [
+            numpy.arange(n),
+            (numpy.arange(n) + 1) % n,
+        ],
+    )
+    result = page_rank(
+        edge_index=edge_index,
+        epsilon=1.0e-08,
+    )
+    numpy.testing.assert_allclose(result.sum(), 1.0, rtol=1e-6)

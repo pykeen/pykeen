@@ -13,7 +13,7 @@ from torch.nn import functional as F  # noqa: N812
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn.emb import Embedding, EmbeddingSpecification
+from ...nn import representation_resolver
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...triples import CoreTriplesFactory
@@ -152,22 +152,22 @@ class ConvE(EntityRelationEmbeddingModel):
 
         super().__init__(
             triples_factory=triples_factory,
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
         )
 
         # ConvE uses one bias for each entity
-        self.bias_term = Embedding.init_with_device(
-            num_embeddings=self.num_entities,
-            embedding_dim=1,
-            device=self.device,
+        self.bias_term = representation_resolver.make(
+            query=None,
+            max_id=self.num_entities,
+            shape=(1,),  # TODO: switch to scalar?
             initializer=nn.init.zeros_,
         )
 
@@ -284,7 +284,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(
             -1,
             self.input_channels,
@@ -317,7 +317,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(
             -1,
             self.input_channels,
@@ -343,7 +343,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         rt_batch_size = rt_batch.shape[0]
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(

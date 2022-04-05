@@ -8,9 +8,8 @@ import torch
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import CPInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import Hint, InductiveMode, Initializer, Normalizer
 
 __all__ = [
     "CP",
@@ -61,9 +60,9 @@ class CP(ERModel):
         """
         super().__init__(
             interaction=CPInteraction,
-            entity_representations=[
+            entity_representations_kwargs=[
                 # head representation
-                EmbeddingSpecification(
+                dict(
                     shape=(rank, embedding_dim),
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs,
@@ -71,7 +70,7 @@ class CP(ERModel):
                     normalizer_kwargs=entity_normalizer_kwargs,
                 ),
                 # tail representation
-                EmbeddingSpecification(
+                dict(
                     shape=(rank, embedding_dim),
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs,
@@ -79,7 +78,7 @@ class CP(ERModel):
                     normalizer_kwargs=entity_normalizer_kwargs,
                 ),
             ],
-            relation_representations=EmbeddingSpecification(
+            relation_representations_kwargs=dict(
                 shape=(rank, embedding_dim),
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
@@ -96,6 +95,8 @@ class CP(ERModel):
         h: Optional[torch.LongTensor],
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
+        *,
+        mode: Optional[InductiveMode],
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:  # noqa: D102
         # Override to allow different head and tail entity representations
         h, r, t = [

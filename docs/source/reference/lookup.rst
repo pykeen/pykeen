@@ -10,5 +10,3 @@ Lookup
 .. autodata:: pykeen.training.training_loop_resolver
 .. autodata:: pykeen.evaluation.evaluator_resolver
 .. autodata:: pykeen.evaluation.metric_resolver
-.. autodata:: pykeen.hpo.pruners.pruner_resolver
-.. autodata:: pykeen.hpo.samplers.sampler_resolver

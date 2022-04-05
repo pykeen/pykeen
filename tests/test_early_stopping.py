@@ -17,6 +17,7 @@ from pykeen.evaluation import RankBasedEvaluator
 from pykeen.models import FixedModel, Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_improvement
 from pykeen.training import SLCWATrainingLoop
+from pykeen.typing import RANK_REALISTIC, SIDE_BOTH
 from tests.mocks import MockEvaluator
 
 
@@ -91,7 +92,11 @@ class TestEarlyStopper(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the early stopper."""
         # Set automatic_memory_optimization to false for tests
-        self.mock_evaluator = MockEvaluator(self.mock_losses, automatic_memory_optimization=False)
+        self.mock_evaluator = MockEvaluator(
+            key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC),
+            values=self.mock_losses,
+            automatic_memory_optimization=False,
+        )
         nations = Nations()
         self.model = FixedModel(triples_factory=nations.training)
         self.stopper = EarlyStopper(
@@ -245,9 +250,6 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
             stopper=stopper,
             use_tqdm=False,
         )
-        self.assertEqual(stopper.number_results, (len(losses) + self.patience * stopper.frequency) // stopper.frequency)
-        self.assertEqual(
-            self.stop_epoch,
-            (len(losses) + 2 * stopper.frequency),
-            msg="Did not stop early like it should have",
-        )
+        self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
+        self.assertEqual(stopper.best_epoch, self.stop_epoch - self.patience * stopper.frequency)
+        self.assertEqual(self.stop_epoch, len(losses), msg="Did not stop early like it should have")

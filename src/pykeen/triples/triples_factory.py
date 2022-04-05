@@ -7,19 +7,21 @@ import itertools
 import logging
 import pathlib
 import re
+import warnings
 from abc import abstractmethod
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Collection,
     Dict,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Set,
     TextIO,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -28,12 +30,22 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
+from torch.utils.data import Dataset
 
-from .instances import Instances, LCWAInstances, SLCWAInstances
+from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df, triple_tensor_to_set
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping
+from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    EntityMapping,
+    LabeledTriples,
+    MappedTriples,
+    RelationMapping,
+    TorchRandomHint,
+)
+from ..utils import compact_mapping, format_relative_comparison, invert_mapping, triple_tensor_to_set
 
 __all__ = [
     "CoreTriplesFactory",
@@ -299,6 +311,9 @@ def restrict_triples(
 class CoreTriplesFactory:
     """Create instances from ID-based triples."""
 
+    triples_file_name: ClassVar[str] = "numeric_triples.tsv.gz"
+    base_file_name: ClassVar[str] = "base.pth"
+
     def __init__(
         self,
         mapped_triples: MappedTriples,
@@ -380,6 +395,17 @@ class CoreTriplesFactory:
             metadata=metadata,
         )
 
+    def __eq__(self, __o: object) -> bool:  # noqa: D105
+        if not isinstance(__o, CoreTriplesFactory):
+            return False
+        return (
+            (self.num_entities == __o.num_entities)
+            and (self.num_relations == __o.num_relations)
+            and (self.num_triples == __o.num_triples)
+            and (self.create_inverse_triples == __o.create_inverse_triples)
+            and bool((self.mapped_triples == __o.mapped_triples).all().item())
+        )
+
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
@@ -458,20 +484,28 @@ class CoreTriplesFactory:
             ]
         )
 
-    def create_slcwa_instances(self) -> Instances:
+    def create_slcwa_instances(self, *, sampler: Optional[str] = None, **kwargs) -> Dataset:
         """Create sLCWA instances for this factory's triples."""
-        return self._create_instances(SLCWAInstances)
-
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Instances:
-        """Create LCWA instances for this factory's triples."""
-        return self._create_instances(LCWAInstances, target=target)
-
-    def _create_instances(self, instances_cls: Type[Instances], **kwargs) -> Instances:
-        return instances_cls.from_triples(
+        cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
+        if "shuffle" in kwargs:
+            if kwargs.pop("shuffle"):
+                warnings.warn("Training instances are always shuffled.", DeprecationWarning)
+            else:
+                raise AssertionError("If shuffle is provided, it must be True.")
+        return cls(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
             num_relations=self.num_relations,
             **kwargs,
+        )
+
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Dataset:
+        """Create LCWA instances for this factory's triples."""
+        return LCWAInstances.from_triples(
+            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            target=target,
         )
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
@@ -594,14 +628,30 @@ class CoreTriplesFactory:
         ]
 
     def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
-        """Normalize entities to IDs."""
+        """Normalize entities to IDs.
+
+        :param entities: A collection of either integer identifiers for entities or
+            string labels for entities (that will get auto-converted)
+        :returns: Integer identifiers for entities
+        :raises ValueError: If the ``entities`` passed are string labels
+            and this triples factory does not have an entity label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
         for e in entities:
             if not isinstance(e, int):
                 raise ValueError(f"{self.__class__.__name__} cannot convert entity IDs from {type(e)} to int.")
         return cast(Collection[int], entities)
 
     def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:
-        """Normalize relations to IDs."""
+        """Normalize relations to IDs.
+
+        :param relations: A collection of either integer identifiers for relations or
+            string labels for relations (that will get auto-converted)
+        :returns: Integer identifiers for relations
+        :raises ValueError: If the ``relations`` passed are string labels
+            and this triples factory does not have a relation label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
         for e in relations:
             if not isinstance(e, int):
                 raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")
@@ -709,13 +759,26 @@ class CoreTriplesFactory:
         """
         path = normalize_path(path)
         logger.info(f"Loading from {path.as_uri()}")
-        data = torch.load(path)
-        return cls(**data)
+        return cls(**cls._from_path_binary(path=path))
+
+    @classmethod
+    def _from_path_binary(
+        cls,
+        path: pathlib.Path,
+    ) -> MutableMapping[str, Any]:
+        # load base
+        data = dict(torch.load(path.joinpath(cls.base_file_name)))
+        # load numeric triples
+        data["mapped_triples"] = torch.as_tensor(
+            pd.read_csv(path.joinpath(cls.triples_file_name), sep="\t", dtype=int).values,
+            dtype=torch.long,
+        )
+        return data
 
     def to_path_binary(
         self,
         path: Union[str, pathlib.Path, TextIO],
-    ) -> None:
+    ) -> pathlib.Path:
         """
         Save triples factory to path in (PyTorch's .pt) binary format.
 
@@ -723,12 +786,22 @@ class CoreTriplesFactory:
             The path to store the triples factory to.
         """
         path = normalize_path(path)
-        torch.save(self._get_binary_state(), path)
+        path.mkdir(exist_ok=True, parents=True)
+
+        # store numeric triples
+        pd.DataFrame(
+            data=self.mapped_triples.numpy(),
+            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+        ).to_csv(path.joinpath(self.triples_file_name), sep="\t", index=False)
+
+        # store metadata
+        torch.save(self._get_binary_state(), path.joinpath(self.base_file_name))
         logger.info(f"Stored {self} to {path.as_uri()}")
+
+        return path
 
     def _get_binary_state(self):
         return dict(
-            mapped_triples=self.mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.num_relations,
             entity_ids=self.entity_ids,
@@ -740,6 +813,9 @@ class CoreTriplesFactory:
 
 class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
+
+    file_name_entity_to_id: ClassVar[str] = "entity_to_id"
+    file_name_relation_to_id: ClassVar[str] = "relation_to_id"
 
     def __init__(
         self,
@@ -904,6 +980,14 @@ class TriplesFactory(CoreTriplesFactory):
             },
         )
 
+    def __eq__(self, __o: object) -> bool:  # noqa: D105
+        return (
+            isinstance(__o, TriplesFactory)
+            and super().__eq__(__o)
+            and (self.entity_to_id == __o.entity_to_id)
+            and (self.relation_to_id == __o.relation_to_id)
+        )
+
     def to_core_triples_factory(self) -> CoreTriplesFactory:
         """Return this factory as a core factory."""
         return CoreTriplesFactory(
@@ -916,11 +1000,39 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
-    def _get_binary_state(self):
+    def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
+        path = super().to_path_binary(path=path)
+        # store entity/relation to ID
+        for name, data in (
+            (
+                self.file_name_entity_to_id,
+                self.entity_to_id,
+            ),
+            (
+                self.file_name_relation_to_id,
+                self.relation_to_id,
+            ),
+        ):
+            pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
+                path.joinpath(f"{name}.tsv.gz"),
+                sep="\t",
+            )
+        return path
+
+    @classmethod
+    def _from_path_binary(cls, path: pathlib.Path) -> MutableMapping[str, Any]:
+        data = super()._from_path_binary(path)
+        # load entity/relation to ID
+        for name in [cls.file_name_entity_to_id, cls.file_name_relation_to_id]:
+            df = pd.read_csv(
+                path.joinpath(f"{name}.tsv.gz"),
+                sep="\t",
+            )
+            data[name] = dict(zip(df["label"], df["id"]))
+        return data
+
+    def _get_binary_state(self):  # noqa: D102
         return dict(
-            mapped_triples=self.mapped_triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )

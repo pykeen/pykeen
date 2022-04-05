@@ -2,19 +2,18 @@
 
 """Built-in datasets for PyKEEN.
 
-New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be registered with PyKEEN using the
+New datasets (inheriting from :class:`pykeen.datasets.Dataset`) can be registered with PyKEEN using the
 :mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
 import logging
-import pathlib
-from textwrap import dedent
-from typing import Any, Mapping, Optional, Type, Union
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
+from .aristo import AristoV4
 from .base import (  # noqa:F401
+    CompressedSingleDataset,
     Dataset,
     EagerDataset,
     LazyDataset,
@@ -22,8 +21,11 @@ from .base import (  # noqa:F401
     PathDataset,
     RemoteDataset,
     SingleTabbedDataset,
+    TabbedDataset,
     TarFileRemoteDataset,
+    TarFileSingleDataset,
     UnpackedRemoteDataset,
+    ZipSingleDataset,
 )
 from .biokg import BioKG
 from .ckg import CKG
@@ -37,19 +39,29 @@ from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
+from .literal_base import NumericPathDataset
 from .nations import Nations
-from .ogb import OGBBioKG, OGBWikiKG
+from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
+from .openea import OpenEA
+from .pharmkg import PharmKG, PharmKG8k
 from .umls import UMLS
+from .utils import get_dataset
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
-from .wk3l import WK3l15k
+from .wk3l import CN3l, MTransEDataset, WK3l15k, WK3l120k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
-from ..triples import CoreTriplesFactory
 
 __all__ = [
+    # Utilities
+    "dataset_resolver",
+    "get_dataset",
+    "has_dataset",
+    # Base Classes
+    "Dataset",
     # Concrete Classes
+    "AristoV4",
     "Hetionet",
     "Kinships",
     "Nations",
@@ -58,12 +70,14 @@ __all__ = [
     "CoDExSmall",
     "CoDExMedium",
     "CoDExLarge",
+    "CN3l",
     "OGBBioKG",
-    "OGBWikiKG",
+    "OGBWikiKG2",
     "UMLS",
     "FB15k",
     "FB15k237",
     "WK3l15k",
+    "WK3l120k",
     "WN18",
     "WN18RR",
     "YAGO310",
@@ -74,119 +88,37 @@ __all__ = [
     "CSKG",
     "DBpedia50",
     "DB100K",
+    "OpenEA",
     "Countries",
     "WD50KT",
     "Wikidata5M",
-    # Utilities
-    "dataset_resolver",
-    "get_dataset",
-    "has_dataset",
+    "PharmKG8k",
+    "PharmKG",
 ]
 
 logger = logging.getLogger(__name__)
 
-dataset_resolver = Resolver.from_entrypoint(group="pykeen.datasets", base=Dataset)
-if not dataset_resolver.lookup_dict:
-    raise RuntimeError(
-        dedent(
-            """\
-    Datasets have been loaded with entrypoints since PyKEEN v1.0.5, which is now a
-    very old version of PyKEEN.
-
-    If you simply use `python3 -m pip install --upgrade pykeen`, the entrypoints will
-    not be reloaded. Instead, please reinstall PyKEEN using the following commands:
-
-    $ python3 -m pip uninstall pykeen
-    $ python3 -m pip install pykeen
-
-    If you are on Kaggle or Google Colab, please follow these instructions:
-    https://pykeen.readthedocs.io/en/stable/installation.html#google-colab-and-kaggle-users
-
-    If issues with Kaggle or Colab persist, please join the conversation at
-    https://github.com/pykeen/pykeen/issues/373
-    """
-        )
-    )
-
-
-def get_dataset(
-    *,
-    dataset: Union[None, str, pathlib.Path, Dataset, Type[Dataset]] = None,
-    dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
-    testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
-    validation: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
-) -> Dataset:
-    """Get a dataset.
-
-    :param dataset: The name of a dataset, an instance of a dataset, or the class for a dataset.
-    :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for
-        the ``dataset`` keyword argument.
-    :param training: A triples factory for training triples or a path to a training triples file if ``dataset=None``
-    :param testing: A triples factory for testing triples or a path to a testing triples file  if ``dataset=None``
-    :param validation: A triples factory for validation triples or a path to a validation triples file
-        if ``dataset=None``
-    :returns: An instantiated dataset
-
-    :raises ValueError: for incorrect usage of the input of the function
-    :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of
-        :class:`pykeen.datasets.base.Dataset`
-    """
-    if dataset is None and (training is None or testing is None):
-        raise ValueError("Must specify either dataset or both training/testing triples factories")
-
-    if dataset is not None and (training is not None or testing is not None):
-        raise ValueError("Can not specify both dataset and training/testing triples factories.")
-
-    if isinstance(dataset, Dataset):
-        if dataset_kwargs:
-            logger.warning("dataset_kwargs not used since a pre-instantiated dataset was given")
-        return dataset
-
-    if isinstance(dataset, pathlib.Path):
-        return Dataset.from_path(dataset)
-
-    if isinstance(dataset, str):
-        if has_dataset(dataset):
-            return dataset_resolver.make(dataset, dataset_kwargs)
-        else:
-            # Assume it's a file path
-            return Dataset.from_path(dataset)
-
-    if isinstance(dataset, type) and issubclass(dataset, Dataset):
-        return dataset(**(dataset_kwargs or {}))  # type: ignore
-
-    if dataset is not None:
-        raise TypeError(f"Dataset is invalid type: {type(dataset)}")
-
-    if isinstance(training, (str, pathlib.Path)) and isinstance(testing, (str, pathlib.Path)):
-        if validation is None or isinstance(validation, (str, pathlib.Path)):
-            return PathDataset(
-                training_path=training,
-                testing_path=testing,
-                validation_path=validation,
-                **(dataset_kwargs or {}),
-            )
-        elif validation is not None:
-            raise TypeError(f"Validation is invalid type: {type(validation)}")
-
-    if isinstance(training, CoreTriplesFactory) and isinstance(testing, CoreTriplesFactory):
-        if validation is not None and not isinstance(validation, CoreTriplesFactory):
-            raise TypeError(f"Validation is invalid type: {type(validation)}")
-        if dataset_kwargs:
-            logger.warning("dataset_kwargs are disregarded when passing pre-instantiated triples factories")
-        return EagerDataset(
-            training=training,
-            testing=testing,
-            validation=validation,
-        )
-
-    raise TypeError(
-        f"""Training and testing must both be given as strings or Triples Factories.
-        - Training: {type(training)}: {training}
-        - Testing: {type(testing)}: {testing}
-        """,
-    )
+dataset_resolver: ClassResolver[Dataset] = ClassResolver.from_subclasses(
+    base=Dataset,
+    skip={
+        EagerDataset,
+        LazyDataset,
+        PathDataset,
+        RemoteDataset,
+        UnpackedRemoteDataset,
+        TarFileRemoteDataset,
+        PackedZipRemoteDataset,
+        CompressedSingleDataset,
+        TarFileSingleDataset,
+        ZipSingleDataset,
+        TabbedDataset,
+        SingleTabbedDataset,
+        NumericPathDataset,
+        MTransEDataset,
+        OGBLoader,
+    },
+)
+dataset_resolver.register_entrypoint("pykeen.datasets")
 
 
 def has_dataset(key: str) -> bool:

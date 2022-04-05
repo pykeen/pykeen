@@ -3,7 +3,7 @@
 """Implementation of TransR."""
 
 from functools import partial
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch
 import torch.autograd
@@ -12,7 +12,7 @@ from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import Embedding, EmbeddingSpecification
+from ...nn import representation_resolver
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
@@ -89,14 +89,14 @@ class TransR(EntityRelationEmbeddingModel):
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=relation_dim,
+            relation_representations_kwargs=dict(
+                shape=(relation_dim,),
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
                 constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
@@ -108,10 +108,10 @@ class TransR(EntityRelationEmbeddingModel):
         # TODO: Initialize from TransE
 
         # embeddings
-        self.relation_projections = Embedding.init_with_device(
-            num_embeddings=self.num_relations,
-            embedding_dim=relation_dim * embedding_dim,
-            device=self.device,
+        self.relation_projections = representation_resolver.make(
+            query=None,
+            shape=(relation_dim * embedding_dim,),
+            max_id=self.num_relations,
             initializer=partial(
                 _projection_initializer,
                 num_relations=self.num_relations,
@@ -157,7 +157,7 @@ class TransR(EntityRelationEmbeddingModel):
         # evaluate score function, shape: (b, e)
         return -linalg.vector_norm(h_bot + r - t_bot, dim=-1) ** 2
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
@@ -166,7 +166,7 @@ class TransR(EntityRelationEmbeddingModel):
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(-1, 1)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
@@ -175,7 +175,7 @@ class TransR(EntityRelationEmbeddingModel):
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)

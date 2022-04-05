@@ -220,7 +220,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         class MockResultTracker(MagicMock, ResultTracker):
             """A mock result tracker."""
 
-        tracker_resolver.register(cls=MockResultTracker)
+        tracker_resolver.register(MockResultTracker)
 
         mock_result_tracker = MockResultTracker()
         mock_result_tracker.end_run = MagicMock()

@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import UMInteraction
 from ...typing import Hint, Initializer
@@ -65,9 +64,10 @@ class UM(ERModel):
         super().__init__(
             interaction=UMInteraction,
             interaction_kwargs=dict(p=scoring_fct_norm),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
+            relation_representations=[],
             **kwargs,
         )

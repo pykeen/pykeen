@@ -7,22 +7,21 @@ import logging
 import timeit
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from dataclasses import dataclass
 from math import ceil
 from textwrap import dedent
-from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import pandas
 import torch
-from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
 from ..constants import TARGET_TO_INDEX
+from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -45,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 @contextmanager
 def optional_context_manager(condition, context_manager):
+    """Return an optional context manager based on the given condition."""
     if condition:
         with context_manager:
             yield context_manager
@@ -52,10 +52,22 @@ def optional_context_manager(condition, context_manager):
         yield
 
 
-@dataclass
-class MetricResults(DataClassJsonMixin):
+class MetricResults:
     """Results from computing metrics."""
 
+    metrics: ClassVar[Mapping[str, Type[Metric]]]
+
+    def __init__(self, data: Mapping):
+        """Initialize the result wrapper."""
+        self.data = data
+
+    def __getattr__(self, item):  # noqa:D105
+        # TODO remove this, it makes code much harder to reason about
+        if item not in self.data:
+            raise AttributeError
+        return self.data[item]
+
+    @abstractmethod
     def get_metric(self, name: str) -> float:
         """Get the given metric from the results.
 
@@ -63,6 +75,10 @@ class MetricResults(DataClassJsonMixin):
         :returns: The value for the metric
         """
         raise NotImplementedError
+
+    def to_dict(self):
+        """Get the results as a dictionary."""
+        return self.data
 
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
@@ -84,6 +100,7 @@ class Evaluator(ABC):
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
+        mode: Optional[InductiveMode] = None,
     ):
         """Initialize the evaluator.
 
@@ -93,12 +110,15 @@ class Evaluator(ABC):
         :param slice_size: >0. The divisor for the scoring function when using slicing
         :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
             evaluation with regards to the hardware at hand.
+        :param mode:
+            the inductive mode, or None for transductive evaluation
         """
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
         self.automatic_memory_optimization = automatic_memory_optimization
+        self.mode = mode
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -182,6 +202,7 @@ class Evaluator(ABC):
             tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
+            mode=self.mode,
         )
         # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
         return cast(MetricResults, rv)
@@ -219,6 +240,8 @@ class Evaluator(ABC):
             Should a progress bar be displayed?
         :param restrict_entities_to:
             Whether to restrict the evaluation to certain entities of interest.
+        :param do_time_consuming_checks:
+            whether to perform time-consuming input validation for restricted evaluation
         :param additional_filter_triples:
             Additional true triples to filter out during filtered evaluation. Only needed if the evaluator is in
             filtered mode.
@@ -314,6 +337,7 @@ class Evaluator(ABC):
                     do_time_consuming_checks=do_time_consuming_checks,
                     batch_size=values_dict.get("batch_size"),
                     slice_size=values_dict.get("slice_size"),
+                    mode=self.mode,
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
@@ -402,6 +426,9 @@ def create_sparse_positive_filter_(
         - positives, shape: (2, m)
             The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
+
+    :raises NotImplementedError:
+        if the `filter_col` is not in `{0, 2}`
     """
     if filter_col not in {0, 2}:
         raise NotImplementedError(
@@ -520,7 +547,9 @@ def evaluate(
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
-) -> Union[MetricResults, List[MetricResults]]:
+    *,
+    mode: Optional[InductiveMode],
+) -> MetricResults:
     """Evaluate metrics for model on mapped triples.
 
     The model is used to predict scores for all tails and all heads for each triple. Subsequently, each abstract
@@ -568,10 +597,20 @@ def evaluate(
         Whether the triples have been pre-filtered to adhere to restrict_entities_to / restrict_relations_to. When set
         to True, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the triples
         accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
-    :param additional_filtered_triples:
-        Additional true triples to filter out during filtered evaluation.
+    :param additional_filter_triples:
+        additional true triples to filter out during filtered evaluation.
     :param targets:
         the prediction targets
+    :param mode:
+        the inductive mode, or None for transductive evaluation
+
+    :raises NotImplementedError:
+        if relation prediction evaluation is requested
+    :raises ValueError:
+        if the pre_filtered_triples contain unwanted entities (can only be detected with the time-consuming checks).
+
+    :return:
+        the evaluation results
     """
     if LABEL_RELATION in targets:
         raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
@@ -665,6 +704,7 @@ def evaluate(
                     all_pos_triples=all_pos_triples,
                     relation_filter=relation_filter,
                     restrict_entities_to=restrict_entities_to,
+                    mode=mode,
                 )
 
             # If we only probe sizes we do not need more than one batch
@@ -697,6 +737,8 @@ def _evaluate_batch(
     all_pos_triples: Optional[MappedTriples],
     relation_filter: Optional[torch.BoolTensor],
     restrict_entities_to: Optional[torch.LongTensor],
+    *,
+    mode: Optional[InductiveMode],
 ) -> torch.BoolTensor:
     """
     Evaluate ranking for batch.
@@ -717,13 +759,18 @@ def _evaluate_batch(
         The relation filter. Can be re-used.
     :param restrict_entities_to:
         Restriction to evaluate only for these entities.
+    :param mode:
+        the inductive mode, or None for transductive evaluation
+
+    :raises ValueError:
+        if all positive triples are required (either due to filtered evaluation, or requiring dense masks).
 
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size)
+    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
 
-    if evaluator.filtered:
+    if evaluator.filtered or evaluator.requires_positive_mask:
         column = TARGET_TO_INDEX[target]
         if all_pos_triples is None:
             raise ValueError(
@@ -738,7 +785,11 @@ def _evaluate_batch(
             relation_filter=relation_filter,
             filter_col=column,
         )
+    else:
+        positive_filter = relation_filter = None
 
+    if evaluator.filtered:
+        assert positive_filter is not None
         # Select scores of true
         true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]]
         # overwrite filtered scores
@@ -752,12 +803,7 @@ def _evaluate_batch(
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:
-        positive_filter, relation_filter = create_sparse_positive_filter_(
-            hrt_batch=batch,
-            all_pos_triples=all_pos_triples,
-            relation_filter=relation_filter,
-            filter_col=column,
-        )
+        assert positive_filter is not None
         positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
     else:
         positive_mask = None
@@ -792,6 +838,10 @@ def get_candidate_set_size(
 
     :param mapped_triples: shape: (n, 3)
         the evaluation triples
+    :param restrict_entities_to:
+        The entity IDs of interest. If None, defaults to all entities. cf. :func:`restrict_triples`.
+    :param restrict_relations_to:
+        The relations IDs of interest. If None, defaults to all relations. cf. :func:`restrict_triples`.
     :param additional_filter_triples: shape: (n, 3)
         additional filter triples besides the evaluation triples themselves. cf. `_prepare_filter_triples`.
     :param num_entities:
@@ -800,7 +850,7 @@ def get_candidate_set_size(
     :return: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates"
         a dataframe of all evaluation triples, with the number of head and tail candidates
     """
-    # optinally restrict triples (nop if no restriction)
+    # optionally restrict triples (nop if no restriction)
     mapped_triples = restrict_triples(
         mapped_triples=mapped_triples,
         entities=restrict_entities_to,

@@ -30,7 +30,7 @@ with datasets, triples factories, and models using the labels
 of the entities and relations.
 
 We can map a triples factory's entities to identifiers using
-:data:`TriplesFactory.entity_to_ids` like in the following
+:func:`TriplesFactory.entities_to_ids` like in the following
 example:
 
 .. code-block:: python
@@ -40,7 +40,7 @@ example:
     triples_factory = Nations().training
 
     # Get tensor of entity identifiers
-    entity_ids = torch.as_tensor(triples_factory.entity_to_ids(["china", "egypt"]))
+    entity_ids = torch.as_tensor(triples_factory.entities_to_ids(["china", "egypt"]))
 
 Similarly, we can map a triples factory's relations to identifiers
 using :data:`TriplesFactory.relation_to_ids` like in the following
@@ -67,10 +67,10 @@ multiple relation representations, so they are respectively stored as sequences 
 While the exact contents of these sequences are model-dependent, the first element of
 each is usually the "primary" representation for either the entities or relations.
 
-Typically, the values in these sequences are instances of the :class:`pykeen.nn.emb.Embedding`.
+Typically, the values in these sequences are instances of the :class:`pykeen.nn.representation.Embedding`.
 This implements a similar, but more powerful, interface to the built-in :class:`torch.nn.Embedding`
 class. However, the values in these sequences can more generally be instances of any subclasses of
-:class:`pykeen.nn.emb.RepresentationModule`. This allows for more powerful encoders those in GNNs
+:class:`pykeen.nn.representation.Representation`. This allows for more powerful encoders those in GNNs
 such as :class:`pykeen.models.RGCN` to be implemented and used.
 
 The entity representations and relation representations can be accessed like this:
@@ -85,8 +85,8 @@ The entity representations and relation representations can be accessed like thi
     result = pipeline(model='TransE', dataset='UMLS')
     model = result.model
 
-    entity_representation_modules: List['pykeen.nn.RepresentationModule'] = model.entity_representations
-    relation_representation_modules: List['pykeen.nn.RepresentationModule'] = model.relation_representations
+    entity_representation_modules: List['pykeen.nn.Representation'] = model.entity_representations
+    relation_representation_modules: List['pykeen.nn.Representation'] = model.relation_representations
 
 Most models, like :class:`pykeen.models.TransE`, only have one representation for entities and one
 for relations. This means that the ``entity_representations`` and ``relation_representations``
@@ -105,7 +105,7 @@ to invoke the `forward()` and get the values.
     entity_embedding_tensor: torch.FloatTensor = entity_embeddings()
     relation_embedding_tensor: torch.FloatTensor = relation_embeddings()
 
-The `forward()` function of all :class:`pykeen.nn.emb.RepresentationModule` takes an ``indices`` parameter.
+The `forward()` function of all :class:`pykeen.nn.representation.Representation` takes an ``indices`` parameter.
 By default, it is ``None`` and returns all values. More explicitly, this looks like:
 
 .. code-block:: python

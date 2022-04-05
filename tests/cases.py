@@ -30,51 +30,74 @@ from unittest.case import SkipTest
 from unittest.mock import patch
 
 import numpy
+import numpy.random
 import pytest
 import torch
+import torch.utils.data
 import unittest_templates
 from click.testing import CliRunner, Result
+from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
-import pykeen.nn.emb
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.representation
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
+from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
-from pykeen.evaluation import Evaluator, MetricResults
+from pykeen.evaluation import Evaluator, MetricResults, evaluator_resolver
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
+from pykeen.metrics import rank_based_metric_resolver
+from pykeen.metrics.ranking import (
+    DerivedRankBasedMetric,
+    NoClosedFormError,
+    RankBasedMetric,
+    generate_num_candidates_and_ranks,
+)
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
-from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.nn.representation import Representation
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples import TriplesFactory, generation
+from pykeen.triples import Instances, TriplesFactory, generation
+from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
-from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
+from pykeen.triples.utils import get_entities
 from pykeen.typing import (
     LABEL_HEAD,
     LABEL_TAIL,
+    TRAINING,
     HeadRepresentation,
+    InductiveMode,
     Initializer,
     MappedTriples,
     RelationRepresentation,
     TailRepresentation,
 )
-from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import (
+    all_in_bounds,
+    get_batchnorm_modules,
+    getattr_or_docdata,
+    is_triple_tensor_subset,
+    resolve_device,
+    set_random_seed,
+    triple_tensor_to_set,
+    unpack_singletons,
+)
 from tests.constants import EPSILON
-from tests.mocks import CustomRepresentations
+from tests.mocks import CustomRepresentation
 from tests.utils import rand
 
 T = TypeVar("T")
@@ -794,6 +817,16 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         """Compute expected penalty for given tensor."""
         return None
 
+    def test_pop_regularization_term(self):
+        """Verify popping a regularization term."""
+        # update term
+        x = torch.rand(self.batch_size, 10, generator=self.generator, device=self.device, requires_grad=True)
+        self.instance.update(x)
+
+        # check that the expected term is returned
+        exp = (self.instance.weight * self.instance.regularization_term).item()
+        self.assertEqual(exp, self.instance.pop_regularization_term().item())
+
 
 class LpRegularizerTest(RegularizerTestCase):
     """Common test for L_p regularizers."""
@@ -837,7 +870,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     create_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
-    sampler = "default"
+    sampler: Optional[str] = None
 
     #: The batch size for use when testing training procedures
     train_batch_size = 400
@@ -857,6 +890,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     #: the model's device
     device: torch.device
+
+    #: the inductive mode
+    mode: ClassVar[Optional[InductiveMode]] = None
 
     def pre_setup_hook(self) -> None:  # noqa: D102
         # for reproducible testing
@@ -904,7 +940,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert set(id(np) for np in new_params) == set(id(p) for p in params)
 
         # check that the parameters where modified
-        num_equal_weights_after_re_init = sum(1 for np in new_params if (np.data == old_content[id(np)]).all())
+        num_equal_weights_after_re_init = sum(
+            1 for new_param in new_params if (new_param.data == old_content[id(new_param)]).all()
+        )
         self.assertEqual(num_equal_weights_after_re_init, self.num_constant_init)
 
     def _check_scores(self, batch, scores) -> None:
@@ -924,7 +962,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test the model's ``score_hrt()`` function."""
         batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
         try:
-            scores = self.instance.score_hrt(batch)
+            scores = self.instance.score_hrt(batch, mode=self.mode)
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
@@ -941,7 +979,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert (batch[:, 0] < self.factory.num_entities).all()
         assert (batch[:, 1] < self.factory.num_relations).all()
         try:
-            scores = self.instance.score_t(batch)
+            scores = self.instance.score_t(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_t not yet implemented")
         except RuntimeError as e:
@@ -959,7 +997,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert batch.shape == (self.batch_size, 2)
         assert (batch < self.factory.num_entities).all()
         try:
-            scores = self.instance.score_r(batch)
+            scores = self.instance.score_r(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_r not yet implemented")
         except RuntimeError as e:
@@ -982,7 +1020,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert (batch[:, 0] < self.factory.num_relations).all()
         assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores = self.instance.score_h(batch)
+            scores = self.instance.score_h(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_h not yet implemented")
         except RuntimeError as e:
@@ -1023,7 +1061,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             loop,
             num_epochs=self.train_num_epochs,
             batch_size=self.train_batch_size,
-            sampler="default",
+            sampler=None,
         )
         self.assertIsInstance(losses, list)
 
@@ -1056,7 +1094,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             **self.instance_kwargs,
         )
 
-        def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
+        def _equal_embeddings(a: Representation, b: Representation) -> bool:
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
@@ -1202,7 +1240,7 @@ Traceback
         # do one optimization step
         opt = optim.SGD(params=self.instance.parameters(), lr=1.0)
         batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
-        scores = self.instance.score_hrt(hrt_batch=batch)
+        scores = self.instance.score_hrt(hrt_batch=batch, mode=self.mode)
         fake_loss = scores.mean()
         fake_loss.backward()
         opt.step()
@@ -1301,7 +1339,7 @@ Traceback
         """Tests whether we can provide custom representations."""
         if isinstance(self.instance, EntityRelationEmbeddingModel):
             old_embeddings = self.instance.relation_embeddings
-            self.instance.relation_embeddings = CustomRepresentations(
+            self.instance.relation_embeddings = CustomRepresentation(
                 num_entities=self.factory.num_relations,
                 shape=old_embeddings.shape,
             )
@@ -1379,7 +1417,43 @@ class BaseNodePieceTest(ModelTestCase):
         return super()._help_test_cli(args)
 
 
-class RepresentationTestCase(GenericTestCase[RepresentationModule]):
+class InductiveModelTestCase(ModelTestCase):
+    """Tests for inductive models."""
+
+    mode = TRAINING
+    num_relations: ClassVar[int] = 7
+    num_entities_transductive: ClassVar[int] = 13
+    num_entities_inductive: ClassVar[int] = 5
+    num_triples_training: ClassVar[int] = 33
+    num_triples_inference: ClassVar[int] = 31
+    num_triples_testing: ClassVar[int] = 37
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        dataset = create_inductive_dataset(
+            num_relations=self.num_relations,
+            num_entities_transductive=self.num_entities_transductive,
+            num_entities_inductive=self.num_entities_inductive,
+            num_triples_training=self.num_triples_training,
+            num_triples_inference=self.num_triples_inference,
+            num_triples_testing=self.num_triples_testing,
+            create_inverse_triples=self.create_inverse_triples,
+        )
+        training_loop_kwargs = dict(self.training_loop_kwargs or dict())
+        training_loop_kwargs["mode"] = self.mode
+        InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
+        # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
+        kwargs["triples_factory"] = self.factory = dataset.transductive_training
+        kwargs["inference_factory"] = dataset.inductive_inference
+        return kwargs
+
+    def _help_test_cli(self, args):  # noqa: D102
+        raise SkipTest("Inductive models are not compatible the CLI.")
+
+    def test_pipeline_nations_early_stopper(self):  # noqa: D102
+        raise SkipTest("Inductive models are not compatible the pipeline.")
+
+
+class RepresentationTestCase(GenericTestCase[Representation]):
     """Common tests for representation modules."""
 
     batch_size: ClassVar[int] = 2
@@ -1420,6 +1494,20 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     def test_all_indices(self):
         """Test with all indices."""
         self._test_indices(indices=torch.arange(self.instance.max_id))
+
+    def test_dropout(self):
+        """Test dropout layer."""
+        # create a new instance with guaranteed dropout
+        kwargs = self.instance_kwargs
+        kwargs.pop("dropout", None)
+        dropout_instance = self.cls(**kwargs, dropout=0.1)
+        # set to training mode
+        dropout_instance.train()
+        # check for different output
+        indices = torch.arange(2)
+        # use more samples to make sure that enough values can be dropped
+        a = torch.stack([dropout_instance(indices) for _ in range(20)])
+        assert not (a[0:1] == a).all()
 
 
 class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
@@ -1759,6 +1847,19 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     ):
         logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
 
+    def test_pipeline(self):
+        """Test interaction with pipeline."""
+        pipeline(
+            training=self.factory,
+            testing=self.factory,
+            model="distmult",
+            evaluator=evaluator_resolver.normalize_cls(self.cls),
+            evaluator_kwargs=self.instance_kwargs,
+            training_kwargs=dict(
+                num_epochs=1,
+            ),
+        )
+
 
 class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelection]):
     """Tests for anchor selection."""
@@ -1826,9 +1927,10 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
     num_tokens: int = 2
     factory: CoreTriplesFactory
 
-    def post_instantiation_hook(self) -> None:
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         """Prepare triples."""
         self.factory = Nations().training
+        return {}
 
     def test_call(self):
         """Test __call__."""
@@ -1866,3 +1968,316 @@ class NodePieceTestCase(RepresentationTestCase):
             create_inverse_triples=False,
         )
         return kwargs
+
+
+class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
+    """Test case for evaluation only models."""
+
+    #: The batch size
+    batch_size: int = 3
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        dataset = Nations()
+        self.factory = kwargs["triples_factory"] = dataset.training
+        return kwargs
+
+    def _verify(self, scores: torch.FloatTensor):
+        """Verify scores."""
+
+    def test_score_t(self):
+        """Test score_t."""
+        hr_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, :2]
+        scores = self.instance.score_t(hr_batch=hr_batch)
+        assert scores.shape == (self.batch_size, self.factory.num_entities)
+        self._verify(scores)
+
+    def test_score_h(self):
+        """Test score_h."""
+        rt_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, 1:]
+        scores = self.instance.score_h(rt_batch=rt_batch)
+        assert scores.shape == (self.batch_size, self.factory.num_entities)
+        self._verify(scores)
+
+
+class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric]):
+    """A test for rank-based metrics."""
+
+    #: the maximum number of candidates
+    max_num_candidates: int = 17
+
+    #: the number of ranks
+    num_ranks: int = 33
+
+    #: the number of samples to use for monte-carlo estimation
+    num_samples: int = 1_000
+
+    #: the number of candidates for each individual ranking task
+    num_candidates: numpy.ndarray
+
+    #: the ranks for each individual ranking task
+    ranks: numpy.ndarray
+
+    def post_instantiation_hook(self) -> None:
+        """Generate a coherent rank & candidate pair."""
+        self.ranks, self.num_candidates = generate_num_candidates_and_ranks(
+            num_ranks=self.num_ranks,
+            max_num_candidates=self.max_num_candidates,
+            seed=42,
+        )
+
+    def test_docdata(self):
+        """Test the docdata contents of the metric."""
+        self.assertTrue(hasattr(self.instance, "increasing"))
+        self.assertNotEqual(
+            "", self.cls.__doc__.splitlines()[0].strip(), msg="First line of docstring should not be blank"
+        )
+        self.assertIsNotNone(get_docdata(self.instance), msg="No docdata available")
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "link"))
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "name"))
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "description"))
+        self.assertIsNotNone(self.instance.key)
+
+    def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
+        """Verify call."""
+        x = self.instance(ranks=ranks, num_candidates=num_candidates)
+        # data type
+        assert isinstance(x, float)
+        # value range
+        self.assertIn(x, self.instance.value_range.approximate(epsilon=1.0e-08))
+
+    def test_call(self):
+        """Test __call__."""
+        self._test_call(ranks=self.ranks, num_candidates=self.num_candidates)
+
+    def test_call_best(self):
+        """Test __call__ with optimal ranks."""
+        self._test_call(ranks=numpy.ones(shape=(self.num_ranks,)), num_candidates=self.num_candidates)
+
+    def test_call_worst(self):
+        """Test __call__ with worst ranks."""
+        self._test_call(ranks=self.num_candidates, num_candidates=self.num_candidates)
+
+    def test_call_no_candidates(self):
+        """Test __call__ without candidates."""
+        if self.instance.needs_candidates:
+            raise SkipTest(f"{self.instance} requires candidates.")
+        self._test_call(ranks=self.ranks, num_candidates=None)
+
+    def test_increasing(self):
+        """Test correct increasing annotation."""
+        x, y = [
+            self.instance(ranks=ranks, num_candidates=self.num_candidates)
+            for ranks in [
+                # original ranks
+                self.ranks,
+                # better ranks
+                numpy.clip(self.ranks - 1, a_min=1, a_max=None),
+            ]
+        ]
+        if self.instance.increasing:
+            self.assertLessEqual(x, y)
+        else:
+            self.assertLessEqual(y, x)
+
+    def _test_expectation(self, weights: Optional[numpy.ndarray]):
+        """Test the numeric expectation is close to the closed form one."""
+        try:
+            closed = self.instance.expected_value(num_candidates=self.num_candidates, weights=weights)
+        except NoClosedFormError as error:
+            raise SkipTest("no implementation of closed-form expectation") from error
+
+        generator = numpy.random.default_rng(seed=0)
+        low, simulated, high = self.instance.numeric_expected_value_with_ci(
+            num_candidates=self.num_candidates,
+            num_samples=self.num_samples,
+            generator=generator,
+            weights=weights,
+        )
+        self.assertLessEqual(low, closed)
+        self.assertLessEqual(closed, high)
+
+    def test_expectation(self):
+        """Test the numeric expectation is close to the closed form one."""
+        self._test_expectation(weights=None)
+
+    def test_expectation_weighted(self):
+        """Test for weighted expectation."""
+        self._test_expectation(weights=self._generate_weights())
+
+    def _test_variance(self, weights: Optional[numpy.ndarray]):
+        """Test the numeric variance is close to the closed form one."""
+        try:
+            closed = self.instance.variance(num_candidates=self.num_candidates, weights=weights)
+        except NoClosedFormError as error:
+            raise SkipTest("no implementation of closed-form variance") from error
+
+        # variances are non-negative
+        self.assertLessEqual(0, closed)
+
+        generator = numpy.random.default_rng(seed=0)
+        low, simulated, high = self.instance.numeric_variance_with_ci(
+            num_candidates=self.num_candidates,
+            num_samples=self.num_samples,
+            generator=generator,
+            weights=weights,
+        )
+        self.assertLessEqual(low, closed)
+        self.assertLessEqual(closed, high)
+
+    def test_variance(self):
+        """Test the numeric variance is close to the closed form one."""
+        self._test_variance(weights=None)
+
+    def test_variance_weighted(self):
+        """Test the weighted numeric variance is close to the closed form one."""
+        self._test_variance(weights=self._generate_weights())
+
+    def _generate_weights(self):
+        """Generate weights."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+        # generate random weights such that sum = n
+        generator = numpy.random.default_rng(seed=21)
+        weights = generator.random(size=self.num_candidates.shape)
+        weights = self.num_ranks * weights / weights.sum()
+        return weights
+
+    def test_different_to_base_metric(self):
+        """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
+        if not isinstance(self.instance, DerivedRankBasedMetric):
+            self.skipTest("no base metric")
+        base_instance = rank_based_metric_resolver.make(self.instance.base_cls)
+        base_factor = 1 if base_instance.increasing else -1
+        self.assertNotEqual(
+            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
+            base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
+        )
+
+    def test_weights_direction(self):
+        """Test monotonicity of weighting."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+
+        # for sanity checking: give the largest weight to best rank => should improve
+        idx = self.ranks.argmin()
+        weights = numpy.ones_like(self.ranks, dtype=float)
+        weights[idx] = 2.0
+        weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
+        unweighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=None)
+        if self.instance.increasing:  # increasing = larger is better => weighted should be better
+            self.assertLessEqual(unweighted, weighted)
+        else:
+            self.assertLessEqual(weighted, unweighted)
+
+    def test_weights_coherence(self):
+        """Test coherence for weighted metrics & metric in repeated array."""
+        if not self.instance.supports_weights:
+            raise SkipTest(f"{self.instance} does not support weights")
+
+        # generate two versions
+        generator = numpy.random.default_rng(seed=21)
+        repeats = generator.integers(low=1, high=10, size=self.ranks.shape)
+
+        # 1. repeat each rank/candidate pair a random number of times
+        repeated_ranks, repeated_num_candidates = [], []
+        for rank, num_candidates, repeat in zip(self.ranks, self.num_candidates, repeats):
+            repeated_ranks.append(numpy.full(shape=(repeat,), fill_value=rank))
+            repeated_num_candidates.append(numpy.full(shape=(repeat,), fill_value=num_candidates))
+        repeated_ranks = numpy.concatenate(repeated_ranks)
+        repeated_num_candidates = numpy.concatenate(repeated_num_candidates)
+        value_repeat = self.instance(ranks=repeated_ranks, num_candidates=repeated_num_candidates, weights=None)
+
+        # 2. do not repeat, but assign a corresponding weight
+        weights = repeats.astype(float)
+        value_weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
+
+        self.assertAlmostEqual(value_repeat, value_weighted, delta=2)
+
+
+class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
+    """Test for metric results."""
+
+    def test_flat_dict(self):
+        """Test to_flat_dict."""
+        flat_dict = self.instance.to_flat_dict()
+        # check flatness
+        self.assertIsInstance(flat_dict, dict)
+        for key, value in flat_dict.items():
+            self.assertIsInstance(key, str)
+            # TODO: does this suffice, or do we really need float as datatype?
+            self.assertIsInstance(value, (float, int), msg=key)
+        self._verify_flat_dict(flat_dict)
+
+    def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
+        pass
+
+
+class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
+    """Test for training instances."""
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.factory = Nations().training
+        return {}
+
+    @abstractmethod
+    def _get_expected_length(self) -> int:
+        raise NotImplementedError
+
+    def test_getitem(self):
+        """Test __getitem__."""
+        self.instance: Instances
+        assert self.instance[0] is not None
+
+    def test_len(self):
+        """Test __len__."""
+        self.assertEqual(len(self.instance), self._get_expected_length())
+
+    def test_data_loader(self):
+        """Test usage with data loader."""
+        for batch in torch.utils.data.DataLoader(
+            dataset=self.instance, batch_size=2, shuffle=True, collate_fn=self.instance.get_collator()
+        ):
+            assert batch is not None
+
+
+class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[BaseBatchedSLCWAInstances]):
+    """Test for batched sLCWA training instances."""
+
+    batch_size: int = 2
+    num_negatives_per_positive: int = 3
+    kwargs = dict(
+        batch_size=batch_size,
+        negative_sampler_kwargs=dict(
+            num_negs_per_pos=num_negatives_per_positive,
+        ),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.factory = Nations().training
+        kwargs["mapped_triples"] = self.factory.mapped_triples
+        return kwargs
+
+    def test_data_loader(self):
+        """Test data loader."""
+        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
+            assert isinstance(batch, SLCWABatch)
+            assert batch.positives.shape == (self.batch_size, 3)
+            assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
+            assert batch.masks is None
+
+    def test_length(self):
+        """Test length."""
+        assert len(self.instance) == len(list(iter(self.instance)))
+
+    def test_data_loader_multiprocessing(self):
+        """Test data loader with multiple workers."""
+        self.assertEqual(
+            sum(
+                (
+                    batch.positives.shape[0]
+                    for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
+                )
+            ),
+            self.factory.num_triples,
+        )
