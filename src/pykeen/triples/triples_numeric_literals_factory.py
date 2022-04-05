@@ -4,9 +4,10 @@
 
 import logging
 import pathlib
-from typing import Any, Dict, Optional, TextIO, Tuple, Union
+from typing import Any, ClassVar, Dict, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
+import pandas
 import torch
 
 from .triples_factory import TriplesFactory
@@ -44,6 +45,9 @@ def create_matrix_of_literals(
 
 class TriplesNumericLiteralsFactory(TriplesFactory):
     """Create multi-modal instances given the path to triples."""
+
+    file_name_literal_to_id: ClassVar[str] = "literal_to_id"
+    file_name_numeric_literals: ClassVar[str] = "literals"
 
     def __init__(
         self,
@@ -120,3 +124,31 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
                 **(self.metadata if keep_metadata else {}),  # type: ignore
             },
         )
+
+    def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
+        path = super().to_path_binary(path=path)
+        # save literal-to-id mapping
+        pandas.DataFrame(data=self.literals_to_id.items(), columns=["label", "id"],).sort_values(by="id").set_index(
+            "id"
+        ).to_csv(
+            path.joinpath(f"{self.literals_to_id}.tsv.gz"),
+            sep="\t",
+        )
+        # save numeric literals
+        np.save(str(path.joinpath(self.file_name_numeric_literals).with_suffix(suffix=".npz")), self.numeric_literals)
+        return path
+
+    @classmethod
+    def _from_path_binary(cls, path: pathlib.Path) -> MutableMapping[str, Any]:
+        data = super()._from_path_binary(path)
+        # load literal-to-id
+        df = pandas.read_csv(
+            path.joinpath(f"{cls.file_name_literal_to_id}.tsv.gz"),
+            sep="\t",
+        )
+        data["literal_to_id"] = dict(zip(df["label"], df["id"]))
+        # load literals
+        data["numeric_literals"] = np.load(
+            str(path.joinpath(self.file_name_numeric_literals).with_suffix(suffix=".npz"))
+        )
+        return data
