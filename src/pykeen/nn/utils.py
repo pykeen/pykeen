@@ -37,7 +37,7 @@ class TransformerEncoder(nn.Module):
         """
         super().__init__()
         try:
-            from transformers import AutoModel, AutoTokenizer
+            from transformers import AutoModel, AutoTokenizer, PreTrainedTokenizer
         except ImportError as error:
             raise ImportError(
                 "Please install the `transformers` library, use the _transformers_ extra"
@@ -46,13 +46,15 @@ class TransformerEncoder(nn.Module):
                 " for more information."
             ) from error
 
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name_or_path=pretrained_model_name_or_path
+        )
         self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
         self.max_length = max_length or 512
 
     def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
         """Encode labels via the provided model and tokenizer."""
-        labels = upgrade_to_sequence(labels)
+        labels = list(upgrade_to_sequence(labels))
         return self.model(
             **self.tokenizer(
                 labels,
