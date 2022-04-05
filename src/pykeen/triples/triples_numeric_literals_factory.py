@@ -131,11 +131,11 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         pandas.DataFrame(data=self.literals_to_id.items(), columns=["label", "id"],).sort_values(by="id").set_index(
             "id"
         ).to_csv(
-            path.joinpath(f"{self.literals_to_id}.tsv.gz"),
+            path.joinpath(f"{self.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )
         # save numeric literals
-        np.save(str(path.joinpath(self.file_name_numeric_literals).with_suffix(suffix=".npz")), self.numeric_literals)
+        np.save(str(path.joinpath(self.file_name_numeric_literals)), self.numeric_literals)
         return path
 
     @classmethod
@@ -149,6 +149,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         data["literal_to_id"] = dict(zip(df["label"], df["id"]))
         # load literals
         data["numeric_literals"] = np.load(
-            str(path.joinpath(self.file_name_numeric_literals).with_suffix(suffix=".npz"))
+            str(path.joinpath(cls.file_name_numeric_literals).with_suffix(suffix=".npy"))
         )
         return data
