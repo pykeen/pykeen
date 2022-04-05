@@ -41,7 +41,7 @@ class TransformerEncoder(nn.Module):
         except ImportError as error:
             raise ImportError(
                 "Please install the `transformers` library, use the _transformers_ extra"
-                " for PyKEEN iwth `pip install pykeen[transformers] when installing, or "
+                " for PyKEEN with `pip install pykeen[transformers] when installing, or "
                 " see the PyKEEN installation docs at https://pykeen.readthedocs.io/en/stable/installation.html"
                 " for more information."
             ) from error
