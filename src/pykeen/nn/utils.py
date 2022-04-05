@@ -13,7 +13,7 @@ __all__ = [
     "TransformerEncoder",
 ]
 
-from pykeen.utils import upgrade_to_sequence
+from pykeen.utils import get_preferred_device, upgrade_to_sequence
 
 
 class TransformerEncoder(nn.Module):
@@ -62,7 +62,7 @@ class TransformerEncoder(nn.Module):
                 padding=True,
                 truncation=True,
                 max_length=self.max_length,
-            )
+            ).to(get_preferred_device(self.model))
         ).pooler_output
 
     @torch.inference_mode()
