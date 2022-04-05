@@ -68,6 +68,20 @@ class CheckpointMismatchError(RuntimeError):
     """An exception when a provided checkpoint file does not match the current training loop setup."""
 
 
+class NoTrainingBatchError(RuntimeError):
+    """An exception when a no training batch was available."""
+
+    def __init__(self):
+        """Initialize the error."""
+        super().__init__(
+            "Did not have a single training batch! This typically happens if the batch_size is set larger"
+            " than the number of training instances, and drop_last is set to True (i.e., its default). You"
+            " can try to fix this problem, by explicitly setting drop_last=False. If you are using the"
+            " pipeline, you find the parameter in the training_kwargs. Further information can be found at"
+            " https://github.com/pykeen/pykeen/issues/828 ."
+        )
+
+
 class SubBatchingNotSupportedError(NotImplementedError):
     """An exception raised when sub batching is not implemented."""
 
@@ -567,6 +581,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             pin_memory,
             sampler=sampler,
         )
+        if len(train_data_loader) == 0:
+            raise NoTrainingBatchError()
         if drop_last and not only_size_probing:
             logger.info(
                 "Dropping last (incomplete) batch each epoch (%s batches).",
@@ -646,15 +662,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     callback.post_batch(epoch=epoch, batch=batch)
 
                     evaluated_once = True
-
-                if num_training_instances == 0:
-                    raise ValueError(
-                        "Did not have a single training batch! This typically happens if the batch_size is set larger"
-                        " than the number of training instances, and drop_last is set to True (i.e., its default). You"
-                        " can try to fix this problem, by explicitly setting drop_last=False. If you are using the"
-                        " pipeline, you find the parameter in the training_kwargs. Further information can be found at"
-                        " https://github.com/pykeen/pykeen/issues/828 ."
-                    )
 
                 del batch
                 del batches
