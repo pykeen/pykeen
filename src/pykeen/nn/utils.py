@@ -13,6 +13,8 @@ __all__ = [
     "TransformerEncoder",
 ]
 
+from pykeen.utils import upgrade_to_sequence
+
 
 class TransformerEncoder(nn.Module):
     """A combination of a tokenizer and a model."""
@@ -50,8 +52,7 @@ class TransformerEncoder(nn.Module):
 
     def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
         """Encode labels via the provided model and tokenizer."""
-        if isinstance(labels, str):
-            labels = [labels]
+        labels = upgrade_to_sequence(labels)
         return self.model(
             **self.tokenizer(
                 labels,
