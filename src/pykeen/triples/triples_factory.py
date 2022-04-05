@@ -15,6 +15,7 @@ from typing import (
     ClassVar,
     Collection,
     Dict,
+    Iterable,
     List,
     Mapping,
     MutableMapping,
@@ -428,8 +429,8 @@ class CoreTriplesFactory:
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
-    def extra_repr(self) -> str:
-        """Extra representation string."""
+    def _iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over extra_repr components."""
         d = [
             ("num_entities", self.num_entities),
             ("num_relations", self.num_relations),
@@ -437,7 +438,14 @@ class CoreTriplesFactory:
             ("inverse_triples", self.create_inverse_triples),
         ]
         d.extend(sorted(self.metadata.items()))  # type: ignore
-        return ", ".join(f'{k}="{v}"' if isinstance(v, (str, pathlib.Path)) else f"{k}={v}" for k, v in d)
+        for k, v in d:
+            if isinstance(v, (str, pathlib.Path)):
+                v = f'"{v}"'
+            yield f"{k}={v}"
+
+    def extra_repr(self) -> str:
+        """Extra representation string."""
+        return ", ".join(self._iter_extra_repr())
 
     def __repr__(self):  # noqa: D105
         return f"{self.__class__.__name__}({self.extra_repr()})"
