@@ -4,9 +4,7 @@
 
 from typing import Any, ClassVar, Mapping, Optional, Type
 
-import torch.autograd
 from class_resolver import OptionalKwargs
-from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -18,17 +16,6 @@ from ...typing import Hint, Initializer
 __all__ = [
     "TuckER",
 ]
-
-
-def _apply_bn_to_tensor(
-    batch_norm: nn.BatchNorm1d,
-    tensor: torch.FloatTensor,
-) -> torch.FloatTensor:
-    shape = tensor.shape
-    tensor = tensor.view(-1, shape[-1])
-    tensor = batch_norm(tensor)
-    tensor = tensor.view(*shape)
-    return tensor
 
 
 class TuckER(ERModel):
