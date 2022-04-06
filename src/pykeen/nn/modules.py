@@ -10,12 +10,26 @@ import math
 from abc import ABC, abstractmethod
 from collections import Counter
 from operator import itemgetter
-from typing import Any, Callable, Generic, Iterable, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 import more_itertools
 import numpy
 import torch
-from class_resolver import ClassResolver
+from class_resolver import ClassResolver, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
@@ -23,6 +37,7 @@ from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .combinations import Combination
+from .init import initializer_resolver
 from ..typing import (
     HeadRepresentation,
     HintOrType,
@@ -922,6 +937,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     """
 
     func = pkf.tucker_interaction
+    default_core_initializer: ClassVar[Type[Initializer]] = nn.init.uniform_
 
     def __init__(
         self,
@@ -931,6 +947,8 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         relation_dropout: float = 0.4,
         head_relation_dropout: float = 0.5,
         apply_batch_normalization: bool = True,
+        core_initializer: HintOrType[Initializer] = default_core_initializer,
+        core_initializer_kwargs: OptionalKwargs = None,
     ):
         """Initialize the Tucker interaction function.
 
@@ -946,8 +964,17 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             The dropout rate applied to the combined head and relation representations.
         :param apply_batch_normalization:
             Whether to use batch normalization on head representations and the combination of head and relation.
+        :param core_initializer:
+            the core tensor's initializer, or a hint thereof
+        :param core_initializer_kwargs:
+            additional keyword-based parameters for the initializer
         """
         super().__init__()
+
+        if core_initializer is self.default_core_initializer:
+            # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
+            core_initializer_kwargs = core_initializer_kwargs or dict(a=-1.0, b=1.0)
+        core_initializer = initializer_resolver.make(core_initializer, pos_kwargs=core_initializer_kwargs)
 
         if relation_dim is None:
             relation_dim = embedding_dim
@@ -955,7 +982,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         # Core tensor
         # Note: we use a different dimension permutation as in the official implementation to match the paper.
         self.core_tensor = nn.Parameter(
-            torch.empty(embedding_dim, relation_dim, embedding_dim),
+            core_initializer(torch.empty(embedding_dim, relation_dim, embedding_dim)),
             requires_grad=True,
         )
 
@@ -969,11 +996,6 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             self.head_relation_batch_norm = nn.BatchNorm1d(embedding_dim)
         else:
             self.head_batch_norm = self.head_relation_batch_norm = None
-
-    def reset_parameters(self):  # noqa:D102
-        # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-        nn.init.uniform_(self.core_tensor, -1.0, 1.0)
-        # batch norm gets reset automatically, since it defines reset_parameters
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(
