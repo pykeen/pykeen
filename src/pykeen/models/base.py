@@ -35,6 +35,28 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+def _restrict_to(
+    scores: torch.FloatTensor,
+    ids: Optional[torch.LongTensor],
+) -> torch.FloatTensor:
+    """
+    Select the given IDs from a tensor of all scores.
+
+    :param scores: shape: (batch_size, n)
+        The scores for all $n$ candidates.
+    :param ids: shape: (k,) | (batch_size, k)
+        the selected IDs.
+
+    :return: shape: (batch_size, k)
+        the selected scores
+    """
+    if ids is None:
+        return scores
+    if ids.ndim == 1:
+        return scores[:, ids]
+    return scores.gather(dim=1, index=ids)
+
+
 class Model(nn.Module, ABC):
     """A base module for KGE models.
 
@@ -201,6 +223,34 @@ class Model(nn.Module, ABC):
             For each h-r pair, the scores for all possible tails.
         """
 
+    def score_ts(
+        self,
+        hr_batch: torch.LongTensor,
+        ts: Optional[torch.LongTensor] = None,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+    ) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction.
+
+        This method calculates for each of the given (head, relation) pairs the score for all possible tails, or a
+        selection thereof.
+
+        :param hr_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
+        :param ts: shape: (num_tails,) | (batch_size, num_tails)
+            the tail entity IDs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
+        """
+        return _restrict_to(scores=self.score_t(hr_batch=hr_batch, slice_size=slice_size, mode=mode), ids=ts)
+
     @abstractmethod
     def score_r(
         self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
@@ -223,6 +273,34 @@ class Model(nn.Module, ABC):
         # TODO: this currently compute (batch_size, num_relations) instead,
         # i.e., scores for normal and inverse relations
 
+    def score_rs(
+        self,
+        ht_batch: torch.LongTensor,
+        rs: Optional[torch.LongTensor] = None,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+    ) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction.
+
+        This method calculates for each of the given (head, tail) pairs the score for all possible relations, or a
+        selection thereof.
+
+        :param ht_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+        :param rs: shape: (num_tails,) | (batch_size, num_tails)
+            the realtion IDs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
+
+        :return: shape: (batch_size, num_real_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+        return _restrict_to(scores=self.score_r(ht_batch=ht_batch, slice_size=slice_size, mode=mode), ids=rs)
+
     @abstractmethod
     def score_h(
         self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
@@ -242,6 +320,35 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
+
+    @abstractmethod
+    def score_hs(
+        self,
+        rt_batch: torch.LongTensor,
+        hs: Optional[torch.LongTensor] = None,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+    ) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction.
+
+        This method calculates for each of the given (relation, tail) pairs the score for all possible heads, or a
+        selection thereof.
+
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+        :param hs: shape: (num_heads,) | (batch_size, num_heads)
+            the head entity IDs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+        return _restrict_to(scores=self.score_h(rt_batch=rt_batch, slice_size=slice_size, mode=mode), ids=hs)
 
     @abstractmethod
     def collect_regularization_term(self) -> torch.FloatTensor:

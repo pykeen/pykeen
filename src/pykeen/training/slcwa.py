@@ -105,6 +105,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
 
         # Compute negative and positive scores
         positive_scores = self.model.score_hrt(positive_batch, mode=self.mode)
+        # TODO: to use fast slcwa, we need to know what was corrupted.
         negative_scores = self.model.score_hrt(negative_batch, mode=self.mode).view(*negative_score_shape)
 
         return (

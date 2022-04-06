@@ -768,6 +768,7 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
+    # TODO: to use score_{h,r,t}s, we need adjusted filter indices
     scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
 
     if evaluator.filtered or evaluator.requires_positive_mask:
