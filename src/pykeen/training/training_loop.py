@@ -125,7 +125,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
-        batch_size=dict(type=int, low=32, high=4000, q=100),
+        batch_size=dict(type=int, low=4, high=12, scale="power_two"),  # [16, 4096]
     )
 
     def __init__(
