@@ -22,7 +22,6 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    Type,
     Union,
 )
 
