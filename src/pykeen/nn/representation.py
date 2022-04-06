@@ -378,8 +378,8 @@ class Embedding(Representation):
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
-            self._embeddings.weight.data.view(self.num_embeddings, *self.shape),
-        ).view(self.num_embeddings, self.embedding_dim)
+            self._embeddings.weight.data.view(self.max_id, *self.shape)
+        ).view(self.max_id, self.embedding_dim)
 
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
