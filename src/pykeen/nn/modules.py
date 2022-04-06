@@ -29,7 +29,7 @@ from typing import (
 import more_itertools
 import numpy
 import torch
-from class_resolver import ClassResolver, OptionalKwargs
+from class_resolver import ClassResolver, Hint, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
@@ -940,7 +940,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     # default core tensor initialization
     # cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-    default_core_initializer: ClassVar[Type[Initializer]] = staticmethod(nn.init.uniform_)
+    default_core_initializer: ClassVar[Initializer] = staticmethod(nn.init.uniform_)  # type: ignore
     default_core_initializer_kwargs: Mapping[str, Any] = {"a": -1.0, "b": 1.0}
 
     def __init__(
@@ -951,7 +951,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         relation_dropout: float = 0.4,
         head_relation_dropout: float = 0.5,
         apply_batch_normalization: bool = True,
-        core_initializer: HintOrType[Initializer] = default_core_initializer,
+        core_initializer: Hint[Initializer] = None,
         core_initializer_kwargs: OptionalKwargs = None,
     ):
         """Initialize the Tucker interaction function.
