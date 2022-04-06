@@ -760,8 +760,14 @@ class CombinedCompGCNRepresentations(nn.Module):
             representation=relation_representations,
             representation_kwargs=relation_representations_kwargs,
         )
-        input_dim = self.entity_representations.embedding_dim
-        assert self.relation_representations.embedding_dim == input_dim
+        if len(self.entity_representations.shape) > 1:
+            raise ValueError(f"{self.__class__.__name__} requires vector base entity representations.")
+        input_dim = self.entity_representations.shape[0]
+        # TODO: might not be true for all compositions
+        if self.relation_representations.shape != self.entity_representations.shape:
+            raise ValueError(
+                f"{self.__class__.__name__} requires entity and relation representations of the same shape."
+            )
 
         # hidden dimension normalization
         if dims is None:
