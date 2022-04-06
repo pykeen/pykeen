@@ -372,7 +372,7 @@ class Embedding(Representation):
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
             self._embeddings.weight.data.view(self.max_id, *self.shape)
-        ).view(self.max_id, self.embedding_dim)
+        ).view(self.max_id, -1)
 
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
