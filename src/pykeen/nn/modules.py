@@ -940,7 +940,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     # default core tensor initialization
     # cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-    default_core_initializer: ClassVar[Type[Initializer]] = nn.init.uniform_
+    default_core_initializer: ClassVar[Type[Initializer]] = staticmethod(nn.init.uniform_)
     default_core_initializer_kwargs: Mapping[str, Any] = {"a": -1.0, "b": 1.0}
 
     def __init__(
