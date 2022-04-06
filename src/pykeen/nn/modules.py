@@ -937,7 +937,11 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     """
 
     func = pkf.tucker_interaction
+
+    # default core tensor initialization
+    # cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
     default_core_initializer: ClassVar[Type[Initializer]] = nn.init.uniform_
+    default_core_initializer_kwargs: Mapping[str, Any] = {"a": -1.0, "b": 1.0}
 
     def __init__(
         self,
@@ -971,18 +975,22 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         """
         super().__init__()
 
-        if core_initializer is self.default_core_initializer:
-            # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-            core_initializer_kwargs = core_initializer_kwargs or dict(a=-1.0, b=1.0)
-        core_initializer = initializer_resolver.make(core_initializer, pos_kwargs=core_initializer_kwargs)
+        # normalize initializer
+        if core_initializer is None:
+            core_initializer = self.default_core_initializer
+        self.core_initializer = core_initializer
+        if core_initializer is self.default_core_initializer and core_initializer_kwargs is None:
+            core_initializer_kwargs = self.default_core_initializer_kwargs
+        self.core_initializer_kwargs = core_initializer_kwargs
 
+        # normalize relation dimension
         if relation_dim is None:
             relation_dim = embedding_dim
 
         # Core tensor
         # Note: we use a different dimension permutation as in the official implementation to match the paper.
         self.core_tensor = nn.Parameter(
-            core_initializer(torch.empty(embedding_dim, relation_dim, embedding_dim)),
+            torch.empty(embedding_dim, relation_dim, embedding_dim),
             requires_grad=True,
         )
 
@@ -996,6 +1004,14 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             self.head_relation_batch_norm = nn.BatchNorm1d(embedding_dim)
         else:
             self.head_batch_norm = self.head_relation_batch_norm = None
+
+        self.reset_parameters()
+
+    def reset_parameters(self):  # noqa:D102
+        # instantiate here to make module easily serializable
+        core_initializer = initializer_resolver.make(self.core_initializer, pos_kwargs=self.core_initializer_kwargs)
+        core_initializer(self.core_tensor)
+        # batch norm gets reset automatically, since it defines reset_parameters
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(
