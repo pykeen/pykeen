@@ -650,6 +650,8 @@ class RGCNRepresentation(Representation):
             max_id=triples_factory.num_entities,
             pos_kwargs=entity_representations_kwargs,
         )
+        if len(base_embeddings.shape) > 1:
+            raise ValueError(f"{self.__class__.__name__} requires vector base entity representations.")
         super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
         self.entity_embeddings = base_embeddings
 
@@ -671,7 +673,7 @@ class RGCNRepresentation(Representation):
         self.register_buffer("targets", t)
         self.register_buffer("edge_types", r)
 
-        dim = base_embeddings.embedding_dim
+        dim = base_embeddings.shape[0]
         self.layers = nn.ModuleList(
             RGCNLayer(
                 input_dim=dim,
