@@ -363,13 +363,6 @@ class Embedding(Representation):
         self._embeddings.requires_grad_(trainable)
 
     @property
-    def num_embeddings(self) -> int:  # noqa: D401
-        """The total number of representations (i.e. the maximum ID)."""
-        # wrapper around max_id, for backward compatibility
-        warnings.warn(f"Directly use {self.__class__.__name__}.max_id instead of num_embeddings.")
-        return self.max_id
-
-    @property
     def embedding_dim(self) -> int:  # noqa: D401
         """The representation dimension."""
         warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
