@@ -86,8 +86,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     @classmethod
     def from_labeled_triples(
         cls,
-        *,
         triples: LabeledTriples,
+        *,
         numeric_triples: LabeledTriples = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
