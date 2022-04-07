@@ -84,6 +84,7 @@ class Dataset:
     metadata: Optional[Mapping[str, Any]] = None
 
     metadata_file_name: ClassVar[str] = "metadata.pth"
+    triples_factory_cls: ClassVar[Type[CoreTriplesFactory]] = TriplesFactory
 
     def __eq__(self, __o: object) -> bool:  # noqa: D105
         return (
@@ -204,7 +205,7 @@ class Dataset:
         for key in ("training", "testing", "validation"):
             tf_path = path.joinpath(key)
             if tf_path.is_dir():
-                tfs[key] = TriplesFactory.from_path_binary(path=tf_path)
+                tfs[key] = cls.triples_factory_cls.from_path_binary(path=tf_path)
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
         metadata_path = path.joinpath(cls.metadata_file_name)
