@@ -66,9 +66,9 @@ TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
 >>> from pykeen.triples import TriplesFactory
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
->>> training = TriplesFactory.from_path(path=NATIONS_TRAIN_PATH)
+>>> training = TriplesFactory.from_path(NATIONS_TRAIN_PATH)
 >>> testing = TriplesFactory.from_path(
-...     path=NATIONS_TEST_PATH,
+...     NATIONS_TEST_PATH,
 ...     entity_to_id=training.entity_to_id,
 ...     relation_to_id=training.relation_to_id,
 ... )
@@ -96,11 +96,11 @@ desired behavior as in:
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
 >>> training = TriplesFactory.from_path(
-...     path=NATIONS_TRAIN_PATH,
+...     NATIONS_TRAIN_PATH,
 ...     create_inverse_triples=True,
 ... )
 >>> testing = TriplesFactory.from_path(
-...     path=NATIONS_TEST_PATH,
+...     NATIONS_TEST_PATH,
 ...     entity_to_id=training.entity_to_id,
 ...     relation_to_id=training.relation_to_id,
 ...     create_inverse_triples=True,
@@ -125,7 +125,7 @@ a stratified dataset.
 >>> from pykeen.triples import TriplesFactory
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH
->>> tf = TriplesFactory.from_path(path=NATIONS_TRAIN_PATH)
+>>> tf = TriplesFactory.from_path(NATIONS_TRAIN_PATH)
 >>> training, testing = tf.split()
 >>> result = pipeline(
 ...     training=training,
@@ -141,7 +141,7 @@ you should specify the splits:
 >>> from pykeen.triples import TriplesFactory
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH
->>> tf = TriplesFactory.from_path(path=NATIONS_TRAIN_PATH)
+>>> tf = TriplesFactory.from_path(NATIONS_TRAIN_PATH)
 >>> training, testing, validation = tf.split([.8, .1, .1])
 >>> result = pipeline(
 ...     training=training,

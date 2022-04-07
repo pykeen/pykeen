@@ -72,8 +72,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     @classmethod
     def from_path(
         cls,
-        *,
         path: Union[str, pathlib.Path, TextIO],
+        *,
         path_to_numeric_triples: Union[str, pathlib.Path, TextIO] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
