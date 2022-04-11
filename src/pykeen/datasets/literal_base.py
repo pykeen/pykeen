@@ -16,7 +16,7 @@ __all__ = [
 class NumericPathDataset(LazyDataset):
     """Contains a lazy reference to a training, testing, and validation dataset."""
 
-    triples_factory_cls: ClassVar[Type[CoreTriplesFactory]] = TriplesNumericLiteralsFactory
+    triples_factory_cls = TriplesNumericLiteralsFactory
 
     def __init__(
         self,
@@ -48,12 +48,12 @@ class NumericPathDataset(LazyDataset):
             self._load_validation()
 
     def _load(self) -> None:
-        self._training = TriplesNumericLiteralsFactory.from_path(
+        self._training = self.triples_factory_cls.from_path(
             path=self.training_path,
             path_to_numeric_triples=self.literals_path,
             create_inverse_triples=self.create_inverse_triples,
         )
-        self._testing = TriplesNumericLiteralsFactory.from_path(
+        self._testing = self.triples_factory_cls.from_path(
             path=self.testing_path,
             path_to_numeric_triples=self.literals_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
@@ -64,7 +64,7 @@ class NumericPathDataset(LazyDataset):
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
         assert self._training is not None
-        self._validation = TriplesNumericLiteralsFactory.from_path(
+        self._validation = self.triples_factory_cls.from_path(
             path=self.validation_path,
             path_to_numeric_triples=self.literals_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training

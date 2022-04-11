@@ -863,6 +863,7 @@ class TriplesFactory(CoreTriplesFactory):
     def from_labeled_triples(
         cls,
         triples: LabeledTriples,
+        *,
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
@@ -941,12 +942,14 @@ class TriplesFactory(CoreTriplesFactory):
     def from_path(
         cls,
         path: Union[str, pathlib.Path, TextIO],
+        *,
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         metadata: Optional[Dict[str, Any]] = None,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
     ) -> "TriplesFactory":
         """
         Create a new triples factory from triples stored in a file.
@@ -967,6 +970,8 @@ class TriplesFactory(CoreTriplesFactory):
             kwarg to this function.
         :param load_triples_kwargs: Optional keyword arguments to pass to :func:`load_triples`.
             Could include the ``delimiter`` or a ``column_remapping``.
+        :param kwargs:
+            additional keyword-based parameters, which are ignored.
 
         :return:
             A new triples factory.

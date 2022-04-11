@@ -52,20 +52,18 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def __init__(
         self,
         *,
-        numeric_literals: np.ndarray = None,
-        literals_to_id: Mapping[str, int] = None,
+        numeric_literals: np.ndarray,
+        literals_to_id: Mapping[str, int],
         **kwargs,
     ) -> None:
         """Initialize the multi-modal triples factory.
 
-        :param path: The path to a 3-column TSV file with triples in it. If not specified,
-         you should specify ``triples``.
-        :param triples:  A 3-column numpy array with triples in it. If not specified,
-         you should specify ``path``
-        :param path_to_numeric_triples: The path to a 3-column TSV file with triples and
-         numeric. If not specified, you should specify ``numeric_triples``.
-        :param numeric_triples:  A 3-column numpy array with numeric triples in it. If not
-         specified, you should specify ``path_to_numeric_triples``.
+        :param numeric_literals: shape: (num_entities, num_literals)
+            the numeric literals as a dense matrix.
+        :param literals_to_id:
+            a mapping from literal names to their IDs, i.e., the columns in the `numeric_literals` matrix.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`.
         """
         super().__init__(**kwargs)
         self.numeric_literals = numeric_literals
@@ -75,10 +73,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def from_path(
         cls,
         path: Union[str, pathlib.Path, TextIO],
-        path_to_numeric_triples: Union[str, pathlib.Path, TextIO],
+        *,
+        path_to_numeric_triples: Union[str, pathlib.Path, TextIO] = None,
         **kwargs,
-    ) -> "TriplesNumericLiteralsFactory":
-        """Create a numeric triples factory from a pair of paths."""
+    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+        if path_to_numeric_triples is None:
+            raise ValueError(f"{cls.__name__} requires path_to_numeric_triples.")
         numeric_triples = load_triples(path_to_numeric_triples)
         triples = load_triples(path)
         return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
@@ -87,9 +87,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def from_labeled_triples(
         cls,
         triples: LabeledTriples,
-        numeric_triples: LabeledTriples,
+        *,
+        numeric_triples: LabeledTriples = None,
         **kwargs,
-    ) -> "TriplesNumericLiteralsFactory":
+    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+        if numeric_triples is None:
+            raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
         numeric_literals, literals_to_id = create_matrix_of_literals(
             numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
@@ -129,6 +132,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore
             },
+            numeric_literals=self.numeric_literals,
+            literals_to_id=self.literals_to_id,
         )
 
     def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102

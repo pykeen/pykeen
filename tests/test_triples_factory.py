@@ -447,7 +447,7 @@ class TestLiterals(unittest.TestCase):
             dtype=str,
         )
 
-        triples_numeric_literal_factory = TriplesNumericLiteralsFactory(
+        triples_numeric_literal_factory = TriplesNumericLiteralsFactory.from_labeled_triples(
             triples=triples_larger,
             numeric_triples=numeric_triples,
         )
