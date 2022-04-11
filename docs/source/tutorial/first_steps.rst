@@ -218,6 +218,7 @@ While not being active for the high-level `pipeline`, you can already use it exp
     ...     # NEW: validation evaluation callback
     ...     callbacks="evaluation-loop",
     ...     callback_kwargs=dict(
+    ...         prefix="validation",
     ...         factory=dataset.validation,
     ...     ),
     ... )
