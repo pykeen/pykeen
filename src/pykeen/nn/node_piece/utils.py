@@ -57,6 +57,10 @@ def page_rank(
     if x0 is None:
         n = adj.shape[0]
         x0 = numpy.full(shape=(n,), fill_value=1.0 / n)
+    else:
+        numpy.testing.assert_allclose(x0.sum(axis=0), 1.0)
+        assert (x0 >= 0.0).all()
+        assert (x0 <= 1.0).all()
 
     # power iteration
     x_old = x = x0
@@ -66,7 +70,7 @@ def page_rank(
         progress = tqdm(progress, unit_scale=True, leave=False)
     for i in progress:
         x = beta * adj.dot(x) + alpha * x0
-        max_diff = numpy.linalg.norm(x - x_old, ord=float("+inf"))
+        max_diff = numpy.linalg.norm(x - x_old, ord=float("+inf"), axis=0).max()
         if use_tqdm:
             progress.set_postfix(max_diff=max_diff)
         if max_diff < epsilon:
