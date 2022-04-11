@@ -145,23 +145,44 @@ class FilterIndex:
 
     @classmethod
     def from_df(cls, df: pandas.DataFrame, target: Target) -> "FilterIndex":
-        """Create index from dataframe."""
+        """
+        Create index from dataframe.
+
+        :param df:
+            the dataframe, comprising columns [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
+        :param target:
+            the prediction target
+
+        :return:
+            a filter index object
+        """
+        # input verification
+        expected_columns = {LABEL_HEAD, LABEL_RELATION, LABEL_TAIL}
+        if not expected_columns.issubset(df.columns):
+            raise ValueError(f"Missing columns: {sorted(expected_columns.difference(df.columns))}")
+
+        # group key = everything except the prediction target
         key = [c for c in df.columns if c != target]
+        # initialize data structure
         triple_id_to_key_id = numpy.empty_like(df.index)
         indices = []
         bounds = [0]
+        # group by key
         for key_id, (key, group) in enumerate(df.groupby(by=key)):
             unique_targets = group[target].unique()
             triple_id_to_key_id[group.index] = key_id
             indices.extend(unique_targets)
             bounds.append(len(indices))
+        # convert lists to arrays
         indices = cast(torch.LongTensor, torch.as_tensor(indices))
         bounds = numpy.asarray(bounds)
+        # instantiate
         return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=bounds, indices=indices)
 
     def __getitem__(self, item: int) -> numpy.ndarray:
+        # return indices corresponding to the `item`-th triple
         key_id = self.triple_id_to_key_id[item]
-        low, high = self.bounds[key_id: key_id + 2]
+        low, high = self.bounds[key_id : key_id + 2]
         return self.indices[low:high]
 
 
