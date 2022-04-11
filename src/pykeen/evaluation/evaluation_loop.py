@@ -161,7 +161,7 @@ class FilterIndex:
 
     def __getitem__(self, item: int) -> numpy.ndarray:
         key_id = self.triple_id_to_key_id[item]
-        low, high = self.bounds[key_id: key_id + 2]
+        low, high = self.bounds[key_id : key_id + 2]
         return self.indices[low:high]
 
 
@@ -246,7 +246,23 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         mode: Optional[InductiveMode] = None,
         **kwargs,
     ) -> None:
-        """Initialize the evaluation loop."""
+        """
+        Initialize the evaluation loop.
+
+        :param triples_factory:
+            the evaluation triples factory
+        :param evaluator:
+            the evaluator, or a hint thereof
+        :param evaluator_kwargs:
+            additional keyword-based parameters for instantiating the evaluator
+        :param targets:
+            the prediction targets.
+        :param mode:
+            the inductive mode, or None for transductive evaluation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain the keys
+            `dataset` or `evaluator`.
+        """
         evaluator = evaluator_resolver.make(evaluator, pos_kwargs=evaluator_kwargs)
         super().__init__(
             dataset=LCWAEvaluationDataset(
