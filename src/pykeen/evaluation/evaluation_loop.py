@@ -2,7 +2,6 @@
 
 """Evaluation loops for KGE models."""
 import dataclasses
-import itertools
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Collection, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, cast
@@ -232,7 +231,7 @@ class FilterIndex:
         indices = []
         bounds = [0]
         # group by key
-        for key_id, (key, group) in enumerate(df.groupby(by=key)):
+        for key_id, (_, group) in enumerate(df.groupby(by=key)):
             unique_targets = group[target].unique()
             triple_id_to_key_id[group.index] = key_id
             indices.extend(unique_targets)
@@ -243,7 +242,7 @@ class FilterIndex:
         # instantiate
         return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=bounds, indices=indices)
 
-    def __getitem__(self, item: int) -> numpy.ndarray:
+    def __getitem__(self, item: int) -> numpy.ndarray:  # noqa: D100
         # return indices corresponding to the `item`-th triple
         key_id = self.triple_id_to_key_id[item]
         low, high = self.bounds[key_id : key_id + 2]
@@ -252,6 +251,8 @@ class FilterIndex:
 
 class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]]):
     """A dataset for link prediction evaluation."""
+
+    filter_indices: Optional[Mapping[Target, FilterIndex]]
 
     def __init__(
         self,
@@ -300,10 +301,10 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         """Return the number of targets."""
         return len(self.targets)
 
-    def __len__(self) -> int:
+    def __len__(self) -> int:  # noqa: D100
         return self.num_triples * self.num_targets
 
-    def __getitem__(self, index: int) -> Tuple[Target, MappedTriples, Optional[torch.LongTensor]]:
+    def __getitem__(self, index: int) -> Tuple[Target, MappedTriples, Optional[torch.LongTensor]]:  # noqa: D100
         # sorted by target -> most of the batches only have a single target
         target_id, index = divmod(index, self.num_triples)
         target = self.targets[target_id]
