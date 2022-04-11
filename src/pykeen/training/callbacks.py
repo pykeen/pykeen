@@ -274,6 +274,22 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         evaluator_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
+        """
+        Initialize the callback.
+
+        :param factory:
+            the triples factory comprising the evaluation triples
+        :param frequency:
+            the evaluation frequency
+        :param prefix:
+            a prefix to use for logging (e.g., to distinguish between different splits)
+        :param evaluator:
+            the evaluator, or a hint thereof
+        :param evaluator_kwargs:
+            additional keyword-based parameters used for the evaluation instantiation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`EvaluationLoop.evaluate`
+        """
         super().__init__()
         self.frequency = frequency
         self.prefix = prefix
@@ -286,6 +302,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
 
     @property
     def evaluation_loop(self):
+        """Return the evaluation loop instance (lazy-initialization)."""
         if self._evaluation_loop is None:
             self._evaluation_loop = LCWAEvaluationLoop(
                 triples_factory=self.factory,
@@ -294,7 +311,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
             )
         return self._evaluation_loop
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return
         result = self.evaluation_loop.evaluate(**self.kwargs)
