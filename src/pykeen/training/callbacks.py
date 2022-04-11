@@ -59,7 +59,7 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.evaluation_loop import LinkPredictionEvaluationLoop
+from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
@@ -287,7 +287,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
     @property
     def evaluation_loop(self):
         if self._evaluation_loop is None:
-            self._evaluation_loop = LinkPredictionEvaluationLoop(
+            self._evaluation_loop = LCWAEvaluationLoop(
                 triples_factory=self.factory,
                 evaluator=self.evaluator,
                 model=self.model,

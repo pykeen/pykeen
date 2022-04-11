@@ -161,11 +161,11 @@ class FilterIndex:
 
     def __getitem__(self, item: int) -> numpy.ndarray:
         key_id = self.triple_id_to_key_id[item]
-        low, high = self.bounds[key_id : key_id + 2]
+        low, high = self.bounds[key_id: key_id + 2]
         return self.indices[low:high]
 
 
-class LinkPredictionEvaluationDataset(Dataset):
+class LCWAEvaluationDataset(Dataset):
     """A dataset for link prediction evaluation."""
 
     def __init__(
@@ -228,8 +228,14 @@ class LinkPredictionEvaluationDataset(Dataset):
         return result
 
 
-class LinkPredictionEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
-    """Link prediction evaluation loop."""
+class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
+    r"""
+    Evaluation loop using 1:n scoring.
+
+    For brevity, we only describe evaluation for tail prediction. Let $(h, r, t) \in \mathcal{T}_{eval}$ denote an
+    evaluation triple. Then, we calculate scores for all triples $(h, r, t')$ with $t' \in \mathcal{E}$, i.e., for
+    replacing the true tail $t$ by all entities.
+    """
 
     def __init__(
         self,
@@ -243,7 +249,7 @@ class LinkPredictionEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]
         """Initialize the evaluation loop."""
         evaluator = evaluator_resolver.make(evaluator, pos_kwargs=evaluator_kwargs)
         super().__init__(
-            dataset=LinkPredictionEvaluationDataset(
+            dataset=LCWAEvaluationDataset(
                 factory=triples_factory,
                 targets=targets,
                 filtered=evaluator.filtered or evaluator.requires_positive_mask,
@@ -255,7 +261,7 @@ class LinkPredictionEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]
         self.mode = mode
 
     def get_collator(self):  # noqa: D102
-        return LinkPredictionEvaluationDataset.collate
+        return LCWAEvaluationDataset.collate
 
     def process_batch(self, batch: Mapping[Target, MappedTriples]) -> None:  # noqa: D102
         for target, (hrt_batch, filter_batch) in batch.items():

@@ -8,7 +8,7 @@ from tests import cases
 class LinkPredictionEvaluationLoopTestCase(cases.EvaluationLoopTestCase):
     """Test the link prediction evaluation loop."""
 
-    cls = pykeen.evaluation.evaluation_loop.LinkPredictionEvaluationLoop
+    cls = pykeen.evaluation.evaluation_loop.LCWAEvaluationLoop
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
