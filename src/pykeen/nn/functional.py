@@ -892,9 +892,12 @@ def transr_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # project to relation specific subspace and ensure constraints
-    h_bot = clamp_norm((h.unsqueeze(dim=-2) @ m_r), p=2, dim=-1, maxnorm=1.0).squeeze(dim=-2)
-    t_bot = clamp_norm((t.unsqueeze(dim=-2) @ m_r), p=2, dim=-1, maxnorm=1.0).squeeze(dim=-2)
+    # project to relation specific subspace
+    h_bot = torch.einsum("...e, ...er -> ...r", h, m_r)
+    t_bot = torch.einsum("...e, ...er -> ...r", t, m_r)
+    # ensure constraints
+    h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.0)
+    t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.0)
     return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 
