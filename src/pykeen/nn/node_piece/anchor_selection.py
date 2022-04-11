@@ -157,43 +157,27 @@ class PageRankAnchorSelection(SingleSelection):
     def __init__(
         self,
         num_anchors: int = 32,
-        max_iter: int = 1_000,
-        alpha: float = 0.05,
-        epsilon: float = 1.0e-04,
+        **kwargs,
     ) -> None:
         """
         Initialize the selection strategy.
 
         :param num_anchors:
             the number of anchors to select
-        :param max_iter:
-            the maximum number of power iterations
-        :param alpha:
-            the smoothing value / teleport probability
-        :param epsilon:
-            a constant to check for convergence
+        :param kwargs:
+            additional keyword-based parameters passed to :func:`page_rank`.
         """
         super().__init__(num_anchors=num_anchors)
-        self.max_iter = max_iter
-        self.alpha = alpha
-        self.epsilon = epsilon
+        self.kwargs = kwargs
 
     def extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().extra_repr()
-        yield f"max_iter={self.max_iter}"
-        yield f"alpha={self.alpha}"
-        yield f"epsilon={self.epsilon}"
+        for key, value in self.kwargs.items():
+            yield f"{key}={value}"
 
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # sort by decreasing page rank
-        return numpy.argsort(
-            page_rank(
-                edge_index=edge_index,
-                max_iter=self.max_iter,
-                alpha=self.alpha,
-                epsilon=self.epsilon,
-            ),
-        )[::-1]
+        return numpy.argsort(page_rank(edge_index=edge_index, **self.kwargs))[::-1]
 
 
 class RandomAnchorSelection(SingleSelection):
