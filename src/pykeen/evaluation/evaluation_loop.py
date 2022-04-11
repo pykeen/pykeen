@@ -280,22 +280,35 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         return LCWAEvaluationDataset.collate
 
     def process_batch(self, batch: Mapping[Target, MappedTriples]) -> None:  # noqa: D102
+        # note: most of the time, this loop will only make a single iteration, since the evaluation dataset typically is
+        #       not shuffled, and contains evaluation ranking tasks sorted by target
         for target, (hrt_batch, filter_batch) in batch.items():
+            # predict scores for all candidates
             scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode)
-            batch_ids = torch.arange(scores.shape[0], device=scores.device)
-            target_ids = hrt_batch[:, TARGET_TO_INDEX[target]]
             true_scores = dense_positive_mask = None
+
+            # filter scores
             if self.evaluator.filtered:
-                assert filter_batch is not None
+                if filter_batch is None:
+                    raise AssertionError("Filter indices are required to filter scores.")
+                # extract true scores
+                batch_ids = torch.arange(scores.shape[0], device=scores.device)
+                target_ids = hrt_batch[:, TARGET_TO_INDEX[target]]
                 true_scores = scores[batch_ids, target_ids, None]
                 # replace by nan
                 scores = filter_scores_(scores=scores, filter_batch=filter_batch)
                 # rewrite true scores
                 scores[batch_ids, target_ids] = true_scores[:, 0]
+
+            # create dense positive masks
+            # TODO: afaik, dense positive masks are not used on GPU -> we do not need to move the masks around
             elif self.evaluator.requires_positive_mask:
-                assert filter_batch is not None
+                if filter_batch is None:
+                    raise AssertionError("Filter indices are required to create dense positive masks.")
                 dense_positive_mask = torch.zeros_like(scores, dtype=torch.bool, device=filter_batch.device)
                 dense_positive_mask[filter_batch[:, 0], filter_batch[:, 0]] = True
+
+            # delegate processing of scores to the evaluator
             self.evaluator.process_scores_(
                 hrt_batch=hrt_batch,
                 target=target,
