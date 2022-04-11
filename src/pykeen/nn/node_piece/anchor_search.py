@@ -12,7 +12,7 @@ import torch
 from class_resolver import ClassResolver, OptionalKwargs
 from tqdm.auto import tqdm
 
-from .utils import edge_index_to_sparse_matrix, page_rank
+from .utils import edge_index_to_sparse_matrix, page_rank, prepare_page_rank_adjacency
 from ...utils import format_relative_comparison
 
 __all__ = [
@@ -238,11 +238,16 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         self.use_tqdm = use_tqdm
 
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        n = edge_index.max().item() + 1
+        # prepare adjacency matrix only once
+        adj = prepare_page_rank_adjacency(edge_index=edge_index)
+        # prepare result
+        n = adj.shape[0]
         result = numpy.full(shape=(n, k), fill_value=-1)
+        # progress bar?
         progress = range(0, n, self.batch_size)
         if self.use_tqdm:
             progress = tqdm(progress, unit="batch", unit_scale=True)
+        # batch-wise computation of PPR
         for start in progress:
             # create a batch of starting vectors, shape: (n, batch_size)
             stop = min(start + self.batch_size, n)
@@ -250,7 +255,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             x0 = numpy.zeros(shape=(n, batch_size))
             x0[numpy.arange(start, stop), numpy.arange(batch_size)] = 1.0
             # run page-rank calculation, shape: (batch_size, n)
-            ppr = page_rank(edge_index=edge_index, x0=x0, **self.page_rank_kwargs)
+            ppr = page_rank(adj=adj, x0=x0, **self.page_rank_kwargs)
             # select PPR values for the anchors, shape: (num_anchors, batch_size)
             ppr = ppr[anchors]
             # select k anchors with largest ppr, shape: (batch_size, k)
