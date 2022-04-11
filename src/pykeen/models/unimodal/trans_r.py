@@ -8,11 +8,10 @@ from typing import Any, ClassVar, Mapping
 import torch
 import torch.autograd
 import torch.nn.init
-from torch import linalg
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import representation_resolver
+from ...nn import TransRInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
@@ -32,7 +31,7 @@ def _projection_initializer(
     return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
 
 
-class TransR(EntityRelationEmbeddingModel):
+class TransR(ERModel):
     r"""An implementation of TransR from [lin2015]_.
 
     TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
@@ -88,98 +87,37 @@ class TransR(EntityRelationEmbeddingModel):
         **kwargs,
     ) -> None:
         """Initialize the model."""
+        # TODO: Initialize from TransE
         super().__init__(
+            interaction=TransRInteraction,
+            interaction_kwargs=dict(
+                p=scoring_fct_norm,
+            ),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
-            relation_representations_kwargs=dict(
-                shape=(relation_dim,),
-                initializer=relation_initializer,
-                constrainer=relation_constrainer,
-                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
-            ),
+            relation_representations_kwargs=[
+                # relation embedding
+                dict(
+                    shape=(relation_dim,),
+                    initializer=relation_initializer,
+                    constrainer=relation_constrainer,
+                    constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
+                ),
+                # relation projection
+                dict(
+                    shape=(relation_dim * embedding_dim,),
+                    max_id=self.num_relations,
+                    initializer=partial(
+                        _projection_initializer,
+                        num_relations=self.num_relations,
+                        embedding_dim=self.embedding_dim,
+                        relation_dim=self.relation_dim,
+                    ),
+                ),
+            ],
             **kwargs,
         )
-        self.scoring_fct_norm = scoring_fct_norm
-
-        # TODO: Initialize from TransE
-
-        # embeddings
-        self.relation_projections = representation_resolver.make(
-            query=None,
-            shape=(relation_dim * embedding_dim,),
-            max_id=self.num_relations,
-            initializer=partial(
-                _projection_initializer,
-                num_relations=self.num_relations,
-                embedding_dim=self.embedding_dim,
-                relation_dim=self.relation_dim,
-            ),
-        )
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.relation_projections.reset_parameters()
-
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        m_r: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        :param h: shape: (batch_size, num_entities, d_e)
-            Head embeddings.
-        :param r: shape: (batch_size, num_entities, d_r)
-            Relation embeddings.
-        :param t: shape: (batch_size, num_entities, d_e)
-            Tail embeddings.
-        :param m_r: shape: (batch_size, num_entities, d_e, d_r)
-            The relation specific linear transformations.
-
-        :return: shape: (batch_size, num_entities)
-            The scores.
-        """
-        # project to relation specific subspace, shape: (b, e, d_r)
-        h_bot = h @ m_r
-        t_bot = t @ m_r
-        # ensure constraints
-        h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.0)
-        t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.0)
-
-        # evaluate score function, shape: (b, e)
-        return -linalg.vector_norm(h_bot + r - t_bot, dim=-1) ** 2
-
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
-        m_r = self.relation_projections(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
-
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
-        m_r = self.relation_projections(indices=hr_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
-
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
-
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
-        m_r = self.relation_projections(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.relation_dim)
-
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
