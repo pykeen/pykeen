@@ -2,7 +2,13 @@
 
 """NodePiece modules."""
 
-from .anchor_search import AnchorSearcher, CSGraphAnchorSearcher, ScipySparseAnchorSearcher, anchor_searcher_resolver
+from .anchor_search import (
+    AnchorSearcher,
+    CSGraphAnchorSearcher,
+    PersonalizedPageRankAnchorSearcher,
+    ScipySparseAnchorSearcher,
+    anchor_searcher_resolver,
+)
 from .anchor_selection import (
     AnchorSelection,
     DegreeAnchorSelection,
@@ -22,6 +28,7 @@ __all__ = [
     "AnchorSearcher",
     "ScipySparseAnchorSearcher",
     "CSGraphAnchorSearcher",
+    "PersonalizedPageRankAnchorSearcher",
     # Anchor Selection
     "anchor_selection_resolver",
     "AnchorSelection",

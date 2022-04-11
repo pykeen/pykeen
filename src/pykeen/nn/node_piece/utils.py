@@ -35,10 +35,10 @@ def page_rank(
         the smoothing value / teleport probability
     :param epsilon: $>0$
         a (small) constant to check for convergence
-    :param x0:
+    :param x0: shape: `(n,)`, or `(n, batch_size)`
         the initial value for $x$. If None, set to a constant $1/n$ vector.
 
-    :return: shape: (n,)
+    :return: shape: `(n,)`
         the page-rank vector, i.e., a score between 0 and 1 for each node.
     """
     # convert to sparse matrix, shape: (n, n)

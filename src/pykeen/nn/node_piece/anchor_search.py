@@ -22,6 +22,7 @@ __all__ = [
     # Concrete classes
     "ScipySparseAnchorSearcher",
     "CSGraphAnchorSearcher",
+    "PersonalizedPageRankAnchorSearcher",
 ]
 
 logger = logging.getLogger(__name__)
@@ -217,7 +218,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         return self.select(pool=pool, k=k)
 
 
-class PersonalizedPageRankSearcher(AnchorSearcher):
+class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
     """Select closest anchors as the nodes with the largest personalized page rank."""
 
     def __init__(self, batch_size: int = 1, **kwargs):
@@ -233,21 +234,20 @@ class PersonalizedPageRankSearcher(AnchorSearcher):
         self.kwargs = kwargs
 
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        n = edge_index.max().item()
+        n = edge_index.max().item() + 1
         result = numpy.full(shape=(n, k), fill_value=-1)
         for start in range(0, n, self.batch_size):
-            # calculate PPR for a batch of nodes
-            # create a batch of starting vectors
+            # create a batch of starting vectors, shape: (n, batch_size)
             stop = min(start + self.batch_size, n)
             batch_size = stop - start
-            x0 = numpy.zeros(shape=(batch_size, n))
-            x0[numpy.arange(batch_size), numpy.arange(start, stop)] = 1.0
+            x0 = numpy.zeros(shape=(n, batch_size))
+            x0[numpy.arange(start, stop), numpy.arange(batch_size)] = 1.0
             # run page-rank calculation, shape: (batch_size, n)
             ppr = page_rank(edge_index=edge_index, x0=x0, **self.kwargs)
-            # select PPR values for the anchors, shape: (batch_size, num_anchors)
-            ppr = ppr[:, anchors]
+            # select PPR values for the anchors, shape: (num_anchors, batch_size)
+            ppr = ppr[anchors]
             # select k anchors with largest ppr, shape: (batch_size, k)
-            result[start:stop, :] = numpy.argpartition(-ppr, kth=k, axis=-1)
+            result[start:stop, :] = numpy.argpartition(-ppr, kth=k, axis=0)[:k].T
         return result
 
 
