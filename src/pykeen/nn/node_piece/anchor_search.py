@@ -11,7 +11,7 @@ import scipy.sparse
 import torch
 from class_resolver import ClassResolver
 
-from .utils import edge_index_to_sparse_matrix
+from .utils import edge_index_to_sparse_matrix, page_rank
 from ...utils import format_relative_comparison
 
 __all__ = [
@@ -215,6 +215,40 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         adjacency = self.create_adjacency(edge_index=edge_index)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
         return self.select(pool=pool, k=k)
+
+
+class PersonalizedPageRankSearcher(AnchorSearcher):
+    """Select closest anchors as the nodes with the largest personalized page rank."""
+
+    def __init__(self, batch_size: int = 1, **kwargs):
+        """
+        Initialize the searcher.
+
+        :param batch_size:
+            the batch size to use.
+        :param kwargs:
+            additional keyword-based parameters used for :func:`page_rank`. Must not include `edge_index`, or `x0`.
+        """
+        self.batch_size = batch_size
+        self.kwargs = kwargs
+
+    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
+        n = edge_index.max().item()
+        result = numpy.full(shape=(n, k), fill_value=-1)
+        for start in range(0, n, self.batch_size):
+            # calculate PPR for a batch of nodes
+            # create a batch of starting vectors
+            stop = min(start + self.batch_size, n)
+            batch_size = stop - start
+            x0 = numpy.zeros(shape=(batch_size, n))
+            x0[numpy.arange(batch_size), numpy.arange(start, stop)] = 1.0
+            # run page-rank calculation, shape: (batch_size, n)
+            ppr = page_rank(edge_index=edge_index, x0=x0, **self.kwargs)
+            # select PPR values for the anchors, shape: (batch_size, num_anchors)
+            ppr = ppr[:, anchors]
+            # select k anchors with largest ppr, shape: (batch_size, k)
+            result[start:stop, :] = numpy.argpartition(-ppr, kth=k, axis=-1)
+        return result
 
 
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
