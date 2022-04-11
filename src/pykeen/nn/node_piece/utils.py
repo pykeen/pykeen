@@ -23,6 +23,7 @@ def page_rank(
     alpha: float = 0.05,
     epsilon: float = 1.0e-04,
     x0: Optional[numpy.ndarray] = None,
+    use_tqdm: bool = False,
 ) -> numpy.ndarray:
     """
     Compute page-rank vector by power iteration.
@@ -37,6 +38,8 @@ def page_rank(
         a (small) constant to check for convergence
     :param x0: shape: `(n,)`, or `(n, batch_size)`
         the initial value for $x$. If None, set to a constant $1/n$ vector.
+    :param use_tqdm:
+        whether to use a tqdm progress bar
 
     :return: shape: `(n,)`
         the page-rank vector, i.e., a score between 0 and 1 for each node.
@@ -61,7 +64,10 @@ def page_rank(
     # power iteration
     x_old = x = x0
     beta = 1.0 - alpha
-    for i in range(max_iter):
+    progress = range(max_iter)
+    if use_tqdm:
+        progress = tqdm(progress, unit_scale=True, leave=False)
+    for i in progress:
         x = beta * adj.dot(x) + alpha * x0
         if numpy.linalg.norm(x - x_old, ord=float("+inf")) < epsilon:
             logger.debug(f"Converged after {i} iterations up to {epsilon}.")
