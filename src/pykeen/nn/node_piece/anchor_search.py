@@ -242,12 +242,36 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         yield f"use_tqdm={self.use_tqdm}"
         yield f"page_rank_kwargs={self.page_rank_kwargs}"
 
+    def precalculate_anchor_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> numpy.ndarray:
+        """
+        Calculate PPR values from each node for each anchor.
+
+        :param edge_index: shape: (2, m)
+            the edge index.
+        :param anchors: shape: `(num_anchors,)`
+            the anchor IDs.
+
+        :return: shape: `(num_entities, num_anchors)`
+            the PPR values for each anchor
+        """
+        return numpy.concatenate(list(self._iter_ppr(edge_index=edge_index, anchors=anchors)))
+
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
+        n = edge_index.max().item() + 1
+        result = numpy.full(shape=(n, k), fill_value=-1)
+        i = 0
+        for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
+            batch_size = batch_ppr.shape[1]
+            # select k anchors with largest ppr, shape: (batch_size, k)
+            result[i : i + batch_size, :] = numpy.argpartition(-batch_ppr, kth=k, axis=0)[:k].T
+            i += batch_size
+        return result
+
+    def _iter_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> Iterable[numpy.ndarray]:
         # prepare adjacency matrix only once
         adj = prepare_page_rank_adjacency(edge_index=edge_index)
         # prepare result
         n = adj.shape[0]
-        result = numpy.full(shape=(n, k), fill_value=-1)
         # progress bar?
         progress = range(0, n, self.batch_size)
         if self.use_tqdm:
@@ -262,10 +286,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             # run page-rank calculation, shape: (batch_size, n)
             ppr = page_rank(adj=adj, x0=x0, **self.page_rank_kwargs)
             # select PPR values for the anchors, shape: (num_anchors, batch_size)
-            ppr = ppr[anchors]
-            # select k anchors with largest ppr, shape: (batch_size, k)
-            result[start:stop, :] = numpy.argpartition(-ppr, kth=k, axis=0)[:k].T
-        return result
+            yield ppr[anchors]
 
 
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
