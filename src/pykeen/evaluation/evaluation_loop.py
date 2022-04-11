@@ -38,6 +38,7 @@ def _hasher(d: Mapping[str, Any]) -> int:
     return id(obj)
 
 
+#: the MemoryUtilizationMaximizer instance for :func:`_evaluate`.
 evaluation_batch_size_maximizer = MemoryUtilizationMaximizer(hasher=_hasher)
 
 
@@ -50,6 +51,29 @@ def _evaluate(
     only_size_probing: bool = False,
     **kwargs,
 ) -> MetricResults:
+    """
+    Run the evaluation loop for a given batch size.
+
+    .. note::
+        this method is wrapped into a `MemoryUtilizationMaximizer` instance to automatically tune the `batch_size`.
+
+    :param loop:
+        the evaluation loop instance.
+    :param batch_size:
+        the batch size
+    :param use_tqdm:
+        whether to use tqdm progress bar
+    :param tqdm_kwargs:
+        additional keyword-based parameters for the progress bar
+    :param only_size_probing:
+        whether to only use the first batch
+        TODO: do we need this?
+    :param kwargs:
+        addititional keyword-based parameters passed to :meth:`EvaluationLoop.get_loader`
+
+    :return:
+        the evaluation results
+    """
     loop.model.eval()
     loader = loop.get_loader(batch_size=batch_size, **kwargs)
     total = len(loader)
