@@ -161,27 +161,50 @@ class FilterIndex:
 
     def __getitem__(self, item: int) -> numpy.ndarray:
         key_id = self.triple_id_to_key_id[item]
-        low, high = self.bounds[key_id : key_id + 2]
+        low, high = self.bounds[key_id: key_id + 2]
         return self.indices[low:high]
 
 
-class LCWAEvaluationDataset(Dataset):
+class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]]):
     """A dataset for link prediction evaluation."""
 
     def __init__(
         self,
-        factory: CoreTriplesFactory,
+        *,
+        mapped_triples: Optional[MappedTriples] = None,
+        factory: Optional[CoreTriplesFactory] = None,
         targets: Optional[Collection[Target]] = None,
         filtered: bool = True,
     ) -> None:
+        """
+        Create a PyTorch dataset for link prediction evaluation.
+
+        :param mapped_triples: shape: (n, 3)
+            the ID-based triples
+        :param factory:
+            the triples factory. Only used of `mapped_triples` is None
+        :param targets:
+            the prediction targets. Defaults to head and tail prediction
+        :param filtered:
+            whether to use filtered evaluation, i.e., prepare filter indices
+        """
         super().__init__()
-        self.mapped_triples = factory.mapped_triples
-        self.num_triples = factory.num_triples
+
+        # input normalization
+        if mapped_triples is None:
+            if factory is None:
+                raise ValueError("Needs at least one of `mapped_triples` and `factory`.")
+            mapped_triples = factory.mapped_triples
         if targets is None:
             targets = [LABEL_HEAD, LABEL_TAIL]
-        self.targets = list(targets)
+
+        self.mapped_triples = mapped_triples
+        self.num_triples = mapped_triples.shape[0]
+        self.targets = tuple(targets)
+
+        # prepare filter indices if required
         if filtered:
-            df = pandas.DataFrame(data=factory.mapped_triples.numpy(), columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+            df = pandas.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
             self.filter_indices = {target: FilterIndex.from_df(df=df, target=target) for target in targets}
         else:
             self.filter_indices = None
@@ -195,22 +218,27 @@ class LCWAEvaluationDataset(Dataset):
         return self.num_triples * self.num_targets
 
     def __getitem__(self, index: int) -> Tuple[Target, MappedTriples, Optional[torch.LongTensor]]:
+        # sorted by target -> most of the batches only have a single target
         target_id, index = divmod(index, self.num_triples)
         target = self.targets[target_id]
+        triple = self.mapped_triples[index, :]
         nnz = None if self.filter_indices is None else self.filter_indices[target][index]
-        return target, self.mapped_triples[index, :], nnz
+        return target, triple, nnz
 
     @staticmethod
     def collate(
         batch: Iterable[Tuple[Target, MappedTriples, Optional[torch.LongTensor]]]
     ) -> Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]:
-        """Collate batches."""
+        """Collate batches by grouping by target."""
+        # group by target
         triples: Mapping[Target, List[torch.LongTensor]] = defaultdict(list)
         nnz: Mapping[Target, List[torch.LongTensor]] = defaultdict(list)
         for target, triple, opt_nnz in batch:
             triples[target].append(triple)
             if opt_nnz is not None:
                 nnz[target].append(opt_nnz)
+
+        # stack groups into a single tensor
         result = {}
         for target in triples.keys():
             target_triples = cast(MappedTriples, torch.stack(triples[target]))
@@ -225,6 +253,7 @@ class LCWAEvaluationDataset(Dataset):
             else:
                 sparse_filter_mask = None
             result[target] = (target_triples, sparse_filter_mask)
+
         return result
 
 
