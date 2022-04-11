@@ -2,7 +2,6 @@
 
 """Implementation of TransR."""
 
-from functools import partial
 from typing import Any, ClassVar, Mapping
 
 import torch
@@ -19,16 +18,6 @@ from ...utils import clamp_norm
 __all__ = [
     "TransR",
 ]
-
-
-def _projection_initializer(
-    x: torch.FloatTensor,
-    num_relations: int,
-    embedding_dim: int,
-    relation_dim: int,
-) -> torch.FloatTensor:
-    """Initialize by Glorot."""
-    return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
 
 
 class TransR(ERModel):
@@ -109,14 +98,8 @@ class TransR(ERModel):
                 ),
                 # relation projection
                 dict(
-                    shape=(relation_dim * embedding_dim,),
-                    max_id=self.num_relations,
-                    initializer=partial(
-                        _projection_initializer,
-                        num_relations=self.num_relations,
-                        embedding_dim=self.embedding_dim,
-                        relation_dim=self.relation_dim,
-                    ),
+                    shape=(embedding_dim, relation_dim),
+                    initializer=torch.nn.init.xavier_uniform_,
                 ),
             ],
             **kwargs,
