@@ -237,6 +237,11 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         self.page_rank_kwargs = page_rank_kwargs or {}
         self.use_tqdm = use_tqdm
 
+    def extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield f"batch_size={self.batch_size}"
+        yield f"use_tqdm={self.use_tqdm}"
+        yield f"page_rank_kwargs={self.page_rank_kwargs}"
+
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         # prepare adjacency matrix only once
         adj = prepare_page_rank_adjacency(edge_index=edge_index)
