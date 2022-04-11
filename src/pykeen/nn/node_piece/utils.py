@@ -10,6 +10,7 @@ from tqdm.auto import tqdm
 
 __all__ = [
     "page_rank",
+    "prepare_page_rank_adjacency",
     "edge_index_to_sparse_matrix",
     "random_sample_no_replacement",
 ]
@@ -18,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 def page_rank(
-    edge_index: numpy.ndarray,
+    adj: Optional[scipy.sparse.csr_matrix] = None,
+    edge_index: Optional[numpy.ndarray] = None,
     max_iter: int = 1_000,
     alpha: float = 0.05,
     epsilon: float = 1.0e-04,
@@ -28,6 +30,8 @@ def page_rank(
     """
     Compute page-rank vector by power iteration.
 
+    :param adj:
+        the adjacency matrix, cf. :func:`prepare_page_rank_adjacency`. Preferred over `edge_index`.
     :param edge_index: shape: (2, m)
         the edge index of the graph, i.e, the edge list.
     :param max_iter: $>0$
@@ -44,17 +48,10 @@ def page_rank(
     :return: shape: `(n,)`
         the page-rank vector, i.e., a score between 0 and 1 for each node.
     """
-    # convert to sparse matrix, shape: (n, n)
-    adj = edge_index_to_sparse_matrix(edge_index=edge_index)
-    # symmetrize
-    adj = adj + adj.transpose()
-    # TODO: should we add self-links
-    # adj = adj + scipy.sparse.eye(m=adj.shape[0], format="coo")
-    # convert to CSR
-    adj = adj.tocsr()
-    # adjacency normalization
-    degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=float))[0]
-    adj = adj.dot(scipy.sparse.diags(degree_inv))
+    if adj is None:
+        if edge_index is None:
+            raise ValueError("Must provide at least one of `adj` and `edge_index`.")
+        adj = prepare_page_rank_adjacency(edge_index)
 
     # input normalization
     if x0 is None:
@@ -76,6 +73,30 @@ def page_rank(
     else:  # for/else, cf. https://book.pythontips.com/en/latest/for_-_else.html
         logger.warning(f"No convergence after {max_iter} iterations with epsilon={epsilon}.")
     return x
+
+
+def prepare_page_rank_adjacency(edge_index: numpy.ndarray) -> scipy.sparse.csr_matrix:
+    """
+    Prepare the page-rank adjacency matrix.
+
+    :param edge_index: shape: (2, n)
+        the edge index
+
+    :return:
+        the symmetric, normalized, and sparse adjacency matrix
+    """
+    # convert to sparse matrix, shape: (n, n)
+    adj = edge_index_to_sparse_matrix(edge_index=edge_index)
+    # symmetrize
+    adj = adj + adj.transpose()
+    # TODO: should we add self-links
+    # adj = adj + scipy.sparse.eye(m=adj.shape[0], format="coo")
+    # convert to CSR
+    adj = adj.tocsr()
+    # adjacency normalization
+    degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=float))[0]
+    adj = adj.dot(scipy.sparse.diags(degree_inv))
+    return adj
 
 
 def edge_index_to_sparse_matrix(
