@@ -11,6 +11,7 @@ import logging
 
 from class_resolver import ClassResolver
 
+from .aristo import AristoV4
 from .base import (  # noqa:F401
     CompressedSingleDataset,
     Dataset,
@@ -60,6 +61,7 @@ __all__ = [
     # Base Classes
     "Dataset",
     # Concrete Classes
+    "AristoV4",
     "Hetionet",
     "Kinships",
     "Nations",

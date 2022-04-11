@@ -4,13 +4,12 @@
 
 from typing import Any, ClassVar, Mapping, Optional, Type
 
-import torch
-import torch.autograd
-from torch import nn
+from class_resolver import OptionalKwargs
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import TuckerInteraction
 from ...nn.init import xavier_normal_
 from ...typing import Hint, Initializer
 
@@ -19,18 +18,7 @@ __all__ = [
 ]
 
 
-def _apply_bn_to_tensor(
-    batch_norm: nn.BatchNorm1d,
-    tensor: torch.FloatTensor,
-) -> torch.FloatTensor:
-    shape = tensor.shape
-    tensor = tensor.view(-1, shape[-1])
-    tensor = batch_norm(tensor)
-    tensor = tensor.view(*shape)
-    return tensor
-
-
-class TuckER(EntityRelationEmbeddingModel):
+class TuckER(ERModel):
     r"""An implementation of TuckEr from [balazevic2019]_.
 
     TuckER is a linear model that is based on the tensor factorization method Tucker in which a three-mode tensor
@@ -101,115 +89,30 @@ class TuckER(EntityRelationEmbeddingModel):
         apply_batch_normalization: bool = True,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
+        core_tensor_initializer: Hint[Initializer] = None,
+        core_tensor_initializer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
+        relation_dim = relation_dim or embedding_dim
         super().__init__(
+            interaction=TuckerInteraction,
+            interaction_kwargs=dict(
+                embedding_dim=embedding_dim,
+                relation_dim=relation_dim,
+                head_dropout=dropout_0,  # TODO: rename
+                relation_dropout=dropout_1,
+                head_relation_dropout=dropout_2,
+                apply_batch_normalization=apply_batch_normalization,
+                core_initializer=core_tensor_initializer,
+                core_initializer_kwargs=core_tensor_initializer_kwargs,
+            ),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
             ),
             relation_representations_kwargs=dict(
-                shape=relation_dim or embedding_dim,
+                shape=relation_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
         )
-
-        # Core tensor
-        # Note: we use a different dimension permutation as in the official implementation to match the paper.
-        self.core_tensor = nn.Parameter(
-            torch.empty(self.embedding_dim, self.relation_dim, self.embedding_dim, device=self.device),
-            requires_grad=True,
-        )
-
-        # Dropout
-        self.input_dropout = nn.Dropout(dropout_0)
-        self.hidden_dropout_1 = nn.Dropout(dropout_1)
-        self.hidden_dropout_2 = nn.Dropout(dropout_2)
-
-        self.apply_batch_normalization = apply_batch_normalization
-
-        if self.apply_batch_normalization:
-            self.bn_0 = nn.BatchNorm1d(self.embedding_dim)
-            self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-        nn.init.uniform_(self.core_tensor, -1.0, 1.0)
-
-    def _scoring_function(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """
-        Evaluate the scoring function.
-
-        :param h: shape: (batch_size, 1, embedding_dim) or (1, num_entities, embedding_dim)
-        :param r: shape: (batch_size, relation_dim)
-        :param t: shape: (1, num_entities, embedding_dim) or (batch_size, 1, embedding_dim)
-        :return: shape: (batch_size, num_entities) or (batch_size, 1)
-        """
-        # Abbreviation
-        w = self.core_tensor
-        d_e = self.embedding_dim
-        d_r = self.relation_dim
-
-        # Compute h_n = DO(BN(h))
-        if self.apply_batch_normalization:
-            h = _apply_bn_to_tensor(batch_norm=self.bn_0, tensor=h)
-
-        h = self.input_dropout(h)
-
-        # Compute wr = DO(W x_2 r)
-        w = w.view(1, d_e, d_r, d_e)
-        r = r.view(-1, 1, 1, d_r)
-        wr = r @ w
-        wr = self.hidden_dropout_1(wr)
-
-        # compute whr = DO(BN(h_n x_1 wr))
-        wr = wr.view(-1, d_e, d_e)
-        whr = h @ wr
-        if self.apply_batch_normalization:
-            whr = _apply_bn_to_tensor(batch_norm=self.bn_1, tensor=whr)
-        whr = self.hidden_dropout_2(whr)
-
-        # Compute whr x_3 t
-        scores = torch.sum(whr * t, dim=-1)
-
-        return scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(1)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(1)
-
-        # Compute scores
-        scores = self._scoring_function(h=h, r=r, t=t)
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(1)
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None).unsqueeze(0)
-
-        # Compute scores
-        scores = self._scoring_function(h=h, r=r, t=t)
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None).unsqueeze(0)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(1)
-
-        # Compute scores
-        scores = self._scoring_function(h=h, r=r, t=t)
-
-        return scores

@@ -41,7 +41,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-33">Datasets</a> •
+  <a href="#datasets-34">Datasets</a> •
   <a href="#inductive-datasets">Inductive Datasets (5)</a> •
   <a href="#models-42">Models</a> •
   <a href="#supporters">Support</a> •
@@ -106,7 +106,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (33)
+### Datasets (34)
 
 The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
@@ -117,6 +117,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 | Name                               | Documentation                                                                                                       | Citation                                                                                                                |   Entities |   Relations |   Triples |
 |------------------------------------|---------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|------------|-------------|-----------|
+| Aristo-v4                          | [`pykeen.datasets.AristoV4`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.AristoV4.html)             | [Chen *et al*., 2021](https://openreview.net/pdf?id=Qa3uS3H7-Le)                                                        |      42016 |        1593 |    279425 |
 | BioKG                              | [`pykeen.datasets.BioKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.BioKG.html)                   | [Walsh *et al*., 2019](https://doi.org/10.1145/3340531.3412776)                                                         |     105524 |          17 |   2067997 |
 | Clinical Knowledge Graph           | [`pykeen.datasets.CKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CKG.html)                       | [Santos *et al*., 2020](https://doi.org/10.1101/2020.05.09.084897)                                                      |    7617419 |          11 |  26691525 |
 | CN3l Family                        | [`pykeen.datasets.CN3l`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CN3l.html)                     | [Chen *et al*., 2017](https://www.ijcai.org/Proceedings/2017/0209.pdf)                                                  |       3206 |          42 |     21777 |
