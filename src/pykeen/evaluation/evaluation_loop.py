@@ -280,6 +280,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         :param filtered:
             whether to use filtered evaluation, i.e., prepare filter indices
         """
+        # TODO: additional filter triples
         super().__init__()
 
         # input normalization
