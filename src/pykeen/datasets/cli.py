@@ -437,6 +437,8 @@ def degree(
     if not plot:
         return
     plt, sns = _get_plotting_libraries()
+
+    # Plot: Descriptive Statistics of Degree Distributions per dataset / split vs. number of triples (=size)
     df = df.melt(
         id_vars=["dataset", "split", "num_triples", "target"],
         value_vars=["mean", "variance", "skewness", "kurtosis"],
@@ -472,6 +474,37 @@ def degree(
     path = base_path.with_suffix(suffix=".pdf")
     grid.savefig(path)
     grid.savefig(IMG_DIR.joinpath("dataset_degree_distributions.svg"))
+    logger.info(f"Saved plot to {path}")
+
+    # Plot: difference between mean head and tail degree
+    df2 = df.loc[df["statistic"] == "mean"].pivot(
+        index=["dataset", "split", "num_triples"], columns="target", values="value"
+    )
+    df2["difference"] = df2["head"] - df2["tail"]
+    grid: sns.FacetGrid = sns.relplot(
+        data=df2,
+        hue="dataset",
+        x="num_triples",
+        style=None if restrict_split is not None else "split",
+        y="difference",
+        height=2.5,
+        aspect=4,
+        hue_order=sorted(df["dataset"].unique()),
+    )
+    grid.fig.suptitle("Dataset Mean Degree Imbalance", x=0.4, y=0.98)
+    sns.move_legend(
+        grid,
+        "lower center",
+        bbox_to_anchor=(0.45, -0.55),
+        ncol=6,
+        title=None,
+        frameon=False,
+    )
+    grid.tight_layout()
+    grid.set(xscale="log", yscale="symlog", xlabel="Triples")
+    path = base_path.with_name("degree-imbalance").with_suffix(suffix=".pdf")
+    grid.savefig(path)
+    grid.savefig(IMG_DIR.joinpath("degree_imbalance.svg"))
     logger.info(f"Saved plot to {path}")
 
 
