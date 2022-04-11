@@ -51,7 +51,7 @@ def _evaluate(
     **kwargs,
 ) -> MetricResults:
     loop.model.eval()
-    loader = loop.get_loader(batch_size=batch_size)
+    loader = loop.get_loader(batch_size=batch_size, **kwargs)
     total = len(loader)
     if only_size_probing:
         loader = itertools.islice(loader, 1)
@@ -71,7 +71,7 @@ def _evaluate(
 
 
 class EvaluationLoop(Generic[BatchType]):
-    """An evaluation loop."""
+    """A base class for evaluation loops."""
 
     def __init__(
         self,
@@ -79,27 +79,53 @@ class EvaluationLoop(Generic[BatchType]):
         dataset: Dataset[BatchType],
         evaluator: Evaluator,
     ) -> None:
-        """Initialize the evaluation loop."""
+        """
+        Initialize the evaluation loop.
+
+        :param model:
+            the model to evaluate.
+        :param dataset:
+            the evaluation dataset
+        :param evaluator:
+            the evaluator instance
+        """
         self.model = model
         self.evaluator = evaluator
         self.dataset = dataset
 
     @abstractmethod
     def process_batch(self, batch: BatchType) -> None:
-        """Process a single batch."""
+        """
+        Process a single batch.
+
+        :param batch:
+            one batch of evaluation samples from the dataset.
+        """
         raise NotImplementedError
 
     def get_collator(self):
         """Get the collator to use for the data loader."""
         return None
 
-    def get_loader(self, batch_size: int, **kwargs) -> DataLoader:
-        """Create a data loader for a single evaluation round."""
+    def get_loader(self, batch_size: int, pin_memory: bool = True, **kwargs) -> DataLoader:
+        """
+        Create a data loader for a single evaluation round.
+
+        :param batch_size:
+            the batch size
+        :param pin_memory:
+            whether to pin memory, cf. :meth:`DataLoader.__init__`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`DataLoader.__init__`
+
+        :return:
+            a dataloader for the evaluation dataset of the given batch size
+        """
         return DataLoader(
             dataset=self.dataset,
             batch_size=batch_size,
             shuffle=False,
-            pin_memory=True,
+            pin_memory=pin_memory,
             collate_fn=self.get_collator(),
             **kwargs,
         )
@@ -115,12 +141,33 @@ class EvaluationLoop(Generic[BatchType]):
         # data loader
         **kwargs,
     ) -> MetricResults:
-        """Evaluate."""
+        """
+        Evaluate the loop's model on the loop's dataset.
+
+        .. note::
+            the contained model will be set to evaluation mode.
+
+        :param batch_size:
+            the batch size. If None, enable automatic memory optimization to maximize memory utilization.
+        :param use_tqdm:
+            whether to use tqdm progress bar
+        :param tqdm_kwargs:
+            additional keyword-based parameters passed to tqdm
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`get_loader`
+
+        :return:
+            the evaluation results.
+        """
+        # set upper limit of batch size for automatic memory optimization
         if not batch_size:
             if self.model.device.type == "cpu":
                 batch_size = 32
             else:
                 batch_size = len(self.dataset)
+        # set model to evaluation mode
+        self.model.eval()
+        # delegate to AMO wrapper
         return _evaluate(
             loop=self,
             batch_size=batch_size,
