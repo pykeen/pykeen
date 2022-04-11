@@ -242,7 +242,7 @@ class FilterIndex:
         # instantiate
         return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=bounds, indices=indices)
 
-    def __getitem__(self, item: int) -> numpy.ndarray:  # noqa: D100
+    def __getitem__(self, item: int) -> numpy.ndarray:  # noqa: D105
         # return indices corresponding to the `item`-th triple
         key_id = self.triple_id_to_key_id[item]
         low, high = self.bounds[key_id : key_id + 2]
@@ -301,10 +301,10 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         """Return the number of targets."""
         return len(self.targets)
 
-    def __len__(self) -> int:  # noqa: D100
+    def __len__(self) -> int:  # noqa: D105
         return self.num_triples * self.num_targets
 
-    def __getitem__(self, index: int) -> Tuple[Target, MappedTriples, Optional[torch.LongTensor]]:  # noqa: D100
+    def __getitem__(self, index: int) -> Tuple[Target, MappedTriples, Optional[torch.LongTensor]]:  # noqa: D105
         # sorted by target -> most of the batches only have a single target
         target_id, index = divmod(index, self.num_triples)
         target = self.targets[target_id]
