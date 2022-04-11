@@ -244,7 +244,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
 
     def precalculate_anchor_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> numpy.ndarray:
         """
-        Calculate PPR values from each node for each anchor.
+        Sort anchors nodes by PPR values from each node.
 
         :param edge_index: shape: (2, m)
             the edge index.
@@ -254,7 +254,15 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         :return: shape: `(num_entities, num_anchors)`
             the PPR values for each anchor
         """
-        return numpy.concatenate(list(self._iter_ppr(edge_index=edge_index, anchors=anchors)))
+        return numpy.concatenate(
+            [
+                numpy.argsort(ppr_batch, axis=-1)
+                for ppr_batch in self._iter_ppr(
+                    edge_index=edge_index,
+                    anchors=anchors,
+                )
+            ]
+        )[:, ::-1]
 
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         n = edge_index.max().item() + 1
@@ -263,11 +271,22 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
             batch_size = batch_ppr.shape[1]
             # select k anchors with largest ppr, shape: (batch_size, k)
-            result[i : i + batch_size, :] = numpy.argpartition(-batch_ppr, kth=k, axis=0)[:k].T
+            result[i : i + batch_size, :] = numpy.argpartition(-batch_ppr, kth=k, axis=-1)[:, :k]
             i += batch_size
         return result
 
     def _iter_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> Iterable[numpy.ndarray]:
+        """
+        Yield batches of PPR values for each anchor from each entities' perspective.
+
+        :param edge_index: shape: (2, m)
+            the edge index.
+        :param anchors: shape: `(num_anchors,)`
+            the anchor IDs.
+
+        :yields: shape: (batch_size, num_anchor)
+            batches of anchor PPRs.
+        """
         # prepare adjacency matrix only once
         adj = prepare_page_rank_adjacency(edge_index=edge_index)
         # prepare result
@@ -286,7 +305,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             # run page-rank calculation, shape: (batch_size, n)
             ppr = page_rank(adj=adj, x0=x0, **self.page_rank_kwargs)
             # select PPR values for the anchors, shape: (num_anchors, batch_size)
-            yield ppr[anchors]
+            yield ppr[anchors].T
 
 
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
