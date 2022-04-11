@@ -66,7 +66,10 @@ def page_rank(
         progress = tqdm(progress, unit_scale=True, leave=False)
     for i in progress:
         x = beta * adj.dot(x) + alpha * x0
-        if numpy.linalg.norm(x - x_old, ord=float("+inf")) < epsilon:
+        max_diff = numpy.linalg.norm(x - x_old, ord=float("+inf"))
+        if use_tqdm:
+            progress.set_postfix(max_diff=max_diff)
+        if max_diff < epsilon:
             logger.debug(f"Converged after {i} iterations up to {epsilon}.")
             break
         x_old = x
