@@ -22,6 +22,7 @@ def page_rank(
     max_iter: int = 1_000,
     alpha: float = 0.05,
     epsilon: float = 1.0e-04,
+    x0: Optional[numpy.ndarray] = None,
 ) -> numpy.ndarray:
     """
     Compute page-rank vector by power iteration.
@@ -34,31 +35,40 @@ def page_rank(
         the smoothing value / teleport probability
     :param epsilon: $>0$
         a (small) constant to check for convergence
+    :param x0:
+        the initial value for $x$. If None, set to a constant $1/n$ vector.
 
     :return: shape: (n,)
         the page-rank vector, i.e., a score between 0 and 1 for each node.
     """
-    # convert to sparse matrix
+    # convert to sparse matrix, shape: (n, n)
     adj = edge_index_to_sparse_matrix(edge_index=edge_index)
     # symmetrize
+    adj = adj + adj.transpose()
     # TODO: should we add self-links
-    # adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
-    adj = (adj + adj.transpose()).tocsr()
-    # degree for adjacency normalization
+    # adj = adj + scipy.sparse.eye(m=adj.shape[0], format="coo")
+    # convert to CSR
+    adj = adj.tocsr()
+    # adjacency normalization
     degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=float))[0]
-    n = degree_inv.shape[0]
+    adj = adj.dot(scipy.sparse.diags(degree_inv))
+
+    # input normalization
+    if x0 is None:
+        n = adj.shape[0]
+        x0 = numpy.full(shape=(n,), fill_value=1.0 / n)
+
     # power iteration
-    x = numpy.full(shape=(n,), fill_value=1.0 / n)
-    x_old = x
+    x_old = x = x0
     beta = 1.0 - alpha
     for i in range(max_iter):
-        x = beta * adj.dot(degree_inv * x) + alpha / n
+        x = beta * adj.dot(x) + alpha * x0
         if numpy.linalg.norm(x - x_old, ord=float("+inf")) < epsilon:
             logger.debug(f"Converged after {i} iterations up to {epsilon}.")
             break
         x_old = x
     else:  # for/else, cf. https://book.pythontips.com/en/latest/for_-_else.html
-        logger.warning(f"No covergence after {max_iter} iterations with epsilon={epsilon}.")
+        logger.warning(f"No convergence after {max_iter} iterations with epsilon={epsilon}.")
     return x
 
 
