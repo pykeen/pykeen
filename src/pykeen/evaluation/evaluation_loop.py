@@ -48,7 +48,6 @@ def _evaluate(
     batch_size: int,
     use_tqdm: bool,
     tqdm_kwargs: OptionalKwargs,
-    only_size_probing: bool = False,
     **kwargs,
 ) -> MetricResults:
     """
@@ -65,11 +64,8 @@ def _evaluate(
         whether to use tqdm progress bar
     :param tqdm_kwargs:
         additional keyword-based parameters for the progress bar
-    :param only_size_probing:
-        whether to only use the first batch
-        TODO: do we need this?
     :param kwargs:
-        addititional keyword-based parameters passed to :meth:`EvaluationLoop.get_loader`
+        additional keyword-based parameters passed to :meth:`EvaluationLoop.get_loader`
 
     :return:
         the evaluation results
@@ -77,9 +73,6 @@ def _evaluate(
     loop.model.eval()
     loader = loop.get_loader(batch_size=batch_size, **kwargs)
     total = len(loader)
-    if only_size_probing:
-        loader = itertools.islice(loader, 1)
-        total = 1
     if use_tqdm:
         loader = tqdm(
             loader,
