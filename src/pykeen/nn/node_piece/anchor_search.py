@@ -284,7 +284,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         :param anchors: shape: `(num_anchors,)`
             the anchor IDs.
 
-        :yields: shape: (batch_size, num_anchor)
+        :yields: shape: (batch_size, num_anchors)
             batches of anchor PPRs.
         """
         # prepare adjacency matrix only once
