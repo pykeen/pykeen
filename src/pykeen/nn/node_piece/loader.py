@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Collection, Mapping, Tuple
 
 from class_resolver import ClassResolver
+import numpy
 from tqdm.auto import tqdm
 
 __all__ = [
@@ -59,9 +60,28 @@ class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
 class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
     """A loader via torch.load."""
 
+    @staticmethod
+    def save(path: pathlib.Path, order: numpy.ndarray, anchor_ids: numpy.ndarray) -> None:
+        """
+        Save tokenization to path.
+        
+        :param path:
+            the output path
+        :param order: shape: (num_entities, num_anchors)
+            the sorted `anchor_ids`' ids per entity
+        :param anchor_ids: shape: (num_anchors,)
+            the anchor entity IDs
+        """
+        # ensure parent directory exists
+        path.parent.mkdir(exists_ok=True, parents=True)
+        # save via torch.save
+        torch.save({
+            "order": order,
+            "anchors": anchor_ids,  # ignored for now
+        }, path)
+
     def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         c = torch.load(path)
-        # anchor_ids = c["anchors"]  # ignored for now
         order = c["order"]
         logger.info(f"Loaded precomputed pools of shape {order.shape}.")
         # TODO: since we save a contiguous array of (num_entities, num_anchors),
