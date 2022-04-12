@@ -47,6 +47,9 @@ def page_rank(
 
     :return: shape: `(n,)`
         the page-rank vector, i.e., a score between 0 and 1 for each node.
+
+    :raises ValueError:
+        if neither `adj` nor `edge_index` are provided
     """
     if adj is None:
         if edge_index is None:
@@ -72,6 +75,7 @@ def page_rank(
         x = beta * adj.dot(x) + alpha * x0
         max_diff = numpy.linalg.norm(x - x_old, ord=float("+inf"), axis=0).max()
         if use_tqdm:
+            assert isinstance(progress, tqdm)  # for mypy
             progress.set_postfix(max_diff=max_diff)
         if max_diff < epsilon:
             logger.debug(f"Converged after {i} iterations up to {epsilon}.")

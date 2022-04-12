@@ -8,8 +8,9 @@ import pickle
 from abc import ABC, abstractmethod
 from typing import Collection, Mapping, Tuple
 
-from class_resolver import ClassResolver
 import numpy
+import torch
+from class_resolver import ClassResolver
 from tqdm.auto import tqdm
 
 __all__ = [
@@ -64,7 +65,7 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
     def save(path: pathlib.Path, order: numpy.ndarray, anchor_ids: numpy.ndarray) -> None:
         """
         Save tokenization to path.
-        
+
         :param path:
             the output path
         :param order: shape: (num_entities, num_anchors)
@@ -73,12 +74,15 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
             the anchor entity IDs
         """
         # ensure parent directory exists
-        path.parent.mkdir(exists_ok=True, parents=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         # save via torch.save
-        torch.save({
-            "order": order,
-            "anchors": anchor_ids,  # ignored for now
-        }, path)
+        torch.save(
+            {
+                "order": order,
+                "anchors": anchor_ids,  # ignored for now
+            },
+            path,
+        )
 
     def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         c = torch.load(path)
@@ -86,10 +90,7 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         logger.info(f"Loaded precomputed pools of shape {order.shape}.")
         # TODO: since we save a contiguous array of (num_entities, num_anchors),
         # it would be more efficient to not convert to a mapping, but directly select from the tensor
-        return {
-            i: list(anchor_ids)
-            for i, anchor_ids in enumerate(order)
-        }
+        return {i: anchor_ids.tolist() for i, anchor_ids in enumerate(order)}  # type: ignore
 
 
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
