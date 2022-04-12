@@ -20,6 +20,7 @@ __all__ = [
     "PrecomputedTokenizerLoader",
     # Concrete classes
     "GalkinPrecomputedTokenizerLoader",
+    "TorchPrecomputedTokenizerLoader",
 ]
 
 logger = logging.getLogger(__name__)

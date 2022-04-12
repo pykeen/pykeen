@@ -18,7 +18,12 @@ from .anchor_selection import (
     SingleSelection,
     anchor_selection_resolver,
 )
-from .loader import GalkinPrecomputedTokenizerLoader, PrecomputedTokenizerLoader, precomputed_tokenizer_loader_resolver
+from .loader import (
+    GalkinPrecomputedTokenizerLoader,
+    PrecomputedTokenizerLoader,
+    TorchPrecomputedTokenizerLoader,
+    precomputed_tokenizer_loader_resolver,
+)
 from .representations import NodePieceRepresentation, TokenizationRepresentation
 from .tokenization import AnchorTokenizer, PrecomputedPoolTokenizer, RelationTokenizer, Tokenizer, tokenizer_resolver
 
@@ -47,6 +52,7 @@ __all__ = [
     "precomputed_tokenizer_loader_resolver",
     "PrecomputedTokenizerLoader",
     "GalkinPrecomputedTokenizerLoader",
+    "TorchPrecomputedTokenizerLoader",
     # Representations
     "TokenizationRepresentation",
     "NodePieceRepresentation",
