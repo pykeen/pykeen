@@ -56,6 +56,22 @@ class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         }, len(anchor_map)
 
 
+class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
+    """A loader via torch.load."""
+
+    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
+        c = torch.load(path)
+        # anchor_ids = c["anchors"]  # ignored for now
+        order = c["order"]
+        logger.info(f"Loaded precomputed pools of shape {order.shape}.")
+        # TODO: since we save a contiguous array of (num_entities, num_anchors),
+        # it would be more efficient to not convert to a mapping, but directly select from the tensor
+        return {
+            i: list(anchor_ids)
+            for i, anchor_ids in enumerate(order)
+        }
+
+
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
     base=PrecomputedTokenizerLoader,
     default=GalkinPrecomputedTokenizerLoader,
