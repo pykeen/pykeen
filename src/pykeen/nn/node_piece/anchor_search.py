@@ -269,7 +269,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         result = numpy.full(shape=(n, k), fill_value=-1)
         i = 0
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
-            batch_size = batch_ppr.shape[1]
+            batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, k)
             result[i : i + batch_size, :] = numpy.argpartition(-batch_ppr, kth=k, axis=-1)[:, :k]
             i += batch_size
