@@ -9,7 +9,7 @@ import logging
 import pathlib
 import zipfile
 from abc import ABC, abstractmethod
-from typing import ClassVar, Iterable, Mapping, Optional, Tuple, cast
+from typing import ClassVar, Dict, Iterable, Mapping, Optional, Tuple, cast
 
 import click
 import pandas
@@ -90,11 +90,11 @@ class ExtraRelationGraphCombinator(GraphPairCombinator):
         **kwargs,
     ) -> TriplesFactory:  # noqa: D102
         mapped_triples = []
-        entity_to_id = {}
-        relation_to_id = {}
+        entity_to_id: Dict[str, int] = {}
+        relation_to_id: Dict[str, int] = {}
         entity_offset = relation_offset = 0
         entity_offsets = []
-        for side, tf in ((0, left), (1, right)):
+        for side, tf in (("left", left), ("right", right)):
             mapped_triples.append(
                 tf.mapped_triples + torch.as_tensor(data=[entity_offset, relation_offset, entity_offset]).view(1, 3)
             )
@@ -113,7 +113,8 @@ class ExtraRelationGraphCombinator(GraphPairCombinator):
         if mask.any():
             alignment = alignment.loc[~mask]
             logger.warning(
-                f"Dropped {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} alignments due to unknown labels."
+                f"Dropped {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} "
+                f"alignments due to unknown labels.",
             )
         # map alignment to (new) IDs
         left_id = alignment["left"].apply(left.entity_to_id.__getitem__) + entity_offsets[0]  # offset should be zero
@@ -148,7 +149,7 @@ class MTransEDataset(LazyDataset, ABC):
     """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
 
     #: The mapping from (graph-pair, side) to triple file name
-    FILE_NAMES: ClassVar[Mapping[Tuple[str, str], str]]
+    FILE_NAMES: ClassVar[Mapping[Tuple[str, Optional[str]], str]]
 
     #: The internal dataset name
     DATASET_NAME: ClassVar[str]
@@ -194,6 +195,8 @@ class MTransEDataset(LazyDataset, ABC):
             Whether to enforce re-download of existing files.
         :param combination:
             the combination method to use if both sides are to be used
+        :param combination_kwargs:
+            additional keyword-based parameters if a combination method is to be instantiated
 
         :raises ValueError:
             If the graph pair or side is invalid.
