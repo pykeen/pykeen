@@ -239,6 +239,7 @@ class MTransEDataset(LazyDataset, ABC):
     @classmethod
     def _load_graph(cls, zip_path: pathlib.Path, graph_pair: str, side: str, **kwargs) -> TriplesFactory:
         relative_path = cls._relative_path(graph_pair=graph_pair, key=side)
+        # TODO: reduce code duplication from reading from zipped "csv" files
         # read all triples from file
         with zipfile.ZipFile(zip_path) as zf:
             logger.info(f"Reading from {zip_path} : {relative_path}")
