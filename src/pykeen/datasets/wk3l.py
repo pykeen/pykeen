@@ -8,19 +8,21 @@ Get a summary with ``python -m pykeen.datasets.wk3l``
 import logging
 import pathlib
 import zipfile
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import ClassVar, Iterable, Mapping, Optional, Tuple, cast
 
 import click
 import pandas
+import torch
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import download_from_google
-import torch
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TorchRandomHint
+from ..utils import format_relative_comparison
 
 __all__ = [
     "MTransEDataset",
@@ -33,6 +35,113 @@ logger = logging.getLogger(__name__)
 
 GOOGLE_DRIVE_ID = "1AsPPU4ka1Rc9u-XYMGWtvV65hF3egi0z"
 GRAPH_PAIRS = ("en_fr", "en_de")
+
+
+class GraphPairCombinator:
+    """A base class for combination of a graph pair into a single graph."""
+
+    @abstractmethod
+    def __call__(
+        self,
+        left: TriplesFactory,
+        right: TriplesFactory,
+        alignment: pandas.DataFrame,
+        **kwargs,
+    ) -> TriplesFactory:
+        """
+        Combine two graphs using the alignment information.
+
+        :param left:
+            the triples of the left graph
+        :param right:
+            the triples of the right graph
+        :param alignment: columns: LEFT | RIGHT
+            the alignment, i.e., pairs of matching entities
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`
+
+        :return:
+            a single triples factory comprising the joint graph.
+        """
+        raise NotImplementedError
+
+
+class CollapseGraphCombinator(GraphPairCombinator):
+    """This combinator merges all matching entity pairs into a single ID."""
+
+    def __call__(
+        self,
+        left: TriplesFactory,
+        right: TriplesFactory,
+        alignment: pandas.DataFrame,
+        **kwargs,
+    ) -> TriplesFactory:  # noqa: D102
+        raise NotImplementedError
+
+
+class ExtraRelationGraphCombinator(GraphPairCombinator):
+    """This combinator keeps all entities, but introduces a novel alignment relation."""
+
+    def __call__(
+        self,
+        left: TriplesFactory,
+        right: TriplesFactory,
+        alignment: pandas.DataFrame,
+        **kwargs,
+    ) -> TriplesFactory:  # noqa: D102
+        mapped_triples = []
+        entity_to_id = {}
+        relation_to_id = {}
+        entity_offset = relation_offset = 0
+        entity_offsets = []
+        for side, tf in ((0, left), (1, right)):
+            mapped_triples.append(
+                tf.mapped_triples + torch.as_tensor(data=[entity_offset, relation_offset, entity_offset]).view(1, 3)
+            )
+            entity_to_id.update((f"{side}:{key}", value + entity_offset) for key, value in tf.entity_to_id.items())
+            relation_to_id.update(
+                (f"{side}:{key}", value + relation_offset) for key, value in tf.relation_to_id.items()
+            )
+            entity_offsets.append(entity_offset)
+            entity_offset += tf.num_entities
+            relation_offset += tf.num_relations
+
+        # extra alignment relation
+        relation_to_id["same-as"] = relation_offset
+        # filter alignment
+        mask = ~(alignment["left"].isin(left.entity_to_id) & alignment["right"].isin(right.entity_to_id))
+        if mask.any():
+            logger.warning(
+                f"Dropping {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} alignments due to unknown labels."
+            )
+            alignment = alignment.loc[~mask]
+        # map alignment to (new) IDs
+        left_id = alignment["left"].apply(left.entity_to_id.__getitem__) + entity_offsets[0]  # offset should be zero
+        right_id = alignment["right"].apply(right.entity_to_id.__getitem__) + entity_offsets[1]
+        # append alignment triples
+        mapped_triples.append(
+            torch.stack(
+                [
+                    torch.as_tensor(left_id, dtype=torch.long),
+                    torch.full(size=(len(left_id),), fill_value=relation_offset),
+                    torch.as_tensor(right_id, dtype=torch.long),
+                ],
+                dim=-1,
+            )
+        )
+        # merged factory
+        return TriplesFactory(
+            mapped_triples=torch.cat(mapped_triples, dim=0),
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            **kwargs,
+        )
+
+
+graph_combinator_resolver: ClassResolver[GraphPairCombinator] = ClassResolver.from_subclasses(
+    base=GraphPairCombinator,
+    default=ExtraRelationGraphCombinator,
+)
 
 
 class MTransEDataset(LazyDataset, ABC):
@@ -60,6 +169,8 @@ class MTransEDataset(LazyDataset, ABC):
         random_state: TorchRandomHint = 0,
         split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
         force: bool = False,
+        combination: HintOrType[GraphPairCombinator] = None,
+        combination_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the dataset.
@@ -81,6 +192,8 @@ class MTransEDataset(LazyDataset, ABC):
             The split ratios used for splitting the dataset into train / validation / test.
         :param force:
             Whether to enforce re-download of existing files.
+        :param combination:
+            the combination method to use if both sides are to be used
 
         :raises ValueError:
             If the graph pair or side is invalid.
@@ -93,6 +206,7 @@ class MTransEDataset(LazyDataset, ABC):
             raise ValueError(f"side must be one of {available_sides} or None")
         self.side = side
         self.graph_pair = graph_pair
+        self.combination = graph_combinator_resolver.make(combination, combination_kwargs) if side is None else None
 
         # For downloading
         self.drive_id = GOOGLE_DRIVE_ID
@@ -114,14 +228,17 @@ class MTransEDataset(LazyDataset, ABC):
         return cache_root.joinpath("wk3l")
 
     @classmethod
-    def _load_graph(cls, zip_path: pathlib.Path, graph_pair: str, side: str, **kwargs) -> TriplesFactory:
-        relative_path = pathlib.PurePosixPath(
+    def _relative_path(cls, graph_pair: str, key: Optional[str]) -> pathlib.PurePath:
+        return pathlib.PurePosixPath(
             "data",
             cls.DATASET_NAME,
             graph_pair,
-            cls.FILE_NAMES[graph_pair, side],
+            cls.FILE_NAMES[graph_pair, key],
         )
 
+    @classmethod
+    def _load_graph(cls, zip_path: pathlib.Path, graph_pair: str, side: str, **kwargs) -> TriplesFactory:
+        relative_path = cls._relative_path(graph_pair=graph_pair, key=side)
         # read all triples from file
         with zipfile.ZipFile(zip_path) as zf:
             logger.info(f"Reading from {zip_path} : {relative_path}")
@@ -145,6 +262,30 @@ class MTransEDataset(LazyDataset, ABC):
             **kwargs,
         )
 
+    @classmethod
+    def _load_alignment(cls, zip_path: pathlib.Path, graph_pair: str) -> pandas.DataFrame:
+        """Load entity alignment information for the given graph pair."""
+        left, right = graph_pair.split("_")
+        dfs = []
+        for key, names in ((f"{left}->{right}", ["left", "right"]), (f"{right}->{left}", ["right", "left"])):
+            relative_path = cls._relative_path(graph_pair=graph_pair, key=key)
+            with zipfile.ZipFile(zip_path) as zf:
+                logger.info(f"Reading from {zip_path} : {relative_path}")
+                with zf.open(str(relative_path), mode="r") as file:
+                    df = pandas.read_csv(
+                        file,
+                        delimiter="@@@",
+                        header=None,
+                        names=names,
+                        engine="python",
+                        encoding="utf8",
+                    )
+            # some "entities" have numeric labels
+            # pandas.read_csv(..., dtype=str) does not work properly.
+            df = df.astype(dtype=str)
+            dfs.append(df)
+        return pandas.concat(dfs)
+
     def _load(self) -> None:
         path = self.cache_root.joinpath("data.zip")
 
@@ -155,44 +296,24 @@ class MTransEDataset(LazyDataset, ABC):
             download_from_google(self.drive_id, path, hexdigests=dict(sha512=self.SHA512))
 
         if self.side is None:
-            # load two factories
-            tfs = {
-                side: self._load_graph(
+            assert self.combination is not None
+            left_side, right_side = self.graph_pair.split("_")
+            tf = self.combination(
+                left=self._load_graph(
                     zip_path=path,
                     graph_pair=self.graph_pair,
-                    side=side,
-                    create_inverse_triples=self.create_inverse_triples,
-                )
-                for side in self.graph_pair.split("_")
-            }
-            # merge
-            mapped_triples = []
-            entity_to_id = {}
-            relation_to_id = {}
-            entity_offset = relation_offset = 0
-            for side in sorted(tfs.keys()):
-                tf = tfs[side]
-                mapped_triples.append(
-                    tf.mapped_triples + torch.as_tensor(data=[entity_offset, relation_offset, entity_offset]).view(1, 3)
-                )
-                entity_to_id.update(
-                    (":".join((side, key)), value + entity_offset) for key, value in tf.entity_to_id.items()
-                )
-                relation_to_id.update(
-                    (":".join((side, key)), value + relation_offset) for key, value in tf.relation_to_id.items()
-                )
-                entity_offset += tf.num_entities
-                relation_offset += tf.num_relations
-            mapped_triples = torch.cat(mapped_triples, dim=0)
-            # TODO: Load alignment and add relation & triples
-            tf = TriplesFactory(
-                mapped_triples=mapped_triples,
-                entity_to_id=entity_to_id,
-                relation_to_id=relation_to_id,
-                create_inverse_triples=self.create_inverse_triples,
-                metadata=dict(path=path, graph_pair=self.graph_pair, side=None),
+                    side=left_side,
+                ),
+                right=self._load_graph(
+                    zip_path=path,
+                    graph_pair=self.graph_pair,
+                    side=right_side,
+                ),
+                alignment=self._load_alignment(
+                    zip_path=path,
+                    graph_pair=self.graph_pair,
+                ),
             )
-            # TODO: split on alignment relation(?)
         else:
             # create triples factory
             tf = self._load_graph(
@@ -248,8 +369,14 @@ class WK3l15k(MTransEDataset):
     FILE_NAMES = {
         ("en_de", "en"): "P_en_v6.csv",
         ("en_de", "de"): "P_de_v6.csv",
+        ("en_de", "en->de"): "en2de_fk.csv",  # left-to-right entity alignment
+        ("en_de", "de->en"): "de2en_fk.csv",  # right-to-left entity alignment
+        ("en_de", None): "P_en_de_v6.csv",  # triple alignment
         ("en_fr", "en"): "P_en_v5.csv",
         ("en_fr", "fr"): "P_fr_v5.csv",
+        ("en_fr", "en->fr"): "en2fr_fk.csv",  # left-to-right entity alignment
+        ("en_fr", "fr->en"): "fr2en_fk.csv",  # right-to-left entity alignment
+        ("en_fr", None): "P_en_fr_v5.csv",  # triple alignment
     }
 
 
