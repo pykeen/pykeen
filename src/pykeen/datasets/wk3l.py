@@ -9,13 +9,14 @@ import logging
 import pathlib
 import zipfile
 from abc import ABC
-from typing import ClassVar, Mapping, Optional, Tuple, cast
+from typing import ClassVar, Iterable, Mapping, Optional, Tuple, cast
 
 import click
 import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import download_from_google
+import torch
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
@@ -52,7 +53,7 @@ class MTransEDataset(LazyDataset, ABC):
     def __init__(
         self,
         graph_pair: str = "en_de",
-        side: str = "en",
+        side: Optional[str] = "en",
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
@@ -66,7 +67,8 @@ class MTransEDataset(LazyDataset, ABC):
         :param graph_pair:
             The graph-pair within the dataset family (cf. GRAPH_PAIRS).
         :param side:
-            The side of the graph-pair, a substring of the graph-pair selection.
+            The side of the graph-pair, a substring of the graph-pair selection, or None
+            to get a union of both graphs with a special alignment relation.
         :param cache_root:
             The cache root.
         :param eager:
@@ -87,15 +89,10 @@ class MTransEDataset(LazyDataset, ABC):
         if graph_pair not in GRAPH_PAIRS:
             raise ValueError(f"Invalid graph pair: Allowed are: {GRAPH_PAIRS}")
         available_sides = graph_pair.split("_")
-        if side not in available_sides:
-            raise ValueError(f"side must be one of {available_sides}")
-
-        self._relative_path = pathlib.PurePosixPath(
-            "data",
-            self.DATASET_NAME,
-            graph_pair,
-            self.FILE_NAMES[graph_pair, side],
-        )
+        if not (side is None or side in available_sides):
+            raise ValueError(f"side must be one of {available_sides} or None")
+        self.side = side
+        self.graph_pair = graph_pair
 
         # For downloading
         self.drive_id = GOOGLE_DRIVE_ID
@@ -116,19 +113,19 @@ class MTransEDataset(LazyDataset, ABC):
         # shared directory for multiple datasets.
         return cache_root.joinpath("wk3l")
 
-    def _load(self) -> None:
-        path = self.cache_root.joinpath("data.zip")
-
-        # ensure file is present
-        # TODO: Re-use ensure_from_google?
-        if not path.is_file() or self.force:
-            logger.info(f"Downloading file from Google Drive (ID: {self.drive_id})")
-            download_from_google(self.drive_id, path, hexdigests=dict(sha512=self.SHA512))
+    @classmethod
+    def _load_graph(cls, zip_path: pathlib.Path, graph_pair: str, side: str, **kwargs) -> TriplesFactory:
+        relative_path = pathlib.PurePosixPath(
+            "data",
+            cls.DATASET_NAME,
+            graph_pair,
+            cls.FILE_NAMES[graph_pair, side],
+        )
 
         # read all triples from file
-        with zipfile.ZipFile(path) as zf:
-            logger.info(f"Reading from {path.as_uri()}")
-            with zf.open(str(self._relative_path), mode="r") as triples_file:
+        with zipfile.ZipFile(zip_path) as zf:
+            logger.info(f"Reading from {zip_path} : {relative_path}")
+            with zf.open(str(relative_path), mode="r") as triples_file:
                 df = pandas.read_csv(
                     triples_file,
                     delimiter="@@@",
@@ -142,11 +139,68 @@ class MTransEDataset(LazyDataset, ABC):
         df = df.astype(dtype=str)
 
         # create triples factory
-        tf = TriplesFactory.from_labeled_triples(
+        return TriplesFactory.from_labeled_triples(
             triples=df.values,
-            create_inverse_triples=self.create_inverse_triples,
-            metadata=dict(path=path),
+            metadata=dict(path=zip_path, graph_pair=graph_pair, side=side),
+            **kwargs,
         )
+
+    def _load(self) -> None:
+        path = self.cache_root.joinpath("data.zip")
+
+        # ensure file is present
+        # TODO: Re-use ensure_from_google?
+        if not path.is_file() or self.force:
+            logger.info(f"Downloading file from Google Drive (ID: {self.drive_id})")
+            download_from_google(self.drive_id, path, hexdigests=dict(sha512=self.SHA512))
+
+        if self.side is None:
+            # load two factories
+            tfs = {
+                side: self._load_graph(
+                    zip_path=path,
+                    graph_pair=self.graph_pair,
+                    side=side,
+                    create_inverse_triples=self.create_inverse_triples,
+                )
+                for side in self.graph_pair.split("_")
+            }
+            # merge
+            mapped_triples = []
+            entity_to_id = {}
+            relation_to_id = {}
+            entity_offset = relation_offset = 0
+            for side in sorted(tfs.keys()):
+                tf = tfs[side]
+                mapped_triples.append(
+                    tf.mapped_triples + torch.as_tensor(data=[entity_offset, relation_offset, entity_offset]).view(1, 3)
+                )
+                entity_to_id.update(
+                    (":".join((side, key)), value + entity_offset) for key, value in tf.entity_to_id.items()
+                )
+                relation_to_id.update(
+                    (":".join((side, key)), value + relation_offset) for key, value in tf.relation_to_id.items()
+                )
+                entity_offset += tf.num_entities
+                relation_offset += tf.num_relations
+            mapped_triples = torch.cat(mapped_triples, dim=0)
+            # TODO: Load alignment and add relation & triples
+            tf = TriplesFactory(
+                mapped_triples=mapped_triples,
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+                create_inverse_triples=self.create_inverse_triples,
+                metadata=dict(path=path, graph_pair=self.graph_pair, side=None),
+            )
+            # TODO: split on alignment relation(?)
+        else:
+            # create triples factory
+            tf = self._load_graph(
+                zip_path=path,
+                graph_pair=self.graph_pair,
+                side=self.side,
+                create_inverse_triples=self.create_inverse_triples,
+            )
 
         # split
         self._training, self._testing, self._validation = cast(
@@ -160,6 +214,11 @@ class MTransEDataset(LazyDataset, ABC):
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
+
+    def _extra_repr(self) -> Iterable[str]:
+        yield from super()._extra_repr()
+        yield f"self.graph_pair={self.graph_pair}"
+        yield f"self.side={self.side}"
 
 
 @parse_docdata
@@ -259,7 +318,7 @@ class CN3l(MTransEDataset):
 @verbose_option
 def _main():
     for graph_pair in GRAPH_PAIRS:
-        for side in graph_pair.split("_"):
+        for side in [None] + graph_pair.split("_"):
             for cls in (WK3l15k, WK3l120k, CN3l):
                 ds = cls(graph_pair=graph_pair, side=side)
                 ds.summarize()
