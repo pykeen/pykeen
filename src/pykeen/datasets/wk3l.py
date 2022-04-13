@@ -442,8 +442,14 @@ class WK3l120k(MTransEDataset):
     FILE_NAMES = {
         ("en_de", "en"): "P_en_v6_120k.csv",
         ("en_de", "de"): "P_de_v6_120k.csv",
+        ("en_de", "en->de"): "en2de_fk_120k.csv",  # left-to-right entity alignment
+        ("en_de", "de->en"): "de2en_fk_120k.csv",  # right-to-left entity alignment
+        ("en_de", None): "P_en_de_v6_120k.csv",  # triple alignment
         ("en_fr", "en"): "P_en_v5_120k.csv",
         ("en_fr", "fr"): "P_fr_v5_120k.csv",
+        ("en_fr", "en->fr"): "en2fr_fk_120k.csv",  # left-to-right entity alignment
+        ("en_fr", "fr->en"): "fr2en_fk_120k.csv",  # right-to-left entity alignment
+        ("en_fr", None): "P_en_fr_v5_120k.csv",  # triple alignment
     }
 
 
@@ -471,8 +477,14 @@ class CN3l(MTransEDataset):
     FILE_NAMES = {
         ("en_de", "en"): "C_en_d.csv",
         ("en_de", "de"): "C_de.csv",
+        ("en_de", "en->de"): "en2de_cn.csv",  # left-to-right entity alignment
+        ("en_de", "de->en"): "de2en_cn.csv",  # right-to-left entity alignment
+        ("en_de", None): "C_en_de.csv",  # triple alignment
         ("en_fr", "en"): "C_en_f.csv",
         ("en_fr", "fr"): "C_fr.csv",
+        ("en_fr", "en->fr"): "en2fr_cn.csv",  # left-to-right entity alignment
+        ("en_fr", "fr->en"): "fr2en_cn.csv",  # right-to-left entity alignment
+        ("en_fr", None): "C_en_fr.csv",  # triple alignment
     }
 
 
