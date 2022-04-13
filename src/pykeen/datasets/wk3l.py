@@ -111,10 +111,10 @@ class ExtraRelationGraphCombinator(GraphPairCombinator):
         # filter alignment
         mask = ~(alignment["left"].isin(left.entity_to_id) & alignment["right"].isin(right.entity_to_id))
         if mask.any():
-            logger.warning(
-                f"Dropping {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} alignments due to unknown labels."
-            )
             alignment = alignment.loc[~mask]
+            logger.warning(
+                f"Dropped {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} alignments due to unknown labels."
+            )
         # map alignment to (new) IDs
         left_id = alignment["left"].apply(left.entity_to_id.__getitem__) + entity_offsets[0]  # offset should be zero
         right_id = alignment["right"].apply(right.entity_to_id.__getitem__) + entity_offsets[1]
@@ -122,9 +122,9 @@ class ExtraRelationGraphCombinator(GraphPairCombinator):
         mapped_triples.append(
             torch.stack(
                 [
-                    torch.as_tensor(left_id, dtype=torch.long),
+                    torch.as_tensor(data=left_id.values, dtype=torch.long),
                     torch.full(size=(len(left_id),), fill_value=relation_offset),
-                    torch.as_tensor(right_id, dtype=torch.long),
+                    torch.as_tensor(data=right_id.values, dtype=torch.long),
                 ],
                 dim=-1,
             )
@@ -265,6 +265,7 @@ class MTransEDataset(LazyDataset, ABC):
     @classmethod
     def _load_alignment(cls, zip_path: pathlib.Path, graph_pair: str) -> pandas.DataFrame:
         """Load entity alignment information for the given graph pair."""
+        logger.info("Loading alignment information")
         left, right = graph_pair.split("_")
         dfs = []
         for key, names in ((f"{left}->{right}", ["left", "right"]), (f"{right}->{left}", ["right", "left"])):
@@ -284,7 +285,41 @@ class MTransEDataset(LazyDataset, ABC):
             # pandas.read_csv(..., dtype=str) does not work properly.
             df = df.astype(dtype=str)
             dfs.append(df)
-        return pandas.concat(dfs)
+        # load triple alignments
+        relative_path = cls._relative_path(graph_pair=graph_pair, key=None)
+        with zipfile.ZipFile(zip_path) as zf:
+            logger.info(f"Reading from {zip_path} : {relative_path}")
+            with zf.open(str(relative_path), mode="r") as file:
+                df = pandas.read_csv(
+                    file,
+                    delimiter="@@@",
+                    header=None,
+                    names=[
+                        (side, column)
+                        for side in ("left", "right")
+                        for column in [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
+                    ],
+                    engine="python",
+                    encoding="utf8",
+                )
+        # some "entities" have numeric labels
+        # pandas.read_csv(..., dtype=str) does not work properly.
+        df = df.astype(dtype=str)
+        # extract entity alignments
+        # (h1, r1, t1) = (h2, r2, t2) => h1 = h2 and t1 = t2
+        for column in [LABEL_HEAD, LABEL_TAIL]:
+            part = df.loc[:, [("left", column), ("right", column)]].copy()
+            part.columns = ["left", "right"]
+            dfs.append(part)
+        df = pandas.concat(dfs)
+        old = df.shape[0]
+        df = df.drop_duplicates()
+        new = df.shape[0]
+        if new < old:
+            logger.info(
+                f"Dropped {format_relative_comparison(part=old - new, total=old)} alignments due to being duplicates."
+            )
+        return df
 
     def _load(self) -> None:
         path = self.cache_root.joinpath("data.zip")
