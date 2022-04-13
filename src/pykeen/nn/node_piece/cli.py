@@ -20,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
-# TODO: no default results in error in class_resolver:
-# ValueError: no default given either from resolver or explicitly
-@dataset_resolver.get_option("-d", "--dataset", as_string=True, default="nations")
+@dataset_resolver.get_option("-d", "--dataset", as_string=True, required=True)
 @click.option("-c", "--configuration-path", type=pathlib.Path, default=None)
 @click.option("-k", "--num-tokens", type=int, default=None)
 @click.option("-a", "--num-anchors", type=int, default=None)
