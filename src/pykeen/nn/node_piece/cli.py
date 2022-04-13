@@ -74,7 +74,7 @@ def tokenize(
     if output_path.exists():
         logger.warning(f"Output path exists: {output_path}")
         if not force:
-            logger.info(f"Existing file will not be overwritten. To enforce this, pass `--force`")
+            logger.info("Existing file will not be overwritten. To enforce this, pass `--force`")
             quit()
 
     # create anchor selection instance
