@@ -59,7 +59,7 @@ def tokenize(
         configuration = {}
     else:
         logger.info(f"Loading tokenization configuration from {configuration_path}")
-        configuration = load_configuration(configuration_path)
+        configuration = dict(load_configuration(configuration_path))
 
     if output_path is None:
         # calculate configuration digest
