@@ -1,4 +1,5 @@
 """Command-Line Interface for pre-computing tokenizations for NodePiece."""
+import copy
 import logging
 import math
 import pathlib
@@ -62,7 +63,10 @@ def tokenize(
 
     if output_path is None:
         # calculate configuration digest
-        digest = _digest_kwargs(configuration)
+        _configuration = copy.deepcopy(configuration)
+        _configuration["num_anchors"] = num_anchors
+        _configuration["num_tokens"] = num_tokens
+        digest = _digest_kwargs(_configuration)
         output_path = PYKEEN_MODULE.join(__name__.replace(".cli", ""), dataset_resolver.normalize(dataset)).joinpath(
             f"{digest}.pt"
         )
