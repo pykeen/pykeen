@@ -89,9 +89,10 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         c = torch.load(path)
         order = c["order"]
         logger.info(f"Loaded precomputed pools of shape {order.shape}.")
+        num_anchors = c["anchors"].shape[0]
         # TODO: since we save a contiguous array of (num_entities, num_anchors),
         # it would be more efficient to not convert to a mapping, but directly select from the tensor
-        return {i: anchor_ids.tolist() for i, anchor_ids in enumerate(order)}  # type: ignore
+        return {i: anchor_ids.tolist() for i, anchor_ids in enumerate(order)}, num_anchors   # type: ignore
 
 
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
