@@ -14,7 +14,7 @@ from .loader import TorchPrecomputedTokenizerLoader
 from ...constants import PYKEEN_MODULE
 from ...datasets import dataset_resolver
 from ...datasets.utils import _digest_kwargs
-from ...utils import load_configuration
+from ...utils import flatten_dictionary, load_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def tokenize(
         _configuration = copy.deepcopy(configuration)
         _configuration["num_anchors"] = num_anchors
         _configuration["num_tokens"] = num_tokens
-        digest = _digest_kwargs(_configuration)
+        digest = _digest_kwargs(flatten_dictionary(_configuration))
         output_path = PYKEEN_MODULE.join(__name__.replace(".cli", ""), dataset_resolver.normalize(dataset)).joinpath(
             f"{digest}.pt"
         )
@@ -78,26 +78,24 @@ def tokenize(
             quit()
 
     # create anchor selection instance
-    anchor_selection_config = configuration.pop("anchor_selection", {})
-    anchor_selection = anchor_selection_config.pop("class", None)  # TODO: better key?
-    anchor_selection_instance = anchor_selection_resolver.make(
-        anchor_selection, pos_kwargs=anchor_selection_config, num_anchors=num_anchors
-    )
-    logger.info(f"Created anchor selection instance: {anchor_selection_instance}")
+    selection_config = configuration.pop("selection", {})
+    selection = selection_config.pop("class", None)  # TODO: better key?
+    selection_instance = anchor_selection_resolver.make(selection, pos_kwargs=selection_config, num_anchors=num_anchors)
+    logger.info(f"Created anchor selection instance: {selection_instance}")
 
     # select anchors
     edge_index = dataset_instance.training.mapped_triples[:, [0, 2]].numpy().T
-    anchors = anchor_selection_instance(edge_index=edge_index)
+    anchors = selection_instance(edge_index=edge_index)
     logger.info(f"Selected {len(anchors)} anchors")
 
     # anchor search (=anchor assignment?)
-    anchor_searcher_config = configuration.pop("anchor_searcher", {})
-    anchor_searcher = anchor_searcher_config.pop("class", None)
-    anchor_searcher_instance = anchor_searcher_resolver.make(anchor_searcher, pos_kwargs=anchor_searcher_config)
-    logger.info(f"Created anchor searcher instance: {anchor_searcher_instance}")
+    searcher_config = configuration.pop("search", {})
+    searcher = searcher_config.pop("class", None)
+    searcher_instance = anchor_searcher_resolver.make(searcher, pos_kwargs=searcher_config)
+    logger.info(f"Created anchor searcher instance: {searcher_instance}")
 
     # assign anchors
-    sorted_anchor_ids = anchor_searcher_instance(edge_index=edge_index, anchors=anchors, k=num_tokens)
+    sorted_anchor_ids = searcher_instance(edge_index=edge_index, anchors=anchors, k=num_tokens)
 
     # save
     TorchPrecomputedTokenizerLoader.save(
