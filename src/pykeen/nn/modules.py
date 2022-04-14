@@ -780,7 +780,21 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
 class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ER-MLP (E) interaction function.
 
-    # TODO: Move doc from ERMLPE model to here and link?
+    This interaction uses a neural network-based approach similar to ER-MLP and with slight modifications.
+    In ER-MLP, the interaction is:
+
+    .. math::
+
+        f(h, r, t) = \textbf{w}^{T} g(\textbf{W} [\textbf{h}; \textbf{r}; \textbf{t}])
+
+    whereas in ER-MLP (E) the interaction is:
+
+    .. math::
+
+        f(h, r, t) = \textbf{t}^{T} f(\textbf{W} (g(\textbf{W} [\textbf{h}; \textbf{r}]))
+
+    including dropouts and batch-norms between each two hidden layers. Thus, the ConvE interaction can be seen as a
+    special case of ERMLP (E).
 
     .. seealso:: :func:`pykeen.nn.functional.ermlpe_interaction`
     """
