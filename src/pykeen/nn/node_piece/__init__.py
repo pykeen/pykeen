@@ -17,6 +17,17 @@ entities from the graph as vocabulary. The anchor selection process is controlle
 :class:`AnchorSelection` instance. In order to obtain the assignment, some measure of graph
 distance is used. To this end, a :class:`AnchorSeracher` instance calculates the closest 
 anchor entities from the vocabulary for each of the entities in the graph.
+
+Since some tokenizations are expensive to compute, we offer a mechanism to use precomputed tokenizations via
+:class:`PrecomputedPoolTokenizer`. To enable loading from different formats, a loader subclassing from
+:class:`PrecomputedTokenizerLoader` can be selected accordingly. To precompute anchor-based tokenizations,
+you can use the command
+
+.. code-block:: console
+
+    pykeen tokenize
+
+It usage is explained by passing the `--help` flag.
 """
 
 from .anchor_search import (
