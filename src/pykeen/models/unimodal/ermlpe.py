@@ -2,7 +2,7 @@
 
 """An implementation of the extension to ERMLP."""
 
-from typing import Any, ClassVar, Mapping, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 from torch.nn.init import uniform_
 
@@ -61,10 +61,10 @@ class ERMLPE(ERModel):
     def __init__(
         self,
         *,
-        hidden_dim: int = 300,
+        embedding_dim: int = 256,
+        hidden_dim: Optional[int] = None,
         input_dropout: float = 0.2,
-        hidden_dropout: float = 0.3,
-        embedding_dim: int = 200,
+        hidden_dropout: Optional[float] = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
         **kwargs,
