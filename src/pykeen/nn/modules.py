@@ -787,12 +787,14 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     def __init__(
         self,
-        hidden_dim: int = 300,
+        embedding_dim: int = 256,
         input_dropout: float = 0.2,
-        hidden_dropout: float = 0.3,
-        embedding_dim: int = 200,
+        hidden_dim: Optional[int] = None,
+        hidden_dropout: Optional[float] = None,
     ):
         super().__init__()
+        hidden_dim = hidden_dim or embedding_dim
+        hidden_dropout = input_dropout if hidden_dropout is None else hidden_dropout
         self.mlp = nn.Sequential(
             nn.Dropout(input_dropout),
             nn.Linear(2 * embedding_dim, hidden_dim),
