@@ -220,7 +220,12 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
 
 class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
-    """Select closest anchors as the nodes with the largest personalized page rank."""
+    """
+    Select closest anchors as the nodes with the largest personalized page rank.
+
+    .. seealso::
+        http://web.stanford.edu/class/cs224w/slides/04-pagerank.pdf
+    """
 
     def __init__(self, batch_size: int = 1, use_tqdm: bool = False, page_rank_kwargs: OptionalKwargs = None):
         """

@@ -158,7 +158,12 @@ class DegreeAnchorSelection(SingleSelection):
 
 
 class PageRankAnchorSelection(SingleSelection):
-    """Select entities according to their page rank."""
+    """
+    Select entities according to their page rank.
+
+    .. seealso::
+        http://web.stanford.edu/class/cs224w/slides/04-pagerank.pdf
+    """
 
     def __init__(
         self,
