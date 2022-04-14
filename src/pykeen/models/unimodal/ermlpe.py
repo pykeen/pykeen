@@ -66,9 +66,25 @@ class ERMLPE(ERModel):
         input_dropout: float = 0.2,
         hidden_dropout: Optional[float] = None,
         entity_initializer: Hint[Initializer] = uniform_,
-        relation_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = None,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension (for both, entities and relations)
+        :param hidden_dim:
+            the hidden dimension of the MLP; defaults to ``embedding_dim``.
+        :param input_dropout:
+            the input dropout of the MLP
+        :param hidden_dropout:
+            the hidden dropout of the MLP; defaults to ``input_dropout``.
+        :param entity_initializer:
+            the entity embedding initializer
+        :param relation_initializer:
+            the relation embedding initializer; defaults to ``entity_initializer``.
+        """
         super().__init__(
             interaction=ERMLPEInteraction,
             interaction_kwargs=dict(
@@ -83,7 +99,7 @@ class ERMLPE(ERModel):
             ),
             relation_representations_kwargs=dict(
                 shape=embedding_dim,
-                initializer=relation_initializer,
+                initializer=relation_initializer or entity_initializer,
             ),
             **kwargs,
         )
