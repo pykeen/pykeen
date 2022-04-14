@@ -15,7 +15,7 @@ to the set of tokens, usually using the graph structure of the KG.
 One way of tokenization, is tokenization by :class:`AnchorTokenizer`, which selects some anchor
 entities from the graph as vocabulary. The anchor selection process is controlled by an
 :class:`AnchorSelection` instance. In order to obtain the assignment, some measure of graph
-distance is used. To this end, a :class:`AnchorSeracher` instance calculates the closest 
+distance is used. To this end, a :class:`AnchorSeracher` instance calculates the closest
 anchor entities from the vocabulary for each of the entities in the graph.
 
 Since some tokenizations are expensive to compute, we offer a mechanism to use precomputed tokenizations via
