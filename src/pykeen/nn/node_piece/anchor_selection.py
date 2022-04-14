@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 
-"""Anchor selection for NodePiece."""
+"""
+Anchor selection for NodePiece.
+
+An anchor selection method selects a given number of entities from the KG which serve as *anchors* to describe other
+entities. Most of these methods rely on some form of
+`(graph) centrality measure <https://en.wikipedia.org/wiki/Centrality>`_ to select central entities.
+"""
 
 import logging
 from abc import ABC, abstractmethod
