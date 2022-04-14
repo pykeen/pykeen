@@ -4,13 +4,12 @@
 
 from typing import Any, ClassVar, Mapping, Type
 
-import torch
-from torch import nn
 from torch.nn.init import uniform_
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn.modules import ERMLPEInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -18,7 +17,7 @@ __all__ = [
 ]
 
 
-class ERMLPE(EntityRelationEmbeddingModel):
+class ERMLPE(ERModel):
     r"""An extension of :class:`pykeen.models.ERMLP` proposed by [sharifzadeh2019]_.
 
     This model uses a neural network-based approach similar to ER-MLP and with slight modifications.
@@ -71,6 +70,13 @@ class ERMLPE(EntityRelationEmbeddingModel):
         **kwargs,
     ) -> None:
         super().__init__(
+            interaction=ERMLPEInteraction,
+            interaction_kwargs=dict(
+                embedding_dim=embedding_dim,
+                hidden_dim=hidden_dim,
+                input_dropout=input_dropout,
+                hidden_dropout=hidden_dropout,
+            ),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
@@ -81,107 +87,3 @@ class ERMLPE(EntityRelationEmbeddingModel):
             ),
             **kwargs,
         )
-        self.hidden_dim = hidden_dim
-
-        self.linear1 = nn.Linear(2 * self.embedding_dim, self.hidden_dim)
-        self.linear2 = nn.Linear(self.hidden_dim, self.embedding_dim)
-        self.input_dropout = nn.Dropout(input_dropout)
-        self.bn1 = nn.BatchNorm1d(self.hidden_dim)
-        self.bn2 = nn.BatchNorm1d(self.embedding_dim)
-        self.mlp = nn.Sequential(
-            self.linear1,
-            nn.Dropout(hidden_dropout),
-            self.bn1,
-            nn.ReLU(),
-            self.linear2,
-            nn.Dropout(hidden_dropout),
-            self.bn2,
-            nn.ReLU(),
-        )
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        for module in [
-            self.linear1,
-            self.linear2,
-            self.bn1,
-            self.bn2,
-        ]:
-            module.reset_parameters()
-
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # Concatenate them
-        x_s = torch.cat([h, r], dim=-1)
-        x_s = self.input_dropout(x_s)
-
-        # Predict t embedding
-        x_t = self.mlp(x_s)
-
-        # compare with all t's
-        # For efficient calculation, each of the calculated [h, r] rows has only to be multiplied with one t row
-        x = (x_t.view(-1, self.embedding_dim) * t).sum(dim=1, keepdim=True)
-        # The application of the sigmoid during training is automatically handled by the default loss.
-
-        return x
-
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).transpose(1, 0)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # Concatenate them
-        x_s = torch.cat([h, r], dim=-1)
-        x_s = self.input_dropout(x_s)
-
-        # Predict t embedding
-        x_t = self.mlp(x_s)
-
-        x = x_t @ t
-        # The application of the sigmoid during training is automatically handled by the default loss.
-
-        return x
-
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        rt_batch_size = t.shape[0]
-
-        # Extend each rt_batch of "r" with shape [rt_batch_size, dim] to [rt_batch_size, dim * num_entities]
-        r = torch.repeat_interleave(r, self.num_entities, dim=0)
-        # Extend each h with shape [num_entities, dim] to [rt_batch_size * num_entities, dim]
-        # h = torch.repeat_interleave(h, rt_batch_size, dim=0)
-        h = h.repeat(rt_batch_size, 1)
-
-        # Extend t
-        t = t.repeat_interleave(self.num_entities, dim=0)
-
-        # Concatenate them
-        x_s = torch.cat([h, r], dim=-1)
-        x_s = self.input_dropout(x_s)
-
-        # Predict t embedding
-        x_t = self.mlp(x_s)
-
-        # For efficient calculation, each of the calculated [h, r] rows has only to be multiplied with one t row
-        x = (x_t.view(-1, self.embedding_dim) * t).sum(dim=1, keepdim=True)
-        # The results have to be realigned with the expected output of the score_h function
-        x = x.view(rt_batch_size, self.num_entities)
-        # The application of the sigmoid during training is automatically handled by the default loss.
-
-        return x
