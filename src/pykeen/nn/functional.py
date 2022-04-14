@@ -382,7 +382,7 @@ def ermlpe_interaction(
     x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
     # dot product
-    return (x * t).sum(dim=-1)
+    return torch.einsum("...d,...d->...", x, t)
 
 
 def hole_interaction(
