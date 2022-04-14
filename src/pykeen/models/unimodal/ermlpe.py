@@ -84,6 +84,8 @@ class ERMLPE(ERModel):
             the entity embedding initializer
         :param relation_initializer:
             the relation embedding initializer; defaults to ``entity_initializer``.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """
         super().__init__(
             interaction=ERMLPEInteraction,

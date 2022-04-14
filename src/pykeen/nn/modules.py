@@ -778,7 +778,7 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
 
 
 class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ER-MLP (E) interaction function.
+    r"""A stateful module for the ER-MLP (E) interaction function.
 
     This interaction uses a neural network-based approach similar to ER-MLP and with slight modifications.
     In ER-MLP, the interaction is:
