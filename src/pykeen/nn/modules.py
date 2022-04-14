@@ -780,6 +780,8 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
 class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ER-MLP (E) interaction function.
 
+    # TODO: Move doc from ERMLPE model to here and link?
+
     .. seealso:: :func:`pykeen.nn.functional.ermlpe_interaction`
     """
 
