@@ -123,17 +123,21 @@ def complex_interaction(
     .. math ::
         Re(\langle h, r, conj(t) \rangle)
 
-    :param h: shape: (`*batch_dims`, `2*dim`)
+    .. note::
+        this method expects the tensors to be compatible with :func:`torch.view_as_complex`.
+
+    :param h: shape: (`*batch_dims`, dim, 2)
         The complex head representations.
-    :param r: shape: (`*batch_dims`, 2*dim)
+    :param r: shape: (`*batch_dims`, dim, 2)
         The complex relation representations.
-    :param t: shape: (`*batch_dims`, 2*dim)
+    :param t: shape: (`*batch_dims`, dim, 2)
         The complex tail representations.
 
     :return: shape: batch_dims
         The scores.
     """
-    return batched_complex(h, r, t)
+    h, r, t = [torch.view_as_complex(x=x) for x in (h, r, t)]
+    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
