@@ -661,11 +661,6 @@ def negative_norm(
         assert not isinstance(p, str)
         return -(x.abs() ** p).sum(dim=-1)
 
-    if torch.is_complex(x):
-        assert not isinstance(p, str)
-        # workaround for complex numbers: manually compute norm
-        return -(x.abs() ** p).sum(dim=-1) ** (1 / p)
-
     return -x.norm(p=p, dim=-1)
 
 
