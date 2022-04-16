@@ -271,6 +271,8 @@ class ERModel(
         interaction_kwargs: OptionalKwargs = None,
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
+        head_representation_indices: Optional[Sequence[int]] = None,
+        tail_representation_indices: Optional[Sequence[int]] = None,
         relation_representations: OneOrManyHintOrType[Representation] = None,
         relation_representations_kwargs: OneOrManyOptionalKwargs = None,
         skip_checks: bool = False,
@@ -287,6 +289,10 @@ class ERModel(
         :param entity_representations: The entity representation or sequence of representations
         :param entity_representations_kwargs:
             additional keyword-based parameters for instantiation of entity representations
+        :param head_representation_indices:
+            if the interaction function's head parameter should only receive a subset of entity representations
+        :param tail_representation_indices:
+            if the interaction function's tail parameter should only receive a subset of entity representations
         :param relation_representations: The relation representation or sequence of representations
         :param relation_representations_kwargs:
             additional keyword-based parameters for instantiation of relation representations
@@ -303,8 +309,11 @@ class ERModel(
             max_id=triples_factory.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
+            # TODO: check via head/tail representation indices
             skip_checks=self.interaction.tail_entity_shape is not None or skip_checks,
         )
+        self.head_representation_indices = head_representation_indices
+        self.tail_representation_indices = tail_representation_indices
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
             representation_kwargs=relation_representations_kwargs,
@@ -510,13 +519,17 @@ class ERModel(
         mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        entity_representations = self._entity_representation_from_mode(mode=mode)
+        head_representations = tail_representations = self._entity_representation_from_mode(mode=mode)
+        if self.head_representation_indices is not None:
+            head_representations = [head_representations[i] for i in self.head_representation_indices]
+        if self.tail_representation_indices is not None:
+            tail_representations = [tail_representations[i] for i in self.tail_representation_indices]
         hr, rr, tr = [
             [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
-                (h, entity_representations),
+                (h, head_representations),
                 (r, self.relation_representations),
-                (t, entity_representations),
+                (t, tail_representations),
             )
         ]
         # normalization

@@ -78,6 +78,8 @@ class CP(ERModel):
                     normalizer_kwargs=entity_normalizer_kwargs,
                 ),
             ],
+            head_representation_indices=[0],
+            tail_representation_indices=[1],
             relation_representations_kwargs=dict(
                 shape=(rank, embedding_dim),
                 initializer=relation_initializer,
@@ -88,27 +90,4 @@ class CP(ERModel):
             # on https://github.com/pykeen/pykeen/pull/663.
             skip_checks=True,
             **kwargs,
-        )
-
-    def _get_representations(
-        self,
-        h: Optional[torch.LongTensor],
-        r: Optional[torch.LongTensor],
-        t: Optional[torch.LongTensor],
-        *,
-        mode: Optional[InductiveMode],
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:  # noqa: D102
-        # Override to allow different head and tail entity representations
-        h, r, t = [
-            [representation.forward_unique(indices=indices) for representation in representations]
-            for indices, representations in (
-                (h, self.entity_representations[0:1]),  # <== this is different
-                (r, self.relation_representations),
-                (t, self.entity_representations[1:2]),  # <== this is different
-            )
-        ]
-        # normalization
-        return cast(
-            Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
-            tuple(x[0] if len(x) == 1 else x for x in (h, r, t)),
         )
