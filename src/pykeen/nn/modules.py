@@ -652,7 +652,7 @@ class ConvEInteraction(
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        return dict(h=h, r=r, t=t[0], t_bias=t[1])
+        return dict(h=h[0], r=r, t=t[0], t_bias=t[1])
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(
