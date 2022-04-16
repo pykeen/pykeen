@@ -4,12 +4,12 @@
 
 from typing import Any, ClassVar, Mapping, Type
 
-import torch
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
+from ...nn.modules import DistMultInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, Hint, Initializer
 
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class DistMult(EntityRelationEmbeddingModel):
+class DistMult(ERModel):
     r"""An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
@@ -86,9 +86,10 @@ class DistMult(EntityRelationEmbeddingModel):
         :param entity_constrainer: Default: constrain entity embeddings to unit length
         :param relation_initializer: Default: relations are initialized to unit length (but not constrained)
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
         """
         super().__init__(
+            interaction=DistMultInteraction,
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
@@ -100,71 +101,3 @@ class DistMult(EntityRelationEmbeddingModel):
             ),
             **kwargs,
         )
-
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        WARNING: Does not ensure forward constraints.
-
-        :param h: shape: (..., e)
-            Head embeddings.
-        :param r: shape: (..., e)
-            Relation embeddings.
-        :param t: shape: (..., e)
-            Tail embeddings.
-
-        :return: shape: (...)
-            The scores.
-        """
-        # Bilinear product
-        # *: Elementwise multiplication
-        return torch.sum(h * r * t, dim=-1)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
-
-        # Compute score
-        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-
-        # Rank against all entities
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
-
-        # Rank against all entities
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
