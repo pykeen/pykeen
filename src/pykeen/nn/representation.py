@@ -346,7 +346,8 @@ class Embedding(Representation):
 
         # work-around until full complex support (torch==1.10 still does not work)
         # TODO: verify that this is our understanding of complex!
-        if dtype.is_complex:
+        self.is_complex = dtype.is_complex
+        if self.is_complex:
             shape = tuple(shape[:-1]) + (shape[-1], 2)
             _embedding_dim = _embedding_dim * 2
             # note: this seems to work, as finfo returns the datatype of the underlying floating
@@ -397,6 +398,8 @@ class Embedding(Representation):
             prefix_shape = indices.shape
             x = self._embeddings(indices.to(self.device))
         x = x.view(*prefix_shape, *self.shape)
+        if self.is_complex:
+            x = torch.view_as_complex(x)
         # verify that contiguity is preserved
         assert x.is_contiguous()
         return x

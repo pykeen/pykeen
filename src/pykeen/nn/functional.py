@@ -124,19 +124,18 @@ def complex_interaction(
         Re(\langle h, r, conj(t) \rangle)
 
     .. note::
-        this method expects the tensors to be compatible with :func:`torch.view_as_complex`.
+        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
 
-    :param h: shape: (`*batch_dims`, dim, 2)
+    :param h: shape: (`*batch_dims`, dim)
         The complex head representations.
-    :param r: shape: (`*batch_dims`, dim, 2)
+    :param r: shape: (`*batch_dims`, dim)
         The complex relation representations.
-    :param t: shape: (`*batch_dims`, dim, 2)
+    :param t: shape: (`*batch_dims`, dim)
         The complex tail representations.
 
     :return: shape: batch_dims
         The scores.
     """
-    h, r, t = [torch.view_as_complex(x=x) for x in (h, r, t)]
     return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
@@ -605,21 +604,20 @@ def rotate_interaction(
     """Evaluate the RotatE interaction function.
 
     .. note::
-        this method expects the tensors to be compatible with :func:`torch.view_as_complex`.
+        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
 
-    :param h: shape: (`*batch_dims`, dim, 2)
+    :param h: shape: (`*batch_dims`, dim)
         The head representations.
-    :param r: shape: (`*batch_dims`, dim, 2)
+    :param r: shape: (`*batch_dims`, dim)
         The relation representations.
-    :param t: shape: (`*batch_dims`, dim, 2)
+    :param t: shape: (`*batch_dims`, dim)
         The tail representations.
 
     :return: shape: batch_dims
         The scores.
     """
-    # r expresses a rotation in complex plane.
-    h, r, t = [torch.view_as_complex(x) for x in (h, r, t)]
     if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
+        # r expresses a rotation in complex plane.
         # rotate head by relation (=Hadamard product in complex space)
         h = h * r
     else:
@@ -630,7 +628,6 @@ def rotate_interaction(
         # |h * r - t| = |h - conj(r) * t|
         t = t * torch.conj(r)
 
-    # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
     return negative_norm(h - t, p=2, power_norm=False)
 
 
