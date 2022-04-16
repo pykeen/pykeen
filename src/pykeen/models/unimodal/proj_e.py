@@ -74,9 +74,9 @@ class ProjE(ERModel):
                 inner_non_linearity=inner_non_linearity,
             ),
             entity_representations_kwargs=dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                ),,
+                shape=embedding_dim,
+                initializer=entity_initializer,
+            ),
             relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
