@@ -196,7 +196,7 @@ def conve_interaction(
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: batch_dims
-    x = (x * t).sum(dim=-1)
+    x = torch.einsum("...d, ...d -> ...", x, t)
 
     # add bias term
     return x + t_bias
