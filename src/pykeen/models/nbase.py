@@ -287,10 +287,6 @@ class ERModel(
         :param entity_representations: The entity representation or sequence of representations
         :param entity_representations_kwargs:
             additional keyword-based parameters for instantiation of entity representations
-        :param head_representation_indices:
-            if the interaction function's head parameter should only receive a subset of entity representations
-        :param tail_representation_indices:
-            if the interaction function's tail parameter should only receive a subset of entity representations
         :param relation_representations: The relation representation or sequence of representations
         :param relation_representations_kwargs:
             additional keyword-based parameters for instantiation of relation representations

@@ -150,7 +150,10 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
 
+    # if the interaction function's head parameter should only receive a subset of entity representations
     _head_indices: ClassVar[Optional[Sequence[int]]] = None
+
+    # if the interaction function's tail parameter should only receive a subset of entity representations
     _tail_indices: ClassVar[Optional[Sequence[int]]] = None
 
     @classmethod
