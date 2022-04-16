@@ -8,6 +8,8 @@ import pickle
 from abc import ABC, abstractmethod
 from typing import Collection, Mapping, Tuple
 
+import numpy
+import torch
 from class_resolver import ClassResolver
 from tqdm.auto import tqdm
 
@@ -18,6 +20,7 @@ __all__ = [
     "PrecomputedTokenizerLoader",
     # Concrete classes
     "GalkinPrecomputedTokenizerLoader",
+    "TorchPrecomputedTokenizerLoader",
 ]
 
 logger = logging.getLogger(__name__)
@@ -54,6 +57,42 @@ class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
             key: [anchor_map[a] for a in value["ancs"] if a in anchor_map]
             for key, value in tqdm(mapping.items(), desc="ID Mapping", unit_scale=True, leave=False)
         }, len(anchor_map)
+
+
+class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
+    """A loader via torch.load."""
+
+    @staticmethod
+    def save(path: pathlib.Path, order: numpy.ndarray, anchor_ids: numpy.ndarray) -> None:
+        """
+        Save tokenization to path.
+
+        :param path:
+            the output path
+        :param order: shape: (num_entities, num_anchors)
+            the sorted `anchor_ids`' ids per entity
+        :param anchor_ids: shape: (num_anchors,)
+            the anchor entity IDs
+        """
+        # ensure parent directory exists
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # save via torch.save
+        torch.save(
+            {
+                "order": order,
+                "anchors": anchor_ids,  # ignored for now
+            },
+            path,
+        )
+
+    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
+        c = torch.load(path)
+        order = c["order"]
+        logger.info(f"Loaded precomputed pools of shape {order.shape}.")
+        num_anchors = c["anchors"].shape[0]
+        # TODO: since we save a contiguous array of (num_entities, num_anchors),
+        # it would be more efficient to not convert to a mapping, but directly select from the tensor
+        return {i: anchor_ids.tolist() for i, anchor_ids in enumerate(order)}, num_anchors  # type: ignore
 
 
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
