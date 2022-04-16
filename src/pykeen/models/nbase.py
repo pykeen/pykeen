@@ -271,8 +271,6 @@ class ERModel(
         interaction_kwargs: OptionalKwargs = None,
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
-        head_representation_indices: Optional[Sequence[int]] = None,
-        tail_representation_indices: Optional[Sequence[int]] = None,
         relation_representations: OneOrManyHintOrType[Representation] = None,
         relation_representations_kwargs: OneOrManyOptionalKwargs = None,
         skip_checks: bool = False,
@@ -307,13 +305,10 @@ class ERModel(
             representations=entity_representations,
             representation_kwargs=entity_representations_kwargs,
             max_id=triples_factory.num_entities,
-            shapes=self.interaction.entity_shape,
+            shapes=self.interaction.full_entity_shapes(),
             label="entity",
-            # TODO: check via head/tail representation indices
-            skip_checks=self.interaction.tail_entity_shape is not None or skip_checks,
+            skip_checks=skip_checks,
         )
-        self.head_representation_indices = head_representation_indices
-        self.tail_representation_indices = tail_representation_indices
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
             representation_kwargs=relation_representations_kwargs,
@@ -520,10 +515,8 @@ class ERModel(
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         head_representations = tail_representations = self._entity_representation_from_mode(mode=mode)
-        if self.head_representation_indices is not None:
-            head_representations = [head_representations[i] for i in self.head_representation_indices]
-        if self.tail_representation_indices is not None:
-            tail_representations = [tail_representations[i] for i in self.tail_representation_indices]
+        head_representations = [head_representations[i] for i in self.interaction.head_indices()]
+        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
         hr, rr, tr = [
             [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (

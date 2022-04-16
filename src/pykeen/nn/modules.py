@@ -148,6 +148,40 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
 
+    _head_indices: ClassVar[Optional[Sequence[int]]] = None
+    _tail_indices: ClassVar[Optional[Sequence[int]]] = None
+
+    @classmethod
+    def head_indices(cls) -> Sequence[int]:
+        """Return the entity representation indices used for the head representations."""
+        if cls._head_indices is None:
+            return list(range(len(cls.entity_shape)))
+        return cls._head_indices
+
+    @classmethod
+    def tail_indices(cls) -> Sequence[int]:
+        """Return the entity representation indices used for the tail representations."""
+        if cls._tail_indices is None:
+            tail_entity_shape = cls.entity_shape if cls.tail_entity_shape is None else cls.tail_entity_shape
+            return list(range(len(tail_entity_shape)))
+        return cls._tail_indices
+
+    @classmethod
+    def full_entity_shapes(cls) -> Sequence[str]:
+        """Return all entity shapes (head & tail)."""
+        shapes = [None] * (max(itt.chain(cls.head_indices(), cls.tail_indices())) + 1)
+        for hi, hs in zip(cls.head_indices(), cls.entity_shape):
+            shapes[hi] = hs
+        for ti, ts in zip(
+            cls.tail_indices(), cls.entity_shape if cls.tail_entity_shape is None else cls.tail_entity_shape
+        ):
+            if shapes[ti] is not None and ts != shapes[ti]:
+                raise ValueError("Shape conflict.")
+            shapes[ti] = ts
+        if any(s is None for s in shapes):
+            raise AssertionError("Unused shape.")
+        return shapes
+
     @classmethod
     def get_dimensions(cls) -> Set[str]:
         """Get all of the relevant dimension keys.
@@ -562,7 +596,8 @@ class ConvEInteraction(
     .. seealso:: :func:`pykeen.nn.functional.conve_interaction`
     """
 
-    tail_entity_shape = ("d", "k")  # with k=1
+    # vector & scalar offset
+    tail_entity_shape = ("d", "")
 
     #: The head-relation encoder operating on 2D "images"
     hr2d: nn.Module
@@ -1507,7 +1542,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     An implementation of the CP interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
 
     .. note ::
-        For $k=1$, this interaction is the same as DistMult (but consider the node below).
+        For $k=1$, this interaction is the same as DistMult (but consider the note below).
 
     .. note ::
         For equivalence to CP, entities should have different representations for head & tail role. This is different
@@ -1517,6 +1552,8 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     func = pkf.cp_interaction
     entity_shape = ("kd",)
     relation_shape = ("kd",)
+    _head_indices = (0,)
+    _tail_indices = (1,)
 
 
 @parse_docdata

@@ -9,7 +9,7 @@ import torch
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import CPInteraction
-from ...typing import Hint, InductiveMode, Initializer, Normalizer
+from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
     "CP",
@@ -78,16 +78,10 @@ class CP(ERModel):
                     normalizer_kwargs=entity_normalizer_kwargs,
                 ),
             ],
-            head_representation_indices=[0],
-            tail_representation_indices=[1],
             relation_representations_kwargs=dict(
                 shape=(rank, embedding_dim),
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
             ),
-            # Since CP uses different representations for entities in head / tail role,
-            # the current solution is a bit hacky, and may be improved. See discussion
-            # on https://github.com/pykeen/pykeen/pull/663.
-            skip_checks=True,
             **kwargs,
         )
