@@ -5,8 +5,8 @@
 from typing import Any, ClassVar, Mapping
 
 import torch
-from torch.nn import functional
 from class_resolver import HintOrType, OptionalKwargs
+from torch.nn import functional
 
 from ..nbase import ERModel
 from ...nn.init import init_phases, xavier_uniform_

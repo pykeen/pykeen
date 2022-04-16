@@ -31,7 +31,6 @@ from ..utils import (
     project_entity,
     tensor_product,
     tensor_sum,
-    view_complex,
 )
 
 __all__ = [

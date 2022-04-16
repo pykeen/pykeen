@@ -44,7 +44,6 @@ import yaml
 from class_resolver import normalize_string
 from docdata import get_docdata
 from torch import nn
-from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
