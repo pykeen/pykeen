@@ -15,7 +15,7 @@ import numpy
 import torch
 from torch import broadcast_tensors, nn
 
-from .compute_kernel import batched_complex, batched_dot
+from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution, Sign
