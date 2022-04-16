@@ -408,7 +408,9 @@ class TestRotatE(cases.ModelTestCase):
         Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
         """
         relation_abs = (
-            self.instance.relation_embeddings(indices=None).view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
+            self.instance.relation_representations[0](indices=None)
+            .view(self.factory.num_relations, -1, 2)
+            .norm(p=2, dim=-1)
         )
         assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
 
