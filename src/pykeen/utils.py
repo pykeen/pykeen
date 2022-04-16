@@ -101,7 +101,6 @@ __all__ = [
     "convert_to_canonical_shape",
     "get_expected_norm",
     "Bias",
-    "complex_normalize",
     "lp_norm",
     "powersum_norm",
     "product_normalize",
@@ -1041,32 +1040,6 @@ def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize:
         return value
     dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
     return value / dim
-
-
-def complex_normalize(x: torch.Tensor) -> torch.Tensor:
-    r"""Normalize a vector of complex numbers such that each element is of unit-length.
-
-    :param x: A tensor formulating complex numbers
-    :returns: A normalized version accoring to the following definition.
-
-    The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
-
-    .. math::
-
-        |a + ib| = \sqrt{a^2 + b^2}
-
-    $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
-
-    .. math::
-        \|x\|^2 = \sum_{i=1}^d |x_i|^2
-                 = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
-                 = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
-                 = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
-                 = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
-    """
-    y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
-    y = functional.normalize(y, p=2, dim=-1)
-    return y.view(*x.shape)
 
 
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}

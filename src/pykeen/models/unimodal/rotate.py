@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping
 
 import torch
+from torch.nn import functional
 from class_resolver import HintOrType, OptionalKwargs
 
 from ..nbase import ERModel
@@ -12,7 +13,6 @@ from ...nn.init import init_phases, xavier_uniform_
 from ...nn.modules import RotatEInteraction
 from ...regularizers import Regularizer
 from ...typing import Constrainer, Hint, Initializer
-from ...utils import complex_normalize
 
 __all__ = [
     "RotatE",
@@ -61,7 +61,7 @@ class RotatE(ERModel):
         embedding_dim: int = 200,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         relation_initializer: Hint[Initializer] = init_phases,
-        relation_constrainer: Hint[Constrainer] = complex_normalize,
+        relation_constrainer: Hint[Constrainer] = functional.normalize,
         regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
