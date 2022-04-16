@@ -570,7 +570,7 @@ def proje_interaction(
     x = activation(tensor_sum(h, r, b_c))
 
     # dot product with t
-    return (x * t).sum(dim=-1) + b_p
+    return torch.einsum("...d, ...d -> ...", x, t) + b_p
 
 
 def rescal_interaction(
