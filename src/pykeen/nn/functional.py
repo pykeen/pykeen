@@ -600,11 +600,14 @@ def rotate_interaction(
 ) -> torch.FloatTensor:
     """Evaluate the RotatE interaction function.
 
-    :param h: shape: (`*batch_dims`, 2*dim)
+    .. note::
+        this method expects the tensors to be compatible with :func:`torch.view_as_complex`.
+
+    :param h: shape: (`*batch_dims`, dim, 2)
         The head representations.
-    :param r: shape: (`*batch_dims`, 2*dim)
+    :param r: shape: (`*batch_dims`, dim, 2)
         The relation representations.
-    :param t: shape: (`*batch_dims`, 2*dim)
+    :param t: shape: (`*batch_dims`, dim, 2)
         The tail representations.
 
     :return: shape: batch_dims
