@@ -136,6 +136,8 @@ def complex_interaction(
     :return: shape: batch_dims
         The scores.
     """
+    # TODO: switch to einsum ?
+    # return torch.real(torch.einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
     return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
