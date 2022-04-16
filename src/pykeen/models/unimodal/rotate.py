@@ -81,5 +81,6 @@ class RotatE(ERModel):
                 constrainer=relation_constrainer,
                 dtype=torch.cfloat,
             ),
+            skip_checks=True,  # due to complex
             **kwargs,
         )

@@ -611,7 +611,7 @@ def rotate_interaction(
         The scores.
     """
     # r expresses a rotation in complex plane.
-    h, r, t = [view_complex(x) for x in (h, r, t)]
+    h, r, t = [torch.view_as_complex(x) for x in (h, r, t)]
     if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
         # rotate head by relation (=Hadamard product in complex space)
         h = h * r
