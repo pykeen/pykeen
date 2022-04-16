@@ -21,7 +21,6 @@ from ..moves import irfft, rfft
 from ..typing import GaussianDistribution, Sign
 from ..utils import (
     boxe_kg_arity_position_score,
-    broadcast_cat,
     clamp_norm,
     compute_box,
     estimate_cost_of_sequence,
@@ -175,11 +174,11 @@ def conve_interaction(
     """
     # repeat if necessary, and concat head and relation
     # shape: -1, num_input_channels, 2*height, width
-    x = broadcast_cat(
-        [
+    x = torch.cat(
+        torch.broadcast_tensors(
             h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
             r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
-        ],
+        ),
         dim=-2,
     )
     prefix_shape = x.shape[:-3]
@@ -375,7 +374,7 @@ def ermlpe_interaction(
         The scores.
     """
     # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
-    x = broadcast_cat([h, r], dim=-1)
+    x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
 
     # Predict t embedding, shape: (*batch_dims, d)
     *batch_dims, dim = x.shape
