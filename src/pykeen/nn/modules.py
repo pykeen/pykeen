@@ -16,6 +16,7 @@ from typing import (
     ClassVar,
     Generic,
     Iterable,
+    List,
     Mapping,
     MutableMapping,
     Optional,
@@ -23,6 +24,7 @@ from typing import (
     Set,
     Tuple,
     Union,
+    cast,
 )
 
 import more_itertools
@@ -169,7 +171,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     @classmethod
     def full_entity_shapes(cls) -> Sequence[str]:
         """Return all entity shapes (head & tail)."""
-        shapes = [None] * (max(itt.chain(cls.head_indices(), cls.tail_indices())) + 1)
+        shapes: List[Optional[str]] = [None] * (max(itt.chain(cls.head_indices(), cls.tail_indices())) + 1)
         for hi, hs in zip(cls.head_indices(), cls.entity_shape):
             shapes[hi] = hs
         for ti, ts in zip(
@@ -178,9 +180,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             if shapes[ti] is not None and ts != shapes[ti]:
                 raise ValueError("Shape conflict.")
             shapes[ti] = ts
-        if any(s is None for s in shapes):
+        if None in shapes:
             raise AssertionError("Unused shape.")
-        return shapes
+        return cast(List[str], shapes)
 
     @classmethod
     def get_dimensions(cls) -> Set[str]:

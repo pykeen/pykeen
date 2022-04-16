@@ -2,9 +2,7 @@
 
 """Implementation of CP model."""
 
-from typing import Any, ClassVar, Mapping, Optional, Tuple, cast
-
-import torch
+from typing import Any, ClassVar, Mapping, Optional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
