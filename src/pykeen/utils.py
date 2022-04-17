@@ -383,8 +383,8 @@ def split_complex(
     x: torch.FloatTensor,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """Split a complex tensor into real and imaginary part."""
-    dim = x.shape[-1] // 2
-    return x[..., :dim], x[..., dim:]
+    x = torch.view_as_real(x)
+    return x[..., 0], x[..., 1]
 
 
 def view_complex(x: torch.FloatTensor) -> torch.Tensor:
@@ -403,7 +403,7 @@ def combine_complex(
     x_im: torch.FloatTensor,
 ) -> torch.FloatTensor:
     """Combine a complex tensor from real and imaginary part."""
-    return torch.cat([x_re, x_im], dim=-1)
+    return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
 def fix_dataclass_init_docs(cls: Type) -> Type:
