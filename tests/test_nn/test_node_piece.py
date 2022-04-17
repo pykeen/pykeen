@@ -91,6 +91,12 @@ class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
         numpy.testing.assert_array_equal(pool, exp_pool)
 
 
+class PersonalizedPageRankAnchorSearcherTests(cases.AnchorSearcherTestCase):
+    """Tests for anchor search via PPR."""
+
+    cls = pykeen.nn.node_piece.PersonalizedPageRankAnchorSearcher
+
+
 class AnchorSearcherMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece.AnchorSearcher]):
     """Test for tests for anchor search strategies."""
 
