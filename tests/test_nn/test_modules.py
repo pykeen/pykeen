@@ -11,6 +11,7 @@ import numpy
 import torch
 import unittest_templates
 from torch import nn
+import torch.nn.functional
 
 import pykeen.nn.modules
 import pykeen.utils
@@ -26,9 +27,9 @@ class ComplExTests(cases.InteractionTestCase):
     """Tests for ComplEx interaction function."""
 
     cls = pykeen.nn.modules.ComplExInteraction
+    dtype = torch.cfloat
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = [view_complex(x) for x in (h, r, t)]
         return (h * r * torch.conj(t)).sum().real
 
 
@@ -266,19 +267,19 @@ class RotatETests(cases.InteractionTestCase):
     """Tests for RotatE interaction function."""
 
     cls = pykeen.nn.modules.RotatEInteraction
+    dtype = torch.cfloat
 
     def _get_hrt(self, *shapes):  # noqa: D102
         # normalize length of r
         h, r, t = super()._get_hrt(*shapes)
-        rc = view_complex(r)
-        rl = (rc.abs() ** 2).sum(dim=-1).sqrt()
-        r = r / rl.unsqueeze(dim=-1)
+        # normalize rotations
+        r = r / r.abs().clamp_min(torch.finfo(r.dtype).eps)
         return h, r, t
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = tuple(view_complex(x) for x in (h, r, t))
+        # h, r, t = tuple(view_complex(x) for x in (h, r, t))
         # check for unit length
-        assert torch.allclose((r.abs() ** 2).sum(dim=-1).sqrt(), torch.ones(1))
+        assert torch.allclose(r.abs(), torch.ones_like(r.abs()))
         d = h * r - t
         return -(d.abs() ** 2).sum(dim=-1).sqrt()
 
