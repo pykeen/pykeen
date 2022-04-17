@@ -25,7 +25,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
-from ..utils import Bias, clamp_norm, get_preferred_device, upgrade_to_sequence
+from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device, upgrade_to_sequence
 
 __all__ = [
     "Representation",
@@ -506,7 +506,7 @@ def process_max_id(max_id: Optional[int], num_embeddings: Optional[int]) -> int:
     return max_id
 
 
-constrainer_resolver = FunctionResolver([functional.normalize, torch.clamp, clamp_norm])
+constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
 
 normalizer_resolver = FunctionResolver([functional.normalize])
 
