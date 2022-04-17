@@ -567,14 +567,14 @@ def proje_interaction(
         The scores.
     """
     # global projections
-    h = h * d_e.view(*make_ones_like(h.shape[:-1]), -1)
-    r = r * d_r.view(*make_ones_like(h.shape[:-1]), -1)
+    h = torch.einsum("...d, d -> ...d", h, d_e)
+    r = torch.einsum("...d, d -> ...d", r, d_r)
 
     # combination, shape: (*batch_dims, d)
     x = activation(tensor_sum(h, r, b_c))
 
     # dot product with t
-    return (x * t).sum(dim=-1) + b_p
+    return torch.einsum("...d, ...d -> ...", x, t) + b_p
 
 
 def rescal_interaction(
