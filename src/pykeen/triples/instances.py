@@ -4,13 +4,14 @@
 
 import math
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, Iterable, Iterator, List, NamedTuple, Optional, Tuple, TypeVar
+from typing import Callable, Generic, Iterable, Iterator, List, NamedTuple, Optional, Tuple, TypeVar, Dict
 
 import numpy as np
 import scipy.sparse
 import torch
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils import data
+from dataclasses import dataclass
 
 from .utils import compute_compressed_adjacency_list
 from ..sampling import NegativeSampler, negative_sampler_resolver
@@ -30,7 +31,8 @@ LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
 SLCWASampleType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
-class SLCWABatch(NamedTuple):
+@dataclass
+class SLCWABatch:
     """A batch for sLCWA training."""
 
     #: the positive triples, shape: (batch_size, 3)
@@ -41,6 +43,9 @@ class SLCWABatch(NamedTuple):
 
     #: filtering masks for negative triples, shape: (batch_size, num_negatives_per_positive)
     masks: Optional[torch.BoolTensor]
+
+    def __getitem__(self, item):
+        return getattr(self, item) if type(item) == str else [self.positives, self.negatives, self.masks]
 
 
 class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):

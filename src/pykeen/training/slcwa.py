@@ -73,7 +73,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
 
     @staticmethod
     def _get_batch_size(batch: SLCWABatch) -> int:  # noqa: D102
-        return batch[0].shape[0]
+        return batch["positives"].shape[0]
 
     def _process_batch(
         self,
@@ -88,7 +88,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             raise AttributeError("Slicing is not possible for sLCWA training loops.")
 
         # split batch
-        positive_batch, negative_batch, positive_filter = batch
+        positive_batch, negative_batch, positive_filter = batch.positives, batch.negatives, batch.masks
 
         # send to device
         positive_batch = positive_batch[start:stop].to(device=self.device)
