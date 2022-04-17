@@ -17,7 +17,7 @@ import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
 from pykeen.typing import Representation, Sign
-from pykeen.utils import clamp_norm, ensure_tuple, project_entity, view_complex
+from pykeen.utils import clamp_norm, ensure_tuple, project_entity
 from tests import cases
 
 logger = logging.getLogger(__name__)
