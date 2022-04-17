@@ -41,7 +41,8 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-33">Datasets</a> •
+  <a href="#datasets-34">Datasets</a> •
+  <a href="#inductive-datasets">Inductive Datasets (5)</a> •
   <a href="#models-42">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -105,7 +106,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (33)
+### Datasets (34)
 
 The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
@@ -116,6 +117,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 | Name                               | Documentation                                                                                                       | Citation                                                                                                                |   Entities |   Relations |   Triples |
 |------------------------------------|---------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|------------|-------------|-----------|
+| Aristo-v4                          | [`pykeen.datasets.AristoV4`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.AristoV4.html)             | [Chen *et al*., 2021](https://openreview.net/pdf?id=Qa3uS3H7-Le)                                                        |      42016 |        1593 |    279425 |
 | BioKG                              | [`pykeen.datasets.BioKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.BioKG.html)                   | [Walsh *et al*., 2019](https://doi.org/10.1145/3340531.3412776)                                                         |     105524 |          17 |   2067997 |
 | Clinical Knowledge Graph           | [`pykeen.datasets.CKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CKG.html)                       | [Santos *et al*., 2020](https://doi.org/10.1101/2020.05.09.084897)                                                      |    7617419 |          11 |  26691525 |
 | CN3l Family                        | [`pykeen.datasets.CN3l`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CN3l.html)                     | [Chen *et al*., 2017](https://www.ijcai.org/Proceedings/2017/0209.pdf)                                                  |       3206 |          42 |     21777 |
@@ -149,6 +151,18 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18                         | [`pykeen.datasets.WN18`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18.html)                     | [Bordes *et al*., 2014](https://arxiv.org/abs/1301.3485)                                                                |      40943 |          18 |    151442 |
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)                 | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)               | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
+
+### Inductive Datasets
+
+The following inductive datasets are built in to PyKEEN.
+
+| Name            | Documentation                                                                                                             | Citation                                                  |
+|-----------------|---------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| ILPC2022 Large  | [`pykeen.datasets.ILPC2022Large`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ILPC2022Large.html)         | [Galkin *et al*., 2022](https://arxiv.org/abs/2203.01520) |
+| ILPC2022 Small  | [`pykeen.datasets.ILPC2022Small`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ILPC2022Small.html)         | [Galkin *et al*., 2022](https://arxiv.org/abs/2203.01520) |
+| FB15k-237       | [`pykeen.datasets.InductiveFB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveFB15k237.html) | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
+| NELL            | [`pykeen.datasets.InductiveNELL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveNELL.html)         | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
+| WordNet-18 (RR) | [`pykeen.datasets.InductiveWN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveWN18RR.html)     | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 
 ### Models (42)
 
@@ -247,15 +261,16 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | early  | [`pykeen.stoppers.EarlyStopper`](https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#pykeen.stoppers.EarlyStopper) | A harness for early stopping. |
 | nop    | [`pykeen.stoppers.NopStopper`](https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#pykeen.stoppers.NopStopper)     | A stopper that does nothing.  |
 
-### Evaluators (3)
+### Evaluators (4)
 
-| Name             | Reference                                                                                                                                     | Description                                      |
-|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| classification   | [`pykeen.evaluation.ClassificationEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.ClassificationEvaluator.html)     | An evaluator that uses a classification metrics. |
-| rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.           |
-| sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) |                                                  |
+| Name             | Reference                                                                                                                                     | Description                                                              |
+|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| classification   | [`pykeen.evaluation.ClassificationEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.ClassificationEvaluator.html)     | An evaluator that uses a classification metrics.                         |
+| macrorankbased   | [`pykeen.evaluation.MacroRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.MacroRankBasedEvaluator.html)     | Macro-average rank-based evaluation.                                     |
+| rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.                                   |
+| sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) | A rank-based evaluator using sampled negatives instead of all negatives. |
 
-### Metrics (42)
+### Metrics (44)
 
 | Name                                                                                                                   | Interval            | Direction   | Description                                                 | Type           |
 |------------------------------------------------------------------------------------------------------------------------|---------------------|-------------|-------------------------------------------------------------|----------------|
@@ -263,7 +278,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | [Accuracy](https://en.wikipedia.org/wiki/Accuracy)                                                                     | [0, 1]              | 📈          | (TP + TN) / (TP + TN + FP + FN)                             | Classification |
 | [Average Precision](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html)    | [0, 1]              | 📈          | A summary statistic over the precision-recall curve         | Classification |
 | [Balanced Accuracy](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html)    | [0, 1]              | 📈          | An adjusted version of the accuracy for imbalanced datasets | Classification |
-| [Diagnostic Odds Ratio](https://en.wikipedia.org/wiki/Diagnostic_odds_ratio)                                           | [0, inf)            | 📈          | LR+/LR-                                                     | Classification |
+| [Diagnostic Odds Ratio](https://en.wikipedia.org/wiki/Diagnostic_odds_ratio)                                           | [0, ∞)              | 📈          | LR+/LR-                                                     | Classification |
 | [F1 Score](https://en.wikipedia.org/wiki/F1_score)                                                                     | [0, 1]              | 📈          | 2TP / (2TP + FP + FN)                                       | Classification |
 | [False Discovery Rate](https://en.wikipedia.org/wiki/False_discovery_rate)                                             | [0, 1]              | 📉          | FP / (FP + TP)                                              | Classification |
 | [False Negative Rate](https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates) | [0, 1]              | 📉          | FN / (FN + TP)                                              | Classification |
@@ -273,9 +288,9 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | [Informedness](https://en.wikipedia.org/wiki/Informedness)                                                             | [0, 1]              | 📈          | TPR + TNR - 1                                               | Classification |
 | [Markedness](https://en.wikipedia.org/wiki/Markedness)                                                                 | [0, 1]              | 📈          | PPV + NPV - 1                                               | Classification |
 | [Matthews Correlation Coefficient](https://en.wikipedia.org/wiki/Phi_coefficient)                                      | [-1, 1]             | 📈          | A balanced measure applicable even with class imbalance     | Classification |
-| [Negative Likelihood Ratio](https://en.wikipedia.org/wiki/Negative_likelihood_ratio)                                   | [0, inf)            | 📉          | FNR / TNR                                                   | Classification |
+| [Negative Likelihood Ratio](https://en.wikipedia.org/wiki/Negative_likelihood_ratio)                                   | [0, ∞)              | 📉          | FNR / TNR                                                   | Classification |
 | [Negative Predictive Value](https://en.wikipedia.org/wiki/Negative_predictive_value)                                   | [0, 1]              | 📈          | TN / (TN + FN)                                              | Classification |
-| [Positive Likelihood Ratio](https://en.wikipedia.org/wiki/Positive_likelihood_ratio)                                   | [0, inf)            | 📈          | TPR / FPR                                                   | Classification |
+| [Positive Likelihood Ratio](https://en.wikipedia.org/wiki/Positive_likelihood_ratio)                                   | [0, ∞)              | 📈          | TPR / FPR                                                   | Classification |
 | [Positive Predictive Value](https://en.wikipedia.org/wiki/Positive_predictive_value)                                   | [0, 1]              | 📈          | TP / (TP + FP)                                              | Classification |
 | [Prevalence Threshold](https://en.wikipedia.org/wiki/Prevalence_threshold)                                             | [0, 1]              | 📉          | √FPR / (√TPR + √FPR)                                        | Classification |
 | [Threat Score](https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.threat_score)   | [0, 1]              | 📈          | TP / (TP + FN + FP)                                         | Classification |
@@ -283,20 +298,22 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | [True Positive Rate](https://en.wikipedia.org/wiki/Sensitivity_(test))                                                 | [0, 1]              | 📈          | TP / (TP + FN)                                              | Classification |
 | [Adjusted Arithmetic Mean Rank (AAMR)](https://arxiv.org/abs/2002.06914)                                               | [0, 2)              | 📉          | The mean over all ranks divided by its expected value.      | Ranking        |
 | [Adjusted Arithmetic Mean Rank Index (AAMRI)](https://arxiv.org/abs/2002.06914)                                        | [-1, 1]             | 📈          | The re-indexed adjusted mean rank (AAMR)                    | Ranking        |
-| [Adjusted Hits at K](https://github.com/pykeen/pykeen/pull/814)                                                        | (-E[f]/(1-E[f]), 1] | 📈          | The re-indexed adjusted hits at K                           | Ranking        |
-| [Adjusted Inverse Harmonic Mean Rank](https://github.com/pykeen/pykeen/pull/814)                                       | (-E[f]/(1-E[f]), 1] | 📈          | The re-indexed adjusted MRR                                 | Ranking        |
-| [Geometric Mean Rank (GMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                 | [1, inf)            | 📉          | The geometric mean over all ranks.                          | Ranking        |
-| [Harmonic Mean Rank (HMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                  | [1, inf)            | 📉          | The harmonic mean over all ranks.                           | Ranking        |
+| [Adjusted Geometric Mean Rank Index (AGMRI)](https://arxiv.org/abs/2002.06914)                                         | (-E[f]/(1-E[f]), 1] | 📈          | The re-indexed adjusted geometric mean rank (AGMRI)         | Ranking        |
+| [Adjusted Hits at K](https://arxiv.org/abs/2203.07544)                                                                 | (-E[f]/(1-E[f]), 1] | 📈          | The re-indexed adjusted hits at K                           | Ranking        |
+| [Adjusted Inverse Harmonic Mean Rank](https://arxiv.org/abs/2203.07544)                                                | (-E[f]/(1-E[f]), 1] | 📈          | The re-indexed adjusted MRR                                 | Ranking        |
+| [Geometric Mean Rank (GMR)](https://arxiv.org/abs/2203.07544)                                                          | [1, ∞)              | 📉          | The geometric mean over all ranks.                          | Ranking        |
+| [Harmonic Mean Rank (HMR)](https://arxiv.org/abs/2203.07544)                                                           | [1, ∞)              | 📉          | The harmonic mean over all ranks.                           | Ranking        |
 | [Hits @ K](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k)                      | [0, 1]              | 📈          | The relative frequency of ranks not larger than a given k.  | Ranking        |
-| [Inverse Arithmetic Mean Rank (IAMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                       | (0, 1]              | 📈          | The inverse of the arithmetic mean over all ranks.          | Ranking        |
-| [Inverse Geometric Mean Rank (IGMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                        | (0, 1]              | 📈          | The inverse of the geometric mean over all ranks.           | Ranking        |
-| [Inverse Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                       | (0, 1]              | 📈          | The inverse of the median over all ranks.                   | Ranking        |
-| [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank)             | [1, inf)            | 📉          | The arithmetic mean over all ranks.                         | Ranking        |
+| [Inverse Arithmetic Mean Rank (IAMR)](https://arxiv.org/abs/2203.07544)                                                | (0, 1]              | 📈          | The inverse of the arithmetic mean over all ranks.          | Ranking        |
+| [Inverse Geometric Mean Rank (IGMR)](https://arxiv.org/abs/2203.07544)                                                 | (0, 1]              | 📈          | The inverse of the geometric mean over all ranks.           | Ranking        |
+| [Inverse Median Rank](https://arxiv.org/abs/2203.07544)                                                                | (0, 1]              | 📈          | The inverse of the median over all ranks.                   | Ranking        |
+| [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank)             | [1, ∞)              | 📉          | The arithmetic mean over all ranks.                         | Ranking        |
 | [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank)                                       | (0, 1]              | 📈          | The inverse of the harmonic mean over all ranks.            | Ranking        |
-| [Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                               | [1, inf)            | 📉          | The median over all ranks.                                  | Ranking        |
-| [z-Hits at K](https://github.com/pykeen/pykeen/pull/814)                                                               | (-inf, inf)         | 📈          | The z-scored hits at K                                      | Ranking        |
-| [z-Mean Rank (ZMR)](https://github.com/pykeen/pykeen/pull/814)                                                         | (-inf, inf)         | 📈          | The z-scored mean rank                                      | Ranking        |
-| [z-Mean Reciprocal Rank (ZMRR)](https://github.com/pykeen/pykeen/pull/814)                                             | (-inf, inf)         | 📈          | The z-scored mean reciprocal rank                           | Ranking        |
+| [Median Rank](https://arxiv.org/abs/2203.07544)                                                                        | [1, ∞)              | 📉          | The median over all ranks.                                  | Ranking        |
+| [z-Geometric Mean Rank (zGMR)](https://arxiv.org/abs/2203.07544)                                                       | (-∞, ∞)             | 📈          | The z-scored geometric mean rank                            | Ranking        |
+| [z-Hits at K](https://arxiv.org/abs/2203.07544)                                                                        | (-∞, ∞)             | 📈          | The z-scored hits at K                                      | Ranking        |
+| [z-Mean Rank (zMR)](https://arxiv.org/abs/2203.07544)                                                                  | (-∞, ∞)             | 📈          | The z-scored mean rank                                      | Ranking        |
+| [z-Mean Reciprocal Rank (zMRR)](https://arxiv.org/abs/2203.07544)                                                      | (-∞, ∞)             | 📈          | The z-scored mean reciprocal rank                           | Ranking        |
 
 ### Trackers (8)
 

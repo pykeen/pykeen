@@ -177,11 +177,11 @@ class TestTriplesFactory(unittest.TestCase):
 
     def test_new_with_restriction(self):
         """Test new_with_restriction()."""
-        relation_restriction = {
+        relation_restrictions = {
             "economicaid",
             "dependent",
         }
-        entity_restriction = {
+        entity_restrictions = {
             "brazil",
             "burma",
             "china",
@@ -195,8 +195,8 @@ class TestTriplesFactory(unittest.TestCase):
                 (entity_restriction, invert_entity_selection),
                 (relation_restriction, invert_relation_selection),
             ) in itt.product(
-                ((None, None), (entity_restriction, False), (entity_restriction, True)),
-                ((None, None), (relation_restriction, False), (relation_restriction, True)),
+                ((None, None), (entity_restrictions, False), (entity_restrictions, True)),
+                ((None, None), (relation_restrictions, False), (relation_restrictions, True)),
             ):
                 with self.subTest(
                     entity_restriction=entity_restriction,
@@ -447,7 +447,7 @@ class TestLiterals(unittest.TestCase):
             dtype=str,
         )
 
-        triples_numeric_literal_factory = TriplesNumericLiteralsFactory(
+        triples_numeric_literal_factory = TriplesNumericLiteralsFactory.from_labeled_triples(
             triples=triples_larger,
             numeric_triples=numeric_triples,
         )

@@ -15,7 +15,7 @@ from pykeen.models import ConvE, Model, TransE
 from pykeen.sampling.filtering import Filterer
 from pykeen.trackers.base import PythonResultTracker
 from pykeen.training import TrainingLoop
-from pykeen.training.training_loop import NonFiniteLossError
+from pykeen.training.training_loop import NonFiniteLossError, NoTrainingBatchError
 from pykeen.triples import TriplesFactory
 
 __all__ = [
@@ -180,6 +180,16 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
         )
         # check non-empty metrics
         assert self.instance.result_tracker.metrics
+
+    def test_error_on_no_batch(self):
+        """Verify that an error is raised if no training batch is available."""
+        with self.assertRaises(NoTrainingBatchError):
+            self.instance.train(
+                triples_factory=self.triples_factory,
+                num_epochs=self.num_epochs,
+                drop_last=True,
+                batch_size=100_000,
+            )
 
 
 class SLCWATrainingLoopTestCase(TrainingLoopTestCase):

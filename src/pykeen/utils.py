@@ -87,7 +87,6 @@ __all__ = [
     "get_json_bytes_io",
     "get_df_io",
     "ensure_ftp_directory",
-    "broadcast_cat",
     "get_batchnorm_modules",
     "get_dropout_modules",
     "calculate_broadcasted_elementwise_result_shape",
@@ -112,6 +111,7 @@ __all__ = [
     "get_preferred_device",
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
+    "logcumsumexp",
 ]
 
 logger = logging.getLogger(__name__)
@@ -505,63 +505,6 @@ def format_relative_comparison(
 ) -> str:
     """Format a relative comparison."""
     return f"{part}/{total} ({part / total:2.2%})"
-
-
-def broadcast_cat(
-    tensors: Sequence[torch.FloatTensor],
-    dim: int,
-) -> torch.FloatTensor:
-    """Concatenate tensors with broadcasting support.
-
-    :param tensors:
-        The tensors. Each of the tensors is require to have the same number of dimensions.
-        For each dimension not equal to dim, the extent has to match the other tensors', or be one.
-        If it is one, the tensor is repeated to match the extent of the othe tensors.
-    :param dim:
-        The concat dimension.
-
-    :return: A concatenated, broadcasted tensor.
-
-    :raises ValueError: if the x and y dimensions are not the same
-    :raises ValueError: if broadcasting is not possible
-    """
-    # input validation
-    if len(tensors) == 0:
-        raise ValueError("Must pass at least one tensor.")
-    if len({x.ndimension() for x in tensors}) != 1:
-        raise ValueError(
-            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
-        )
-
-    # base case
-    if len(tensors) == 1:
-        return tensors[0]
-
-    # normalize dim
-    if dim < 0:
-        dim = tensors[0].ndimension() + dim
-
-    # calculate repeats for each tensor
-    repeats = [[1 for _ in t.shape] for t in tensors]
-    for i, dims in enumerate(zip(*(t.shape for t in tensors))):
-        # dimensions along concatenation axis do not need to match
-        if i == dim:
-            continue
-
-        # get desired extent along dimension
-        d_max = max(dims)
-        if not {1, d_max}.issuperset(dims):
-            raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
-
-        for j, td in enumerate(dims):
-            if td != d_max:
-                repeats[j][i] = d_max
-
-    # repeat tensors along axes if necessary
-    tensors = [t.repeat(*r) for t, r in zip(tensors, repeats)]
-
-    # concatenate
-    return torch.cat(tensors, dim=dim)
 
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
@@ -1368,6 +1311,26 @@ def camel_to_snake(name: str) -> str:
 def make_ones_like(prefix: Sequence) -> Sequence[int]:
     """Create a list of ones of same length as the input sequence."""
     return [1 for _ in prefix]
+
+
+def logcumsumexp(a: np.ndarray) -> np.ndarray:
+    """Compute ``log(cumsum(exp(a)))``.
+
+    :param a: shape: s
+        the array
+
+    :return: shape s
+        the log-cumsum-exp of the array
+
+    .. seealso ::
+        :func:`scipy.special.logsumexp` and :func:`torch.logcumsumexp`
+    """
+    a_max = np.amax(a)
+    tmp = np.exp(a - a_max)
+    s = np.cumsum(tmp)
+    out = np.log(s)
+    out += a_max
+    return out
 
 
 if __name__ == "__main__":

@@ -21,7 +21,6 @@ from ..moves import irfft, rfft
 from ..typing import GaussianDistribution, Sign
 from ..utils import (
     boxe_kg_arity_position_score,
-    broadcast_cat,
     clamp_norm,
     compute_box,
     estimate_cost_of_sequence,
@@ -175,11 +174,11 @@ def conve_interaction(
     """
     # repeat if necessary, and concat head and relation
     # shape: -1, num_input_channels, 2*height, width
-    x = broadcast_cat(
-        [
+    x = torch.cat(
+        torch.broadcast_tensors(
             h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
             r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
-        ],
+        ),
         dim=-2,
     )
     prefix_shape = x.shape[:-3]
@@ -375,7 +374,7 @@ def ermlpe_interaction(
         The scores.
     """
     # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
-    x = broadcast_cat([h, r], dim=-1)
+    x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
 
     # Predict t embedding, shape: (*batch_dims, d)
     *batch_dims, dim = x.shape
@@ -564,14 +563,14 @@ def proje_interaction(
         The scores.
     """
     # global projections
-    h = h * d_e.view(*make_ones_like(h.shape[:-1]), -1)
-    r = r * d_r.view(*make_ones_like(h.shape[:-1]), -1)
+    h = torch.einsum("...d, d -> ...d", h, d_e)
+    r = torch.einsum("...d, d -> ...d", r, d_r)
 
     # combination, shape: (*batch_dims, d)
     x = activation(tensor_sum(h, r, b_c))
 
     # dot product with t
-    return (x * t).sum(dim=-1) + b_p
+    return torch.einsum("...d, ...d -> ...", x, t) + b_p
 
 
 def rescal_interaction(
@@ -892,9 +891,12 @@ def transr_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # project to relation specific subspace and ensure constraints
-    h_bot = clamp_norm((h.unsqueeze(dim=-2) @ m_r), p=2, dim=-1, maxnorm=1.0).squeeze(dim=-2)
-    t_bot = clamp_norm((t.unsqueeze(dim=-2) @ m_r), p=2, dim=-1, maxnorm=1.0).squeeze(dim=-2)
+    # project to relation specific subspace
+    h_bot = torch.einsum("...e, ...er -> ...r", h, m_r)
+    t_bot = torch.einsum("...e, ...er -> ...r", t, m_r)
+    # ensure constraints
+    h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.0)
+    t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.0)
     return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 

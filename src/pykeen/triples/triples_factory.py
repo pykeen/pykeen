@@ -15,6 +15,7 @@ from typing import (
     ClassVar,
     Collection,
     Dict,
+    Iterable,
     List,
     Mapping,
     MutableMapping,
@@ -428,8 +429,8 @@ class CoreTriplesFactory:
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
-    def extra_repr(self) -> str:
-        """Extra representation string."""
+    def _iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over extra_repr components."""
         d = [
             ("num_entities", self.num_entities),
             ("num_relations", self.num_relations),
@@ -437,7 +438,14 @@ class CoreTriplesFactory:
             ("inverse_triples", self.create_inverse_triples),
         ]
         d.extend(sorted(self.metadata.items()))  # type: ignore
-        return ", ".join(f'{k}="{v}"' if isinstance(v, (str, pathlib.Path)) else f"{k}={v}" for k, v in d)
+        for k, v in d:
+            if isinstance(v, (str, pathlib.Path)):
+                v = f'"{v}"'
+            yield f"{k}={v}"
+
+    def extra_repr(self) -> str:
+        """Extra representation string."""
+        return ", ".join(self._iter_extra_repr())
 
     def __repr__(self):  # noqa: D105
         return f"{self.__class__.__name__}({self.extra_repr()})"
@@ -628,14 +636,30 @@ class CoreTriplesFactory:
         ]
 
     def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
-        """Normalize entities to IDs."""
+        """Normalize entities to IDs.
+
+        :param entities: A collection of either integer identifiers for entities or
+            string labels for entities (that will get auto-converted)
+        :returns: Integer identifiers for entities
+        :raises ValueError: If the ``entities`` passed are string labels
+            and this triples factory does not have an entity label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
         for e in entities:
             if not isinstance(e, int):
                 raise ValueError(f"{self.__class__.__name__} cannot convert entity IDs from {type(e)} to int.")
         return cast(Collection[int], entities)
 
     def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:
-        """Normalize relations to IDs."""
+        """Normalize relations to IDs.
+
+        :param relations: A collection of either integer identifiers for relations or
+            string labels for relations (that will get auto-converted)
+        :returns: Integer identifiers for relations
+        :raises ValueError: If the ``relations`` passed are string labels
+            and this triples factory does not have a relation label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
         for e in relations:
             if not isinstance(e, int):
                 raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")
@@ -839,6 +863,7 @@ class TriplesFactory(CoreTriplesFactory):
     def from_labeled_triples(
         cls,
         triples: LabeledTriples,
+        *,
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
@@ -917,12 +942,14 @@ class TriplesFactory(CoreTriplesFactory):
     def from_path(
         cls,
         path: Union[str, pathlib.Path, TextIO],
+        *,
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         metadata: Optional[Dict[str, Any]] = None,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
     ) -> "TriplesFactory":
         """
         Create a new triples factory from triples stored in a file.
@@ -943,6 +970,8 @@ class TriplesFactory(CoreTriplesFactory):
             kwarg to this function.
         :param load_triples_kwargs: Optional keyword arguments to pass to :func:`load_triples`.
             Could include the ``delimiter`` or a ``column_remapping``.
+        :param kwargs:
+            additional keyword-based parameters, which are ignored.
 
         :return:
             A new triples factory.
