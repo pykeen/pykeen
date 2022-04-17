@@ -1,20 +1,16 @@
 import json
+import logging
 import pathlib
 import pprint
+
 import click
-import pandas
-import logging
 import more_click
+import pandas
+
 from pykeen.constants import PYKEEN_BENCHMARKS
-from pykeen.pipeline.api import pipeline_from_config, replicate_pipeline_from_config
-from pykeen.utils import (
-    CONFIGURATION_FILE_FORMATS,
-    format_relative_comparison,
-    get_devices,
-    load_configuration,
-    resolve_device,
-)
 from pykeen.experiments.cli import HERE
+from pykeen.pipeline.api import pipeline_from_config
+from pykeen.utils import CONFIGURATION_FILE_FORMATS, format_relative_comparison, load_configuration, resolve_device
 from pykeen.version import get_git_hash
 
 logger = logging.getLogger(__name__)
