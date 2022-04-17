@@ -9,9 +9,9 @@ from unittest import SkipTest
 
 import numpy
 import torch
+import torch.nn.functional
 import unittest_templates
 from torch import nn
-import torch.nn.functional
 
 import pykeen.nn.modules
 import pykeen.utils
