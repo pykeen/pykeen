@@ -100,6 +100,7 @@ __all__ = [
     "convert_to_canonical_shape",
     "get_expected_norm",
     "Bias",
+    "complex_normalize",
     "lp_norm",
     "powersum_norm",
     "product_normalize",
@@ -1039,6 +1040,26 @@ def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize:
         return value
     dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
     return value / dim
+
+
+def complex_normalize(x: torch.Tensor) -> torch.Tensor:
+    r"""Normalize a vector of complex numbers such that each *element* is of unit-length.
+
+    Let $x \in \mathbb{C}^d$ denote a complex vector. Then, the operation computes
+
+    .. math::
+        x_i' = \frac{x_i}{|x_i|}
+
+    where $|x_i| = \sqrt{Re(x_i)^2 + Im(x_i)^2}$ is the
+    `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_
+
+    :param x:
+        A tensor formulating complex numbers
+
+    :returns:
+        An elementwise noramlized vector.
+    """
+    return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
 
 
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
