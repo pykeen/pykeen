@@ -17,7 +17,7 @@ import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
 from pykeen.typing import Representation, Sign
-from pykeen.utils import clamp_norm, ensure_tuple, project_entity
+from pykeen.utils import clamp_norm, complex_normalize, ensure_tuple, project_entity
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -270,15 +270,13 @@ class RotatETests(cases.InteractionTestCase):
     dtype = torch.cfloat
 
     def _get_hrt(self, *shapes):  # noqa: D102
-        # normalize length of r
         h, r, t = super()._get_hrt(*shapes)
-        # normalize rotations
-        r = r / r.abs().clamp_min(torch.finfo(r.dtype).eps)
+        # normalize rotations to unit modulus
+        r = complex_normalize(r)
         return h, r, t
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        # h, r, t = tuple(view_complex(x) for x in (h, r, t))
-        # check for unit length
+        # check for unit modulus
         assert torch.allclose(r.abs(), torch.ones_like(r.abs()))
         d = h * r - t
         return -(d.abs() ** 2).sum(dim=-1).sqrt()
