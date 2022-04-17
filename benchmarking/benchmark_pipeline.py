@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("-c", "--configuration-root", type=pathlib.Path, default=HERE)
-@click.option("-o", "--output-root", type=pathlib.Path, default=PYKEEN_BENCHMARKS.joinpath("pipeline"))
+@click.option("-o", "--output-root", type=pathlib.Path, default=PYKEEN_BENCHMARKS.joinpath("pipeline", get_git_hash()))
 @click.option("-e", "--num-epochs", type=int, default=5)
 @more_click.log_level_option()
 def main(
@@ -43,11 +43,6 @@ def main(
     )
     logger.info(f"Found {len(configuration_paths)} configurations under {configuration_root}")
 
-    git_hash = get_git_hash()
-    if git_hash == "UNHASHED":
-        logger.warning("Could not parse git hash!")
-
-    data = []
     for i, path in enumerate(configuration_paths, start=1):
         logger.info(f"Progress: {format_relative_comparison(part=i, total=len(configuration_paths))}")
         reference, model, dataset, *remainder = path.stem.split("_")
@@ -58,15 +53,10 @@ def main(
             logger.warning(f"Skipping {path} due to explicit model ignore rule")
             continue
 
-        output_path = output_root.joinpath(device.type, git_hash, model, dataset, "_".join((reference, *remainder)))
+        output_path = output_root.joinpath(device.type, model, dataset, "_".join((reference, *remainder)))
         if output_path.exists():
             logger.debug(f"Skipping configuration {path} since output path exists {output_path}")
             continue
-        results = json.loads(output_path.read_text())
-        times = results["times"]
-        times["training"] /= num_epochs
-        times["path"] = path.relative_to(configuration_root).as_posix()
-        data.append(times)
 
         # load configuration
         configuration = load_configuration(path)
@@ -89,9 +79,31 @@ def main(
             save_replicates=False,
             save_training=False,
         )
-    df = pandas.DataFrame(data=data).sort_values(by="path")
-    print(df)
-    df.to_csv(output_root.joinpath("summary.tsv"), sep="\t", index=False)
+
+    data = []
+    for i, path in enumerate(configuration_paths, start=1):
+        reference, model, dataset, *remainder = path.stem.split("_")
+        output_path = output_root.joinpath(
+            device.type, model, dataset, "_".join((reference, *remainder)), "results.json"
+        )
+        if not output_path.exists():
+            logger.warning(f"{output_path} is not existing")
+            continue
+        results = json.loads(output_path.read_text())
+        times = results["times"]
+        times["training"] /= num_epochs
+        times["path"] = path.relative_to(configuration_root).as_posix()
+        data.append(times)
+    df = pandas.DataFrame.from_records(data=data)
+    df = df.sort_values(by="path")[["path", "training", "evaluation"]]
+    output_path = output_root.joinpath("summary.tsv")
+    df.to_csv(output_path, sep="\t", index=False)
+    logger.info(f"Written summary to {output_path}")
+
+    # print
+    print(f"{'path':50}  training  evaluation")
+    for _, row in df.iterrows():
+        print(f"{row['path']:50} {row['training']:8.2f}s   {row['evaluation']:8.2f}s")
 
 
 if __name__ == "__main__":
