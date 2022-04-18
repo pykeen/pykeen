@@ -267,6 +267,9 @@ class PipelineResult(Result):
     #: The losses during training
     losses: List[float]
 
+    #: The evaluator instance
+    evaluator: Evaluator
+
     #: The results evaluated by the pipeline
     metric_results: MetricResults
 
@@ -365,6 +368,10 @@ class PipelineResult(Result):
             ),
             metrics=self.metric_results.to_dict(),
             losses=self.losses,
+            evaluator_metadata=dict(
+                batch_size=self.evaluator.batch_size,
+                slice_size=self.evaluator.slice_size,
+            ),
         )
         if self.stopper is not None and isinstance(self.stopper, EarlyStopper):
             results["stopper"] = self.stopper.get_summary_dict()
@@ -1338,6 +1345,7 @@ def pipeline(  # noqa: C901
         metadata=metadata,
         train_seconds=training_end_time,
         evaluate_seconds=evaluate_end_time,
+        evaluator=evaluator_instance,
     )
 
 
