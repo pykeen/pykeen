@@ -144,7 +144,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The symbolic shapes for entity representations
     entity_shape: Sequence[str] = ("d",)
 
-    #: The symbolic shapes for entity representations for tail entities, if different. This is ony relevant for ConvE.
+    #: The symbolic shapes for entity representations for tail entities, if different.
+    #: Otherwise, the entity_shape is used for head & tail entities
     tail_entity_shape: Optional[Sequence[str]] = None
 
     #: The symbolic shapes for relation representations
@@ -167,6 +168,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     def tail_indices(cls) -> Sequence[int]:
         """Return the entity representation indices used for the tail representations."""
         if cls._tail_indices is None:
+            # comment: this is different to head_indices, since entity_shape is only used for
+            #          tail if there is no explicit tail shape
             tail_entity_shape = cls.entity_shape if cls.tail_entity_shape is None else cls.tail_entity_shape
             return list(range(len(tail_entity_shape)))
         return cls._tail_indices
