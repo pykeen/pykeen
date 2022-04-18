@@ -2,10 +2,12 @@ import json
 import logging
 import pathlib
 import pprint
-
+from typing import Any, Mapping
+import platform
 import click
 import more_click
 import pandas
+import torch
 
 from pykeen.constants import PYKEEN_BENCHMARKS
 from pykeen.experiments.cli import HERE
@@ -16,23 +18,47 @@ from pykeen.version import get_git_hash
 logger = logging.getLogger(__name__)
 
 
+def _collect_system_information() -> Mapping[str, Any]:
+    uname = platform.uname()
+    result = dict(
+        system=uname.system,
+        release=uname.release,
+        machine=uname.machine,
+        torch_version=torch.__version__,
+    )
+    if torch.cuda.is_available():
+        # e.g. _CudaDeviceProperties(name='Quadro RTX 8000', major=7, minor=5, total_memory=48601MB, multi_processor_count=72)
+        properties = torch.cuda.get_device_properties(device=torch.device("cuda"))
+        result["gpu"] = dict(
+            name=properties.name,
+            total_memory=properties.total_memory,
+            compute_capability=(properties.major, properties.minor),
+            cuda=torch.version.cuda,
+            cudnn=torch.backends.cudnn.version(),
+        )
+    return result
+
+
 @click.command()
 @click.option("-c", "--configuration-root", type=pathlib.Path, default=HERE)
 @click.option("-o", "--output-root", type=pathlib.Path, default=PYKEEN_BENCHMARKS.joinpath("pipeline", get_git_hash()))
 @click.option("-e", "--num-epochs", type=int, default=5)
+@click.option("--debug", is_flag=True)
 @more_click.log_level_option()
 def main(
     configuration_root: pathlib.Path,
     output_root: pathlib.Path,
     num_epochs: int,
     log_level: str,
+    debug: bool,
 ):
     """"""
     logging.basicConfig(level=log_level)
 
     device = resolve_device(device=None)
-    # TODO: collect info about system?
     logging.info(f"Running on device: {device}")
+
+    system_information = _collect_system_information()
 
     configuration_paths = sorted(
         path for ext in CONFIGURATION_FILE_FORMATS for path in configuration_root.rglob(f"*{ext}")
@@ -55,11 +81,14 @@ def main(
             continue
 
         # load configuration
-        configuration = load_configuration(path)
+        configuration = dict(load_configuration(path))
         # reduce number of training epochs
         configuration["pipeline"]["training_kwargs"]["num_epochs"] = num_epochs
         # discard results
         configuration.pop("results", None)
+        # add system information to metadata
+        configuration.setdefault("metadata", {})
+        configuration["metadata"]["system"] = system_information
 
         logger.info(f"Running configuration from {path}")
         logger.debug(pprint.pformat(configuration, indent=2, sort_dicts=True))
@@ -72,9 +101,13 @@ def main(
         # save results
         result.save_to_directory(
             directory=output_path,
+            save_metadata=True,
             save_replicates=False,
             save_training=False,
         )
+
+        if debug:
+            break
 
     data = []
     for i, path in enumerate(configuration_paths, start=1):
@@ -85,13 +118,19 @@ def main(
         if not output_path.exists():
             logger.warning(f"{output_path} is not existing")
             continue
+
         results = json.loads(output_path.read_text())
-        times = results["times"]
-        times["training"] /= num_epochs
-        times["path"] = path.relative_to(configuration_root).as_posix()
-        data.append(times)
+        data.append(
+            {
+                "training": results["times"]["training"] / num_epochs,
+                "evaluation": results["times"]["evaluation"],
+                "batch_size.evaluation": results["evaluator_metadata"]["batch_size"],
+                "path": path.relative_to(configuration_root).as_posix(),
+            }
+        )
     df = pandas.DataFrame.from_records(data=data)
-    df = df.sort_values(by="path")[["path", "training", "evaluation"]]
+    df = df[sorted(df.columns)]
+    df = df.sort_values(by="path")
     output_path = output_root.joinpath("summary.tsv")
     df.to_csv(output_path, sep="\t", index=False)
     logger.info(f"Written summary to {output_path}")
