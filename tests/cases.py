@@ -409,6 +409,7 @@ class InteractionTestCase(
     batch_size: int = 3
     num_relations: int = 5
     num_entities: int = 7
+    dtype: torch.dtype = torch.get_default_dtype()
 
     shape_kwargs = dict()
 
@@ -425,7 +426,9 @@ class InteractionTestCase(
         result = tuple(
             tuple(
                 torch.rand(
-                    size=tuple(prefix_shape) + tuple(shape_kwargs[dim] for dim in weight_shape), requires_grad=True
+                    size=tuple(prefix_shape) + tuple(shape_kwargs[dim] for dim in weight_shape),
+                    requires_grad=True,
+                    dtype=self.dtype,
                 )
                 for weight_shape in weight_shapes
             )
