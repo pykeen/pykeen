@@ -2,8 +2,8 @@
 
 r"""
 A knowledge graph embedding model is capable of computing real-valued scores representing the plausibility
-$(h,r,t) \in \mathbb{K}$, where a larger score indicates a higher plausibility. The interpretation of the
-score value is model-dependent, and usually it cannot be directly interpreted as a probability.
+of a triple $(h,r,t) \in \mathbb{K}$, where a larger score indicates a higher plausibility. The interpretation
+of the score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 
 In PyKEEN, the API of a model is defined in :class:`Model`, where the scoring function is exposed as
 :meth:`Model.score_hrt`, which can be used to compute plausability scores for (a batch of) triples.
@@ -30,10 +30,10 @@ ensure a value range of $[0, 1]$.
 
 Most models derive from :class:`ERModel`, which is a generic implementation of a knowledge graph embedding model.
 It combines a variable number of *representations* for entities and relations, cf.
-:class:`pykeen.nn.representation.Representation`, and an interaction function, cf. :class:`pykeen.nn.modules.Interaction`.
-The representation modules convert integer entity or relation indices to numeric representations, e.g., vectors.
-The interaction function takes the representations of the head entities, relations and tail entities as input and
-computes a scalar plausability score for triples.
+:class:`pykeen.nn.representation.Representation`, and an interaction function, cf.
+:class:`pykeen.nn.modules.Interaction`. The representation modules convert integer entity or relation indices to
+numeric representations, e.g., vectors. The interaction function takes the representations of the head entities,
+relations and tail entities as input and computes a scalar plausability score for triples.
 
 .. note ::
 
@@ -42,8 +42,9 @@ computes a scalar plausability score for triples.
 
 .. note ::
 
-    The specific models from this module, e.g., :class:`RESCAL`, package given specific entity and relation representations
-    with an interaction function. For more flexible combinations, consider using :class:`ERModel` directly.
+    The specific models from this module, e.g., :class:`RESCAL`, package given specific entity and relation
+    representations with an interaction function. For more flexible combinations, consider using
+    :class:`ERModel` directly.
 """  # noqa: D205, D400
 
 from class_resolver import ClassResolver, get_subclasses
