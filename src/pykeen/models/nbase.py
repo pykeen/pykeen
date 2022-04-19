@@ -311,6 +311,7 @@ class ERModel(
             max_id=triples_factory.num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
+            skip_checks=skip_checks,
         )
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
