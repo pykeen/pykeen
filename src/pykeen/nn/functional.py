@@ -15,7 +15,7 @@ import numpy
 import torch
 from torch import broadcast_tensors, nn
 
-from .compute_kernel import batched_complex, batched_dot
+from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution, Sign
@@ -31,7 +31,6 @@ from ..utils import (
     project_entity,
     tensor_product,
     tensor_sum,
-    view_complex,
 )
 
 __all__ = [
@@ -123,17 +122,22 @@ def complex_interaction(
     .. math ::
         Re(\langle h, r, conj(t) \rangle)
 
-    :param h: shape: (`*batch_dims`, `2*dim`)
+    .. note::
+        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
+
+    :param h: shape: (`*batch_dims`, dim)
         The complex head representations.
-    :param r: shape: (`*batch_dims`, 2*dim)
+    :param r: shape: (`*batch_dims`, dim)
         The complex relation representations.
-    :param t: shape: (`*batch_dims`, 2*dim)
+    :param t: shape: (`*batch_dims`, dim)
         The complex tail representations.
 
     :return: shape: batch_dims
         The scores.
     """
-    return batched_complex(h, r, t)
+    # TODO: switch to einsum ?
+    # return torch.real(torch.einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
+    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
@@ -600,19 +604,21 @@ def rotate_interaction(
 ) -> torch.FloatTensor:
     """Evaluate the RotatE interaction function.
 
-    :param h: shape: (`*batch_dims`, 2*dim)
+    .. note::
+        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
+
+    :param h: shape: (`*batch_dims`, dim)
         The head representations.
-    :param r: shape: (`*batch_dims`, 2*dim)
+    :param r: shape: (`*batch_dims`, dim)
         The relation representations.
-    :param t: shape: (`*batch_dims`, 2*dim)
+    :param t: shape: (`*batch_dims`, dim)
         The tail representations.
 
     :return: shape: batch_dims
         The scores.
     """
-    # r expresses a rotation in complex plane.
-    h, r, t = [view_complex(x) for x in (h, r, t)]
     if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
+        # r expresses a rotation in complex plane.
         # rotate head by relation (=Hadamard product in complex space)
         h = h * r
     else:
@@ -623,7 +629,6 @@ def rotate_interaction(
         # |h * r - t| = |h - conj(r) * t|
         t = t * torch.conj(r)
 
-    # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
     return negative_norm(h - t, p=2, power_norm=False)
 
 
