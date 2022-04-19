@@ -1,0 +1,25 @@
+# ER-MLP on WN18RR from https://arxiv.org/abs/2006.13365
+metadata:
+  title: ER-MLP on WN18RR from https://arxiv.org/abs/2006.13365
+pipeline:
+  dataset: wn18rr
+  dataset_kwargs:
+    create_inverse_triples: True
+  evaluator_kwargs:
+    filtered: true
+  loss: softplus
+  model: ermlp
+  model_kwargs:
+    embedding_dim: 64
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 11
+  optimizer: adam
+  optimizer_kwargs:
+    lr: 0.0017090393255693942
+    weight_decay: 0.0
+  training_kwargs:
+    batch_size: 128
+    label_smoothing: 0.0
+    num_epochs: 651
+  training_loop: slcwa

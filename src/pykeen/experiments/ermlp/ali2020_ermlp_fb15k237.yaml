@@ -5,6 +5,8 @@ pipeline:
   dataset: fb15k237
   dataset_kwargs:
     create_inverse_triples: True
+  evaluator_kwargs:
+    filtered: true
   loss: bceaftersigmoid
   model: ermlp
   model_kwargs:
