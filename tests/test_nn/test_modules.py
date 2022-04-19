@@ -45,14 +45,6 @@ class ConvETests(cases.InteractionTestCase):
         embedding_dim=cases.InteractionTestCase.dim,
     )
 
-    def _get_hrt(
-        self,
-        *shapes: Tuple[int, ...],
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]:  # noqa: D102
-        h, r, t = super()._get_hrt(*shapes)
-        t_bias = torch.rand_like(t[..., 0, None])  # type: torch.FloatTensor
-        return h, r, (t, t_bias)
-
     def _exp_score(
         self,
         embedding_height,

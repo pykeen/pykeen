@@ -150,11 +150,8 @@ class InductiveNodePiece(ERModel):
                 num_tokens=num_tokens,
             ),
             max_id=inference_factory.num_entities,
-            shapes=self.interaction.entity_shape,
+            shapes=self.interaction.full_entity_shapes(),
             label="entity",
-            skip_checks=self.interaction.tail_entity_shape is not None or kwargs["skip_checks"]
-            if "skip_checks" in kwargs
-            else False,
         )
 
         self.num_train_entities = triples_factory.num_entities
