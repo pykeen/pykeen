@@ -27,7 +27,6 @@ results:  # comment: these are from a re-trained model with PyKEEN 1.8.1-dev
     adjusted_arithmetic_mean_rank: 0.06767674367509606
     adjusted_arithmetic_mean_rank_index: 0.9324521424146514
     adjusted_geometric_mean_rank_index: 0.9974841609394713
-    adjusted_hits_at_k: 0.5392646742205345
     adjusted_inverse_harmonic_mean_rank: 0.36029523317509216
     arithmetic_mean_rank: 489.62091064453125
     geometric_mean_rank: 14.393702507019043
@@ -47,5 +46,4 @@ results:  # comment: these are from a re-trained model with PyKEEN 1.8.1-dev
     variance: 3911803.0
     z_arithmetic_mean_rank: 230.8702424924307
     z_geometric_mean_rank: 142.84785762213127
-    z_hits_at_k: 2931.383150135418
     z_inverse_harmonic_mean_rank: 4837.851804229454
