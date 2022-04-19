@@ -30,6 +30,7 @@ results:  # comment: these are from a re-trained model with PyKEEN 1.8.1-dev
     adjusted_geometric_mean_rank_index: 0.9974326039462115
     adjusted_hits_at_k: 0.4779834507530108
     adjusted_inverse_harmonic_mean_rank: 0.43423145933570234
+    arithmetic_mean_rank: 2634.76513671875
     geometric_mean_rank: 39.311912536621094
     harmonic_mean_rank: 2.3020918087753826
     hits_at_k:
