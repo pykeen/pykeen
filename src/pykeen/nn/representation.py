@@ -346,12 +346,15 @@ class Embedding(Representation):
 
         # work-around until full complex support (torch==1.10 still does not work)
         # TODO: verify that this is our understanding of complex!
-        if dtype.is_complex:
-            shape = tuple(shape[:-1]) + (2 * shape[-1],)
+        self.is_complex = dtype.is_complex
+        _shape = shape
+        if self.is_complex:
+            _shape = tuple(shape[:-1]) + (shape[-1], 2)
             _embedding_dim = _embedding_dim * 2
             # note: this seems to work, as finfo returns the datatype of the underlying floating
             # point dtype, rather than the combined complex one
             dtype = getattr(torch, torch.finfo(dtype).dtype)
+        self._shape = _shape
 
         super().__init__(max_id=max_id, shape=shape, **kwargs)
 
@@ -378,13 +381,18 @@ class Embedding(Representation):
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
-            self._embeddings.weight.data.view(self.num_embeddings, *self.shape),
-        ).view(self.num_embeddings, self.embedding_dim)
+            self._embeddings.weight.data.view(self.num_embeddings, *self._shape),
+        ).view(*self._embeddings.weight.data.shape)
 
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
         if self.constrainer is not None:
-            self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
+            x = self._plain_forward()
+            x = self.constrainer(x)
+            # fixme: work-around until nn.Embedding supports complex
+            if self.is_complex:
+                x = torch.view_as_real(x)
+            self._embeddings.weight.data = x.view(*self._embeddings.weight.data.shape)
 
     def _plain_forward(
         self,
@@ -396,7 +404,10 @@ class Embedding(Representation):
         else:
             prefix_shape = indices.shape
             x = self._embeddings(indices.to(self.device))
-        x = x.view(*prefix_shape, *self.shape)
+        x = x.view(*prefix_shape, *self._shape)
+        # fixme: work-around until nn.Embedding supports complex
+        if self.is_complex:
+            x = torch.view_as_complex(x)
         # verify that contiguity is preserved
         assert x.is_contiguous()
         return x

@@ -9,9 +9,10 @@ from typing import Iterable
 import numpy
 import scipy.sparse
 import torch
-from class_resolver import ClassResolver
+from class_resolver import ClassResolver, OptionalKwargs
+from tqdm.auto import tqdm
 
-from .utils import edge_index_to_sparse_matrix
+from .utils import edge_index_to_sparse_matrix, page_rank, prepare_page_rank_adjacency
 from ...utils import format_relative_comparison
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     # Concrete classes
     "ScipySparseAnchorSearcher",
     "CSGraphAnchorSearcher",
+    "PersonalizedPageRankAnchorSearcher",
 ]
 
 logger = logging.getLogger(__name__)
@@ -215,6 +217,100 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         adjacency = self.create_adjacency(edge_index=edge_index)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
         return self.select(pool=pool, k=k)
+
+
+class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
+    """
+    Select closest anchors as the nodes with the largest personalized page rank.
+
+    .. seealso::
+        http://web.stanford.edu/class/cs224w/slides/04-pagerank.pdf
+    """
+
+    def __init__(self, batch_size: int = 1, use_tqdm: bool = False, page_rank_kwargs: OptionalKwargs = None):
+        """
+        Initialize the searcher.
+
+        :param batch_size:
+            the batch size to use.
+        :param use_tqdm:
+            whether to use tqdm
+        :param page_rank_kwargs:
+            keyword-based parameters used for :func:`page_rank`. Must not include `edge_index`, or `x0`.
+        """
+        self.batch_size = batch_size
+        self.page_rank_kwargs = page_rank_kwargs or {}
+        self.use_tqdm = use_tqdm
+
+    def extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield f"batch_size={self.batch_size}"
+        yield f"use_tqdm={self.use_tqdm}"
+        yield f"page_rank_kwargs={self.page_rank_kwargs}"
+
+    def precalculate_anchor_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> numpy.ndarray:
+        """
+        Sort anchors nodes by PPR values from each node.
+
+        :param edge_index: shape: (2, m)
+            the edge index.
+        :param anchors: shape: `(num_anchors,)`
+            the anchor IDs.
+
+        :return: shape: `(num_entities, num_anchors)`
+            the PPR values for each anchor
+        """
+        return numpy.concatenate(
+            [
+                numpy.argsort(ppr_batch, axis=-1)
+                for ppr_batch in self._iter_ppr(
+                    edge_index=edge_index,
+                    anchors=anchors,
+                )
+            ]
+        )[:, ::-1]
+
+    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
+        n = edge_index.max().item() + 1
+        result = numpy.full(shape=(n, k), fill_value=-1)
+        i = 0
+        for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
+            batch_size = batch_ppr.shape[0]
+            # select k anchors with largest ppr, shape: (batch_size, k)
+            result[i : i + batch_size, :] = numpy.argpartition(-batch_ppr, kth=k, axis=-1)[:, :k]
+            i += batch_size
+        return result
+
+    def _iter_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> Iterable[numpy.ndarray]:
+        """
+        Yield batches of PPR values for each anchor from each entities' perspective.
+
+        :param edge_index: shape: (2, m)
+            the edge index.
+        :param anchors: shape: `(num_anchors,)`
+            the anchor IDs.
+
+        :yields: shape: (batch_size, num_anchors)
+            batches of anchor PPRs.
+        """
+        # prepare adjacency matrix only once
+        adj = prepare_page_rank_adjacency(edge_index=edge_index)
+        # prepare result
+        n = adj.shape[0]
+        # progress bar?
+        progress = range(0, n, self.batch_size)
+        if self.use_tqdm:
+            progress = tqdm(progress, unit="batch", unit_scale=True)
+        # batch-wise computation of PPR
+        for start in progress:
+            # create a batch of starting vectors, shape: (n, batch_size)
+            stop = min(start + self.batch_size, n)
+            batch_size = stop - start
+            x0 = numpy.zeros(shape=(n, batch_size))
+            x0[numpy.arange(start, stop), numpy.arange(batch_size)] = 1.0
+            # run page-rank calculation, shape: (batch_size, n)
+            ppr = page_rank(adj=adj, x0=x0, **self.page_rank_kwargs)
+            # select PPR values for the anchors, shape: (num_anchors, batch_size)
+            yield ppr[anchors].T
 
 
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(

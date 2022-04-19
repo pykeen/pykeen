@@ -22,7 +22,7 @@ from ..nn.representation import Representation
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
-from ..utils import check_shapes
+from ..utils import check_shapes, get_batchnorm_modules
 
 __all__ = [
     "_NewAbstractModel",
@@ -311,6 +311,7 @@ class ERModel(
             max_id=triples_factory.num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
+            skip_checks=skip_checks,
         )
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
@@ -406,6 +407,13 @@ class ERModel(
         h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
+    def _check_slicing(self, slice_size: Optional[int]) -> None:
+        """Raise an error, if slicing is requested, but the model does not support it."""
+        if not slice_size:
+            return
+        if get_batchnorm_modules(self):  # if there are any, this is truthy
+            raise ValueError("This model does not support slicing, since it has batch normalization layers.")
+
     def score_t(
         self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
@@ -424,6 +432,7 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
+        self._check_slicing(slice_size=slice_size)
         h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
@@ -449,6 +458,7 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
+        self._check_slicing(slice_size=slice_size)
         h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
@@ -474,6 +484,7 @@ class ERModel(
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
+        self._check_slicing(slice_size=slice_size)
         h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
