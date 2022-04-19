@@ -8,6 +8,8 @@ pipeline:
   evaluator_kwargs:
     filtered: true
   loss: bceaftersigmoid
+  loss_kwargs:
+    reduction: mean
   model: ermlp
   model_kwargs:
     embedding_dim: 64
