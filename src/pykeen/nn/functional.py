@@ -160,7 +160,7 @@ def conve_interaction(
         The relation representations.
     :param t: shape: (`*batch_dims`, dim)
         The tail representations.
-    :param t_bias: shape: (`*batch_dims`, 1)
+    :param t_bias: shape: (`*batch_dims`)
         The tail entity bias.
     :param input_channels:
         The number of input channels.
@@ -200,10 +200,10 @@ def conve_interaction(
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: batch_dims
-    x = (x * t).sum(dim=-1)
+    x = torch.einsum("...d, ...d -> ...", x, t)
 
     # add bias term
-    return x + t_bias.squeeze(dim=-1)
+    return x + t_bias
 
 
 def convkb_interaction(
