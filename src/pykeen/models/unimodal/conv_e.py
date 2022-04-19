@@ -174,8 +174,6 @@ class ConvE(ERModel):
                     initializer=nn.init.zeros_,
                 ),
             ],
-            # the bias is only for tail representations
-            head_representation_indices=[0],
             relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
