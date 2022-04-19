@@ -152,36 +152,33 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     relation_shape: Sequence[str] = ("d",)
 
     # if the interaction function's head parameter should only receive a subset of entity representations
-    _head_indices: ClassVar[Optional[Sequence[int]]] = None
+    _head_indices: Optional[Sequence[int]] = None
 
     # if the interaction function's tail parameter should only receive a subset of entity representations
-    _tail_indices: ClassVar[Optional[Sequence[int]]] = None
+    _tail_indices: Optional[Sequence[int]] = None
 
-    @classmethod
-    def head_indices(cls) -> Sequence[int]:
+    def head_indices(self) -> Sequence[int]:
         """Return the entity representation indices used for the head representations."""
-        if cls._head_indices is None:
-            return list(range(len(cls.entity_shape)))
-        return cls._head_indices
+        if self._head_indices is None:
+            return list(range(len(self.entity_shape)))
+        return self._head_indices
 
-    @classmethod
-    def tail_indices(cls) -> Sequence[int]:
+    def tail_indices(self) -> Sequence[int]:
         """Return the entity representation indices used for the tail representations."""
-        if cls._tail_indices is None:
+        if self._tail_indices is None:
             # comment: this is different to head_indices, since entity_shape is only used for
             #          tail if there is no explicit tail shape
-            tail_entity_shape = cls.entity_shape if cls.tail_entity_shape is None else cls.tail_entity_shape
+            tail_entity_shape = self.entity_shape if self.tail_entity_shape is None else self.tail_entity_shape
             return list(range(len(tail_entity_shape)))
-        return cls._tail_indices
+        return self._tail_indices
 
-    @classmethod
-    def full_entity_shapes(cls) -> Sequence[str]:
+    def full_entity_shapes(self) -> Sequence[str]:
         """Return all entity shapes (head & tail)."""
-        shapes: List[Optional[str]] = [None] * (max(itt.chain(cls.head_indices(), cls.tail_indices())) + 1)
-        for hi, hs in zip(cls.head_indices(), cls.entity_shape):
+        shapes: List[Optional[str]] = [None] * (max(itt.chain(self.head_indices(), self.tail_indices())) + 1)
+        for hi, hs in zip(self.head_indices(), self.entity_shape):
             shapes[hi] = hs
         for ti, ts in zip(
-            cls.tail_indices(), cls.entity_shape if cls.tail_entity_shape is None else cls.tail_entity_shape
+            self.tail_indices(), self.entity_shape if self.tail_entity_shape is None else self.tail_entity_shape
         ):
             if shapes[ti] is not None and ts != shapes[ti]:
                 raise ValueError("Shape conflict.")
