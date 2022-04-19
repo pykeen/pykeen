@@ -146,7 +146,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     #: The symbolic shapes for entity representations for tail entities, if different.
     #: Otherwise, the entity_shape is used for head & tail entities
-    tail_entity_shape: Optional[Sequence[str]] = None
+    _tail_entity_shape: Optional[Sequence[str]] = None
 
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
@@ -157,6 +157,13 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     # if the interaction function's tail parameter should only receive a subset of entity representations
     _tail_indices: Optional[Sequence[int]] = None
 
+    @property
+    def tail_entity_shape(self) -> Sequence[str]:
+        """Return the symbolic shape for tail entity representations."""
+        if self._tail_entity_shape is None:
+            return self.entity_shape
+        return self._tail_entity_shape
+
     def head_indices(self) -> Sequence[int]:
         """Return the entity representation indices used for the head representations."""
         if self._head_indices is None:
@@ -166,10 +173,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     def tail_indices(self) -> Sequence[int]:
         """Return the entity representation indices used for the tail representations."""
         if self._tail_indices is None:
-            # comment: this is different to head_indices, since entity_shape is only used for
-            #          tail if there is no explicit tail shape
-            tail_entity_shape = self.entity_shape if self.tail_entity_shape is None else self.tail_entity_shape
-            return list(range(len(tail_entity_shape)))
+            return list(range(len(self.tail_entity_shape)))
         return self._tail_indices
 
     def full_entity_shapes(self) -> Sequence[str]:
@@ -177,9 +181,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         shapes: List[Optional[str]] = [None] * (max(itt.chain(self.head_indices(), self.tail_indices())) + 1)
         for hi, hs in zip(self.head_indices(), self.entity_shape):
             shapes[hi] = hs
-        for ti, ts in zip(
-            self.tail_indices(), self.entity_shape if self.tail_entity_shape is None else self.tail_entity_shape
-        ):
+        for ti, ts in zip(self.tail_indices(), self.tail_entity_shape):
             if shapes[ti] is not None and ts != shapes[ti]:
                 raise ValueError("Shape conflict.")
             shapes[ti] = ts
@@ -196,7 +198,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
         :returns: a set of strings representting the dimension keys.
         """
-        return set(itt.chain(cls.entity_shape, cls.tail_entity_shape or set(), cls.relation_shape))
+        # TODO: cannot cover dynamic shapes, e.g., AutoSF
+        return set(itt.chain(cls.entity_shape, cls._tail_entity_shape or set(), cls.relation_shape))
 
     @abstractmethod
     def forward(
@@ -1402,7 +1405,7 @@ class MonotonicAffineTransformationInteraction(
         # forward entity/relation shapes
         self.entity_shape = base.entity_shape
         self.relation_shape = base.relation_shape
-        self.tail_entity_shape = base.tail_entity_shape
+        self._tail_entity_shape = base._tail_entity_shape
 
         # The parameters of the affine transformation: bias
         self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)

@@ -166,7 +166,7 @@ def _normalize_representation_kwargs(
         raise DimensionError(set(dimensions), interaction.get_dimensions())
     if entity_representations_kwargs is None:
         # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
-        if interaction.tail_entity_shape is not None:
+        if interaction._tail_entity_shape is not None:
             raise NotImplementedError
         entity_representations_kwargs = [
             dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.entity_shape
