@@ -23,3 +23,29 @@ pipeline:
     label_smoothing: 0.0
     num_epochs: 651
   training_loop: slcwa
+results:  # comment: these are from a re-trained model with PyKEEN 1.8.1-dev
+  realistic:
+    adjusted_arithmetic_mean_rank: 0.1299383156478674
+    adjusted_arithmetic_mean_rank_index: 0.8701045951694795
+    adjusted_geometric_mean_rank_index: 0.9974326039462115
+    adjusted_hits_at_k: 0.4779834507530108
+    adjusted_inverse_harmonic_mean_rank: 0.43423145933570234
+    geometric_mean_rank: 39.311912536621094
+    harmonic_mean_rank: 2.3020918087753826
+    hits_at_k:
+      "1": 0.4076607387140903
+      "3": 0.44596443228454175
+      "5": 0.4582763337893297
+      "10": 0.4781121751025992
+    inverse_arithmetic_mean_rank: 0.0003795404627453536
+    inverse_geometric_mean_rank: 0.025437582284212112
+    inverse_harmonic_mean_rank: 0.4343875410129532
+    inverse_median_rank: 0.05882352963089943
+    median_absolute_deviation: 23.721635496089633
+    median_rank: 17.0
+    standard_deviation: 6373.68896484375
+    variance: 40623908.0
+    z_arithmetic_mean_rank: 81.49104146464603
+    z_geometric_mean_rank: 53.988794678605814
+    z_hits_at_k: 1645.7345022521195
+    z_inverse_harmonic_mean_rank: 3689.2556628028246
