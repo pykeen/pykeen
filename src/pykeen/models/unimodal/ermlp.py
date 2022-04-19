@@ -47,7 +47,7 @@ class ERMLP(ERModel):
     def __init__(
         self,
         *,
-        embedding_dim: int = 50,
+        embedding_dim: int = 64,
         hidden_dim: Optional[int] = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
