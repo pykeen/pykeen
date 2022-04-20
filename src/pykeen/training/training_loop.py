@@ -68,6 +68,20 @@ class CheckpointMismatchError(RuntimeError):
     """An exception when a provided checkpoint file does not match the current training loop setup."""
 
 
+class NoTrainingBatchError(RuntimeError):
+    """An exception when a no training batch was available."""
+
+    def __init__(self):
+        """Initialize the error."""
+        super().__init__(
+            "Did not have a single training batch! This typically happens if the batch_size is set larger "
+            "than the number of training instances, and drop_last is set to True. The latter happens by default, if "
+            "the model uses batch norm layers. You can try to fix this problem, by explicitly setting drop_last=False. "
+            "If you are using the pipeline, you find the parameter in the training_kwargs. Further information can be "
+            "found at https://github.com/pykeen/pykeen/issues/828 ."
+        )
+
+
 class SubBatchingNotSupportedError(NotImplementedError):
     """An exception raised when sub batching is not implemented."""
 
@@ -111,7 +125,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
-        batch_size=dict(type=int, low=32, high=4000, q=100),
+        batch_size=dict(type=int, low=4, high=12, scale="power_two"),  # [16, 4096]
     )
 
     def __init__(
@@ -567,6 +581,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             pin_memory,
             sampler=sampler,
         )
+        if len(train_data_loader) == 0:
+            raise NoTrainingBatchError()
         if drop_last and not only_size_probing:
             logger.info(
                 "Dropping last (incomplete) batch each epoch (%s batches).",

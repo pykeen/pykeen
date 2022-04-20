@@ -44,7 +44,6 @@ import yaml
 from class_resolver import normalize_string
 from docdata import get_docdata
 from torch import nn
-from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
@@ -87,7 +86,6 @@ __all__ = [
     "get_json_bytes_io",
     "get_df_io",
     "ensure_ftp_directory",
-    "broadcast_cat",
     "get_batchnorm_modules",
     "get_dropout_modules",
     "calculate_broadcasted_elementwise_result_shape",
@@ -386,8 +384,8 @@ def split_complex(
     x: torch.FloatTensor,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """Split a complex tensor into real and imaginary part."""
-    dim = x.shape[-1] // 2
-    return x[..., :dim], x[..., dim:]
+    x = torch.view_as_real(x)
+    return x[..., 0], x[..., 1]
 
 
 def view_complex(x: torch.FloatTensor) -> torch.Tensor:
@@ -406,7 +404,7 @@ def combine_complex(
     x_im: torch.FloatTensor,
 ) -> torch.FloatTensor:
     """Combine a complex tensor from real and imaginary part."""
-    return torch.cat([x_re, x_im], dim=-1)
+    return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
 def fix_dataclass_init_docs(cls: Type) -> Type:
@@ -506,63 +504,6 @@ def format_relative_comparison(
 ) -> str:
     """Format a relative comparison."""
     return f"{part}/{total} ({part / total:2.2%})"
-
-
-def broadcast_cat(
-    tensors: Sequence[torch.FloatTensor],
-    dim: int,
-) -> torch.FloatTensor:
-    """Concatenate tensors with broadcasting support.
-
-    :param tensors:
-        The tensors. Each of the tensors is require to have the same number of dimensions.
-        For each dimension not equal to dim, the extent has to match the other tensors', or be one.
-        If it is one, the tensor is repeated to match the extent of the othe tensors.
-    :param dim:
-        The concat dimension.
-
-    :return: A concatenated, broadcasted tensor.
-
-    :raises ValueError: if the x and y dimensions are not the same
-    :raises ValueError: if broadcasting is not possible
-    """
-    # input validation
-    if len(tensors) == 0:
-        raise ValueError("Must pass at least one tensor.")
-    if len({x.ndimension() for x in tensors}) != 1:
-        raise ValueError(
-            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
-        )
-
-    # base case
-    if len(tensors) == 1:
-        return tensors[0]
-
-    # normalize dim
-    if dim < 0:
-        dim = tensors[0].ndimension() + dim
-
-    # calculate repeats for each tensor
-    repeats = [[1 for _ in t.shape] for t in tensors]
-    for i, dims in enumerate(zip(*(t.shape for t in tensors))):
-        # dimensions along concatenation axis do not need to match
-        if i == dim:
-            continue
-
-        # get desired extent along dimension
-        d_max = max(dims)
-        if not {1, d_max}.issuperset(dims):
-            raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
-
-        for j, td in enumerate(dims):
-            if td != d_max:
-                repeats[j][i] = d_max
-
-    # repeat tensors along axes if necessary
-    tensors = [t.repeat(*r) for t, r in zip(tensors, repeats)]
-
-    # concatenate
-    return torch.cat(tensors, dim=dim)
 
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
@@ -718,11 +659,6 @@ def negative_norm(
     if power_norm:
         assert not isinstance(p, str)
         return -(x.abs() ** p).sum(dim=-1)
-
-    if torch.is_complex(x):
-        assert not isinstance(p, str)
-        # workaround for complex numbers: manually compute norm
-        return -(x.abs() ** p).sum(dim=-1) ** (1 / p)
 
     return -x.norm(p=p, dim=-1)
 
@@ -1107,29 +1043,23 @@ def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize:
 
 
 def complex_normalize(x: torch.Tensor) -> torch.Tensor:
-    r"""Normalize a vector of complex numbers such that each element is of unit-length.
+    r"""Normalize a vector of complex numbers such that each *element* is of unit-length.
 
-    :param x: A tensor formulating complex numbers
-    :returns: A normalized version accoring to the following definition.
-
-    The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
+    Let $x \in \mathbb{C}^d$ denote a complex vector. Then, the operation computes
 
     .. math::
+        x_i' = \frac{x_i}{|x_i|}
 
-        |a + ib| = \sqrt{a^2 + b^2}
+    where $|x_i| = \sqrt{Re(x_i)^2 + Im(x_i)^2}$ is the
+    `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_
 
-    $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
+    :param x:
+        A tensor formulating complex numbers
 
-    .. math::
-        \|x\|^2 = \sum_{i=1}^d |x_i|^2
-                 = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
-                 = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
-                 = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
-                 = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
+    :returns:
+        An elementwise noramlized vector.
     """
-    y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
-    y = functional.normalize(y, p=2, dim=-1)
-    return y.view(*x.shape)
+    return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
 
 
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}

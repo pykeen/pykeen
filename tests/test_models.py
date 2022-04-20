@@ -121,7 +121,7 @@ class TestDistMult(cases.ModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
@@ -407,9 +407,7 @@ class TestRotatE(cases.ModelTestCase):
 
         Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
         """
-        relation_abs = (
-            self.instance.relation_embeddings(indices=None).view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
-        )
+        relation_abs = self.instance.relation_representations[0](indices=None).abs()
         assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
 
 
@@ -639,51 +637,12 @@ class TestTransR(cases.DistanceModelTestCase):
         "relation_dim": 4,
     }
 
-    def test_score_hrt_manual(self):
-        """Manually test interaction function of TransR."""
-        # entity embeddings
-        weights = torch.as_tensor(data=[[2.0, 2.0], [3.0, 3.0]], dtype=torch.float)
-        entity_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=2,
-        )
-        entity_embeddings._embeddings.weight.data.copy_(weights)
-        self.instance.entity_embeddings = entity_embeddings
-
-        # relation embeddings
-        relation_weights = torch.as_tensor(data=[[4.0, 4], [5.0, 5.0]], dtype=torch.float)
-        relation_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=2,
-        )
-        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
-
-        relation_projection_weights = torch.as_tensor(
-            data=[[5.0, 5.0, 6.0, 6.0], [7.0, 7.0, 8.0, 8.0]], dtype=torch.float
-        )
-        relation_projection_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=4,
-        )
-        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
-
-        # Compute Scores
-        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
-        scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
-        first_score = scores[0].item()
-        # second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -32, delta=0.01)
-
     def _check_constraints(self):
         """Check model constraints.
 
         Entity and relation embeddings have to have at most unit L2 norm.
         """
-        for emb in (self.instance.entity_embeddings, self.instance.relation_embeddings):
+        for emb in (self.instance.entity_representations[0], self.instance.relation_representations[0]):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=1.0e-06)
 
 

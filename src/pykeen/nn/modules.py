@@ -10,12 +10,27 @@ import math
 from abc import ABC, abstractmethod
 from collections import Counter
 from operator import itemgetter
-from typing import Any, Callable, Generic, Iterable, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 import more_itertools
 import numpy
 import torch
-from class_resolver import ClassResolver
+from class_resolver import ClassResolver, Hint, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
@@ -23,6 +38,7 @@ from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .combinations import Combination
+from .init import initializer_resolver
 from ..typing import (
     HeadRepresentation,
     HintOrType,
@@ -128,11 +144,50 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The symbolic shapes for entity representations
     entity_shape: Sequence[str] = ("d",)
 
-    #: The symbolic shapes for entity representations for tail entities, if different. This is ony relevant for ConvE.
-    tail_entity_shape: Optional[Sequence[str]] = None
+    #: The symbolic shapes for entity representations for tail entities, if different.
+    #: Otherwise, the entity_shape is used for head & tail entities
+    _tail_entity_shape: Optional[Sequence[str]] = None
 
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
+
+    # if the interaction function's head parameter should only receive a subset of entity representations
+    _head_indices: Optional[Sequence[int]] = None
+
+    # if the interaction function's tail parameter should only receive a subset of entity representations
+    _tail_indices: Optional[Sequence[int]] = None
+
+    @property
+    def tail_entity_shape(self) -> Sequence[str]:
+        """Return the symbolic shape for tail entity representations."""
+        if self._tail_entity_shape is None:
+            return self.entity_shape
+        return self._tail_entity_shape
+
+    def head_indices(self) -> Sequence[int]:
+        """Return the entity representation indices used for the head representations."""
+        if self._head_indices is None:
+            return list(range(len(self.entity_shape)))
+        return self._head_indices
+
+    def tail_indices(self) -> Sequence[int]:
+        """Return the entity representation indices used for the tail representations."""
+        if self._tail_indices is None:
+            return list(range(len(self.tail_entity_shape)))
+        return self._tail_indices
+
+    def full_entity_shapes(self) -> Sequence[str]:
+        """Return all entity shapes (head & tail)."""
+        shapes: List[Optional[str]] = [None] * (max(itt.chain(self.head_indices(), self.tail_indices())) + 1)
+        for hi, hs in zip(self.head_indices(), self.entity_shape):
+            shapes[hi] = hs
+        for ti, ts in zip(self.tail_indices(), self.tail_entity_shape):
+            if shapes[ti] is not None and ts != shapes[ti]:
+                raise ValueError("Shape conflict.")
+            shapes[ti] = ts
+        if None in shapes:
+            raise AssertionError("Unused shape.")
+        return cast(List[str], shapes)
 
     @classmethod
     def get_dimensions(cls) -> Set[str]:
@@ -143,7 +198,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
         :returns: a set of strings representting the dimension keys.
         """
-        return set(itt.chain(cls.entity_shape, cls.tail_entity_shape or set(), cls.relation_shape))
+        # TODO: cannot cover dynamic shapes, e.g., AutoSF
+        return set(itt.chain(cls.entity_shape, cls._tail_entity_shape or set(), cls.relation_shape))
 
     @abstractmethod
     def forward(
@@ -548,7 +604,8 @@ class ConvEInteraction(
     .. seealso:: :func:`pykeen.nn.functional.conve_interaction`
     """
 
-    tail_entity_shape = ("d", "k")  # with k=1
+    # vector & scalar offset
+    tail_entity_shape = ("d", "")
 
     #: The head-relation encoder operating on 2D "images"
     hr2d: nn.Module
@@ -923,6 +980,11 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     func = pkf.tucker_interaction
 
+    # default core tensor initialization
+    # cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
+    default_core_initializer: ClassVar[Initializer] = staticmethod(nn.init.uniform_)  # type: ignore
+    default_core_initializer_kwargs: Mapping[str, Any] = {"a": -1.0, "b": 1.0}
+
     def __init__(
         self,
         embedding_dim: int = 200,
@@ -931,6 +993,8 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         relation_dropout: float = 0.4,
         head_relation_dropout: float = 0.5,
         apply_batch_normalization: bool = True,
+        core_initializer: Hint[Initializer] = None,
+        core_initializer_kwargs: OptionalKwargs = None,
     ):
         """Initialize the Tucker interaction function.
 
@@ -946,9 +1010,22 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             The dropout rate applied to the combined head and relation representations.
         :param apply_batch_normalization:
             Whether to use batch normalization on head representations and the combination of head and relation.
+        :param core_initializer:
+            the core tensor's initializer, or a hint thereof
+        :param core_initializer_kwargs:
+            additional keyword-based parameters for the initializer
         """
         super().__init__()
 
+        # normalize initializer
+        if core_initializer is None:
+            core_initializer = self.default_core_initializer
+        self.core_initializer = core_initializer
+        if core_initializer is self.default_core_initializer and core_initializer_kwargs is None:
+            core_initializer_kwargs = self.default_core_initializer_kwargs
+        self.core_initializer_kwargs = core_initializer_kwargs
+
+        # normalize relation dimension
         if relation_dim is None:
             relation_dim = embedding_dim
 
@@ -970,9 +1047,12 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         else:
             self.head_batch_norm = self.head_relation_batch_norm = None
 
+        self.reset_parameters()
+
     def reset_parameters(self):  # noqa:D102
-        # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-        nn.init.uniform_(self.core_tensor, -1.0, 1.0)
+        # instantiate here to make module easily serializable
+        core_initializer = initializer_resolver.make(self.core_initializer, pos_kwargs=self.core_initializer_kwargs)
+        core_initializer(self.core_tensor)
         # batch norm gets reset automatically, since it defines reset_parameters
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
@@ -1325,7 +1405,7 @@ class MonotonicAffineTransformationInteraction(
         # forward entity/relation shapes
         self.entity_shape = base.entity_shape
         self.relation_shape = base.relation_shape
-        self.tail_entity_shape = base.tail_entity_shape
+        self._tail_entity_shape = base._tail_entity_shape
 
         # The parameters of the affine transformation: bias
         self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
@@ -1470,7 +1550,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     An implementation of the CP interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
 
     .. note ::
-        For $k=1$, this interaction is the same as DistMult (but consider the node below).
+        For $k=1$, this interaction is the same as DistMult (but consider the note below).
 
     .. note ::
         For equivalence to CP, entities should have different representations for head & tail role. This is different
@@ -1480,6 +1560,8 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     func = pkf.cp_interaction
     entity_shape = ("kd",)
     relation_shape = ("kd",)
+    _head_indices = (0,)
+    _tail_indices = (1,)
 
 
 @parse_docdata
@@ -1763,7 +1845,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         )
 
 
-interaction_resolver = ClassResolver.from_subclasses(
+interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
     Interaction,  # type: ignore
     skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
     suffix=Interaction.__name__,
