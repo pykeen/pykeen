@@ -37,8 +37,10 @@ pipeline:
   stopper: early
   stopper_kwargs:
     frequency: 100
-    metric: "inverse_harmonic_mean_rank"  # = mean reciprocal rank
-    patience: 400  # big enough to run until the end
+    # = mean reciprocal rank
+    metric: "inverse_harmonic_mean_rank"
+    # big enough to run until the end
+    patience: 1000
   
   negative_sampler: basic
   negative_sampler_kwargs:
@@ -49,9 +51,12 @@ pipeline:
     lr: 0.001
   training_kwargs:
     batch_size: 4096
-    num_epochs: 1000 # was 400 before; why?
+    # TODO: was 400 before; why?
+    num_epochs: 1000
   training_loop: SLCWA
 
+# cf. https://arxiv.org/pdf/2007.06267v2.pdf, Table 8
+# best/optimistic rank, cf. https://github.com/ralphabb/BoxE/blob/584c83bb42817c67df0f70c52898aacfc916af19/BoxEModel.py#L916-L917
 results:
   best:
     hits_at_k:
