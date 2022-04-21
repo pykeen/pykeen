@@ -12,8 +12,7 @@ pipeline:
     adversarial_temperature: 4.0
   model: BoxE
   model_kwargs:
-    entity_initializer: uniform_norm   # This has to be a uniform distribution between -0.5/sqrt(emb_dim)
-    #and 0.5/sqrt(emb_dim)
+    entity_initializer: uniform_norm   # This has to be a uniform distribution between -0.5/sqrt(emb_dim) and 0.5/sqrt(emb_dim)
     relation_initializer: uniform_norm     # This is also between -0.5/sqrt(emb_dim) and 0.5/sqrt(emb_dim)
     relation_size_initializer: uniform    # This is a uniform distribution between -1 and 1
     relation_size_initializer_kwargs:
@@ -41,9 +40,13 @@ pipeline:
     batch_size: 1024
     num_epochs: 1000
   training_loop: SLCWA
+
+# cf. https://arxiv.org/pdf/2007.06267v2.pdf, Table 7
 results:
   best:
     hits_at_k:
+      '1': 0.238
+      '3': 0.374
       '10': 0.538
     mean_rank: 163
     mean_reciprocal_rank: 0.337
