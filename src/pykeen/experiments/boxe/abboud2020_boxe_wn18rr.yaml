@@ -23,6 +23,7 @@ pipeline:
     relation_size_initializer_kwargs:
       a: -1
       b: 1
+    # 500-dimensional embeddings for parity with other models in the literature
     embedding_dim: 500
     # Standard L2 norm
     p: 2
