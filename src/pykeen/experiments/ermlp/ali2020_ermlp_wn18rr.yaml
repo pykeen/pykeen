@@ -13,6 +13,7 @@ pipeline:
   model: ermlp
   model_kwargs:
     embedding_dim: 64
+    hidden_dim: 64
   negative_sampler: basic
   negative_sampler_kwargs:
     num_negs_per_pos: 11

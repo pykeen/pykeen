@@ -13,6 +13,7 @@ pipeline:
   model: ermlp
   model_kwargs:
     embedding_dim: 64
+    hidden_dim: 64
   optimizer: adam
   optimizer_kwargs:
     lr: 0.005779875816374009
