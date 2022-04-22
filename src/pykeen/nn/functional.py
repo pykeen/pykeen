@@ -349,11 +349,11 @@ def ermlp_interaction(
         return final(activation(hidden(torch.cat([h, r, t], dim=-1))))
 
     # split, shape: (embedding_dim, hidden_dim)
-    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
+    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.split(split_size=dim, dim=-1)
     bias = hidden.bias.view(*make_ones_like(prefix), -1)
-    h = torch.einsum("...i,ij->...j", h, head_to_hidden)
-    r = torch.einsum("...i,ij->...j", r, rel_to_hidden)
-    t = torch.einsum("...i,ij->...j", t, tail_to_hidden)
+    h = torch.einsum("...i, ji -> ...j", h, head_to_hidden)
+    r = torch.einsum("...i, ji -> ...j", r, rel_to_hidden)
+    t = torch.einsum("...i, ji -> ...j", t, tail_to_hidden)
     return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
 
 
