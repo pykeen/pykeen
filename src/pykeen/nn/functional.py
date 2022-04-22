@@ -346,7 +346,7 @@ def ermlp_interaction(
     # same shape
     *prefix, dim = h.shape
     if h.shape == r.shape and h.shape == t.shape:
-        return final(activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * dim)))).view(prefix)
+        return final(activation(hidden(torch.cat([h, r, t], dim=-1))))
 
     # split, shape: (embedding_dim, hidden_dim)
     head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
