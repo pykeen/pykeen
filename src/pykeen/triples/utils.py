@@ -82,6 +82,7 @@ def load_triples(
         dtype=str,
         header=None,
         usecols=column_remapping,
+        keep_default_na=False,
     )
     if column_remapping is not None:
         df = df[[df.columns[c] for c in column_remapping]]
