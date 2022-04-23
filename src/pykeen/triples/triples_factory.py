@@ -72,7 +72,7 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     :param triples: shape: (n, 3), dtype: str
     """
     # Split triples
-    heads, tails = triples[:, 0], triples[:, 2]
+    heads, tails = triples[:, 0].astype(str), triples[:, 2].astype(str)
     # Sorting ensures consistent results when the triples are permuted
     entity_labels = sorted(set(heads).union(tails))
     # Create mapping
