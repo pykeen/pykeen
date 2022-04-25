@@ -10,8 +10,7 @@ novel triples.
 """
 
 import logging
-from collections import defaultdict
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
+from typing import Collection, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
 
 import click
 import numpy
@@ -225,7 +224,7 @@ class Sealant:
         sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True)))
         self.relations_to_delete = _select_by_most_pairs(
             size=sizes,
-            components=_get_connected_components((a, b) for a, b in self.candidates if a != b),
+            components=get_connected_components((a, b) for a, b in self.candidates if a != b),
         )
         logger.info(f"identified {len(self.candidates)} from {self.triples_factory} to delete")
 
