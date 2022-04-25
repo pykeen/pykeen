@@ -15,13 +15,12 @@ import numpy
 import torch
 from torch import broadcast_tensors, nn
 
-from .compute_kernel import batched_complex, batched_dot
+from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution, Sign
 from ..utils import (
     boxe_kg_arity_position_score,
-    broadcast_cat,
     clamp_norm,
     compute_box,
     estimate_cost_of_sequence,
@@ -32,7 +31,6 @@ from ..utils import (
     project_entity,
     tensor_product,
     tensor_sum,
-    view_complex,
 )
 
 __all__ = [
@@ -124,17 +122,22 @@ def complex_interaction(
     .. math ::
         Re(\langle h, r, conj(t) \rangle)
 
-    :param h: shape: (`*batch_dims`, `2*dim`)
+    .. note::
+        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
+
+    :param h: shape: (`*batch_dims`, dim)
         The complex head representations.
-    :param r: shape: (`*batch_dims`, 2*dim)
+    :param r: shape: (`*batch_dims`, dim)
         The complex relation representations.
-    :param t: shape: (`*batch_dims`, 2*dim)
+    :param t: shape: (`*batch_dims`, dim)
         The complex tail representations.
 
     :return: shape: batch_dims
         The scores.
     """
-    return batched_complex(h, r, t)
+    # TODO: switch to einsum ?
+    # return torch.real(torch.einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
+    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
@@ -157,7 +160,7 @@ def conve_interaction(
         The relation representations.
     :param t: shape: (`*batch_dims`, dim)
         The tail representations.
-    :param t_bias: shape: (`*batch_dims`, 1)
+    :param t_bias: shape: (`*batch_dims`)
         The tail entity bias.
     :param input_channels:
         The number of input channels.
@@ -175,11 +178,11 @@ def conve_interaction(
     """
     # repeat if necessary, and concat head and relation
     # shape: -1, num_input_channels, 2*height, width
-    x = broadcast_cat(
-        [
+    x = torch.cat(
+        torch.broadcast_tensors(
             h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
             r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
-        ],
+        ),
         dim=-2,
     )
     prefix_shape = x.shape[:-3]
@@ -197,10 +200,10 @@ def conve_interaction(
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: batch_dims
-    x = (x * t).sum(dim=-1)
+    x = torch.einsum("...d, ...d -> ...", x, t)
 
     # add bias term
-    return x + t_bias.squeeze(dim=-1)
+    return x + t_bias
 
 
 def convkb_interaction(
@@ -375,7 +378,7 @@ def ermlpe_interaction(
         The scores.
     """
     # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
-    x = broadcast_cat([h, r], dim=-1)
+    x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
 
     # Predict t embedding, shape: (*batch_dims, d)
     *batch_dims, dim = x.shape
@@ -564,14 +567,14 @@ def proje_interaction(
         The scores.
     """
     # global projections
-    h = h * d_e.view(*make_ones_like(h.shape[:-1]), -1)
-    r = r * d_r.view(*make_ones_like(h.shape[:-1]), -1)
+    h = torch.einsum("...d, d -> ...d", h, d_e)
+    r = torch.einsum("...d, d -> ...d", r, d_r)
 
     # combination, shape: (*batch_dims, d)
     x = activation(tensor_sum(h, r, b_c))
 
     # dot product with t
-    return (x * t).sum(dim=-1) + b_p
+    return torch.einsum("...d, ...d -> ...", x, t) + b_p
 
 
 def rescal_interaction(
@@ -601,19 +604,21 @@ def rotate_interaction(
 ) -> torch.FloatTensor:
     """Evaluate the RotatE interaction function.
 
-    :param h: shape: (`*batch_dims`, 2*dim)
+    .. note::
+        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
+
+    :param h: shape: (`*batch_dims`, dim)
         The head representations.
-    :param r: shape: (`*batch_dims`, 2*dim)
+    :param r: shape: (`*batch_dims`, dim)
         The relation representations.
-    :param t: shape: (`*batch_dims`, 2*dim)
+    :param t: shape: (`*batch_dims`, dim)
         The tail representations.
 
     :return: shape: batch_dims
         The scores.
     """
-    # r expresses a rotation in complex plane.
-    h, r, t = [view_complex(x) for x in (h, r, t)]
     if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
+        # r expresses a rotation in complex plane.
         # rotate head by relation (=Hadamard product in complex space)
         h = h * r
     else:
@@ -624,7 +629,6 @@ def rotate_interaction(
         # |h * r - t| = |h - conj(r) * t|
         t = t * torch.conj(r)
 
-    # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
     return negative_norm(h - t, p=2, power_norm=False)
 
 

@@ -121,7 +121,7 @@ class TestDistMult(cases.ModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
@@ -407,9 +407,7 @@ class TestRotatE(cases.ModelTestCase):
 
         Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
         """
-        relation_abs = (
-            self.instance.relation_embeddings(indices=None).view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
-        )
+        relation_abs = self.instance.relation_representations[0](indices=None).abs()
         assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
 
 
