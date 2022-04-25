@@ -14,9 +14,9 @@ from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import download, read_zipfile_csv
 
-from .base import LazyDataset
-from ..triples import TriplesFactory
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TorchRandomHint
+from ..base import LazyDataset
+from ...triples import TriplesFactory
+from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TorchRandomHint
 
 __all__ = [
     "OpenEA",
