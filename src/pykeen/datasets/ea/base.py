@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 # TODO: support ID-only graphs
 
 
-class EABase(EagerDataset):
+class EADataset(EagerDataset):
     """Base class for entity alignment datasets."""
 
     def __init__(
         self,
         *,
         metadata: OptionalKwargs = None,
-        side: Optional[EASide] = None,
+        side: Optional[EASide] = SIDE_LEFT,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),

@@ -17,7 +17,7 @@ import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import SIDE_LEFT, SIDE_RIGHT, EA_SIDES, EABase, EASide
+from .base import SIDE_LEFT, SIDE_RIGHT, EA_SIDES, EADataset, EASide
 from ...constants import PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
 from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
@@ -40,7 +40,7 @@ WK3L_MODULE = PYKEEN_DATASETS_MODULE.submodule("wk3l")
 EA_SIDES_R = tuple(reversed(EA_SIDES))
 
 
-class MTransEDataset(EABase, ABC):
+class MTransEDataset(EADataset, ABC):
     """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
 
     #: The mapping from (graph-pair, side) to triple file name
