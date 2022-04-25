@@ -13,6 +13,9 @@ from ...utils import format_relative_comparison
 logger = logging.getLogger(__name__)
 
 
+# TODO: support ID-only graphs
+
+
 class GraphPairCombinator:
     """A base class for combination of a graph pair into a single graph."""
 
