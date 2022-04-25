@@ -21,7 +21,7 @@ import torch
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import CoreTriplesFactory, TriplesFactory, cat_triples
 from pykeen.typing import MappedTriples
-from pykeen.utils import compact_mapping
+from pykeen.utils import compact_mapping, get_connected_components
 
 __all__ = [
     "Sealant",
@@ -32,40 +32,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 X = TypeVar("X")
 Y = TypeVar("Y")
-
-
-def find(x: X, parent: Mapping[X, X]) -> X:
-    # check validity
-    if x not in parent:
-        raise ValueError(f"Unknown element: {x}.")
-    # path compression
-    while parent[x] != x:
-        x, parent[x] = parent[x], parent[parent[x]]  # type: ignore
-    return x
-
-
-def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
-    # collect connected components using union find with path compression
-    parent: Dict[X, X] = dict()
-    for x, y in pairs:
-        parent.setdefault(x, x)
-        parent.setdefault(y, y)
-        # get representatives
-        x = find(x=x, parent=parent)
-        y = find(x=y, parent=parent)
-        # already merged
-        if x == y:
-            continue
-        # make x the smaller one
-        if y < x:  # type: ignore
-            x, y = y, x
-        # merge
-        parent[y] = x
-    # extract partitions
-    result = defaultdict(list)
-    for k, v in parent.items():
-        result[v].append(k)
-    return list(result.values())
 
 
 def _select_by_most_pairs(
