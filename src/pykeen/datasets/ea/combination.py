@@ -46,56 +46,7 @@ class GraphPairCombinator:
         raise NotImplementedError
 
 
-class CollapseGraphCombinator(GraphPairCombinator):
-    """This combinator merges all matching entity pairs into a single ID."""
-
-    def __call__(
-        self,
-        left: TriplesFactory,
-        right: TriplesFactory,
-        alignment: pandas.DataFrame,
-        **kwargs,
-    ) -> TriplesFactory:  # noqa: D102
-        # concatenate (shifted) triples
-        mapped_triples = torch.cat(
-            [
-                left.mapped_triples,
-                right.mapped_triples
-                + torch.as_tensor([left.num_entities, left.num_relations, left.num_entities]).view(1, 3),
-            ]
-        )
-        # determine connected components regarding the same-as relation (i.e., applies transitivity)
-        id_mapping = torch.arange(left.num_entities + right.num_entities)
-        for cc in get_connected_components(
-            pairs=(
-                (
-                    left.entity_labeling.label_to_id[row[EA_SIDE_LEFT]],
-                    right.entity_labeling.label_to_id[row[EA_SIDE_RIGHT]] + left.num_entities,
-                )
-                for _, row in alignment.iterrows()
-            )
-        ):
-            cc = list(cc)
-            id_mapping[cc] = min(cc)
-        # apply id mapping
-        h, r, t = mapped_triples.t()
-        h, t = id_mapping[h], id_mapping[t]
-        # ensure consecutive IDs
-        unique, inverse = torch.cat([h, t]).unique(return_inverse=True)
-        h, t = inverse.split(split_size_or_sections=2)
-        mapped_triples = torch.stack([h, r, t], dim=-1)
-        # TODO: keep labeling?
-        return CoreTriplesFactory(
-            mapped_triples=mapped_triples,
-            num_entities=len(unique),
-            num_relations=left.num_relations + right.num_relations,
-            entity_ids=None,
-            relation_ids=None,
-            **kwargs,
-        )
-
-
-class ExtraRelationGraphCombinator(GraphPairCombinator):
+class ExtraRelationGraphPairCombinator(GraphPairCombinator):
     """This combinator keeps all entities, but introduces a novel alignment relation."""
 
     def __call__(
@@ -157,7 +108,62 @@ class ExtraRelationGraphCombinator(GraphPairCombinator):
         )
 
 
+class CollapseGraphPairCombinator(GraphPairCombinator):
+    """This combinator merges all matching entity pairs into a single ID."""
+
+    def __call__(
+        self,
+        left: TriplesFactory,
+        right: TriplesFactory,
+        alignment: pandas.DataFrame,
+        **kwargs,
+    ) -> TriplesFactory:  # noqa: D102
+        # concatenate (shifted) triples
+        mapped_triples = torch.cat(
+            [
+                left.mapped_triples,
+                right.mapped_triples
+                + torch.as_tensor([left.num_entities, left.num_relations, left.num_entities]).view(1, 3),
+            ]
+        )
+        # determine connected components regarding the same-as relation (i.e., applies transitivity)
+        id_mapping = torch.arange(left.num_entities + right.num_entities)
+        for cc in get_connected_components(
+            pairs=(
+                (
+                    left.entity_labeling.label_to_id[row[EA_SIDE_LEFT]],
+                    right.entity_labeling.label_to_id[row[EA_SIDE_RIGHT]] + left.num_entities,
+                )
+                for _, row in alignment.iterrows()
+            )
+        ):
+            cc = list(cc)
+            id_mapping[cc] = min(cc)
+        # apply id mapping
+        h, r, t = mapped_triples.t()
+        h, t = id_mapping[h], id_mapping[t]
+        # ensure consecutive IDs
+        unique, inverse = torch.cat([h, t]).unique(return_inverse=True)
+        h, t = inverse.split(split_size_or_sections=2)
+        mapped_triples = torch.stack([h, r, t], dim=-1)
+        # TODO: keep labeling?
+        return CoreTriplesFactory(
+            mapped_triples=mapped_triples,
+            num_entities=len(unique),
+            num_relations=left.num_relations + right.num_relations,
+            entity_ids=None,
+            relation_ids=None,
+            **kwargs,
+        )
+
+
+class SwapGraphPairCombinator(GraphPairCombinator):
+    """Add extra triples by swapping aligned entities."""
+
+    # TODO: implement
+
+
 graph_combinator_resolver: ClassResolver[GraphPairCombinator] = ClassResolver.from_subclasses(
     base=GraphPairCombinator,
-    default=ExtraRelationGraphCombinator,
+    default=ExtraRelationGraphPairCombinator,
 )
