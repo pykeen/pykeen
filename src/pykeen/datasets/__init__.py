@@ -36,7 +36,7 @@ from .cskg import CSKG
 from .db100k import DB100K
 from .dbpedia import DBpedia50
 from .drkg import DRKG
-from .ea import CN3l, OpenEA, WK3l15k, WK3l120k, MTransEDataset
+from .ea import CN3l, MTransEDataset, OpenEA, WK3l15k, WK3l120k
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships

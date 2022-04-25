@@ -9,7 +9,7 @@ import itertools
 import logging
 import pathlib
 from abc import ABC
-from typing import ClassVar, List, Literal, Mapping, Tuple, Union
+from typing import ClassVar, Literal, Mapping, Tuple, Union
 
 import click
 import pandas
@@ -37,7 +37,7 @@ EN_DE: GraphPair = "en_de"
 EN_FR: GraphPair = "en_fr"
 GRAPH_PAIRS = (EN_DE, EN_FR)
 WK3L_MODULE = PYKEEN_DATASETS_MODULE.submodule("wk3l")
-EA_SIDES_R = tuple(reversed(EA_SIDES))
+EA_SIDES_R: Tuple[EASide, EASide] = (SIDE_RIGHT, SIDE_LEFT)
 
 
 class MTransEDataset(EADataset, ABC):
@@ -88,17 +88,17 @@ class MTransEDataset(EADataset, ABC):
             cls.FILE_NAMES[graph_pair, key],
         )
 
-    def _load_df(self, key: Union[None, EASide, Tuple[EASide, EASide]], names: List[str]) -> pandas.DataFrame:
+    def _load_df(self, key: Union[None, EASide, Tuple[EASide, EASide]], **kwargs) -> pandas.DataFrame:
         return read_zipfile_csv(
             path=self.zip_path,
             inner_path=str(self._relative_path(graph_pair=self.graph_pair, key=key)),
             header=None,
-            names=names,
             sep="@@@",
             engine="python",
             encoding="utf8",
             dtype=str,
-        )  # .astypye(str)
+            **kwargs,
+        )
 
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         logger.info(f"Loading graph for side: {side}")
@@ -115,8 +115,7 @@ class MTransEDataset(EADataset, ABC):
         dfs = [self._load_df(key=key, names=list(key)) for key in (EA_SIDES, EA_SIDES_R)]
         # load triple alignments
         df = self._load_df(
-            key=None,
-            names=[(side, column) for side in EA_SIDES for column in [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]],
+            key=None, names=[(side, column) for side in EA_SIDES for column in [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]]
         )
         # extract entity alignments
         # (h1, r1, t1) = (h2, r2, t2) => h1 = h2 and t1 = t2

@@ -82,7 +82,6 @@ class OpenEA(EADataset):
     def __init__(
         self,
         *,
-        side: EASide = SIDE_LEFT,
         graph_pair: str = D_W,
         size: GraphSize = SIZE_15K,
         version: GraphVersion = V1,
@@ -101,7 +100,7 @@ class OpenEA(EADataset):
             additional keyword-based parameters passed to :meth:`EABase.__init__`
 
         :raises ValueError:
-            If the graph pair, side, size or version is invalid.
+            If the graph pair, size or version is invalid.
         """
         # Input validation.
         if graph_pair not in GRAPH_PAIRS:
@@ -120,7 +119,7 @@ class OpenEA(EADataset):
         # save relative paths beforehand so they are present for loading
         self.inner_path = pathlib.PurePosixPath("OpenEA_dataset_v2.0", f"{graph_pair}_{size}_{version}")
         # delegate to super class
-        super().__init__(side=side, **kwargs)
+        super().__init__(**kwargs)
 
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         # left side has files ending with 1, right side with 2

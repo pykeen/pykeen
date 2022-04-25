@@ -49,7 +49,8 @@ class EADataset(EagerDataset):
             new = alignment.shape[0]
             if new < old:
                 logger.info(
-                    f"Dropped {format_relative_comparison(part=old - new, total=old)} alignments due to being duplicates.",
+                    f"Dropped {format_relative_comparison(part=old - new, total=old)} alignments "
+                    f"due to being duplicates.",
                 )
             # combine
             self.combination = graph_combinator_resolver.make(combination, pos_kwargs=combination_kwargs)
