@@ -8,7 +8,6 @@ Get a summary with ``python -m pykeen.datasets.wk3l``
 import itertools
 import logging
 import pathlib
-import zipfile
 from abc import ABC
 from typing import ClassVar, List, Literal, Mapping, Tuple, Union
 
@@ -16,8 +15,9 @@ import click
 import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
+from pystow.utils import read_zipfile_csv
 
-from .base import SIDE_LEFT, SIDE_RIGHT, EA_SIDES, EADataset, EASide
+from .base import EA_SIDES, SIDE_LEFT, SIDE_RIGHT, EADataset, EASide
 from ...constants import PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
 from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
@@ -88,24 +88,17 @@ class MTransEDataset(EADataset, ABC):
             cls.FILE_NAMES[graph_pair, key],
         )
 
-    def _load_df(self, key: Union[None, EASide, Tuple[EASide, EASide]], names: List[str]) -> pathlib.Path:
-        # load triple alignments
-        relative_path = self._relative_path(graph_pair=self.graph_pair, key=key)
-        with zipfile.ZipFile(self.zip_path) as zf:
-            logger.info(f"Reading from {self.zip_path} : {relative_path}")
-            with zf.open(str(relative_path), mode="r") as file:
-                df = pandas.read_csv(
-                    file,
-                    delimiter="@@@",
-                    header=None,
-                    names=names,
-                    engine="python",
-                    encoding="utf8",
-                )
-        # some "entities" have numeric labels
-        # pandas.read_csv(..., dtype=str) does not work properly.
-        df = df.astype(dtype=str)
-        return df
+    def _load_df(self, key: Union[None, EASide, Tuple[EASide, EASide]], names: List[str]) -> pandas.DataFrame:
+        return read_zipfile_csv(
+            path=self.zip_path,
+            inner_path=str(self._relative_path(graph_pair=self.graph_pair, key=key)),
+            header=None,
+            names=names,
+            sep="@@@",
+            engine="python",
+            encoding="utf8",
+            dtype=str,
+        )  # .astypye(str)
 
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         logger.info(f"Loading graph for side: {side}")
