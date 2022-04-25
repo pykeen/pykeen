@@ -19,7 +19,7 @@ from pystow.utils import read_zipfile_csv
 from .base import EA_SIDES, SIDE_LEFT, EADataset, EASide
 from ...constants import PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
-from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TorchRandomHint
+from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 
 __all__ = [
     "OpenEA",
@@ -140,13 +140,23 @@ class OpenEA(EADataset):
         )
 
     def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
-        return super()._load_alignment()
+        return read_zipfile_csv(
+            path=self.zip_path,
+            inner_path=str(self.inner_path.joinpath("ent_links")),
+            header=None,
+            names=list(EA_SIDES),
+            sep="\t",
+            encoding="utf8",
+            dtype=str,
+        )
 
 
 @click.command()
 @verbose_option
 def _main():
-    for size, version, graph_pair, side in itertools.product(GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, EA_SIDES):
+    for size, version, graph_pair, side in itertools.product(
+        GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, EA_SIDES + (None,)
+    ):
         ds = OpenEA(graph_pair=graph_pair, side=side, size=size, version=version)
         ds.summarize()
 
