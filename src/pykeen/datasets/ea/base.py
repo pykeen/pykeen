@@ -2,7 +2,7 @@
 
 import logging
 from abc import abstractmethod
-from typing import Iterable, Literal, Optional, Tuple
+from typing import Iterable, Optional, Tuple
 
 import pandas
 from class_resolver import HintOrType, OptionalKwargs
@@ -10,13 +10,8 @@ from class_resolver import HintOrType, OptionalKwargs
 from .combination import GraphPairCombinator, graph_combinator_resolver
 from ..base import EagerDataset
 from ...triples import TriplesFactory
-from ...typing import TorchRandomHint
+from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint
 from ...utils import format_relative_comparison
-
-EASide = Literal["left", "right"]
-SIDE_LEFT: EASide = "left"
-SIDE_RIGHT: EASide = "right"
-EA_SIDES: Tuple[EASide, EASide] = (SIDE_LEFT, SIDE_RIGHT)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +26,7 @@ class EADataset(EagerDataset):
         self,
         *,
         metadata: OptionalKwargs = None,
-        side: Optional[EASide] = SIDE_LEFT,
+        side: Optional[EASide] = EA_SIDE_LEFT,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),

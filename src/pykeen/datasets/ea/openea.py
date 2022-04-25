@@ -16,10 +16,10 @@ from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
 
-from .base import EA_SIDES, SIDE_LEFT, EADataset, EASide
+from .base import EADataset
 from ...constants import PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
-from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
+from ...typing import EA_SIDE_LEFT, EA_SIDES, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, EASide
 
 __all__ = [
     "OpenEA",
@@ -123,7 +123,7 @@ class OpenEA(EADataset):
 
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         # left side has files ending with 1, right side with 2
-        one_or_two = "1" if side == SIDE_LEFT else "2"
+        one_or_two = "1" if side == EA_SIDE_LEFT else "2"
         file_name = f"rel_triples_{one_or_two}"
         return TriplesFactory.from_labeled_triples(
             triples=read_zipfile_csv(

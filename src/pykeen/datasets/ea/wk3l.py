@@ -17,10 +17,10 @@ from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
 
-from .base import EA_SIDES, SIDE_LEFT, SIDE_RIGHT, EADataset, EASide
+from .base import EADataset
 from ...constants import PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
-from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
+from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, EASide
 
 __all__ = [
     "MTransEDataset",
@@ -37,7 +37,7 @@ EN_DE: GraphPair = "en_de"
 EN_FR: GraphPair = "en_fr"
 GRAPH_PAIRS = (EN_DE, EN_FR)
 WK3L_MODULE = PYKEEN_DATASETS_MODULE.submodule("wk3l")
-EA_SIDES_R: Tuple[EASide, EASide] = (SIDE_RIGHT, SIDE_LEFT)
+EA_SIDES_R: Tuple[EASide, EASide] = (EA_SIDE_RIGHT, EA_SIDE_LEFT)
 
 
 class MTransEDataset(EADataset, ABC):
@@ -120,7 +120,7 @@ class MTransEDataset(EADataset, ABC):
         # extract entity alignments
         # (h1, r1, t1) = (h2, r2, t2) => h1 = h2 and t1 = t2
         for column in [LABEL_HEAD, LABEL_TAIL]:
-            part = df.loc[:, [(SIDE_LEFT, column), (SIDE_RIGHT, column)]].copy()
+            part = df.loc[:, [(EA_SIDE_LEFT, column), (EA_SIDE_RIGHT, column)]].copy()
             part.columns = list(EA_SIDES)
             dfs.append(part)
         return pandas.concat(dfs)
@@ -151,13 +151,13 @@ class WK3l15k(MTransEDataset):
 
     DATASET_NAME = "WK3l-15k"
     FILE_NAMES = {
-        (EN_DE, SIDE_LEFT): "P_en_v6.csv",
-        (EN_DE, SIDE_RIGHT): "P_de_v6.csv",
+        (EN_DE, EA_SIDE_LEFT): "P_en_v6.csv",
+        (EN_DE, EA_SIDE_RIGHT): "P_de_v6.csv",
         (EN_DE, EA_SIDES): "en2de_fk.csv",  # left-to-right entity alignment
         (EN_DE, EA_SIDES_R): "de2en_fk.csv",  # right-to-left entity alignment
         (EN_DE, None): "P_en_de_v6.csv",  # triple alignment
-        (EN_FR, SIDE_LEFT): "P_en_v5.csv",
-        (EN_FR, SIDE_RIGHT): "P_fr_v5.csv",
+        (EN_FR, EA_SIDE_LEFT): "P_en_v5.csv",
+        (EN_FR, EA_SIDE_RIGHT): "P_fr_v5.csv",
         (EN_FR, EA_SIDES): "en2fr_fk.csv",  # left-to-right entity alignment
         (EN_FR, EA_SIDES_R): "fr2en_fk.csv",  # right-to-left entity alignment
         (EN_FR, None): "P_en_fr_v5.csv",  # triple alignment
@@ -189,13 +189,13 @@ class WK3l120k(MTransEDataset):
 
     DATASET_NAME = "WK3l-120k"
     FILE_NAMES = {
-        (EN_DE, SIDE_LEFT): "P_en_v6_120k.csv",
-        (EN_DE, SIDE_RIGHT): "P_de_v6_120k.csv",
+        (EN_DE, EA_SIDE_LEFT): "P_en_v6_120k.csv",
+        (EN_DE, EA_SIDE_RIGHT): "P_de_v6_120k.csv",
         (EN_DE, EA_SIDES): "en2de_fk_120k.csv",  # left-to-right entity alignment
         (EN_DE, EA_SIDES_R): "de2en_fk_120k.csv",  # right-to-left entity alignment
         (EN_DE, None): "P_en_de_v6_120k.csv",  # triple alignment
-        (EN_FR, SIDE_LEFT): "P_en_v5_120k.csv",
-        (EN_FR, SIDE_RIGHT): "P_fr_v5_120k.csv",
+        (EN_FR, EA_SIDE_LEFT): "P_en_v5_120k.csv",
+        (EN_FR, EA_SIDE_RIGHT): "P_fr_v5_120k.csv",
         (EN_FR, EA_SIDES): "en2fr_fk_120k.csv",  # left-to-right entity alignment
         (EN_FR, EA_SIDES_R): "fr2en_fk_120k.csv",  # right-to-left entity alignment
         (EN_FR, None): "P_en_fr_v5_120k.csv",  # triple alignment
@@ -224,13 +224,13 @@ class CN3l(MTransEDataset):
 
     DATASET_NAME = "CN3l"
     FILE_NAMES = {
-        (EN_DE, SIDE_LEFT): "C_en_d.csv",
-        (EN_DE, SIDE_RIGHT): "C_de.csv",
+        (EN_DE, EA_SIDE_LEFT): "C_en_d.csv",
+        (EN_DE, EA_SIDE_RIGHT): "C_de.csv",
         (EN_DE, EA_SIDES): "en2de_cn.csv",  # left-to-right entity alignment
         (EN_DE, EA_SIDES_R): "de2en_cn.csv",  # right-to-left entity alignment
         (EN_DE, None): "C_en_de.csv",  # triple alignment
-        (EN_FR, SIDE_LEFT): "C_en_f.csv",
-        (EN_FR, SIDE_RIGHT): "C_fr.csv",
+        (EN_FR, EA_SIDE_LEFT): "C_en_f.csv",
+        (EN_FR, EA_SIDE_RIGHT): "C_fr.csv",
         (EN_FR, EA_SIDES): "en2fr_cn.csv",  # left-to-right entity alignment
         (EN_FR, EA_SIDES_R): "fr2en_cn.csv",  # right-to-left entity alignment
         (EN_FR, None): "C_en_fr.csv",  # triple alignment
