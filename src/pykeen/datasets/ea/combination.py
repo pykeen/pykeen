@@ -1,7 +1,7 @@
 """Combination strategies for entity alignment datasets."""
 import logging
 from abc import abstractmethod
-from typing import Dict
+from typing import Dict, Tuple
 
 import pandas
 import torch
@@ -27,7 +27,7 @@ class GraphPairCombinator:
         right: TriplesFactory,
         alignment: pandas.DataFrame,
         **kwargs,
-    ) -> TriplesFactory:
+    ) -> Tuple[TriplesFactory, torch.LongTensor]:
         """
         Combine two graphs using the alignment information.
 
@@ -41,13 +41,20 @@ class GraphPairCombinator:
             additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`
 
         :return:
-            a single triples factory comprising the joint graph.
+            a single triples factory comprising the joint graph, as well as a tensor of pairs of matching IDs.
+            The tensor of matching pairs has shape `(2, num_alignments)`, where `num_alignments` can also be 0.
         """
         raise NotImplementedError
 
 
 class DisjointGraphPairCombinator(GraphPairCombinator):
     """This combinator keeps both graphs as disconnected components."""
+
+    # TODO: implement
+
+
+class SwapGraphPairCombinator(GraphPairCombinator):
+    """Add extra triples by swapping aligned entities."""
 
     # TODO: implement
 
@@ -111,7 +118,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             **kwargs,
-        )
+        ), torch.stack([left_id, right_id])
 
 
 class CollapseGraphPairCombinator(GraphPairCombinator):
@@ -160,13 +167,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
             entity_ids=None,
             relation_ids=None,
             **kwargs,
-        )
-
-
-class SwapGraphPairCombinator(GraphPairCombinator):
-    """Add extra triples by swapping aligned entities."""
-
-    # TODO: implement
+        ), torch.empty(size=(2, 0), dtype=torch.long)
 
 
 graph_combinator_resolver: ClassResolver[GraphPairCombinator] = ClassResolver.from_subclasses(

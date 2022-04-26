@@ -49,11 +49,11 @@ class EADataset(EagerDataset):
                 )
             # combine
             self.combination = graph_combinator_resolver.make(combination, pos_kwargs=combination_kwargs)
-            tf = self.combination(left=left, right=right, alignment=alignment)  # **kwargs
+            tf, self.alignment = self.combination(left=left, right=right, alignment=alignment)  # **kwargs
         elif side not in EA_SIDES:
             raise ValueError(f"side must be one of {EA_SIDES} or None")
         else:
-            self.combination = None
+            self.combination = self.alignment = None
             tf = self._load_graph(side=side)
         # store for repr
         self.side = side
