@@ -1323,7 +1323,10 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     return out
 
 
-def normalize_path(path: Union[str, pathlib.Path, TextIO], mkdir: bool = False) -> pathlib.Path:
+PathType = Union[str, pathlib.Path, TextIO]
+
+
+def normalize_path(path: Optional[PathType], mkdir: bool = False, default: Optional[PathType] = None) -> pathlib.Path:
     """
     Normalize a path.
 
@@ -1331,10 +1334,16 @@ def normalize_path(path: Union[str, pathlib.Path, TextIO], mkdir: bool = False) 
         the path in either of the valid forms.
     :param mkdir:
         whether to ensure that the path refers to an existing directory by creating it if necessary
+    :param default:
+        the default to use if path is None
 
     :return:
         the absolute and resolved path
     """
+    if path is None:
+        if default is None:
+            raise ValueError("If no default is provided, path cannot be None.")
+        path = default
     if isinstance(path, TextIO):
         path = path.name
     if isinstance(path, str):
