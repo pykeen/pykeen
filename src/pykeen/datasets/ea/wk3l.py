@@ -73,9 +73,9 @@ class MTransEDataset(EADataset, ABC):
         # store *before* calling super to have it available when loading the graphs
         self.graph_pair = graph_pair
         # ensure zip file is present
-        # TODO: hex-digest?
-        # hexdigests=dict(sha512=self.SHA512)
-        self.zip_path = WK3L_MODULE.ensure_from_google(name="data.zip", file_id=GOOGLE_DRIVE_ID)
+        self.zip_path = WK3L_MODULE.ensure_from_google(
+            name="data.zip", file_id=GOOGLE_DRIVE_ID, download_kwargs=dict(hexdigests=dict(sha512=self.SHA512))
+        )
         super().__init__(**kwargs)
 
     @classmethod
