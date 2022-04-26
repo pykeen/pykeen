@@ -35,12 +35,12 @@ import pytest
 import torch
 import torch.utils.data
 import unittest_templates
+from class_resolver import HintOrType
 from click.testing import CliRunner, Result
 from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
-from class_resolver import HintOrType
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -64,13 +64,7 @@ from pykeen.metrics.ranking import (
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
-from pykeen.nn.modules import (
-    DistMultInteraction,
-    FunctionalInteraction,
-    Interaction,
-    LiteralInteraction,
-    TransEInteraction,
-)
+from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.nn.representation import Representation
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
