@@ -12,10 +12,9 @@ from typing import Any, Mapping, Optional, Union
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
-from pykeen.utils import normalize_path
-
 from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
+from ...utils import normalize_path
 
 __all__ = [
     # Base class
