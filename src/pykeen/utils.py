@@ -1326,12 +1326,16 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
 PathType = Union[str, pathlib.Path, TextIO]
 
 
-def normalize_path(path: Optional[PathType], mkdir: bool = False, default: Optional[PathType] = None) -> pathlib.Path:
+def normalize_path(
+    path: Optional[PathType], *other: Union[str, pathlib.Path], mkdir: bool = False, default: Optional[PathType] = None
+) -> pathlib.Path:
     """
     Normalize a path.
 
     :param path:
         the path in either of the valid forms.
+    :param other:
+        additional parts to join to the path
     :param mkdir:
         whether to ensure that the path refers to an existing directory by creating it if necessary
     :param default:
@@ -1355,6 +1359,8 @@ def normalize_path(path: Optional[PathType], mkdir: bool = False, default: Optio
         path = pathlib.Path(path)
     if not isinstance(path, pathlib.Path):
         raise TypeError(f"path is invalid type: {type(path)}")
+    if other:
+        path = path.joinpath(other)
     # resolve path to make sure it is an absolute path
     path = path.expanduser().resolve()
     # ensure directory exists
