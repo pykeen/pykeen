@@ -1337,9 +1337,9 @@ def normalize_path(path: Optional[PathType], mkdir: bool = False, default: Optio
     :param default:
         the default to use if path is None
 
-    :raise TypeError:
+    :raises TypeError:
         if `path` is of unsuitable type
-    :raise ValueError:
+    :raises ValueError:
         if `path` and `default` are both `None`
 
     :return:
