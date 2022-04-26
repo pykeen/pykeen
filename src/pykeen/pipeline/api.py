@@ -224,6 +224,7 @@ from ..utils import (
     get_json_bytes_io,
     get_model_io,
     load_configuration,
+    normalize_path,
     random_non_negative_int,
     resolve_device,
     set_random_seed,
@@ -380,12 +381,7 @@ class PipelineResult(Result):
         **_kwargs,
     ) -> None:
         """Save all artifacts in the given directory."""
-        if isinstance(directory, str):
-            directory = pathlib.Path(directory)
-        # resolve directory to make sure it is an absolute path
-        directory = directory.expanduser().resolve()
-        # ensure directory exists
-        directory.mkdir(exist_ok=True, parents=True)
+        directory = normalize_path(path=directory, mkdir=True)
 
         # always save results as json file
         with directory.joinpath("results.json").open("w") as file:

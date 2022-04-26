@@ -111,6 +111,7 @@ __all__ = [
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
     "logcumsumexp",
+    "normalize_path",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1319,6 +1320,28 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     out = np.log(s)
     out += a_max
     return out
+
+
+def normalize_path(path: Union[str, pathlib.Path], mkdir: bool = False) -> pathlib.Path:
+    """
+    Normalize a path.
+
+    :param path:
+        the path in either of the valid forms.
+    :param mkdir:
+        whether to ensure that the path refers to an existing directory by creating it if necessary
+
+    :return:
+        the absolute and resolved path
+    """
+    if isinstance(path, str):
+        path = pathlib.Path(path)
+    # resolve path to make sure it is an absolute path
+    path = path.expanduser().resolve()
+    # ensure directory exists
+    if mkdir:
+        path.mkdir(exist_ok=True, parents=True)
+    return path
 
 
 if __name__ == "__main__":
