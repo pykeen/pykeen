@@ -70,7 +70,7 @@ def xavier_uniform_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
 def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     r"""Initialize weights of the tensor similarly to Glorot/Xavier initialization.
 
-    Proceed as if it was a linear layer with `fan_in` of zero, `fan_out` of `prod(tensor.shape[1:])` and Xavier uniform
+    Proceed as if it was a linear layer with `fan_in` of zero, `fan_out` of `prod(tensor.shape[1:])` and Xavier Normal
     initialization is used, i.e. fill the weight of input `tensor` with values
     sampled from :math:`\mathcal{N}(0, \text{std}^2)` where
 
