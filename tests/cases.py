@@ -40,6 +40,7 @@ from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
+from class_resolver import HintOrType
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -63,7 +64,13 @@ from pykeen.metrics.ranking import (
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
-from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.nn.modules import (
+    DistMultInteraction,
+    FunctionalInteraction,
+    Interaction,
+    LiteralInteraction,
+    TransEInteraction,
+)
 from pykeen.nn.representation import Representation
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
@@ -1608,15 +1615,25 @@ class LiteralTestCase(InteractionTestCase):
 class InitializerTestCase(unittest.TestCase):
     """A test case for initializers."""
 
+    #: the number of entities
+    num_entities: ClassVar[int] = 33
+
     #: the shape of the tensor to initialize
-    shape: Tuple[int, ...] = (3, 4)
+    shape: ClassVar[Tuple[int, ...]] = (3,)
 
     #: to be initialized / set in subclass
     initializer: Initializer
 
+    #: the interaction to use for testing a model
+    interaction: ClassVar[HintOrType[Interaction]] = DistMultInteraction
+    dtype: ClassVar[torch.dtype] = torch.get_default_dtype()
+
     def test_initialization(self):
         """Test whether the initializer returns a modified tensor."""
-        x = torch.rand(*self.shape)
+        shape = (self.num_entities, *self.shape)
+        if self.dtype.is_complex:
+            shape = shape + (2,)
+        x = torch.rand(size=shape)
         # initializers *may* work in-place => clone
         y = self.initializer(x.clone())
         assert not (x == y).all()
@@ -1628,21 +1645,17 @@ class InitializerTestCase(unittest.TestCase):
 
     def test_model(self):
         """Test whether initializer can be used for a model."""
-        triples_factory = generation.generate_triples_factory(
-            num_entities=self.shape[0],
-        )
-        model = pykeen.models.TransE(
+        triples_factory = generation.generate_triples_factory(num_entities=self.num_entities)
+        # actual number may be different...
+        self.num_entities = triples_factory.num_entities
+        model = pykeen.models.ERModel(
             triples_factory=triples_factory,
-            embedding_dim=self.shape[1],
-            entity_initializer=self.initializer,
+            interaction=self.interaction,
+            entity_representations_kwargs=dict(shape=self.shape, initializer=self.initializer, dtype=self.dtype),
+            relation_representations_kwargs=dict(shape=self.shape),
             random_seed=0,
         ).to(resolve_device())
         model.reset_parameters_()
-
-        with tempfile.TemporaryDirectory() as d:
-            path = pathlib.Path(d) / "test.pkl"
-            model.save_state(path)
-            model.load_state(path)
 
 
 class PredictBaseTestCase(unittest.TestCase):

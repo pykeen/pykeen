@@ -8,6 +8,7 @@ import torch
 
 import pykeen.nn.init
 from pykeen.datasets import Nations
+from pykeen.nn.modules import ComplExInteraction
 from tests import cases
 
 try:
@@ -34,13 +35,17 @@ class PhasesTestCase(cases.InitializerTestCase):
     """Tests for phase initialization."""
 
     initializer = staticmethod(pykeen.nn.init.init_phases)
+    # complex tensor
+    dtype = torch.cfloat
+    interaction = ComplExInteraction
 
     def _verify_initialization(self, x: torch.FloatTensor) -> None:  # noqa: D102
         # check value range
         assert (x >= -1.0).all()
         assert (x <= 1.0).all()
-        # check sin**2 + cos**2 == 1
-        assert torch.allclose(x.view(*x.shape[:-1], 2, -1).pow(2).sum(dim=-2), torch.ones(*x.shape[:-1], 1))
+        # check modulus == 1
+        mod = torch.view_as_complex(x).abs()
+        assert torch.allclose(mod, torch.ones_like(mod))
 
 
 class PretrainedInitializerTestCase(cases.InitializerTestCase):
@@ -48,7 +53,7 @@ class PretrainedInitializerTestCase(cases.InitializerTestCase):
 
     def setUp(self) -> None:
         """Prepare for test."""
-        self.pretrained = torch.rand(*self.shape)
+        self.pretrained = torch.rand(self.num_entities, *self.shape)
         self.initializer = pykeen.nn.init.PretrainedInitializer(tensor=self.pretrained)
 
     def _verify_initialization(self, x: torch.FloatTensor) -> None:  # noqa: D102
@@ -107,4 +112,5 @@ class LabelBasedInitializerTestCase(cases.InitializerTestCase):
             triples_factory=dataset.training,
             for_entities=True,
         )
-        self.shape = self.initializer.tensor.shape
+        self.num_entities = dataset.num_entities
+        self.shape = self.initializer.tensor.shape[1:]
