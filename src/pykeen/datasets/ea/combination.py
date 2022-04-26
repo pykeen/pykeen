@@ -46,6 +46,12 @@ class GraphPairCombinator:
         raise NotImplementedError
 
 
+class DisjointGraphPairCombinator(GraphPairCombinator):
+    """This combinator keeps both graphs as disconnected components."""
+
+    # TODO: implement
+
+
 class ExtraRelationGraphPairCombinator(GraphPairCombinator):
     """This combinator keeps all entities, but introduces a novel alignment relation."""
 
