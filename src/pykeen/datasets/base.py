@@ -379,9 +379,7 @@ class LazyDataset(Dataset):
             :class:`pykeen.datasets.base.Dataset`.
         :returns: A path object for the calculated cache root directory
         """
-        if cache_root is None:
-            cache_root = PYKEEN_DATASETS
-        cache_root = normalize_path(cache_root)
+        cache_root = normalize_path(cache_root, default=PYKEEN_DATASETS)
         cache_root = self._extend_cache_root(cache_root=cache_root)
         cache_root.mkdir(parents=True, exist_ok=True)
         logger.debug("using cache root at %s", cache_root.as_uri())

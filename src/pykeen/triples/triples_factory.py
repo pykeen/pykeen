@@ -22,6 +22,7 @@ from typing import (
     Optional,
     Sequence,
     Set,
+    TextIO,
     TypeVar,
     Union,
     cast,
@@ -792,8 +793,7 @@ class CoreTriplesFactory:
         :param path:
             The path to store the triples factory to.
         """
-        path = normalize_path(path)
-        path.mkdir(exist_ok=True, parents=True)
+        path = normalize_path(path, mkdir=True)
 
         # store numeric triples
         pd.DataFrame(

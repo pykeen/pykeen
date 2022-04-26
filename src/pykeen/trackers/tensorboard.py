@@ -40,11 +40,9 @@ class TensorBoardResultTracker(ResultTracker):
         """
         import torch.utils.tensorboard
 
-        if experiment_path is None:
-            if experiment_name is None:
-                experiment_name = time.strftime("%Y-%m-%d-%H-%M-%S")
-            experiment_path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
-        experiment_path = normalize_path(experiment_path)
+        if experiment_name is None:
+            experiment_name = time.strftime("%Y-%m-%d-%H-%M-%S")
+        experiment_path = normalize_path(experiment_path, default=PYKEEN_LOGS.joinpath("tensorboard", experiment_name))
 
         # if we really need access to the path later, we can expose it as a property
         #  via self.writer.log_dir

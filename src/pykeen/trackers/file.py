@@ -57,11 +57,9 @@ class FileResultTracker(ResultTracker):
         :param name: The default file name for a file if no path is given. If no default is given,
             the current time is used.
         """
-        if path is None:
-            if name is None:
-                name = datetime.datetime.now().isoformat()
-            path = PYKEEN_LOGS / f"{name}.{self.extension}"
-        path = normalize_path(path)
+        if name is None:
+            name = datetime.datetime.now().isoformat()
+        path = normalize_path(path, default=PYKEEN_LOGS.joinpath(f"{name}.{self.extension}"))
         logger.info(f"Logging to {path.as_uri()}.")
         path.parent.mkdir(exist_ok=True, parents=True)
         self.file = path.open(mode="w", newline="", encoding="utf8")
