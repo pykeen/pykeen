@@ -222,7 +222,7 @@ def _run_ablation_experiments(
         )
 
 
-def iter_unique_ids(disable: bool = False) -> Iterable[pathlib.Path]:
+def iter_unique_ids(disable: bool = False) -> Iterable[str]:
     """Iterate unique id to append to a path."""
     if disable:
         return []
