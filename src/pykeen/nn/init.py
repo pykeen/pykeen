@@ -76,9 +76,16 @@ def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
 
 
 def init_phases(x: torch.Tensor) -> torch.Tensor:
-    r"""Generate random phases between 0 and :math:`2\pi`."""
-    phases = 2 * np.pi * torch.rand_like(x[..., : x.shape[-1] // 2])
-    return torch.cat([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
+    r"""
+    Generate random phases between 0 and :math:`2\pi`.
+
+    This method works on the canonical torch real representation of complex tensors.
+
+    .. seealso ::
+        https://pytorch.org/docs/stable/complex_numbers.html
+    """
+    phases = 2 * np.pi * torch.rand_like(torch.view_as_complex(x).real)
+    return torch.view_as_real(torch.complex(real=phases.cos(), imag=phases.sin())).detach()
 
 
 xavier_uniform_norm_ = compose(
