@@ -70,7 +70,7 @@ from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
-from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
+from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingCallback, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
 from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
 from pykeen.triples.splitting import Cleaner, Splitter
@@ -2290,4 +2290,23 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
                 )
             ),
             self.factory.num_triples,
+        )
+
+
+class TrainingCallbackTestCase(unittest_templates.GenericTestCase[TrainingCallback]):
+    """Base test case for training callbacks."""
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        self.dataset = Nations()
+        return kwargs
+
+    def test_pipeline(self):
+        """Test running a small pipeline with the provided callback."""
+        pipeline(
+            dataset=self.dataset,
+            model="distmult",
+            training_kwargs=dict(
+                callbacks=self.instance,
+            ),
         )
