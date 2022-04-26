@@ -187,14 +187,10 @@ def _help_reproduce(
 
     # Create directory in which all experimental artifacts are saved
     datetime = time.strftime("%Y-%m-%d-%H-%M-%S")
+    experiment_id = f"{datetime}_{uuid4()}"
     if file_name is not None:
-        experiment_id = f"{datetime}_{uuid4()}_{file_name}"
-    else:
-        experiment_id = f"{datetime}_{uuid4()}"
-
-    directory = normalize_path(directory)
-    output_directory = directory.joinpath(experiment_id)
-    output_directory.mkdir(exist_ok=True, parents=True)
+        experiment_id += f"_{file_name}"
+    output_directory = normalize_path(directory, experiment_id, mkdir=True)
 
     extra_kwargs = {} if extra_config is None else load_configuration(path=extra_config)
 

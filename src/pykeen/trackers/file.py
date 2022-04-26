@@ -59,9 +59,8 @@ class FileResultTracker(ResultTracker):
         """
         if name is None:
             name = datetime.datetime.now().isoformat()
-        path = normalize_path(path, default=PYKEEN_LOGS.joinpath(f"{name}.{self.extension}"))
+        path = normalize_path(path, default=PYKEEN_LOGS.joinpath(f"{name}.{self.extension}"), mkdir=True, is_file=True)
         logger.info(f"Logging to {path.as_uri()}.")
-        path.parent.mkdir(exist_ok=True, parents=True)
         self.file = path.open(mode="w", newline="", encoding="utf8")
 
     def end_run(self, success: bool = True) -> None:  # noqa: D102
