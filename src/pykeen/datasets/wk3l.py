@@ -112,6 +112,7 @@ class MTransEDataset(LazyDataset, ABC):
         if eager:
             self._load()
 
+    # docstr-coverage: inherited
     def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:  # noqa: D102
         # shared directory for multiple datasets.
         return cache_root.joinpath("wk3l")

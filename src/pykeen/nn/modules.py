@@ -509,6 +509,7 @@ class NormBasedInteraction(
         self.p = p
         self.power_norm = power_norm
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(p=self.p, power_norm=self.power_norm)
 
@@ -689,6 +690,7 @@ class ConvEInteraction(
         self.embedding_width = embedding_width
         self.input_channels = input_channels
 
+    # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
@@ -697,6 +699,7 @@ class ConvEInteraction(
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, r=r, t=t[0], t_bias=t[1])
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(
             input_channels=self.input_channels,
@@ -731,6 +734,7 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
         self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # Use Xavier initialization for weight; bias to zero
         nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain("relu"))
@@ -742,6 +746,7 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(
             conv=self.conv,
@@ -801,6 +806,7 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         self.activation = nn.ReLU()
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(
             hidden=self.hidden,
@@ -808,6 +814,7 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
             final=self.hidden_to_score,
         )
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # Initialize biases with zero
         nn.init.zeros_(self.hidden.bias)
@@ -848,6 +855,7 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             nn.ReLU(),
         )
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(mlp=self.mlp)
 
@@ -870,6 +878,7 @@ class TransRInteraction(
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
 
+    # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
@@ -928,6 +937,7 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
             inner_non_linearity = nn.Tanh()
         self.inner_non_linearity = inner_non_linearity
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         embedding_dim = self.d_e.shape[0]
         bound = math.sqrt(6) / embedding_dim

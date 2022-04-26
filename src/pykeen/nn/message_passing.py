@@ -280,6 +280,7 @@ class BasesDecomposition(Decomposition):
 
         return out
 
+    # docstr-coverage: inherited
     def forward(
         self,
         x: torch.FloatTensor,
@@ -365,12 +366,14 @@ class BlockDecomposition(Decomposition):
         self.num_blocks = num_blocks
         self.block_size = block_size
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         block_size = self.blocks.shape[-1]
         # Xavier Glorot initialization of each block
         std = torch.sqrt(torch.as_tensor(2.0)) / (2 * block_size)
         nn.init.normal_(self.blocks, std=std)
 
+    # docstr-coverage: inherited
     def forward(
         self,
         x: torch.FloatTensor,
@@ -499,6 +502,7 @@ class RGCNLayer(nn.Module):
             activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
         self.activation = activation
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         if self.bias is not None:
             nn.init.zeros_(self.bias)
@@ -692,12 +696,14 @@ class RGCNRepresentation(Representation):
         # buffering of enriched representations
         self.enriched_embeddings = None
 
+    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
 
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 

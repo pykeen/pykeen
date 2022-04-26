@@ -314,6 +314,7 @@ class EagerDataset(Dataset):
         )
         self.metadata = metadata
 
+    # docstr-coverage: inherited
     def _extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super()._extra_repr()
         yield f"metadata={self.metadata}"
@@ -585,6 +586,7 @@ class RemoteDataset(PathDataset):
         res.raise_for_status()
         return BytesIO(res.content)
 
+    # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
         all_unpacked = all(path.is_file() for path in self._get_paths())
 
@@ -599,6 +601,7 @@ class RemoteDataset(PathDataset):
 class TarFileRemoteDataset(RemoteDataset):
     """A remote dataset stored as a tar file."""
 
+    # docstr-coverage: inherited
     def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
         with tarfile.open(fileobj=archive_file) as tf:
             tf.extractall(path=self.cache_root)
@@ -659,6 +662,7 @@ class PackedZipRemoteDataset(LazyDataset):
             self._load()
             self._load_validation()
 
+    # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
         self._training = self._load_helper(self.relative_training_path)
         self._testing = self._load_helper(

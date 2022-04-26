@@ -392,7 +392,7 @@ def hole_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-) -> torch.FloatTensor:  # noqa: D102
+) -> torch.FloatTensor:
     """Evaluate the HolE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)

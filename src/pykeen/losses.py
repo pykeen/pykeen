@@ -399,6 +399,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
     synonyms = {"Negative Log Likelihood Loss"}
 
+    # docstr-coverage: inherited
     def forward(
         self,
         scores: torch.FloatTensor,
@@ -421,6 +422,7 @@ class MSELoss(PointwiseLoss):
 
     synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
+    # docstr-coverage: inherited
     def forward(
         self,
         scores: torch.FloatTensor,
@@ -463,6 +465,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
+    # docstr-coverage: inherited
     def process_slcwa_scores(
         self,
         positive_scores: torch.FloatTensor,
@@ -486,6 +489,7 @@ class MarginPairwiseLoss(PairwiseLoss):
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
+    # docstr-coverage: inherited
     def process_lcwa_scores(
         self,
         predictions: torch.FloatTensor,
@@ -788,6 +792,7 @@ class DoubleMarginLoss(PointwiseLoss):
         self.positive_weight = positive_negative_balance
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
+    # docstr-coverage: inherited
     def process_slcwa_scores(
         self,
         positive_scores: torch.FloatTensor,
@@ -822,6 +827,7 @@ class DoubleMarginLoss(PointwiseLoss):
         negative_loss = self._reduction_method(self.margin_activation(self.negative_margin + negative_scores))
         return self.positive_weight * positive_loss + self.negative_weight * negative_loss
 
+    # docstr-coverage: inherited
     def process_lcwa_scores(
         self,
         predictions: torch.FloatTensor,
@@ -982,6 +988,7 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
     name: Binary cross entropy (after sigmoid)
     """
 
+    # docstr-coverage: inherited
     def forward(
         self,
         logits: torch.FloatTensor,
@@ -1043,6 +1050,7 @@ class CrossEntropyLoss(SetwiseLoss):
     name: Cross entropy
     """
 
+    # docstr-coverage: inherited
     def process_slcwa_scores(
         self,
         positive_scores: torch.FloatTensor,
@@ -1075,6 +1083,7 @@ class CrossEntropyLoss(SetwiseLoss):
             reduction=self.reduction,
         )
 
+    # docstr-coverage: inherited
     def process_lcwa_scores(
         self,
         predictions: torch.FloatTensor,
@@ -1124,6 +1133,7 @@ class NSSALoss(SetwiseLoss):
         self.inverse_softmax_temperature = adversarial_temperature
         self.margin = margin
 
+    # docstr-coverage: inherited
     def process_lcwa_scores(
         self,
         predictions: torch.FloatTensor,
@@ -1153,6 +1163,7 @@ class NSSALoss(SetwiseLoss):
             neg_weights=weights[~pos_mask],
         )
 
+    # docstr-coverage: inherited
     def process_slcwa_scores(
         self,
         positive_scores: torch.FloatTensor,
@@ -1273,6 +1284,7 @@ class FocalLoss(PointwiseLoss):
         self.alpha = alpha
         self.gamma = gamma
 
+    # docstr-coverage: inherited
     def forward(
         self,
         prediction: torch.FloatTensor,

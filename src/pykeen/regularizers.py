@@ -120,10 +120,12 @@ class NoRegularizer(Regularizer):
     #: The default strategy for optimizing the no-op regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
+    # docstr-coverage: inherited
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
         pass
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         # always return zero
         return torch.zeros(1, dtype=x.dtype, device=x.device)
@@ -158,6 +160,7 @@ class LpRegularizer(Regularizer):
         self.normalize = normalize
         self.p = p
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
@@ -187,6 +190,7 @@ class PowerSumRegularizer(Regularizer):
         self.normalize = normalize
         self.p = p
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
@@ -210,9 +214,11 @@ class TransHRegularizer(Regularizer):
         super().__init__(weight=weight, apply_only_once=True, parameters=parameters)
         self.epsilon = epsilon
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         raise NotImplementedError("TransH regularizer is order-sensitive!")
 
+    # docstr-coverage: inherited
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         if len(tensors) != 3:
             raise KeyError("Expects exactly three tensors")
@@ -259,6 +265,7 @@ class CombinedRegularizer(Regularizer):
     def normalize(self):  # noqa: D102
         return any(r.normalize for r in self.regularizers)
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 

@@ -263,6 +263,7 @@ class RandomizedCleaner(Cleaner):
     3. Continue until ``move_id_mask`` has no true bits
     """
 
+    # docstr-coverage: inherited
     def cleanup_pair(
         self,
         reference: MappedTriples,

@@ -121,6 +121,7 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
