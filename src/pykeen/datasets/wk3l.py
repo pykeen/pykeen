@@ -9,7 +9,7 @@ import logging
 import pathlib
 import zipfile
 from abc import ABC
-from typing import ClassVar, Mapping, Optional, Tuple, cast
+from typing import ClassVar, Iterable, Mapping, Optional, Tuple, cast
 
 import click
 import pandas
@@ -112,9 +112,9 @@ class MTransEDataset(LazyDataset, ABC):
         if eager:
             self._load()
 
-    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:  # noqa: D102
+    def _cache_sub_directories(self) -> Iterable[str]:  # noqa: D102
         # shared directory for multiple datasets.
-        return cache_root.joinpath("wk3l")
+        yield "wk3l"
 
     def _load(self) -> None:
         path = self.cache_root.joinpath("data.zip")
