@@ -1327,7 +1327,11 @@ PathType = Union[str, pathlib.Path, TextIO]
 
 
 def normalize_path(
-    path: Optional[PathType], *other: Union[str, pathlib.Path], mkdir: bool = False, default: Optional[PathType] = None
+    path: Optional[PathType],
+    *other: Union[str, pathlib.Path],
+    mkdir: bool = False,
+    is_file: bool = False,
+    default: Optional[PathType] = None,
 ) -> pathlib.Path:
     """
     Normalize a path.
@@ -1338,6 +1342,8 @@ def normalize_path(
         additional parts to join to the path
     :param mkdir:
         whether to ensure that the path refers to an existing directory by creating it if necessary
+    :param is_file:
+        whether the path is intended to be a file - only relevant for creating directories
     :param default:
         the default to use if path is None
 
@@ -1365,7 +1371,10 @@ def normalize_path(
     path = path.expanduser().resolve()
     # ensure directory exists
     if mkdir:
-        path.mkdir(exist_ok=True, parents=True)
+        directory = path
+        if is_file:
+            directory = path.parent
+        directory.mkdir(exist_ok=True, parents=True)
     return path
 
 
