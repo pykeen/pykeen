@@ -25,14 +25,31 @@ class EADataset(EagerDataset):
     def __init__(
         self,
         *,
-        metadata: OptionalKwargs = None,
         side: Optional[EASide] = EA_SIDE_LEFT,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
         combination: HintOrType[GraphPairCombinator] = None,
         combination_kwargs: OptionalKwargs = None,
+        **kwargs,
     ) -> None:
+        """
+        Initialize the dataset.
+
+        :param side:
+            the side, if only a single graph should be considered, or `None` to combine the two graphs into a
+            single one, using `combination`.
+        :param create_inverse_triples:
+            whether to create inverse triples.
+        :param random_state:
+            the random state to use for reproducible splits
+        :param combination:
+            the graph combination. only effective if side is `None`
+        :param combination_kwargs:
+            additional keyword-based parameters for the graph combination
+        :param kwargs:
+            any additional keyword-based parameters are passed to :meth:`EagerDataset.__init__`.
+        """
         if side is None:
             # load both graphs
             left, right = [self._load_graph(side=side) for side in EA_SIDES]
@@ -61,7 +78,7 @@ class EADataset(EagerDataset):
         training, testing, validation = tf.split(ratios=split_ratios, random_state=random_state)
         # create inverse triples only for training
         training.create_inverse_triples = create_inverse_triples
-        super().__init__(training=training, testing=testing, validation=validation, metadata=metadata)
+        super().__init__(training=training, testing=testing, validation=validation, **kwargs)
 
     @abstractmethod
     def _load_graph(self, side: EASide) -> TriplesFactory:
