@@ -11,7 +11,7 @@ from typing import Any, ClassVar, Mapping, Optional, TextIO, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
-from ..utils import flatten_dictionary
+from ..utils import flatten_dictionary, normalize_path
 
 __all__ = [
     "FileResultTracker",
@@ -61,10 +61,7 @@ class FileResultTracker(ResultTracker):
             if name is None:
                 name = datetime.datetime.now().isoformat()
             path = PYKEEN_LOGS / f"{name}.{self.extension}"
-        elif isinstance(path, str):
-            path = pathlib.Path(path)
-        # as_uri() requires the path to be absolute. resolve additionally also normalizes the path
-        path = path.resolve()
+        path = normalize_path(path)
         logger.info(f"Logging to {path.as_uri()}.")
         path.parent.mkdir(exist_ok=True, parents=True)
         self.file = path.open(mode="w", newline="", encoding="utf8")

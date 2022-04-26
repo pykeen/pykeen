@@ -27,7 +27,7 @@ from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
-from ..utils import normalize_string
+from ..utils import normalize_path, normalize_string
 
 __all__ = [
     # Base classes
@@ -381,7 +381,7 @@ class LazyDataset(Dataset):
         """
         if cache_root is None:
             cache_root = PYKEEN_DATASETS
-        cache_root = pathlib.Path(cache_root).resolve()
+        cache_root = normalize_path(cache_root)
         cache_root = self._extend_cache_root(cache_root=cache_root)
         cache_root.mkdir(parents=True, exist_ok=True)
         logger.debug("using cache root at %s", cache_root.as_uri())

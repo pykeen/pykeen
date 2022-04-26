@@ -12,6 +12,8 @@ from typing import Any, Mapping, Optional, Union
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
+from pykeen.utils import normalize_path
+
 from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
 
@@ -168,7 +170,7 @@ class LazyInductiveDataset(InductiveDataset):
         """
         if cache_root is None:
             cache_root = PYKEEN_DATASETS
-        cache_root = pathlib.Path(cache_root).resolve()
+        cache_root = normalize_path(cache_root)
         cache_root = self._extend_cache_root(cache_root=cache_root)
         # add v1 / v2 / v3 / v4 for inductive splits if available
         if version is not None:

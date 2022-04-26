@@ -29,6 +29,7 @@ from typing import (
     Optional,
     Sequence,
     Set,
+    TextIO,
     Tuple,
     Type,
     TypeVar,
@@ -1322,7 +1323,7 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     return out
 
 
-def normalize_path(path: Union[str, pathlib.Path], mkdir: bool = False) -> pathlib.Path:
+def normalize_path(path: Union[str, pathlib.Path, TextIO], mkdir: bool = False) -> pathlib.Path:
     """
     Normalize a path.
 
@@ -1334,8 +1335,12 @@ def normalize_path(path: Union[str, pathlib.Path], mkdir: bool = False) -> pathl
     :return:
         the absolute and resolved path
     """
+    if isinstance(path, TextIO):
+        path = path.name
     if isinstance(path, str):
         path = pathlib.Path(path)
+    if not isinstance(path, pathlib.Path):
+        raise TypeError(f"path is invalid type: {type(path)}")
     # resolve path to make sure it is an absolute path
     path = path.expanduser().resolve()
     # ensure directory exists

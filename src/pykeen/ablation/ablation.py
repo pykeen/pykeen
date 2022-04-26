@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
-from ..utils import normalize_string
+from ..utils import normalize_path, normalize_string
 
 __all__ = [
     "ablation_pipeline",
@@ -140,8 +140,7 @@ def ablation_pipeline(
     :param create_unique_subdir: Defines, whether a unique sub-directory for the experimental artifacts should
         be created. The sub-directory name is defined  by the  current  data + a unique id.
     """
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
+    directory = normalize_path(directory)
     if create_unique_subdir:
         directory = _create_path_with_id(directory=directory)
 
@@ -283,8 +282,7 @@ def prepare_ablation_from_path(
         created.
     :return: pairs of output directories and HPO config paths inside those directories
     """
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
+    directory = normalize_path(directory)
     directory = _create_path_with_id(directory=directory)
     with open(path) as file:
         config = json.load(file)
@@ -424,8 +422,7 @@ def prepare_ablation(  # noqa:C901
             If the dataset is not specified correctly, i.e., dataset is not of type str, or a dictionary containing
             the paths to the training, testing, and validation data.
     """
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
+    directory = normalize_path(path=directory)
     if isinstance(datasets, str):
         datasets = [datasets]
     if isinstance(create_inverse_triples, bool):

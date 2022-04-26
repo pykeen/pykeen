@@ -15,7 +15,7 @@ import click
 import tabulate
 from more_click import verbose_option
 
-from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration
+from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_path
 
 __all__ = [
     "experiments",
@@ -178,8 +178,7 @@ def _help_reproduce(
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
-    if isinstance(path, str):
-        path = pathlib.Path(path).resolve()
+    path = normalize_path(path)
 
     if not path.is_file():
         click.secho(f"Could not find configuration at {path}", fg="red")
@@ -193,8 +192,7 @@ def _help_reproduce(
     else:
         experiment_id = f"{datetime}_{uuid4()}"
 
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
+    directory = normalize_path(directory)
     output_directory = directory.joinpath(experiment_id)
     output_directory.mkdir(exist_ok=True, parents=True)
 

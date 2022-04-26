@@ -649,8 +649,7 @@ def save_pipeline_results_to_directory(
     :param save_training: Should the training triples be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
+    directory = normalize_path(directory)
     replicates_directory = directory.joinpath("replicates")
     losses_rows = []
 

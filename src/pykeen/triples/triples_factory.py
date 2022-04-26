@@ -22,7 +22,6 @@ from typing import (
     Optional,
     Sequence,
     Set,
-    TextIO,
     TypeVar,
     Union,
     cast,
@@ -46,7 +45,7 @@ from ..typing import (
     RelationMapping,
     TorchRandomHint,
 )
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping, triple_tensor_to_set
+from ..utils import compact_mapping, format_relative_comparison, invert_mapping, triple_tensor_to_set, normalize_path
 
 __all__ = [
     "CoreTriplesFactory",
@@ -1306,15 +1305,3 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     steps = splits_steps(a, b)
     n = sum(tf.num_triples for tf in a)
     return 1 - steps / n
-
-
-def normalize_path(path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:
-    """Normalize path."""
-    if isinstance(path, TextIO):
-        return pathlib.Path(path.name).resolve()
-    elif isinstance(path, str):
-        return pathlib.Path(path).resolve()
-    elif isinstance(path, pathlib.Path):
-        return path.resolve()
-    else:
-        raise TypeError(f"path is invalid type: {type(path)}")
