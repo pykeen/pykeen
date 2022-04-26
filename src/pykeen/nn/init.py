@@ -35,22 +35,36 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def xavier_uniform_(tensor, gain: float = 1.0):
+def xavier_uniform_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     r"""Initialize weights of the tensor similarly to Glorot/Xavier initialization.
 
     Proceed as if it was a linear layer with fan_in of zero and Xavier uniform
-    initialization is used, i.e. fill the weight of input `embedding` with values values
+    initialization is used, i.e. fill the weight of input `tensor` with values
     sampled from :math:`\mathcal{U}(-a, a)` where
 
     .. math::
+        a = \text{gain} \times \sqrt{\frac{6}{\text{fan\_out}}}
 
-        a = \text{gain} \times \sqrt{\frac{6}{\text{embedding_dim}}}
+    where `fan_out` is given as `prod(tensor.shape[1:])`.
 
-    :param tensor: A tensor
-    :param gain: An optional scaling factor, defaults to 1.0.
-    :return: Embedding with weights by the Xavier uniform initializer.
+    .. seealso::
+        :meth:`torch.nn.init.xavier_uniform_`
+
+    Examples:
+        >>> w = torch.empty(3, 5)
+        >>> pykeen.nn.init.xavier_uniform_(w, gain=torch.nn.init.calculate_gain("relu"))
+
+    :param tensor:
+        a tensor to initialize
+    :param gain:
+        an optional scaling factor, defaults to 1.0.
+
+    :return:
+        tensor with weights by this initializer.
     """
-    bound = gain * 6 / math.sqrt(tensor.shape[-1])
+    # cf. torch.nn.init.xavier_uniform_
+    std = gain * math.sqrt(2.0 / float(np.prod(tensor.shape[1:])))
+    bound = math.sqrt(3.0) * std  # Calculate uniform bounds from standard deviation
     torch.nn.init.uniform_(tensor, -bound, bound)
     return tensor
 
