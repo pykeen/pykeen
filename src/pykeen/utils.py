@@ -1366,7 +1366,7 @@ def normalize_path(
     if not isinstance(path, pathlib.Path):
         raise TypeError(f"path is invalid type: {type(path)}")
     if other:
-        path = path.joinpath(other)
+        path = path.joinpath(*other)
     # resolve path to make sure it is an absolute path
     path = path.expanduser().resolve()
     # ensure directory exists
