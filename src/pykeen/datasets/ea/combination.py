@@ -47,8 +47,8 @@ def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[Map
         # append shifted mapped triples
         res.append(x + offset)
         # update offset
-        offset[[0, 2]] += e_offset
-        offset[1] += r_offset
+        offset[:, 0::2] += e_offset
+        offset[:, 1] += r_offset
     return torch.cat(res), offsets
 
 
