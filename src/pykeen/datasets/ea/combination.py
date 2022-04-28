@@ -4,11 +4,13 @@ from abc import abstractmethod
 from typing import Dict, Mapping, Tuple, Union
 
 import pandas
+import numpy
+from pandas.api.types import is_string_dtype, is_numeric_dtype
 import torch
 from class_resolver import ClassResolver
 
 from ...triples import CoreTriplesFactory, TriplesFactory
-from ...typing import COLUMN_HEAD, COLUMN_TAIL, EA_SIDE_LEFT, EA_SIDE_RIGHT, MappedTriples, TargetColumn
+from ...typing import COLUMN_HEAD, COLUMN_TAIL, EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, MappedTriples, TargetColumn
 from ...utils import format_relative_comparison, get_connected_components
 
 logger = logging.getLogger(__name__)
@@ -79,24 +81,48 @@ def merge_both_mappings(
 
 def filter_map_alignment(
     alignment: pandas.DataFrame,
-    left: TriplesFactory,
-    right: TriplesFactory,
+    left: CoreTriplesFactory,
+    right: CoreTriplesFactory,
     entity_offsets: torch.LongTensor,
-) -> Tuple[torch.LongTensor, torch.LongTensor]:
+) -> torch.LongTensor:
+    """
+    Convert dataframe with label or ID-based alignment.
+
+    :param alignment: columns: EA_SIDES
+        the dataframe with the alignment
+    :param left:
+        the triples factory of the left graph
+    :param right:
+        the triples factory of the right graph
+    :param entity_offsets: shape: (2,)
+        the entity offsets from old to new IDs
+
+    :return: shape: (2, num_alignments)
+        the ID-based alignment in new IDs
+    """
+    # convert labels to IDs
+    for side, tf in zip(EA_SIDES, (left, right)):
+        if isinstance(tf, TriplesFactory) and is_string_dtype(alignment[side]):
+            logger.debug(f"Mapping label-based alignment for {side}")
+            # map labels, using -1 as fill-value for invalid labels
+            # we cannot drop them here, since the two columns need to stay aligned
+            alignment[side] = alignment[side].apply(tf.entity_to_id.get, -1)
+        if not is_numeric_dtype(alignment[side]):
+            raise ValueError(f"Invalid dype in alignment dataframe for side={side}: {alignment[side].dtype}")
+
     # filter alignment
-    mask = ~(alignment[EA_SIDE_LEFT].isin(left.entity_to_id) & alignment[EA_SIDE_RIGHT].isin(right.entity_to_id))
-    if mask.any():
-        alignment = alignment.loc[~mask]
+    invalid_mask = (alignment < 0).any(axis=1) | alignment.values >= numpy.reshape(
+        numpy.asarray([left.num_entities, right.num_entities]), (1, 2)
+    )
+    if invalid_mask.any():
         logger.warning(
-            f"Dropped {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} "
-            f"alignments due to unknown labels.",
+            f"Dropping {format_relative_comparison(part=invalid_mask.sum(), total=alignment.shape[0])} "
+            f"alignments due to invalid labels.",
         )
+        alignment = alignment.loc[~invalid_mask]
 
-    # map alignment to (new) IDs
-    left_id = alignment[EA_SIDE_LEFT].apply(left.entity_to_id.__getitem__) + entity_offsets[0]
-    right_id = alignment[EA_SIDE_RIGHT].apply(right.entity_to_id.__getitem__) + entity_offsets[1]
-
-    return left_id, right_id
+    # map alignment from old IDs to new IDs
+    return torch.as_tensor(alignment.to_numpy().T, dtype=torch.long) + entity_offsets.view(1, 2)
 
 
 class GraphPairCombinator:
