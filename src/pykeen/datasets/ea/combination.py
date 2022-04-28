@@ -1,7 +1,7 @@
 """Combination strategies for entity alignment datasets."""
 import logging
 from abc import abstractmethod
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy
 import pandas
