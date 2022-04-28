@@ -215,7 +215,7 @@ class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresen
 
 
 @unittest.skipIf(error is not None, "Need to install `torch_geometric`")
-class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+class FeaturizedRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
     cls = pykeen.nn.pyg.FeaturizedRelationTypePyGRepresentation

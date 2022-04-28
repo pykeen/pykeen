@@ -13,9 +13,17 @@ from pykeen.typing import OneOrSequence
 from .representation import Representation
 
 
+__all__ = [
+    "IgnoreRelationTypePyGRepresentation",
+    "FeaturizedRelationTypePyGRepresentation",
+    "CategoricalRelationTypePyGRepresentation",
+]
+
+
 def try_import() -> Optional[Exception]:
+    """Try to import torch_geometric and return the error."""
     try:
-        import torch_geometric
+        import torch_geometric  # noqa: F401
 
         return None
     except (
@@ -88,6 +96,9 @@ class AbstractPyGRepresentation(Representation):
 
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
+
+        :raises ImportError:
+            if PyTorch Geometric is not installed
         """
         # fail if dependencies are missing
         if MessagePassing is None or layer_resolver is None:
@@ -120,7 +131,7 @@ class AbstractPyGRepresentation(Representation):
 
     @abstractmethod
     def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """The message passing."""
+        """Perform the message passing."""
         raise NotImplementedError
 
 
