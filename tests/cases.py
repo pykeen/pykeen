@@ -2319,19 +2319,40 @@ class TrainingCallbackTestCase(unittest_templates.GenericTestCase[TrainingCallba
 class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCombinator]):
     """Base test for graph pair combination methods."""
 
-    def test_combination_label(self):
-        """Test combination."""
-        raise NotImplementedError
+    def _add_labels(self, tf: CoreTriplesFactory) -> TriplesFactory:
+        """Add artificial labels to a triples factory."""
+        entity_to_id = {f"e_{i}": i for i in range(tf.num_entities)}
+        relation_to_id = {f"r_{i}": i for i in range(tf.num_relations)}
+        return TriplesFactory(
+            mapped_triples=tf.mapped_triples, entity_to_id=entity_to_id, relation_to_id=relation_to_id
+        )
 
-    def test_combination_id(self):
-        """Test combination."""
+    def _test_combination(self, labels: bool):
+        # generate random triples factories
         left, right = [generation.generate_triples_factory(random_state=random_state) for random_state in (0, 1)]
+        # generate random alignment
         left_idx, right_idx = torch.stack([torch.arange(left.num_entities), torch.randperm(left.num_entities)])[
             : left.num_entities // 2
         ].numpy()
+        # add label information if necessary
+        if labels:
+            left, right = [self._add_labels(tf) for tf in (left, right)]
+            left_idx = [left.entity_id_to_label[i] for i in left_idx]
+            right_idx = [right.entity_id_to_label[i] for i in right_idx]
+        # prepare alignment data frame
         alignment = pandas.DataFrame(data={EA_SIDE_LEFT: left_idx, EA_SIDE_RIGHT: right_idx})
+        # call
         tf_both, alignment_t = self.instance(left=left, right=right, alignment=alignment)
+        # check
         assert type(tf_both) is type(left)
         assert alignment_t.ndim == 2
         assert alignment_t.shape[0] == 2
         assert alignment_t.shape[1] <= len(alignment)
+
+    def test_combination_label(self):
+        """Test combination with labels."""
+        self._test_combination(labels=True)
+
+    def test_combination_id(self):
+        """Test combination without labels."""
+        self._test_combination(labels=False)
