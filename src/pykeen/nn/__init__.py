@@ -42,6 +42,11 @@ from .modules import (
 )
 from .node_piece import NodePieceRepresentation, TokenizationRepresentation, tokenizer_resolver
 from .representation import Embedding, Representation, SubsetRepresentation
+from .pyg import (
+    IgnoreRelationTypePyGRepresentation,
+    CategoricalRelationTypePyGRepresentation,
+    FeaturizedRelationTypePyGRepresentation,
+)
 
 __all__ = [
     "Embedding",
@@ -50,6 +55,9 @@ __all__ = [
     "RGCNRepresentation",
     "SubsetRepresentation",
     "TokenizationRepresentation",
+    "IgnoreRelationTypePyGRepresentation",
+    "CategoricalRelationTypePyGRepresentation",
+    "FeaturizedRelationTypePyGRepresentation",
     "init",
     "Interaction",
     "interaction_resolver",

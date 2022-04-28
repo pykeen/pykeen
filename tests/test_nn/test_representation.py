@@ -13,13 +13,13 @@ import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
 from pykeen.datasets import get_dataset
-from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
 try:
     import transformers
 except ImportError:
     transformers = None
+error = pykeen.nn.pyg.try_import()
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -58,52 +58,28 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
     )
 
 
-# TODO consider making subclass of cases.RepresentationTestCase
-# that has num_entities, num_relations, num_triples, and
-# create_inverse_triples as well as a generate_triples_factory()
-# wrapper
-
-
-class RGCNRepresentationTests(cases.RepresentationTestCase):
+class RGCNRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test RGCN representations."""
 
     cls = pykeen.nn.message_passing.RGCNRepresentation
-    num_entities: ClassVar[int] = 8
-    num_relations: ClassVar[int] = 7
-    num_triples: ClassVar[int] = 31
     num_bases: ClassVar[int] = 2
-    kwargs = dict(
-        entity_representations_kwargs=dict(embedding_dim=num_entities),
-    )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["triples_factory"] = generate_triples_factory(
-            num_entities=self.num_entities,
-            num_relations=self.num_relations,
-            num_triples=self.num_triples,
-        )
+        kwargs["entity_representations_kwargs"] = (dict(embedding_dim=self.num_entities),)
         return kwargs
 
 
-class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
+class TestSingleCompGCNRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test single CompGCN representations."""
 
     cls = pykeen.nn.representation.SingleCompGCNRepresentation
-    num_entities: ClassVar[int] = 8
-    num_relations: ClassVar[int] = 7
-    num_triples: ClassVar[int] = 31
     dim: ClassVar[int] = 3
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["combined"] = pykeen.nn.representation.CombinedCompGCNRepresentations(
-            triples_factory=generate_triples_factory(
-                num_entities=self.num_entities,
-                num_relations=self.num_relations,
-                num_triples=self.num_triples,
-                create_inverse_triples=True,
-            ),
+            triples_factory=kwargs.pop("triples_factory"),
             entity_representations_kwargs=dict(embedding_dim=self.dim),
             relation_representations_kwargs=dict(embedding_dim=self.dim),
             dims=self.dim,
@@ -205,6 +181,55 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["labels"] = sorted(get_dataset(dataset="nations").entity_to_id.keys())
         return kwargs
+
+
+@unittest.skipIf(error is not None, "Need to install `torch_geometric`")
+class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+    """Test for Pytorch Geometric representations using uni-relational message passing layers."""
+
+    cls = pykeen.nn.pyg.IgnoreRelationTypePyGRepresentation
+    embedding_dim: int = 3
+    kwargs = dict(
+        base_kwargs=dict(shape=(embedding_dim,)),
+        layers=["gcn"] * 2,
+        layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
+    )
+
+
+@unittest.skipIf(error is not None, "Need to install `torch_geometric`")
+class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+    """Test for Pytorch Geometric representations using categorical message passing layers."""
+
+    cls = pykeen.nn.pyg.CategoricalRelationTypePyGRepresentation
+    embedding_dim: int = 3
+    kwargs = dict(
+        base_kwargs=dict(shape=(embedding_dim,)),
+        layers=["rgcn"],
+        layers_kwargs=dict(
+            in_channels=embedding_dim,
+            out_channels=embedding_dim,
+            num_bases=2,
+            num_relations=cases.TriplesFactoryRepresentationTestCase.num_relations,
+        ),
+    )
+
+
+@unittest.skipIf(error is not None, "Need to install `torch_geometric`")
+class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+    """Test for Pytorch Geometric representations using categorical message passing layers."""
+
+    cls = pykeen.nn.pyg.FeaturizedRelationTypePyGRepresentation
+    embedding_dim: int = 3
+    kwargs = dict(
+        base_kwargs=dict(shape=(embedding_dim,)),
+        layers=["gat"],
+        layers_kwargs=dict(
+            in_channels=embedding_dim,
+            out_channels=embedding_dim,
+            num_bases=2,
+            num_relations=cases.TriplesFactoryRepresentationTestCase.num_relations,
+        ),
+    )
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):

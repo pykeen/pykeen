@@ -12,20 +12,32 @@ from pykeen.typing import OneOrSequence
 
 from .representation import Representation
 
-layer_resolver: Optional[ClassResolver[nn.Module]]
-import_error: Optional[ImportError]
 
-try:
+def try_import() -> Optional[Exception]:
+    try:
+        import torch_geometric
+
+        return None
+    except (
+        ImportError,
+        # OSError happens when trying to run with CUDA-enabled binaries on a cpu machine
+        OSError,
+    ) as import_error:
+        return import_error
+
+
+error = try_import()
+layer_resolver: Optional[ClassResolver[nn.Module]]
+if error is None:
     from torch_geometric.nn.conv import MessagePassing
 
     layer_resolver: ClassResolver[nn.Module] = ClassResolver.from_subclasses(
         base=MessagePassing,  # type: ignore
+        suffix="Conv",
     )
-    error = None
-except ImportError as import_error:
+else:
     MessagePassing = None
     layer_resolver = None
-    error = import_error
 
 
 class AbstractPyGRepresentation(Representation):
