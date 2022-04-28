@@ -7,11 +7,9 @@ from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOr
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from pykeen.triples.triples_factory import CoreTriplesFactory
-from pykeen.typing import OneOrSequence
-
 from .representation import Representation
-
+from ..triples.triples_factory import CoreTriplesFactory
+from ..typing import OneOrSequence
 
 __all__ = [
     "IgnoreRelationTypePyGRepresentation",
