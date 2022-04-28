@@ -31,6 +31,7 @@ from unittest.mock import patch
 
 import numpy
 import numpy.random
+import pandas
 import pytest
 import torch
 import torch.utils.data
@@ -49,6 +50,7 @@ import pykeen.nn.representation
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
+from pykeen.datasets.ea.combination import GraphPairCombinator
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
@@ -77,6 +79,8 @@ from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
 from pykeen.typing import (
+    EA_SIDE_LEFT,
+    EA_SIDE_RIGHT,
     LABEL_HEAD,
     LABEL_TAIL,
     TRAINING,
@@ -2310,3 +2314,24 @@ class TrainingCallbackTestCase(unittest_templates.GenericTestCase[TrainingCallba
                 callbacks=self.instance,
             ),
         )
+
+
+class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCombinator]):
+    """Base test for graph pair combination methods."""
+
+    def test_combination_label(self):
+        """Test combination."""
+        raise NotImplementedError
+
+    def test_combination_id(self):
+        """Test combination."""
+        left, right = [generation.generate_triples_factory(random_state=random_state) for random_state in (0, 1)]
+        left_idx, right_idx = torch.stack([torch.arange(left.num_entities), torch.randperm(left.num_entities)])[
+            : left.num_entities // 2
+        ].numpy()
+        alignment = pandas.DataFrame(data={EA_SIDE_LEFT: left_idx, EA_SIDE_RIGHT: right_idx})
+        tf_both, alignment_t = self.instance(left=left, right=right, alignment=alignment)
+        assert type(tf_both) is type(left)
+        assert alignment_t.ndim == 2
+        assert alignment_t.shape[0] == 2
+        assert alignment_t.shape[1] <= len(alignment)
