@@ -1,14 +1,14 @@
 """Combination strategies for entity alignment datasets."""
 import logging
 from abc import abstractmethod
-from typing import Dict, Tuple, Union
+from typing import Dict, Mapping, Tuple, Union
 
 import pandas
 import torch
 from class_resolver import ClassResolver
 
 from ...triples import CoreTriplesFactory, TriplesFactory
-from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, MappedTriples
+from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, MappedTriples
 from ...utils import format_relative_comparison, get_connected_components
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,52 @@ def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[Map
     return torch.cat(res), offsets
 
 
+def merge_mappings(*pairs: Tuple[str, Mapping[str, int]], offsets: torch.LongTensor) -> Mapping[str, int]:
+    result: Dict[str, int] = {}
+    for (prefix, mapping), offset in zip(pairs, offsets.tolist()):
+        result.update((f"{prefix}:{key}", value + offset) for key, value in mapping.items())
+    return result
+
+
+def merge_both_mappings(
+    left: TriplesFactory, right: TriplesFactory, offsets: torch.LongTensor
+) -> Tuple[Mapping[str, int], Mapping[str, int]]:
+    return (
+        merge_mappings(
+            (EA_SIDE_LEFT, left.entity_to_id),
+            (EA_SIDE_RIGHT, right.entity_to_id),
+            offsets=offsets[:, 0],
+        ),
+        merge_mappings(
+            (EA_SIDE_LEFT, left.relation_to_id),
+            (EA_SIDE_RIGHT, right.relation_to_id),
+            offsets=offsets[:, 1],
+        ),
+    )
+
+
+def filter_map_alignment(
+    alignment: pandas.DataFrame,
+    left: TriplesFactory,
+    right: TriplesFactory,
+    entity_offsets: torch.LongTensor,
+) -> Tuple[torch.LongTensor, torch.LongTensor]:
+    # filter alignment
+    mask = ~(alignment[EA_SIDE_LEFT].isin(left.entity_to_id) & alignment[EA_SIDE_RIGHT].isin(right.entity_to_id))
+    if mask.any():
+        alignment = alignment.loc[~mask]
+        logger.warning(
+            f"Dropped {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} "
+            f"alignments due to unknown labels.",
+        )
+
+    # map alignment to (new) IDs
+    left_id = alignment[EA_SIDE_LEFT].apply(left.entity_to_id.__getitem__) + entity_offsets[0]
+    right_id = alignment[EA_SIDE_RIGHT].apply(right.entity_to_id.__getitem__) + entity_offsets[1]
+
+    return left_id, right_id
+
+
 class GraphPairCombinator:
     """A base class for combination of a graph pair into a single graph."""
 
@@ -86,6 +132,18 @@ class GraphPairCombinator:
 class DisjointGraphPairCombinator(GraphPairCombinator):
     """This combinator keeps both graphs as disconnected components."""
 
+    def __call__(
+        self, left: TriplesFactory, right: TriplesFactory, alignment: pandas.DataFrame, **kwargs
+    ) -> Tuple[TriplesFactory, torch.LongTensor]:
+        # concatenate triples
+        mapped_triples, offsets = cat_triples(left, right)
+        return TriplesFactory(
+            mapped_triples=mapped_triples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            **kwargs,
+        )
+
     # TODO: implement
 
 
@@ -108,21 +166,12 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
         # concatenate triples
         mapped_triples, offsets = cat_triples(left, right)
 
-        # filter alignment
-        mask = ~(alignment[EA_SIDE_LEFT].isin(left.entity_to_id) & alignment[EA_SIDE_RIGHT].isin(right.entity_to_id))
-        if mask.any():
-            alignment = alignment.loc[~mask]
-            logger.warning(
-                f"Dropped {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} "
-                f"alignments due to unknown labels.",
-            )
-
-        # map alignment to (new) IDs
-        left_id = alignment[EA_SIDE_LEFT].apply(left.entity_to_id.__getitem__) + offsets[0, 0]
-        right_id = alignment[EA_SIDE_RIGHT].apply(right.entity_to_id.__getitem__) + offsets[1, 0]
-        # extra alignment relation
+        # filter alignment and translate to IDs
+        left_id, right_id = filter_map_alignment(
+            alignment=alignment, left=left, right=right, entity_offsets=offsets[:, 0]
+        )
+        # add alignment triples with extra relation
         alignment_relation_id = offsets[-1, 1]
-        # append alignment triples
         mapped_triples.append(
             torch.stack(
                 [
@@ -134,15 +183,10 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
             )
         )
 
-        # construct mappings
-        entity_to_id: Dict[str, int] = {}
-        relation_to_id: Dict[str, int] = {}
-        for side, tf, e_offset, r_offset in zip(
-            EA_SIDES, (left, right), offsets[:, 0].tolist(), offsets[:, 1].tolist()
-        ):
-            entity_to_id.update((f"{side}:{key}", value + e_offset) for key, value in tf.entity_to_id.items())
-            relation_to_id.update((f"{side}:{key}", value + r_offset) for key, value in tf.relation_to_id.items())
-        relation_to_id["same-as"] = alignment_relation_id
+        # merge mappings
+        entity_to_id, relation_to_id = merge_both_mappings(left=left, right=right, offsets=offsets)
+        # extra alignment relation
+        relation_to_id["same-as"] = alignment_relation_id = offsets[-1, 1]
 
         # merged factory
         return TriplesFactory(
@@ -150,7 +194,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             **kwargs,
-        ), torch.stack([left_id, right_id])
+        ), torch.stack([left_id, right_id], dim=0)
 
 
 class CollapseGraphPairCombinator(GraphPairCombinator):
