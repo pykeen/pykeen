@@ -56,7 +56,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
         right: TriplesFactory,
         alignment: pandas.DataFrame,
         **kwargs,
-    ) -> TriplesFactory:  # noqa: D102
+    ) -> Tuple[TriplesFactory, torch.LongTensor]:  # noqa: D102
         mapped_triples = []
         entity_to_id: Dict[str, int] = {}
         relation_to_id: Dict[str, int] = {}
