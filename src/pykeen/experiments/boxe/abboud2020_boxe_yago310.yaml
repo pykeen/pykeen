@@ -51,8 +51,7 @@ pipeline:
     lr: 0.001
   training_kwargs:
     batch_size: 4096
-    # TODO: was 400 before; why?
-    # on Yago3-10, BoxE converges around 300 epochs
+    # on Yago3-10, BoxE converges around 300 epochs, so we reduce the number of epochs here
     num_epochs: 400
   training_loop: SLCWA
 
