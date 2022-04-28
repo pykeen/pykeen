@@ -248,6 +248,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         self.prefix = prefix
         self.kwargs = kwargs
+        self.batch_size = self.kwargs.pop("batch_size", None)
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
@@ -256,6 +257,7 @@ class EvaluationTrainingCallback(TrainingCallback):
             model=self.model,
             mapped_triples=self.evaluation_triples,
             device=self.training_loop.device,
+            batch_size=self.evaluator.batch_size or self.batch_size,
             **self.kwargs,
         )
         self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
