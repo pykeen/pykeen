@@ -12,7 +12,6 @@ from pykeen.typing import OneOrSequence
 
 from .representation import Representation
 
-
 __all__ = [
     "IgnoreRelationTypePyGRepresentation",
     "FeaturizedRelationTypePyGRepresentation",
@@ -39,7 +38,7 @@ layer_resolver: Optional[ClassResolver[nn.Module]]
 if error is None:
     from torch_geometric.nn.conv import MessagePassing
 
-    layer_resolver: ClassResolver[nn.Module] = ClassResolver.from_subclasses(
+    layer_resolver = ClassResolver.from_subclasses(
         base=MessagePassing,  # type: ignore
         suffix="Conv",
     )
@@ -110,13 +109,14 @@ class AbstractPyGRepresentation(Representation):
         # the base representations, e.g., entity embeddings or features
         self.base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=triples_factory.num_entities)
 
-        super().__init__(max_id=self.base.max_id, shape=output_shape or base.shape, **kwargs)
+        super().__init__(max_id=self.base.max_id, shape=output_shape or self.base.shape, **kwargs)
 
         # initialize layers
         self.layers = nn.ModuleList(layer_resolver.make_many(layers, pos_kwargs=layers_kwargs))
         if activation is None:
-            activation = [None] * self.layers
+            activation = [None] * len(self.layers)
         self.activations = nn.ModuleList(activation_resolver.make_many(activation, activation_kwargs))
+        assert len(self.layers) == len(self.activations)
 
         # prepare buffer
         # TODO: inductive?
