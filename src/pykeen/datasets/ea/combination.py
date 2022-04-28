@@ -20,7 +20,7 @@ def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[Map
     """
     Concatenate (shifted) triples.
 
-    :param tfs:
+    :param triples:
         the triples factories, or mapped triples
 
     :return:
@@ -52,7 +52,7 @@ def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[Map
     return torch.cat(res), offsets
 
 
-def merge_mappings(
+def _merge_mappings(
     *pairs: Tuple[str, Mapping[str, int]],
     offsets: torch.LongTensor = None,
     mappings: Sequence[Mapping[int, int]] = None,
@@ -73,7 +73,7 @@ def merge_mappings(
     return result
 
 
-def merge_both_mappings(
+def _merge_both_mappings(
     left: TriplesFactory,
     right: TriplesFactory,
     relation_offsets: torch.LongTensor,
@@ -83,14 +83,14 @@ def merge_both_mappings(
     entity_mappings: Sequence[Mapping[int, int]] = None,
 ) -> Tuple[Mapping[str, int], Mapping[str, int]]:
     # merge entity mapping
-    entity_to_id = merge_mappings(
+    entity_to_id = _merge_mappings(
         (EA_SIDE_LEFT, left.entity_to_id),
         (EA_SIDE_RIGHT, right.entity_to_id),
         offsets=entity_offsets,
         mappings=entity_mappings,
     )
     # merge relation mapping
-    relation_to_id = merge_mappings(
+    relation_to_id = _merge_mappings(
         (EA_SIDE_LEFT, left.relation_to_id),
         (EA_SIDE_RIGHT, right.relation_to_id),
         offsets=relation_offsets,
@@ -119,6 +119,9 @@ def filter_map_alignment(
 
     :return: shape: (2, num_alignments)
         the ID-based alignment in new IDs
+
+    :raises ValueError:
+        if the datatype of the alignment data frame is imcompatible (neither string nor integer).
     """
     # convert labels to IDs
     for side, tf in zip(EA_SIDES, (left, right)):
@@ -187,7 +190,7 @@ class GraphPairCombinator:
         mapped_triples, alignment, translation_kwargs = self._process(mapped_triples, alignment, offsets)
         if isinstance(left, TriplesFactory) and isinstance(right, TriplesFactory):
             # merge mappings
-            entity_to_id, relation_to_id = merge_both_mappings(
+            entity_to_id, relation_to_id = _merge_both_mappings(
                 # TODO: offsets can also be dense mapping
                 # translation: Union[torch.LongTensor, Tuple[torch.LongTensor, torch.LongTensor]]
                 left=left,
