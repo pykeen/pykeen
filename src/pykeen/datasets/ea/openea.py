@@ -8,7 +8,7 @@ Get a summary with ``python -m pykeen.datasets.openea``
 import itertools
 import logging
 import pathlib
-from typing import Literal, Tuple
+from typing import Tuple
 
 import click
 import pandas

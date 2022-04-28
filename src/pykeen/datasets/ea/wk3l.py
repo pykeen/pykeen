@@ -9,7 +9,7 @@ import itertools
 import logging
 import pathlib
 from abc import ABC
-from typing import ClassVar, Literal, Mapping, Tuple, Union
+from typing import ClassVar, Mapping, Tuple, Union
 
 import click
 import pandas
