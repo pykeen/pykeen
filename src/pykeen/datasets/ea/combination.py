@@ -38,9 +38,9 @@ def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[Map
         offsets[i] = offset
         # normalization
         if isinstance(x, CoreTriplesFactory):
-            x = x.mapped_triples
             e_offset = x.num_entities
             r_offset = x.num_relations
+            x = x.mapped_triples
         else:
             e_offset = x[:, [0, 2]].max().item() + 1
             r_offset = x[:, 1].max().item() + 1
