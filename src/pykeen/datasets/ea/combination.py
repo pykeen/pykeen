@@ -1,20 +1,56 @@
 """Combination strategies for entity alignment datasets."""
 import logging
 from abc import abstractmethod
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 import pandas
 import torch
 from class_resolver import ClassResolver
 
 from ...triples import CoreTriplesFactory, TriplesFactory
-from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT
+from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, MappedTriples
 from ...utils import format_relative_comparison, get_connected_components
 
 logger = logging.getLogger(__name__)
 
 
 # TODO: support ID-only graphs
+
+
+def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[MappedTriples, torch.LongTensor]:
+    """
+    Concatenate (shifted) triples.
+
+    :param tfs:
+        the triples factories, or mapped triples
+
+    :return:
+        the concatenation of the shifted mapped triples such that there is no overlap, and the offsets for the
+        individual factories
+    """
+    # a buffer for the triples
+    res = []
+    # the overall offsets
+    offsets = torch.empty(len(triples), 3)
+    # the current offset
+    offset = torch.zeros(1, 3, dtype=torch.long)
+    for i, x in enumerate(triples):
+        # store offset
+        offsets[i] = offset
+        # normalization
+        if isinstance(x, CoreTriplesFactory):
+            x = x.mapped_triples
+            e_offset = x.num_entities
+            r_offset = x.num_relations
+        else:
+            e_offset = x[:, [0, 2]].max().item() + 1
+            r_offset = x[:, 1].max().item() + 1
+        # append shifted mapped triples
+        res.append(x + offset)
+        # update offset
+        offset[[0, 2]] += e_offset
+        offset[1] += r_offset
+    return torch.cat(res), offsets
 
 
 class GraphPairCombinator:
@@ -69,25 +105,9 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
         alignment: pandas.DataFrame,
         **kwargs,
     ) -> TriplesFactory:  # noqa: D102
-        mapped_triples = []
-        entity_to_id: Dict[str, int] = {}
-        relation_to_id: Dict[str, int] = {}
-        entity_offset = relation_offset = 0
-        entity_offsets = []
-        for side, tf in ((EA_SIDE_LEFT, left), (EA_SIDE_RIGHT, right)):
-            mapped_triples.append(
-                tf.mapped_triples + torch.as_tensor(data=[entity_offset, relation_offset, entity_offset]).view(1, 3)
-            )
-            entity_to_id.update((f"{side}:{key}", value + entity_offset) for key, value in tf.entity_to_id.items())
-            relation_to_id.update(
-                (f"{side}:{key}", value + relation_offset) for key, value in tf.relation_to_id.items()
-            )
-            entity_offsets.append(entity_offset)
-            entity_offset += tf.num_entities
-            relation_offset += tf.num_relations
+        # concatenate triples
+        mapped_triples, offsets = cat_triples(left, right)
 
-        # extra alignment relation
-        relation_to_id["same-as"] = relation_offset
         # filter alignment
         mask = ~(alignment[EA_SIDE_LEFT].isin(left.entity_to_id) & alignment[EA_SIDE_RIGHT].isin(right.entity_to_id))
         if mask.any():
@@ -96,22 +116,34 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
                 f"Dropped {format_relative_comparison(part=mask.sum(), total=alignment.shape[0])} "
                 f"alignments due to unknown labels.",
             )
+
         # map alignment to (new) IDs
-        left_id = (
-            alignment[EA_SIDE_LEFT].apply(left.entity_to_id.__getitem__) + entity_offsets[0]
-        )  # offset should be zero
-        right_id = alignment[EA_SIDE_RIGHT].apply(right.entity_to_id.__getitem__) + entity_offsets[1]
+        left_id = alignment[EA_SIDE_LEFT].apply(left.entity_to_id.__getitem__) + offsets[0, 0]
+        right_id = alignment[EA_SIDE_RIGHT].apply(right.entity_to_id.__getitem__) + offsets[1, 0]
+        # extra alignment relation
+        alignment_relation_id = offsets[-1, 1]
         # append alignment triples
         mapped_triples.append(
             torch.stack(
                 [
                     torch.as_tensor(data=left_id.values, dtype=torch.long),
-                    torch.full(size=(len(left_id),), fill_value=relation_offset),
+                    torch.full(size=(len(left_id),), fill_value=alignment_relation_id),
                     torch.as_tensor(data=right_id.values, dtype=torch.long),
                 ],
                 dim=-1,
             )
         )
+
+        # construct mappings
+        entity_to_id: Dict[str, int] = {}
+        relation_to_id: Dict[str, int] = {}
+        for side, tf, e_offset, r_offset in zip(
+            EA_SIDES, (left, right), offsets[:, 0].tolist(), offsets[:, 1].tolist()
+        ):
+            entity_to_id.update((f"{side}:{key}", value + e_offset) for key, value in tf.entity_to_id.items())
+            relation_to_id.update((f"{side}:{key}", value + r_offset) for key, value in tf.relation_to_id.items())
+        relation_to_id["same-as"] = alignment_relation_id
+
         # merged factory
         return TriplesFactory(
             mapped_triples=torch.cat(mapped_triples, dim=0),
@@ -131,14 +163,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         alignment: pandas.DataFrame,
         **kwargs,
     ) -> TriplesFactory:  # noqa: D102
-        # concatenate (shifted) triples
-        mapped_triples = torch.cat(
-            [
-                left.mapped_triples,
-                right.mapped_triples
-                + torch.as_tensor([left.num_entities, left.num_relations, left.num_entities]).view(1, 3),
-            ]
-        )
+        mapped_triples, offsets = cat_triples(left, right)
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
         id_mapping = torch.arange(left.num_entities + right.num_entities)
         for cc in get_connected_components(
