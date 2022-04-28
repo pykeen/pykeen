@@ -237,4 +237,4 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
 
     base_cls = pykeen.nn.representation.Representation
     base_test = cases.RepresentationTestCase
-    skip_cls = {mocks.CustomRepresentation}
+    skip_cls = {mocks.CustomRepresentation, pykeen.nn.pyg.AbstractPyGRepresentation}
