@@ -3,21 +3,20 @@
 """Instance creation utilities."""
 
 import pathlib
-from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Callable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
 import torch
 from pkg_resources import iter_entry_points
 
-from ..typing import LabeledTriples
+from ..typing import LabeledTriples, MappedTriples
 
 __all__ = [
+    "compute_compressed_adjacency_list",
     "load_triples",
     "get_entities",
     "get_relations",
-    "triple_tensor_to_set",
-    "is_triple_tensor_subset",
     "tensor_to_df",
 ]
 
@@ -89,16 +88,6 @@ def load_triples(
     return df.to_numpy()
 
 
-def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
-    """Convert a tensor of triples to a set of int-tuples."""
-    return set(map(tuple, tensor.tolist()))
-
-
-def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
-    """Check whether one tensor of triples is a subset of another one."""
-    return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
-
-
 def get_entities(triples: torch.LongTensor) -> Set[int]:
     """Get all entities from the triples."""
     return set(triples[:, [0, 2]].flatten().tolist())
@@ -153,3 +142,44 @@ def tensor_to_df(
     # Re-order columns
     columns = list(TRIPLES_DF_COLUMNS[::2]) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
     return rv.loc[:, columns]
+
+
+def compute_compressed_adjacency_list(
+    mapped_triples: MappedTriples,
+    num_entities: Optional[int] = None,
+) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
+    """Compute compressed undirected adjacency list representation for efficient sampling.
+
+    The compressed adjacency list format is inspired by CSR sparse matrix format.
+
+    :param mapped_triples:
+        the ID-based triples
+    :param num_entities:
+        the number of entities.
+
+    :return: a tuple `(degrees, offsets, compressed_adj_lists)` where
+
+            - degrees: shape: `(num_entities,)`
+            - offsets: shape: `(num_entities,)`
+            - compressed_adj_list: shape: `(2 * num_triples, 2)`
+
+        with
+
+        .. code::
+
+            adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
+    """
+    num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
+    num_triples = mapped_triples.shape[0]
+    adj_lists: List[List[Tuple[int, float]]] = [[] for _ in range(num_entities)]
+    for i, (s, _, o) in enumerate(mapped_triples):
+        adj_lists[s].append((i, o.item()))
+        adj_lists[o].append((i, s.item()))
+    degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
+    assert torch.sum(degrees) == 2 * num_triples
+
+    offset = torch.empty(num_entities, dtype=torch.long)
+    offset[0] = 0
+    offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
+    compressed_adj_lists = torch.cat([torch.as_tensor(adj_list, dtype=torch.long) for adj_list in adj_lists], dim=0)
+    return degrees, offset, compressed_adj_lists

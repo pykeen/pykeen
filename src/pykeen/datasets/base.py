@@ -30,6 +30,7 @@ from ..typing import TorchRandomHint
 from ..utils import normalize_string
 
 __all__ = [
+    # Base classes
     "Dataset",
     "EagerDataset",
     "LazyDataset",
@@ -43,6 +44,7 @@ __all__ = [
     "ZipSingleDataset",
     "TabbedDataset",
     "SingleTabbedDataset",
+    # Utilities
     "dataset_similarity",
 ]
 
@@ -68,7 +70,7 @@ def dataset_similarity(a: Dataset, b: Dataset, metric: Optional[str] = None) -> 
 
 
 class Dataset:
-    """Contains a lazy reference to a training, testing, and validation dataset."""
+    """The base dataset class."""
 
     #: A factory wrapping the training triples
     training: CoreTriplesFactory
@@ -82,6 +84,7 @@ class Dataset:
     metadata: Optional[Mapping[str, Any]] = None
 
     metadata_file_name: ClassVar[str] = "metadata.pth"
+    triples_factory_cls: ClassVar[Type[CoreTriplesFactory]] = TriplesFactory
 
     def __eq__(self, __o: object) -> bool:  # noqa: D105
         return (
@@ -127,10 +130,23 @@ class Dataset:
         """The number of relations."""
         return self.training.num_relations
 
+    @classmethod
+    def docdata(cls, *parts: str) -> Any:
+        """Get docdata for this class."""
+        rv = docdata.get_docdata(cls)
+        for part in parts:
+            rv = rv[part]
+        return rv
+
     @staticmethod
     def triples_sort_key(cls: Type[Dataset]) -> int:
         """Get the number of triples for sorting."""
-        return docdata.get_docdata(cls)["statistics"]["triples"]
+        return cls.docdata("statistics", "triples")
+
+    @classmethod
+    def triples_pair_sort_key(cls, pair: Tuple[str, Type[Dataset]]) -> int:
+        """Get the number of triples for sorting in an iterator context."""
+        return cls.triples_sort_key(pair[1])
 
     def _summary_rows(self):
         return [
@@ -189,7 +205,7 @@ class Dataset:
         for key in ("training", "testing", "validation"):
             tf_path = path.joinpath(key)
             if tf_path.is_dir():
-                tfs[key] = TriplesFactory.from_path_binary(path=tf_path)
+                tfs[key] = cls.triples_factory_cls.from_path_binary(path=tf_path)
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
         metadata_path = path.joinpath(cls.metadata_file_name)
@@ -271,7 +287,7 @@ class Dataset:
 
 
 class EagerDataset(Dataset):
-    """A dataset that has already been loaded."""
+    """A dataset whose training, testing, and optional validation factories are pre-loaded."""
 
     def __init__(
         self,
@@ -304,7 +320,7 @@ class EagerDataset(Dataset):
 
 
 class LazyDataset(Dataset):
-    """A dataset that has lazy loading."""
+    """A dataset whose training, testing, and optional validation factories are lazily loaded."""
 
     #: The actual instance of the training factory, which is exposed to the user through `training`
     _training: Optional[TriplesFactory] = None

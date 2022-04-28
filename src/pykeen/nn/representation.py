@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Embedding modules."""
+"""Representation modules."""
 
 from __future__ import annotations
 
@@ -8,13 +8,12 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver
+from class_resolver import FunctionResolver, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
@@ -25,19 +24,18 @@ from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
-from ..utils import Bias, clamp_norm, complex_normalize
+from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
+from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device, upgrade_to_sequence
 
 __all__ = [
-    "RepresentationModule",
+    "Representation",
     "Embedding",
-    "LowRankEmbeddingRepresentation",
-    "EmbeddingSpecification",
+    "LowRankRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
-    "SubsetRepresentationModule",
+    "SubsetRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -46,7 +44,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class RepresentationModule(nn.Module, ABC):
+class Representation(nn.Module, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -73,10 +71,24 @@ class RepresentationModule(nn.Module, ABC):
     #: the shape of an individual representation
     shape: Tuple[int, ...]
 
+    #: a normalizer for individual representations
+    normalizer: Optional[Normalizer]
+
+    #: a regularizer for individual representations
+    regularizer: Optional[Regularizer]
+
+    #: dropout
+    dropout: Optional[nn.Dropout]
+
     def __init__(
         self,
         max_id: int,
-        shape: Sequence[int],
+        shape: OneOrSequence[int],
+        normalizer: HintOrType[Normalizer] = None,
+        normalizer_kwargs: OptionalKwargs = None,
+        regularizer: HintOrType[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
+        dropout: Optional[float] = None,
     ):
         """Initialize the representation module.
 
@@ -84,12 +96,32 @@ class RepresentationModule(nn.Module, ABC):
             The maximum ID (exclusively). Valid Ids reach from 0, ..., max_id-1
         :param shape:
             The shape of an individual representation.
+        :param normalizer:
+            A normalization function, which is applied to the selected representations in every forward pass.
+        :param normalizer_kwargs:
+            Additional keyword arguments passed to the normalizer
+        :param regularizer:
+            An output regularizer, which is applied to the selected representations in forward pass
+        :param regularizer_kwargs:
+            Additional keyword arguments passed to the regularizer
+        :param dropout:
+            The optional dropout probability
         """
         super().__init__()
         self.max_id = max_id
-        self.shape = tuple(shape)
+        self.shape = tuple(upgrade_to_sequence(shape))
+        self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
+        self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
+        self.dropout = None if dropout is None else nn.Dropout(dropout)
 
     @abstractmethod
+    def _plain_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Get representations for indices, without applying normalization, regularization or output dropout."""
+        raise NotImplementedError
+
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -108,6 +140,14 @@ class RepresentationModule(nn.Module, ABC):
         :return: shape: (``*s``, ``*self.shape``)
             The representations.
         """
+        x = self._plain_forward(indices=indices)
+        if self.normalizer is not None:
+            x = self.normalizer(x)
+        if self.regularizer is not None:
+            self.regularizer.update(x)
+        if self.dropout is not None:
+            x = self.dropout(x)
+        return x
 
     def forward_unique(
         self,
@@ -125,7 +165,17 @@ class RepresentationModule(nn.Module, ABC):
         if indices is None:
             return self(None)
         unique, inverse = indices.unique(return_inverse=True)
-        return self(unique)[inverse]
+        x_unique = self._plain_forward(indices=unique)
+        # normalize *before* repeating
+        if self.normalizer is not None:
+            x_unique = self.normalizer(x_unique)
+        # regularize *after* repeating
+        x = x_unique[inverse]
+        if self.regularizer is not None:
+            self.regularizer.update(x)
+        if self.dropout is not None:
+            x = self.dropout(x)
+        return x
 
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
@@ -140,38 +190,58 @@ class RepresentationModule(nn.Module, ABC):
         warnings.warn("The embedding_dim property is deprecated. Use .shape instead.", DeprecationWarning)
         return int(np.prod(self.shape))
 
+    @property
+    def device(self) -> torch.device:
+        """Return the device."""
+        return get_preferred_device(module=self, allow_ambiguity=True)
 
-class SubsetRepresentationModule(RepresentationModule):
+
+class SubsetRepresentation(Representation):
     """A representation module, which only exposes a subset of representations of its base."""
 
     def __init__(
         self,
-        base: RepresentationModule,
         max_id: int,
+        base: HintOrType[Representation],
+        base_kwargs: OptionalKwargs = None,
+        **kwargs,
     ):
         """
         Initialize the representations.
 
-        :param base:
-            the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         :param max_id:
             the maximum number of relations.
+        :param base:
+            the base representations. have to have a sufficient number of representations, i.e., at least max_id.
+        :param base_kwargs:
+            additional keyword arguments for the base representation
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
+
+        :raises ValueError: if ``max_id`` is larger than the base representation's mad_id
         """
+        # has to be imported here to avoid cyclic import
+        from . import representation_resolver
+
+        base = representation_resolver.make(base, pos_kwargs=base_kwargs)
         if max_id > base.max_id:
-            raise ValueError(f"Base representations comprise only {base.max_id} representations.")
-        super().__init__(max_id, base.shape)
+            raise ValueError(
+                f"Base representations comprise only {base.max_id} representations, "
+                f"but at least {max_id} are required.",
+            )
+        super().__init__(max_id=max_id, shape=base.shape, **kwargs)
         self.base = base
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id)
-        return self.base.forward(indices=indices)
+            indices = torch.arange(self.max_id, device=self.device)
+        return self.base._plain_forward(indices=indices)
 
 
-class Embedding(RepresentationModule):
+class Embedding(Representation):
     """Trainable embeddings.
 
     This class provides the same interface as :class:`torch.nn.Embedding` and
@@ -190,14 +260,12 @@ class Embedding(RepresentationModule):
 
     >>> from pykeen.datasets import Nations
     >>> dataset = Nations()
-    >>> from pykeen.nn.emb import EmbeddingSpecification
-    >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
     >>> from pykeen.models import ERModel
     >>> model = ERModel(
     ...     triples_factory=dataset.training,
     ...     interaction='distmult',
-    ...     entity_representations=spec,
-    ...     relation_representations=spec,
+    ...     entity_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
+    ...     relation_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
     ... )
     >>> import torch
     >>> batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
@@ -211,32 +279,33 @@ class Embedding(RepresentationModule):
 
     def __init__(
         self,
-        num_embeddings: int,
+        max_id: Optional[int] = None,
+        num_embeddings: Optional[int] = None,
         embedding_dim: Optional[int] = None,
         shape: Union[None, int, Sequence[int]] = None,
         initializer: Hint[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        normalizer: Hint[Normalizer] = None,
-        normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Hint[Regularizer] = None,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
-        dropout: Optional[float] = None,
+        **kwargs,
     ):
         """Instantiate an embedding with extended functionality.
 
+        :param max_id: >0
+            The number of embeddings.
         :param num_embeddings: >0
             The number of embeddings.
         :param embedding_dim: >0
             The embedding dimensionality.
+        :param shape:
+            The shape of an individual representation.
         :param initializer:
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
             initialization may be in-place). Can be passed as a function, or as string corresponding to a key in
-            :data:`pykeen.nn.emb.initializers` such as:
+            :data:`pykeen.nn.representation.initializers` such as:
 
             - ``"xavier_uniform"``
             - ``"xavier_uniform_norm"``
@@ -249,15 +318,11 @@ class Embedding(RepresentationModule):
             - ``"init_phases"``
         :param initializer_kwargs:
             Additional keyword arguments passed to the initializer
-        :param normalizer:
-            A normalization function, which is applied in every forward pass.
-        :param normalizer_kwargs:
-            Additional keyword arguments passed to the normalizer
         :param constrainer:
             A function which is applied to the weights after each parameter update, without tracking gradients.
             It may be used to enforce model constraints outside of gradient-based training. The function does not need
             to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string
-            corresponding to a key in :data:`pykeen.nn.emb.constrainers` such as:
+            corresponding to a key in :data:`pykeen.nn.representation.constrainers` such as:
 
             - ``'normalize'``
             - ``'complex_normalize'``
@@ -265,13 +330,14 @@ class Embedding(RepresentationModule):
             - ``'clamp_norm'``
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
-        :param regularizer:
-            A regularizer, which is applied to the selected embeddings in forward pass
-        :param regularizer_kwargs:
-            Additional keyword arguments passed to the regularizer
-        :param dropout:
-            A dropout value for the embeddings.
+        :param trainable: Should the wrapped embeddings be marked to require gradient. Defaults to True.
+        :param dtype: The datatype (otherwise uses :func:`torch.get_default_dtype` to look up)
+        :param kwargs:
+            additional keyword-based parameters passed to Representation.__init__
         """
+        # normalize num_embeddings vs. max_id
+        max_id = process_max_id(max_id, num_embeddings)
+
         # normalize embedding_dim vs. shape
         _embedding_dim, shape = process_shape(embedding_dim, shape)
 
@@ -280,93 +346,55 @@ class Embedding(RepresentationModule):
 
         # work-around until full complex support (torch==1.10 still does not work)
         # TODO: verify that this is our understanding of complex!
-        if dtype.is_complex:
-            shape = tuple(shape[:-1]) + (2 * shape[-1],)
+        self.is_complex = dtype.is_complex
+        _shape = shape
+        if self.is_complex:
+            _shape = tuple(shape[:-1]) + (shape[-1], 2)
             _embedding_dim = _embedding_dim * 2
             # note: this seems to work, as finfo returns the datatype of the underlying floating
             # point dtype, rather than the combined complex one
             dtype = getattr(torch, torch.finfo(dtype).dtype)
+        self._shape = _shape
 
-        super().__init__(
-            max_id=num_embeddings,
-            shape=shape,
-        )
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # use make for initializer since there's a default, and make_safe
         # for the others to pass through None values
         self.initializer = initializer_resolver.make(initializer, initializer_kwargs)
-        self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
         self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
-        self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
-
-        self._embeddings = torch.nn.Embedding(
-            num_embeddings=num_embeddings,
-            embedding_dim=_embedding_dim,
-            dtype=dtype,
-        )
+        self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
-        self.dropout = None if dropout is None else nn.Dropout(dropout)
-
-    @classmethod
-    def init_with_device(
-        cls,
-        num_embeddings: int,
-        embedding_dim: int,
-        device: torch.device,
-        initializer: Optional[Initializer] = None,
-        initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        normalizer: Optional[Normalizer] = None,
-        normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        constrainer: Optional[Constrainer] = None,
-        constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> "Embedding":  # noqa:E501
-        """Create an embedding object on the given device by wrapping :func:`__init__`.
-
-        This method is a hotfix for not being able to pass a device during initialization of
-        :class:`torch.nn.Embedding`. Instead the weight is always initialized on CPU and has
-        to be moved to GPU afterwards.
-
-        .. seealso::
-
-            https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
-
-        :return:
-            The embedding.
-        """
-        return cls(
-            num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            initializer=initializer,
-            initializer_kwargs=initializer_kwargs,
-            normalizer=normalizer,
-            normalizer_kwargs=normalizer_kwargs,
-            constrainer=constrainer,
-            constrainer_kwargs=constrainer_kwargs,
-        ).to(device=device)
 
     @property
     def num_embeddings(self) -> int:  # noqa: D401
         """The total number of representations (i.e. the maximum ID)."""
         # wrapper around max_id, for backward compatibility
+        warnings.warn(f"Directly use {self.__class__.__name__}.max_id instead of num_embeddings.")
         return self.max_id
 
     @property
     def embedding_dim(self) -> int:  # noqa: D401
         """The representation dimension."""
+        warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
         return self._embeddings.embedding_dim
 
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
-            self._embeddings.weight.data.view(self.num_embeddings, *self.shape),
-        ).view(self.num_embeddings, self.embedding_dim)
+            self._embeddings.weight.data.view(self.num_embeddings, *self._shape),
+        ).view(*self._embeddings.weight.data.shape)
 
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
         if self.constrainer is not None:
-            self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
+            x = self._plain_forward()
+            x = self.constrainer(x)
+            # fixme: work-around until nn.Embedding supports complex
+            if self.is_complex:
+                x = torch.view_as_real(x)
+            self._embeddings.weight.data = x.view(*self._embeddings.weight.data.shape)
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -375,21 +403,17 @@ class Embedding(RepresentationModule):
             x = self._embeddings.weight
         else:
             prefix_shape = indices.shape
-            x = self._embeddings(indices)
-        x = x.view(*prefix_shape, *self.shape)
+            x = self._embeddings(indices.to(self.device))
+        x = x.view(*prefix_shape, *self._shape)
+        # fixme: work-around until nn.Embedding supports complex
+        if self.is_complex:
+            x = torch.view_as_complex(x)
         # verify that contiguity is preserved
         assert x.is_contiguous()
-        # TODO: move normalizer / regularizer to base class?
-        if self.normalizer is not None:
-            x = self.normalizer(x)
-        if self.regularizer is not None:
-            self.regularizer.update(x)
-        if self.dropout is not None:
-            x = self.dropout(x)
         return x
 
 
-class LowRankEmbeddingRepresentation(RepresentationModule):
+class LowRankRepresentation(Representation):
     r"""
     Low-rank embedding factorization.
 
@@ -404,7 +428,7 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
         self,
         *,
         max_id: int,
-        shape: Sequence[int],
+        shape: OneOrSequence[int],
         num_bases: int = 3,
         weight_initializer: Initializer = uniform_norm_p1_,
         **kwargs,
@@ -421,11 +445,11 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
         :param weight_initializer:
             the initializer for basis weights
         :param kwargs:
-            additional keyword based arguments passed to :class:`pykeen.nn.emb.Embedding`, which is used for the base
-            representations.
+            additional keyword based arguments passed to :class:`pykeen.nn.representation.Embedding`, which is used
+            for the base representations.
         """
         super().__init__(max_id=max_id, shape=shape)
-        self.bases = Embedding(num_embeddings=num_bases, shape=shape, **kwargs)
+        self.bases = Embedding(max_id=num_bases, shape=shape, **kwargs)
         self.weight_initializer = weight_initializer
         self.weight = nn.Parameter(torch.empty(max_id, num_bases))
         self.reset_parameters()
@@ -434,7 +458,7 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
         self.bases.reset_parameters()
         self.weight.data = self.weight_initializer(self.weight)
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
@@ -443,58 +467,9 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
         # get base weights, shape: (*batch_dims, num_bases)
         weight = self.weight
         if indices is not None:
-            weight = weight[indices]
+            weight = weight[indices.to(self.device)]
         # weighted linear combination of bases, shape: (*batch_dims, *shape)
         return torch.tensordot(weight, bases, dims=([-1], [0]))
-
-
-@dataclass
-class EmbeddingSpecification:
-    """An embedding specification."""
-
-    embedding_dim: Optional[int] = None
-    shape: Union[None, int, Sequence[int]] = None
-
-    initializer: Hint[Initializer] = None
-    initializer_kwargs: Optional[Mapping[str, Any]] = None
-
-    normalizer: Hint[Normalizer] = None
-    normalizer_kwargs: Optional[Mapping[str, Any]] = None
-
-    constrainer: Hint[Constrainer] = None
-    constrainer_kwargs: Optional[Mapping[str, Any]] = None
-
-    regularizer: Hint[Regularizer] = None
-    regularizer_kwargs: Optional[Mapping[str, Any]] = None
-
-    dtype: Optional[torch.dtype] = None
-    dropout: Optional[float] = None
-
-    def __post_init__(self):
-        if self.shape is None:
-            if self.embedding_dim is None:
-                raise ValueError("Missing both, shape and embedding_dim")
-            self.shape = (self.embedding_dim,)
-
-    def make(self, *, num_embeddings: int, device: Optional[torch.device] = None) -> Embedding:
-        """Create an embedding with this specification."""
-        rv = Embedding(
-            num_embeddings=num_embeddings,
-            shape=self.shape,
-            initializer=self.initializer,
-            initializer_kwargs=self.initializer_kwargs,
-            normalizer=self.normalizer,
-            normalizer_kwargs=self.normalizer_kwargs,
-            constrainer=self.constrainer,
-            constrainer_kwargs=self.constrainer_kwargs,
-            regularizer=self.regularizer,
-            regularizer_kwargs=self.regularizer_kwargs,
-            dtype=self.dtype,
-            dropout=self.dropout,
-        )
-        if device is not None:
-            rv = rv.to(device)
-        return rv
 
 
 def process_shape(
@@ -517,6 +492,18 @@ def process_shape(
     else:
         raise TypeError(f"Invalid type for shape: ({type(shape)}) {shape}")
     return dim, shape
+
+
+def process_max_id(max_id: Optional[int], num_embeddings: Optional[int]) -> int:
+    """Normalize max_id."""
+    if max_id is None:
+        if num_embeddings is None:
+            raise ValueError("Must provide max_id")
+        warnings.warn("prefer using 'max_id' over 'num_embeddings'", DeprecationWarning)
+        max_id = num_embeddings
+    elif num_embeddings is not None and num_embeddings != max_id:
+        raise ValueError("Cannot provide both, 'max_id' over 'num_embeddings'")
+    return max_id
 
 
 constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
@@ -566,6 +553,9 @@ class CompGCNLayer(nn.Module):
             The activation to use.
         :param activation_kwargs:
             Additional key-word based arguments passed to the activation.
+        :param edge_weighting:
+            A pre-instantiated :class:`EdgeWeighting`, a class, or name to look
+            up with :class:`class_resolver`.
         """
         super().__init__()
 
@@ -705,6 +695,28 @@ class CompGCNLayer(nn.Module):
         return x_e, x_r
 
 
+def build_representation(
+    max_id: int,
+    representation: HintOrType[Representation],
+    representation_kwargs: OptionalKwargs,
+) -> Representation:
+    """Build representations and check maximum ID."""
+    # has to be imported here to avoid cyclic imports
+    from . import representation_resolver
+
+    representation = representation_resolver.make(
+        representation,
+        pos_kwargs=representation_kwargs,
+        # kwargs
+        max_id=max_id,
+    )
+    if representation.max_id != max_id:
+        raise ValueError(
+            f"Representations should provide {max_id} representations, " f"but have {representation.max_id}",
+        )
+    return representation
+
+
 class CombinedCompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers."""
 
@@ -717,7 +729,10 @@ class CombinedCompGCNRepresentations(nn.Module):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        embedding_specification: EmbeddingSpecification,
+        entity_representations: HintOrType[Representation] = None,
+        entity_representations_kwargs: OptionalKwargs = None,
+        relation_representations: HintOrType[Representation] = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         num_layers: Optional[int] = 1,
         dims: Union[None, int, Sequence[int]] = None,
         layer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -727,8 +742,14 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         :param triples_factory:
             The triples factory containing the training triples.
-        :param embedding_specification:
-            An embedding specification for the base entity and relation representations.
+        :param entity_representations:
+            the base entity representations
+        :param entity_representations_kwargs:
+            additional keyword parameters for the base entity representations
+        :param relation_representations:
+            the base relation representations
+        :param relation_representations_kwargs:
+            additional keyword parameters for the base relation representations
         :param num_layers:
             The number of message passing layers to use. If None, will be inferred by len(dims), i.e., requires dims to
             be a sequence / list.
@@ -737,15 +758,22 @@ class CombinedCompGCNRepresentations(nn.Module):
             If an integer, is the same for all layers. The last dimension is equal to the output dimension.
         :param layer_kwargs:
             Additional key-word based parameters passed to the individual layers; cf. CompGCNLayer.
+        :raises ValueError: for several invalid combinations of arguments:
+            1. If the dimensions were given as an integer but no number of layers were given
+            2. If the dimensions were given as a ist but it does not match the number of layers that were given
         """
         super().__init__()
         # TODO: Check
         assert triples_factory.create_inverse_triples
-        self.entity_representations = embedding_specification.make(
-            num_embeddings=triples_factory.num_entities,
+        self.entity_representations = build_representation(
+            max_id=triples_factory.num_entities,
+            representation=entity_representations,
+            representation_kwargs=entity_representations_kwargs,
         )
-        self.relation_representations = embedding_specification.make(
-            num_embeddings=2 * triples_factory.real_num_relations,
+        self.relation_representations = build_representation(
+            max_id=2 * triples_factory.real_num_relations,
+            representation=relation_representations,
+            representation_kwargs=relation_representations_kwargs,
         )
         input_dim = self.entity_representations.embedding_dim
         assert self.relation_representations.embedding_dim == input_dim
@@ -766,10 +794,10 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         # Create message passing layers
         layers = []
-        for input_dim, output_dim in zip(itertools.chain([input_dim], dims), dims):
+        for input_dim_, output_dim in zip(itertools.chain([input_dim], dims), dims):
             layers.append(
                 CompGCNLayer(
-                    input_dim=input_dim,
+                    input_dim=input_dim_,
                     output_dim=output_dim,
                     **(layer_kwargs or {}),
                 )
@@ -817,7 +845,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         )
 
 
-class SingleCompGCNRepresentation(RepresentationModule):
+class SingleCompGCNRepresentation(Representation):
     """A wrapper around the combined representation module."""
 
     # TODO: PyG
@@ -826,6 +854,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
         self,
         combined: CombinedCompGCNRepresentations,
         position: int = 0,
+        **kwargs,
     ):
         """
         Initialize the module.
@@ -834,6 +863,9 @@ class SingleCompGCNRepresentation(RepresentationModule):
             The combined representations.
         :param position:
             The position, either 0 for entities, or 1 for relations.
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
+        :raises ValueError: If an invalid value is given for the position
         """
         if position == 0:  # entity
             max_id = combined.entity_representations.max_id
@@ -843,22 +875,22 @@ class SingleCompGCNRepresentation(RepresentationModule):
             shape = (combined.output_dim,)
         else:
             raise ValueError
-        super().__init__(max_id=max_id, shape=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
         self.combined = combined
         self.position = position
         self.reset_parameters()
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         x = self.combined()[self.position]
         if indices is not None:
-            x = x[indices]
+            x = x[indices.to(self.device)]
         return x
 
 
-class LabelBasedTransformerRepresentation(RepresentationModule):
+class LabelBasedTransformerRepresentation(Representation):
     """
     Label-based representations using a transformer encoder.
 
@@ -870,7 +902,7 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
     .. code-block:: python
 
         from pykeen.datasets import get_dataset
-        from pykeen.nn.emb import EmbeddingSpecification, LabelBasedTransformerRepresentation
+        from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
@@ -889,6 +921,7 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
         labels: Sequence[str],
         pretrained_model_name_or_path: str = "bert-base-cased",
         max_length: int = 512,
+        **kwargs,
     ):
         """
         Initialize the representation.
@@ -899,6 +932,8 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
             the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
         :param max_length: >0
             the maximum number of tokens to pad/trim the labels to
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
         """
         encoder = TransformerEncoder(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -906,7 +941,7 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
         )
         # infer shape
         shape = encoder.encode_all(labels[0:1]).shape[1:]
-        super().__init__(max_id=len(labels), shape=shape)
+        super().__init__(max_id=len(labels), shape=shape, **kwargs)
 
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
@@ -929,6 +964,9 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
         :param kwargs:
             additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
 
+        :returns:
+            A label-based transformer from the triples factory
+
         :raise ImportError:
             if the transformers library could not be imported
         """
@@ -938,13 +976,13 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
             **kwargs,
         )
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id)
-        uniq, inverse = indices.unique(return_inverse=True)
+            indices = torch.arange(self.max_id, device=self.device)
+        uniq, inverse = indices.to(device=self.device).unique(return_inverse=True)
         x = self.encoder(
             labels=[self.labels[i] for i in uniq.tolist()],
         )

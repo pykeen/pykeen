@@ -9,8 +9,9 @@ import unittest
 from timeit import default_timer
 
 from pykeen.constants import PYKEEN_DATASETS
-from pykeen.datasets import Nations, _cached_get_dataset, _digest_kwargs
+from pykeen.datasets import Nations
 from pykeen.datasets.base import Dataset
+from pykeen.datasets.utils import _cached_get_dataset, _digest_kwargs
 
 
 def _time_cached_get_dataset(name: str) -> float:

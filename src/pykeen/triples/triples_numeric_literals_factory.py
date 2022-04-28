@@ -4,12 +4,12 @@
 
 import logging
 import pathlib
-from typing import Any, Dict, Optional, TextIO, Tuple, Union
+from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
+import pandas
 import torch
 
-from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples
@@ -46,83 +46,73 @@ def create_matrix_of_literals(
 class TriplesNumericLiteralsFactory(TriplesFactory):
     """Create multi-modal instances given the path to triples."""
 
+    file_name_literal_to_id: ClassVar[str] = "literal_to_id"
+    file_name_numeric_literals: ClassVar[str] = "literals"
+
     def __init__(
         self,
         *,
-        path: Union[None, str, pathlib.Path, TextIO] = None,
-        triples: Optional[LabeledTriples] = None,
-        path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
-        numeric_triples: Optional[np.ndarray] = None,
+        numeric_literals: np.ndarray,
+        literals_to_id: Mapping[str, int],
         **kwargs,
     ) -> None:
         """Initialize the multi-modal triples factory.
 
-        :param path: The path to a 3-column TSV file with triples in it. If not specified,
-         you should specify ``triples``.
-        :param triples:  A 3-column numpy array with triples in it. If not specified,
-         you should specify ``path``
-        :param path_to_numeric_triples: The path to a 3-column TSV file with triples and
-         numeric. If not specified, you should specify ``numeric_triples``.
-        :param numeric_triples:  A 3-column numpy array with numeric triples in it. If not
-         specified, you should specify ``path_to_numeric_triples``.
+        :param numeric_literals: shape: (num_entities, num_literals)
+            the numeric literals as a dense matrix.
+        :param literals_to_id:
+            a mapping from literal names to their IDs, i.e., the columns in the `numeric_literals` matrix.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`.
         """
-        if path is not None:
-            base = TriplesFactory.from_path(path=path, **kwargs)
-        elif triples is None:
-            base = TriplesFactory(**kwargs)
-        else:
-            base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
-        super().__init__(
+        super().__init__(**kwargs)
+        self.numeric_literals = numeric_literals
+        self.literals_to_id = literals_to_id
+
+    @classmethod
+    def from_path(
+        cls,
+        path: Union[str, pathlib.Path, TextIO],
+        *,
+        path_to_numeric_triples: Union[str, pathlib.Path, TextIO] = None,
+        **kwargs,
+    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+        if path_to_numeric_triples is None:
+            raise ValueError(f"{cls.__name__} requires path_to_numeric_triples.")
+        numeric_triples = load_triples(path_to_numeric_triples)
+        triples = load_triples(path)
+        return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
+
+    @classmethod
+    def from_labeled_triples(
+        cls,
+        triples: LabeledTriples,
+        *,
+        numeric_triples: LabeledTriples = None,
+        **kwargs,
+    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+        if numeric_triples is None:
+            raise ValueError(f"{cls.__name__} requires numeric_triples.")
+        base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
+        numeric_literals, literals_to_id = create_matrix_of_literals(
+            numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
+        )
+        return cls(
             entity_to_id=base.entity_to_id,
             relation_to_id=base.relation_to_id,
             mapped_triples=base.mapped_triples,
             create_inverse_triples=base.create_inverse_triples,
-        )
-
-        if path_to_numeric_triples is None and numeric_triples is None:
-            raise ValueError("Must specify one of path_to_numeric_triples or numeric_triples")
-        elif path_to_numeric_triples is not None and numeric_triples is not None:
-            raise ValueError("Must not specify both path_to_numeric_triples and numeric_triples")
-        elif path_to_numeric_triples is not None:
-            self.numeric_triples = load_triples(path_to_numeric_triples)
-        else:
-            self.numeric_triples = numeric_triples
-
-        assert self.entity_to_id is not None
-        self.numeric_literals, self.literals_to_id = create_matrix_of_literals(
-            numeric_triples=self.numeric_triples,
-            entity_to_id=self.entity_to_id,
+            numeric_literals=numeric_literals,
+            literals_to_id=literals_to_id,
         )
 
     def get_numeric_literals_tensor(self) -> torch.FloatTensor:
         """Return the numeric literals as a tensor."""
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 
-    def extra_repr(self) -> str:  # noqa: D102
-        return super().extra_repr() + (f"num_literals={len(self.literals_to_id)}")
-
-    def create_slcwa_instances(self) -> MultimodalSLCWAInstances:
-        """Create multi-modal sLCWA instances for this factory's triples."""
-        slcwa_instances = super().create_slcwa_instances()
-        return MultimodalSLCWAInstances(
-            mapped_triples=slcwa_instances.mapped_triples,
-            numeric_literals=self.numeric_literals,
-            literals_to_id=self.literals_to_id,
-        )
-
-    def create_lcwa_instances(
-        self,
-        use_tqdm: Optional[bool] = None,
-        target: Optional[int] = None,
-    ) -> MultimodalLCWAInstances:
-        """Create multi-modal LCWA instances for this factory's triples."""
-        lcwa_instances = super().create_lcwa_instances(use_tqdm=use_tqdm, target=target)
-        return MultimodalLCWAInstances(
-            pairs=lcwa_instances.pairs,
-            compressed=lcwa_instances.compressed,
-            numeric_literals=self.numeric_literals,
-            literals_to_id=self.literals_to_id,
-        )
+    def _iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super()._iter_extra_repr()
+        yield f"num_literals={len(self.literals_to_id)}"
 
     def clone_and_exchange_triples(
         self,
@@ -134,7 +124,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(
-            numeric_triples=self.numeric_triples,
             mapped_triples=mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
@@ -143,4 +132,34 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore
             },
+            numeric_literals=self.numeric_literals,
+            literals_to_id=self.literals_to_id,
         )
+
+    def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
+        path = super().to_path_binary(path=path)
+        # save literal-to-id mapping
+        pandas.DataFrame(data=self.literals_to_id.items(), columns=["label", "id"],).sort_values(by="id").set_index(
+            "id"
+        ).to_csv(
+            path.joinpath(f"{self.file_name_literal_to_id}.tsv.gz"),
+            sep="\t",
+        )
+        # save numeric literals
+        np.save(str(path.joinpath(self.file_name_numeric_literals)), self.numeric_literals)
+        return path
+
+    @classmethod
+    def _from_path_binary(cls, path: pathlib.Path) -> MutableMapping[str, Any]:
+        data = super()._from_path_binary(path)
+        # load literal-to-id
+        df = pandas.read_csv(
+            path.joinpath(f"{cls.file_name_literal_to_id}.tsv.gz"),
+            sep="\t",
+        )
+        data["literals_to_id"] = dict(zip(df["label"], df["id"]))
+        # load literals
+        data["numeric_literals"] = np.load(
+            str(path.joinpath(cls.file_name_numeric_literals).with_suffix(suffix=".npy"))
+        )
+        return data

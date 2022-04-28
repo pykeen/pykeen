@@ -11,15 +11,18 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
+from class_resolver import OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch import nn
 
 from .base import Model
-from ..nn.emb import EmbeddingSpecification, RepresentationModule
+from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
+from ..nn.representation import Representation
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
-from ..utils import check_shapes
+from ..utils import check_shapes, get_batchnorm_modules
 
 __all__ = [
     "_NewAbstractModel",
@@ -27,13 +30,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-EmbeddingSpecificationHint = Union[
-    None,
-    EmbeddingSpecification,
-    RepresentationModule,
-    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
-]
 
 
 class _NewAbstractModel(Model, ABC):
@@ -134,53 +130,78 @@ class _NewAbstractModel(Model, ABC):
 
 
 def _prepare_representation_module_list(
-    representations: EmbeddingSpecificationHint,
-    num_embeddings: int,
+    max_id: int,
     shapes: Sequence[str],
     label: str,
+    representations: OneOrManyHintOrType[Representation] = None,
+    representation_kwargs: OneOrManyOptionalKwargs = None,
     skip_checks: bool = False,
-) -> Sequence[RepresentationModule]:
-    """Normalize list of representations and wrap into nn.ModuleList."""
-    # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
-    if representations is None:
-        representations = []
-    if not isinstance(representations, Sequence):
-        representations = [representations]
-    if not skip_checks and len(representations) != len(shapes):
-        raise ValueError(
-            f"Interaction function requires {len(shapes)} {label} representations, but "
-            f"{len(representations)} were given.",
-        )
-    modules = []
-    for r in representations:
-        if not isinstance(r, RepresentationModule):
-            assert isinstance(r, EmbeddingSpecification)
-            r = r.make(num_embeddings=num_embeddings)
-        if r.max_id < num_embeddings:
+) -> Sequence[Representation]:
+    """
+    Normalize list of representations and wrap into nn.ModuleList.
+
+    .. note ::
+        Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
+
+    :param representations:
+        the representations, or hints for them.
+    :param representation_kwargs:
+        additional keyword-based parameters for instantiating representations from hints.
+    :param max_id:
+        the maximum representation ID. Newly instantiated representations will contain that many representations, and
+        pre-instantiated ones have to provide at least that many.
+    :param shapes:
+        the symbolic shapes, which are used for shape verification, if skip_checks is False.
+    :param label:
+        a label to use for error messages (typically, "entities" or "relations").
+    :param skip_checks:
+        whether to skip shape verification.
+
+    :return:
+        a module list of instantiated representation modules.
+
+    :raises ValueError:
+        if the maximum ID or shapes do not match
+    """
+    # TODO: allow max_id being present in representation_kwargs; if it matches max_id
+    # TODO: we could infer some shapes from the given interaction shape information
+    rs = representation_resolver.make_many(representations, kwargs=representation_kwargs, max_id=max_id)
+
+    # check max-id
+    for r in rs:
+        if r.max_id < max_id:
             raise ValueError(
-                f"{r} only provides {r.max_id} {label} representations, but should provide {num_embeddings}.",
+                f"{r} only provides {r.max_id} {label} representations, but should provide {max_id}.",
             )
-        elif r.max_id > num_embeddings:
+        elif r.max_id > max_id:
             logger.warning(
-                f"{r} provides {r.max_id} {label} representations, although only {num_embeddings} are needed."
+                f"{r} provides {r.max_id} {label} representations, although only {max_id} are needed."
                 f"While this is not necessarily wrong, it can indicate an error where the number of {label} "
                 f"representations was chosen wrong.",
             )
-        modules.append(r)
-    if not skip_checks:
-        check_shapes(
-            *zip(
-                (r.shape for r in modules),
-                shapes,
-            ),
-            raise_on_errors=True,
+
+    rs = cast(Sequence[Representation], nn.ModuleList(rs))
+    if skip_checks:
+        return rs
+
+    # check shapes
+    if len(rs) != len(shapes):
+        raise ValueError(
+            f"Interaction function requires {len(shapes)} {label} representations, but {len(rs)} were given."
         )
-    return nn.ModuleList(modules)
+    check_shapes(
+        *zip(
+            (r.shape for r in rs),
+            shapes,
+        ),
+        raise_on_errors=True,
+    )
+    return rs
 
 
 def repeat_if_necessary(
     scores: torch.FloatTensor,
-    representations: Sequence[RepresentationModule],
+    representations: Sequence[Representation],
     num: Optional[int],
 ) -> torch.FloatTensor:
     """
@@ -227,10 +248,10 @@ class ERModel(
     """
 
     #: The entity representations
-    entity_representations: Sequence[RepresentationModule]
+    entity_representations: Sequence[Representation]
 
     #: The relation representations
-    relation_representations: Sequence[RepresentationModule]
+    relation_representations: Sequence[Representation]
 
     #: The weight regularizers
     weight_regularizers: List[Regularizer]
@@ -247,9 +268,11 @@ class ERModel(
             Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
             Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         ],
-        interaction_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_representations: EmbeddingSpecificationHint = None,
-        relation_representations: EmbeddingSpecificationHint = None,
+        interaction_kwargs: OptionalKwargs = None,
+        entity_representations: OneOrManyHintOrType[Representation] = None,
+        entity_representations_kwargs: OneOrManyOptionalKwargs = None,
+        relation_representations: OneOrManyHintOrType[Representation] = None,
+        relation_representations_kwargs: OneOrManyOptionalKwargs = None,
         skip_checks: bool = False,
         **kwargs,
     ) -> None:
@@ -262,7 +285,11 @@ class ERModel(
             Additional key-word based parameters given to the interaction module's constructor, if not already
             instantiated.
         :param entity_representations: The entity representation or sequence of representations
+        :param entity_representations_kwargs:
+            additional keyword-based parameters for instantiation of entity representations
         :param relation_representations: The relation representation or sequence of representations
+        :param relation_representations_kwargs:
+            additional keyword-based parameters for instantiation of relation representations
         :param skip_checks:
             whether to skip entity representation checks.
         :param kwargs:
@@ -272,16 +299,19 @@ class ERModel(
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
-            num_embeddings=triples_factory.num_entities,
-            shapes=self.interaction.entity_shape,
+            representation_kwargs=entity_representations_kwargs,
+            max_id=triples_factory.num_entities,
+            shapes=self.interaction.full_entity_shapes(),
             label="entity",
-            skip_checks=self.interaction.tail_entity_shape is not None or skip_checks,
+            skip_checks=skip_checks,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
-            num_embeddings=triples_factory.num_relations,
+            representation_kwargs=relation_representations_kwargs,
+            max_id=triples_factory.num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
+            skip_checks=skip_checks,
         )
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
@@ -377,6 +407,13 @@ class ERModel(
         h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
+    def _check_slicing(self, slice_size: Optional[int]) -> None:
+        """Raise an error, if slicing is requested, but the model does not support it."""
+        if not slice_size:
+            return
+        if get_batchnorm_modules(self):  # if there are any, this is truthy
+            raise ValueError("This model does not support slicing, since it has batch normalization layers.")
+
     def score_t(
         self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
@@ -395,6 +432,7 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
+        self._check_slicing(slice_size=slice_size)
         h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
@@ -420,6 +458,7 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
+        self._check_slicing(slice_size=slice_size)
         h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
@@ -445,6 +484,7 @@ class ERModel(
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
+        self._check_slicing(slice_size=slice_size)
         h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
@@ -471,13 +511,15 @@ class ERModel(
         mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        entity_representations = self._entity_representation_from_mode(mode=mode)
+        head_representations = tail_representations = self._entity_representation_from_mode(mode=mode)
+        head_representations = [head_representations[i] for i in self.interaction.head_indices()]
+        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
         hr, rr, tr = [
             [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
-                (h, entity_representations),
+                (h, head_representations),
                 (r, self.relation_representations),
-                (t, entity_representations),
+                (t, tail_representations),
             )
         ]
         # normalization

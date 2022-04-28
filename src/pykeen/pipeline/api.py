@@ -37,7 +37,7 @@ could be used as in:
 >>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the dataset was given as a string. A list of available datasets can be found in
-:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`pykeen.datasets.base.Dataset` could be
+:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`pykeen.datasets.Dataset` could be
 used as in:
 
 >>> from pykeen.pipeline import pipeline
@@ -197,13 +197,14 @@ from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMappin
 import pandas as pd
 import scipy.stats
 import torch
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
-from ..evaluation.metrics import MetricKey
+from ..evaluation.ranking_metric_lookup import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
@@ -215,12 +216,11 @@ from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, resolve_result_trackers
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
-from ..typing import Hint, HintType, MappedTriples, OneOrSequence
+from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
     Result,
     ensure_ftp_directory,
     fix_dataclass_init_docs,
-    flatten_dictionary,
     get_json_bytes_io,
     get_model_io,
     load_configuration,
@@ -376,6 +376,7 @@ class PipelineResult(Result):
         *,
         save_metadata: bool = True,
         save_replicates: bool = True,
+        save_training: bool = True,
         **_kwargs,
     ) -> None:
         """Save all artifacts in the given directory."""
@@ -383,12 +384,16 @@ class PipelineResult(Result):
             directory = pathlib.Path(directory).resolve()
         directory.mkdir(exist_ok=True, parents=True)
 
-        with directory.joinpath("metadata.json").open("w") as file:
-            json.dump(self.metadata, file, indent=2, sort_keys=True)
         with directory.joinpath("results.json").open("w") as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
+        if save_metadata:
+            with directory.joinpath("metadata.json").open("w") as file:
+                json.dump(self.metadata, file, indent=2, sort_keys=True)
         if save_replicates:
             self.save_model(directory.joinpath("trained_model.pkl"))
+        if save_training:
+            self.training.to_path_binary(directory.joinpath("training_triples"))
+        logger.info(f"Saved to directory: {directory.as_uri()}")
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
@@ -501,6 +506,7 @@ def replicate_pipeline_from_config(
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
+    save_training: bool = False,
     keep_seed: bool = False,
     **kwargs,
 ) -> None:
@@ -512,6 +518,7 @@ def replicate_pipeline_from_config(
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
+    :param save_training: whether to save the training factory.
     :param keep_seed: whether to keep the random seed in a configuration
     """
     # note: we do not directly forward discard_seed here, since we want to highlight the different default behaviour:
@@ -523,6 +530,7 @@ def replicate_pipeline_from_config(
         pipeline_results=pipeline_results,
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
+        save_training=save_training,
     )
 
 
@@ -547,9 +555,7 @@ class _ResultAccumulator:
 
     def add_original_result(self, result: Mapping[str, Any]) -> None:
         """Add an "original" result, i.e., one stored in the reproducibility configuration."""
-        # normalize keys
-        # TODO: this can only normalize rank-based metrics!
-        result = {MetricKey.normalize(k): v for k, v in flatten_dictionary(result).items()}
+        result = normalize_flattened_metric_results(result)
         self.keys = sorted(result.keys())
         self.data.append([True] + [result[k] for k in self.keys])
 
@@ -625,6 +631,7 @@ def save_pipeline_results_to_directory(
     move_to_cpu: bool = False,
     save_metadata: bool = False,
     save_replicates: bool = True,
+    save_training: bool = False,
     width: int = 5,
 ) -> None:
     """Save the result set to the directory.
@@ -636,6 +643,7 @@ def save_pipeline_results_to_directory(
     :param save_metadata: Should the metadata be saved? Might be redundant in a scenario when you're
         using this function, so defaults to false.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param save_training: Should the training triples be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
     if isinstance(directory, str):
@@ -657,6 +665,7 @@ def save_pipeline_results_to_directory(
             replicate_directory,
             save_metadata=save_metadata,
             save_replicates=save_replicates,
+            save_training=save_training,
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
@@ -832,8 +841,8 @@ def pipeline(  # noqa: C901
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     # 9. Tracking
-    result_tracker: Optional[OneOrSequence[HintType[ResultTracker]]] = None,
-    result_tracker_kwargs: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
+    result_tracker: OneOrManyHintOrType[ResultTracker] = None,
+    result_tracker_kwargs: OneOrManyOptionalKwargs = None,
     # Misc
     metadata: Optional[Dict[str, Any]] = None,
     device: Hint[torch.device] = None,
@@ -1160,6 +1169,7 @@ def pipeline(  # noqa: C901
         triples_factory=training,
         optimizer=optimizer_instance,
         lr_scheduler=lr_scheduler_instance,
+        result_tracker=_result_tracker,
         **training_loop_kwargs,
     )
     _result_tracker.log_params(
@@ -1227,7 +1237,6 @@ def pipeline(  # noqa: C901
     losses = training_loop_instance.train(
         triples_factory=training,
         stopper=stopper_instance,
-        result_tracker=_result_tracker,
         clear_optimizer=clear_optimizer,
         **training_kwargs,
     )

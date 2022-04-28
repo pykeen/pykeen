@@ -106,9 +106,9 @@ class Regularizer(nn.Module, ABC):
         if self.tracked_parameters:
             self.update(*self.tracked_parameters)
 
-        term = self.regularization_term
+        result = self.weight * self.regularization_term
         self.reset()
-        return self.weight * term
+        return result
 
 
 class NoRegularizer(Regularizer):
@@ -263,7 +263,7 @@ class CombinedRegularizer(Regularizer):
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 
 
-regularizer_resolver = ClassResolver.from_subclasses(
+regularizer_resolver: ClassResolver[Regularizer] = ClassResolver.from_subclasses(
     base=Regularizer,
     default=NoRegularizer,
 )

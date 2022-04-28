@@ -6,27 +6,25 @@ from __future__ import annotations
 
 import functools
 import inspect
-import itertools
 import logging
 import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
-from class_resolver import HintOrType
+from class_resolver import HintOrType, OptionalKwargs
 from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
+from ..nn.representation import Representation, build_representation
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
-from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
+from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
 __all__ = [
     "Model",
@@ -35,22 +33,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-class DeviceResolutionError(ValueError):
-    """An error in the resolution of a model's device."""
-
-
-class AmbiguousDeviceError(DeviceResolutionError):
-    """An error raised if there is ambiguity in device resolution."""
-
-    def __init__(self, module: nn.Module) -> None:
-        """Initialize the error."""
-        _info = defaultdict(list)
-        for name, tensor in itertools.chain(module.named_parameters(), module.named_buffers()):
-            _info[tensor.data.device].append(name)
-        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
-        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
 
 
 class Model(nn.Module, ABC):
@@ -151,26 +133,7 @@ class Model(nn.Module, ABC):
     @property
     def device(self) -> torch.device:
         """Return the model's device."""
-        return self.get_preferred_device(allow_ambiguity=False)
-
-    def get_devices(self) -> Collection[torch.device]:
-        """Return the device(s) from each components of the model."""
-        return {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
-
-    def get_preferred_device(self, allow_ambiguity: bool = True) -> torch.device:
-        """Return the preferred device."""
-        devices = self.get_devices()
-        if len(devices) == 0:
-            raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
-        if len(devices) == 1:
-            return next(iter(devices))
-        if not allow_ambiguity:
-            raise AmbiguousDeviceError(self)
-        # try to resolve ambiguous device; there has to be at least one cuda device
-        cuda_devices = {d for d in devices if d.type == "cuda"}
-        if len(cuda_devices) == 1:
-            return next(iter(cuda_devices))
-        raise AmbiguousDeviceError(self)
+        return get_preferred_device(self, allow_ambiguity=False)
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
@@ -295,6 +258,11 @@ class Model(nn.Module, ABC):
     def num_parameter_bytes(self) -> int:
         """Calculate the number of bytes used for all parameters of the model."""
         return sum(param.numel() * param.element_size() for param in self.parameters(recurse=True))
+
+    @property
+    def num_parameters(self) -> int:
+        """Calculate the number of parameters of the model."""
+        return sum(param.numel() for param in self.parameters(recurse=True))
 
     def save_state(self, path: Union[str, os.PathLike]) -> None:
         """Save the state of the model.
@@ -778,16 +746,19 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     #: Primary embeddings for entities
-    entity_embeddings: Embedding
+    entity_embeddings: Representation
+
     #: Primary embeddings for relations
-    relation_embeddings: Embedding
+    relation_embeddings: Representation
 
     def __init__(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        entity_representations: EmbeddingSpecification,
-        relation_representations: EmbeddingSpecification,
+        entity_representations: HintOrType[Representation] = None,
+        entity_representations_kwargs: OptionalKwargs = None,
+        relation_representations: HintOrType[Representation] = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
@@ -795,13 +766,15 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.entity_embeddings = entity_representations.make(
-            num_embeddings=triples_factory.num_entities,
-            device=self.device,
+        self.entity_embeddings = build_representation(
+            max_id=triples_factory.num_entities,
+            representation=entity_representations,
+            representation_kwargs=entity_representations_kwargs,
         )
-        self.relation_embeddings = relation_representations.make(
-            num_embeddings=triples_factory.num_relations,
-            device=self.device,
+        self.relation_embeddings = build_representation(
+            max_id=triples_factory.num_relations,
+            representation=relation_representations,
+            representation_kwargs=relation_representations_kwargs,
         )
 
     @property
@@ -810,12 +783,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return self.entity_embeddings.embedding_dim
 
     @property
-    def relation_dim(self) -> int:  # noqa:D401
-        """The relation embedding dimension."""
-        return self.relation_embeddings.embedding_dim
-
-    @property
-    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+    def entity_representations(self) -> Sequence[Representation]:  # noqa:D401
         """The entity representations.
 
         This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
@@ -823,7 +791,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return [self.entity_embeddings]
 
     @property
-    def relation_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+    def relation_representations(self) -> Sequence[Representation]:  # noqa:D401
         """The relation representations.
 
         This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.

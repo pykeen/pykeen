@@ -2,9 +2,23 @@
 
 """Test that samplers can be executed."""
 
-from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, PseudoTypedNegativeSampler
+import numpy.testing
+import torch
+import unittest_templates
+
+from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler, PseudoTypedNegativeSampler
 from pykeen.sampling.pseudo_type import create_index
 from tests.test_sampling import cases
+
+
+def _verify_entity_corruption(instance: NegativeSampler, positive_batch: torch.LongTensor):
+    """Verify that at most one entity is corrupted."""
+    negative_batch = instance.corrupt_batch(positive_batch=positive_batch)
+    positive_batch = positive_batch.unsqueeze(dim=1).repeat(1, instance.num_negs_per_pos, 1)
+    # same relation
+    numpy.testing.assert_array_equal(negative_batch[..., 1], positive_batch[..., 1])
+    # only corruption of a single entity (note: we do not check for exactly 2, since we do not filter).
+    numpy.testing.assert_array_less(1, (negative_batch == positive_batch).sum(dim=-1))
 
 
 class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
@@ -27,11 +41,19 @@ class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
         assert num_subj_corrupted - 1 <= num_triples
         assert half_size - 1 <= num_subj_corrupted
 
+    def test_entity_corruption(self):
+        """Verify entity corruption."""
+        _verify_entity_corruption(instance=self.instance, positive_batch=self.positive_batch)
+
 
 class BernoulliNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
     """Test the Bernoulli negative sampler."""
 
     cls = BernoulliNegativeSampler
+
+    def test_entity_corruption(self):
+        """Verify entity corruption."""
+        _verify_entity_corruption(instance=self.instance, positive_batch=self.positive_batch)
 
 
 class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
@@ -41,12 +63,7 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
 
     def test_corrupt_batch(self):
         """Additional test for corrupt_batch."""
-        positive_batch = self.positive_batch.unsqueeze(dim=1)
         negative_batch = self.instance.corrupt_batch(positive_batch=self.positive_batch)
-        # same relation
-        assert (negative_batch[..., 1] == positive_batch[..., 1]).all()
-        # only corruption of a single entity (note: we do not check for exactly 2, since we do not filter).
-        assert ((negative_batch == positive_batch).sum(dim=-1) >= 2).all()
         # check that corrupted entities co-occur with the relation in training data
         for entity_pos in (0, 2):
             er_training = {(r, e) for r, e in self.triples_factory.mapped_triples[:, [1, entity_pos]].tolist()}
@@ -55,7 +72,9 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
 
     def test_index_structure(self):
         """Test the index structure."""
-        data, offsets = create_index(triples_factory=self.triples_factory)
+        data, offsets = create_index(
+            mapped_triples=self.triples_factory.mapped_triples, num_relations=self.triples_factory.num_relations
+        )
         triples = self.triples_factory.mapped_triples
         for r in range(self.triples_factory.num_relations):
             triples_with_r = triples[triples[:, 1] == r]
@@ -63,3 +82,14 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
                 index_entities = set(data[offsets[2 * r + i] : offsets[2 * r + i + 1]].tolist())
                 triple_entities = set(triples_with_r[:, entity_pos].tolist())
                 assert index_entities == triple_entities
+
+    def test_entity_corruption(self):
+        """Verify entity corruption."""
+        _verify_entity_corruption(instance=self.instance, positive_batch=self.positive_batch)
+
+
+class NegativeSamplerMetaTestCase(unittest_templates.MetaTestCase):
+    """Meta test case for testing all negative samplers."""
+
+    base_cls = NegativeSampler
+    base_test = cases.NegativeSamplerGenericTestCase

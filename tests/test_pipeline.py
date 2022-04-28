@@ -364,8 +364,7 @@ class TestPipelineReplicate(unittest.TestCase):
                     model="transe",
                 ),
                 results={
-                    "hits_at_k": {"best": {"10": 0.538}},
-                    "mean_rank": {"best": 163},
+                    "best": {"hits_at_k": {"10": 0.538}, "mean_rank": 163},
                 },
             ),
             directory=self.tmp_dir_path,
@@ -516,7 +515,7 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
             random_seed=42,
             filter_validation_when_testing=False,
         )
-        assert results.metric_results.arithmetic_mean_rank["both"]["realistic"] == 2, "The rank should equal 2"
+        assert results.metric_results.get_metric("mr") == 2, "The rank should equal 2"
 
     def test_pipeline_evaluation_filtering_with_validation_triples(self):
         """Test if the evaluator's triple filtering with validation triples works as expected using the pipeline."""
@@ -531,4 +530,4 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
             random_seed=42,
             filter_validation_when_testing=True,
         )
-        assert results.metric_results.arithmetic_mean_rank["both"]["realistic"] == 1, "The rank should equal 1"
+        assert results.metric_results.get_metric("mr") == 1, "The rank should equal 1"

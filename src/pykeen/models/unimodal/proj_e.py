@@ -4,16 +4,13 @@
 
 from typing import Any, ClassVar, Mapping, Optional, Type
 
-import numpy
-import torch
-import torch.autograd
 from torch import nn
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
-from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
+from ...nn.modules import ProjEInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -21,7 +18,7 @@ __all__ = [
 ]
 
 
-class ProjE(EntityRelationEmbeddingModel):
+class ProjE(ERModel):
     r"""An implementation of ProjE from [shi2017]_.
 
     ProjE is a neural network-based approach with a *combination* and a *projection* layer. The interaction model
@@ -71,76 +68,18 @@ class ProjE(EntityRelationEmbeddingModel):
         **kwargs,
     ) -> None:
         super().__init__(
-            entity_representations=EmbeddingSpecification(
+            interaction=ProjEInteraction,
+            interaction_kwargs=dict(
                 embedding_dim=embedding_dim,
+                inner_non_linearity=inner_non_linearity,
+            ),
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
         )
-
-        # Global entity projection
-        self.d_e = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
-
-        # Global relation projection
-        self.d_r = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
-
-        # Global combination bias
-        self.b_c = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
-
-        # Global combination bias
-        self.b_p = nn.Parameter(torch.empty(1, device=self.device), requires_grad=True)
-
-        if inner_non_linearity is None:
-            inner_non_linearity = nn.Tanh()
-        self.inner_non_linearity = inner_non_linearity
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        bound = numpy.sqrt(6) / self.embedding_dim
-        nn.init.uniform_(self.d_e, a=-bound, b=bound)
-        nn.init.uniform_(self.d_r, a=-bound, b=bound)
-        nn.init.uniform_(self.b_c, a=-bound, b=bound)
-        nn.init.uniform_(self.b_p, a=-bound, b=bound)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # Compute score
-        hidden = self.inner_non_linearity(self.d_e[None, :] * h + self.d_r[None, :] * r + self.b_c[None, :])
-        scores = torch.sum(hidden * t, dim=-1, keepdim=True) + self.b_p
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
-
-        # Rank against all entities
-        hidden = self.inner_non_linearity(self.d_e[None, :] * h + self.d_r[None, :] * r + self.b_c[None, :])
-        scores = torch.sum(hidden[:, None, :] * t[None, :, :], dim=-1) + self.b_p
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-
-        # Rank against all entities
-        hidden = self.inner_non_linearity(
-            self.d_e[None, None, :] * h[None, :, :]
-            + (self.d_r[None, None, :] * r[:, None, :] + self.b_c[None, None, :]),
-        )
-        scores = torch.sum(hidden * t[:, None, :], dim=-1) + self.b_p
-
-        return scores

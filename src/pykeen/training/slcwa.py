@@ -3,16 +3,16 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Mapping, Optional
+from typing import Optional
 
-import torch
-from class_resolver import HintOrType
+import torch.utils.data
+from class_resolver import HintOrType, OptionalKwargs
+from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
-from ..sampling import NegativeSampler, negative_sampler_resolver
-from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import SLCWABatchType, SLCWASampleType
-from ..typing import MappedTriples
+from ..sampling import NegativeSampler
+from ..triples import CoreTriplesFactory
+from ..triples.instances import SLCWABatch, SLCWASampleType
 
 __all__ = [
     "SLCWATrainingLoop",
@@ -21,48 +21,62 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
+class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
     """A training loop that uses the stochastic local closed world assumption training approach.
 
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
     """
 
-    negative_sampler: NegativeSampler
-
     def __init__(
         self,
-        *,
-        triples_factory: CoreTriplesFactory,
         negative_sampler: HintOrType[NegativeSampler] = None,
-        negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """Initialize the training loop.
 
-        :param triples_factory: The training triples factory. Also passed to TrainingLoop.__init__
         :param negative_sampler: The class, instance, or name of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
             for every positive one
         :param kwargs:
             Additional keyword-based parameters passed to TrainingLoop.__init__
         """
-        super().__init__(triples_factory=triples_factory, **kwargs)
-        self.negative_sampler = negative_sampler_resolver.make(
-            query=negative_sampler,
-            pos_kwargs=negative_sampler_kwargs,
-            triples_factory=triples_factory,
+        super().__init__(**kwargs)
+        self.negative_sampler = negative_sampler
+        self.negative_sampler_kwargs = negative_sampler_kwargs
+
+    def _create_training_data_loader(
+        self,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        pin_memory: bool,
+        sampler: Optional[str],
+    ) -> DataLoader[SLCWABatch]:  # noqa: D102
+        return DataLoader(
+            dataset=triples_factory.create_slcwa_instances(
+                batch_size=batch_size,
+                shuffle=True,
+                drop_last=drop_last,
+                negative_sampler=self.negative_sampler,
+                negative_sampler_kwargs=self.negative_sampler_kwargs,
+                sampler=sampler,
+            ),
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            # disable automatic batching
+            batch_size=None,
+            batch_sampler=None,
         )
 
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_slcwa_instances()
-
     @staticmethod
-    def _get_batch_size(batch: MappedTriples) -> int:  # noqa: D102
-        return batch.shape[0]
+    def _get_batch_size(batch: SLCWABatch) -> int:  # noqa: D102
+        return batch[0].shape[0]
 
     def _process_batch(
         self,
-        batch: MappedTriples,
+        batch: SLCWABatch,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
@@ -72,19 +86,18 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         if slice_size is not None:
             raise AttributeError("Slicing is not possible for sLCWA training loops.")
 
-        # Send positive batch to device
-        positive_batch = batch[start:stop].to(device=self.device)
+        # split batch
+        positive_batch, negative_batch, positive_filter = batch
 
-        # Create negative samples, shape: (batch_size, num_neg_per_pos, 3)
-        negative_batch, positive_filter = self.negative_sampler.sample(positive_batch=positive_batch)
-
-        # apply filter mask
-        if positive_filter is None:
-            negative_score_shape = negative_batch.shape[:2]
-            negative_batch = negative_batch.view(-1, 3)
-        else:
+        # send to device
+        positive_batch = positive_batch[start:stop].to(device=self.device)
+        negative_batch = negative_batch[start:stop]
+        if positive_filter is not None:
+            positive_filter = positive_filter[start:stop]
             negative_batch = negative_batch[positive_filter]
-            negative_score_shape = negative_batch.shape[:-1]
+        # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
+        negative_score_shape = negative_batch.shape[:-1]
+        negative_batch = negative_batch.view(-1, 3)
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
         # BasicNegativeSampler, BernoulliNegativeSampler
@@ -109,7 +122,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,

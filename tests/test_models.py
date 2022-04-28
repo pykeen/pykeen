@@ -27,7 +27,7 @@ from pykeen.models import (
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
-from pykeen.nn import Embedding, EmbeddingSpecification, NodePieceRepresentation
+from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
@@ -60,9 +60,13 @@ class TestCompGCN(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        dim = kwargs.pop("embedding_dim")
         kwargs["encoder_kwargs"] = dict(
-            embedding_specification=EmbeddingSpecification(
-                embedding_dim=(kwargs.pop("embedding_dim")),
+            entity_representations_kwargs=dict(
+                shape=(dim,),
+            ),
+            relation_representations_kwargs=dict(
+                shape=(dim,),
             ),
         )
         return kwargs
@@ -117,7 +121,7 @@ class TestDistMult(cases.ModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
@@ -303,9 +307,9 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         """Test the expected vocabulary size of the individual tokenizations."""
         assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
         node_piece = self.instance.entity_representations[0]
-        assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)
-        assert len(node_piece.tokenizations) == 2
-        anchor, relation = node_piece.tokenizations
+        assert isinstance(node_piece.token_representations, torch.nn.ModuleList)
+        assert len(node_piece.token_representations) == 2
+        anchor, relation = node_piece.token_representations
         assert anchor.vocabulary.max_id == self.num_anchors + 1
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
@@ -403,9 +407,7 @@ class TestRotatE(cases.ModelTestCase):
 
         Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
         """
-        relation_abs = (
-            self.instance.relation_embeddings(indices=None).view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
-        )
+        relation_abs = self.instance.relation_representations[0](indices=None).abs()
         assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
 
 
@@ -635,51 +637,12 @@ class TestTransR(cases.DistanceModelTestCase):
         "relation_dim": 4,
     }
 
-    def test_score_hrt_manual(self):
-        """Manually test interaction function of TransR."""
-        # entity embeddings
-        weights = torch.as_tensor(data=[[2.0, 2.0], [3.0, 3.0]], dtype=torch.float)
-        entity_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=2,
-        )
-        entity_embeddings._embeddings.weight.data.copy_(weights)
-        self.instance.entity_embeddings = entity_embeddings
-
-        # relation embeddings
-        relation_weights = torch.as_tensor(data=[[4.0, 4], [5.0, 5.0]], dtype=torch.float)
-        relation_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=2,
-        )
-        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
-
-        relation_projection_weights = torch.as_tensor(
-            data=[[5.0, 5.0, 6.0, 6.0], [7.0, 7.0, 8.0, 8.0]], dtype=torch.float
-        )
-        relation_projection_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=4,
-        )
-        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
-
-        # Compute Scores
-        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
-        scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
-        first_score = scores[0].item()
-        # second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -32, delta=0.01)
-
     def _check_constraints(self):
         """Check model constraints.
 
         Entity and relation embeddings have to have at most unit L2 norm.
         """
-        for emb in (self.instance.entity_embeddings, self.instance.relation_embeddings):
+        for emb in (self.instance.entity_representations[0], self.instance.relation_representations[0]):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=1.0e-06)
 
 
@@ -771,6 +734,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                         model_names.add(value.__name__)
 
         star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
+        # FIXME definitely a type mismatch going on here
         model_names = _remove_non_models(model_names - SKIP_MODULES)
 
         self.assertEqual(model_names, star_model_names, msg="Forgot to add some imports")
@@ -870,9 +834,9 @@ class ERModelTests(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        embedding_dim = kwargs.pop("embedding_dim")
-        kwargs["entity_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
-        kwargs["relation_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        shape = (kwargs.pop("embedding_dim"),)
+        kwargs["entity_representations_kwargs"] = dict(shape=shape)
+        kwargs["relation_representations_kwargs"] = dict(shape=shape)
         return kwargs
 
     def test_has_hpo_defaults(self):  # noqa: D102

@@ -48,8 +48,10 @@ def softmax(
     :param dim:
         The dimension along which to compute the softmax.
 
-    :return:
+    :returns:
         The softmax-ed tensor.
+
+    :raises ImportError: if :mod:`torch_scatter` is not installed
     """
     if torch_scatter is None:
         raise ImportError(
@@ -179,6 +181,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
             the number of attention heads
         :param dropout:
             the attention dropout
+        :raises ValueError: If ``message_dim`` is not divisible by ``num_heads``
         """
         super().__init__()
         if 0 != message_dim % num_heads:
