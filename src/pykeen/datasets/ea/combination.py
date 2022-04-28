@@ -8,7 +8,7 @@ import torch
 from class_resolver import ClassResolver
 
 from ...triples import CoreTriplesFactory, TriplesFactory
-from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, MappedTriples
+from ...typing import COLUMN_HEAD, COLUMN_TAIL, EA_SIDE_LEFT, EA_SIDE_RIGHT, MappedTriples, TargetColumn
 from ...utils import format_relative_comparison, get_connected_components
 
 logger = logging.getLogger(__name__)
@@ -155,10 +155,55 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
         )
 
 
+def _swap_index(mapped_triples: MappedTriples, dense_map: torch.LongTensor, index: TargetColumn) -> MappedTriples:
+    trans = dense_map[mapped_triples[:, index]]
+    mask = trans >= 0
+    mapped_triples = mapped_triples[mask].clone()
+    mapped_triples[:, index] = trans
+    return mapped_triples
+
+
 class SwapGraphPairCombinator(GraphPairCombinator):
     """Add extra triples by swapping aligned entities."""
 
-    # TODO: implement
+    def __call__(
+        self, left: TriplesFactory, right: TriplesFactory, alignment: pandas.DataFrame, **kwargs
+    ) -> Tuple[TriplesFactory, torch.LongTensor]:
+        # concatenate triples
+        mapped_triples, offsets = cat_triples(left, right)
+        # merge mappings
+        entity_to_id, relation_to_id = merge_both_mappings(left=left, right=right, offsets=offsets)
+        # filter alignment and translate to IDs
+        alignment = torch.stack(
+            filter_map_alignment(alignment=alignment, left=left, right=right, entity_offsets=offsets[:, 0]),
+            dim=0,
+        )
+        # add swap triples
+        # e1 ~ e2 => (e1, r, t) ~> (e2, r, t), or (h, r, e1) ~> (h, r, e2)
+        dense_map = torch.full(size=(offsets[-1, 0],), fill_value=-1)
+        left_id, right_id = alignment
+        dense_map[left_id] = right_id
+        dense_map[right_id] = left_id
+        mapped_triples = torch.cat(
+            [
+                mapped_triples,
+                # swap head
+                _swap_index(mapped_triples=mapped_triples, dense_map=dense_map, index=COLUMN_HEAD),
+                # swap tail
+                _swap_index(mapped_triples=mapped_triples, dense_map=dense_map, index=COLUMN_TAIL),
+            ],
+            dim=0,
+        )
+
+        return (
+            TriplesFactory(
+                mapped_triples=mapped_triples,
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+                **kwargs,
+            ),
+            alignment,
+        )
 
 
 class ExtraRelationGraphPairCombinator(GraphPairCombinator):
