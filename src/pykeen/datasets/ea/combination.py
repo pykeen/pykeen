@@ -287,7 +287,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
 
 
 def _iter_mappings(
-    *old_new_ids_pairs: Tuple[torch.LongTensor], offsets: torch.LongTensor
+    *old_new_ids_pairs: Tuple[torch.LongTensor, torch.LongTensor], offsets: torch.LongTensor
 ) -> Iterable[Mapping[int, int]]:
     # TODO: check
     old, new = [torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs)]
