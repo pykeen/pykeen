@@ -1520,6 +1520,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
+    create_inverse_triples: bool = True
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
