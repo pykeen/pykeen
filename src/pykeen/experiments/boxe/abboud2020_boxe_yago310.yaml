@@ -40,7 +40,7 @@ pipeline:
     # = mean reciprocal rank
     metric: "inverse_harmonic_mean_rank"
     # big enough to run until the end
-    patience: 1000
+    patience: 400
   
   negative_sampler: basic
   negative_sampler_kwargs:
@@ -52,7 +52,8 @@ pipeline:
   training_kwargs:
     batch_size: 4096
     # TODO: was 400 before; why?
-    num_epochs: 1000
+    # on Yago3-10, BoxE converges around 300 epochs
+    num_epochs: 400
   training_loop: SLCWA
 
 # cf. https://arxiv.org/pdf/2007.06267v2.pdf, Table 8
