@@ -315,7 +315,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         h, r, t = mapped_triples.t()
         h_new, t_new = entity_id_mapping[h], entity_id_mapping[t]
         # ensure consecutive IDs
-        unique, inverse = torch.cat([h_new, t_new]).unique(return_inverse=True)
+        inverse = torch.cat([h_new, t_new]).unique(return_inverse=True)[1]
         h_new, t_new = inverse.split(split_size_or_sections=2)
         mapped_triples = torch.stack([h_new, r, t_new], dim=-1)
         # only use training alignments?
