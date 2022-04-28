@@ -136,7 +136,7 @@ def filter_map_alignment(
     # filter alignment
     invalid_mask = (alignment.values < 0).any(axis=1) | (
         alignment.values >= numpy.reshape(numpy.asarray([left.num_entities, right.num_entities]), newshape=(1, 2))
-    )
+    ).any(axis=1)
     if invalid_mask.any():
         logger.warning(
             f"Dropping {format_relative_comparison(part=invalid_mask.sum(), total=alignment.shape[0])} "
