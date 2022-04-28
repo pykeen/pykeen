@@ -66,7 +66,7 @@ class RGCNRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["entity_representations_kwargs"] = (dict(embedding_dim=self.num_entities),)
+        kwargs["entity_representations_kwargs"] = dict(embedding_dim=self.num_entities)
         return kwargs
 
 
