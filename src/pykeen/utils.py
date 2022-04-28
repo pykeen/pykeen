@@ -111,7 +111,6 @@ __all__ = [
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
     "logcumsumexp",
-    "get_connected_components",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1320,42 +1319,6 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     out = np.log(s)
     out += a_max
     return out
-
-
-def find(x: X, parent: Mapping[X, X]) -> X:
-    """Find step of union-find data structure with path compression."""
-    # check validity
-    if x not in parent:
-        raise ValueError(f"Unknown element: {x}.")
-    # path compression
-    while parent[x] != x:
-        x, parent[x] = parent[x], parent[parent[x]]  # type: ignore
-    return x
-
-
-def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
-    """Get the connected components from adjacency list."""
-    # collect connected components using union find with path compression
-    parent: Dict[X, X] = dict()
-    for x, y in pairs:
-        parent.setdefault(x, x)
-        parent.setdefault(y, y)
-        # get representatives
-        x = find(x=x, parent=parent)
-        y = find(x=y, parent=parent)
-        # already merged
-        if x == y:
-            continue
-        # make x the smaller one
-        if y < x:  # type: ignore
-            x, y = y, x
-        # merge
-        parent[y] = x
-    # extract partitions
-    result = defaultdict(list)
-    for k, v in parent.items():
-        result[v].append(k)
-    return list(result.values())
 
 
 if __name__ == "__main__":
