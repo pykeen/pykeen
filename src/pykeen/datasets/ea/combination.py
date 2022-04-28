@@ -137,14 +137,22 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
     ) -> Tuple[TriplesFactory, torch.LongTensor]:
         # concatenate triples
         mapped_triples, offsets = cat_triples(left, right)
-        return TriplesFactory(
-            mapped_triples=mapped_triples,
-            entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id,
-            **kwargs,
+        # merge mappings
+        entity_to_id, relation_to_id = merge_both_mappings(left=left, right=right, offsets=offsets)
+        # filter alignment and translate to IDs
+        alignment = torch.stack(
+            filter_map_alignment(alignment=alignment, left=left, right=right, entity_offsets=offsets[:, 0]),
+            dim=0,
         )
-
-    # TODO: implement
+        return (
+            TriplesFactory(
+                mapped_triples=mapped_triples,
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+                **kwargs,
+            ),
+            alignment,
+        )
 
 
 class SwapGraphPairCombinator(GraphPairCombinator):
