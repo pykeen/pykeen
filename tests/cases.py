@@ -1528,6 +1528,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
             num_entities=self.num_entities,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
+            create_inverse_triples=self.create_inverse_triples,
         )
         return kwargs
 
