@@ -9,13 +9,14 @@ import itertools
 import logging
 import pathlib
 from abc import ABC
-from typing import ClassVar, Literal, Mapping, Tuple, Union
+from typing import ClassVar, Mapping, Tuple, Union
 
 import click
 import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
+from typing_extensions import Literal  # Python 3.7 compatibility
 
 from .base import EADataset
 from ...constants import PYKEEN_DATASETS_MODULE
