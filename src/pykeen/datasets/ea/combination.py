@@ -7,9 +7,9 @@ import pandas
 import torch
 from class_resolver import ClassResolver
 
-from ...triples import CoreTriplesFactory, TriplesFactory
+from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT
-from ...utils import format_relative_comparison, get_connected_components
+from ...utils import format_relative_comparison
 
 logger = logging.getLogger(__name__)
 
@@ -45,18 +45,6 @@ class GraphPairCombinator:
             The tensor of matching pairs has shape `(2, num_alignments)`, where `num_alignments` can also be 0.
         """
         raise NotImplementedError
-
-
-class DisjointGraphPairCombinator(GraphPairCombinator):
-    """This combinator keeps both graphs as disconnected components."""
-
-    # TODO: implement
-
-
-class SwapGraphPairCombinator(GraphPairCombinator):
-    """Add extra triples by swapping aligned entities."""
-
-    # TODO: implement
 
 
 class ExtraRelationGraphPairCombinator(GraphPairCombinator):
@@ -119,55 +107,6 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
             relation_to_id=relation_to_id,
             **kwargs,
         ), torch.stack([left_id, right_id])
-
-
-class CollapseGraphPairCombinator(GraphPairCombinator):
-    """This combinator merges all matching entity pairs into a single ID."""
-
-    def __call__(
-        self,
-        left: TriplesFactory,
-        right: TriplesFactory,
-        alignment: pandas.DataFrame,
-        **kwargs,
-    ) -> TriplesFactory:  # noqa: D102
-        # concatenate (shifted) triples
-        mapped_triples = torch.cat(
-            [
-                left.mapped_triples,
-                right.mapped_triples
-                + torch.as_tensor([left.num_entities, left.num_relations, left.num_entities]).view(1, 3),
-            ]
-        )
-        # determine connected components regarding the same-as relation (i.e., applies transitivity)
-        id_mapping = torch.arange(left.num_entities + right.num_entities)
-        for cc in get_connected_components(
-            pairs=(
-                (
-                    left.entity_labeling.label_to_id[row[EA_SIDE_LEFT]],
-                    right.entity_labeling.label_to_id[row[EA_SIDE_RIGHT]] + left.num_entities,
-                )
-                for _, row in alignment.iterrows()
-            )
-        ):
-            cc = list(cc)
-            id_mapping[cc] = min(cc)
-        # apply id mapping
-        h, r, t = mapped_triples.t()
-        h, t = id_mapping[h], id_mapping[t]
-        # ensure consecutive IDs
-        unique, inverse = torch.cat([h, t]).unique(return_inverse=True)
-        h, t = inverse.split(split_size_or_sections=2)
-        mapped_triples = torch.stack([h, r, t], dim=-1)
-        # TODO: keep labeling?
-        return CoreTriplesFactory(
-            mapped_triples=mapped_triples,
-            num_entities=len(unique),
-            num_relations=left.num_relations + right.num_relations,
-            entity_ids=None,
-            relation_ids=None,
-            **kwargs,
-        ), torch.empty(size=(2, 0), dtype=torch.long)
 
 
 graph_combinator_resolver: ClassResolver[GraphPairCombinator] = ClassResolver.from_subclasses(
