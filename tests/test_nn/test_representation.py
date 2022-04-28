@@ -66,7 +66,7 @@ class RGCNRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["entity_representations_kwargs"] = (dict(embedding_dim=self.num_entities),)
+        kwargs["entity_representations_kwargs"] = dict(embedding_dim=self.num_entities)
         return kwargs
 
 
@@ -237,4 +237,4 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
 
     base_cls = pykeen.nn.representation.Representation
     base_test = cases.RepresentationTestCase
-    skip_cls = {mocks.CustomRepresentation}
+    skip_cls = {mocks.CustomRepresentation, pykeen.nn.pyg.AbstractPyGRepresentation}
