@@ -22,6 +22,7 @@ from .typing import (
 __all__ = [
     "PYKEEN_HOME",
     "PYKEEN_DATASETS",
+    "PYKEEN_DATASETS_MODULE",
     "PYKEEN_BENCHMARKS",
     "PYKEEN_EXPERIMENTS",
     "PYKEEN_CHECKPOINTS",
@@ -37,6 +38,7 @@ PYKEEN_MODULE: pystow.Module = pystow.module("pykeen")
 PYKEEN_HOME: Path = PYKEEN_MODULE.base
 #: A subdirectory of the PyKEEN data folder for datasets, defaults to ``~/.data/pykeen/datasets``
 PYKEEN_DATASETS: Path = PYKEEN_MODULE.join("datasets")
+PYKEEN_DATASETS_MODULE: pystow.Module = PYKEEN_MODULE.submodule("datasets")
 #: A subdirectory of the PyKEEN data folder for benchmarks, defaults to ``~/.data/pykeen/benchmarks``
 PYKEEN_BENCHMARKS: Path = PYKEEN_MODULE.join("benchmarks")
 #: A subdirectory of the PyKEEN data folder for experiments, defaults to ``~/.data/pykeen/experiments``
