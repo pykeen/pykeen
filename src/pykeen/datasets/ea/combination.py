@@ -1,7 +1,7 @@
 """Combination strategies for entity alignment datasets."""
 import logging
 from abc import abstractmethod
-from typing import Any, Dict, Mapping, Tuple, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy
 import pandas
@@ -14,9 +14,6 @@ from ...typing import COLUMN_HEAD, COLUMN_TAIL, EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_
 from ...utils import format_relative_comparison, get_connected_components
 
 logger = logging.getLogger(__name__)
-
-
-# TODO: support ID-only graphs
 
 
 def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[MappedTriples, torch.LongTensor]:
@@ -55,28 +52,51 @@ def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[Map
     return torch.cat(res), offsets
 
 
-def merge_mappings(*pairs: Tuple[str, Mapping[str, int]], offsets: torch.LongTensor) -> Mapping[str, int]:
+def merge_mappings(
+    *pairs: Tuple[str, Mapping[str, int]],
+    offsets: torch.LongTensor = None,
+    mappings: Sequence[Mapping[int, int]] = None,
+    extra: Optional[Mapping[str, int]] = None,
+) -> Dict[str, int]:
     result: Dict[str, int] = {}
-    for (prefix, mapping), offset in zip(pairs, offsets.tolist()):
-        result.update((f"{prefix}:{key}", value + offset) for key, value in mapping.items())
+    for i, (prefix, mapping) in enumerate(pairs):
+        for key, value in mapping.items():
+            key = f"{prefix}:{key}"
+            if offsets:
+                value = value + offsets[i].item()
+            else:
+                assert mappings is not None
+                value = mappings[i][value]
+            result[key] = value
+    if extra:
+        result.update(extra)
     return result
 
 
 def merge_both_mappings(
-    left: TriplesFactory, right: TriplesFactory, offsets: torch.LongTensor
+    left: TriplesFactory,
+    right: TriplesFactory,
+    relation_offsets: torch.LongTensor,
+    # optional
+    entity_offsets: Optional[torch.LongTensor] = None,
+    extra_relations: Optional[Mapping[str, int]] = None,
+    entity_mappings: Sequence[Mapping[int, int]] = None,
 ) -> Tuple[Mapping[str, int], Mapping[str, int]]:
-    return (
-        merge_mappings(
-            (EA_SIDE_LEFT, left.entity_to_id),
-            (EA_SIDE_RIGHT, right.entity_to_id),
-            offsets=offsets[:, 0],
-        ),
-        merge_mappings(
-            (EA_SIDE_LEFT, left.relation_to_id),
-            (EA_SIDE_RIGHT, right.relation_to_id),
-            offsets=offsets[:, 1],
-        ),
+    # merge entity mapping
+    entity_to_id = merge_mappings(
+        (EA_SIDE_LEFT, left.entity_to_id),
+        (EA_SIDE_RIGHT, right.entity_to_id),
+        offsets=entity_offsets,
+        mappings=entity_mappings,
     )
+    # merge relation mapping
+    relation_to_id = merge_mappings(
+        (EA_SIDE_LEFT, left.relation_to_id),
+        (EA_SIDE_RIGHT, right.relation_to_id),
+        offsets=relation_offsets,
+        extra=extra_relations,
+    )
+    return entity_to_id, relation_to_id
 
 
 def filter_map_alignment(
@@ -263,6 +283,19 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
         return mapped_triples, alignment, dict(offsets=offsets, extra_relations={"same-as": alignment_relation_id})
 
 
+def _iter_mappings(
+    *old_new_ids_pairs: Tuple[torch.LongTensor], offsets: torch.LongTensor
+) -> Iterable[Mapping[int, int]]:
+    # TODO: check
+    old, new = [torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs)]
+    offsets = offsets.tolist()
+    for low, high in zip(offsets, offsets[1:]):
+        mask = (low <= old) & (old < high)
+        this_old = old[mask] - low
+        this_new = new[mask]
+        yield dict(zip(this_old.tolist(), this_new.tolist()))
+
+
 class CollapseGraphPairCombinator(GraphPairCombinator):
     """This combinator merges all matching entity pairs into a single ID."""
 
@@ -280,13 +313,17 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
             entity_id_mapping[cc] = min(cc)
         # apply id mapping
         h, r, t = mapped_triples.t()
-        h, t = entity_id_mapping[h], entity_id_mapping[t]
+        h_new, t_new = entity_id_mapping[h], entity_id_mapping[t]
         # ensure consecutive IDs
-        unique, inverse = torch.cat([h, t]).unique(return_inverse=True)
-        h, t = inverse.split(split_size_or_sections=2)
-        mapped_triples = torch.stack([h, r, t], dim=-1)
-        # TODO: keep labeling? only use training alignments?
-        return mapped_triples, torch.empty(size=(2, 0), dtype=torch.long), dict()
+        unique, inverse = torch.cat([h_new, t_new]).unique(return_inverse=True)
+        h_new, t_new = inverse.split(split_size_or_sections=2)
+        mapped_triples = torch.stack([h_new, r, t_new], dim=-1)
+        # only use training alignments?
+        return (
+            mapped_triples,
+            torch.empty(size=(2, 0), dtype=torch.long),
+            dict(entity_mappings=list(_iter_mappings((h, h_new), (t, t_new), offsets=offsets))),
+        )
 
 
 graph_combinator_resolver: ClassResolver[GraphPairCombinator] = ClassResolver.from_subclasses(
