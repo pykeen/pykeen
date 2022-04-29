@@ -256,8 +256,13 @@ class MessagePassingRepresentation(Representation):
         self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
 
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        # TODO: we could reduce the memory footprint and maybe also computation time
+        #       by considering only the k-hop neighborhood of the requested indices
+        # get *all* base representations
         x = self.base(indices=None)
+        # perform message passing on *all* base representations & edges
         x = self._message_passing(x=x)
+        # select desired indices
         if indices is not None:
             x = x[indices]
         return x
