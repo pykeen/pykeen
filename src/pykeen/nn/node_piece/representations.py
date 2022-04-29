@@ -301,7 +301,7 @@ class NodePieceRepresentation(Representation):
 
     def num_unique_hashes(self) -> Tuple[List[float], float]:
         # returns the ratio of unique hashes in token_representations in the total pool
-        num_nodes = self.token_representations[0].assignment.shape[0]
+        num_nodes = self.max_id
 
         # unique hashes per representation
         uniques_per_representation = [
