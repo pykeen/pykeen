@@ -28,6 +28,16 @@ except ImportError:
     MessagePassing = None
     layer_resolver = None
 
+_PYG_INSTALLATION_TEXT = """
+Requires `torch_geometric` to be installed.
+
+Please refer to 
+
+    https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html
+
+for installation instructions.  
+"""
+
 
 class AbstractPyGRepresentation(Representation):
     """An abstract representation class utilizing PyTorch Geometric message passing layers."""
@@ -83,7 +93,7 @@ class AbstractPyGRepresentation(Representation):
         """
         # fail if dependencies are missing
         if MessagePassing is None or layer_resolver is None:
-            raise ImportError(f"{self} requires `torch_geometric` to be installed.")
+            raise ImportError(_PYG_INSTALLATION_TEXT)
 
         # avoid cyclic import
         from . import representation_resolver
