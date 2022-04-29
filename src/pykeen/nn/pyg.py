@@ -1,4 +1,81 @@
-"""PyTorch Geometric based representation modules."""
+"""
+PyTorch Geometric based representation modules.
+
+The modules enable entity representations which are linked to their graph neighbors' representations. Similar
+representations are those by CompGCN or R-GCN. However, this module offers generic modules to combine many of the
+numerous message passing layers from PyTorch Geometric with base representations. A summary of available message passing
+layers can be found at https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html.
+
+The three classes differ in how the make use of the relation type information:
+
+:class:`IgnoreRelationTypePyGRepresentation` ignores the relation types and only uses the connectivity information from
+the training triples. Thereby, it can be combined with message passing layers defined on uni-relational graphs, which
+are the majority of available layers from the PyTorch Geometric library. In the following example, we create
+a two-layer :class:`torch_geometric.nn.conv.GCNConv` on top of an :class:`Embedding`:
+
+
+.. code-block:: python
+
+    from pykeen.datasets import get_dataset
+
+    embedding_dim = 64
+    dataset = get_dataset(dataset="nations")
+    r = IgnoreRelationTypePyGRepresentation(
+        triples_factory=dataset.training,
+        base_kwargs=dict(shape=embedding_dim),
+        layers=["gcn"] * 2,
+        layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
+    )
+
+:class:`CategoricalRelationTypePyGRepresentation` is for message passing layer, which internally handle the categorical
+relation type information via an `edge_type` input. Example layers include :class:`torch_geometric.nn.conv.RGCNConv`, or
+:class:`torch_geometric.nn.conv.RGATConv`. The following example creates a one-layer RGCN using the basis decomposition:
+
+.. code-block:: python
+
+    from pykeen.datasets import get_dataset
+
+    embedding_dim = 64
+    dataset = get_dataset(dataset="nations")
+    r = CategoricalRelationTypePyGRepresentation(
+        triples_factory=dataset.training,
+        base_kwargs=dict(shape=embedding_dim),
+        layers="rgcn",
+        layers_kwargs=dict(
+            in_channels=embedding_dim,
+            out_channels=embedding_dim,
+            num_bases=2,
+            num_relations=dataset.num_relations,
+        ),
+    )
+
+:class:`FeaturizedRelationTypePyGRepresentation` is for message passing layer which can use edge attributes via
+the parameter `edge_attr`. It adds another representation layer for relations, and looks up these relation
+representations to use as edge attributes. Example message passing layers include
+:class:`torch_geometric.nn.conv.GMMConv`, or :class:`torch_geometric.nn.conv.GATConv`. The following example create a
+two-layer GAT on top of the base representations:
+
+
+.. code-block:: python
+
+    from pykeen.datasets import get_dataset
+
+    embedding_dim = 64
+    dataset = get_dataset(dataset="nations")
+    r = FeaturizedRelationTypePyGRepresentation(
+        triples_factory=dataset.training,
+        base_kwargs=dict(shape=embedding_dim),
+        relation_representation_kwargs=dict(
+            shape=embedding_dim,
+        ),
+        layers="gat",
+        layers_kwargs=dict(
+            in_channels=embedding_dim,
+            out_channels=embedding_dim,
+            edge_dim=embedding_dim,  # should match relation dim
+        ),
+    )
+"""
 from abc import abstractmethod
 from typing import Optional, Sequence
 
