@@ -145,7 +145,7 @@ def filter_map_alignment(
         alignment = alignment.loc[~invalid_mask]
 
     # map alignment from old IDs to new IDs
-    return torch.as_tensor(alignment.to_numpy().T, dtype=torch.long) + entity_offsets.view(1, 2)
+    return torch.as_tensor(alignment.to_numpy().T, dtype=torch.long) + entity_offsets.view(2, 1)
 
 
 def _swap_index(mapped_triples: MappedTriples, dense_map: torch.LongTensor, index: TargetColumn) -> MappedTriples:
