@@ -8,24 +8,8 @@ layers can be found at https://pytorch-geometric.readthedocs.io/en/latest/module
 
 The three classes differ in how the make use of the relation type information:
 
-:class:`UniRelationalMessagePassingRepresentation` ignores the relation types and only uses the connectivity information
-from the training triples. Thereby, it can be combined with message passing layers defined on uni-relational graphs,
-which are the majority of available layers from the PyTorch Geometric library. In the following example, we create
-a two-layer :class:`torch_geometric.nn.conv.GCNConv` on top of an :class:`Embedding`:
-
-
-.. code-block:: python
-
-    from pykeen.datasets import get_dataset
-
-    embedding_dim = 64
-    dataset = get_dataset(dataset="nations")
-    r = UniRelationalMessagePassingRepresentation(
-        triples_factory=dataset.training,
-        base_kwargs=dict(shape=embedding_dim),
-        layers=["gcn"] * 2,
-        layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
-    )
+* :class:`UniRelationalMessagePassingRepresentation` only uses the connectivity information from the training triples,
+  but ignores the relation type.
 
 :class:`CategoricalRelationTypeMessagePassingRepresentation` is for message passing layer, which internally handle the
 categorical relation type information via an `edge_type` input. Example layers include
@@ -282,7 +266,31 @@ class MessagePassingRepresentation(Representation):
 
 
 class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
-    """A representation with message passing not making use of the relation type."""
+    """
+    A representation with message passing not making use of the relation type.
+
+    By only using the connectivity information, but not the relation type information, this module
+    can utilize message passing layers defined on uni-relational graphs, which are the majority of
+    available layers from the PyTorch Geometric library.
+
+    Example:
+
+    Here, we create a two-layer :class:`torch_geometric.nn.conv.GCNConv` on top of an
+    :class:`pykeen.nn.representation.Embedding`:
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+
+        embedding_dim = 64
+        dataset = get_dataset(dataset="nations")
+        r = UniRelationalMessagePassingRepresentation(
+            triples_factory=dataset.training,
+            base_kwargs=dict(shape=embedding_dim),
+            layers=["gcn"] * 2,
+            layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
+        )
+    """
 
     def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations):
