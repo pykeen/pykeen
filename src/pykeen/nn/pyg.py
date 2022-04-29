@@ -12,34 +12,8 @@ The three classes differ in how the make use of the relation type information:
   but ignores the relation type, e.g., :class:`torch_geometric.nn.conv.GCNConv`.
 * :class:`CategoricalRelationTypeMessagePassingRepresentation` is for message passing layer, which internally handle the
   categorical relation type information via an `edge_type` input, e.g., :class:`torch_geometric.nn.conv.RGCNConv`.
-
-
-:class:`FeaturizedRelationTypeMessagePassingRepresentation` is for message passing layer which can use edge attributes
-via the parameter `edge_attr`. It adds another representation layer for relations, and looks up these relation
-representations to use as edge attributes. Example message passing layers include
-:class:`torch_geometric.nn.conv.GMMConv`, or :class:`torch_geometric.nn.conv.GATConv`. The following example create a
-two-layer GAT on top of the base representations:
-
-
-.. code-block:: python
-
-    from pykeen.datasets import get_dataset
-
-    embedding_dim = 64
-    dataset = get_dataset(dataset="nations")
-    r = FeaturizedRelationTypeMessagePassingRepresentation(
-        triples_factory=dataset.training,
-        base_kwargs=dict(shape=embedding_dim),
-        relation_representation_kwargs=dict(
-            shape=embedding_dim,
-        ),
-        layers="gat",
-        layers_kwargs=dict(
-            in_channels=embedding_dim,
-            out_channels=embedding_dim,
-            edge_dim=embedding_dim,  # should match relation dim
-        ),
-    )
+* :class:`FeaturizedRelationTypeMessagePassingRepresentation` is for message passing layer which can use edge attributes
+  via the parameter `edge_attr`, e.g., :class:`torch_geometric.nn.conv.GMMConv`. 
 
 We can also easily utilize these representations with :class:`pykeen.models.ERModel`. Here, we showcase how to combine
 static label-based entity features with a trainable GCN encoder for entity representations, with learned embeddings for
@@ -79,7 +53,6 @@ relation representations and a DistMult interaction function.
             ),
         ),
     )
-
 """
 from abc import abstractmethod
 from typing import Optional, Sequence
@@ -280,7 +253,7 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
 
 class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresentation):
     """
-    A representation with message passing with uses categorical relation type information, e.g., R-GCN.
+    A representation with message passing with uses categorical relation type information.
     
     
     The message passing layers of this module internally handle the categorical relation type information
@@ -310,7 +283,7 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
         )
     """
 
-    #: the edge type
+    #: the edge type, shape: (num_edges,)
     edge_type: torch.LongTensor
 
     def __init__(self, triples_factory: CoreTriplesFactory, **kwargs):
@@ -320,9 +293,10 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
         :param triples_factory:
             the factory comprising the training triples used for message passing
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`AbstractPyGRepresentation.__init__`
+            additional keyword-based parameters passed to :meth:`MessagePassingRepresentation.__init__`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
+        # register an additional buffer for the categorical edge type
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
     def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -332,9 +306,41 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
 
 
 class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationTypeMessagePassingRepresentation):
-    """A representation with message passing with uses categorical relation type information, e.g., R-GCN."""
+    """
+    A representation with message passing with uses edge features obtained from relation representations.
 
-    #: the edge type
+    It (re-)uses a representation layer for relations to obtain edge features, which are then utilized
+    by appropriate message passing layers, e.g., :class:`torch_geometric.nn.conv.GMMConv`, or
+    :class:`torch_geometric.nn.conv.GATConv`. We further allow a (shared) transformation of edge features
+    between layers.
+    
+    Example
+
+    The following example creates a two-layer GAT on top of the base representations:
+
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+
+        embedding_dim = 64
+        dataset = get_dataset(dataset="nations")
+        r = FeaturizedRelationTypeMessagePassingRepresentation(
+            triples_factory=dataset.training,
+            base_kwargs=dict(shape=embedding_dim),
+            relation_representation_kwargs=dict(
+                shape=embedding_dim,
+            ),
+            layers="gat",
+            layers_kwargs=dict(
+                in_channels=embedding_dim,
+                out_channels=embedding_dim,
+                edge_dim=embedding_dim,  # should match relation dim
+            ),
+        )
+    """
+
+    #: the relation representations used to obtain initial edge features
     relation_representation: Representation
 
     def __init__(
@@ -361,9 +367,11 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
             If None, do not modify the representations.
 
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`AbstractPyGRepresentation.__init__`
+            additional keyword-based parameters passed to
+            :meth:`CategoricalRelationTypeMessagePassingRepresentation.__init__`, except the `triples_factory`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
+
         # avoid cyclic import
         from . import representation_resolver
 
@@ -373,10 +381,14 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
         self.relation_transformation = relation_transformation
 
     def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+        # get initial edge features from relation representations
         edge_attr = self.relation_representation(self.edge_type)
         n_layer = len(self.layers)
         for i, (layer, activation) in enumerate(zip(self.layers, self.activations)):
             x = activation(layer(x, edge_index=self.edge_index, edge_attr=edge_attr))
+            # apply edge feature transformation, if necessary
+            # TODO: it might be worth to apply the transformation only for the unique edge
+            #       types (#relations) instead of edges (#edges)
             if self.relation_transformation is not None and i < n_layer - 1:
                 edge_attr = self.relation_transformation(edge_attr)
         return x
