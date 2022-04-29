@@ -182,7 +182,7 @@ class MessagePassingRepresentation(Representation):
         activation = list(upgrade_to_sequence(activation))
         if len(activation) == 1:
             activation = activation * len(self.layers)
-        self.activations = nn.ModuleList(activation_resolver.make_many(activation_l, activation_kwargs))
+        self.activations = nn.ModuleList(activation_resolver.make_many(activation, activation_kwargs))
         if len(self.layers) != len(self.activations):
             raise ValueError(
                 f"The lengths of the list of message passing layers ({len(self.layers)}) "
