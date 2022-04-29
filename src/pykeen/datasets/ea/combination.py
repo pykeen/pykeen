@@ -30,7 +30,7 @@ def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[Map
     # a buffer for the triples
     res = []
     # the overall offsets
-    offsets = torch.empty(len(triples), 3)
+    offsets = torch.empty(len(triples), 3, dtype=torch.long)
     # the current offset
     offset = torch.zeros(1, 3, dtype=torch.long)
     for i, x in enumerate(triples):
