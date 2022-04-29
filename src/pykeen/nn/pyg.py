@@ -108,11 +108,11 @@ except ImportError:
 _PYG_INSTALLATION_TEXT = """
 Requires `torch_geometric` to be installed.
 
-Please refer to 
+Please refer to
 
     https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html
 
-for installation instructions.  
+for installation instructions.
 """
 
 
