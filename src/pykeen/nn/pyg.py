@@ -158,7 +158,18 @@ for installation instructions.
 
 
 class MessagePassingRepresentation(Representation):
-    """An abstract representation class utilizing PyTorch Geometric message passing layers."""
+    """
+    An abstract representation class utilizing PyTorch Geometric message passing layers.
+
+    It comprises:
+        * base (entity) representations, which can also be passed as hints
+        * a sequence of message passing layers. They are utilized in an abstract
+          :meth:`MessagePassingRepresentation._message_passing` to enrich the base representations
+          by neighborhood information.
+        * a sequence of activation layers in between the message passing layers.
+        * an `edge_index` buffer, which stores the edge index and is moved to the device alongside
+          the module.
+    """
 
     #: the message passing layers
     layers: Sequence[MessagePassing]
