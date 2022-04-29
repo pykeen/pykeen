@@ -187,7 +187,11 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+# annotation to skip tests which require torch geometric
+skip_if_torch_geometric_is_missing = unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+
+
+@skip_if_torch_geometric_is_missing
 class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using uni-relational message passing layers."""
 
@@ -200,7 +204,7 @@ class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentatio
     )
 
 
-@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+@skip_if_torch_geometric_is_missing
 class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
@@ -218,7 +222,7 @@ class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresen
     )
 
 
-@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+@skip_if_torch_geometric_is_missing
 class FeaturizedRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
