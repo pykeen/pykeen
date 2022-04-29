@@ -2356,3 +2356,42 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
     def test_combination_id(self):
         """Test combination without labels."""
         self._test_combination(labels=False)
+
+    def test_manual(self):
+        """
+        Smoke-test on a manual example.
+
+        cf. https://github.com/pykeen/pykeen/pull/893#discussion_r861553903
+        """
+        left_tf = TriplesFactory.from_labeled_triples(
+            pandas.DataFrame(
+                [
+                    ["la", "0", "lb"],
+                    ["lb", "0", "lc"],
+                    ["la", "1", "ld"],
+                    ["le", "1", "lg"],
+                    ["lh", "1", "lg"],
+                ],
+            ).values
+        )
+        right_tf = TriplesFactory.from_labeled_triples(
+            pandas.DataFrame(
+                [
+                    ["ra", "2", "rb"],
+                    ["ra", "2", "rc"],
+                    ["rc", "3", "rd"],
+                    ["re", "3", "rg"],
+                    ["rh", "3", "rg"],
+                ],
+            ).values
+        )
+        test_links = pandas.DataFrame(
+            [
+                ["ld", "rd"],
+                ["le", "re"],
+                ["lg", "rg"],
+                ["lh", "rh"],
+            ],
+            columns=[EA_SIDE_LEFT, EA_SIDE_RIGHT],
+        )
+        self.instance(left=left_tf, right=right_tf, alignment=test_links)
