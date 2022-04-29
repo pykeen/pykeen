@@ -8,9 +8,9 @@ layers can be found at https://pytorch-geometric.readthedocs.io/en/latest/module
 
 The three classes differ in how the make use of the relation type information:
 
-:class:`IgnoreRelationTypePyGRepresentation` ignores the relation types and only uses the connectivity information from
-the training triples. Thereby, it can be combined with message passing layers defined on uni-relational graphs, which
-are the majority of available layers from the PyTorch Geometric library. In the following example, we create
+:class:`UniRelationalMessagePassingRepresentation` ignores the relation types and only uses the connectivity information
+from the training triples. Thereby, it can be combined with message passing layers defined on uni-relational graphs,
+which are the majority of available layers from the PyTorch Geometric library. In the following example, we create
 a two-layer :class:`torch_geometric.nn.conv.GCNConv` on top of an :class:`Embedding`:
 
 
@@ -20,16 +20,17 @@ a two-layer :class:`torch_geometric.nn.conv.GCNConv` on top of an :class:`Embedd
 
     embedding_dim = 64
     dataset = get_dataset(dataset="nations")
-    r = IgnoreRelationTypePyGRepresentation(
+    r = UniRelationalMessagePassingRepresentation(
         triples_factory=dataset.training,
         base_kwargs=dict(shape=embedding_dim),
         layers=["gcn"] * 2,
         layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
     )
 
-:class:`CategoricalRelationTypePyGRepresentation` is for message passing layer, which internally handle the categorical
-relation type information via an `edge_type` input. Example layers include :class:`torch_geometric.nn.conv.RGCNConv`, or
-:class:`torch_geometric.nn.conv.RGATConv`. The following example creates a one-layer RGCN using the basis decomposition:
+:class:`CategoricalRelationTypeMessagePassingRepresentation` is for message passing layer, which internally handle the
+categorical relation type information via an `edge_type` input. Example layers include
+:class:`torch_geometric.nn.conv.RGCNConv`, or :class:`torch_geometric.nn.conv.RGATConv`.
+The following example creates a one-layer RGCN using the basis decomposition:
 
 .. code-block:: python
 
@@ -37,7 +38,7 @@ relation type information via an `edge_type` input. Example layers include :clas
 
     embedding_dim = 64
     dataset = get_dataset(dataset="nations")
-    r = CategoricalRelationTypePyGRepresentation(
+    r = CategoricalRelationTypeMessagePassingRepresentation(
         triples_factory=dataset.training,
         base_kwargs=dict(shape=embedding_dim),
         layers="rgcn",
@@ -49,8 +50,8 @@ relation type information via an `edge_type` input. Example layers include :clas
         ),
     )
 
-:class:`FeaturizedRelationTypePyGRepresentation` is for message passing layer which can use edge attributes via
-the parameter `edge_attr`. It adds another representation layer for relations, and looks up these relation
+:class:`FeaturizedRelationTypeMessagePassingRepresentation` is for message passing layer which can use edge attributes
+via the parameter `edge_attr`. It adds another representation layer for relations, and looks up these relation
 representations to use as edge attributes. Example message passing layers include
 :class:`torch_geometric.nn.conv.GMMConv`, or :class:`torch_geometric.nn.conv.GATConv`. The following example create a
 two-layer GAT on top of the base representations:
@@ -62,7 +63,7 @@ two-layer GAT on top of the base representations:
 
     embedding_dim = 64
     dataset = get_dataset(dataset="nations")
-    r = FeaturizedRelationTypePyGRepresentation(
+    r = FeaturizedRelationTypeMessagePassingRepresentation(
         triples_factory=dataset.training,
         base_kwargs=dict(shape=embedding_dim),
         relation_representation_kwargs=dict(
@@ -89,9 +90,9 @@ from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import OneOrSequence
 
 __all__ = [
-    "IgnoreRelationTypePyGRepresentation",
-    "FeaturizedRelationTypePyGRepresentation",
-    "CategoricalRelationTypePyGRepresentation",
+    "UniRelationalMessagePassingRepresentation",
+    "FeaturizedRelationTypeMessagePassingRepresentation",
+    "CategoricalRelationTypeMessagePassingRepresentation",
 ]
 
 try:
@@ -116,7 +117,7 @@ for installation instructions.
 """
 
 
-class AbstractPyGRepresentation(Representation):
+class MessagePassingRepresentation(Representation):
     """An abstract representation class utilizing PyTorch Geometric message passing layers."""
 
     #: the message passing layers
@@ -207,7 +208,7 @@ class AbstractPyGRepresentation(Representation):
         raise NotImplementedError
 
 
-class IgnoreRelationTypePyGRepresentation(AbstractPyGRepresentation):
+class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
     """A representation with message passing not making use of the relation type."""
 
     def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -216,7 +217,7 @@ class IgnoreRelationTypePyGRepresentation(AbstractPyGRepresentation):
         return x
 
 
-class CategoricalRelationTypePyGRepresentation(AbstractPyGRepresentation):
+class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresentation):
     """A representation with message passing with uses categorical relation type information, e.g., R-GCN."""
 
     #: the edge type
@@ -240,7 +241,7 @@ class CategoricalRelationTypePyGRepresentation(AbstractPyGRepresentation):
         return x
 
 
-class FeaturizedRelationTypePyGRepresentation(CategoricalRelationTypePyGRepresentation):
+class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationTypeMessagePassingRepresentation):
     """A representation with message passing with uses categorical relation type information, e.g., R-GCN."""
 
     #: the edge type

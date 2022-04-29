@@ -195,7 +195,7 @@ skip_if_torch_geometric_is_missing = unittest.skipIf(torch_geometric is None, "N
 class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using uni-relational message passing layers."""
 
-    cls = pykeen.nn.pyg.IgnoreRelationTypePyGRepresentation
+    cls = pykeen.nn.pyg.UniRelationalMessagePassingRepresentation
     embedding_dim: int = 3
     kwargs = dict(
         base_kwargs=dict(shape=(embedding_dim,)),
@@ -208,7 +208,7 @@ class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentatio
 class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
-    cls = pykeen.nn.pyg.CategoricalRelationTypePyGRepresentation
+    cls = pykeen.nn.pyg.CategoricalRelationTypeMessagePassingRepresentation
     embedding_dim: int = 3
     kwargs = dict(
         base_kwargs=dict(shape=(embedding_dim,)),
@@ -226,7 +226,7 @@ class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresen
 class FeaturizedRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
-    cls = pykeen.nn.pyg.FeaturizedRelationTypePyGRepresentation
+    cls = pykeen.nn.pyg.FeaturizedRelationTypeMessagePassingRepresentation
     embedding_dim: int = 3
     kwargs = dict(
         base_kwargs=dict(shape=(embedding_dim,)),
@@ -247,4 +247,4 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
 
     base_cls = pykeen.nn.representation.Representation
     base_test = cases.RepresentationTestCase
-    skip_cls = {mocks.CustomRepresentation, pykeen.nn.pyg.AbstractPyGRepresentation}
+    skip_cls = {mocks.CustomRepresentation, pykeen.nn.pyg.MessagePassingRepresentation}
