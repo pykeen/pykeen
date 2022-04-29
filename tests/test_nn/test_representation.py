@@ -227,8 +227,6 @@ class FeaturizedRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresent
         layers_kwargs=dict(
             in_channels=embedding_dim,
             out_channels=embedding_dim,
-            num_bases=2,
-            num_relations=cases.TriplesFactoryRepresentationTestCase.num_relations,
         ),
     )
 
