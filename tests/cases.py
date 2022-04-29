@@ -2394,4 +2394,14 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
             ],
             columns=[EA_SIDE_LEFT, EA_SIDE_RIGHT],
         )
-        self.instance(left=left_tf, right=right_tf, alignment=test_links)
+        combined_tf, alignment_t = self.instance(left=left_tf, right=right_tf, alignment=test_links)
+        self._verify_manual(
+            left_tf=left_tf,
+            right_tf=right_tf,
+            df_alignment=test_links,
+            combined_tf=combined_tf,
+            alignment_t=alignment_t,
+        )
+
+    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+        """Verify the result of the combination of the manual example."""
