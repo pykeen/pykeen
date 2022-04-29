@@ -17,31 +17,14 @@ __all__ = [
     "CategoricalRelationTypePyGRepresentation",
 ]
 
-
-def try_import() -> Optional[Exception]:
-    """Try to import torch_geometric and return the error."""
-    try:
-        import torch_geometric  # noqa: F401
-
-        return None
-    except (
-        ImportError,
-        # OSError happens when trying to run with CUDA-enabled binaries on a cpu machine
-        OSError,
-    ) as import_error:
-        return import_error
-
-
-error = try_import()
-layer_resolver: Optional[ClassResolver[nn.Module]]
-if error is None:
+try:
     from torch_geometric.nn.conv import MessagePassing
 
     layer_resolver = ClassResolver.from_subclasses(
         base=MessagePassing,  # type: ignore
         suffix="Conv",
     )
-else:
+except ImportError:
     MessagePassing = None
     layer_resolver = None
 
@@ -100,18 +83,21 @@ class AbstractPyGRepresentation(Representation):
         """
         # fail if dependencies are missing
         if MessagePassing is None or layer_resolver is None:
-            raise ImportError(f"{self} requires `torch_geometric` to be installed.") from error
+            raise ImportError(f"{self} requires `torch_geometric` to be installed.")
 
         # avoid cyclic import
         from . import representation_resolver
 
         # the base representations, e.g., entity embeddings or features
-        self.base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=triples_factory.num_entities)
+        base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=triples_factory.num_entities)
 
-        super().__init__(max_id=self.base.max_id, shape=output_shape or self.base.shape, **kwargs)
+        super().__init__(max_id=base.max_id, shape=output_shape or base.shape, **kwargs)
+
+        # assign sub-module *after* super call
+        self.base = base
 
         # initialize layers
-        self.layers = nn.ModuleList(layer_resolver.make_many(layers, pos_kwargs=layers_kwargs))
+        self.layers = nn.ModuleList(layer_resolver.make_many(layers, layers_kwargs))
         if activation is None:
             activation = [None] * len(self.layers)
         self.activations = nn.ModuleList(activation_resolver.make_many(activation, activation_kwargs))
@@ -176,7 +162,7 @@ class FeaturizedRelationTypePyGRepresentation(CategoricalRelationTypePyGRepresen
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        relation_representation: HintOrType[Representation],
+        relation_representation: HintOrType[Representation] = None,
         relation_representation_kwargs: OptionalKwargs = None,
         relation_transformation: Optional[nn.Module] = None,
         **kwargs,
