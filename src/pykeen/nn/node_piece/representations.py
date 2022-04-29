@@ -3,7 +3,7 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, Optional, Sequence, Union, Tuple, List
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -298,3 +298,23 @@ class NodePieceRepresentation(Representation):
             ),
             self.aggregation_index,
         )
+
+    def unique_hashes(self) -> Tuple[List[float], float]:
+        # returns the ratio of unique hashes in token_representations in the total pool
+        num_nodes = self.token_representations[0].assignment.shape[0]
+
+        # unique hashes per representation
+        uniques_per_representation = [
+            tokens.assignment.unique(dim=0).shape[0] / num_nodes
+            for tokens in self.token_representations
+        ]
+
+        # unique hashes is we concat all representations together
+        uniques_total = torch.unique(
+            torch.cat(
+                [tokens.assignment for tokens in self.token_representations], dim=-1
+            ),
+            dim=0
+        ).shape[0]
+        return uniques_per_representation, uniques_total / num_nodes
+
