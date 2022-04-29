@@ -381,14 +381,15 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
         self.relation_transformation = relation_transformation
 
     def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        # get initial edge features from relation representations
-        edge_attr = self.relation_representation(self.edge_type)
+        # get initial relation representations
+        x_rel = self.relation_representation(indices=None)
         n_layer = len(self.layers)
         for i, (layer, activation) in enumerate(zip(self.layers, self.activations)):
+            # select edge attributes from relation representations according to relation type
+            edge_attr = x_rel[self.edge_type]
+            # perform message passing
             x = activation(layer(x, edge_index=self.edge_index, edge_attr=edge_attr))
-            # apply edge feature transformation, if necessary
-            # TODO: it might be worth to apply the transformation only for the unique edge
-            #       types (#relations) instead of edges (#edges)
+            # apply relation transformation, if necessary
             if self.relation_transformation is not None and i < n_layer - 1:
-                edge_attr = self.relation_transformation(edge_attr)
+                x_rel = self.relation_transformation(x_rel)
         return x
