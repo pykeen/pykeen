@@ -157,6 +157,8 @@ class MessagePassingRepresentation(Representation):
 
         :raises ImportError:
             if PyTorch Geometric is not installed
+        :raises ValueError:
+            if the number of activations and message passing layers do not match (after input normalization)
         """
         # fail if dependencies are missing
         if MessagePassing is None or layer_resolver is None:
