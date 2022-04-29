@@ -299,13 +299,18 @@ class NodePieceRepresentation(Representation):
             self.aggregation_index,
         )
 
-    def num_unique_hashes(self) -> Tuple[List[float], float]:
-        # returns the ratio of unique hashes in token_representations in the total pool
-        num_nodes = self.max_id
-
+    def ratio_unique_hashes(self) -> Tuple[List[float], float]:
+        """
+        Return the ratio of unique hashes in the total pool.
+        
+        :return:
+            A pair `unique_per_repr, unique_total`, where `unique_per_repr` is a list with
+            the percentage of unique hashes for each token representation, and `unique_total`
+            the frequency of unique hashes when we concatenate all token representations.
+        """
         # unique hashes per representation
         uniques_per_representation = [
-            tokens.assignment.unique(dim=0).shape[0] / num_nodes
+            tokens.assignment.unique(dim=0).shape[0] / self.max_id
             for tokens in self.token_representations
         ]
 
@@ -316,5 +321,5 @@ class NodePieceRepresentation(Representation):
             ),
             dim=0
         ).shape[0]
-        return uniques_per_representation, uniques_total / num_nodes
+        return uniques_per_representation, uniques_total / self.max_id
 
