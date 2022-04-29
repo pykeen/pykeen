@@ -309,7 +309,7 @@ class NodePieceRepresentation(Representation):
             for tokens in self.token_representations
         ]
 
-        # unique hashes is we concat all representations together
+        # unique hashes if we concat all representations together
         uniques_total = torch.unique(
             torch.cat(
                 [tokens.assignment for tokens in self.token_representations], dim=-1
