@@ -149,10 +149,13 @@ def filter_map_alignment(
 
 
 def _swap_index(mapped_triples: MappedTriples, dense_map: torch.LongTensor, index: TargetColumn) -> MappedTriples:
+    # determine swapping partner
     trans = dense_map[mapped_triples[:, index]]
+    # only keep triples where we have a swapping partner
     mask = trans >= 0
     mapped_triples = mapped_triples[mask].clone()
-    mapped_triples[:, index] = trans
+    # replace by swapping partner
+    mapped_triples[:, index] = trans[mask]
     return mapped_triples
 
 
@@ -243,10 +246,12 @@ class SwapGraphPairCombinator(GraphPairCombinator):
     ) -> Tuple[MappedTriples, torch.LongTensor, Mapping[str, Any]]:  # noqa: D102
         # add swap triples
         # e1 ~ e2 => (e1, r, t) ~> (e2, r, t), or (h, r, e1) ~> (h, r, e2)
-        dense_map = torch.full(size=(offsets[-1, 0],), fill_value=-1)
+        # create dense entity remapping for swap
+        dense_map = torch.full(size=(mapped_triples[:, 0::2].max().item() + 1,), fill_value=-1)
         left_id, right_id = alignment
         dense_map[left_id] = right_id
         dense_map[right_id] = left_id
+        # add swapped triples
         mapped_triples = torch.cat(
             [
                 mapped_triples,
