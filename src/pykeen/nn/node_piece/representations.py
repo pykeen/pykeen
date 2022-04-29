@@ -310,8 +310,7 @@ class NodePieceRepresentation(Representation):
         """
         # unique hashes per representation
         uniques_per_representation = [
-            tokens.assignment.unique(dim=0).shape[0] / self.max_id
-            for tokens in self.token_representations
+            tokens.assignment.unique(dim=0).shape[0] / self.max_id for tokens in self.token_representations
         ]
 
         # unique hashes if we concat all representations together
