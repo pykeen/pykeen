@@ -76,6 +76,46 @@ two-layer GAT on top of the base representations:
             edge_dim=embedding_dim,  # should match relation dim
         ),
     )
+
+We can also easily utilize these representations with :class:`pykeen.models.ERModel`. Here, we showcase how to combine
+static label-based entity features with a trainable GCN encoder for entity representations, with learned embeddings for
+relation representations and a DistMult interaction function.
+
+.. code-block:: python
+
+    from pykeen.datasets import get_dataset
+    from pykeen.models import ERModel
+    from pykeen.nn.init import LabelBasedInitializer
+    from pykeen.pipeline import pipeline
+
+    dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=True))
+    entity_initializer = LabelBasedInitializer.from_triples_factory(
+        triples_factory=dataset.training,
+        for_entities=True,
+    )
+    (embedding_dim,) = entity_initializer.tensor.shape[1:]
+    r = pipeline(
+        dataset=dataset,
+        model=ERModel,
+        model_kwargs=dict(
+            interaction="distmult",
+            entity_representations="UniRelationalMessagePassing",
+            entity_representations_kwargs=dict(
+                triples_factory=dataset.training,
+                base_kwargs=dict(
+                    shape=embedding_dim,
+                    initializer=entity_initializer,
+                    trainable=False,
+                ),
+                layers=["GCN"] * 2,
+                layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
+            ),
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
+            ),
+        ),
+    )
+
 """
 from abc import abstractmethod
 from typing import Optional, Sequence
@@ -179,7 +219,7 @@ class MessagePassingRepresentation(Representation):
         # the base representations, e.g., entity embeddings or features
         base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=triples_factory.num_entities)
 
-        super().__init__(max_id=base.max_id, shape=output_shape or base.shape, **kwargs)
+        super().__init__(max_id=kwargs.pop("max_id", base.max_id), shape=output_shape or base.shape, **kwargs)
 
         # assign sub-module *after* super call
         self.base = base
