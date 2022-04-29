@@ -9,30 +9,10 @@ layers can be found at https://pytorch-geometric.readthedocs.io/en/latest/module
 The three classes differ in how the make use of the relation type information:
 
 * :class:`UniRelationalMessagePassingRepresentation` only uses the connectivity information from the training triples,
-  but ignores the relation type.
+  but ignores the relation type, e.g., :class:`torch_geometric.nn.conv.GCNConv`.
+* :class:`CategoricalRelationTypeMessagePassingRepresentation` is for message passing layer, which internally handle the
+  categorical relation type information via an `edge_type` input, e.g., :class:`torch_geometric.nn.conv.RGCNConv`.
 
-:class:`CategoricalRelationTypeMessagePassingRepresentation` is for message passing layer, which internally handle the
-categorical relation type information via an `edge_type` input. Example layers include
-:class:`torch_geometric.nn.conv.RGCNConv`, or :class:`torch_geometric.nn.conv.RGATConv`.
-The following example creates a one-layer RGCN using the basis decomposition:
-
-.. code-block:: python
-
-    from pykeen.datasets import get_dataset
-
-    embedding_dim = 64
-    dataset = get_dataset(dataset="nations")
-    r = CategoricalRelationTypeMessagePassingRepresentation(
-        triples_factory=dataset.training,
-        base_kwargs=dict(shape=embedding_dim),
-        layers="rgcn",
-        layers_kwargs=dict(
-            in_channels=embedding_dim,
-            out_channels=embedding_dim,
-            num_bases=2,
-            num_relations=dataset.num_relations,
-        ),
-    )
 
 :class:`FeaturizedRelationTypeMessagePassingRepresentation` is for message passing layer which can use edge attributes
 via the parameter `edge_attr`. It adds another representation layer for relations, and looks up these relation
@@ -299,7 +279,36 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
 
 
 class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresentation):
-    """A representation with message passing with uses categorical relation type information, e.g., R-GCN."""
+    """
+    A representation with message passing with uses categorical relation type information, e.g., R-GCN.
+    
+    
+    The message passing layers of this module internally handle the categorical relation type information
+    via an `edge_type` input, e.g., :class:`torch_geometric.nn.conv.RGCNConv`, or
+    :class:`torch_geometric.nn.conv.RGATConv`.
+
+    Example:
+    
+    The following example creates a one-layer RGCN using the basis decomposition:
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+
+        embedding_dim = 64
+        dataset = get_dataset(dataset="nations")
+        r = CategoricalRelationTypeMessagePassingRepresentation(
+            triples_factory=dataset.training,
+            base_kwargs=dict(shape=embedding_dim),
+            layers="rgcn",
+            layers_kwargs=dict(
+                in_channels=embedding_dim,
+                out_channels=embedding_dim,
+                num_bases=2,
+                num_relations=dataset.num_relations,
+            ),
+        )
+    """
 
     #: the edge type
     edge_type: torch.LongTensor
