@@ -195,6 +195,7 @@ class MessagePassingRepresentation(Representation):
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
         # TODO: we could reduce the memory footprint and maybe also computation time
         #       by considering only the k-hop neighborhood of the requested indices
+        #       computing this may be computationally expensive, too
         # get *all* base representations
         x = self.base(indices=None)
         # perform message passing on *all* base representations & edges
