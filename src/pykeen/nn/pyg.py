@@ -13,7 +13,7 @@ The three classes differ in how the make use of the relation type information:
 * :class:`CategoricalRelationTypeMessagePassingRepresentation` is for message passing layer, which internally handle the
   categorical relation type information via an `edge_type` input, e.g., :class:`torch_geometric.nn.conv.RGCNConv`.
 * :class:`FeaturizedRelationTypeMessagePassingRepresentation` is for message passing layer which can use edge attributes
-  via the parameter `edge_attr`, e.g., :class:`torch_geometric.nn.conv.GMMConv`. 
+  via the parameter `edge_attr`, e.g., :class:`torch_geometric.nn.conv.GMMConv`.
 
 We can also easily utilize these representations with :class:`pykeen.models.ERModel`. Here, we showcase how to combine
 static label-based entity features with a trainable GCN encoder for entity representations, with learned embeddings for
@@ -227,8 +227,6 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
     can utilize message passing layers defined on uni-relational graphs, which are the majority of
     available layers from the PyTorch Geometric library.
 
-    Example:
-
     Here, we create a two-layer :class:`torch_geometric.nn.conv.GCNConv` on top of an
     :class:`pykeen.nn.representation.Embedding`:
 
@@ -255,14 +253,11 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
 class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresentation):
     """
     A representation with message passing with uses categorical relation type information.
-    
-    
+
     The message passing layers of this module internally handle the categorical relation type information
     via an `edge_type` input, e.g., :class:`torch_geometric.nn.conv.RGCNConv`, or
     :class:`torch_geometric.nn.conv.RGATConv`.
 
-    Example:
-    
     The following example creates a one-layer RGCN using the basis decomposition:
 
     .. code-block:: python
@@ -314,8 +309,6 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
     by appropriate message passing layers, e.g., :class:`torch_geometric.nn.conv.GMMConv`, or
     :class:`torch_geometric.nn.conv.GATConv`. We further allow a (shared) transformation of edge features
     between layers.
-    
-    Example
 
     The following example creates a two-layer GAT on top of the base representations:
 
