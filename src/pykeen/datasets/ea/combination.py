@@ -231,7 +231,7 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
     ) -> Tuple[MappedTriples, torch.LongTensor, Mapping[str, Any]]:  # noqa: D102
-        return mapped_triples, alignment, dict(offsets=offsets)
+        return mapped_triples, alignment, dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1])
 
 
 class SwapGraphPairCombinator(GraphPairCombinator):
@@ -262,7 +262,7 @@ class SwapGraphPairCombinator(GraphPairCombinator):
             ],
             dim=0,
         )
-        return mapped_triples, alignment, dict(offsets=offsets)
+        return mapped_triples, alignment, dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1])
 
 
 class ExtraRelationGraphPairCombinator(GraphPairCombinator):
@@ -288,7 +288,15 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
                 dim=-1,
             )
         )
-        return mapped_triples, alignment, dict(offsets=offsets, extra_relations={"same-as": alignment_relation_id})
+        return (
+            mapped_triples,
+            alignment,
+            dict(
+                entity_offsets=offsets[:, 0],
+                relation_offsets=offsets[:, 1],
+                extra_relations={"same-as": alignment_relation_id},
+            )
+        )
 
 
 def _iter_mappings(
@@ -330,7 +338,10 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         return (
             mapped_triples,
             torch.empty(size=(2, 0), dtype=torch.long),
-            dict(entity_mappings=list(_iter_mappings((h, h_new), (t, t_new), offsets=offsets))),
+            dict(
+                entity_mappings=list(_iter_mappings((h, h_new), (t, t_new), offsets=offsets)),
+                relation_offsets=offsets[:, 1],
+            ),
         )
 
 
