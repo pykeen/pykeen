@@ -128,6 +128,7 @@ from torch import nn
 from .representation import Representation
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import OneOrSequence
+from ..utils import upgrade_to_sequence
 
 __all__ = [
     "UniRelationalMessagePassingRepresentation",
@@ -237,10 +238,18 @@ class MessagePassingRepresentation(Representation):
 
         # initialize layers
         self.layers = nn.ModuleList(layer_resolver.make_many(layers, layers_kwargs))
-        if activation is None:
-            activation = [None] * len(self.layers)
+
+        # normalize activation
+        activation = upgrade_to_sequence(activation)
+        if len(activation) == 1:
+            activation = activation * len(self.layers)
         self.activations = nn.ModuleList(activation_resolver.make_many(activation, activation_kwargs))
-        assert len(self.layers) == len(self.activations)
+        if len(self.layers) != len(self.activations):
+            raise ValueError(
+                f"The lengths of the list of message passing layers ({len(self.layers)}) "
+                f"and activation layers ({len(self.activation)}) differs! To disable activations "
+                f"on certain layers, e.g., the last, use torch.nn.Identity."
+            )
 
         # prepare buffer
         # TODO: inductive?
