@@ -3,7 +3,7 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, Optional, Sequence, Union, Tuple, List
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -302,7 +302,7 @@ class NodePieceRepresentation(Representation):
     def ratio_unique_hashes(self) -> Tuple[List[float], float]:
         """
         Return the ratio of unique hashes in the total pool.
-        
+
         :return:
             A pair `unique_per_repr, unique_total`, where `unique_per_repr` is a list with
             the percentage of unique hashes for each token representation, and `unique_total`
@@ -322,4 +322,3 @@ class NodePieceRepresentation(Representation):
             dim=0
         ).shape[0]
         return uniques_per_representation, uniques_total / self.max_id
-
