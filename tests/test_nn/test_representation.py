@@ -19,7 +19,10 @@ try:
     import transformers
 except ImportError:
     transformers = None
-error = pykeen.nn.pyg.try_import()
+try:
+    import torch_geometric
+except ImportError:
+    torch_geometric = None
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -184,7 +187,7 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-@unittest.skipIf(error is not None, "Need to install `torch_geometric`")
+@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
 class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using uni-relational message passing layers."""
 
@@ -197,7 +200,7 @@ class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentatio
     )
 
 
-@unittest.skipIf(error is not None, "Need to install `torch_geometric`")
+@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
 class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
@@ -215,7 +218,7 @@ class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresen
     )
 
 
-@unittest.skipIf(error is not None, "Need to install `torch_geometric`")
+@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
 class FeaturizedRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
@@ -227,6 +230,10 @@ class FeaturizedRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresent
         layers_kwargs=dict(
             in_channels=embedding_dim,
             out_channels=embedding_dim,
+            edge_dim=embedding_dim,  # should match relation dim
+        ),
+        relation_representation_kwargs=dict(
+            shape=embedding_dim,
         ),
     )
 
