@@ -269,7 +269,15 @@ class MessagePassingRepresentation(Representation):
 
     @abstractmethod
     def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Perform the message passing."""
+        """
+        Perform the message passing steps.
+
+        :param x: shape: `(num_entities, *input_dims)`
+            the base entity representations
+
+        :return: shape: `(num_entities, *output_dims)`
+            the enriched entity representations
+        """
         raise NotImplementedError
 
 
