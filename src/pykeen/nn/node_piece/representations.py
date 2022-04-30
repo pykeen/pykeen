@@ -323,7 +323,16 @@ class NodePieceRepresentation(Representation):
         :return:
             A ratio information tuple
 
-        .. todo:: @migalkin explain why you would want to calculate this
+        Tokenization strategies might produce exactly the same hashes for
+        several nodes depending on the graph structure and tokenization
+        parameters. Same hashes will result in same node representations
+        and, hence, might inhibit the downstream performance.
+        This function comes handy when you need to estimate the diversity
+        of built node hashes under a certain tokenization strategy - ideally,
+        you'd want every node to have a unique hash.
+        The function computes how many node hashes are unique in each
+        representation and overall (if we concat all of them in a single row).
+        1.0 means that all nodes have unique hashes.
 
         Example usage:
 
