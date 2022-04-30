@@ -52,7 +52,7 @@ from .loader import (
     TorchPrecomputedTokenizerLoader,
     precomputed_tokenizer_loader_resolver,
 )
-from .representations import NodePieceRepresentation, TokenizationRepresentation
+from .representations import NodePieceRepresentation, TokenizationRepresentation, RatioInfo
 from .tokenization import AnchorTokenizer, PrecomputedPoolTokenizer, RelationTokenizer, Tokenizer, tokenizer_resolver
 
 __all__ = [
@@ -84,6 +84,8 @@ __all__ = [
     # Representations
     "TokenizationRepresentation",
     "NodePieceRepresentation",
+    # Data containers
+    "RatioInfo",
 ]
 
 # TODO: use graph library, such as igraph, graph-tool, or networkit

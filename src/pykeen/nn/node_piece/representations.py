@@ -3,7 +3,7 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from typing import Callable, List, NamedTuple, Optional, Sequence, Tuple, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -17,6 +17,7 @@ from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
     "TokenizationRepresentation",
+    "RatioInfo",
     "NodePieceRepresentation",
 ]
 
@@ -166,6 +167,22 @@ class TokenizationRepresentation(Representation):
         return self.vocabulary(token_ids)
 
 
+class RatioInfo(NamedTuple):
+    """A ratio information object.
+
+    A pair `unique_per_repr, unique_total`, where `unique_per_repr` is a list with
+    the percentage of unique hashes for each token representation, and `unique_total`
+    the frequency of unique hashes when we concatenate all token representations.
+    """
+
+    #: A list with ratios per representation in their creation order,
+    #: e.g., ``[0.58, 0.82]`` for :class:`AnchorTokenization` and :class:`RelationTokenization`
+    unique_per_repr: List[float]
+
+    #: A scalar ratio of unique rows when combining all representations into one matrix, e.g. 0.95
+    unique_total: float
+
+
 class NodePieceRepresentation(Representation):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
@@ -299,14 +316,31 @@ class NodePieceRepresentation(Representation):
             self.aggregation_index,
         )
 
-    def ratio_unique_hashes(self) -> Tuple[List[float], float]:
+    def ratio_unique_hashes(self) -> RatioInfo:
         """
         Return the ratio of unique hashes in the total pool.
 
         :return:
-            A pair `unique_per_repr, unique_total`, where `unique_per_repr` is a list with
-            the percentage of unique hashes for each token representation, and `unique_total`
-            the frequency of unique hashes when we concatenate all token representations.
+            A ratio information tuple
+
+        .. todo:: @migalkin explain why you would want to calculate this
+
+        Example usage:
+
+        .. code-block::
+
+            from pykeen.model import NodePiece
+
+            model = NodePiece(
+                triples_factory=dataset.training,
+                tokenizers=["AnchorTokenizer", "RelationTokenizer"],
+                num_tokens=[20, 12],
+                embedding_dim=64,
+                interaction="rotate",
+                relation_constrainer="complex_normalize",
+                entity_initializer="xavier_uniform_",
+            )
+            print(model.entity_representations[0].num_unique_hashes())
         """
         # unique hashes per representation
         uniques_per_representation = [
@@ -315,9 +349,9 @@ class NodePieceRepresentation(Representation):
 
         # unique hashes if we concat all representations together
         uniques_total = torch.unique(
-            torch.cat(
-                [tokens.assignment for tokens in self.token_representations], dim=-1
-            ),
-            dim=0
+            torch.cat([tokens.assignment for tokens in self.token_representations], dim=-1), dim=0
         ).shape[0]
-        return uniques_per_representation, uniques_total / self.max_id
+        return RatioInfo(
+            unique_per_repr=uniques_per_representation,
+            unique_total=uniques_total / self.max_id,
+        )
