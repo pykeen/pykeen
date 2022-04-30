@@ -124,8 +124,8 @@ class MessagePassingRepresentation(Representation, ABC):
         base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
         output_shape: OneOrSequence[int] = None,
-        activation: OneOrManyHintOrType[nn.Module] = None,
-        activation_kwargs: OneOrManyOptionalKwargs = None,
+        activations: OneOrManyHintOrType[nn.Module] = None,
+        activations_kwargs: OneOrManyOptionalKwargs = None,
         **kwargs,
     ):
         """
@@ -148,9 +148,9 @@ class MessagePassingRepresentation(Representation, ABC):
             the output shape. Defaults to the base representation shape. Has to match to output shape of the last
             message passing layer.
 
-        :param activation:
+        :param activations:
             the activation(s), or hints thereof
-        :param activation_kwargs:
+        :param activations_kwargs:
             additional keyword-based parameters passed to the activations upon instantiation
 
         :param kwargs:
@@ -180,10 +180,12 @@ class MessagePassingRepresentation(Representation, ABC):
         self.layers = nn.ModuleList(layer_resolver.make_many(layers, layers_kwargs))
 
         # normalize activation
-        activation = list(upgrade_to_sequence(activation))
-        if len(activation) == 1:
-            activation = activation * len(self.layers)
-        self.activations = nn.ModuleList(activation_resolver.make_many(activation, activation_kwargs))
+        activations = list(upgrade_to_sequence(activations))
+        if len(activations) == 1:
+            activations = activations * len(self.layers)
+        self.activations = nn.ModuleList(activation_resolver.make_many(activations, activations_kwargs))
+
+        # check consistency
         if len(self.layers) != len(self.activations):
             raise ValueError(
                 f"The lengths of the list of message passing layers ({len(self.layers)}) "
@@ -191,9 +193,13 @@ class MessagePassingRepresentation(Representation, ABC):
                 f"on certain layers, e.g., the last, use torch.nn.Identity."
             )
 
-        # prepare buffer
-        # TODO: inductive?
+        # buffer edge index for message passing
         self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+
+        # TODO: inductiveness; we need to
+        #   * replace edge_index
+        #   * replace base representations
+        #   * keep layers & activations
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
