@@ -76,6 +76,7 @@ __all__ = [
 
 try:
     from torch_geometric.nn.conv import MessagePassing
+    from torch_geometric.utils import k_hop_subgraph
 
     layer_resolver = ClassResolver.from_subclasses(
         base=MessagePassing,  # type: ignore
@@ -84,6 +85,7 @@ try:
 except ImportError:
     MessagePassing = None
     layer_resolver = None
+    k_hop_subgraph = None
 
 _PYG_INSTALLATION_TEXT = """
 Requires `torch_geometric` to be installed.
@@ -126,6 +128,7 @@ class MessagePassingRepresentation(Representation, ABC):
         output_shape: OneOrSequence[int] = None,
         activations: OneOrManyHintOrType[nn.Module] = None,
         activations_kwargs: OneOrManyOptionalKwargs = None,
+        restrict_k_hop: bool = False,
         **kwargs,
     ):
         """
@@ -152,6 +155,9 @@ class MessagePassingRepresentation(Representation, ABC):
             the activation(s), or hints thereof
         :param activations_kwargs:
             additional keyword-based parameters passed to the activations upon instantiation
+        :param restrict_k_hop:
+            whether to restrict the message passing only to the k-hop neighborhood, when only some indices
+            are requested. This utilizes :func:`torch_geometric.utils.k_hop_subgraph`.
 
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
@@ -162,7 +168,7 @@ class MessagePassingRepresentation(Representation, ABC):
             if the number of activations and message passing layers do not match (after input normalization)
         """
         # fail if dependencies are missing
-        if MessagePassing is None or layer_resolver is None:
+        if MessagePassing is None or layer_resolver is None or k_hop_subgraph is None:
             raise ImportError(_PYG_INSTALLATION_TEXT)
 
         # avoid cyclic import
@@ -196,6 +202,8 @@ class MessagePassingRepresentation(Representation, ABC):
         # buffer edge index for message passing
         self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
 
+        self.restrict_k_hop = restrict_k_hop
+
         # TODO: inductiveness; we need to
         #   * replace edge_index
         #   * replace base representations
@@ -203,27 +211,38 @@ class MessagePassingRepresentation(Representation, ABC):
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
-        # TODO: we could reduce the memory footprint and maybe also computation time
-        #       by considering only the k-hop neighborhood of the requested indices
-        #       computing this may be computationally expensive, too
-        # get *all* base representations
-        x = self.base(indices=None)
-        # perform message passing on *all* base representations & edges
-        x = self.pass_messages(x=x)
+        if indices is not None and self.restrict_k_hop:
+            assert k_hop_subgraph is not None
+            # (1) the nodes involved in the subgraph
+            # (2) the filtered edge_index connectivity
+            # (3) the mapping from node indices in node_idx to their new location, and
+            # (4) the edge mask indicating which edges were preserved
+            neighbor_indices, _, indices, edge_mask = k_hop_subgraph(
+                node_idx=indices, num_hops=len(self.layers), edge_index=self.edge_index, relabel_nodes=True
+            )
+            x = self.base(indices=neighbor_indices)
+        else:
+            # get *all* base representations
+            x = self.base(indices=None)
+            edge_mask = None
+        # perform message passing
+        x = self.pass_messages(x=x, edge_mask=edge_mask)
         # select desired indices
         if indices is not None:
             x = x[indices]
         return x
 
     @abstractmethod
-    def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:
+    def pass_messages(self, x: torch.FloatTensor, edge_mask: Optional[torch.BoolTensor] = None) -> torch.FloatTensor:
         """
         Perform the message passing steps.
 
-        :param x: shape: `(num_entities, *input_dims)`
+        :param x: shape: `(n, d_in)`
             the base entity representations
+        :param edge_mask: shape: `(num_edges,)`
+            an edge mask if message passing is restricted
 
-        :return: shape: `(num_entities, *output_dims)`
+        :return: shape: `(n, d_out)`
             the enriched entity representations
         """
         raise NotImplementedError
@@ -255,9 +274,14 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
     """
 
     # docstr-coverage: inherited
-    def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def pass_messages(
+        self, x: torch.FloatTensor, edge_mask: Optional[torch.BoolTensor] = None
+    ) -> torch.FloatTensor:  # noqa: D102
+        edge_index = self.edge_index
+        if edge_mask:
+            edge_index = edge_index[:, edge_mask]
         for layer, activation in zip(self.layers, self.activations):
-            x = activation(layer(x, edge_index=self.edge_index))
+            x = activation(layer(x, edge_index=edge_index))
         return x
 
 
@@ -307,9 +331,15 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
     # docstr-coverage: inherited
-    def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def pass_messages(
+        self, x: torch.FloatTensor, edge_mask: Optional[torch.BoolTensor] = None
+    ) -> torch.FloatTensor:  # noqa: D102
+        edge_index, edge_type = self.edge_index, self.edge_type
+        if edge_mask:
+            edge_index = edge_index[:, edge_mask]
+            edge_type = edge_type[:, edge_mask]
         for layer, activation in zip(self.layers, self.activations):
-            x = activation(layer(x, edge_index=self.edge_index, edge_type=self.edge_type))
+            x = activation(layer(x, edge_index=edge_index, edge_type=edge_type))
         return x
 
 
@@ -387,15 +417,21 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
         self.relation_transformation = relation_transformation
 
     # docstr-coverage: inherited
-    def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def pass_messages(
+        self, x: torch.FloatTensor, edge_mask: Optional[torch.BoolTensor] = None
+    ) -> torch.FloatTensor:  # noqa: D102
+        edge_index, edge_type = self.edge_index, self.edge_type
+        if edge_mask:
+            edge_index = edge_index[:, edge_mask]
+            edge_type = edge_type[:, edge_mask]
         # get initial relation representations
         x_rel = self.relation_representation(indices=None)
         n_layer = len(self.layers)
         for i, (layer, activation) in enumerate(zip(self.layers, self.activations)):
             # select edge attributes from relation representations according to relation type
-            edge_attr = x_rel[self.edge_type]
+            edge_attr = x_rel[edge_type]
             # perform message passing
-            x = activation(layer(x, edge_index=self.edge_index, edge_attr=edge_attr))
+            x = activation(layer(x, edge_index=edge_index, edge_attr=edge_attr))
             # apply relation transformation, if necessary
             if self.relation_transformation is not None and i < n_layer - 1:
                 x_rel = self.relation_transformation(x_rel)
