@@ -4,7 +4,7 @@ PyTorch Geometric based representation modules.
 The modules enable entity representations which are linked to their graph neighbors' representations. Similar
 representations are those by CompGCN or R-GCN. However, this module offers generic modules to combine many of the
 numerous message passing layers from PyTorch Geometric with base representations. A summary of available message passing
-layers can be found at https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html.
+layers can be found at :mod:`torch_geometric.nn.conv`.
 
 The three classes differ in how the make use of the relation type information:
 
@@ -54,7 +54,8 @@ relation representations and a DistMult interaction function.
         ),
     )
 """
-from abc import abstractmethod
+
+from abc import ABC, abstractmethod
 from typing import Optional, Sequence
 
 import torch
@@ -95,7 +96,7 @@ for installation instructions.
 """
 
 
-class MessagePassingRepresentation(Representation):
+class MessagePassingRepresentation(Representation, ABC):
     """
     An abstract representation class utilizing PyTorch Geometric message passing layers.
 
