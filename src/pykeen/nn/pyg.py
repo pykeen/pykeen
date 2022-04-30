@@ -107,17 +107,16 @@ FLOW_DIRECTIONS: Collection[FlowDirection] = {"source_to_target", "target_to_sou
 
 def _extract_flow(layers: Sequence[MessagePassing]) -> FlowDirection:
     """Extract the flow direction from the message passing layers."""
-    flow = None
+    flow: Optional[FlowDirection] = None
     for layer in layers:
         if flow is None:
+            if layer.flow not in FLOW_DIRECTIONS:
+                raise AssertionError(f"Invalid flow: {layer.flow}. Valid flows: {FLOW_DIRECTIONS}")
             flow = layer.flow
         elif flow != layer.flow:
             raise ValueError(f"Different flow directions across layers: {[l.flow for l in layers]}")
     # default flow
-    if flow is None:
-        flow = "source_to_target"
-    assert flow in FLOW_DIRECTIONS
-    return flow
+    return flow or "source_to_target"
 
 
 class MessagePassingRepresentation(Representation, ABC):
