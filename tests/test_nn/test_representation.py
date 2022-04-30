@@ -203,6 +203,20 @@ class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentatio
         layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
     )
 
+    def test_consistency_k_hop(self):
+        """Test consistency of results between using only k-hop and using the full graph."""
+        # select random indices
+        indices = torch.randint(self.num_entities, size=(self.num_entities // 2,), generator=self.generator)
+        assert isinstance(self.instance, pykeen.nn.pyg.MessagePassingRepresentation)
+        # forward pass with full graph
+        self.instance.restrict_k_hop = False
+        x_full = self.instance(indices=indices)
+        # forward pass with restricted graph
+        self.instance.restrict_k_hop = True
+        x_restrict = self.instance(indices=indices)
+        # verify the results are similar
+        assert torch.allclose(x_full, x_restrict)
+
 
 @skip_if_torch_geometric_is_missing
 class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
