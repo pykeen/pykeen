@@ -101,6 +101,11 @@ from tests.constants import EPSILON
 from tests.mocks import CustomRepresentation
 from tests.utils import rand
 
+try:
+    import torch_geometric
+except ImportError:
+    torch_geometric = None
+
 T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
@@ -1531,6 +1536,25 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
             create_inverse_triples=self.create_inverse_triples,
         )
         return kwargs
+
+
+@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
+    """Tests for message passing representations"""
+
+    def test_consistency_k_hop(self):
+        """Test consistency of results between using only k-hop and using the full graph."""
+        # select random indices
+        indices = torch.randint(self.num_entities, size=(self.num_entities // 2,), generator=self.generator)
+        assert isinstance(self.instance, pykeen.nn.pyg.MessagePassingRepresentation)
+        # forward pass with full graph
+        self.instance.restrict_k_hop = False
+        x_full = self.instance(indices=indices)
+        # forward pass with restricted graph
+        self.instance.restrict_k_hop = True
+        x_restrict = self.instance(indices=indices)
+        # verify the results are similar
+        assert torch.allclose(x_full, x_restrict)
 
 
 class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):

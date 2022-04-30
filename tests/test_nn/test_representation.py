@@ -19,10 +19,6 @@ try:
     import transformers
 except ImportError:
     transformers = None
-try:
-    import torch_geometric
-except ImportError:
-    torch_geometric = None
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -187,12 +183,7 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-# annotation to skip tests which require torch geometric
-skip_if_torch_geometric_is_missing = unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
-
-
-@skip_if_torch_geometric_is_missing
-class UniRelationalMessagePassingRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+class UniRelationalMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
     """Test for Pytorch Geometric representations using uni-relational message passing layers."""
 
     cls = pykeen.nn.pyg.UniRelationalMessagePassingRepresentation
@@ -203,24 +194,8 @@ class UniRelationalMessagePassingRepresentationTests(cases.TriplesFactoryReprese
         layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
     )
 
-    def test_consistency_k_hop(self):
-        """Test consistency of results between using only k-hop and using the full graph."""
-        # TODO: move to a base test
-        # select random indices
-        indices = torch.randint(self.num_entities, size=(self.num_entities // 2,), generator=self.generator)
-        assert isinstance(self.instance, pykeen.nn.pyg.MessagePassingRepresentation)
-        # forward pass with full graph
-        self.instance.restrict_k_hop = False
-        x_full = self.instance(indices=indices)
-        # forward pass with restricted graph
-        self.instance.restrict_k_hop = True
-        x_restrict = self.instance(indices=indices)
-        # verify the results are similar
-        assert torch.allclose(x_full, x_restrict)
 
-
-@skip_if_torch_geometric_is_missing
-class CategoricalRelationTypeMessagePassingRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+class CategoricalRelationTypeMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
     cls = pykeen.nn.pyg.CategoricalRelationTypeMessagePassingRepresentation
@@ -237,8 +212,7 @@ class CategoricalRelationTypeMessagePassingRepresentationTests(cases.TriplesFact
     )
 
 
-@skip_if_torch_geometric_is_missing
-class FeaturizedRelationTypeMessagePassingRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+class FeaturizedRelationTypeMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
     cls = pykeen.nn.pyg.FeaturizedRelationTypeMessagePassingRepresentation
