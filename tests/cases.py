@@ -1540,7 +1540,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
 
 @unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
 class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
-    """Tests for message passing representations"""
+    """Tests for message passing representations."""
 
     def test_consistency_k_hop(self):
         """Test consistency of results between using only k-hop and using the full graph."""
