@@ -211,8 +211,11 @@ class MessagePassingRepresentation(Representation, ABC):
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
-        if indices is not None and self.restrict_k_hop:
+        if self.restrict_k_hop and indices is not None:
+            # we can restrict the message passing to the k-hop neighborhood of the desired indices;
+            # this does only make sense if we do not request *all* indices
             assert k_hop_subgraph is not None
+            # k_hop_subgraph returns:
             # (1) the nodes involved in the subgraph
             # (2) the filtered edge_index connectivity
             # (3) the mapping from node indices in node_idx to their new location, and
@@ -220,6 +223,7 @@ class MessagePassingRepresentation(Representation, ABC):
             neighbor_indices, _, indices, edge_mask = k_hop_subgraph(
                 node_idx=indices, num_hops=len(self.layers), edge_index=self.edge_index, relabel_nodes=True
             )
+            # we only need the base representations for the neighbor indices
             x = self.base(indices=neighbor_indices)
         else:
             # get *all* base representations
@@ -231,6 +235,20 @@ class MessagePassingRepresentation(Representation, ABC):
         if indices is not None:
             x = x[indices]
         return x
+
+    def _get_edge_index(self, edge_mask: Optional[torch.BoolTensor] = None) -> torch.LongTensor:
+        """
+        Return the (selected part of the) edge index.
+
+        :param edge_mask: shape: `(num_edges,)`
+            the edge mask
+
+        :return: shape: `(2, num_selected_edges)`
+            the selected edges, or all edges if `edge_mask` is None
+        """
+        if edge_mask is None:
+            return self.edge_index
+        return self.edge_index[:, edge_mask]
 
     @abstractmethod
     def pass_messages(self, x: torch.FloatTensor, edge_mask: Optional[torch.BoolTensor] = None) -> torch.FloatTensor:
@@ -277,9 +295,7 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
     def pass_messages(
         self, x: torch.FloatTensor, edge_mask: Optional[torch.BoolTensor] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        edge_index = self.edge_index
-        if edge_mask:
-            edge_index = edge_index[:, edge_mask]
+        edge_index = self._get_edge_index(edge_mask=edge_mask)
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=edge_index))
         return x
@@ -330,14 +346,26 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
         # register an additional buffer for the categorical edge type
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
+    def _get_edge_type(self, edge_mask: Optional[torch.BoolTensor] = None) -> torch.LongTensor:
+        """
+        Return the (selected part of the) edge type.
+
+        :param edge_mask: shape: `(num_edges,)`
+            the edge mask
+
+        :return: shape: `(num_selected_edges,)`
+            the selected edge types, or all edge types if `edge_mask` is None
+        """
+        if edge_mask is None:
+            return self.edge_type
+        return self.edge_type[edge_mask]
+
     # docstr-coverage: inherited
     def pass_messages(
         self, x: torch.FloatTensor, edge_mask: Optional[torch.BoolTensor] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        edge_index, edge_type = self.edge_index, self.edge_type
-        if edge_mask:
-            edge_index = edge_index[:, edge_mask]
-            edge_type = edge_type[:, edge_mask]
+        edge_index = self._get_edge_index(edge_mask=edge_mask)
+        edge_type = self._get_edge_type(edge_mask=edge_mask)
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=edge_index, edge_type=edge_type))
         return x
@@ -420,10 +448,8 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
     def pass_messages(
         self, x: torch.FloatTensor, edge_mask: Optional[torch.BoolTensor] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        edge_index, edge_type = self.edge_index, self.edge_type
-        if edge_mask:
-            edge_index = edge_index[:, edge_mask]
-            edge_type = edge_type[:, edge_mask]
+        edge_index = self._get_edge_index(edge_mask=edge_mask)
+        edge_type = self._get_edge_type(edge_mask=edge_mask)
         # get initial relation representations
         x_rel = self.relation_representation(indices=None)
         n_layer = len(self.layers)
