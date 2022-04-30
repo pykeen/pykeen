@@ -202,14 +202,14 @@ class MessagePassingRepresentation(Representation, ABC):
         # get *all* base representations
         x = self.base(indices=None)
         # perform message passing on *all* base representations & edges
-        x = self._message_passing(x=x)
+        x = self.pass_messages(x=x)
         # select desired indices
         if indices is not None:
             x = x[indices]
         return x
 
     @abstractmethod
-    def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:
+    def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:
         """
         Perform the message passing steps.
 
@@ -247,7 +247,7 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
         )
     """
 
-    def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=self.edge_index))
         return x
@@ -298,7 +298,7 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
         # register an additional buffer for the categorical edge type
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
-    def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=self.edge_index, edge_type=self.edge_type))
         return x
@@ -377,7 +377,7 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
         )
         self.relation_transformation = relation_transformation
 
-    def _message_passing(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         # get initial relation representations
         x_rel = self.relation_representation(indices=None)
         n_layer = len(self.layers)
