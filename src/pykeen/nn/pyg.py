@@ -56,13 +56,13 @@ relation representations and a DistMult interaction function.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Sequence
-from typing_extensions import Literal
+from typing import Collection, Optional, Sequence
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
+from typing_extensions import Literal
 
 from .representation import Representation
 from ..triples.triples_factory import CoreTriplesFactory
@@ -102,6 +102,7 @@ for installation instructions.
 """
 
 FlowDirection = Literal["source_to_target", "target_to_source"]
+FLOW_DIRECTIONS: Collection[FlowDirection] = {"source_to_target", "target_to_source"}
 
 
 def _extract_flow(layers: Sequence[MessagePassing]) -> FlowDirection:
@@ -115,6 +116,7 @@ def _extract_flow(layers: Sequence[MessagePassing]) -> FlowDirection:
     # default flow
     if flow is None:
         flow = "source_to_target"
+    assert flow in FLOW_DIRECTIONS
     return flow
 
 
