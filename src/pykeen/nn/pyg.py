@@ -195,6 +195,7 @@ class MessagePassingRepresentation(Representation, ABC):
         # TODO: inductive?
         self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
 
+    # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
         # TODO: we could reduce the memory footprint and maybe also computation time
         #       by considering only the k-hop neighborhood of the requested indices
@@ -247,6 +248,7 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
         )
     """
 
+    # docstr-coverage: inherited
     def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=self.edge_index))
@@ -298,6 +300,7 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
         # register an additional buffer for the categorical edge type
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
+    # docstr-coverage: inherited
     def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=self.edge_index, edge_type=self.edge_type))
@@ -377,6 +380,7 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
         )
         self.relation_transformation = relation_transformation
 
+    # docstr-coverage: inherited
     def pass_messages(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         # get initial relation representations
         x_rel = self.relation_representation(indices=None)
