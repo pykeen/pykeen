@@ -386,7 +386,7 @@ class LazyDataset(Dataset):
     def _cache_sub_directories(self) -> Iterable[str]:
         """Iterate over appropriate cache sub-directory."""
         # TODO: use class-resolver normalize?
-        return self.__class__.__name__.lower()
+        yield self.__class__.__name__.lower()
 
 
 class PathDataset(LazyDataset):
