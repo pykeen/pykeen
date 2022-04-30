@@ -1,7 +1,8 @@
 """Combination strategies for entity alignment datasets."""
+
 import logging
-from abc import abstractmethod
-from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple, Union
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Iterable, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy
 import pandas
@@ -159,7 +160,13 @@ def _swap_index(mapped_triples: MappedTriples, dense_map: torch.LongTensor, inde
     return mapped_triples
 
 
-class GraphPairCombinator:
+class _ProcessedTuple(NamedTuple):
+    mapped_triples: MappedTriples
+    alignment: torch.LongTensor
+    translation_kwargs: Mapping[str, Any]
+
+
+class GraphPairCombinator(ABC):
     """A base class for combination of a graph pair into a single graph."""
 
     def __call__(
@@ -217,7 +224,7 @@ class GraphPairCombinator:
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> Tuple[MappedTriples, torch.LongTensor, Mapping[str, Any]]:
+    ) -> _ProcessedTuple:
         raise NotImplementedError
 
 
@@ -230,8 +237,12 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> Tuple[MappedTriples, torch.LongTensor, Mapping[str, Any]]:  # noqa: D102
-        return mapped_triples, alignment, dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1])
+    ) -> _ProcessedTuple:  # noqa: D102
+        return _ProcessedTuple(
+            mapped_triples,
+            alignment,
+            dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1]),
+        )
 
 
 class SwapGraphPairCombinator(GraphPairCombinator):
@@ -243,7 +254,7 @@ class SwapGraphPairCombinator(GraphPairCombinator):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> Tuple[MappedTriples, torch.LongTensor, Mapping[str, Any]]:  # noqa: D102
+    ) -> _ProcessedTuple:  # noqa: D102
         # add swap triples
         # e1 ~ e2 => (e1, r, t) ~> (e2, r, t), or (h, r, e1) ~> (h, r, e2)
         # create dense entity remapping for swap
@@ -262,7 +273,11 @@ class SwapGraphPairCombinator(GraphPairCombinator):
             ],
             dim=0,
         )
-        return mapped_triples, alignment, dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1])
+        return _ProcessedTuple(
+            mapped_triples,
+            alignment,
+            dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1]),
+        )
 
 
 class ExtraRelationGraphPairCombinator(GraphPairCombinator):
@@ -274,7 +289,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> Tuple[MappedTriples, torch.LongTensor, Mapping[str, Any]]:  # noqa: D102
+    ) -> _ProcessedTuple:  # noqa: D102
         # add alignment triples with extra relation
         left_id, right_id = alignment
         alignment_relation_id = offsets[-1, 1]
@@ -288,14 +303,14 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
                 dim=-1,
             )
         )
-        return (
+        return _ProcessedTuple(
             mapped_triples,
             alignment,
             dict(
                 entity_offsets=offsets[:, 0],
                 relation_offsets=offsets[:, 1],
                 extra_relations={"same-as": alignment_relation_id},
-            )
+            ),
         )
 
 
@@ -321,7 +336,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> Tuple[MappedTriples, torch.LongTensor, Mapping[str, Any]]:  # noqa: D102
+    ) -> _ProcessedTuple:  # noqa: D102
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
         entity_id_mapping = torch.arange(offsets[-1, 0])
         for cc in get_connected_components(pairs=alignment.tolist()):
@@ -335,7 +350,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         h_new, t_new = inverse.split(split_size_or_sections=2)
         mapped_triples = torch.stack([h_new, r, t_new], dim=-1)
         # only use training alignments?
-        return (
+        return _ProcessedTuple(
             mapped_triples,
             torch.empty(size=(2, 0), dtype=torch.long),
             dict(
