@@ -57,6 +57,7 @@ relation representations and a DistMult interaction function.
 
 from abc import ABC, abstractmethod
 from typing import Optional, Sequence
+from typing_extensions import Literal
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -97,6 +98,22 @@ Please refer to
 for installation instructions.
 """
 
+FlowDirection = Literal["source_to_target", "target_to_source"]
+
+
+def _extract_flow(layers: Sequence[MessagePassing]) -> FlowDirection:
+    """Extract the flow direction from the message passing layers."""
+    flow = None
+    for layer in layers:
+        if flow is None:
+            flow = layer.flow
+        elif flow != layer.flow:
+            raise ValueError(f"Different flow directions across layers: {[l.flow for l in layers]}")
+    # default flow
+    if flow is None:
+        flow = "source_to_target"
+    return flow
+
 
 class MessagePassingRepresentation(Representation, ABC):
     """
@@ -114,6 +131,9 @@ class MessagePassingRepresentation(Representation, ABC):
 
     #: the message passing layers
     layers: Sequence[MessagePassing]
+
+    #: the flow direction of messages across layers
+    flow: FlowDirection
 
     #: the edge index, shape: (2, num_edges)
     edge_index: torch.LongTensor
@@ -184,6 +204,7 @@ class MessagePassingRepresentation(Representation, ABC):
 
         # initialize layers
         self.layers = nn.ModuleList(layer_resolver.make_many(layers, layers_kwargs))
+        self.flow = _extract_flow(self.layers)
 
         # normalize activation
         activations = list(upgrade_to_sequence(activations))
@@ -221,7 +242,11 @@ class MessagePassingRepresentation(Representation, ABC):
             # (3) the mapping from node indices in node_idx to their new location, and
             # (4) the edge mask indicating which edges were preserved
             neighbor_indices, _, indices, edge_mask = k_hop_subgraph(
-                node_idx=indices, num_hops=len(self.layers), edge_index=self.edge_index, relabel_nodes=True
+                node_idx=indices,
+                num_hops=len(self.layers),
+                edge_index=self.edge_index,
+                relabel_nodes=True,
+                flow=self.flow,
             )
             # we only need the base representations for the neighbor indices
             x = self.base(indices=neighbor_indices)
