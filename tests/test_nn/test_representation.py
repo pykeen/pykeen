@@ -192,7 +192,7 @@ skip_if_torch_geometric_is_missing = unittest.skipIf(torch_geometric is None, "N
 
 
 @skip_if_torch_geometric_is_missing
-class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+class UniRelationalMessagePassingRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using uni-relational message passing layers."""
 
     cls = pykeen.nn.pyg.UniRelationalMessagePassingRepresentation
@@ -205,6 +205,7 @@ class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentatio
 
     def test_consistency_k_hop(self):
         """Test consistency of results between using only k-hop and using the full graph."""
+        # TODO: move to a base test
         # select random indices
         indices = torch.randint(self.num_entities, size=(self.num_entities // 2,), generator=self.generator)
         assert isinstance(self.instance, pykeen.nn.pyg.MessagePassingRepresentation)
@@ -219,7 +220,7 @@ class IgnoreRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentatio
 
 
 @skip_if_torch_geometric_is_missing
-class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+class CategoricalRelationTypeMessagePassingRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
     cls = pykeen.nn.pyg.CategoricalRelationTypeMessagePassingRepresentation
@@ -237,7 +238,7 @@ class CategoricalRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresen
 
 
 @skip_if_torch_geometric_is_missing
-class FeaturizedRelationTypePyGRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
+class FeaturizedRelationTypeMessagePassingRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
     cls = pykeen.nn.pyg.FeaturizedRelationTypeMessagePassingRepresentation
