@@ -17,7 +17,7 @@ from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
     "TokenizationRepresentation",
-    "RatioInfo",
+    "DiversityInfo",
     "NodePieceRepresentation",
 ]
 
@@ -167,7 +167,7 @@ class TokenizationRepresentation(Representation):
         return self.vocabulary(token_ids)
 
 
-class RatioInfo(NamedTuple):
+class DiversityInfo(NamedTuple):
     """A ratio information object.
 
     A pair `unique_per_repr, unique_total`, where `unique_per_repr` is a list with
@@ -177,10 +177,10 @@ class RatioInfo(NamedTuple):
 
     #: A list with ratios per representation in their creation order,
     #: e.g., ``[0.58, 0.82]`` for :class:`AnchorTokenization` and :class:`RelationTokenization`
-    unique_per_repr: List[float]
+    uniques_per_representation: List[float]
 
     #: A scalar ratio of unique rows when combining all representations into one matrix, e.g. 0.95
-    unique_total: float
+    uniques_total: float
 
 
 class NodePieceRepresentation(Representation):
@@ -316,9 +316,9 @@ class NodePieceRepresentation(Representation):
             self.aggregation_index,
         )
 
-    def ratio_unique_hashes(self) -> RatioInfo:
+    def estimate_diversity(self) -> DiversityInfo:
         """
-        Return the ratio of unique hashes in the total pool.
+        Estimate the diversity of the tokens via their hashes.
 
         :return:
             A ratio information tuple
@@ -350,17 +350,19 @@ class NodePieceRepresentation(Representation):
                 entity_initializer="xavier_uniform_",
             )
             print(model.entity_representations[0].num_unique_hashes())
+
+        .. seealso:: https://github.com/pykeen/pykeen/pull/896
         """
         # unique hashes per representation
         uniques_per_representation = [
             tokens.assignment.unique(dim=0).shape[0] / self.max_id for tokens in self.token_representations
         ]
 
-        # unique hashes if we concat all representations together
-        uniques_total = torch.unique(
+        # unique hashes if we concatenate all representations together
+        unnormalized_uniques_total = torch.unique(
             torch.cat([tokens.assignment for tokens in self.token_representations], dim=-1), dim=0
         ).shape[0]
-        return RatioInfo(
-            unique_per_repr=uniques_per_representation,
-            unique_total=uniques_total / self.max_id,
+        return DiversityInfo(
+            uniques_per_representation=uniques_per_representation,
+            uniques_total=unnormalized_uniques_total / self.max_id,
         )
