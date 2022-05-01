@@ -71,6 +71,12 @@ class EdgeWeighting(nn.Module):
     needs_message: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
+        """
+        Initialize the module.
+
+        :param kwargs:
+            ignored keyword-based parameters.
+        """
         # stub init to enable arbitrary arguments in subclasses
         super().__init__()
 
