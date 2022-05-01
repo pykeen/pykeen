@@ -3,28 +3,47 @@
 """Utilities for neural network components."""
 
 from typing import Optional, Sequence, Union
+import logging
 
 import torch
 from more_itertools import chunked
 from torch import nn
 from tqdm.auto import tqdm
-from torch_max_mem import maximize_memory_utilization
+from torch_max_mem import MemoryUtilizationMaximizer
 
-from ..utils import get_preferred_device
+from ..utils import get_preferred_device, upgrade_to_sequence, resolve_device
 
 __all__ = [
     "TransformerEncoder",
 ]
 
+logger = logging.getLogger(__name__)
+memory_utilization_maximizer = MemoryUtilizationMaximizer()
 
-@maximize_memory_utilization()
+
+@memory_utilization_maximizer
 def _encode_all_memory_utilization_optimized(
-    encoder: nn.Module,
+    encoder: "TransformerEncoder",
     labels: Sequence[str],
     batch_size: int,
 ) -> torch.Tensor:
+    """
+    Encode all labels with the given batch-size.
+
+    Wrapped by memory utilization maximizer to automatically reduce the batch size if needed.
+
+    :param encoder:
+        the encoder
+    :param labels:
+        the labels to encode
+    :param batch_size:
+        the batch size to use. Will automatically be reduced if necessary.
+
+    :return: shape: `(len(labels), dim)`
+        the encoded labels
+    """
     return torch.cat(
-        [encoder(batch) for batch in chunked(tqdm(labels, leave=False), batch_size)],
+        [encoder(batch) for batch in chunked(tqdm(map(str, labels), leave=False), batch_size)],
         dim=0,
     )
 
@@ -62,13 +81,15 @@ class TransformerEncoder(nn.Module):
         self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path=pretrained_model_name_or_path
         )
-        self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path).to(
+            resolve_device()
+        )
         self.max_length = max_length or 512
 
     def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
         """Encode labels via the provided model and tokenizer."""
-        if isinstance(labels, str):
-            labels = [labels]
+        labels = upgrade_to_sequence(labels)
+        labels = list(map(str, labels))
         return self.model(
             **self.tokenizer(
                 labels,

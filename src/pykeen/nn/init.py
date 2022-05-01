@@ -240,7 +240,7 @@ class LabelBasedInitializer(PretrainedInitializer):
         self,
         labels: Sequence[str],
         pretrained_model_name_or_path: str = "bert-base-cased",
-        batch_size: int = 32,
+        batch_size: Optional[int] = None,
         max_length: Optional[int] = None,
     ):
         """
@@ -251,7 +251,7 @@ class LabelBasedInitializer(PretrainedInitializer):
         :param pretrained_model_name_or_path:
             the name of the pretrained model, or a path, cf. :func:`transformers.AutoModel.from_pretrained`
         :param batch_size: >0
-            the batch size to use while encoding.
+            the (maximum) batch size to use while encoding. If None, use `len(labels)`, i.e., only a single batch.
         :param max_length: >0
             the maximum number of tokens to pad/trim the labels to
 
