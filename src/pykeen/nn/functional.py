@@ -95,6 +95,7 @@ def _apply_optional_bn_to_tensor(
 
 
 def _add_cuda_warning(func):
+    # docstr-coverage: wrapped
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
