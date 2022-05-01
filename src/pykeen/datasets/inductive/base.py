@@ -182,9 +182,8 @@ class LazyInductiveDataset(InductiveDataset):
 
     def _cache_sub_directories(self, version: Optional[str]) -> Iterable[str]:
         """Iterate over appropriate cache sub-directory."""
-        # TODO: use class-resolver?
+        yield from super()._cache_sub_directories()
         # add v1 / v2 / v3 / v4 for inductive splits if available
-        yield self.__class__.__name__.lower()
         if version:
             yield version
 
