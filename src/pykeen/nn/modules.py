@@ -757,6 +757,16 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         embedding_dim: int = 200,
         num_filters: int = 400,
     ):
+        """
+        Initialize the interaction module.
+
+        :param hidden_dropout_rate:
+            the dropout rate applied on the hidden layer
+        :param embedding_dim:
+            the entity and relation embedding dimension
+        :param num_filters:
+            the number of filters (=output channels) of the convolution
+        """
         super().__init__()
         self.embedding_dim = embedding_dim
         self.num_filters = num_filters
