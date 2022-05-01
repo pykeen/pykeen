@@ -17,7 +17,7 @@ from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
     "TokenizationRepresentation",
-    "DiversityInfo",
+    "HashDiversityInfo",
     "NodePieceRepresentation",
 ]
 
@@ -167,7 +167,7 @@ class TokenizationRepresentation(Representation):
         return self.vocabulary(token_ids)
 
 
-class DiversityInfo(NamedTuple):
+class HashDiversityInfo(NamedTuple):
     """A ratio information object.
 
     A pair `unique_per_repr, unique_total`, where `unique_per_repr` is a list with
@@ -316,7 +316,7 @@ class NodePieceRepresentation(Representation):
             self.aggregation_index,
         )
 
-    def estimate_diversity(self) -> DiversityInfo:
+    def estimate_diversity(self) -> HashDiversityInfo:
         """
         Estimate the diversity of the tokens via their hashes.
 
@@ -362,7 +362,7 @@ class NodePieceRepresentation(Representation):
         unnormalized_uniques_total = torch.unique(
             torch.cat([tokens.assignment for tokens in self.token_representations], dim=-1), dim=0
         ).shape[0]
-        return DiversityInfo(
+        return HashDiversityInfo(
             uniques_per_representation=uniques_per_representation,
             uniques_total=unnormalized_uniques_total / self.max_id,
         )
