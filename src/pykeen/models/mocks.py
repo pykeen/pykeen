@@ -36,6 +36,14 @@ class FixedModel(Model):
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(self, *, triples_factory: CoreTriplesFactory, **_kwargs):
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            the (training) triples factory
+        :param _kwargs:
+            ignored keyword-based parameters
+        """
         super().__init__(
             triples_factory=triples_factory,
         )
