@@ -142,6 +142,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
     def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatch]]:  # noqa: D102
         return self.collate
 
+    # docstr-coverage: inherited
     @classmethod
     def from_triples(
         cls,
@@ -256,6 +257,12 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
     def __init__(self, **kwargs):
+        """
+        Initialize the instances.
+
+        :param kwargs:
+            keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
+        """
         super().__init__(**kwargs)
         # indexing
         self.degrees, self.offset, self.neighbors = compute_compressed_adjacency_list(
