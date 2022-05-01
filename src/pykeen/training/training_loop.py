@@ -86,6 +86,12 @@ class SubBatchingNotSupportedError(NotImplementedError):
     """An exception raised when sub batching is not implemented."""
 
     def __init__(self, model: Model):
+        """
+        Initialize the error.
+
+        :param model:
+            the unsupported model
+        """
         super().__init__(model)
         self.model = model
 
