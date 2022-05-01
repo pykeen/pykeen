@@ -143,7 +143,7 @@ class JSONResultTracker(FileResultTracker):
     extension = "jsonl"
 
     def _write(self, obj) -> None:
-        print(json.dumps(obj), file=self.file, flush=True)  # noqa:T001
+        print(json.dumps(obj), file=self.file, flush=True)  # noqa:T201
 
     def log_params(
         self,
