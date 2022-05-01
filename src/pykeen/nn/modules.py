@@ -623,14 +623,43 @@ class ConvEInteraction(
         output_channels: int = 32,
         embedding_height: Optional[int] = None,
         embedding_width: Optional[int] = None,
-        kernel_height: int = 3,
         kernel_width: int = 3,
+        kernel_height: Optional[int] = None,
         input_dropout: float = 0.2,
-        output_dropout: float = 0.3,
         feature_map_dropout: float = 0.2,
+        output_dropout: float = 0.3,
         embedding_dim: int = 200,
         apply_batch_normalization: bool = True,
     ):
+        """
+        Initialize the interaction module.
+
+        :param input_channels:
+            the number of input channels for the convolution operation. Can be inferred from other parameters,
+            cf. :func:`_calculate_missing_shape_information`.
+        :param output_channels:
+            the number of input channels for the convolution operation
+        :param embedding_height:
+            the height of the "image" after reshaping the concatenated head and relation embedding. Can be inferred
+            from other parameters, cf. :func:`_calculate_missing_shape_information`.
+        :param embedding_width:
+            the width of the "image" after reshaping the concatenated head and relation embedding. Can be inferred
+            from other parameters, cf. :func:`_calculate_missing_shape_information`.
+        :param kernel_width:
+            the width of the convolution kernel
+        :param kernel_height:
+            the height of the convolution kernel. Defaults to `kernel_width`
+        :param input_dropout:
+            the dropout applied *before* the convolution
+        :param feature_map_dropout:
+            the dropout applied *after* the convolution
+        :param output_dropout:
+            the dropout applied after the linear projection
+        :param embedding_dim:
+            the embedding dimension of entities and relations
+        :param apply_batch_normalization:
+            whether to apply batch normalization
+        """
         super().__init__()
 
         # Automatic calculation of remaining dimensions
@@ -653,6 +682,9 @@ class ConvEInteraction(
                 f"Product of input channels ({input_channels}), height ({embedding_height}), and width "
                 f"({embedding_width}) does not equal target embedding dimension ({embedding_dim})",
             )
+
+        # normalize kernel height
+        kernel_height = kernel_height or kernel_width
 
         # encoders
         # 1: 2D encoder: BN?, DO, Conv, BN?, Act, DO
