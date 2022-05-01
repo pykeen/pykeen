@@ -1062,7 +1062,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
         self.reset_parameters()
 
-    def reset_parameters(self):  # noqa:D102
+    def reset_parameters(self):  # noqa: D102
         # instantiate here to make module easily serializable
         core_initializer = initializer_resolver.make(self.core_initializer, pos_kwargs=self.core_initializer_kwargs)
         core_initializer(self.core_tensor)
@@ -1544,7 +1544,7 @@ class BoxEInteraction(
         h: Tuple[FloatTensor, FloatTensor],
         r: Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         t: Tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa:D102
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
         h_pos, h_bump = h
         t_pos, t_bump = t
@@ -1641,7 +1641,7 @@ class MultiLinearTuckerInteraction(
             requires_grad=True,
         )
 
-    def reset_parameters(self):  # noqa:D102
+    def reset_parameters(self):  # noqa: D102
         # initialize core tensor
         nn.init.normal_(
             self.core_tensor,

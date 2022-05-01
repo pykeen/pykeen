@@ -1255,7 +1255,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: Optional[int] = None,
         weights: Optional[np.ndarray] = None,
         **kwargs,
-    ) -> float:  # noqa:D102
+    ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates)
         n = num_candidates.max().item()
         individual = harmonic_variances(n)[num_candidates - 1]
@@ -1549,7 +1549,7 @@ class HitsAtK(RankBasedMetric):
         num_samples: Optional[int] = None,
         weights: Optional[np.ndarray] = None,
         **kwargs,
-    ) -> float:  # noqa:D102
+    ) -> float:  # noqa: D102
         # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)

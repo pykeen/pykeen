@@ -150,7 +150,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
         num_entities: int,
         num_relations: int,
         **kwargs,
-    ) -> Instances:  # noqa:D102
+    ) -> Instances:  # noqa: D102
         return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)
 
 

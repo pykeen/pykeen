@@ -62,7 +62,7 @@ class ClassificationMetric(Metric):
     func: ClassVar[Callable[[np.array, np.array], float]]
 
     @classmethod
-    def get_description(cls) -> str:  # noqa:D102
+    def get_description(cls) -> str:  # noqa: D102
         return cls.description
 
     @classmethod
