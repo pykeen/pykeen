@@ -2,16 +2,16 @@
 
 """Utilities for neural network components."""
 
-from typing import Optional, Sequence, Union
 import logging
+from typing import Optional, Sequence, Union
 
 import torch
 from more_itertools import chunked
 from torch import nn
-from tqdm.auto import tqdm
 from torch_max_mem import MemoryUtilizationMaximizer
+from tqdm.auto import tqdm
 
-from ..utils import get_preferred_device, upgrade_to_sequence, resolve_device
+from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 
 __all__ = [
     "TransformerEncoder",
