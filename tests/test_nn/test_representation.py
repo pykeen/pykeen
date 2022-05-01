@@ -183,10 +183,10 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class UniRelationalMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
+class SimpleMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
     """Test for Pytorch Geometric representations using uni-relational message passing layers."""
 
-    cls = pykeen.nn.pyg.UniRelationalMessagePassingRepresentation
+    cls = pykeen.nn.pyg.SimpleMessagePassingRepresentation
     embedding_dim: int = 3
     kwargs = dict(
         base_kwargs=dict(shape=(embedding_dim,)),
@@ -195,10 +195,10 @@ class UniRelationalMessagePassingRepresentationTests(cases.MessagePassingReprese
     )
 
 
-class CategoricalRelationTypeMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
+class TypedMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
-    cls = pykeen.nn.pyg.CategoricalRelationTypeMessagePassingRepresentation
+    cls = pykeen.nn.pyg.TypedMessagePassingRepresentation
     embedding_dim: int = 3
     kwargs = dict(
         base_kwargs=dict(shape=(embedding_dim,)),
@@ -212,10 +212,10 @@ class CategoricalRelationTypeMessagePassingRepresentationTests(cases.MessagePass
     )
 
 
-class FeaturizedRelationTypeMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
+class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
     """Test for Pytorch Geometric representations using categorical message passing layers."""
 
-    cls = pykeen.nn.pyg.FeaturizedRelationTypeMessagePassingRepresentation
+    cls = pykeen.nn.pyg.FeaturizedMessagePassingRepresentation
     embedding_dim: int = 3
     kwargs = dict(
         base_kwargs=dict(shape=(embedding_dim,)),

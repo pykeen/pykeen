@@ -8,11 +8,11 @@ layers can be found at :mod:`torch_geometric.nn.conv`.
 
 The three classes differ in how the make use of the relation type information:
 
-* :class:`UniRelationalMessagePassingRepresentation` only uses the connectivity information from the training triples,
+* :class:`SimpleMessagePassingRepresentation` only uses the connectivity information from the training triples,
   but ignores the relation type, e.g., :class:`torch_geometric.nn.conv.GCNConv`.
-* :class:`CategoricalRelationTypeMessagePassingRepresentation` is for message passing layer, which internally handle the
+* :class:`TypedMessagePassingRepresentation` is for message passing layer, which internally handle the
   categorical relation type information via an `edge_type` input, e.g., :class:`torch_geometric.nn.conv.RGCNConv`.
-* :class:`FeaturizedRelationTypeMessagePassingRepresentation` is for message passing layer which can use edge attributes
+* :class:`FeaturizedMessagePassingRepresentation` is for message passing layer which can use edge attributes
   via the parameter `edge_attr`, e.g., :class:`torch_geometric.nn.conv.GMMConv`.
 
 We can also easily utilize these representations with :class:`pykeen.models.ERModel`. Here, we showcase how to combine
@@ -37,7 +37,7 @@ relation representations and a DistMult interaction function.
         model=ERModel,
         model_kwargs=dict(
             interaction="distmult",
-            entity_representations="UniRelationalMessagePassing",
+            entity_representations="SimpleMessagePassing",
             entity_representations_kwargs=dict(
                 triples_factory=dataset.training,
                 base_kwargs=dict(
@@ -73,9 +73,9 @@ __all__ = [
     # abstract
     "MessagePassingRepresentation",
     # concrete classes
-    "UniRelationalMessagePassingRepresentation",
-    "FeaturizedRelationTypeMessagePassingRepresentation",
-    "CategoricalRelationTypeMessagePassingRepresentation",
+    "SimpleMessagePassingRepresentation",
+    "FeaturizedMessagePassingRepresentation",
+    "TypedMessagePassingRepresentation",
 ]
 
 try:
@@ -287,7 +287,7 @@ class MessagePassingRepresentation(Representation, ABC):
         raise NotImplementedError
 
 
-class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
+class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
     """
     A representation with message passing not making use of the relation type.
 
@@ -304,7 +304,7 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
 
         embedding_dim = 64
         dataset = get_dataset(dataset="nations")
-        r = UniRelationalMessagePassingRepresentation(
+        r = SimpleMessagePassingRepresentation(
             triples_factory=dataset.training,
             base_kwargs=dict(shape=embedding_dim),
             layers=["gcn"] * 2,
@@ -321,7 +321,7 @@ class UniRelationalMessagePassingRepresentation(MessagePassingRepresentation):
         return x
 
 
-class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresentation):
+class TypedMessagePassingRepresentation(MessagePassingRepresentation):
     """
     A representation with message passing with uses categorical relation type information.
 
@@ -337,7 +337,7 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
 
         embedding_dim = 64
         dataset = get_dataset(dataset="nations")
-        r = CategoricalRelationTypeMessagePassingRepresentation(
+        r = TypedMessagePassingRepresentation(
             triples_factory=dataset.training,
             base_kwargs=dict(shape=embedding_dim),
             layers="rgcn",
@@ -390,7 +390,7 @@ class CategoricalRelationTypeMessagePassingRepresentation(MessagePassingRepresen
         return x
 
 
-class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationTypeMessagePassingRepresentation):
+class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
     """
     A representation with message passing with uses edge features obtained from relation representations.
 
@@ -408,7 +408,7 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
 
         embedding_dim = 64
         dataset = get_dataset(dataset="nations")
-        r = FeaturizedRelationTypeMessagePassingRepresentation(
+        r = FeaturizedMessagePassingRepresentation(
             triples_factory=dataset.training,
             base_kwargs=dict(shape=embedding_dim),
             relation_representation_kwargs=dict(
@@ -451,7 +451,7 @@ class FeaturizedRelationTypeMessagePassingRepresentation(CategoricalRelationType
 
         :param kwargs:
             additional keyword-based parameters passed to
-            :meth:`CategoricalRelationTypeMessagePassingRepresentation.__init__`, except the `triples_factory`
+            :meth:`TypedMessagePassingRepresentation.__init__`, except the `triples_factory`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
 
