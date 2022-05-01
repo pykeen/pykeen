@@ -831,20 +831,18 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
     def __init__(
         self,
         embedding_dim: int,
-        hidden_dim: int,
+        hidden_dim: Optional[int] = None,
     ):
-        """Initialize the interaction function.
+        """Initialize the interaction module.
 
         :param embedding_dim:
-            The embedding vector dimension.
+            The embedding vector dimension for entities and relations.
         :param hidden_dim:
-            The hidden dimension of the MLP.
+            The hidden dimension of the MLP. Defaults to `embedding_dim`.
         """
         super().__init__()
-        """The multi-layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
-           with self.embedding_dim neurons and output layer with one neuron.
-           The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
-        """
+        # normalize hidden_dim
+        hidden_dim = hidden_dim or embedding_dim
         self.hidden = nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True)
         self.activation = nn.ReLU()
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
@@ -880,11 +878,24 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     def __init__(
         self,
-        hidden_dim: int = 300,
+        embedding_dim: int = 200,
+        hidden_dim: Optional[int] = None,
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
-        embedding_dim: int = 200,
     ):
+        """
+        Initialize the interaction module.
+
+        :param embedding_dim:
+            the embedding dimension of entities and relations
+        :param hidden_dim:
+            the hidden dimension of the MLP. Defaults to `embedding_dim`.
+        :param input_dropout:
+            the dropout applied *before* the first layer
+        :param hidden_dropout:
+            the dropout applied *after* the first layer
+        """
+        hidden_dim = hidden_dim or embedding_dim
         super().__init__()
         self.mlp = nn.Sequential(
             nn.Dropout(input_dropout),
@@ -919,6 +930,14 @@ class TransRInteraction(
     func = pkf.transr_interaction
 
     def __init__(self, p: int, power_norm: bool = True):
+        """
+        Initialize the interaction module.
+
+        :param p:
+            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+        :param power_norm:
+            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+        """
         super().__init__(p=p, power_norm=power_norm)
 
     # docstr-coverage: inherited
@@ -961,8 +980,17 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
     def __init__(
         self,
         embedding_dim: int = 50,
-        inner_non_linearity: Optional[nn.Module] = None,
+        inner_non_linearity: HintOrType[nn.Module] = None,
     ):
+        """
+        Initialize the interaction module.
+
+        :param embedding_dim:
+            the embedding dimension of entities and relations
+        :param inner_non_linearity:
+            the inner non-linearity, or a hint thereof. Defaults to :class:`nn.Tanh`.
+            Disable by passing :class:`nn.Idenity`
+        """
         super().__init__()
 
         # Global entity projection
@@ -978,8 +1006,8 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
 
         if inner_non_linearity is None:
-            inner_non_linearity = nn.Tanh()
-        self.inner_non_linearity = inner_non_linearity
+            inner_non_linearity = nn.Tanh
+        self.inner_non_linearity = activation_resolver.make(inner_non_linearity)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
@@ -1104,6 +1132,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
         self.reset_parameters()
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # instantiate here to make module easily serializable
         core_initializer = initializer_resolver.make(self.core_initializer, pos_kwargs=self.core_initializer_kwargs)
@@ -1135,6 +1164,14 @@ class UMInteraction(
     func = pkf.um_interaction
 
     def __init__(self, p: int, power_norm: bool = True):
+        """
+        Initialize the interaction module.
+
+        :param p:
+            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+        :param power_norm:
+            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+        """
         super().__init__(p=p, power_norm=power_norm)
 
     @staticmethod
@@ -1156,6 +1193,14 @@ class TorusEInteraction(NormBasedInteraction[torch.FloatTensor, torch.FloatTenso
     func = pkf.toruse_interaction
 
     def __init__(self, p: int = 2, power_norm: bool = False):
+        """
+        Initialize the interaction module.
+
+        :param p:
+            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+        :param power_norm:
+            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+        """
         super().__init__(p=p, power_norm=power_norm)
 
 
@@ -1176,6 +1221,14 @@ class TransDInteraction(
     func = pkf.transd_interaction
 
     def __init__(self, p: int = 2, power_norm: bool = True):
+        """
+        Initialize the interaction module.
+
+        :param p:
+            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+        :param power_norm:
+            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+        """
         super().__init__(p=p, power_norm=power_norm)
 
     @staticmethod
@@ -1214,16 +1267,15 @@ class NTNInteraction(
         """Initialize NTN with the given non-linear activation function.
 
         :param activation: A non-linear activation function. Defaults to the hyperbolic
-            tangent :class:`torch.nn.Tanh` if none, otherwise uses the :data:`pykeen.utils.activation_resolver`
+            tangent :class:`torch.nn.Tanh` if None, otherwise uses the :data:`pykeen.utils.activation_resolver`
             for lookup.
         :param activation_kwargs: If the ``activation`` is passed as a class, these keyword arguments
             are used during its instantiation.
         """
         super().__init__()
         if activation is None:
-            self.non_linearity = nn.Tanh()
-        else:
-            self.non_linearity = activation_resolver.make(activation, activation_kwargs)
+            activation = nn.Tanh()
+        self.non_linearity = activation_resolver.make(activation, activation_kwargs)
 
     @staticmethod
     # docstr-coverage: inherited
@@ -1259,6 +1311,14 @@ class KG2EInteraction(
     func = pkf.kg2e_interaction
 
     def __init__(self, similarity: Optional[str] = None, exact: bool = True):
+        """
+        Initialize the interaction module.
+
+        :param similarity:
+            the distribution similarity to use. Defaults to KL divergence.
+        :param exact:
+            whether to compute the exact similarity, or leave out constant terms
+        """
         super().__init__()
         if similarity is None:
             similarity = "KL"
@@ -1356,6 +1416,12 @@ class SimplEInteraction(
     relation_shape = ("d", "d")
 
     def __init__(self, clamp_score: Union[None, float, Tuple[float, float]] = None):
+        """
+        Initialize the interaction module.
+
+        :param clamp_score:
+            whether to clamp scores into a fixed interval
+        """
         super().__init__()
         if isinstance(clamp_score, float):
             clamp_score = (-clamp_score, clamp_score)
@@ -1662,7 +1728,8 @@ class MultiLinearTuckerInteraction(
         relation_dim: Optional[int] = None,
         tail_dim: Optional[int] = None,
     ):
-        """Initialize the Tucker interaction function.
+        """
+        Initialize the Tucker interaction function.
 
         :param head_dim:
             The head entity embedding dimension.
@@ -1683,6 +1750,7 @@ class MultiLinearTuckerInteraction(
             requires_grad=True,
         )
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # initialize core tensor
         nn.init.normal_(
