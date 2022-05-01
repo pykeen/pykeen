@@ -175,7 +175,7 @@ class Dataset:
 
     def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
 
     def _extra_repr(self) -> Iterable[str]:
         """Yield extra entries for the instance's string representation."""
