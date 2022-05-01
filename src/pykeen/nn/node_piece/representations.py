@@ -3,7 +3,7 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, List, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import Callable, List, NamedTuple, Optional, Sequence, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
