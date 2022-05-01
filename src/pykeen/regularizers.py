@@ -148,14 +148,23 @@ class LpRegularizer(Regularizer):
 
     def __init__(
         self,
-        weight: float = 1.0,
+        *,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.0,
-        apply_only_once: bool = False,
-        parameters: Optional[Iterable[nn.Parameter]] = None,
+        **kwargs,
     ):
-        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
+        """
+        Initialize the regularizer.
+
+        :param dim:
+            the dimension along which to calculate the Lp norm, cf. :func:`lp_norm`
+        :param normalize:
+            whether to normalize the norm by the dimension, cf. :func:`lp_norm`
+        :param p:
+            the parameter $p$ of the Lp norm, cf. :func:`lp_norm`
+        """
+        super().__init__(**kwargs)
         self.dim = dim
         self.normalize = normalize
         self.p = p
