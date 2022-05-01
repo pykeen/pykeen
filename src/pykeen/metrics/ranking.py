@@ -657,6 +657,7 @@ class ZMetric(DerivedRankBasedMetric):
     closed_expectation: ClassVar[bool] = True
     closed_variance: ClassVar[bool] = True
 
+    # docstr-coverage: inherited
     def get_coefficients(
         self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
     ) -> AffineTransformationParameters:  # noqa: D102
@@ -752,6 +753,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     closed_expectation: ClassVar[bool] = True
 
+    # docstr-coverage: inherited
     def get_coefficients(
         self, num_candidates: np.ndarray, weights: Optional[np.ndarray] = None
     ) -> AffineTransformationParameters:  # noqa: D102

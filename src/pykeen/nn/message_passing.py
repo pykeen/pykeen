@@ -199,6 +199,7 @@ class BasesDecomposition(Decomposition):
         )
         self.memory_intense = memory_intense
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.relation_representations.reset_parameters()
 

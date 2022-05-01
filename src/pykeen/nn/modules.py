@@ -692,6 +692,7 @@ class ConvEInteraction(
 
     # docstr-coverage: inherited
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -880,6 +881,7 @@ class TransRInteraction(
 
     # docstr-coverage: inherited
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -974,6 +976,7 @@ class SEInteraction(
     func = pkf.se_interaction
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1093,6 +1096,7 @@ class UMInteraction(
         super().__init__(p=p, power_norm=power_norm)
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1133,6 +1137,7 @@ class TransDInteraction(
         super().__init__(p=p, power_norm=power_norm)
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: Tuple[torch.FloatTensor, torch.FloatTensor],
         r: Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1179,6 +1184,7 @@ class NTNInteraction(
             self.non_linearity = activation_resolver.make(activation, activation_kwargs)
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: torch.FloatTensor,
         r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
@@ -1187,6 +1193,7 @@ class NTNInteraction(
         w, vh, vt, b, u = r
         return dict(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt)
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(activation=self.non_linearity)
 
@@ -1251,6 +1258,7 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
     func = pkf.transh_interaction
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1277,6 +1285,7 @@ class MuREInteraction(
     func = pkf.mure_interaction
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: Tuple[FloatTensor, FloatTensor, FloatTensor],
         r: Tuple[FloatTensor, FloatTensor],
@@ -1310,10 +1319,12 @@ class SimplEInteraction(
             clamp_score = (-clamp_score, clamp_score)
         self.clamp_score = clamp_score
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(clamp=self.clamp_score)
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1332,6 +1343,7 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
     func = pkf.pair_re_interaction
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1428,10 +1440,12 @@ class MonotonicAffineTransformationInteraction(
             dtype=torch.get_default_dtype(),
         ).squeeze()
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.bias.data = self.initial_bias.to(device=self.bias.device)
         self.log_scale.data = self.initial_log_scale.to(device=self.bias.device)
 
+    # docstr-coverage: inherited
     def forward(
         self,
         h: HeadRepresentation,
@@ -1478,6 +1492,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         self.combination_bias = nn.Parameter(data=torch.zeros(embedding_dim))
         self.combination_dropout = nn.Dropout(combination_dropout) if combination_dropout else None
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(
             bias=self.combination_bias,
@@ -1486,6 +1501,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         )
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: FloatTensor,
         r: Tuple[FloatTensor, FloatTensor],
@@ -1549,6 +1565,7 @@ class BoxEInteraction(
             t_bump=t_bump,
         )
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         state = super()._prepare_state_for_functional()
         state["tanh_map"] = self.tanh_map
@@ -1698,6 +1715,7 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
         self.position_embeddings = nn.Parameter(position_initializer(torch.empty(2, input_dim)))
         self.final = nn.Linear(input_dim, input_dim, bias=True)
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(
             transformer=self.transformer,
@@ -1747,12 +1765,14 @@ class TripleREInteraction(
         super().__init__(p=p, power_norm=power_norm)
         self.u = u
 
+    # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._prepare_state_for_functional()
         kwargs["u"] = self.u
         return kwargs
 
     @staticmethod
+    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: FloatTensor,
         r: Tuple[FloatTensor, FloatTensor, FloatTensor],

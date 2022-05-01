@@ -50,6 +50,7 @@ class GraphPairCombinator:
 class ExtraRelationGraphPairCombinator(GraphPairCombinator):
     """This combinator keeps all entities, but introduces a novel alignment relation."""
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         left: TriplesFactory,

@@ -71,6 +71,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
 
     # docstr-coverage: inherited
     @classmethod
+    # docstr-coverage: inherited
     def from_path(
         cls,
         path: Union[str, pathlib.Path, TextIO],
@@ -86,6 +87,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
 
     # docstr-coverage: inherited
     @classmethod
+    # docstr-coverage: inherited
     def from_labeled_triples(
         cls,
         triples: LabeledTriples,
@@ -112,6 +114,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """Return the numeric literals as a tensor."""
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 
+    # docstr-coverage: inherited
     def _iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super()._iter_extra_repr()
         yield f"num_literals={len(self.literals_to_id)}"

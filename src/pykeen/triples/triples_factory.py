@@ -755,6 +755,7 @@ class CoreTriplesFactory:
         )
 
     @classmethod
+    # docstr-coverage: inherited
     def from_path_binary(
         cls,
         path: Union[str, pathlib.Path, TextIO],

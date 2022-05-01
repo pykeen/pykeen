@@ -99,6 +99,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
             nn.ReLU(),
         )
 
+    # docstr-coverage: inherited
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
         for module in [
@@ -109,6 +110,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
         ]:
             module.reset_parameters()
 
+    # docstr-coverage: inherited
     def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim)
@@ -132,6 +134,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
         return x
 
+    # docstr-coverage: inherited
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
@@ -152,6 +155,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
         return x
 
+    # docstr-coverage: inherited
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)

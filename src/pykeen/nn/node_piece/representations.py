@@ -144,6 +144,7 @@ class TokenizationRepresentation(Representation):
             **kwargs,
         )
 
+    # docstr-coverage: inherited
     def extra_repr(self) -> str:  # noqa: D102
         return "\n".join(
             (
@@ -153,6 +154,7 @@ class TokenizationRepresentation(Representation):
             )
         )
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -283,10 +285,12 @@ class NodePieceRepresentation(Representation):
         self.aggregation = aggregation_resolver.lookup(aggregation)
         self.aggregation_index = -(1 + len(shape))
 
+    # docstr-coverage: inherited
     def extra_repr(self) -> str:  # noqa: D102
         aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
         return f"aggregation={aggregation_str}, "
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,

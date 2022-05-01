@@ -293,6 +293,7 @@ class RandomizedCleaner(Cleaner):
 class DeterministicCleaner(Cleaner):
     """Cleanup a triples array (testing) with respect to another (training)."""
 
+    # docstr-coverage: inherited
     def cleanup_pair(
         self,
         reference: MappedTriples,
@@ -399,6 +400,7 @@ class CleanupSplitter(Splitter):
         """
         self.cleaner = cleaner_resolver.make(cleaner)
 
+    # docstr-coverage: inherited
     def split_absolute_size(
         self,
         mapped_triples: MappedTriples,
@@ -420,6 +422,7 @@ class CleanupSplitter(Splitter):
 class CoverageSplitter(Splitter):
     """This splitter greedily selects training triples such that each entity is covered and then splits the rest."""
 
+    # docstr-coverage: inherited
     def split_absolute_size(
         self,
         mapped_triples: MappedTriples,
