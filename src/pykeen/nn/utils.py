@@ -8,12 +8,25 @@ import torch
 from more_itertools import chunked
 from torch import nn
 from tqdm.auto import tqdm
+from torch_max_mem import maximize_memory_utilization
 
 from ..utils import get_preferred_device
 
 __all__ = [
     "TransformerEncoder",
 ]
+
+
+@maximize_memory_utilization()
+def _encode_all_memory_utilization_optimized(
+    encoder: nn.Module,
+    labels: Sequence[str],
+    batch_size: int,
+) -> torch.Tensor:
+    return torch.cat(
+        [encoder(batch) for batch in chunked(tqdm(labels, leave=False), batch_size)],
+        dim=0,
+    )
 
 
 class TransformerEncoder(nn.Module):
@@ -70,7 +83,7 @@ class TransformerEncoder(nn.Module):
     def encode_all(
         self,
         labels: Sequence[str],
-        batch_size: int = 1,
+        batch_size: int = None,
     ) -> torch.FloatTensor:
         """Encode all labels (inference mode & batched).
 
@@ -81,12 +94,12 @@ class TransformerEncoder(nn.Module):
             means that the labels are encoded one-by-one, while ``batch_size=len(labels)``
             would correspond to encoding all at once.
             Larger batch sizes increase memory requirements, but may be computationally
-            more efficient.
+            more efficient. `batch_size` can also be set to `None` to enable automatic batch
+            size maximization for the employed hardware.
 
         :returns: shape: (len(labels), dim)
             a tensor representing the encodings for all labels
         """
-        return torch.cat(
-            [self(batch) for batch in chunked(tqdm(labels), batch_size)],
-            dim=0,
-        )
+        return _encode_all_memory_utilization_optimized(
+            encoder=self, labels=labels, batch_size=batch_size or len(labels)
+        ).detach()
