@@ -112,6 +112,14 @@ class TripleCoverageError(RuntimeError):
     """An exception thrown when not all entities/relations are covered by triples."""
 
     def __init__(self, arr, name: str = "ids"):
+        """
+        Initialize the error.
+
+        :param arr: shape: (num_indices,)
+            the array of covering triple IDs
+        :param name:
+            the name to use for creating the error message
+        """
         r = sorted((arr < 0).nonzero(as_tuple=False))
         super().__init__(
             f"Could not cover the following {name} from the provided triples: {r}. One possible reason is that you are"
