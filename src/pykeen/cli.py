@@ -598,7 +598,7 @@ def readme(check: bool):
             sys.exit(-1)
 
     with open(readme_path, "w") as file:
-        print(new_readme, file=file)  # noqa:T001
+        print(new_readme, file=file)  # noqa:T201
 
 
 def get_readme() -> str:
