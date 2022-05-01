@@ -349,7 +349,7 @@ class NodePieceRepresentation(Representation):
                 relation_constrainer="complex_normalize",
                 entity_initializer="xavier_uniform_",
             )
-            print(model.entity_representations[0].num_unique_hashes())
+            print(model.entity_representations[0].estimate_diversity())
 
         .. seealso:: https://github.com/pykeen/pykeen/pull/896
         """
