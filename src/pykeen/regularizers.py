@@ -163,6 +163,8 @@ class LpRegularizer(Regularizer):
             whether to normalize the norm by the dimension, cf. :func:`lp_norm`
         :param p:
             the parameter $p$ of the Lp norm, cf. :func:`lp_norm`
+        :param kwargs:
+            additonal keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
         super().__init__(**kwargs)
         self.dim = dim
@@ -187,14 +189,25 @@ class PowerSumRegularizer(Regularizer):
 
     def __init__(
         self,
-        weight: float = 1.0,
+        *,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.0,
-        apply_only_once: bool = False,
-        parameters: Optional[Iterable[nn.Parameter]] = None,
+        **kwargs,
     ):
-        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
+        """
+        Initialize the regularizer.
+
+        :param dim:
+            the dimension along which to calculate the Lp norm, cf. :func:`powersum_norm`
+        :param normalize:
+            whether to normalize the norm by the dimension, cf. :func:`powersum_norm`
+        :param p:
+            the parameter $p$ of the Lp norm, cf. :func:`powersum_norm`
+        :param kwargs:
+            additonal keyword-based parameters passed to :meth:`Regularizer.__init__`
+        """
+        super().__init__(**kwargs)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -214,13 +227,21 @@ class TransHRegularizer(Regularizer):
 
     def __init__(
         self,
-        weight: float = 0.05,
+        *,
         epsilon: float = 1e-5,
-        parameters: Optional[Iterable[nn.Parameter]] = None,
+        **kwargs,
     ):
+        """
+        Initialize the regularizer.
+
+        :param epsilon:
+            a small value used to check for approximate orthogonality
+        :param kwargs:
+            additonal keyword-based parameters passed to :meth:`Regularizer.__init__`
+        """
         # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
         # Therefore, apply_only_once is always set to True.
-        super().__init__(weight=weight, apply_only_once=True, parameters=parameters)
+        super().__init__(**kwargs, apply_only_once=True)
         self.epsilon = epsilon
 
     # docstr-coverage: inherited
@@ -256,9 +277,19 @@ class CombinedRegularizer(Regularizer):
         self,
         regularizers: Iterable[Regularizer],
         total_weight: float = 1.0,
-        apply_only_once: bool = False,
+        **kwargs,
     ):
-        super().__init__(weight=total_weight, apply_only_once=apply_only_once)
+        """
+        Initialize the regularizer.
+
+        :param regularizers:
+            the base regularizers
+        :param total_weight:
+            the total regularization weight distributed to the base regularizers according to their individual weights
+        :param kwargs:
+            additonal keyword-based parameters passed to :meth:`Regularizer.__init__`
+        """
+        super().__init__(weight=total_weight, **kwargs)
         self.regularizers = nn.ModuleList(regularizers)
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):
@@ -270,6 +301,7 @@ class CombinedRegularizer(Regularizer):
             ).reciprocal(),
         )
 
+    # docstr-coverage: inherited
     @property
     def normalize(self):  # noqa: D102
         return any(r.normalize for r in self.regularizers)
