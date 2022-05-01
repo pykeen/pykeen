@@ -42,9 +42,9 @@ from .modules import (
 )
 from .node_piece import NodePieceRepresentation, TokenizationRepresentation, tokenizer_resolver
 from .pyg import (
-    TypedMessagePassingRepresentation,
     FeaturizedMessagePassingRepresentation,
     SimpleMessagePassingRepresentation,
+    TypedMessagePassingRepresentation,
 )
 from .representation import Embedding, Representation, SubsetRepresentation
 
