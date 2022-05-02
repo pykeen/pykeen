@@ -66,6 +66,26 @@ class RotatE(ERModel):
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension
+        :param entity_initializer:
+            the entity representation initializer
+        :param relation_initializer:
+            the relation representation initializer
+        :param entity_constrainer:
+            the entity representation constrainer
+        :param relation_constrainer:
+            the relation representation constrainer
+        :param regularizer:
+            the regularizer
+        :param regularizer_kwargs:
+            additional keyword-based parameters passed to the regularizer
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         super().__init__(
             interaction=RotatEInteraction,
             entity_representations_kwargs=dict(
