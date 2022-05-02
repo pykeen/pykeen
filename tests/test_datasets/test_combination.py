@@ -1,7 +1,9 @@
 """Tests for graph combination methods."""
 import unittest_templates
 
+import torch
 import pykeen.datasets.ea.combination
+import pykeen.triples.generation
 from tests import cases
 
 
@@ -36,3 +38,25 @@ class GraphPairCombinatorMetaTestCase(
 
     base_cls = pykeen.datasets.ea.combination.GraphPairCombinator
     base_test = cases.GraphPairCombinatorTestCase
+
+
+def test_cat_shift_triples():
+    """Test cat_shift_triples."""
+    first, second = pykeen.triples.generation.generate_triples(), pykeen.triples.generation.generate_triples()
+    combined, offsets = pykeen.datasets.ea.combination.cat_shift_triples(first, second)
+    # verify shape
+    assert combined.shape == (first.shape[0] + second.shape[0], 3)
+    assert offsets.shape == (2, 3)
+    # verify dtype
+    assert combined.dtype == first.dtype
+    assert offsets.dtype == torch.long
+    # verify number of entities/relations
+    num_entities_first = first[:, 0::2].max().item() + 1
+    num_relations_first = first[:, 1].max().item() + 1
+    combined_num_entities = num_entities_first + second[:, 0::2].max().item() + 1
+    combined_num_relations = num_relations_first + second[:, 1].max().item() + 1
+    assert combined[:, 0::2].max().item() == combined_num_entities - 1
+    assert combined[:, 1].max().item() == combined_num_relations - 1
+    # verify offsets
+    exp_offsets = torch.as_tensor([[0, 0, 0], [num_entities_first, num_relations_first, num_entities_first]])
+    assert (offsets == exp_offsets).all()

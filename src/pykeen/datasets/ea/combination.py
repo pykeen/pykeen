@@ -17,7 +17,7 @@ from ...utils import format_relative_comparison, get_connected_components
 logger = logging.getLogger(__name__)
 
 
-def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[MappedTriples, torch.LongTensor]:
+def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[MappedTriples, torch.LongTensor]:
     """
     Concatenate (shifted) triples.
 
@@ -25,8 +25,8 @@ def cat_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[Map
         the triples factories, or mapped triples
 
     :return:
-        the concatenation of the shifted mapped triples such that there is no overlap, and the offsets for the
-        individual factories
+        a tuple `(combined_triples, offsets)`, where `combined_triples` is the concatenation of the shifted mapped
+        triples such that there is no overlap, and `offsets` comprises the offsets for the individual factories
     """
     # a buffer for the triples
     res = []
@@ -193,7 +193,7 @@ class GraphPairCombinator(ABC):
             The tensor of matching pairs has shape `(2, num_alignments)`, where `num_alignments` can also be 0.
         """
         # concatenate triples
-        mapped_triples, offsets = cat_triples(left, right)
+        mapped_triples, offsets = cat_shift_triples(left, right)
         # filter alignment and translate to IDs
         alignment = filter_map_alignment(alignment=alignment, left=left, right=right, entity_offsets=offsets[:, 0])
         # process
