@@ -1,7 +1,7 @@
 """Tests for graph combination methods."""
+import torch
 import unittest_templates
 
-import torch
 import pykeen.datasets.ea.combination
 import pykeen.triples.generation
 from tests import cases

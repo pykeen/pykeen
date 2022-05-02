@@ -1,9 +1,8 @@
 """Combination strategies for entity alignment datasets."""
 
-from collections import defaultdict
-from email.policy import default
 import logging
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Any, ClassVar, Dict, Iterable, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
 
 import numpy
@@ -98,6 +97,8 @@ def merge_label_to_id_mapping(
         for key, value in mapping.items():
             key = f"{prefix}:{key}"
             if offsets is None:
+                # for mypy
+                assert mappings is not None
                 value = mappings[i][value]
             else:
                 value = value + offsets[i].item()
@@ -109,10 +110,10 @@ def merge_label_to_id_mapping(
     result: Dict[str, int] = {}
     for value, keys in value_to_keys.items():
         if len(keys) == 1:
-            keys = list(keys)[0]
+            key = list(keys)[0]
         else:
-            keys = str(set(keys))
-        result[keys] = value
+            key = str(set(keys))
+        result[key] = value
     return result
 
 
@@ -140,6 +141,9 @@ def merge_label_to_id_mappings(
         explicit entity ID remappings
     :param extra_relations:
         additional relations, as a mapping from their label to IDs
+
+    :return:
+        the updated entity and relation to id mappings
     """
     # merge entity mapping
     entity_to_id = merge_label_to_id_mapping(
@@ -435,7 +439,7 @@ def iter_entity_mappings(
     :param offsets: shape: (2,)
         the entity offsets
 
-    :return:
+    :yield:
         explicit id remappings
     """
     old, new = [torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs)]
