@@ -6,11 +6,8 @@ import unittest_templates
 
 import pykeen.datasets.ea.combination
 import pykeen.triples.generation
+from pykeen.utils import triple_tensor_to_set
 from tests import cases
-
-
-def _triple_tensor_to_set_of_triples(triples: torch.Tensor) -> Set[Tuple]:
-    return {tuple(tr.tolist()) for tr in triples}
 
 
 class DisjointGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
@@ -34,7 +31,7 @@ class DisjointGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
             (11, 3, 12),
             (13, 3, 12),
         }
-        assert expected_triples == _triple_tensor_to_set_of_triples(combined_tf.mapped_triples)
+        assert expected_triples == triple_tensor_to_set(combined_tf.mapped_triples)
 
 
 class ExtraRelationGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
@@ -66,7 +63,7 @@ class ExtraRelationGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase
             (5, same_as_id, 12),
             (6, same_as_id, 13),
         }
-        assert expected_triples == _triple_tensor_to_set_of_triples(combined_tf.mapped_triples)
+        assert expected_triples == triple_tensor_to_set(combined_tf.mapped_triples)
 
 
 class CollapseGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
@@ -88,7 +85,7 @@ class CollapseGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
             (4, 3, 5),
             (6, 3, 5),
         }
-        assert expected_triples == _triple_tensor_to_set_of_triples(combined_tf.mapped_triples)
+        assert expected_triples == triple_tensor_to_set(combined_tf.mapped_triples)
 
 
 class SwapGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
@@ -123,7 +120,7 @@ class SwapGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
             (11, 3, 5),
             (13, 3, 5),
         }
-        assert expected_triples == _triple_tensor_to_set_of_triples(combined_tf.mapped_triples)
+        assert expected_triples == triple_tensor_to_set(combined_tf.mapped_triples)
 
 
 class GraphPairCombinatorMetaTestCase(
