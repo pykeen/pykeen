@@ -213,8 +213,15 @@ def swap_index_triples(
 
 
 class _ProcessedTuple(NamedTuple):
+    """The result of processing a pair of triples factories."""
+
+    #: the merged id-based triples, shape: (n, 3)
     mapped_triples: MappedTriples
+
+    #: the updated alignment, shape: (2, m)
     alignment: torch.LongTensor
+
+    #: additional keyword-based parameters for adjusting label-to-id mappings
     translation_kwargs: Mapping[str, Any]
 
 
@@ -277,6 +284,19 @@ class GraphPairCombinator(ABC):
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
     ) -> _ProcessedTuple:
+        """
+        Process the combined mapped triples.
+
+        :param mapped_triples: shape: (n, 3)
+            the id-based merged triples
+        :param alignment: shape: (2, m)
+            the id-based entity alignment
+        :param offsets: shape: (2, 2)
+            the entity and relation offsets from merging
+
+        :return:
+            updated triples and alignment tensor, as well as parameters for updating label-to-id mappings
+        """
         raise NotImplementedError
 
 
