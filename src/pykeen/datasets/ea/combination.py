@@ -415,7 +415,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
     ) -> ProcessedTuple:  # noqa: D102
         # add alignment triples with extra relation
         left_id, right_id = alignment
-        alignment_relation_id = offsets[-1, 1]
+        alignment_relation_id = mapped_triples[:, 1].max().item() + 1
         mapped_triples = torch.cat(
             [
                 mapped_triples,
