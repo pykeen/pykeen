@@ -25,18 +25,18 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tup
         the triples factories, or mapped triples
 
     :return:
-        a tuple `(combined_triples, offsets)`, where `combined_triples` is the concatenation of the shifted mapped
-        triples such that there is no overlap, and `offsets` comprises the offsets for the individual factories
+        a tuple `(combined_triples, offsets)`, where
+        * `combined_triples`, shape: `(sum(map(len, triples)), 3)`, is the concatenation of the shifted mapped triples
+          such that there is no overlap, and
+        * `offsets`, shape: `(len(triples), 2)` comprises the entity & relation offsets for the individual factories
     """
     # a buffer for the triples
     res = []
-    # the overall offsets
-    offsets = torch.empty(len(triples), 3, dtype=torch.long)
-    # the current offset
-    offset = torch.zeros(1, 3, dtype=torch.long)
+    # the offsets
+    offsets = torch.zeros(len(triples), 2, dtype=torch.long)
     for i, x in enumerate(triples):
-        # store offset
-        offsets[i] = offset
+        # # store offset
+        # offsets[i] = offset
         # normalization
         if isinstance(x, CoreTriplesFactory):
             e_offset = x.num_entities
@@ -46,10 +46,10 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tup
             e_offset = x[:, [0, 2]].max().item() + 1
             r_offset = x[:, 1].max().item() + 1
         # append shifted mapped triples
-        res.append(x + offset)
-        # update offset
-        offset[:, 0::2] += e_offset
-        offset[:, 1] += r_offset
+        res.append(x + offsets[None, i, [0, 1, 0]])
+        # update offsets
+        offsets[i + 1 :, 0] += e_offset
+        offsets[i + 1 :, 1] += r_offset
     return torch.cat(res), offsets
 
 
