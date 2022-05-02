@@ -14,6 +14,10 @@ Example implementations from PyKEEN include
 enrichment, or :class:`pykeen.nn.representation.SingleCompGCNRepresentation`,
 which enrich via CompGCN layers.
 
+Another way to utilize message passing is via the modules provided in :mod:`pykeen.nn.pyg`,
+which allow to use the message passing layers from PyTorch Geometric
+to enrich base representations via message passing.
+
 Decomposition
 -------------
 Since knowledge graphs may contain a large number of entities, having
