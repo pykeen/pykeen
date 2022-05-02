@@ -1334,8 +1334,18 @@ def find(x: X, parent: Mapping[X, X]) -> X:
 
 
 def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
-    """Get the connected components from adjacency list."""
-    # collect connected components using union find with path compression
+    """
+    Calculate the connected components for a graph given as edge list.
+
+    The implementation uses a `union-find <https://en.wikipedia.org/wiki/Disjoint-set_data_structure>`_ data structure
+    with path compression.
+
+    :param pairs:
+        the edge list, i.e., pairs of node ids.
+
+    :return:
+        a collection of connected components, i.e., a collection of disjoint collections of node ids.
+    """
     parent: Dict[X, X] = dict()
     for x, y in pairs:
         parent.setdefault(x, x)
