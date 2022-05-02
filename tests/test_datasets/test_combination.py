@@ -1,4 +1,6 @@
 """Tests for graph combination methods."""
+from typing import Set, Tuple
+
 import torch
 import unittest_templates
 
@@ -7,16 +9,64 @@ import pykeen.triples.generation
 from tests import cases
 
 
+def _triple_tensor_to_set_of_triples(triples: torch.Tensor) -> Set[Tuple]:
+    return {tuple(tr.tolist()) for tr in triples}
+
+
 class DisjointGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
     """Tests for disjoint graph combination."""
 
     cls = pykeen.datasets.ea.combination.DisjointGraphPairCombinator
+
+    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+        # assumes deterministic entity to id mapping
+        expected_triples = {
+            # from left_tf
+            (0, 0, 1),
+            (0, 1, 3),
+            (1, 0, 2),
+            (4, 1, 5),
+            (6, 1, 5),
+            # from right_tf with offset
+            (7, 2, 8),
+            (7, 2, 9),
+            (9, 3, 10),
+            (11, 3, 12),
+            (13, 3, 12),
+        }
+        assert expected_triples == _triple_tensor_to_set_of_triples(combined_tf.mapped_triples)
 
 
 class ExtraRelationGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
     """Tests for extra relation graph combination."""
 
     cls = pykeen.datasets.ea.combination.ExtraRelationGraphPairCombinator
+    same_as_rel_name = cls.ALIGNMENT_RELATION_NAME
+
+    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+        same_as_id = combined_tf.relation_to_id[self.__class__.same_as_rel_name]
+        assert isinstance(same_as_id, int)
+        # assumes deterministic entity to id mapping
+        expected_triples = {
+            # from left_tf
+            (0, 0, 1),
+            (0, 1, 3),
+            (1, 0, 2),
+            (4, 1, 5),
+            (6, 1, 5),
+            # from right_tf with offset
+            (7, 2, 8),
+            (7, 2, 9),
+            (9, 3, 10),
+            (11, 3, 12),
+            (13, 3, 12),
+            # extra-relation
+            (3, same_as_id, 10),
+            (4, same_as_id, 11),
+            (5, same_as_id, 12),
+            (6, same_as_id, 13),
+        }
+        assert expected_triples == _triple_tensor_to_set_of_triples(combined_tf.mapped_triples)
 
 
 class CollapseGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
@@ -24,11 +74,56 @@ class CollapseGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
 
     cls = pykeen.datasets.ea.combination.CollapseGraphPairCombinator
 
+    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+        # assumes deterministic entity to id mapping
+        expected_triples = {
+            (0, 0, 1),
+            (0, 1, 3),
+            (1, 0, 2),
+            (4, 1, 5),
+            (6, 1, 5),
+            (7, 2, 8),
+            (7, 2, 9),
+            (9, 3, 3),
+            (4, 3, 5),
+            (6, 3, 5),
+        }
+        assert expected_triples == _triple_tensor_to_set_of_triples(combined_tf.mapped_triples)
+
 
 class SwapGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
     """Tests for swap graph combination."""
 
     cls = pykeen.datasets.ea.combination.SwapGraphPairCombinator
+
+    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+        # assumes deterministic entity to id mapping
+        expected_triples = {
+            # from left_tf
+            (0, 0, 1),
+            (0, 1, 3),
+            (1, 0, 2),
+            (4, 1, 5),
+            (6, 1, 5),
+            # from right_tf with offset
+            (7, 2, 8),
+            (7, 2, 9),
+            (9, 3, 10),
+            (11, 3, 12),
+            (13, 3, 12),
+            # additional
+            (11, 1, 5),
+            (13, 1, 5),
+            (4, 3, 12),
+            (6, 3, 12),
+            (0, 1, 10),
+            (4, 1, 12),
+            (6, 1, 12),
+            (9, 3, 3),
+            (11, 3, 5),
+            (13, 3, 5),
+        }
+        assert expected_triples == _triple_tensor_to_set_of_triples(combined_tf.mapped_triples)
 
 
 class GraphPairCombinatorMetaTestCase(
