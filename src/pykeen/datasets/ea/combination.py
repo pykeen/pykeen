@@ -452,8 +452,7 @@ def iter_entity_mappings(
     :param offsets: shape: (2,)
         the entity offsets
 
-    :yield:
-        explicit id remappings
+    :yields: explicit id remappings
     """
     old, new = [torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs)]
     offsets = offsets.tolist() + [old.max().item() + 1]
