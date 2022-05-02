@@ -1,8 +1,10 @@
 """Combination strategies for entity alignment datasets."""
 
+from collections import defaultdict
+from email.policy import default
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Dict, Iterable, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import Any, ClassVar, Dict, Iterable, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
 
 import numpy
 import pandas
@@ -90,7 +92,8 @@ def merge_label_to_id_mapping(
     """
     if (offsets is None and mappings is None) or (offsets is not None and mappings is not None):
         raise ValueError("Exactly one of `offsets` or `mappings` has to be provided")
-    result: Dict[str, int] = {}
+    # merge labels with same ID
+    value_to_keys: Mapping[int, Set[str]] = defaultdict(set)
     for i, (prefix, mapping) in enumerate(pairs):
         for key, value in mapping.items():
             key = f"{prefix}:{key}"
@@ -98,9 +101,18 @@ def merge_label_to_id_mapping(
                 value = mappings[i][value]
             else:
                 value = value + offsets[i].item()
-            result[key] = value
+            value_to_keys[value].add(key)
     if extra:
-        result.update(extra)
+        for k, v in extra.items():
+            value_to_keys[v].add(k)
+    # reconstruct label-to-id
+    result: Dict[str, int] = {}
+    for value, keys in value_to_keys.items():
+        if len(keys) == 1:
+            keys = list(keys)[0]
+        else:
+            keys = str(set(keys))
+        result[keys] = value
     return result
 
 
