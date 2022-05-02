@@ -13,6 +13,10 @@ from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint
 from ...utils import format_relative_comparison
 
+__all__ = [
+    "EADataset",
+]
+
 logger = logging.getLogger(__name__)
 
 
