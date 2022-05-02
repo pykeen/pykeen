@@ -265,8 +265,14 @@ class Loss(_Loss):
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, size_average=None, reduce=None, reduction: str = "mean"):
-        super().__init__(size_average=size_average, reduce=reduce, reduction=reduction)
+    def __init__(self, reduction: str = "mean"):
+        """
+        Initialize the loss.
+
+        :param reduction:
+            the reduction, cf. `_Loss.__init__`
+        """
+        super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
     def process_slcwa_scores(
