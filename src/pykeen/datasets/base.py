@@ -27,7 +27,7 @@ from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
-from ..utils import normalize_string
+from ..utils import normalize_path, normalize_string
 
 __all__ = [
     # Base classes
@@ -380,17 +380,14 @@ class LazyDataset(Dataset):
             :class:`pykeen.datasets.base.Dataset`.
         :returns: A path object for the calculated cache root directory
         """
-        if cache_root is None:
-            cache_root = PYKEEN_DATASETS
-        cache_root = pathlib.Path(cache_root).resolve()
-        cache_root = self._extend_cache_root(cache_root=cache_root)
-        cache_root.mkdir(parents=True, exist_ok=True)
+        cache_root = normalize_path(cache_root, *self._cache_sub_directories(), mkdir=True, default=PYKEEN_DATASETS)
         logger.debug("using cache root at %s", cache_root.as_uri())
         return cache_root
 
-    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:
-        """Get appropriate cache sub-directory."""
-        return cache_root.joinpath(self.__class__.__name__.lower())
+    def _cache_sub_directories(self) -> Iterable[str]:
+        """Iterate over appropriate cache sub-directory."""
+        # TODO: use class-resolver normalize?
+        yield self.__class__.__name__.lower()
 
 
 class PathDataset(LazyDataset):

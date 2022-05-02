@@ -9,7 +9,7 @@ import itertools
 import logging
 import pathlib
 from abc import ABC
-from typing import ClassVar, Mapping, Tuple, Union
+from typing import ClassVar, Iterable, Mapping, Tuple, Union
 
 import click
 import pandas
@@ -78,6 +78,10 @@ class MTransEDataset(EADataset, ABC):
             name="data.zip", file_id=GOOGLE_DRIVE_ID, download_kwargs=dict(hexdigests=dict(sha512=self.SHA512))
         )
         super().__init__(**kwargs)
+
+    def _cache_sub_directories(self) -> Iterable[str]:  # noqa: D102
+        # shared directory for multiple datasets.
+        yield "wk3l"
 
     @classmethod
     def _relative_path(cls, graph_pair: GraphPair, key: Union[None, EASide, Tuple[EASide, EASide]]) -> pathlib.PurePath:

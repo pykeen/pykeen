@@ -3,7 +3,7 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, List, NamedTuple, Optional, Sequence, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -17,6 +17,7 @@ from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
     "TokenizationRepresentation",
+    "HashDiversityInfo",
     "NodePieceRepresentation",
 ]
 
@@ -168,6 +169,22 @@ class TokenizationRepresentation(Representation):
         return self.vocabulary(token_ids)
 
 
+class HashDiversityInfo(NamedTuple):
+    """A ratio information object.
+
+    A pair `unique_per_repr, unique_total`, where `unique_per_repr` is a list with
+    the percentage of unique hashes for each token representation, and `unique_total`
+    the frequency of unique hashes when we concatenate all token representations.
+    """
+
+    #: A list with ratios per representation in their creation order,
+    #: e.g., ``[0.58, 0.82]`` for :class:`AnchorTokenization` and :class:`RelationTokenization`
+    uniques_per_representation: List[float]
+
+    #: A scalar ratio of unique rows when combining all representations into one matrix, e.g. 0.95
+    uniques_total: float
+
+
 class NodePieceRepresentation(Representation):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
@@ -301,4 +318,55 @@ class NodePieceRepresentation(Representation):
                 dim=self.aggregation_index,
             ),
             self.aggregation_index,
+        )
+
+    def estimate_diversity(self) -> HashDiversityInfo:
+        """
+        Estimate the diversity of the tokens via their hashes.
+
+        :return:
+            A ratio information tuple
+
+        Tokenization strategies might produce exactly the same hashes for
+        several nodes depending on the graph structure and tokenization
+        parameters. Same hashes will result in same node representations
+        and, hence, might inhibit the downstream performance.
+        This function comes handy when you need to estimate the diversity
+        of built node hashes under a certain tokenization strategy - ideally,
+        you'd want every node to have a unique hash.
+        The function computes how many node hashes are unique in each
+        representation and overall (if we concat all of them in a single row).
+        1.0 means that all nodes have unique hashes.
+
+        Example usage:
+
+        .. code-block::
+
+            from pykeen.model import NodePiece
+
+            model = NodePiece(
+                triples_factory=dataset.training,
+                tokenizers=["AnchorTokenizer", "RelationTokenizer"],
+                num_tokens=[20, 12],
+                embedding_dim=64,
+                interaction="rotate",
+                relation_constrainer="complex_normalize",
+                entity_initializer="xavier_uniform_",
+            )
+            print(model.entity_representations[0].estimate_diversity())
+
+        .. seealso:: https://github.com/pykeen/pykeen/pull/896
+        """
+        # unique hashes per representation
+        uniques_per_representation = [
+            tokens.assignment.unique(dim=0).shape[0] / self.max_id for tokens in self.token_representations
+        ]
+
+        # unique hashes if we concatenate all representations together
+        unnormalized_uniques_total = torch.unique(
+            torch.cat([tokens.assignment for tokens in self.token_representations], dim=-1), dim=0
+        ).shape[0]
+        return HashDiversityInfo(
+            uniques_per_representation=uniques_per_representation,
+            uniques_total=unnormalized_uniques_total / self.max_id,
         )
