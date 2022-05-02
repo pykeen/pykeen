@@ -105,6 +105,11 @@ from tests.constants import EPSILON
 from tests.mocks import CustomRepresentation
 from tests.utils import rand
 
+try:
+    import torch_geometric
+except ImportError:
+    torch_geometric = None
+
 T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
@@ -1516,6 +1521,44 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         # use more samples to make sure that enough values can be dropped
         a = torch.stack([dropout_instance(indices) for _ in range(20)])
         assert not (a[0:1] == a).all()
+
+
+class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
+    """Tests for representations requiring triples factories."""
+
+    num_entities: ClassVar[int] = 8
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
+    create_inverse_triples: bool = False
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = generation.generate_triples_factory(
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+            create_inverse_triples=self.create_inverse_triples,
+        )
+        return kwargs
+
+
+@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
+    """Tests for message passing representations."""
+
+    def test_consistency_k_hop(self):
+        """Test consistency of results between using only k-hop and using the full graph."""
+        # select random indices
+        indices = torch.randint(self.num_entities, size=(self.num_entities // 2,), generator=self.generator)
+        assert isinstance(self.instance, pykeen.nn.pyg.MessagePassingRepresentation)
+        # forward pass with full graph
+        self.instance.restrict_k_hop = False
+        x_full = self.instance(indices=indices)
+        # forward pass with restricted graph
+        self.instance.restrict_k_hop = True
+        x_restrict = self.instance(indices=indices)
+        # verify the results are similar
+        assert torch.allclose(x_full, x_restrict)
 
 
 class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
