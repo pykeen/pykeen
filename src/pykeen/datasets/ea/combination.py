@@ -76,7 +76,7 @@ def merge_label_to_id_mapping(
     :raises ValueError:
         if not exactly one of `offsets` or `mappings` is provided
     """
-    if (offsets is None and mappings is None) or (offsets is not None and mapping is not None):
+    if (offsets is None and mappings is None) or (offsets is not None and mappings is not None):
         raise ValueError("Exactly one of `offsets` or `mappings` has to be provided")
     result: Dict[str, int] = {}
     for i, (prefix, mapping) in enumerate(pairs):
