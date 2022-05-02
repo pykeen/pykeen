@@ -256,6 +256,7 @@ class GraphPairCombinator(ABC):
         # filter alignment and translate to IDs
         alignment = filter_map_alignment(alignment=alignment, left=left, right=right, entity_offsets=offsets[:, 0])
         # process
+        # TODO: restrict to only using training alignments?
         mapped_triples, alignment, translation_kwargs = self._process(mapped_triples, alignment, offsets)
         if isinstance(left, TriplesFactory) and isinstance(right, TriplesFactory):
             # merge mappings
@@ -389,12 +390,22 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
         )
 
 
-def _iter_mappings(
+def iter_entity_mappings(
     *old_new_ids_pairs: Tuple[torch.LongTensor, torch.LongTensor], offsets: torch.LongTensor
 ) -> Iterable[Mapping[int, int]]:
-    # TODO: check
+    """
+    Create explicit Id mappings.
+
+    :param old_new_ids_pairs:
+        aligned pairs of old and new ids
+    :param offsets: shape: (2,)
+        the entity offsets
+
+    :return:
+        explicit id remappings
+    """
     old, new = [torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs)]
-    offsets = offsets.tolist()
+    offsets = offsets.tolist() + [old.max().item() + 1]
     for low, high in zip(offsets, offsets[1:]):
         mask = (low <= old) & (old < high)
         this_old = old[mask] - low
@@ -429,7 +440,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
             mapped_triples,
             torch.empty(size=(2, 0), dtype=torch.long),
             dict(
-                entity_mappings=list(_iter_mappings((h, h_new), (t, t_new), offsets=offsets)),
+                entity_mappings=list(iter_entity_mappings((h, h_new), (t, t_new), offsets=offsets[:, 0])),
                 relation_offsets=offsets[:, 1],
             ),
         )
