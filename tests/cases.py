@@ -2446,5 +2446,6 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
             alignment_t=alignment_t,
         )
 
+    @abstractmethod
     def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
         """Verify the result of the combination of the manual example."""
