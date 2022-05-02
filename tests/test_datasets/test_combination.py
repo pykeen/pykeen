@@ -1,5 +1,4 @@
 """Tests for graph combination methods."""
-from typing import Set, Tuple
 
 import torch
 import unittest_templates
