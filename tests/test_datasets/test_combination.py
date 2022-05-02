@@ -5,6 +5,7 @@ import unittest_templates
 
 import pykeen.datasets.ea.combination
 import pykeen.triples.generation
+from pykeen.triples import CoreTriplesFactory
 from pykeen.utils import triple_tensor_to_set
 from tests import cases
 
@@ -14,7 +15,8 @@ class DisjointGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
 
     cls = pykeen.datasets.ea.combination.DisjointGraphPairCombinator
 
-    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+    # docstr-coverage: inherited
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):  # noqa: D102
         # assumes deterministic entity to id mapping
         expected_triples = {
             # from left_tf
@@ -39,7 +41,8 @@ class ExtraRelationGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase
     cls = pykeen.datasets.ea.combination.ExtraRelationGraphPairCombinator
     same_as_rel_name = cls.ALIGNMENT_RELATION_NAME
 
-    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+    # docstr-coverage: inherited
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):  # noqa: D102
         same_as_id = combined_tf.relation_to_id[self.__class__.same_as_rel_name]
         assert isinstance(same_as_id, int)
         # assumes deterministic entity to id mapping
@@ -70,7 +73,8 @@ class CollapseGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
 
     cls = pykeen.datasets.ea.combination.CollapseGraphPairCombinator
 
-    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+    # docstr-coverage: inherited
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):  # noqa: D102
         # assumes deterministic entity to id mapping
         expected_triples = {
             (0, 0, 1),
@@ -92,7 +96,8 @@ class SwapGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
 
     cls = pykeen.datasets.ea.combination.SwapGraphPairCombinator
 
-    def _verify_manual(self, left_tf, right_tf, df_alignment, combined_tf, alignment_t):
+    # docstr-coverage: inherited
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):  # noqa: D102
         # assumes deterministic entity to id mapping
         expected_triples = {
             # from left_tf
