@@ -72,15 +72,31 @@ def _merge_mappings(
     return result
 
 
-def _merge_both_mappings(
+def merge_label_to_id_mappings(
     left: TriplesFactory,
     right: TriplesFactory,
     relation_offsets: torch.LongTensor,
     # optional
     entity_offsets: Optional[torch.LongTensor] = None,
-    extra_relations: Optional[Mapping[str, int]] = None,
     entity_mappings: Sequence[Mapping[int, int]] = None,
+    extra_relations: Optional[Mapping[str, int]] = None,
 ) -> Tuple[Mapping[str, int], Mapping[str, int]]:
+    """
+    Merge entity-to-id and relation-to-id mappings.
+
+    :param left:
+        the left triples factory
+    :param right:
+        the right triples factory
+    :param relation_offsets: shape: (2,)
+        the relation offsets
+    :param entity_offsets: shape: (2,)
+        the entity offsets, if entities are shifted uniformly
+    :param entity_mappings:
+        explicit entity ID remappings
+    :param extra_relations:
+        additional relations, as a mapping from their label to IDs
+    """
     # merge entity mapping
     entity_to_id = _merge_mappings(
         (EA_SIDE_LEFT, left.entity_to_id),
@@ -198,7 +214,7 @@ class GraphPairCombinator(ABC):
         mapped_triples, alignment, translation_kwargs = self._process(mapped_triples, alignment, offsets)
         if isinstance(left, TriplesFactory) and isinstance(right, TriplesFactory):
             # merge mappings
-            entity_to_id, relation_to_id = _merge_both_mappings(
+            entity_to_id, relation_to_id = merge_label_to_id_mappings(
                 # TODO: offsets can also be dense mapping
                 # translation: Union[torch.LongTensor, Tuple[torch.LongTensor, torch.LongTensor]]
                 left=left,
