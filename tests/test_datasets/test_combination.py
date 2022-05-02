@@ -60,3 +60,23 @@ def test_cat_shift_triples():
     # verify offsets
     exp_offsets = torch.as_tensor([[0, 0], [num_entities_first, num_relations_first]])
     assert (offsets == exp_offsets).all()
+
+
+def test_iter_entity_mappings():
+    """Test iter_entity_mappings."""
+    # create old, new pairs
+    max_id = 33
+    # simulate merging ids
+    old = torch.arange(max_id)
+    new = torch.randint(max_id, size=(max_id,)).sort().values
+    pairs = [(old, new)]
+    # only a single pair
+    offsets = torch.as_tensor([0])
+    # apply
+    mappings = list(pykeen.datasets.ea.combination.iter_entity_mappings(*pairs, offsets=offsets))
+    assert len(mappings) == len(pairs)
+    for (old, new), mapi in zip(pairs, mappings):
+        # every key is contained
+        assert set(mapi.keys()) == set(old.tolist())
+        # value range
+        assert set(mapi.values()) == set(new.tolist())
