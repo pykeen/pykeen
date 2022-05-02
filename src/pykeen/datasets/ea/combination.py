@@ -3,7 +3,20 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Dict, Iterable, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    Any,
+    ClassVar,
+    DefaultDict,
+    Dict,
+    Iterable,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 import numpy
 import pandas
@@ -92,7 +105,7 @@ def merge_label_to_id_mapping(
     if (offsets is None and mappings is None) or (offsets is not None and mappings is not None):
         raise ValueError("Exactly one of `offsets` or `mappings` has to be provided")
     # merge labels with same ID
-    value_to_keys: Mapping[int, Set[str]] = defaultdict(set)
+    value_to_keys: DefaultDict[int, Set[str]] = defaultdict(set)
     for i, (prefix, mapping) in enumerate(pairs):
         for key, value in mapping.items():
             key = f"{prefix}:{key}"
