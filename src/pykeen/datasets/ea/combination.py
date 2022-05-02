@@ -14,6 +14,18 @@ from ...triples import CoreTriplesFactory, TriplesFactory
 from ...typing import COLUMN_HEAD, COLUMN_TAIL, EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, MappedTriples, TargetColumn
 from ...utils import format_relative_comparison, get_connected_components
 
+__all__ = [
+    # Abstract class
+    "GraphPairCombinator",
+    # Concrete classes
+    "DisjointGraphPairCombinator",
+    "SwapGraphPairCombinator",
+    "ExtraRelationGraphPairCombinator",
+    "CollapseGraphPairCombinator",
+    # Data Structures
+    "ProcessedTuple",
+]
+
 logger = logging.getLogger(__name__)
 
 
@@ -212,7 +224,7 @@ def swap_index_triples(
     return mapped_triples
 
 
-class _ProcessedTuple(NamedTuple):
+class ProcessedTuple(NamedTuple):
     """The result of processing a pair of triples factories."""
 
     #: the merged id-based triples, shape: (n, 3)
@@ -290,7 +302,7 @@ class GraphPairCombinator(ABC):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> _ProcessedTuple:
+    ) -> ProcessedTuple:
         """
         Process the combined mapped triples.
 
@@ -316,8 +328,8 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> _ProcessedTuple:  # noqa: D102
-        return _ProcessedTuple(
+    ) -> ProcessedTuple:  # noqa: D102
+        return ProcessedTuple(
             mapped_triples,
             alignment,
             dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1]),
@@ -333,7 +345,7 @@ class SwapGraphPairCombinator(GraphPairCombinator):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> _ProcessedTuple:  # noqa: D102
+    ) -> ProcessedTuple:  # noqa: D102
         # add swap triples
         # e1 ~ e2 => (e1, r, t) ~> (e2, r, t), or (h, r, e1) ~> (h, r, e2)
         # create dense entity remapping for swap
@@ -352,7 +364,7 @@ class SwapGraphPairCombinator(GraphPairCombinator):
             ],
             dim=0,
         )
-        return _ProcessedTuple(
+        return ProcessedTuple(
             mapped_triples,
             alignment,
             dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1]),
@@ -371,7 +383,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> _ProcessedTuple:  # noqa: D102
+    ) -> ProcessedTuple:  # noqa: D102
         # add alignment triples with extra relation
         left_id, right_id = alignment
         alignment_relation_id = offsets[-1, 1]
@@ -385,7 +397,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
                 dim=-1,
             )
         )
-        return _ProcessedTuple(
+        return ProcessedTuple(
             mapped_triples,
             alignment,
             dict(
@@ -428,7 +440,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
         offsets: torch.LongTensor,
-    ) -> _ProcessedTuple:  # noqa: D102
+    ) -> ProcessedTuple:  # noqa: D102
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
         entity_id_mapping = torch.arange(offsets[-1, 0])
         for cc in get_connected_components(pairs=alignment.tolist()):
@@ -442,7 +454,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         h_new, t_new = inverse.split(split_size_or_sections=2)
         mapped_triples = torch.stack([h_new, r, t_new], dim=-1)
         # only use training alignments?
-        return _ProcessedTuple(
+        return ProcessedTuple(
             mapped_triples,
             torch.empty(size=(2, 0), dtype=torch.long),
             dict(
