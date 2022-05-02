@@ -260,6 +260,7 @@ _REDUCTION_METHODS = dict(
 class Loss(_Loss):
     """A loss function."""
 
+    #: synonyms of this loss
     synonyms: ClassVar[Optional[Set[str]]] = None
 
     #: The default strategy for optimizing the loss's hyper-parameters
@@ -620,6 +621,14 @@ class SoftMarginRankingLoss(MarginPairwiseLoss):
     )
 
     def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+        """
+        Initialize the loss.
+
+        :param margin:
+            the margin, cf. :meth:`MarginPairwiseLoss.__init__`
+        :param reduction:
+            the reduction, cf. :meth:`MarginPairwiseLoss.__init__`
+        """
         super().__init__(margin=margin, margin_activation="softplus", reduction=reduction)
 
 
@@ -647,6 +656,12 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
     def __init__(self, reduction: str = "mean"):
+        """
+        Initialize the loss.
+
+        :param reduction:
+            the reduction, cf. :meth:`SoftMarginRankingLoss.__init__`
+        """
         super().__init__(margin=0.0, reduction=reduction)
 
 
@@ -894,6 +909,16 @@ class DeltaPointwiseLoss(PointwiseLoss):
         margin_activation: Hint[nn.Module] = "softplus",
         reduction: str = "mean",
     ) -> None:
+        """
+        Initialize the loss.
+
+        :param margin:
+            the margin, cf. :meth:`PointwiseLoss.__init__`
+        :param margin_activation:
+            the margin activation, or a hint thereof, cf. `margin_activation_resolver`.
+        :param reduction:
+            the reduction, cf. :meth:`PointwiseLoss.__init__`
+        """
         super().__init__(reduction=reduction)
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
@@ -930,6 +955,14 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
     )
 
     def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+        """
+        Initialize the loss.
+
+        :param margin:
+            the margin, cf. :meth:`DeltaPointwiseLoss.__init__`
+        :param reduction:
+            the reduction, cf. :meth:`DeltaPointwiseLoss.__init__`
+        """
         super().__init__(margin=margin, margin_activation="relu", reduction=reduction)
 
 
@@ -954,6 +987,14 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
     )
 
     def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+        """
+        Initialize the loss.
+
+        :param margin:
+            the margin, cf. :meth:`DeltaPointwiseLoss.__init__`
+        :param reduction:
+            the reduction, cf. :meth:`DeltaPointwiseLoss.__init__`
+        """
         super().__init__(margin=margin, margin_activation="softplus", reduction=reduction)
 
 
@@ -979,6 +1020,12 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
     hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
     def __init__(self, reduction: str = "mean") -> None:
+        """
+        Initialize the loss.
+
+        :param reduction:
+            the reduction, cf. :meth:`SoftPointwiseHingeLoss.__init__`
+        """
         super().__init__(margin=0.0, reduction=reduction)
 
 
