@@ -257,7 +257,7 @@ class GraphPairCombinator(ABC):
         alignment = filter_map_alignment(alignment=alignment, left=left, right=right, entity_offsets=offsets[:, 0])
         # process
         # TODO: restrict to only using training alignments?
-        mapped_triples, alignment, translation_kwargs = self._process(mapped_triples, alignment, offsets)
+        mapped_triples, alignment, translation_kwargs = self.process(mapped_triples, alignment, offsets)
         if isinstance(left, TriplesFactory) and isinstance(right, TriplesFactory):
             # merge mappings
             entity_to_id, relation_to_id = merge_label_to_id_mappings(
@@ -279,7 +279,7 @@ class GraphPairCombinator(ABC):
         return triples_factory, alignment
 
     @abstractmethod
-    def _process(
+    def process(
         self,
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
@@ -305,7 +305,7 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
     """This combinator keeps both graphs as disconnected components."""
 
     # docstr-coverage: inherited
-    def _process(
+    def process(
         self,
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
@@ -322,7 +322,7 @@ class SwapGraphPairCombinator(GraphPairCombinator):
     """Add extra triples by swapping aligned entities."""
 
     # docstr-coverage: inherited
-    def _process(
+    def process(
         self,
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
@@ -360,7 +360,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
     ALIGNMENT_RELATION_NAME: ClassVar[str] = "same-as"
 
     # docstr-coverage: inherited
-    def _process(
+    def process(
         self,
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
@@ -417,7 +417,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
     """This combinator merges all matching entity pairs into a single ID."""
 
     # docstr-coverage: inherited
-    def _process(
+    def process(
         self,
         mapped_triples: MappedTriples,
         alignment: torch.LongTensor,
