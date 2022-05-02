@@ -1512,6 +1512,12 @@ class HitsAtK(RankBasedMetric):
     closed_variance: ClassVar[bool] = True
 
     def __init__(self, k: int = 10) -> None:
+        """
+        Initialize the metric.
+
+        :param k:
+            the parameter $k$ of number of top entries to consider
+        """
         super().__init__()
         self.k = k
 
@@ -1525,6 +1531,7 @@ class HitsAtK(RankBasedMetric):
     ) -> float:  # noqa: D102
         return np.average(np.less_equal(ranks, self.k), weights=weights).item()
 
+    # docstr-coverage: inherited
     @property
     def key(self) -> str:  # noqa: D102
         return super().key[:-1] + str(self.k)

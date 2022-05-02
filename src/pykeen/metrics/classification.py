@@ -61,6 +61,7 @@ class ClassificationMetric(Metric):
     #: The function that runs the metric
     func: ClassVar[Callable[[np.array, np.array], float]]
 
+    # docstr-coverage: inherited
     @classmethod
     def get_description(cls) -> str:  # noqa: D102
         return cls.description
@@ -100,6 +101,7 @@ class MetricAnnotator:
     metrics: MutableMapping[str, Type[ClassificationMetric]]
 
     def __init__(self):
+        """Initialize the annotator."""
         self.metrics = {}
 
     def higher(self, func, **kwargs):
