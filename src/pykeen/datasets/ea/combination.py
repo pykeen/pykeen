@@ -35,8 +35,6 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tup
     # the offsets
     offsets = torch.zeros(len(triples), 2, dtype=torch.long)
     for i, x in enumerate(triples):
-        # # store offset
-        # offsets[i] = offset
         # normalization
         if isinstance(x, CoreTriplesFactory):
             e_offset = x.num_entities
