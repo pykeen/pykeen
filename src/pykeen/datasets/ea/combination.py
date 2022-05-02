@@ -51,21 +51,41 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tup
     return torch.cat(res), offsets
 
 
-def _merge_mappings(
+def merge_label_to_id_mapping(
     *pairs: Tuple[str, Mapping[str, int]],
     offsets: torch.LongTensor = None,
     mappings: Sequence[Mapping[int, int]] = None,
     extra: Optional[Mapping[str, int]] = None,
 ) -> Dict[str, int]:
+    """
+    Merge label-to-id mappings.
+
+    :param pairs:
+        pairs of `(prefix, label_to_id)`, where `label_to_id` is the label-to-id mapping, and `prefix` is a string
+        prefix to prepend to each key of the label-to-id mapping.
+    :param offsets: shape: `(len(pairs),)`
+        id offsets for each pair
+    :param mappings:
+        explicit id remappings for each pair
+    :param extra:
+        extra entries to add after merging
+
+    :return:
+        a merged label-to-id mapping
+
+    :raises ValueError:
+        if not exactly one of `offsets` or `mappings` is provided
+    """
+    if (offsets is None and mappings is None) or (offsets is not None and mapping is not None):
+        raise ValueError("Exactly one of `offsets` or `mappings` has to be provided")
     result: Dict[str, int] = {}
     for i, (prefix, mapping) in enumerate(pairs):
         for key, value in mapping.items():
             key = f"{prefix}:{key}"
-            if offsets:
-                value = value + offsets[i].item()
-            else:
-                assert mappings is not None
+            if offsets is None:
                 value = mappings[i][value]
+            else:
+                value = value + offsets[i].item()
             result[key] = value
     if extra:
         result.update(extra)
@@ -98,14 +118,14 @@ def merge_label_to_id_mappings(
         additional relations, as a mapping from their label to IDs
     """
     # merge entity mapping
-    entity_to_id = _merge_mappings(
+    entity_to_id = merge_label_to_id_mapping(
         (EA_SIDE_LEFT, left.entity_to_id),
         (EA_SIDE_RIGHT, right.entity_to_id),
         offsets=entity_offsets,
         mappings=entity_mappings,
     )
     # merge relation mapping
-    relation_to_id = _merge_mappings(
+    relation_to_id = merge_label_to_id_mapping(
         (EA_SIDE_LEFT, left.relation_to_id),
         (EA_SIDE_RIGHT, right.relation_to_id),
         offsets=relation_offsets,
