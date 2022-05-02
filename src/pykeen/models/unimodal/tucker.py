@@ -93,6 +93,32 @@ class TuckER(ERModel):
         core_tensor_initializer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the (entity) embedding dimension
+        :param relation_dim:
+            the relation embedding dimension. Defaults to `embedding_dim`.
+        :param dropout_0:
+            the first dropout, cf. formula
+        :param dropout_1:
+            the second dropout, cf. formula
+        :param dropout_2:
+            the third dropout, cf. formula
+        :param apply_batch_normalization:
+            whether to apply batch normalization
+        :param entity_initializer:
+            the entity representation initializer
+        :param relation_initializer:
+            the relation representation initializer
+        :param core_tensor_initializer:
+            the core tensor initializer
+        :param core_tensor_initializer_kwargs:
+            keyword-based parameters passed to the core tensor initializer
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         relation_dim = relation_dim or embedding_dim
         super().__init__(
             interaction=TuckerInteraction,
