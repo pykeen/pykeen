@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import Any, ClassVar, Dict, Iterable, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy
 import pandas
@@ -355,6 +355,9 @@ class SwapGraphPairCombinator(GraphPairCombinator):
 class ExtraRelationGraphPairCombinator(GraphPairCombinator):
     """This combinator keeps all entities, but introduces a novel alignment relation."""
 
+    #: the name of the additional alignment relation
+    ALIGNMENT_RELATION_NAME: ClassVar[str] = "same-as"
+
     # docstr-coverage: inherited
     def _process(
         self,
@@ -381,7 +384,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
             dict(
                 entity_offsets=offsets[:, 0],
                 relation_offsets=offsets[:, 1],
-                extra_relations={"same-as": alignment_relation_id},
+                extra_relations={self.ALIGNMENT_RELATION_NAME: alignment_relation_id},
             ),
         )
 
