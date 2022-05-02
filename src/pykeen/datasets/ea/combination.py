@@ -375,15 +375,19 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
         # add alignment triples with extra relation
         left_id, right_id = alignment
         alignment_relation_id = offsets[-1, 1]
-        mapped_triples.append(
-            torch.stack(
-                [
-                    torch.as_tensor(data=left_id.values, dtype=torch.long),
-                    torch.full(size=(len(left_id),), fill_value=alignment_relation_id),
-                    torch.as_tensor(data=right_id.values, dtype=torch.long),
-                ],
-                dim=-1,
-            )
+        mapped_triples = torch.cat(
+            [
+                mapped_triples,
+                torch.stack(
+                    [
+                        left_id,
+                        torch.full(size=(len(left_id),), fill_value=alignment_relation_id),
+                        right_id,
+                    ],
+                    dim=-1,
+                ),
+            ],
+            dim=0,
         )
         return _ProcessedTuple(
             mapped_triples,
@@ -430,8 +434,8 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         offsets: torch.LongTensor,
     ) -> _ProcessedTuple:  # noqa: D102
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
-        entity_id_mapping = torch.arange(offsets[-1, 0])
-        for cc in get_connected_components(pairs=alignment.tolist()):
+        entity_id_mapping = torch.arange(mapped_triples[:, 0::2].max().item() + 1)
+        for cc in get_connected_components(pairs=alignment.t().tolist()):
             cc = list(cc)
             entity_id_mapping[cc] = min(cc)
         # apply id mapping
@@ -439,7 +443,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         h_new, t_new = entity_id_mapping[h], entity_id_mapping[t]
         # ensure consecutive IDs
         inverse = torch.cat([h_new, t_new]).unique(return_inverse=True)[1]
-        h_new, t_new = inverse.split(split_size_or_sections=2)
+        h_new, t_new = inverse.split((len(h), len(t)))
         mapped_triples = torch.stack([h_new, r, t_new], dim=-1)
         # only use training alignments?
         return _ProcessedTuple(
