@@ -183,7 +183,25 @@ def filter_map_alignment(
     return torch.as_tensor(alignment.to_numpy().T, dtype=torch.long) + entity_offsets.view(2, 1)
 
 
-def _swap_index(mapped_triples: MappedTriples, dense_map: torch.LongTensor, index: TargetColumn) -> MappedTriples:
+def swap_index_triples(
+    mapped_triples: MappedTriples,
+    dense_map: torch.LongTensor,
+    index: TargetColumn,
+) -> MappedTriples:
+    """
+    Return triples where some indices in the index column are swapped.
+
+    :param mapped_triples: shape: (m, 3)
+        the id-based triples
+    :param dense_map: shape: (n,)
+        a dense map between IDs. Contains `-1` for missing entries
+    :param index:
+        the index, a number between 0 (incl) and 3 (excl).
+
+    :return:
+        all triples which contain a key at the `index` position, where the key has been replaced by the corresponding
+        value in the dense map
+    """
     # determine swapping partner
     trans = dense_map[mapped_triples[:, index]]
     # only keep triples where we have a swapping partner
@@ -301,9 +319,9 @@ class SwapGraphPairCombinator(GraphPairCombinator):
             [
                 mapped_triples,
                 # swap head
-                _swap_index(mapped_triples=mapped_triples, dense_map=dense_map, index=COLUMN_HEAD),
+                swap_index_triples(mapped_triples=mapped_triples, dense_map=dense_map, index=COLUMN_HEAD),
                 # swap tail
-                _swap_index(mapped_triples=mapped_triples, dense_map=dense_map, index=COLUMN_TAIL),
+                swap_index_triples(mapped_triples=mapped_triples, dense_map=dense_map, index=COLUMN_TAIL),
             ],
             dim=0,
         )
