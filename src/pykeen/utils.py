@@ -26,6 +26,7 @@ from typing import (
     Iterable,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Set,
@@ -1322,14 +1323,14 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     return out
 
 
-def find(x: X, parent: Mapping[X, X]) -> X:
+def find(x: X, parent: MutableMapping[X, X]) -> X:
     """Find step of union-find data structure with path compression."""
     # check validity
     if x not in parent:
         raise ValueError(f"Unknown element: {x}.")
     # path compression
     while parent[x] != x:
-        x, parent[x] = parent[x], parent[parent[x]]  # type: ignore
+        x, parent[x] = parent[x], parent[parent[x]]
     return x
 
 
