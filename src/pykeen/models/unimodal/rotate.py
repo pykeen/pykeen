@@ -75,8 +75,6 @@ class RotatE(ERModel):
             the entity representation initializer
         :param relation_initializer:
             the relation representation initializer
-        :param entity_constrainer:
-            the entity representation constrainer
         :param relation_constrainer:
             the relation representation constrainer
         :param regularizer:

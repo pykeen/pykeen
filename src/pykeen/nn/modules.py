@@ -677,12 +677,6 @@ class ConvEInteraction(
         )
         logger.info(f"Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
 
-        if input_channels * embedding_height * embedding_width != embedding_dim:
-            raise ValueError(
-                f"Product of input channels ({input_channels}), height ({embedding_height}), and width "
-                f"({embedding_width}) does not equal target embedding dimension ({embedding_dim})",
-            )
-
         # normalize kernel height
         kernel_height = kernel_height or kernel_width
 

@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 X = TypeVar("X")
 Y = TypeVar("Y")
 
+
 # TODO: this will be modified in https://github.com/pykeen/pykeen/pull/893
 def find(x: X, parent: Mapping[X, X]) -> X:
     # check validity
