@@ -96,9 +96,9 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         :param triples_factory:
             The triples factory containing the training triples.
         :param entity_margin:
-            ...
+            whether to compute entity-specific marginal distributions
         :param relation_margin:
-            ...
+            whether to compute relation-specific marginal distributions
 
         If you set ``entity_margin=False`` and ``relation_margin=False``, it will
         lead to a uniform distribution, i.e. equal scores for all entities.
@@ -128,6 +128,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         else:
             self.head_per_tail = self.tail_per_head = None
 
+    # docstr-coverage: inherited
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return marginal_score(
             entity_relation_batch=hr_batch,
@@ -136,6 +137,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
             num_entities=self.num_entities,
         )
 
+    # docstr-coverage: inherited
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return marginal_score(
             entity_relation_batch=rt_batch.flip(1),
@@ -162,6 +164,14 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         triples_factory: CoreTriplesFactory,
         threshold: Optional[float] = None,
     ):
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            the (training) triples factory
+        :param threshold:
+            the threshold applied to the similarity matrix, cf. :func:`get_relation_similarity`
+        """
         super().__init__(triples_factory=triples_factory)
         # compute relation similarity matrix
         self.sim, self.sim_inv = get_relation_similarity(triples_factory, threshold=threshold)
@@ -176,12 +186,14 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
             for col_indices in (h, t)
         ]
 
+    # docstr-coverage: inherited
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         r = hr_batch[:, 1]
         scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)
 
+    # docstr-coverage: inherited
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         r = rt_batch[:, 0]
         scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail
