@@ -2,7 +2,7 @@
 
 """An implementation of the extension to ERMLP."""
 
-from typing import Any, ClassVar, Mapping, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
@@ -62,14 +62,33 @@ class ERMLPE(EntityRelationEmbeddingModel):
     def __init__(
         self,
         *,
-        hidden_dim: int = 300,
+        embedding_dim: int = 200,
+        hidden_dim: Optional[int] = None,
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
-        embedding_dim: int = 200,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension
+        :param hidden_dim:
+            the hidden dimension of the MLP. Defaults to `embedding_dim`
+        :param input_dropout:
+            the input dropout
+        :param hidden_dropout:
+            the hidden layer's dropout
+        :param entity_initializer:
+            the entity representation initializer
+        :param relation_initializer:
+            the relation representation initializer
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`EntityRelationEmbeddingModel.__init__`
+        """
+        hidden_dim = hidden_dim or embedding_dim
         super().__init__(
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
