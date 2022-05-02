@@ -9,7 +9,7 @@ as well as broadcasting and thus naturally support slicing and 1:n scoring.
 from __future__ import annotations
 
 import functools
-from typing import Iterable, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy
 import torch
@@ -23,6 +23,7 @@ from ..utils import (
     boxe_kg_arity_position_score,
     clamp_norm,
     compute_box,
+    ensure_complex,
     estimate_cost_of_sequence,
     is_cudnn_error,
     make_ones_like,
@@ -135,6 +136,7 @@ def complex_interaction(
     :return: shape: batch_dims
         The scores.
     """
+    h, r, t = ensure_complex(h, r, t)
     # TODO: switch to einsum ?
     # return torch.real(torch.einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
     return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
@@ -597,16 +599,6 @@ def rescal_interaction(
     return torch.einsum("...d,...de,...e->...", h, r, t)
 
 
-def _ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
-    for x in xs:
-        if x.is_complex():
-            yield x
-            continue
-        if x.shape[-1] != 2:
-            x = x.view(*x.shape[:-1], -1, 2)
-        yield torch.view_as_complex(x)
-
-
 def rotate_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -627,8 +619,7 @@ def rotate_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # ensure complex
-    h, r, t = _ensure_complex(h, r, t)
+    h, r, t = ensure_complex(h, r, t)
     if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
         # r expresses a rotation in complex plane.
         # rotate head by relation (=Hadamard product in complex space)
