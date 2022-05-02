@@ -224,6 +224,7 @@ from ..utils import (
     get_json_bytes_io,
     get_model_io,
     load_configuration,
+    normalize_path,
     random_non_negative_int,
     resolve_device,
     set_random_seed,
@@ -380,12 +381,13 @@ class PipelineResult(Result):
         **_kwargs,
     ) -> None:
         """Save all artifacts in the given directory."""
-        if isinstance(directory, str):
-            directory = pathlib.Path(directory).resolve()
-        directory.mkdir(exist_ok=True, parents=True)
+        directory = normalize_path(path=directory, mkdir=True)
 
+        # always save results as json file
         with directory.joinpath("results.json").open("w") as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
+
+        # save other components only if requested (which they are, by default)
         if save_metadata:
             with directory.joinpath("metadata.json").open("w") as file:
                 json.dump(self.metadata, file, indent=2, sort_keys=True)
@@ -393,6 +395,7 @@ class PipelineResult(Result):
             self.save_model(directory.joinpath("trained_model.pkl"))
         if save_training:
             self.training.to_path_binary(directory.joinpath("training_triples"))
+
         logger.info(f"Saved to directory: {directory.as_uri()}")
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
@@ -646,8 +649,7 @@ def save_pipeline_results_to_directory(
     :param save_training: Should the training triples be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
+    directory = normalize_path(directory)
     replicates_directory = directory.joinpath("replicates")
     losses_rows = []
 

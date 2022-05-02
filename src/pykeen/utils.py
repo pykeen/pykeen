@@ -30,6 +30,7 @@ from typing import (
     Optional,
     Sequence,
     Set,
+    TextIO,
     Tuple,
     Type,
     TypeVar,
@@ -113,6 +114,7 @@ __all__ = [
     "is_triple_tensor_subset",
     "logcumsumexp",
     "get_connected_components",
+    "normalize_path",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1367,6 +1369,61 @@ def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collect
     for k, v in parent.items():
         result[v].append(k)
     return list(result.values())
+
+
+PathType = Union[str, pathlib.Path, TextIO]
+
+
+def normalize_path(
+    path: Optional[PathType],
+    *other: Union[str, pathlib.Path],
+    mkdir: bool = False,
+    is_file: bool = False,
+    default: Optional[PathType] = None,
+) -> pathlib.Path:
+    """
+    Normalize a path.
+
+    :param path:
+        the path in either of the valid forms.
+    :param other:
+        additional parts to join to the path
+    :param mkdir:
+        whether to ensure that the path refers to an existing directory by creating it if necessary
+    :param is_file:
+        whether the path is intended to be a file - only relevant for creating directories
+    :param default:
+        the default to use if path is None
+
+    :raises TypeError:
+        if `path` is of unsuitable type
+    :raises ValueError:
+        if `path` and `default` are both `None`
+
+    :return:
+        the absolute and resolved path
+    """
+    if path is None:
+        if default is None:
+            raise ValueError("If no default is provided, path cannot be None.")
+        path = default
+    if isinstance(path, TextIO):
+        path = path.name
+    if isinstance(path, str):
+        path = pathlib.Path(path)
+    if not isinstance(path, pathlib.Path):
+        raise TypeError(f"path is invalid type: {type(path)}")
+    if other:
+        path = path.joinpath(*other)
+    # resolve path to make sure it is an absolute path
+    path = path.expanduser().resolve()
+    # ensure directory exists
+    if mkdir:
+        directory = path
+        if is_file:
+            directory = path.parent
+        directory.mkdir(exist_ok=True, parents=True)
+    return path
 
 
 if __name__ == "__main__":
