@@ -265,7 +265,9 @@ class LabelBasedInitializer(PretrainedInitializer):
             ).encode_all(
                 labels=labels,
                 batch_size=batch_size,
-            ),
+            )
+            # must be cloned if we want to do backprop
+            .clone(),
         )
 
     @classmethod

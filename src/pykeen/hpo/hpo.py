@@ -36,7 +36,7 @@ from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
-from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
+from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io, normalize_path
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -375,9 +375,7 @@ class HpoPipelineResult(Result):
 
     def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        if isinstance(directory, str):
-            directory = pathlib.Path(directory).resolve()
-        directory.mkdir(exist_ok=True, parents=True)
+        directory = normalize_path(directory, mkdir=True)
 
         # Output study information
         with directory.joinpath("study.json").open("w") as file:
