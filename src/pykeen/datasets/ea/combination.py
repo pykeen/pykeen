@@ -261,8 +261,6 @@ class GraphPairCombinator(ABC):
         if isinstance(left, TriplesFactory) and isinstance(right, TriplesFactory):
             # merge mappings
             entity_to_id, relation_to_id = merge_label_to_id_mappings(
-                # TODO: offsets can also be dense mapping
-                # translation: Union[torch.LongTensor, Tuple[torch.LongTensor, torch.LongTensor]]
                 left=left,
                 right=right,
                 **translation_kwargs,
@@ -274,7 +272,15 @@ class GraphPairCombinator(ABC):
                 **kwargs,
             )
         else:
-            triples_factory = CoreTriplesFactory(mapped_triples=mapped_triples, **kwargs)
+            max_ids = mapped_triples.max(axis=0).values
+            triples_factory = CoreTriplesFactory(
+                mapped_triples=mapped_triples,
+                num_entities=max_ids[0::2].max().item(),
+                num_relations=max_ids[1].item(),
+                entity_ids=None,
+                relation_ids=None,
+                **kwargs,
+            )
 
         return triples_factory, alignment
 
