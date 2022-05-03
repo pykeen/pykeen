@@ -149,6 +149,10 @@ class LpRegularizer(Regularizer):
     def __init__(
         self,
         *,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        weight: float = 1.0,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        apply_only_once: bool = False,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.0,
@@ -157,6 +161,10 @@ class LpRegularizer(Regularizer):
         """
         Initialize the regularizer.
 
+        :param weight:
+            The relative weight of the regularization
+        :param apply_only_once:
+            Should the regularization be applied more than once after reset?
         :param dim:
             the dimension along which to calculate the Lp norm, cf. :func:`lp_norm`
         :param normalize:
@@ -164,9 +172,9 @@ class LpRegularizer(Regularizer):
         :param p:
             the parameter $p$ of the Lp norm, cf. :func:`lp_norm`
         :param kwargs:
-            additonal keyword-based parameters passed to :meth:`Regularizer.__init__`
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
-        super().__init__(**kwargs)
+        super().__init__(weight=weight, apply_only_once=apply_only_once, **kwargs)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -190,6 +198,10 @@ class PowerSumRegularizer(Regularizer):
     def __init__(
         self,
         *,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        weight: float = 1.0,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        apply_only_once: bool = False,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.0,
@@ -198,6 +210,10 @@ class PowerSumRegularizer(Regularizer):
         """
         Initialize the regularizer.
 
+        :param weight:
+            The relative weight of the regularization
+        :param apply_only_once:
+            Should the regularization be applied more than once after reset?
         :param dim:
             the dimension along which to calculate the Lp norm, cf. :func:`powersum_norm`
         :param normalize:
@@ -205,9 +221,9 @@ class PowerSumRegularizer(Regularizer):
         :param p:
             the parameter $p$ of the Lp norm, cf. :func:`powersum_norm`
         :param kwargs:
-            additonal keyword-based parameters passed to :meth:`Regularizer.__init__`
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
-        super().__init__(**kwargs)
+        super().__init__(weight=weight, apply_only_once=apply_only_once, **kwargs)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -228,20 +244,24 @@ class TransHRegularizer(Regularizer):
     def __init__(
         self,
         *,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        weight: float = 1.0,
         epsilon: float = 1e-5,
         **kwargs,
     ):
         """
         Initialize the regularizer.
 
+        :param weight:
+            The relative weight of the regularization
         :param epsilon:
             a small value used to check for approximate orthogonality
         :param kwargs:
-            additonal keyword-based parameters passed to :meth:`Regularizer.__init__`
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
         # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
         # Therefore, apply_only_once is always set to True.
-        super().__init__(**kwargs, apply_only_once=True)
+        super().__init__(weight=weight, **kwargs, apply_only_once=True)
         self.epsilon = epsilon
 
     # docstr-coverage: inherited
@@ -287,7 +307,7 @@ class CombinedRegularizer(Regularizer):
         :param total_weight:
             the total regularization weight distributed to the base regularizers according to their individual weights
         :param kwargs:
-            additonal keyword-based parameters passed to :meth:`Regularizer.__init__`
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
         super().__init__(weight=total_weight, **kwargs)
         self.regularizers = nn.ModuleList(regularizers)
