@@ -26,9 +26,11 @@ from typing import (
     Iterable,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Set,
+    TextIO,
     Tuple,
     Type,
     TypeVar,
@@ -111,6 +113,8 @@ __all__ = [
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
     "logcumsumexp",
+    "get_connected_components",
+    "normalize_path",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1319,6 +1323,107 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     out = np.log(s)
     out += a_max
     return out
+
+
+def find(x: X, parent: MutableMapping[X, X]) -> X:
+    """Find step of union-find data structure with path compression."""
+    # check validity
+    if x not in parent:
+        raise ValueError(f"Unknown element: {x}.")
+    # path compression
+    while parent[x] != x:
+        x, parent[x] = parent[x], parent[parent[x]]
+    return x
+
+
+def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
+    """
+    Calculate the connected components for a graph given as edge list.
+
+    The implementation uses a `union-find <https://en.wikipedia.org/wiki/Disjoint-set_data_structure>`_ data structure
+    with path compression.
+
+    :param pairs:
+        the edge list, i.e., pairs of node ids.
+
+    :return:
+        a collection of connected components, i.e., a collection of disjoint collections of node ids.
+    """
+    parent: Dict[X, X] = dict()
+    for x, y in pairs:
+        parent.setdefault(x, x)
+        parent.setdefault(y, y)
+        # get representatives
+        x = find(x=x, parent=parent)
+        y = find(x=y, parent=parent)
+        # already merged
+        if x == y:
+            continue
+        # make x the smaller one
+        if y < x:  # type: ignore
+            x, y = y, x
+        # merge
+        parent[y] = x
+    # extract partitions
+    result = defaultdict(list)
+    for k, v in parent.items():
+        result[v].append(k)
+    return list(result.values())
+
+
+PathType = Union[str, pathlib.Path, TextIO]
+
+
+def normalize_path(
+    path: Optional[PathType],
+    *other: Union[str, pathlib.Path],
+    mkdir: bool = False,
+    is_file: bool = False,
+    default: Optional[PathType] = None,
+) -> pathlib.Path:
+    """
+    Normalize a path.
+
+    :param path:
+        the path in either of the valid forms.
+    :param other:
+        additional parts to join to the path
+    :param mkdir:
+        whether to ensure that the path refers to an existing directory by creating it if necessary
+    :param is_file:
+        whether the path is intended to be a file - only relevant for creating directories
+    :param default:
+        the default to use if path is None
+
+    :raises TypeError:
+        if `path` is of unsuitable type
+    :raises ValueError:
+        if `path` and `default` are both `None`
+
+    :return:
+        the absolute and resolved path
+    """
+    if path is None:
+        if default is None:
+            raise ValueError("If no default is provided, path cannot be None.")
+        path = default
+    if isinstance(path, TextIO):
+        path = path.name
+    if isinstance(path, str):
+        path = pathlib.Path(path)
+    if not isinstance(path, pathlib.Path):
+        raise TypeError(f"path is invalid type: {type(path)}")
+    if other:
+        path = path.joinpath(*other)
+    # resolve path to make sure it is an absolute path
+    path = path.expanduser().resolve()
+    # ensure directory exists
+    if mkdir:
+        directory = path
+        if is_file:
+            directory = path.parent
+        directory.mkdir(exist_ok=True, parents=True)
+    return path
 
 
 if __name__ == "__main__":

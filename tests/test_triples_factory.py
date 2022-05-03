@@ -59,6 +59,13 @@ numeric_triples = np.array(
     dtype=str,
 )
 
+# See https://github.com/pykeen/pykeen/pull/883
+triples_with_nans = [
+    ["netherlands", "militaryalliance", "uk"],
+    ["egypt", "intergovorgs3", "usa"],
+    ["jordan", "relbooktranslations", "nan"],
+]
+
 
 class TestTriplesFactory(unittest.TestCase):
     """Class for testing triples factories."""
@@ -479,6 +486,20 @@ class TestUtils(unittest.TestCase):
             ],
             _triples.tolist(),
         )
+
+    def test_load_triples_with_nans(self):
+        """Test loading triples that have a ``nan`` string.
+
+        .. seealso:: https://github.com/pykeen/pykeen/pull/883
+        """
+        path = RESOURCES.joinpath("test_nans.tsv")
+        expected_triples = [
+            ["netherlands", "militaryalliance", "uk"],
+            ["egypt", "intergovorgs3", "usa"],
+            ["jordan", "relbooktranslations", "nan"],
+        ]
+        _triples = load_triples(path).tolist()
+        self.assertEqual(expected_triples, _triples)
 
     def test_labeled_binary(self):
         """Test binary i/o on labeled triples factory."""
