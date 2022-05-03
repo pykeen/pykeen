@@ -40,7 +40,7 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         :param entity_representations_kwargs:
             the entity representations keyword-based parameters (excluding the ones from literals)
         :param kwargs:
-            additonal keyword-based parameters passed to :meth:`ERModel.__init__`
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """
         literals = triples_factory.get_numeric_literals_tensor()
         _max_id, *shape = literals.shape
