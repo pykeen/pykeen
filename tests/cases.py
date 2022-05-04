@@ -31,6 +31,7 @@ from unittest.mock import patch
 
 import numpy
 import numpy.random
+import pandas
 import pytest
 import torch
 import torch.utils.data
@@ -49,6 +50,7 @@ import pykeen.nn.representation
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
+from pykeen.datasets.ea.combination import GraphPairCombinator
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
@@ -77,6 +79,8 @@ from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
 from pykeen.typing import (
+    EA_SIDE_LEFT,
+    EA_SIDE_RIGHT,
     LABEL_HEAD,
     LABEL_TAIL,
     TRAINING,
@@ -2353,3 +2357,89 @@ class TrainingCallbackTestCase(unittest_templates.GenericTestCase[TrainingCallba
                 callbacks=self.instance,
             ),
         )
+
+
+class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCombinator]):
+    """Base test for graph pair combination methods."""
+
+    def _add_labels(self, tf: CoreTriplesFactory) -> TriplesFactory:
+        """Add artificial labels to a triples factory."""
+        entity_to_id = {f"e_{i}": i for i in range(tf.num_entities)}
+        relation_to_id = {f"r_{i}": i for i in range(tf.num_relations)}
+        return TriplesFactory(
+            mapped_triples=tf.mapped_triples, entity_to_id=entity_to_id, relation_to_id=relation_to_id
+        )
+
+    def _test_combination(self, labels: bool):
+        # generate random triples factories
+        left, right = [generation.generate_triples_factory(random_state=random_state) for random_state in (0, 1)]
+        # generate random alignment
+        left_idx, right_idx = torch.stack([torch.arange(left.num_entities), torch.randperm(left.num_entities)])[
+            : left.num_entities // 2
+        ].numpy()
+        # add label information if necessary
+        if labels:
+            left, right = [self._add_labels(tf) for tf in (left, right)]
+            left_idx = [left.entity_id_to_label[i] for i in left_idx]
+            right_idx = [right.entity_id_to_label[i] for i in right_idx]
+        # prepare alignment data frame
+        alignment = pandas.DataFrame(data={EA_SIDE_LEFT: left_idx, EA_SIDE_RIGHT: right_idx})
+        # call
+        tf_both, alignment_t = self.instance(left=left, right=right, alignment=alignment)
+        # check
+        assert type(tf_both) is type(left)
+        assert alignment_t.ndim == 2
+        assert alignment_t.shape[0] == 2
+        assert alignment_t.shape[1] <= len(alignment)
+
+    def test_combination_label(self):
+        """Test combination with labels."""
+        self._test_combination(labels=True)
+
+    def test_combination_id(self):
+        """Test combination without labels."""
+        self._test_combination(labels=False)
+
+    def test_manual(self):
+        """
+        Smoke-test on a manual example.
+
+        cf. https://github.com/pykeen/pykeen/pull/893#discussion_r861553903
+        """
+        left_tf = TriplesFactory.from_labeled_triples(
+            pandas.DataFrame(
+                [
+                    ["la", "0", "lb"],
+                    ["lb", "0", "lc"],
+                    ["la", "1", "ld"],
+                    ["le", "1", "lg"],
+                    ["lh", "1", "lg"],
+                ],
+            ).values
+        )
+        right_tf = TriplesFactory.from_labeled_triples(
+            pandas.DataFrame(
+                [
+                    ["ra", "2", "rb"],
+                    ["ra", "2", "rc"],
+                    ["rc", "3", "rd"],
+                    ["re", "3", "rg"],
+                    ["rh", "3", "rg"],
+                ],
+            ).values
+        )
+        test_links = pandas.DataFrame(
+            [
+                ["ld", "rd"],
+                ["le", "re"],
+                ["lg", "rg"],
+                ["lh", "rh"],
+            ],
+            columns=[EA_SIDE_LEFT, EA_SIDE_RIGHT],
+        )
+        combined_tf, alignment_t = self.instance(left=left_tf, right=right_tf, alignment=test_links)
+        self._verify_manual(combined_tf=combined_tf)
+
+    @abstractmethod
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):
+        """Verify the result of the combination of the manual example."""
