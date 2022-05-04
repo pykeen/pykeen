@@ -58,6 +58,7 @@ __all__ = [
     "clamp_norm",
     "compact_mapping",
     "create_relation_to_entity_set_mapping",
+    "ensure_complex",
     "ensure_torch_random_state",
     "format_relative_comparison",
     "invert_mapping",
@@ -1424,6 +1425,26 @@ def normalize_path(
             directory = path.parent
         directory.mkdir(exist_ok=True, parents=True)
     return path
+
+
+def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
+    """
+    Ensure that all tensors are of complex dtype.
+
+    Reshape and convert if necessary.
+
+    :param xs:
+        the tensors
+
+    :yields: complex tensors.
+    """
+    for x in xs:
+        if x.is_complex():
+            yield x
+            continue
+        if x.shape[-1] != 2:
+            x = x.view(*x.shape[:-1], -1, 2)
+        yield torch.view_as_complex(x)
 
 
 if __name__ == "__main__":
