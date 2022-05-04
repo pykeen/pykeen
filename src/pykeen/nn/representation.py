@@ -232,6 +232,7 @@ class SubsetRepresentation(Representation):
         super().__init__(max_id=max_id, shape=base.shape, **kwargs)
         self.base = base
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -378,12 +379,14 @@ class Embedding(Representation):
         warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
         return self._embeddings.embedding_dim
 
+    # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
             self._embeddings.weight.data.view(self.num_embeddings, *self._shape),
         ).view(*self._embeddings.weight.data.shape)
 
+    # docstr-coverage: inherited
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
         if self.constrainer is not None:
@@ -394,6 +397,7 @@ class Embedding(Representation):
                 x = torch.view_as_real(x)
             self._embeddings.weight.data = x.view(*self._embeddings.weight.data.shape)
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -454,10 +458,12 @@ class LowRankRepresentation(Representation):
         self.weight = nn.Parameter(torch.empty(max_id, num_bases))
         self.reset_parameters()
 
+    # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         self.bases.reset_parameters()
         self.weight.data = self.weight_initializer(self.weight)
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -808,10 +814,12 @@ class CombinedCompGCNRepresentations(nn.Module):
         # initialize buffer of enriched representations
         self.enriched_representations = None
 
+    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         # invalidate enriched embeddings
         self.enriched_representations = None
 
+    # docstr-coverage: inherited
     def train(self, mode: bool = True):  # noqa: D102
         # when changing from evaluation to training mode, the buffered representations have been computed without
         # gradient tracking. hence, we need to invalidate them.
@@ -874,6 +882,7 @@ class SingleCompGCNRepresentation(Representation):
         self.position = position
         self.reset_parameters()
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -970,6 +979,7 @@ class LabelBasedTransformerRepresentation(Representation):
             **kwargs,
         )
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,

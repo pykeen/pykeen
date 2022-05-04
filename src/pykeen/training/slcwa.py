@@ -45,6 +45,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
 
+    # docstr-coverage: inherited
     def _create_training_data_loader(
         self,
         triples_factory: CoreTriplesFactory,
@@ -71,9 +72,11 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         )
 
     @staticmethod
+    # docstr-coverage: inherited
     def _get_batch_size(batch: SLCWABatch) -> int:  # noqa: D102
         return batch[0].shape[0]
 
+    # docstr-coverage: inherited
     def _process_batch(
         self,
         batch: SLCWABatch,
@@ -118,6 +121,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             + self.model.collect_regularization_term()
         )
 
+    # docstr-coverage: inherited
     def _slice_size_search(
         self,
         *,

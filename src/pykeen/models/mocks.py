@@ -36,6 +36,14 @@ class FixedModel(Model):
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(self, *, triples_factory: CoreTriplesFactory, **_kwargs):
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            the (training) triples factory
+        :param _kwargs:
+            ignored keyword-based parameters
+        """
         super().__init__(
             triples_factory=triples_factory,
         )
@@ -47,6 +55,7 @@ class FixedModel(Model):
         # up the optimizer
         self.dummy = torch.nn.Parameter(torch.empty(1), requires_grad=True)
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return 0.0
 
@@ -55,6 +64,7 @@ class FixedModel(Model):
             raise NotImplementedError
         return self.num_entities
 
+    # docstr-coverage: inherited
     def _reset_parameters_(self):  # noqa: D102
         pass  # Not needed for mock model
 
@@ -67,9 +77,11 @@ class FixedModel(Model):
         """Generate fake scores."""
         return (h * (self.num_entities * self.num_relations) + r * self.num_entities + t).float().requires_grad_(True)
 
+    # docstr-coverage: inherited
     def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
 
+    # docstr-coverage: inherited
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=hr_batch[:, 0:1],
@@ -77,6 +89,7 @@ class FixedModel(Model):
             t=torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0),
         )
 
+    # docstr-coverage: inherited
     def score_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=ht_batch[:, 0:1],
@@ -84,6 +97,7 @@ class FixedModel(Model):
             t=ht_batch[:, 1:2],
         )
 
+    # docstr-coverage: inherited
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0),

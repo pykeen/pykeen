@@ -75,6 +75,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         # of total entities from another inductive inference factory
         self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode=self.mode)
 
+    # docstr-coverage: inherited
     def _create_training_data_loader(
         self,
         triples_factory: CoreTriplesFactory,
@@ -102,9 +103,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         )
 
     @staticmethod
+    # docstr-coverage: inherited
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
         return batch[0].shape[0]
 
+    # docstr-coverage: inherited
     def _process_batch(
         self,
         batch: LCWABatchType,
@@ -132,6 +135,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             + self.model.collect_regularization_term()
         )
 
+    # docstr-coverage: inherited
     def _slice_size_search(
         self,
         *,

@@ -8,12 +8,13 @@ import pathlib
 import shutil
 import sys
 import time
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 from uuid import uuid4
 
 import click
 import tabulate
 from more_click import verbose_option
+from tqdm.auto import tqdm
 
 from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_path
 
@@ -72,13 +73,7 @@ def experiments():
     """Run landmark experiments."""
 
 
-@experiments.command(
-    epilog="Available experiments:\n\n\b\n"
-    + tabulate.tabulate(
-        sorted(path.stem.split("_") for ext in CONFIGURATION_FILE_FORMATS for path in HERE.rglob(f"*{ext}")),
-        headers=("reference", "model", "dataset"),
-    ),
-)
+@experiments.command()
 @click.argument("model")
 @click.argument("reference")
 @click.argument("dataset")
@@ -269,6 +264,26 @@ def validate():
             click.secho(error, err=True, color=True)
             has_error = True
     exit(-1 if has_error else 0)
+
+
+def _iter_configurations() -> Iterable[pathlib.Path]:
+    """Iterate over configuration paths."""
+    for ext in CONFIGURATION_FILE_FORMATS:
+        yield from HERE.rglob(f"*{ext}")
+
+
+@experiments.command()
+def list():
+    """List experiment configurations."""
+    data = set()
+    for path in tqdm(_iter_configurations(), unit="configuration", unit_scale=True, leave=False):
+        # clip for node piece configurations
+        reference, model, dataset = path.stem.split("_")[:3]
+        # "pykeen experiments reproduce" expects "model reference dataset"
+        data.add((model, reference, dataset))
+    click.secho(f"There are {len(data)} available experiments. Run via\n")
+    click.secho("\tpykeen experiments reproduce <MODEL> <REFERENCE> <DATASET>\n")
+    click.echo(tabulate.tabulate(sorted(data), headers=("model", "reference", "dataset")))
 
 
 if __name__ == "__main__":

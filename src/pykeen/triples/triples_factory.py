@@ -202,14 +202,17 @@ class RelationInverter:
 class DefaultRelationInverter(RelationInverter):
     """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
 
+    # docstr-coverage: inherited
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
         return relation_id + 1
 
+    # docstr-coverage: inherited
     def _map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:  # noqa: D102
         batch = batch.clone()
         batch[:, index] *= 2
         return batch
 
+    # docstr-coverage: inherited
     def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
         # The number of relations stored in the triples factory includes the number of inverse relations
         # Id of inverse relation: relation + 1
@@ -752,6 +755,7 @@ class CoreTriplesFactory:
         )
 
     @classmethod
+    # docstr-coverage: inherited
     def from_path_binary(
         cls,
         path: Union[str, pathlib.Path, TextIO],
@@ -1012,6 +1016,7 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
+    # docstr-coverage: inherited
     def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # store entity/relation to ID
@@ -1043,12 +1048,14 @@ class TriplesFactory(CoreTriplesFactory):
             data[name] = dict(zip(df["label"], df["id"]))
         return data
 
+    # docstr-coverage: inherited
     def _get_binary_state(self):  # noqa: D102
         return dict(
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
 
+    # docstr-coverage: inherited
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
@@ -1138,9 +1145,11 @@ class TriplesFactory(CoreTriplesFactory):
             axis=1,
         )
 
+    # docstr-coverage: inherited
     def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_labeling.label_to_id)
 
+    # docstr-coverage: inherited
     def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_labeling.label_to_id)
 
@@ -1218,6 +1227,7 @@ class TriplesFactory(CoreTriplesFactory):
         word_cloud = WordCloud()
         return HTML(word_cloud.get_embed_code(text=text, topn=top))
 
+    # docstr-coverage: inherited
     def tensor_to_df(
         self,
         tensor: torch.LongTensor,
@@ -1242,6 +1252,7 @@ class TriplesFactory(CoreTriplesFactory):
         columns = list(TRIPLES_DF_COLUMNS) + old_col[3:]
         return data.loc[:, columns]
 
+    # docstr-coverage: inherited
     def new_with_restriction(
         self,
         entities: Union[None, Collection[int], Collection[str]] = None,
