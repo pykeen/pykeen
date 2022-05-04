@@ -87,6 +87,7 @@ class RESCAL(EntityRelationEmbeddingModel):
             **kwargs,
         )
 
+    # docstr-coverage: inherited
     def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         # shape: (b, d)
@@ -104,6 +105,7 @@ class RESCAL(EntityRelationEmbeddingModel):
 
         return scores[:, :, 0]
 
+    # docstr-coverage: inherited
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -117,6 +119,7 @@ class RESCAL(EntityRelationEmbeddingModel):
 
         return scores[:, 0, :]
 
+    # docstr-coverage: inherited
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         """Forward pass using left side (head) prediction."""
         # Get embeddings
