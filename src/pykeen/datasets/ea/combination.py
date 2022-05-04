@@ -205,7 +205,7 @@ def filter_map_alignment(
             logger.debug(f"Mapping label-based alignment for {side}")
             # map labels, using -1 as fill-value for invalid labels
             # we cannot drop them here, since the two columns need to stay aligned
-            alignment[side] = alignment[side].apply(tf.entity_to_id.get, -1)
+            alignment[side] = alignment[side].apply(tf.entity_to_id.get, args=(-1,))
         if not is_numeric_dtype(alignment[side]):
             raise ValueError(f"Invalid dype in alignment dataframe for side={side}: {alignment[side].dtype}")
 
