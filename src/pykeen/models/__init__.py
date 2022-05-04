@@ -151,7 +151,7 @@ __all__ = [
     "make_model_cls",
 ]
 
-model_resolver = ClassResolver.from_subclasses(
+model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
     base=Model,
     skip={
         # Abstract Models

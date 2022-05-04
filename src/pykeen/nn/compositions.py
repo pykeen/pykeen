@@ -66,7 +66,7 @@ class CircularCorrelationCompositionModule(FunctionalCompositionModule):
     func = circular_correlation
 
 
-composition_resolver = ClassResolver.from_subclasses(
+composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
     skip={
