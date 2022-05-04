@@ -474,12 +474,13 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
         kwargs.update(self._prepare_state_for_functional())
         return kwargs
 
+    # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-    ) -> MutableMapping[str, torch.FloatTensor]:
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         """Conversion utility to prepare the h/r/t representations for the functional form."""
         assert all(torch.is_tensor(x) for x in (h, r, t))
         return dict(h=h, r=r, t=t)
@@ -718,7 +719,6 @@ class ConvEInteraction(
 
     # docstr-coverage: inherited
     @staticmethod
-    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -936,7 +936,6 @@ class TransRInteraction(
 
     # docstr-coverage: inherited
     @staticmethod
-    # docstr-coverage: inherited
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1039,8 +1038,8 @@ class SEInteraction(
     relation_shape = ("dd", "dd")
     func = pkf.se_interaction
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1168,8 +1167,8 @@ class UMInteraction(
         """
         super().__init__(p=p, power_norm=power_norm)
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1225,8 +1224,8 @@ class TransDInteraction(
         """
         super().__init__(p=p, power_norm=power_norm)
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: Tuple[torch.FloatTensor, torch.FloatTensor],
         r: Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1271,8 +1270,8 @@ class NTNInteraction(
             activation = nn.Tanh()
         self.non_linearity = activation_resolver.make(activation, activation_kwargs)
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: torch.FloatTensor,
         r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
@@ -1319,6 +1318,7 @@ class KG2EInteraction(
         self.similarity = similarity
         self.exact = exact
 
+    # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
         h: Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1353,8 +1353,8 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
     relation_shape = ("d", "d")
     func = pkf.transh_interaction
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1380,8 +1380,8 @@ class MuREInteraction(
     relation_shape = ("d", "d")
     func = pkf.mure_interaction
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: Tuple[FloatTensor, FloatTensor, FloatTensor],
         r: Tuple[FloatTensor, FloatTensor],
@@ -1425,8 +1425,8 @@ class SimplEInteraction(
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(clamp=self.clamp_score)
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1444,8 +1444,8 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
     relation_shape = ("d", "d")
     func = pkf.pair_re_interaction
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
@@ -1602,8 +1602,8 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
             dropout=self.combination_dropout,
         )
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: FloatTensor,
         r: Tuple[FloatTensor, FloatTensor],
@@ -1641,6 +1641,7 @@ class BoxEInteraction(
         super().__init__(p=p, power_norm=power_norm)
         self.tanh_map = tanh_map
 
+    # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
         h: Tuple[FloatTensor, FloatTensor],
@@ -1753,12 +1754,13 @@ class MultiLinearTuckerInteraction(
             std=numpy.sqrt(numpy.prod(numpy.reciprocal(numpy.asarray(self.core_tensor.shape)))),
         )
 
+    # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
         h: Tuple[FloatTensor, FloatTensor],
         r: FloatTensor,
         t: Tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, torch.FloatTensor]:
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h[0], r=r, t=t[1])
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
@@ -1875,8 +1877,8 @@ class TripleREInteraction(
         kwargs["u"] = self.u
         return kwargs
 
-    @staticmethod
     # docstr-coverage: inherited
+    @staticmethod
     def _prepare_hrt_for_functional(
         h: FloatTensor,
         r: Tuple[FloatTensor, FloatTensor, FloatTensor],
@@ -1949,12 +1951,13 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(coefficients=self.coefficients)
 
+    # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-    ) -> MutableMapping[str, torch.FloatTensor]:
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(zip("hrt", ensure_tuple(h, r, t)))
 
     def extend(self, *new_coefficients: Tuple[int, int, int, Sign]) -> "AutoSFInteraction":
