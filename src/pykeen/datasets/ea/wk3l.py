@@ -103,7 +103,7 @@ class MTransEDataset(EADataset, ABC):
             encoding="utf8",
             dtype=str,
             **kwargs,
-        )
+        ).dropna()
 
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         logger.info(f"Loading graph for side: {side}")
