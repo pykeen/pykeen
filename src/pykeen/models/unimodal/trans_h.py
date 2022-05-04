@@ -109,10 +109,12 @@ class TransH(EntityRelationEmbeddingModel):
             constrainer=functional.normalize,
         )
 
+    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
         self.normal_vector_embeddings.post_parameter_update()
 
+    # docstr-coverage: inherited
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
         self.normal_vector_embeddings.reset_parameters()
@@ -130,6 +132,7 @@ class TransH(EntityRelationEmbeddingModel):
             self.relation_embeddings(indices=None),
         )
 
+    # docstr-coverage: inherited
     def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
@@ -146,6 +149,7 @@ class TransH(EntityRelationEmbeddingModel):
 
         return -linalg.vector_norm(ph + d_r - pt, ord=2, dim=-1, keepdim=True)
 
+    # docstr-coverage: inherited
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
@@ -162,6 +166,7 @@ class TransH(EntityRelationEmbeddingModel):
 
         return -linalg.vector_norm(ph[:, None, :] + d_r[:, None, :] - pt, ord=2, dim=-1)
 
+    # docstr-coverage: inherited
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)

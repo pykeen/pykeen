@@ -201,7 +201,7 @@ class RankBasedMetricResults(MetricResults):
                 return value
         raise KeyError(metric_key)
 
-    # docstr-coverage:inherited
+    # docstr-coverage: inherited
     def to_dict(self) -> Mapping[ExtendedTarget, Mapping[RankType, Mapping[str, float]]]:  # noqa: D102
         result: MutableMapping[ExtendedTarget, MutableMapping[RankType, MutableMapping[str, float]]] = {}
         for side, rank_type, metric_name, metric_value in self._iter_rows():
@@ -210,7 +210,7 @@ class RankBasedMetricResults(MetricResults):
             result[side][rank_type][metric_name] = metric_value
         return result
 
-    # docstr-coverage:inherited
+    # docstr-coverage: inherited
     def to_flat_dict(self):  # noqa: D102
         return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
 
@@ -273,7 +273,7 @@ class RankBasedEvaluator(Evaluator):
         self.num_candidates = defaultdict(list)
         self.num_entities = None
 
-    # docstr-coverage:inherited
+    # docstr-coverage: inherited
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -294,7 +294,7 @@ class RankBasedEvaluator(Evaluator):
             self.ranks[target, rank_type].append(v.detach().cpu().numpy())
         self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
-    # docstr-coverage:inherited
+    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -439,7 +439,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
 
-    # docstr-coverage:inherited
+    # docstr-coverage: inherited
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -521,7 +521,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
     def _get_key(self, target: Target) -> List[Target]:
         return [c for c in self.COLUMNS if c != target]
 
-    # docstr-coverage:inherited
+    # docstr-coverage: inherited
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -543,7 +543,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         keys = cast(List[Tuple[int, int]], list(map(tuple, key_list)))
         self.weights[target].append(numpy.asarray([self.precomputed_weights[target][k] for k in keys]))
 
-    # docstr-coverage:inherited
+    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError

@@ -96,6 +96,7 @@ def _apply_optional_bn_to_tensor(
 
 
 def _add_cuda_warning(func):
+    # docstr-coverage: excused `wrapped`
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
@@ -394,7 +395,7 @@ def hole_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-) -> torch.FloatTensor:  # noqa: D102
+) -> torch.FloatTensor:
     """Evaluate the HolE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)

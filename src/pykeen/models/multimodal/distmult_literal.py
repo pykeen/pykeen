@@ -43,6 +43,18 @@ class DistMultLiteral(LiteralModel):
         input_dropout: float = 0.0,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            the (training) triples factory
+        :param embedding_dim:
+            the embedding dimension
+        :param input_dropout:
+            the input dropout, cf. :meth:`DistMultCombination.__init__`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`LiteralModel.__init__`
+        """
         super().__init__(
             triples_factory=triples_factory,
             interaction=LiteralInteraction(
