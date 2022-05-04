@@ -55,6 +55,12 @@ class ExtraKeysError(ValueError):
     """Raised on extra keys being used."""
 
     def __init__(self, keys: Iterable[str]):
+        """
+        Initialize the error.
+
+        :param keys:
+            the extra keys
+        """
         super().__init__(sorted(keys))
 
     def __str__(self) -> str:
@@ -887,6 +893,21 @@ def suggest_kwargs(
     kwargs_ranges: Mapping[str, Any],
     kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Mapping[str, Any]:
+    """
+    Suggest parameters from given dictionaries.
+
+    :param trial:
+        the optuna trial
+    :param prefix:
+        the prefix to be prepended to the name
+    :param kwargs:
+        a dictionary of fixed parameters
+    :param kwargs_ranges:
+        a dictionary of parameters to be sampled with their ranges.
+
+    :return:
+        a dictionary with fixed and sampled parameters
+    """
     _kwargs: Dict[str, Any] = {}
     if kwargs:
         _kwargs.update(kwargs)

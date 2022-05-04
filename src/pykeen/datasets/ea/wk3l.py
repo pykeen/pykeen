@@ -106,6 +106,7 @@ class MTransEDataset(EADataset, ABC):
             **kwargs,
         )
 
+    # docstr-coverage: inherited
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         logger.info(f"Loading graph for side: {side}")
         df = self._load_df(key=side, names=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
@@ -114,6 +115,7 @@ class MTransEDataset(EADataset, ABC):
             triples=df.values, metadata=dict(graph_pair=self.graph_pair, side=side)
         )
 
+    # docstr-coverage: inherited
     def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")
