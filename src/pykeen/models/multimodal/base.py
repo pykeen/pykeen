@@ -26,12 +26,24 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         interaction: LiteralInteraction,
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
-        relation_representations: OneOrManyHintOrType[Representation] = None,
-        relation_representations_kwargs: OneOrManyOptionalKwargs = None,
         **kwargs,
     ):
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            the (training) triples factory
+        :param interaction:
+            the interaction function
+        :param entity_representations:
+            the entity representations (excluding the ones from literals)
+        :param entity_representations_kwargs:
+            the entity representations keyword-based parameters (excluding the ones from literals)
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         literals = triples_factory.get_numeric_literals_tensor()
-        max_id, *shape = literals.shape
+        _max_id, *shape = literals.shape
         entity_representations = tuple(upgrade_to_sequence(entity_representations)) + (Embedding,)
         entity_representations_kwargs = tuple(upgrade_to_sequence(entity_representations_kwargs)) + (
             dict(
@@ -46,7 +58,5 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
             interaction=interaction,
             entity_representations=entity_representations,
             entity_representations_kwargs=entity_representations_kwargs,
-            relation_representations=relation_representations,
-            relation_representations_kwargs=relation_representations_kwargs,
             **kwargs,
         )

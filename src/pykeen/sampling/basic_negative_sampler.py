@@ -83,6 +83,7 @@ class BasicNegativeSampler(NegativeSampler):
         # Set the indices
         self._corruption_indices = [TARGET_TO_INDEX[side] for side in self.corruption_scheme]
 
+    # docstr-coverage: inherited
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
         batch_shape = positive_batch.shape[:-1]
 
