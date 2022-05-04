@@ -1290,7 +1290,7 @@ class FocalLoss(PointwiseLoss):
         return self._reduction_method(loss)
 
 
-loss_resolver = ClassResolver.from_subclasses(
+loss_resolver: ClassResolver[Loss] = ClassResolver.from_subclasses(
     Loss,
     default=MarginRankingLoss,
     skip={

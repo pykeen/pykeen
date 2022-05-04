@@ -304,7 +304,7 @@ class DeterministicCleaner(Cleaner):
         return reference, other
 
 
-cleaner_resolver = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+cleaner_resolver: ClassResolver[Cleaner] = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
 
 
 class Splitter:
@@ -439,7 +439,7 @@ class CoverageSplitter(Splitter):
         return [torch.cat([train_seed, train], dim=0), *rest]
 
 
-splitter_resolver = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
+splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
 
 
 def split(

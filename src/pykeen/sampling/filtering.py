@@ -350,7 +350,7 @@ class BloomFilterer(Filterer):
         return result
 
 
-filterer_resolver = ClassResolver.from_subclasses(
+filterer_resolver: ClassResolver[Filterer] = ClassResolver.from_subclasses(
     base=Filterer,
     default=BloomFilterer,
 )

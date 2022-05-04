@@ -222,4 +222,6 @@ class AttentionEdgeWeighting(EdgeWeighting):
         return (message_ * alpha.view(-1, self.num_heads, 1)).view(-1, self.num_heads * self.attention_dim)
 
 
-edge_weight_resolver = ClassResolver.from_subclasses(base=EdgeWeighting, default=SymmetricEdgeWeighting)
+edge_weight_resolver: ClassResolver[EdgeWeighting] = ClassResolver.from_subclasses(
+    base=EdgeWeighting, default=SymmetricEdgeWeighting
+)
