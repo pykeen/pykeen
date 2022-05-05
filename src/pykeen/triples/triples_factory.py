@@ -367,8 +367,6 @@ class CoreTriplesFactory(DatasetInfo):
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
-        entity_ids: Collection[int],
-        relation_ids: Collection[int],
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
     ):
@@ -390,8 +388,6 @@ class CoreTriplesFactory(DatasetInfo):
             _num_entities=num_entities, _num_relations=num_relations, create_inverse_triples=create_inverse_triples
         )
         self.mapped_triples = mapped_triples
-        self.entity_ids = entity_ids
-        self.relation_ids = relation_ids
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -402,8 +398,6 @@ class CoreTriplesFactory(DatasetInfo):
         mapped_triples: MappedTriples,
         num_entities: Optional[int] = None,
         num_relations: Optional[int] = None,
-        entity_ids: Collection[int] = None,
-        relation_ids: Collection[int] = None,
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> "CoreTriplesFactory":
@@ -428,10 +422,6 @@ class CoreTriplesFactory(DatasetInfo):
             num_entities = mapped_triples[:, [0, 2]].max().item() + 1
         if num_relations is None:
             num_relations = mapped_triples[:, 1].max().item() + 1
-        if entity_ids is None:
-            entity_ids = get_entities(mapped_triples)
-        if relation_ids is None:
-            relation_ids = get_relations(mapped_triples)
         return CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=num_entities,
@@ -582,8 +572,6 @@ class CoreTriplesFactory(DatasetInfo):
             mapped_triples=mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
-            entity_ids=self.entity_ids,
-            relation_ids=self.relation_ids,
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
@@ -829,8 +817,6 @@ class CoreTriplesFactory(DatasetInfo):
         return dict(
             num_entities=self.num_entities,
             num_relations=self.num_relations,
-            entity_ids=self.entity_ids,
-            relation_ids=self.relation_ids,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -1024,8 +1010,6 @@ class TriplesFactory(CoreTriplesFactory):
             mapped_triples=self.mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.num_relations,
-            entity_ids=self.entity_ids,
-            relation_ids=self.relation_ids,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )

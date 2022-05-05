@@ -527,9 +527,6 @@ class TestUtils(unittest.TestCase):
         """Check two triples factories have all of the same stuff."""
         # TODO: this could be (Core)TriplesFactory.__equal__
         self.assertEqual(type(tf1), type(tf2))
-        self.assertEqual(tf1.entity_ids, tf2.entity_ids)
-        self.assertEqual(tf1.relation_ids, tf2.relation_ids)
-        self.assertEqual(tf1.relation_ids, tf2.relation_ids)
         if isinstance(tf1, TriplesFactory):
             self.assertEqual(tf1.entity_labeling, tf2.entity_labeling)
             self.assertEqual(tf1.relation_labeling, tf2.relation_labeling)
