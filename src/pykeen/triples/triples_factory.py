@@ -312,7 +312,51 @@ def restrict_triples(
 
 
 @dataclasses.dataclass
-class CoreTriplesFactory:
+class DatasetInfo:
+    """An object storing information about the number of entities and relations."""
+
+    #: the number of entities
+    _num_entities: int
+
+    #: the number of relations (excluding "artificial" inverse relations)
+    _num_relations: int
+
+    #: whether to create inverse triples
+    create_inverse_triples: bool = False
+
+    @property
+    def num_entities(self) -> int:  # noqa: D401
+        """The number of unique entities."""
+        return self._num_entities
+
+    @property
+    def num_relations(self) -> int:  # noqa: D401
+        """The number of unique relations."""
+        if self.create_inverse_triples:
+            return 2 * self.real_num_relations
+        return self.real_num_relations
+
+    @property
+    def real_num_relations(self) -> int:  # noqa: D401
+        """The number of relations without inverse relations."""
+        return self._num_relations
+
+    def extra_repr(self) -> str:
+        """Extra representation string."""
+        return ", ".join(self._iter_extra_repr())
+
+    def __repr__(self):  # noqa: D105
+        return f"{self.__class__.__name__}({self.extra_repr()})"
+
+    def _iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over extra_repr components."""
+        yield f"num_entities={self.num_entities}"
+        yield f"num_relations={self.num_relations}"
+        yield f"create_inverse_triples={self.create_inverse_triples}"
+
+
+@dataclasses.dataclass
+class CoreTriplesFactory(DatasetInfo):
     """Create instances from ID-based triples."""
 
     triples_file_name: ClassVar[str] = "numeric_triples.tsv.gz"
@@ -342,13 +386,12 @@ class CoreTriplesFactory:
         :param metadata:
             Arbitrary metadata to go with the graph
         """
-        super().__init__()
+        super().__init__(
+            _num_entities=num_entities, _num_relations=num_relations, create_inverse_triples=create_inverse_triples
+        )
         self.mapped_triples = mapped_triples
-        self._num_entities = num_entities
-        self._num_relations = num_relations
         self.entity_ids = entity_ids
         self.relation_ids = relation_ids
-        self.create_inverse_triples = create_inverse_triples
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -411,47 +454,18 @@ class CoreTriplesFactory:
         )
 
     @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of unique entities."""
-        return self._num_entities
-
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of unique relations."""
-        if self.create_inverse_triples:
-            return 2 * self.real_num_relations
-        return self.real_num_relations
-
-    @property
-    def real_num_relations(self) -> int:  # noqa: D401
-        """The number of relations without inverse relations."""
-        return self._num_relations
-
-    @property
     def num_triples(self) -> int:  # noqa: D401
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
     def _iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
-        d = [
-            ("num_entities", self.num_entities),
-            ("num_relations", self.num_relations),
-            ("num_triples", self.num_triples),
-            ("inverse_triples", self.create_inverse_triples),
-        ]
-        d.extend(sorted(self.metadata.items()))  # type: ignore
-        for k, v in d:
+        yield from super()._iter_extra_repr()
+        yield f"num_triples={self.num_triples}"
+        for key, value in sorted(self.metadata.items()):
             if isinstance(v, (str, pathlib.Path)):
                 v = f'"{v}"'
             yield f"{k}={v}"
-
-    def extra_repr(self) -> str:
-        """Extra representation string."""
-        return ", ".join(self._iter_extra_repr())
-
-    def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}({self.extra_repr()})"
 
     def with_labels(
         self,
