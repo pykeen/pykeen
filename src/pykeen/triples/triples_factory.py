@@ -35,7 +35,7 @@ from torch.utils.data import Dataset
 
 from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
+from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..typing import (
     LABEL_HEAD,
     LABEL_RELATION,
