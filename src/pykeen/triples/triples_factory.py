@@ -315,19 +315,14 @@ def restrict_triples(
 class DatasetInfo:
     """An object storing information about the number of entities and relations."""
 
-    #: the number of entities
-    _num_entities: int
+    #: the number of unique entities
+    num_entities: int
 
     #: the number of relations (excluding "artificial" inverse relations)
     _num_relations: int
 
     #: whether to create inverse triples
     create_inverse_triples: bool = False
-
-    @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of unique entities."""
-        return self._num_entities
 
     @property
     def num_relations(self) -> int:  # noqa: D401
@@ -385,7 +380,9 @@ class CoreTriplesFactory(DatasetInfo):
             Arbitrary metadata to go with the graph
         """
         super().__init__(
-            _num_entities=num_entities, _num_relations=num_relations, create_inverse_triples=create_inverse_triples
+            num_entities=num_entities,
+            _num_relations=num_relations,
+            create_inverse_triples=create_inverse_triples,
         )
         self.mapped_triples = mapped_triples
         if metadata is None:
@@ -426,8 +423,6 @@ class CoreTriplesFactory(DatasetInfo):
             mapped_triples=mapped_triples,
             num_entities=num_entities,
             num_relations=num_relations,
-            entity_ids=entity_ids,
-            relation_ids=relation_ids,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
@@ -452,7 +447,7 @@ class CoreTriplesFactory(DatasetInfo):
         """Iterate over extra_repr components."""
         yield from super()._iter_extra_repr()
         yield f"num_triples={self.num_triples}"
-        for key, value in sorted(self.metadata.items()):
+        for k, v in sorted(self.metadata.items()):
             if isinstance(v, (str, pathlib.Path)):
                 v = f'"{v}"'
             yield f"{k}={v}"
