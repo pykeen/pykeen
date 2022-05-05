@@ -664,7 +664,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_t function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self._entity_ids), dim=2)
+        hrt_batch = extend_batch(batch=hr_batch, max_id=self.num_entities, dim=2)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
@@ -694,7 +694,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_h function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self._entity_ids), dim=0)
+        hrt_batch = extend_batch(batch=rt_batch, max_id=self.num_entities, dim=0)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
@@ -724,7 +724,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_r function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self._relation_ids), dim=1)
+        hrt_batch = extend_batch(batch=ht_batch, max_id=self.num_relations, dim=1)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
