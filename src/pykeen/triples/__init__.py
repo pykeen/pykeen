@@ -3,7 +3,7 @@
 """Classes for creating and storing training data from triples."""
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
-from .triples_factory import CoreTriplesFactory, RelationInverter, TriplesFactory, relation_inverter, DatasetInfo
+from .triples_factory import CoreTriplesFactory, DatasetInfo, RelationInverter, TriplesFactory, relation_inverter
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
