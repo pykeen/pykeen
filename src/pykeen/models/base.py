@@ -616,9 +616,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         else:
             self.regularizer = NoRegularizer()
 
-        self._entity_ids = set(range(triples_factory.num_entities))
-        self._relation_ids = set(range(triples_factory.num_relations))
-
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         super().__init_subclass__(**kwargs)
         if autoreset:
