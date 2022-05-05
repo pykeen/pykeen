@@ -260,6 +260,11 @@ class Labeling:
         # label
         return self._vectorized_labeler(ids, (unknown_label,))
 
+    @property
+    def max_id(self) -> int:
+        """Return the maximum ID (excl.)."""
+        return max(self.label_to_id.values()) + 1
+
 
 def restrict_triples(
     mapped_triples: MappedTriples,
@@ -845,17 +850,15 @@ class TriplesFactory(CoreTriplesFactory):
         :param metadata:
             Arbitrary metadata to go with the graph
         """
+        self.entity_labeling = Labeling(label_to_id=entity_to_id)
+        self.relation_labeling = Labeling(label_to_id=relation_to_id)
         super().__init__(
             mapped_triples=mapped_triples,
-            num_entities=len(entity_to_id),
-            num_relations=len(relation_to_id),
-            entity_ids=sorted(entity_to_id.values()),
-            relation_ids=sorted(relation_to_id.values()),
+            num_entities=self.entity_labeling.max_id,
+            num_relations=self.relation_labeling.max_id,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
-        self.entity_labeling = Labeling(label_to_id=entity_to_id)
-        self.relation_labeling = Labeling(label_to_id=relation_to_id)
 
     @classmethod
     def from_labeled_triples(
