@@ -49,6 +49,7 @@ from ..typing import (
 from ..utils import compact_mapping, format_relative_comparison, invert_mapping, normalize_path, triple_tensor_to_set
 
 __all__ = [
+    "KGInfo",
     "CoreTriplesFactory",
     "TriplesFactory",
     "create_entity_mapping",
