@@ -22,7 +22,7 @@ from torch import nn
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.representation import Representation, build_representation
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import DatasetInfo, relation_inverter
+from ..triples import KGInfo, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
@@ -67,7 +67,7 @@ class Model(nn.Module, ABC):
     def __init__(
         self,
         *,
-        triples_factory: DatasetInfo,
+        triples_factory: KGInfo,
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
@@ -592,7 +592,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
     def __init__(
         self,
         *,
-        triples_factory: DatasetInfo,
+        triples_factory: KGInfo,
         regularizer: Optional[Regularizer] = None,
         **kwargs,
     ) -> None:
@@ -752,7 +752,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     def __init__(
         self,
         *,
-        triples_factory: DatasetInfo,
+        triples_factory: KGInfo,
         entity_representations: HintOrType[Representation] = None,
         entity_representations_kwargs: OptionalKwargs = None,
         relation_representations: HintOrType[Representation] = None,

@@ -317,7 +317,7 @@ def restrict_triples(
 
 
 @dataclasses.dataclass
-class DatasetInfo:
+class KGInfo:
     """An object storing information about the number of entities and relations."""
 
     #: the number of unique entities
@@ -356,7 +356,7 @@ class DatasetInfo:
 
 
 @dataclasses.dataclass
-class CoreTriplesFactory(DatasetInfo):
+class CoreTriplesFactory(KGInfo):
     """Create instances from ID-based triples."""
 
     triples_file_name: ClassVar[str] = "numeric_triples.tsv.gz"

@@ -20,7 +20,7 @@ from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import Representation
 from ..regularizers import Regularizer
-from ..triples import DatasetInfo
+from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes, get_batchnorm_modules
 
@@ -263,7 +263,7 @@ class ERModel(
     def __init__(
         self,
         *,
-        triples_factory: DatasetInfo,
+        triples_factory: KGInfo,
         interaction: Union[
             str,
             Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
