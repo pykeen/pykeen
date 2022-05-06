@@ -36,7 +36,7 @@ class OGBLoader(LazyDataset):
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.cache_root = self._help_cache(cache_root)
-        self.create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = _create_inverse_triples
 
     def _load(self) -> None:
         try:
@@ -77,7 +77,7 @@ class OGBLoader(LazyDataset):
 
         return TriplesFactory.from_labeled_triples(
             triples=triples,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=self._create_inverse_triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
         )
