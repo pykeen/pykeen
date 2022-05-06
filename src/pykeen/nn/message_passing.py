@@ -562,7 +562,9 @@ class RGCNLayer(nn.Module):
         return y
 
 
-decomposition_resolver = ClassResolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
+decomposition_resolver: ClassResolver[Decomposition] = ClassResolver.from_subclasses(
+    base=Decomposition, default=BasesDecomposition
+)
 
 
 class RGCNRepresentation(Representation):
