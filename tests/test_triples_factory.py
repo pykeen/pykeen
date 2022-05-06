@@ -393,70 +393,25 @@ class TestLiterals(unittest.TestCase):
     def test_metadata(self):
         """Test metadata passing for triples factories."""
         t = Nations().training
-        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata["path"])
-        comps = set(repr(t).replace("TriplesFactory(", "")[:-1].split(", "))
-        self.assertEqual(
-            comps,
-            {
-                "num_entities=14",
-                "num_relations=55",
-                "num_triples=1592",
-                "inverse_triples=False",
-                f'path="{NATIONS_TRAIN_PATH}"',
-            },
-        )
+        self.assertEqual(t.metadata, dict(path=NATIONS_TRAIN_PATH))
 
         entities = ["poland", "ussr"]
         x = t.new_with_restriction(entities=entities)
         entities_ids = t.entities_to_ids(entities=entities)
-        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata["path"])
-        comps = set(repr(t).replace("TriplesFactory(", "")[:-1].split(", "))
-        self.assertEqual(
-            comps,
-            {
-                "num_entities=14",
-                "num_relations=55",
-                "num_triples=37",
-                "inverse_triples=False",
-                f"entity_restriction={repr(entities_ids)}",
-                f'path="{NATIONS_TRAIN_PATH}"',
-            },
-        )
+        self.assertEqual(x.metadata, dict(path=NATIONS_TRAIN_PATH, entity_restriction=entities_ids))
 
         relations = ["negativebehavior"]
         v = t.new_with_restriction(relations=relations)
         relations_ids = t.relations_to_ids(relations=relations)
-        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata["path"])
-        comps = set(repr(t).replace("TriplesFactory(", "")[:-1].split(", "))
-        self.assertEqual(
-            comps,
-            {
-                "num_entities=14",
-                "num_relations=55",
-                "num_triples=29",
-                "inverse_triples=False",
-                f"relation_restriction={repr(relations_ids)})",
-                f'path="{NATIONS_TRAIN_PATH}"',
-            },
-        )
+        self.assertEqual(v.metadata, dict(path=NATIONS_TRAIN_PATH, relation_restriction=relations_ids))
 
         w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
-        self.assertNotIn("path", w.metadata)
-        comps = set(repr(t).replace("TriplesFactory(", "")[:-1].split(", "))
-        self.assertEqual(
-            comps,
-            {
-                "num_entities=14",
-                "num_relations=55",
-                "num_triples=5",
-                "inverse_triples=False",
-            },
-        )
+        self.assertEqual(w.metadata, dict())
 
         y, z = t.split()
-        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata["path"])
-        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata["path"])
+        self.assertEqual(y.metadata, dict(path=NATIONS_TRAIN_PATH))
+        self.assertEqual(z.metadata, dict(path=NATIONS_TRAIN_PATH))
 
     def test_triples_numeric_literals_factory_split(self):
         """Test splitting a TriplesNumericLiteralsFactory object."""
