@@ -324,23 +324,20 @@ class KGInfo:
     #: the number of unique entities
     num_entities: int
 
-    #: the number of relations (excluding "artificial" inverse relations)
-    _num_relations: int
+    #: the number of relations (maybe including "artificial" inverse relations)
+    num_relations: int
 
     #: whether to create inverse triples
     create_inverse_triples: bool = False
 
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of unique relations."""
-        if self.create_inverse_triples:
-            return 2 * self.real_num_relations
-        return self.real_num_relations
+    #: the number of real relations, i.e., without artificial inverses
+    real_num_relations: int = dataclasses.field(init=False, repr=False)
 
-    @property
-    def real_num_relations(self) -> int:  # noqa: D401
-        """The number of relations without inverse relations."""
-        return self._num_relations
+    def __post_init__(self):
+        """Normalize attributes."""
+        self.real_num_relations = self.num_relations
+        if self.create_inverse_triples:
+            self.num_relations *= 2
 
     def extra_repr(self) -> str:
         """Extra representation string."""
@@ -387,7 +384,7 @@ class CoreTriplesFactory(KGInfo):
         """
         super().__init__(
             num_entities=num_entities,
-            _num_relations=num_relations,
+            num_relations=num_relations,
             create_inverse_triples=create_inverse_triples,
         )
         self.mapped_triples = mapped_triples
