@@ -317,7 +317,6 @@ def restrict_triples(
     return mapped_triples[keep_mask]
 
 
-@dataclasses.dataclass
 class KGInfo:
     """An object storing information about the number of entities and relations."""
 
@@ -328,16 +327,32 @@ class KGInfo:
     num_relations: int
 
     #: whether to create inverse triples
-    create_inverse_triples: bool = False
+    create_inverse_triples: bool
 
     #: the number of real relations, i.e., without artificial inverses
-    real_num_relations: int = dataclasses.field(init=False, repr=False)
+    real_num_relations: int
 
-    def __post_init__(self):
-        """Normalize attributes."""
-        self.real_num_relations = self.num_relations
-        if self.create_inverse_triples:
-            self.num_relations *= 2
+    def __init__(
+        self,
+        num_entities: int,
+        num_relations: int,
+        create_inverse_triples: bool,
+    ) -> None:
+        """
+        Initialize the information object.
+
+        :param num_entities:
+            the number of entities.
+        :param num_relations:
+            the number of relations, excluding artifical inverse relations.
+        :param create_inverse_triples:
+            whether to create inverse triples
+        """
+        self.num_entities = num_entities
+        self.real_num_relations = num_relations
+        if create_inverse_triples:
+            num_relations *= 2
+        self.num_relations = num_relations
 
     def extra_repr(self) -> str:
         """Extra representation string."""
@@ -353,7 +368,6 @@ class KGInfo:
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
 
-@dataclasses.dataclass
 class CoreTriplesFactory(KGInfo):
     """Create instances from ID-based triples."""
 
