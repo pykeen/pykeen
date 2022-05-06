@@ -353,6 +353,7 @@ class KGInfo:
         if create_inverse_triples:
             num_relations *= 2
         self.num_relations = num_relations
+        self.create_inverse_triples = create_inverse_triples
 
     def extra_repr(self) -> str:
         """Extra representation string."""
