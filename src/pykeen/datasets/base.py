@@ -419,7 +419,7 @@ class PathDataset(LazyDataset):
         self.testing_path = pathlib.Path(testing_path)
         self.validation_path = pathlib.Path(validation_path) if validation_path else None
 
-        self.create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
 
         if eager:
@@ -429,7 +429,7 @@ class PathDataset(LazyDataset):
     def _load(self) -> None:
         self._training = TriplesFactory.from_path(
             path=self.training_path,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=self._create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
         self._testing = TriplesFactory.from_path(
