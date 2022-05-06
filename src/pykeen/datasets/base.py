@@ -78,8 +78,6 @@ class Dataset:
     testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the training triples
     validation: Optional[CoreTriplesFactory]
-    #: All datasets should take care of inverse triple creation
-    create_inverse_triples: bool
     #: the dataset's name
     metadata: Optional[Mapping[str, Any]] = None
 
@@ -129,6 +127,11 @@ class Dataset:
     def num_relations(self):  # noqa: D401
         """The number of relations."""
         return self.training.num_relations
+
+    @property
+    def create_inverse_triples(self):
+        """Return whether inverse triples are created *for the training factory*."""
+        return self.training.create_inverse_triples
 
     @classmethod
     def docdata(cls, *parts: str) -> Any:
