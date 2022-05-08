@@ -1,4 +1,32 @@
-"""PyTorch Lightning integration."""
+# -*- coding: utf-8 -*-
+
+"""PyTorch Lightning integration.
+
+PyTorch Lightning poses an alternative way to implement a training
+loop and evaluation loop for knowledge graph embedding models that
+has some nice features:
+
+- mixed precision training
+- multi-gpu training
+
+.. code-block:: python
+
+    model = LitLCWAModule(
+        dataset="fb15k237",
+        dataset_kwargs=dict(create_inverse_triples=True),
+        model="mure",
+        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits"),
+        batch_size=128,
+    )
+    trainer = pytorch_lightning.Trainer(
+        accelerator="auto",  # automatically choose accelerator
+        logger=False,  # defaults to TensorBoard; explicitly disabled here
+        precision=16,  # mixed precision training
+    )
+    trainer.fit(model=model)
+
+"""
+
 import pytorch_lightning
 import torch
 import torch.utils.data
@@ -10,9 +38,17 @@ from pykeen.models import Model, model_resolver
 from pykeen.optimizers import optimizer_resolver
 from pykeen.triples.triples_factory import CoreTriplesFactory
 
+__all__ = [
+    "LitLCWAModule",
+]
+
 
 class LitLCWAModule(pytorch_lightning.LightningModule):
-    """A PyTorch Lightning module for training a model with LCWA training loop."""
+    """A PyTorch Lightning module for training a model with LCWA training loop.
+
+
+    .. seealso:: https://github.com/pykeen/pykeen/pull/905
+    """
 
     def __init__(
         self,
@@ -109,7 +145,7 @@ class LitLCWAModule(pytorch_lightning.LightningModule):
         )
 
 
-def main():
+def _main():
     """Run PyTorch lightning model."""
     model = LitLCWAModule(
         dataset="fb15k237",
@@ -127,4 +163,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _main()
