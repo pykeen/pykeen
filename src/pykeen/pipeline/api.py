@@ -403,6 +403,22 @@ class PipelineResult(Result):
         """
         Save all artifacts in the given directory.
 
+        The serialization format looks as follows
+
+        .. code-block::
+
+            directory/
+                results.json
+                metadata.json
+                trained_model.pkl
+                training_triples
+
+        All but the first component are optional and can be disabled, e.g. to save disk space during hyperparameter
+        tuning. `trained_model.pkl` is the full model saved via :func:`torch.save`, and can thus be loaded via
+        :func:`torch.load`, cf. TODO: link. `training_triples` contains the training triples factory, including
+        label-to-id mappings, if used. It has been saved via :meth:`TriplesFactory.to_path_binary`, and can re-loaded
+        via :meth:`TriplesFactory.from_path_binary`.
+
         :param directory:
             the directory path. It will be created including all parent directories if necessary
         :param save_metadata:
