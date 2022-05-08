@@ -102,6 +102,7 @@ class MTransEDataset(EADataset, ABC):
             engine="python",
             encoding="utf8",
             dtype=str,
+            keep_default_na=False,
             **kwargs,
         )
 
