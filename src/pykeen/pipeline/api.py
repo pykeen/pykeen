@@ -380,7 +380,21 @@ class PipelineResult(Result):
         save_training: bool = True,
         **_kwargs,
     ) -> None:
-        """Save all artifacts in the given directory."""
+        """
+        Save all artifacts in the given directory.
+
+        :param directory:
+            the directory path. It will be created including all parent directories if necessary
+        :param save_metadata:
+            whether to save metadata, cf. :attr:`PipelineResult.metadata`
+        :param save_replicates:
+            # TODO: rename param?
+            whether to save the trained model, cf. :meth:`PipelineResult.save_model`
+        :param save_training:
+            whether to save the training triples factory
+        :param _kwargs:
+            additional keyword-based parameters, which are ignored
+        """
         directory = normalize_path(path=directory, mkdir=True)
 
         # always save results as json file
