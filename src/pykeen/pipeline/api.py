@@ -411,14 +411,15 @@ class PipelineResult(Result):
                 results.json
                 metadata.json
                 trained_model.pkl
-                training_triples
+                training_triples/
 
         All but the first component are optional and can be disabled, e.g. to save disk space during hyperparameter
         tuning. `trained_model.pkl` is the full model saved via :func:`torch.save`, and can thus be loaded via
         :func:`torch.load`, cf. `torch's serialization documentation
         <https://pytorch.org/docs/stable/notes/serialization.html>`_. `training_triples` contains the training triples
-        factory, including label-to-id mappings, if used. It has been saved via :meth:`TriplesFactory.to_path_binary`,
-        and can re-loaded via :meth:`TriplesFactory.from_path_binary`.
+        factory, including label-to-id mappings, if used. It has been saved via
+        :meth:`pykeen.triples.CoreTriplesFactory.to_path_binary`, and can re-loaded via
+        :meth:`pykeen.triples.CoreTriplesFactory.from_path_binary`.
 
         :param directory:
             the directory path. It will be created including all parent directories if necessary
