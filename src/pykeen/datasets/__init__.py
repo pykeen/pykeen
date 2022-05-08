@@ -45,6 +45,7 @@ from .nations import Nations
 from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .pharmkg import PharmKG, PharmKG8k
+from .primekg import PrimeKG
 from .umls import UMLS
 from .utils import get_dataset
 from .wd50k import WD50KT
@@ -93,6 +94,7 @@ __all__ = [
     "Wikidata5M",
     "PharmKG8k",
     "PharmKG",
+    "PrimeKG",
 ]
 
 logger = logging.getLogger(__name__)
