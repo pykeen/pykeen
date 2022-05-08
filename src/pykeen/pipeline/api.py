@@ -192,7 +192,21 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union, cast
+from typing import (
+    Any,
+    ClassVar,
+    Collection,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import pandas as pd
 import scipy.stats
@@ -291,6 +305,12 @@ class PipelineResult(Result):
 
     #: The git hash of PyKEEN used to create these results
     git_hash: str = field(default_factory=get_git_hash)
+
+    # file names for storing results
+    RESULT_FILE_NAME: ClassVar[str] = "results.json"
+    METADATA_FILE_NAME: ClassVar[str] = "metadata.json"
+    MODEL_FILE_NAME: ClassVar[str] = "trained_model.pkl"
+    TRAINING_TRIPLES_FILE_NAME: ClassVar[str] = "training_triples"
 
     @property
     def title(self) -> Optional[str]:  # noqa:D401
@@ -398,17 +418,17 @@ class PipelineResult(Result):
         directory = normalize_path(path=directory, mkdir=True)
 
         # always save results as json file
-        with directory.joinpath("results.json").open("w") as file:
+        with directory.joinpath(self.RESULT_FILE_NAME).open("w") as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
 
         # save other components only if requested (which they are, by default)
         if save_metadata:
-            with directory.joinpath("metadata.json").open("w") as file:
+            with directory.joinpath(self.METADATA_FILE_NAME).open("w") as file:
                 json.dump(self.metadata, file, indent=2, sort_keys=True)
         if save_replicates:
-            self.save_model(directory.joinpath("trained_model.pkl"))
+            self.save_model(directory.joinpath(self.MODEL_FILE_NAME))
         if save_training:
-            self.training.to_path_binary(directory.joinpath("training_triples"))
+            self.training.to_path_binary(directory.joinpath(self.TRAINING_TRIPLES_FILE_NAME))
 
         logger.info(f"Saved to directory: {directory.as_uri()}")
 
