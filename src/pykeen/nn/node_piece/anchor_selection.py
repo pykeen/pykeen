@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 
-"""Anchor selection for NodePiece."""
+"""
+Anchor selection for NodePiece.
+
+An anchor selection method selects a given number of entities from the KG which serve as *anchors* to describe other
+entities. Most of these methods rely on some form of
+`(graph) centrality measure <https://en.wikipedia.org/wiki/Centrality>`_ to select central entities.
+"""
 
 import logging
 from abc import ABC, abstractmethod
@@ -144,6 +150,7 @@ class SingleSelection(AnchorSelection, ABC):
 class DegreeAnchorSelection(SingleSelection):
     """Select entities according to their (undirected) degree."""
 
+    # docstr-coverage: inherited
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         unique, counts = numpy.unique(edge_index, return_counts=True)
         # sort by decreasing degree
@@ -152,48 +159,39 @@ class DegreeAnchorSelection(SingleSelection):
 
 
 class PageRankAnchorSelection(SingleSelection):
-    """Select entities according to their page rank."""
+    """
+    Select entities according to their page rank.
+
+    .. seealso::
+        http://web.stanford.edu/class/cs224w/slides/04-pagerank.pdf
+    """
 
     def __init__(
         self,
         num_anchors: int = 32,
-        max_iter: int = 1_000,
-        alpha: float = 0.05,
-        epsilon: float = 1.0e-04,
+        **kwargs,
     ) -> None:
         """
         Initialize the selection strategy.
 
         :param num_anchors:
             the number of anchors to select
-        :param max_iter:
-            the maximum number of power iterations
-        :param alpha:
-            the smoothing value / teleport probability
-        :param epsilon:
-            a constant to check for convergence
+        :param kwargs:
+            additional keyword-based parameters passed to :func:`page_rank`.
         """
         super().__init__(num_anchors=num_anchors)
-        self.max_iter = max_iter
-        self.alpha = alpha
-        self.epsilon = epsilon
+        self.kwargs = kwargs
 
+    # docstr-coverage: inherited
     def extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().extra_repr()
-        yield f"max_iter={self.max_iter}"
-        yield f"alpha={self.alpha}"
-        yield f"epsilon={self.epsilon}"
+        for key, value in self.kwargs.items():
+            yield f"{key}={value}"
 
+    # docstr-coverage: inherited
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # sort by decreasing page rank
-        return numpy.argsort(
-            page_rank(
-                edge_index=edge_index,
-                max_iter=self.max_iter,
-                alpha=self.alpha,
-                epsilon=self.epsilon,
-            ),
-        )[::-1]
+        return numpy.argsort(page_rank(edge_index=edge_index, **self.kwargs))[::-1]
 
 
 class RandomAnchorSelection(SingleSelection):
@@ -215,6 +213,7 @@ class RandomAnchorSelection(SingleSelection):
         super().__init__(num_anchors=num_anchors)
         self.generator: numpy.random.Generator = numpy.random.default_rng(random_seed)
 
+    # docstr-coverage: inherited
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         return self.generator.permutation(edge_index.max())
 
@@ -263,10 +262,12 @@ class MixtureAnchorSelection(AnchorSelection):
                 logger.warning(f"{selection} had wrong number of anchors. Setting to {num}")
                 selection.num_anchors = num
 
+    # docstr-coverage: inherited
     def extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().extra_repr()
         yield f"selections={self.selections}"
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         edge_index: numpy.ndarray,

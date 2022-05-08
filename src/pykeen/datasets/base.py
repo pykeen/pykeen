@@ -27,7 +27,7 @@ from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
-from ..utils import normalize_string
+from ..utils import normalize_path, normalize_string
 
 __all__ = [
     # Base classes
@@ -175,7 +175,7 @@ class Dataset:
 
     def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
 
     def _extra_repr(self) -> Iterable[str]:
         """Yield extra entries for the instance's string representation."""
@@ -314,6 +314,7 @@ class EagerDataset(Dataset):
         )
         self.metadata = metadata
 
+    # docstr-coverage: inherited
     def _extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super()._extra_repr()
         yield f"metadata={self.metadata}"
@@ -379,17 +380,14 @@ class LazyDataset(Dataset):
             :class:`pykeen.datasets.base.Dataset`.
         :returns: A path object for the calculated cache root directory
         """
-        if cache_root is None:
-            cache_root = PYKEEN_DATASETS
-        cache_root = pathlib.Path(cache_root).resolve()
-        cache_root = self._extend_cache_root(cache_root=cache_root)
-        cache_root.mkdir(parents=True, exist_ok=True)
+        cache_root = normalize_path(cache_root, *self._cache_sub_directories(), mkdir=True, default=PYKEEN_DATASETS)
         logger.debug("using cache root at %s", cache_root.as_uri())
         return cache_root
 
-    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:
-        """Get appropriate cache sub-directory."""
-        return cache_root.joinpath(self.__class__.__name__.lower())
+    def _cache_sub_directories(self) -> Iterable[str]:
+        """Iterate over appropriate cache sub-directory."""
+        # TODO: use class-resolver normalize?
+        yield self.__class__.__name__.lower()
 
 
 class PathDataset(LazyDataset):
@@ -585,6 +583,7 @@ class RemoteDataset(PathDataset):
         res.raise_for_status()
         return BytesIO(res.content)
 
+    # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
         all_unpacked = all(path.is_file() for path in self._get_paths())
 
@@ -599,6 +598,7 @@ class RemoteDataset(PathDataset):
 class TarFileRemoteDataset(RemoteDataset):
     """A remote dataset stored as a tar file."""
 
+    # docstr-coverage: inherited
     def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
         with tarfile.open(fileobj=archive_file) as tf:
             tf.extractall(path=self.cache_root)
@@ -659,6 +659,7 @@ class PackedZipRemoteDataset(LazyDataset):
             self._load()
             self._load_validation()
 
+    # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
         self._training = self._load_helper(self.relative_training_path)
         self._testing = self._load_helper(

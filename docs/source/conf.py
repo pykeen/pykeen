@@ -52,7 +52,7 @@ copyright = f"2019-{date.today().year}, PyKEEN Project Team"
 author = "PyKEEN Project Team"
 
 # The full version, including alpha/beta/rc tags.
-release = "1.8.1-dev"
+release = "1.8.2-dev"
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -255,6 +255,7 @@ intersphinx_mapping = {
     "https://docs.python.org/3/": None,
     "torch": ("https://pytorch.org/docs/stable", None),
     "torchvision": ("https://pytorch.org/vision/stable", None),
+    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest/", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "optuna": ("https://optuna.readthedocs.io/en/latest", None),
     "pybel": ("https://pybel.readthedocs.io/en/latest/", None),

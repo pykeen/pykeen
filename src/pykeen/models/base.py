@@ -731,6 +731,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self) -> torch.FloatTensor:  # noqa: D102
         return self.regularizer.term
 
@@ -783,11 +784,6 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return self.entity_embeddings.embedding_dim
 
     @property
-    def relation_dim(self) -> int:  # noqa:D401
-        """The relation embedding dimension."""
-        return self.relation_embeddings.embedding_dim
-
-    @property
     def entity_representations(self) -> Sequence[Representation]:  # noqa:D401
         """The entity representations.
 
@@ -803,10 +799,12 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         """
         return [self.relation_embeddings]
 
+    # docstr-coverage: inherited
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
         self.relation_embeddings.reset_parameters()
 
+    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         # make sure to call this first, to reset regularizer state!
         super().post_parameter_update()

@@ -41,6 +41,7 @@ from .metrics.utils import Metric
 from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
 from .models.cli import build_cli_from_cls
 from .nn.modules import LiteralInteraction, interaction_resolver
+from .nn.node_piece.cli import tokenize
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver
@@ -597,7 +598,7 @@ def readme(check: bool):
             sys.exit(-1)
 
     with open(readme_path, "w") as file:
-        print(new_readme, file=file)  # noqa:T001
+        print(new_readme, file=file)  # noqa:T201
 
 
 def get_readme() -> str:
@@ -661,6 +662,9 @@ for cls in model_resolver.lookup_dict.values():
 # Add HPO command
 main.add_command(optimize)
 main.add_command(experiments)
+
+# Add NodePiece tokenization command
+main.add_command(tokenize)
 
 if __name__ == "__main__":
     main()
