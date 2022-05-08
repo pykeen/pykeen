@@ -20,6 +20,7 @@ PyKEEN
    tutorial/representations
    tutorial/node_piece
    tutorial/inductive_lp
+   contrib/lightning
 
 .. toctree::
    :caption: Bring Your Own
