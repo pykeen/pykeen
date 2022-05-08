@@ -46,7 +46,6 @@ __all__ = [
 class LitLCWAModule(pytorch_lightning.LightningModule):
     """A PyTorch Lightning module for training a model with LCWA training loop.
 
-
     .. seealso:: https://github.com/pykeen/pykeen/pull/905
     """
 
