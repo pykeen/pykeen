@@ -11,7 +11,7 @@ import numpy as np
 
 from .base import PathDataset
 from ..triples import TriplesFactory
-from ..utils import random_non_negative_int
+from ..utils import normalize_path, random_non_negative_int
 
 LABELS = ["train", "test", "valid"]
 
@@ -34,12 +34,10 @@ def main(
     seed: int,
 ):
     """Make a dataset from the given triples."""
-    directory = directory.resolve()
-    directory.mkdir(exist_ok=True, parents=True)
+    directory = normalize_path(directory, mkdir=True)
 
     # Normalize path
-    path = path.expanduser().resolve()
-
+    path = normalize_path(path)
     triples_factory = TriplesFactory.from_path(path=path)
     ratios = test_ratios if no_validation else validation_ratios
 

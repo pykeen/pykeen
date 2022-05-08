@@ -112,6 +112,14 @@ class TripleCoverageError(RuntimeError):
     """An exception thrown when not all entities/relations are covered by triples."""
 
     def __init__(self, arr, name: str = "ids"):
+        """
+        Initialize the error.
+
+        :param arr: shape: (num_indices,)
+            the array of covering triple IDs
+        :param name:
+            the name to use for creating the error message
+        """
         r = sorted((arr < 0).nonzero(as_tuple=False))
         super().__init__(
             f"Could not cover the following {name} from the provided triples: {r}. One possible reason is that you are"
@@ -263,6 +271,7 @@ class RandomizedCleaner(Cleaner):
     3. Continue until ``move_id_mask`` has no true bits
     """
 
+    # docstr-coverage: inherited
     def cleanup_pair(
         self,
         reference: MappedTriples,
@@ -292,6 +301,7 @@ class RandomizedCleaner(Cleaner):
 class DeterministicCleaner(Cleaner):
     """Cleanup a triples array (testing) with respect to another (training)."""
 
+    # docstr-coverage: inherited
     def cleanup_pair(
         self,
         reference: MappedTriples,
@@ -304,7 +314,7 @@ class DeterministicCleaner(Cleaner):
         return reference, other
 
 
-cleaner_resolver = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+cleaner_resolver: ClassResolver[Cleaner] = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
 
 
 class Splitter:
@@ -398,6 +408,7 @@ class CleanupSplitter(Splitter):
         """
         self.cleaner = cleaner_resolver.make(cleaner)
 
+    # docstr-coverage: inherited
     def split_absolute_size(
         self,
         mapped_triples: MappedTriples,
@@ -419,6 +430,7 @@ class CleanupSplitter(Splitter):
 class CoverageSplitter(Splitter):
     """This splitter greedily selects training triples such that each entity is covered and then splits the rest."""
 
+    # docstr-coverage: inherited
     def split_absolute_size(
         self,
         mapped_triples: MappedTriples,
@@ -439,7 +451,7 @@ class CoverageSplitter(Splitter):
         return [torch.cat([train_seed, train], dim=0), *rest]
 
 
-splitter_resolver = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
+splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
 
 
 def split(

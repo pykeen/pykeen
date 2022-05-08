@@ -45,7 +45,7 @@ class InductiveFB15k237(UnpackedRemoteDisjointInductiveDataset):
     """The inductive FB15k-237 dataset in 4 versions.
 
     ---
-    name: Inductive_FB15k237
+    name: FB15k-237
     citation:
         author: Teru
         year: 2020
@@ -113,7 +113,7 @@ class InductiveWN18RR(UnpackedRemoteDisjointInductiveDataset):
     """The inductive WN18RR dataset in 4 versions.
 
     ---
-    name: Inductive_WN18RR
+    name: WordNet-18 (RR)
     citation:
         author: Teru
         year: 2020
@@ -181,7 +181,7 @@ class InductiveNELL(UnpackedRemoteDisjointInductiveDataset):
     """The inductive NELL dataset in 4 versions.
 
     ---
-    name: Inductive_NELL
+    name: NELL
     citation:
         author: Teru
         year: 2020

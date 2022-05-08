@@ -16,7 +16,6 @@ import pytest
 import torch
 
 from pykeen.utils import (
-    broadcast_cat,
     calculate_broadcasted_elementwise_result_shape,
     clamp_norm,
     combine_complex,
@@ -26,6 +25,7 @@ from pykeen.utils import (
     flatten_dictionary,
     get_optimal_sequence,
     get_until_first_blank,
+    logcumsumexp,
     project_entity,
     set_random_seed,
     split_complex,
@@ -333,15 +333,10 @@ class TestUtils(unittest.TestCase):
             # compare result to sequential addition
             assert torch.allclose(result, functools.reduce(operator.mul, tensors[1:], tensors[0]))
 
-    def test_broadcast_cat(self):
-        """Test broadcast_cat."""
-        generator = set_random_seed(seed=42)[1]
-        for shapes in _generate_shapes(generator=generator):
-            tensors = [torch.rand(*shape) for shape in shapes]
-
-            for dim in range(len(tensors[0].shape)):
-                result = broadcast_cat(tensors, dim=dim)
-                # check result shape
-                assert result.shape == tuple(
-                    sum(dims) if i == dim else max(dims) for i, dims in enumerate(zip(*shapes))
-                )
+    def test_logcumsumexp(self):
+        """Verify that our numpy implementation gives the same results as the torch variant."""
+        generator = numpy.random.default_rng(seed=42)
+        a = generator.random(size=(21,))
+        r1 = logcumsumexp(a)
+        r2 = torch.logcumsumexp(torch.as_tensor(a), dim=0).numpy()
+        numpy.testing.assert_allclose(r1, r2)

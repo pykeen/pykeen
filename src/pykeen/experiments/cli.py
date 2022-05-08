@@ -8,14 +8,15 @@ import pathlib
 import shutil
 import sys
 import time
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 from uuid import uuid4
 
 import click
 import tabulate
 from more_click import verbose_option
+from tqdm.auto import tqdm
 
-from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration
+from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_path
 
 __all__ = [
     "experiments",
@@ -72,13 +73,7 @@ def experiments():
     """Run landmark experiments."""
 
 
-@experiments.command(
-    epilog="Available experiments:\n\n\b\n"
-    + tabulate.tabulate(
-        sorted(path.stem.split("_") for ext in CONFIGURATION_FILE_FORMATS for path in HERE.rglob(f"*{ext}")),
-        headers=("reference", "model", "dataset"),
-    ),
-)
+@experiments.command()
 @click.argument("model")
 @click.argument("reference")
 @click.argument("dataset")
@@ -178,8 +173,7 @@ def _help_reproduce(
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
-    if isinstance(path, str):
-        path = pathlib.Path(path).resolve()
+    path = normalize_path(path)
 
     if not path.is_file():
         click.secho(f"Could not find configuration at {path}", fg="red")
@@ -188,15 +182,10 @@ def _help_reproduce(
 
     # Create directory in which all experimental artifacts are saved
     datetime = time.strftime("%Y-%m-%d-%H-%M-%S")
+    experiment_id = f"{datetime}_{uuid4()}"
     if file_name is not None:
-        experiment_id = f"{datetime}_{uuid4()}_{file_name}"
-    else:
-        experiment_id = f"{datetime}_{uuid4()}"
-
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
-    output_directory = directory.joinpath(experiment_id)
-    output_directory.mkdir(exist_ok=True, parents=True)
+        experiment_id += f"_{file_name}"
+    output_directory = normalize_path(directory, experiment_id, mkdir=True)
 
     extra_kwargs = {} if extra_config is None else load_configuration(path=extra_config)
 
@@ -258,6 +247,43 @@ def ablation(
         move_to_cpu=move_to_cpu,
         discard_replicates=discard_replicates,
     )
+
+
+@experiments.command()
+def validate():
+    """Validate configurations."""
+    from .validate import get_configuration_errors, iterate_config_paths
+
+    has_error = False
+    for _directory_name, _config_name, path in iterate_config_paths():
+        path = path.resolve()
+        errors = get_configuration_errors(path=path)
+        if errors:
+            click.secho(f"Errors in {path.as_uri()}")
+        for error in errors:
+            click.secho(error, err=True, color=True)
+            has_error = True
+    exit(-1 if has_error else 0)
+
+
+def _iter_configurations() -> Iterable[pathlib.Path]:
+    """Iterate over configuration paths."""
+    for ext in CONFIGURATION_FILE_FORMATS:
+        yield from HERE.rglob(f"*{ext}")
+
+
+@experiments.command()
+def list():
+    """List experiment configurations."""
+    data = set()
+    for path in tqdm(_iter_configurations(), unit="configuration", unit_scale=True, leave=False):
+        # clip for node piece configurations
+        reference, model, dataset = path.stem.split("_")[:3]
+        # "pykeen experiments reproduce" expects "model reference dataset"
+        data.add((model, reference, dataset))
+    click.secho(f"There are {len(data)} available experiments. Run via\n")
+    click.secho("\tpykeen experiments reproduce <MODEL> <REFERENCE> <DATASET>\n")
+    click.echo(tabulate.tabulate(sorted(data), headers=("model", "reference", "dataset")))
 
 
 if __name__ == "__main__":

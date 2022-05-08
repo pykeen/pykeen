@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Collection, Mapping, NamedTuple, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Callable, Collection, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -50,6 +50,11 @@ __all__ = [
     "TRAINING",
     "TESTING",
     "VALIDATION",
+    # entity alignment sides
+    "EASide",
+    "EA_SIDE_LEFT",
+    "EA_SIDE_RIGHT",
+    "EA_SIDES",
 ]
 
 X = TypeVar("X")
@@ -141,17 +146,14 @@ RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
     "average": RANK_REALISTIC,
 }
 
-RankTypeExpectedRealistic = Literal["expected_realistic"]
-RANK_EXPECTED_REALISTIC: RankTypeExpectedRealistic = "expected_realistic"
-ExtendedRankType = Union[RankType, RankTypeExpectedRealistic]
-
-EXPECTED_RANKS: Mapping[RankType, Optional[RankTypeExpectedRealistic]] = {
-    RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
-    RANK_OPTIMISTIC: None,  # TODO - research problem
-    RANK_PESSIMISTIC: None,  # TODO - research problem
-}
-
 TargetBoth = Literal["both"]
 SIDE_BOTH: TargetBoth = "both"
 ExtendedTarget = Union[Target, TargetBoth]
 SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
+SIDE_MAPPING = {LABEL_HEAD: [LABEL_HEAD], LABEL_TAIL: [LABEL_TAIL], SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL]}
+
+# entity alignment
+EASide = Literal["left", "right"]
+EA_SIDE_LEFT: EASide = "left"
+EA_SIDE_RIGHT: EASide = "right"
+EA_SIDES: Tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)

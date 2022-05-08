@@ -9,7 +9,6 @@ from torch import FloatTensor, nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import CrossEInteraction
 from ...typing import Hint, Initializer
@@ -70,21 +69,21 @@ class CrossE(ERModel[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor])
                 combination_dropout=combination_dropout,
                 embedding_dim=embedding_dim,
             ),
-            entity_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representations_kwargs=[
+                dict(
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                 ),
             ],
-            relation_representations=[
+            relation_representations_kwargs=[
                 # Regular relation embeddings
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                 ),
                 # The relation-specific interaction vector
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_interaction_initializer,
                 ),
             ],

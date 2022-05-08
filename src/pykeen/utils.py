@@ -12,6 +12,7 @@ import operator
 import os
 import pathlib
 import random
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
@@ -26,8 +27,11 @@ from typing import (
     Iterable,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
+    Set,
+    TextIO,
     Tuple,
     Type,
     TypeVar,
@@ -41,8 +45,8 @@ import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
 from class_resolver import normalize_string
+from docdata import get_docdata
 from torch import nn
-from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
@@ -50,9 +54,12 @@ from .version import get_git_hash
 
 __all__ = [
     "at_least_eps",
+    "broadcast_upgrade_to_sequences",
     "compose",
     "clamp_norm",
     "compact_mapping",
+    "create_relation_to_entity_set_mapping",
+    "ensure_complex",
     "ensure_torch_random_state",
     "format_relative_comparison",
     "invert_mapping",
@@ -83,7 +90,6 @@ __all__ = [
     "get_json_bytes_io",
     "get_df_io",
     "ensure_ftp_directory",
-    "broadcast_cat",
     "get_batchnorm_modules",
     "get_dropout_modules",
     "calculate_broadcasted_elementwise_result_shape",
@@ -107,6 +113,11 @@ __all__ = [
     "timer",
     "get_devices",
     "get_preferred_device",
+    "triple_tensor_to_set",
+    "is_triple_tensor_subset",
+    "logcumsumexp",
+    "get_connected_components",
+    "normalize_path",
 ]
 
 logger = logging.getLogger(__name__)
@@ -380,8 +391,8 @@ def split_complex(
     x: torch.FloatTensor,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """Split a complex tensor into real and imaginary part."""
-    dim = x.shape[-1] // 2
-    return x[..., :dim], x[..., dim:]
+    x = torch.view_as_real(x)
+    return x[..., 0], x[..., 1]
 
 
 def view_complex(x: torch.FloatTensor) -> torch.Tensor:
@@ -400,7 +411,7 @@ def combine_complex(
     x_im: torch.FloatTensor,
 ) -> torch.FloatTensor:
     """Combine a complex tensor from real and imaginary part."""
-    return torch.cat([x_re, x_im], dim=-1)
+    return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
 def fix_dataclass_init_docs(cls: Type) -> Type:
@@ -500,63 +511,6 @@ def format_relative_comparison(
 ) -> str:
     """Format a relative comparison."""
     return f"{part}/{total} ({part / total:2.2%})"
-
-
-def broadcast_cat(
-    tensors: Sequence[torch.FloatTensor],
-    dim: int,
-) -> torch.FloatTensor:
-    """Concatenate tensors with broadcasting support.
-
-    :param tensors:
-        The tensors. Each of the tensors is require to have the same number of dimensions.
-        For each dimension not equal to dim, the extent has to match the other tensors', or be one.
-        If it is one, the tensor is repeated to match the extent of the othe tensors.
-    :param dim:
-        The concat dimension.
-
-    :return: A concatenated, broadcasted tensor.
-
-    :raises ValueError: if the x and y dimensions are not the same
-    :raises ValueError: if broadcasting is not possible
-    """
-    # input validation
-    if len(tensors) == 0:
-        raise ValueError("Must pass at least one tensor.")
-    if len({x.ndimension() for x in tensors}) != 1:
-        raise ValueError(
-            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
-        )
-
-    # base case
-    if len(tensors) == 1:
-        return tensors[0]
-
-    # normalize dim
-    if dim < 0:
-        dim = tensors[0].ndimension() + dim
-
-    # calculate repeats for each tensor
-    repeats = [[1 for _ in t.shape] for t in tensors]
-    for i, dims in enumerate(zip(*(t.shape for t in tensors))):
-        # dimensions along concatenation axis do not need to match
-        if i == dim:
-            continue
-
-        # get desired extent along dimension
-        d_max = max(dims)
-        if not {1, d_max}.issuperset(dims):
-            raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
-
-        for j, td in enumerate(dims):
-            if td != d_max:
-                repeats[j][i] = d_max
-
-    # repeat tensors along axes if necessary
-    tensors = [t.repeat(*r) for t, r in zip(tensors, repeats)]
-
-    # concatenate
-    return torch.cat(tensors, dim=dim)
 
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
@@ -713,11 +667,6 @@ def negative_norm(
         assert not isinstance(p, str)
         return -(x.abs() ** p).sum(dim=-1)
 
-    if torch.is_complex(x):
-        assert not isinstance(p, str)
-        # workaround for complex numbers: manually compute norm
-        return -(x.abs() ** p).sum(dim=-1) ** (1 / p)
-
     return -x.norm(p=p, dim=-1)
 
 
@@ -873,6 +822,38 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     ('t', 'e', 's', 't')
     """
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
+
+
+def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    """Apply upgrade_to_sequence to each input, and afterwards repeat singletons to match the maximum length.
+
+    :param xs: length: m
+        the inputs.
+
+    :return:
+        a sequence of length m, where each element is a sequence and all elements have the same length.
+
+    :raises ValueError:
+        if there is a non-singleton sequence input with length different from the maximum sequence length.
+
+    >>> broadcast_upgrade_to_sequences(1)
+    ((1,),)
+    >>> broadcast_upgrade_to_sequences(1, 2)
+    ((1,), (2,))
+    >>> broadcast_upgrade_to_sequences(1, (2, 3))
+    ((1, 1), (2, 3))
+    """
+    # upgrade to sequence
+    xs_ = [upgrade_to_sequence(x) for x in xs]
+    # broadcast
+    max_len = max(map(len, xs_))
+    for i in range(len(xs_)):
+        x = xs_[i]
+        if len(x) < max_len:
+            if len(x) != 1:
+                raise ValueError(f"Length mismatch: maximum length: {max_len}, but encountered length {len(x)}, too.")
+            xs_[i] = tuple(list(x) * max_len)
+    return tuple(xs_)
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
@@ -1069,29 +1050,23 @@ def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize:
 
 
 def complex_normalize(x: torch.Tensor) -> torch.Tensor:
-    r"""Normalize a vector of complex numbers such that each element is of unit-length.
+    r"""Normalize a vector of complex numbers such that each *element* is of unit-length.
 
-    :param x: A tensor formulating complex numbers
-    :returns: A normalized version accoring to the following definition.
-
-    The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
+    Let $x \in \mathbb{C}^d$ denote a complex vector. Then, the operation computes
 
     .. math::
+        x_i' = \frac{x_i}{|x_i|}
 
-        |a + ib| = \sqrt{a^2 + b^2}
+    where $|x_i| = \sqrt{Re(x_i)^2 + Im(x_i)^2}$ is the
+    `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_
 
-    $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
+    :param x:
+        A tensor formulating complex numbers
 
-    .. math::
-        \|x\|^2 = \sum_{i=1}^d |x_i|^2
-                 = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
-                 = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
-                 = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
-                 = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
+    :returns:
+        An elementwise noramlized vector.
     """
-    y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
-    y = functional.normalize(y, p=2, dim=-1)
-    return y.view(*x.shape)
+    return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
 
 
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
@@ -1302,6 +1277,204 @@ def timer(
         return wrapped
 
     return wrapper
+
+
+def getattr_or_docdata(cls, key: str) -> str:
+    """Get the attr or data inside docdata."""
+    if hasattr(cls, key):
+        return getattr(cls, key)
+    getter_key = f"get_{key}"
+    if hasattr(cls, getter_key):
+        return getattr(cls, getter_key)()
+    docdata = get_docdata(cls)
+    if key in docdata:
+        return docdata[key]
+    raise KeyError
+
+
+def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
+    """Convert a tensor of triples to a set of int-tuples."""
+    return set(map(tuple, tensor.tolist()))
+
+
+def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+    """Check whether one tensor of triples is a subset of another one."""
+    return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
+
+
+def create_relation_to_entity_set_mapping(
+    triples: Iterable[Tuple[int, int, int]],
+) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    """
+    Create mappings from relation IDs to the set of their head / tail entities.
+
+    :param triples:
+        The triples.
+
+    :return:
+        A pair of dictionaries, each mapping relation IDs to entity ID sets.
+    """
+    tails = defaultdict(set)
+    heads = defaultdict(set)
+    for h, r, t in triples:
+        heads[r].add(h)
+        tails[r].add(t)
+    return heads, tails
+
+
+camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def camel_to_snake(name: str) -> str:
+    """Convert camel-case to snake case."""
+    # cf. https://stackoverflow.com/a/1176023
+    return camel_to_snake_pattern.sub("_", name).lower()
+
+
+def make_ones_like(prefix: Sequence) -> Sequence[int]:
+    """Create a list of ones of same length as the input sequence."""
+    return [1 for _ in prefix]
+
+
+def logcumsumexp(a: np.ndarray) -> np.ndarray:
+    """Compute ``log(cumsum(exp(a)))``.
+
+    :param a: shape: s
+        the array
+
+    :return: shape s
+        the log-cumsum-exp of the array
+
+    .. seealso ::
+        :func:`scipy.special.logsumexp` and :func:`torch.logcumsumexp`
+    """
+    a_max = np.amax(a)
+    tmp = np.exp(a - a_max)
+    s = np.cumsum(tmp)
+    out = np.log(s)
+    out += a_max
+    return out
+
+
+def find(x: X, parent: MutableMapping[X, X]) -> X:
+    """Find step of union-find data structure with path compression."""
+    # check validity
+    if x not in parent:
+        raise ValueError(f"Unknown element: {x}.")
+    # path compression
+    while parent[x] != x:
+        x, parent[x] = parent[x], parent[parent[x]]
+    return x
+
+
+def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
+    """
+    Calculate the connected components for a graph given as edge list.
+
+    The implementation uses a `union-find <https://en.wikipedia.org/wiki/Disjoint-set_data_structure>`_ data structure
+    with path compression.
+
+    :param pairs:
+        the edge list, i.e., pairs of node ids.
+
+    :return:
+        a collection of connected components, i.e., a collection of disjoint collections of node ids.
+    """
+    parent: Dict[X, X] = dict()
+    for x, y in pairs:
+        parent.setdefault(x, x)
+        parent.setdefault(y, y)
+        # get representatives
+        x = find(x=x, parent=parent)
+        y = find(x=y, parent=parent)
+        # already merged
+        if x == y:
+            continue
+        # make x the smaller one
+        if y < x:  # type: ignore
+            x, y = y, x
+        # merge
+        parent[y] = x
+    # extract partitions
+    result = defaultdict(list)
+    for k, v in parent.items():
+        result[v].append(k)
+    return list(result.values())
+
+
+PathType = Union[str, pathlib.Path, TextIO]
+
+
+def normalize_path(
+    path: Optional[PathType],
+    *other: Union[str, pathlib.Path],
+    mkdir: bool = False,
+    is_file: bool = False,
+    default: Optional[PathType] = None,
+) -> pathlib.Path:
+    """
+    Normalize a path.
+
+    :param path:
+        the path in either of the valid forms.
+    :param other:
+        additional parts to join to the path
+    :param mkdir:
+        whether to ensure that the path refers to an existing directory by creating it if necessary
+    :param is_file:
+        whether the path is intended to be a file - only relevant for creating directories
+    :param default:
+        the default to use if path is None
+
+    :raises TypeError:
+        if `path` is of unsuitable type
+    :raises ValueError:
+        if `path` and `default` are both `None`
+
+    :return:
+        the absolute and resolved path
+    """
+    if path is None:
+        if default is None:
+            raise ValueError("If no default is provided, path cannot be None.")
+        path = default
+    if isinstance(path, TextIO):
+        path = path.name
+    if isinstance(path, str):
+        path = pathlib.Path(path)
+    if not isinstance(path, pathlib.Path):
+        raise TypeError(f"path is invalid type: {type(path)}")
+    if other:
+        path = path.joinpath(*other)
+    # resolve path to make sure it is an absolute path
+    path = path.expanduser().resolve()
+    # ensure directory exists
+    if mkdir:
+        directory = path
+        if is_file:
+            directory = path.parent
+        directory.mkdir(exist_ok=True, parents=True)
+    return path
+
+
+def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
+    """
+    Ensure that all tensors are of complex dtype.
+
+    Reshape and convert if necessary.
+
+    :param xs:
+        the tensors
+
+    :yields: complex tensors.
+    """
+    for x in xs:
+        if x.is_complex():
+            yield x
+            continue
+        if x.shape[-1] != 2:
+            x = x.view(*x.shape[:-1], -1, 2)
+        yield torch.view_as_complex(x)
 
 
 if __name__ == "__main__":

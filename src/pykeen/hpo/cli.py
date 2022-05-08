@@ -34,6 +34,8 @@ def optimize(
     """Optimize hyper-parameters for a KGE model.
 
     For example, use pykeen optimize TransE Nations --loss MarginRankingLoss
+
+    # noqa: DAR101
     """
     if n_trials is None and timeout is None:
         click.secho("Must specify either --n-trials or --timeout", fg="red")

@@ -59,6 +59,13 @@ numeric_triples = np.array(
     dtype=str,
 )
 
+# See https://github.com/pykeen/pykeen/pull/883
+triples_with_nans = [
+    ["netherlands", "militaryalliance", "uk"],
+    ["egypt", "intergovorgs3", "usa"],
+    ["jordan", "relbooktranslations", "nan"],
+]
+
 
 class TestTriplesFactory(unittest.TestCase):
     """Class for testing triples factories."""
@@ -177,11 +184,11 @@ class TestTriplesFactory(unittest.TestCase):
 
     def test_new_with_restriction(self):
         """Test new_with_restriction()."""
-        relation_restriction = {
+        relation_restrictions = {
             "economicaid",
             "dependent",
         }
-        entity_restriction = {
+        entity_restrictions = {
             "brazil",
             "burma",
             "china",
@@ -195,8 +202,8 @@ class TestTriplesFactory(unittest.TestCase):
                 (entity_restriction, invert_entity_selection),
                 (relation_restriction, invert_relation_selection),
             ) in itt.product(
-                ((None, None), (entity_restriction, False), (entity_restriction, True)),
-                ((None, None), (relation_restriction, False), (relation_restriction, True)),
+                ((None, None), (entity_restrictions, False), (entity_restrictions, True)),
+                ((None, None), (relation_restrictions, False), (relation_restrictions, True)),
             ):
                 with self.subTest(
                     entity_restriction=entity_restriction,
@@ -344,43 +351,6 @@ class TestSplit(unittest.TestCase):
 class TestLiterals(unittest.TestCase):
     """Class for testing utils for processing numeric literals.tsv."""
 
-    def test_create_lcwa_instances(self):
-        """Test creating LCWA instances."""
-        factory = TriplesNumericLiteralsFactory(triples=triples, numeric_triples=numeric_triples)
-        instances = factory.create_lcwa_instances()
-
-        id_peter = factory.entity_to_id["peter"]
-        id_age = instances.literals_to_id["/lit/hasAge"]
-        id_height = instances.literals_to_id["/lit/hasHeight"]
-        id_num_children = instances.literals_to_id["/lit/hasChildren"]
-
-        self.assertEqual(instances.numeric_literals[id_peter, id_age], 30)
-        self.assertEqual(instances.numeric_literals[id_peter, id_height], 185)
-        self.assertEqual(instances.numeric_literals[id_peter, id_num_children], 2)
-
-        id_susan = factory.entity_to_id["susan"]
-        id_age = instances.literals_to_id["/lit/hasAge"]
-        id_height = instances.literals_to_id["/lit/hasHeight"]
-        id_num_children = instances.literals_to_id["/lit/hasChildren"]
-
-        self.assertEqual(instances.numeric_literals[id_susan, id_age], 28)
-        self.assertEqual(instances.numeric_literals[id_susan, id_height], 170)
-        self.assertEqual(instances.numeric_literals[id_susan, id_num_children], 0)
-
-        id_chocolate_cake = factory.entity_to_id["chocolate_cake"]
-        id_age = instances.literals_to_id["/lit/hasAge"]
-        id_height = instances.literals_to_id["/lit/hasHeight"]
-        id_num_children = instances.literals_to_id["/lit/hasChildren"]
-
-        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_age], 0)
-        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_height], 0)
-        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_num_children], 0)
-
-        # Check if multilabels are working correctly
-        self.assertTrue((instance_mapped_triples == instances.pairs).all())
-        for i, exp in enumerate(instance_labels):
-            self.assertTrue((exp == instances.compressed[i].nonzero()[-1]).all())
-
     def test_triples(self):
         """Test properties of the triples factory."""
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
@@ -484,7 +454,7 @@ class TestLiterals(unittest.TestCase):
             dtype=str,
         )
 
-        triples_numeric_literal_factory = TriplesNumericLiteralsFactory(
+        triples_numeric_literal_factory = TriplesNumericLiteralsFactory.from_labeled_triples(
             triples=triples_larger,
             numeric_triples=numeric_triples,
         )
@@ -516,6 +486,20 @@ class TestUtils(unittest.TestCase):
             ],
             _triples.tolist(),
         )
+
+    def test_load_triples_with_nans(self):
+        """Test loading triples that have a ``nan`` string.
+
+        .. seealso:: https://github.com/pykeen/pykeen/pull/883
+        """
+        path = RESOURCES.joinpath("test_nans.tsv")
+        expected_triples = [
+            ["netherlands", "militaryalliance", "uk"],
+            ["egypt", "intergovorgs3", "usa"],
+            ["jordan", "relbooktranslations", "nan"],
+        ]
+        _triples = load_triples(path).tolist()
+        self.assertEqual(expected_triples, _triples)
 
     def test_labeled_binary(self):
         """Test binary i/o on labeled triples factory."""

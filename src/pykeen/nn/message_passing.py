@@ -4,21 +4,20 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Tuple, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
-from class_resolver import ClassResolver, Hint
+from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from .emb import EmbeddingSpecification, LowRankEmbeddingRepresentation, RepresentationModule
 from .init import uniform_norm_p1_
+from .representation import LowRankRepresentation, Representation
 from .weighting import EdgeWeighting, edge_weight_resolver
-from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    "RGCNRepresentations",
+    "RGCNRepresentation",
     "Decomposition",
     "BasesDecomposition",
     "BlockDecomposition",
@@ -176,6 +175,7 @@ class BasesDecomposition(Decomposition):
         :param memory_intense:
             Enable memory-intense forward pass which may be faster, in particular if the number of different relations
             is small.
+        :raises ValueError: If the ``num_bases`` is greater than ``num_relations``
         """
         super().__init__(
             input_dim=input_dim,
@@ -191,7 +191,7 @@ class BasesDecomposition(Decomposition):
         if num_bases > num_relations:
             raise ValueError("The number of bases should not exceed the number of relations.")
 
-        self.relation_representations = LowRankEmbeddingRepresentation(
+        self.relation_representations = LowRankRepresentation(
             max_id=num_relations,
             shape=(self.input_dim, self.output_dim),
             weight_initializer=uniform_norm_p1_,
@@ -199,6 +199,7 @@ class BasesDecomposition(Decomposition):
         )
         self.memory_intense = memory_intense
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.relation_representations.reset_parameters()
 
@@ -280,6 +281,7 @@ class BasesDecomposition(Decomposition):
 
         return out
 
+    # docstr-coverage: inherited
     def forward(
         self,
         x: torch.FloatTensor,
@@ -334,6 +336,7 @@ class BlockDecomposition(Decomposition):
             The number of blocks to use. Has to be a divisor of input_dim.
         :param output_dim: >0
             The output dimension. If None is given, defaults to input_dim.
+        :raises NotImplementedError: If ``input_dim`` is not divisible by ``num_blocks``
         """
         super().__init__(
             input_dim=input_dim,
@@ -364,12 +367,14 @@ class BlockDecomposition(Decomposition):
         self.num_blocks = num_blocks
         self.block_size = block_size
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         block_size = self.blocks.shape[-1]
         # Xavier Glorot initialization of each block
         std = torch.sqrt(torch.as_tensor(2.0)) / (2 * block_size)
         nn.init.normal_(self.blocks, std=std)
 
+    # docstr-coverage: inherited
     def forward(
         self,
         x: torch.FloatTensor,
@@ -498,6 +503,7 @@ class RGCNLayer(nn.Module):
             activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
         self.activation = activation
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         if self.bias is not None:
             nn.init.zeros_(self.bias)
@@ -556,10 +562,12 @@ class RGCNLayer(nn.Module):
         return y
 
 
-decomposition_resolver = ClassResolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
+decomposition_resolver: ClassResolver[Decomposition] = ClassResolver.from_subclasses(
+    base=Decomposition, default=BasesDecomposition
+)
 
 
-class RGCNRepresentations(RepresentationModule):
+class RGCNRepresentation(Representation):
     r"""Entity representations enriched by R-GCN.
 
     The GCN employed by the entity encoder is adapted to include typed edges.
@@ -588,7 +596,10 @@ class RGCNRepresentations(RepresentationModule):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        embedding_specification: EmbeddingSpecification,
+        max_id: Optional[int] = None,
+        shape: Optional[Sequence[int]] = None,
+        entity_representations: HintOrType[Representation] = None,
+        entity_representations_kwargs: OptionalKwargs = None,
         num_layers: int = 2,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
@@ -598,15 +609,21 @@ class RGCNRepresentations(RepresentationModule):
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Hint[Regularizer] = None,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
     ):
         """Instantiate the R-GCN encoder.
 
         :param triples_factory:
             The triples factory holding the training triples used for message passing.
-        :param embedding_specification:
-            The base embedding specification.
+        :param max_id:
+            The maximum number of IDs. could either be None (the default), or match the triples factory's number of
+            entities.
+        :param shape:
+            the shape information. If None, will propagate the shape information of the base entity representations.
+        :param entity_representations:
+            the base entity representations (or a hint for them)
+        :param entity_representations_kwargs:
+            additional keyword-based parameters for the base entity representations
         :param num_layers:
             The number of layers.
         :param use_bias:
@@ -625,13 +642,22 @@ class RGCNRepresentations(RepresentationModule):
             The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
         :param decomposition_kwargs:
             Additional keyword based arguments passed to the decomposition upon instantiation.
-        :param regularizer:
-            A regularizer, which is applied to the selected embeddings in forward pass
-        :param regularizer_kwargs:
-            Additional keyword arguments passed to the regularizer
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+        :raises ValueError: If the triples factory creates inverse triples.
         """
-        base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
-        super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
+        if max_id:
+            assert max_id == triples_factory.num_entities
+
+        # has to be imported now to avoid cyclic imports
+        from . import representation_resolver
+
+        base_embeddings = representation_resolver.make(
+            entity_representations,
+            max_id=triples_factory.num_entities,
+            pos_kwargs=entity_representations_kwargs,
+        )
+        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
         self.entity_embeddings = base_embeddings
 
         if triples_factory.create_inverse_triples:
@@ -673,16 +699,14 @@ class RGCNRepresentations(RepresentationModule):
         # buffering of enriched representations
         self.enriched_embeddings = None
 
-        if regularizer is not None:
-            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
-        self.regularizer = regularizer
-
+    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
 
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 
@@ -692,7 +716,7 @@ class RGCNRepresentations(RepresentationModule):
             elif any(p.requires_grad for p in m.parameters()):
                 logger.warning("Layers %s has parameters, but no reset_parameters.", m)
 
-    def _real_forward(self) -> torch.FloatTensor:
+    def _real_forward_all(self) -> torch.FloatTensor:
         if self.enriched_embeddings is not None:
             return self.enriched_embeddings
 
@@ -737,14 +761,12 @@ class RGCNRepresentations(RepresentationModule):
 
         return x
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
-        x = self._real_forward()
+        x = self._real_forward_all()
         if indices is not None:
             x = x[indices]
-        if self.regularizer is not None:
-            self.regularizer.update(x)
         return x

@@ -10,7 +10,6 @@ from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import KG2EInteraction
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
@@ -96,33 +95,33 @@ class KG2E(ERModel):
             interaction_kwargs=dict(
                 similarity=dist_similarity,
             ),
-            entity_representations=[
+            entity_representations_kwargs=[
                 # mean
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     constrainer=entity_constrainer,
                     constrainer_kwargs=entity_constrainer_kwargs or self.constrainer_default_kwargs,
                 ),
                 # diagonal covariance
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     # Ensure positive definite covariances matrices and appropriate size by clamping
                     constrainer=torch.clamp,
                     constrainer_kwargs=dict(min=c_min, max=c_max),
                 ),
             ],
-            relation_representations=[
+            relation_representations_kwargs=[
                 # mean
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     constrainer=relation_constrainer,
                     constrainer_kwargs=relation_constrainer_kwargs or self.constrainer_default_kwargs,
                 ),
                 # diagonal covariance
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     # Ensure positive definite covariances matrices and appropriate size by clamping
                     constrainer=torch.clamp,
                     constrainer_kwargs=dict(min=c_min, max=c_max),

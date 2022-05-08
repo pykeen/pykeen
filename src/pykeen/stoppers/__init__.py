@@ -39,7 +39,7 @@ __all__ = [
     "stopper_resolver",
 ]
 
-stopper_resolver = ClassResolver.from_subclasses(
+stopper_resolver: ClassResolver[Stopper] = ClassResolver.from_subclasses(
     Stopper,
     default=NopStopper,
 )

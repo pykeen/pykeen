@@ -9,7 +9,6 @@ from class_resolver import OptionalKwargs
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import SimplEInteraction
 from ...regularizers import PowerSumRegularizer, Regularizer, regularizer_resolver
 from ...typing import Hint, Initializer
@@ -80,34 +79,53 @@ class SimplE(ERModel):
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension
+        :param clamp_score:
+            whether to clamp scores, cf. :meth:`SimplEInteraction.__init__`
+        :param entity_initializer:
+            the entity representation initializer
+        :param relation_initializer:
+            the relation representation initializer
+        :param regularizer:
+            the regularizer, defaults to :attr:`SimplE.regularizer_default`
+        :param regularizer_kwargs:
+            additional keyword-based parameters passed to the regularizer, defaults to
+            :attr:`SimplE.regularizer_default_kwargs`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         regularizer = regularizer_resolver.make_safe(regularizer, pos_kwargs=regularizer_kwargs)
         super().__init__(
             interaction=SimplEInteraction,
             interaction_kwargs=dict(clamp_score=clamp_score),
-            entity_representations=[
+            entity_representations_kwargs=[
                 # (head) entity
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     regularizer=regularizer,
                 ),
                 # tail entity
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=entity_initializer,
                     regularizer=regularizer,
                 ),
             ],
-            relation_representations=[
+            relation_representations_kwargs=[
                 # relations
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     regularizer=regularizer,
                 ),
                 # inverse relations
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     regularizer=regularizer,
                 ),

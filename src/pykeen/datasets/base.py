@@ -27,9 +27,10 @@ from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
-from ..utils import normalize_string
+from ..utils import normalize_path, normalize_string
 
 __all__ = [
+    # Base classes
     "Dataset",
     "EagerDataset",
     "LazyDataset",
@@ -43,6 +44,7 @@ __all__ = [
     "ZipSingleDataset",
     "TabbedDataset",
     "SingleTabbedDataset",
+    # Utilities
     "dataset_similarity",
 ]
 
@@ -68,7 +70,7 @@ def dataset_similarity(a: Dataset, b: Dataset, metric: Optional[str] = None) -> 
 
 
 class Dataset:
-    """Contains a lazy reference to a training, testing, and validation dataset."""
+    """The base dataset class."""
 
     #: A factory wrapping the training triples
     training: CoreTriplesFactory
@@ -82,6 +84,7 @@ class Dataset:
     metadata: Optional[Mapping[str, Any]] = None
 
     metadata_file_name: ClassVar[str] = "metadata.pth"
+    triples_factory_cls: ClassVar[Type[CoreTriplesFactory]] = TriplesFactory
 
     def __eq__(self, __o: object) -> bool:  # noqa: D105
         return (
@@ -127,10 +130,23 @@ class Dataset:
         """The number of relations."""
         return self.training.num_relations
 
+    @classmethod
+    def docdata(cls, *parts: str) -> Any:
+        """Get docdata for this class."""
+        rv = docdata.get_docdata(cls)
+        for part in parts:
+            rv = rv[part]
+        return rv
+
     @staticmethod
     def triples_sort_key(cls: Type[Dataset]) -> int:
         """Get the number of triples for sorting."""
-        return docdata.get_docdata(cls)["statistics"]["triples"]
+        return cls.docdata("statistics", "triples")
+
+    @classmethod
+    def triples_pair_sort_key(cls, pair: Tuple[str, Type[Dataset]]) -> int:
+        """Get the number of triples for sorting in an iterator context."""
+        return cls.triples_sort_key(pair[1])
 
     def _summary_rows(self):
         return [
@@ -159,7 +175,7 @@ class Dataset:
 
     def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
 
     def _extra_repr(self) -> Iterable[str]:
         """Yield extra entries for the instance's string representation."""
@@ -189,7 +205,7 @@ class Dataset:
         for key in ("training", "testing", "validation"):
             tf_path = path.joinpath(key)
             if tf_path.is_dir():
-                tfs[key] = TriplesFactory.from_path_binary(path=tf_path)
+                tfs[key] = cls.triples_factory_cls.from_path_binary(path=tf_path)
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
         metadata_path = path.joinpath(cls.metadata_file_name)
@@ -271,7 +287,7 @@ class Dataset:
 
 
 class EagerDataset(Dataset):
-    """A dataset that has already been loaded."""
+    """A dataset whose training, testing, and optional validation factories are pre-loaded."""
 
     def __init__(
         self,
@@ -298,13 +314,14 @@ class EagerDataset(Dataset):
         )
         self.metadata = metadata
 
+    # docstr-coverage: inherited
     def _extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super()._extra_repr()
         yield f"metadata={self.metadata}"
 
 
 class LazyDataset(Dataset):
-    """A dataset that has lazy loading."""
+    """A dataset whose training, testing, and optional validation factories are lazily loaded."""
 
     #: The actual instance of the training factory, which is exposed to the user through `training`
     _training: Optional[TriplesFactory] = None
@@ -363,17 +380,14 @@ class LazyDataset(Dataset):
             :class:`pykeen.datasets.base.Dataset`.
         :returns: A path object for the calculated cache root directory
         """
-        if cache_root is None:
-            cache_root = PYKEEN_DATASETS
-        cache_root = pathlib.Path(cache_root).resolve()
-        cache_root = self._extend_cache_root(cache_root=cache_root)
-        cache_root.mkdir(parents=True, exist_ok=True)
+        cache_root = normalize_path(cache_root, *self._cache_sub_directories(), mkdir=True, default=PYKEEN_DATASETS)
         logger.debug("using cache root at %s", cache_root.as_uri())
         return cache_root
 
-    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:
-        """Get appropriate cache sub-directory."""
-        return cache_root.joinpath(self.__class__.__name__.lower())
+    def _cache_sub_directories(self) -> Iterable[str]:
+        """Iterate over appropriate cache sub-directory."""
+        # TODO: use class-resolver normalize?
+        yield self.__class__.__name__.lower()
 
 
 class PathDataset(LazyDataset):
@@ -569,6 +583,7 @@ class RemoteDataset(PathDataset):
         res.raise_for_status()
         return BytesIO(res.content)
 
+    # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
         all_unpacked = all(path.is_file() for path in self._get_paths())
 
@@ -583,6 +598,7 @@ class RemoteDataset(PathDataset):
 class TarFileRemoteDataset(RemoteDataset):
     """A remote dataset stored as a tar file."""
 
+    # docstr-coverage: inherited
     def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
         with tarfile.open(fileobj=archive_file) as tf:
             tf.extractall(path=self.cache_root)
@@ -643,6 +659,7 @@ class PackedZipRemoteDataset(LazyDataset):
             self._load()
             self._load_validation()
 
+    # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
         self._training = self._load_helper(self.relative_training_path)
         self._testing = self._load_helper(

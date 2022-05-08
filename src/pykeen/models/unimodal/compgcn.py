@@ -8,8 +8,8 @@ import torch
 from class_resolver import Hint
 
 from ..nbase import ERModel
-from ...nn.emb import CombinedCompGCNRepresentations, EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, Interaction
+from ...nn.representation import CombinedCompGCNRepresentations
 from ...triples import CoreTriplesFactory
 from ...typing import RelationRepresentation
 
@@ -54,7 +54,8 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
             The embedding dimension to be used if ``embedding_specification`` is not given explicitly in
             ``encoder_kwargs``.
         :param encoder_kwargs:
-            Additional keyword arguments for the encoder, cf. :class:`pykeen.nn.emb.CombinedCompGCNRepresentations`.
+            Additional keyword arguments for the encoder,
+            cf. :class:`pykeen.nn.representation.CombinedCompGCNRepresentations`.
         :param interaction:
             The interaction function to use as decoder.
         :param interaction_kwargs:
@@ -63,7 +64,8 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
             Additional keyword based arguments passed to :class:`pykeen.models.ERModel`.
         """
         encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
-        encoder_kwargs.setdefault("embedding_specification", EmbeddingSpecification(embedding_dim=embedding_dim))
+        encoder_kwargs.setdefault("entity_representations_kwargs", dict(embedding_dim=embedding_dim))
+        encoder_kwargs.setdefault("relation_representations_kwargs", encoder_kwargs["entity_representations_kwargs"])
 
         # combined representation
         entity_representations, relation_representations = CombinedCompGCNRepresentations(

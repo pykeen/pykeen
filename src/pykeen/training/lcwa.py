@@ -7,9 +7,10 @@ from math import ceil
 from typing import Optional, Union
 
 import torch
+from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
-from ..triples import CoreTriplesFactory, Instances
+from ..triples import CoreTriplesFactory
 from ..triples.instances import LCWABatchType, LCWASampleType
 
 __all__ = [
@@ -74,13 +75,39 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         # of total entities from another inductive inference factory
         self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode=self.mode)
 
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_lcwa_instances(target=self.target)
+    # docstr-coverage: inherited
+    def _create_training_data_loader(
+        self,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        pin_memory: bool,
+        sampler: Optional[str],
+    ) -> DataLoader[LCWABatchType]:  # noqa: D102
+        if sampler:
+            raise NotImplementedError(
+                f"LCWA training does not support non-default batch sampling. Expected sampler=None, but got "
+                f"sampler='{sampler}'.",
+            )
+
+        dataset = triples_factory.create_lcwa_instances(target=self.target)
+        return DataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=batch_size,
+            drop_last=drop_last,
+            shuffle=True,
+            pin_memory=pin_memory,
+            collate_fn=dataset.get_collator(),
+        )
 
     @staticmethod
+    # docstr-coverage: inherited
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
         return batch[0].shape[0]
 
+    # docstr-coverage: inherited
     def _process_batch(
         self,
         batch: LCWABatchType,
@@ -108,11 +135,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             + self.model.collect_regularization_term()
         )
 
+    # docstr-coverage: inherited
     def _slice_size_search(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
@@ -129,7 +156,6 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 logger.debug(f"Trying slice size {slice_size} now.")
                 self._train(
                     triples_factory=triples_factory,
-                    training_instances=training_instances,
                     num_epochs=1,
                     batch_size=batch_size,
                     sub_batch_size=sub_batch_size,
