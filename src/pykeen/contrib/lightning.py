@@ -195,7 +195,16 @@ class LCWALitModule(LitModule):
         )
 
 
-lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
+# TODO: this does not seem to work
+# lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
+#     base=LitModule,
+#     default=SLCWALitModule,
+# )
+lit_module_resolver: ClassResolver[LitModule] = ClassResolver(
+    classes={
+        SLCWALitModule,
+        LCWALitModule,
+    },
     base=LitModule,
     default=SLCWALitModule,
 )
@@ -208,6 +217,7 @@ lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
 @model_resolver.get_option("-m", "--model", default="mure")
 @loss_resolver.get_option("-l", "--loss", default="bcewithlogits")
 @options.batch_size_option
+@click.option("-d", "--embedding-dim", type=int, default=128)
 @click.option("-b", "--batch-size", type=int, default=128)
 @click.option("-mp", "--mixed-precision", is_flag=True)
 def _main(
@@ -230,9 +240,14 @@ def _main(
         batch_size=batch_size,
     )
     trainer = pytorch_lightning.Trainer(
-        accelerator="auto",  # automatically choose accelerator
-        logger=False,  # defaults to TensorBoard; explicitly disabled here
-        precision=16 if mixed_precision else None,  # mixed precision training
+        # automatically choose accelerator
+        accelerator="auto",
+        # defaults to TensorBoard; explicitly disabled here
+        logger=False,
+        # disable checkpointing
+        enable_checkpointing=False,
+        # mixed precision training
+        precision=16 if mixed_precision else 32,
     )
     trainer.fit(model=lit)
 
