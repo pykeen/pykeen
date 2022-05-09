@@ -43,6 +43,7 @@ from pykeen.models.cli import options
 from pykeen.optimizers import optimizer_resolver
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from pykeen.triples.triples_factory import CoreTriplesFactory
+from pykeen.sampling import NegativeSampler
 
 __all__ = [
     "LitModule",
@@ -148,6 +149,17 @@ class LitModule(pytorch_lightning.LightningModule):
 class SLCWALitModule(LitModule):
     """A PyTorch Lightning module for training a model with sLCWA training loop."""
 
+    def __init__(
+        self,
+        *,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.negative_sampler = negative_sampler
+        self.negative_sampler_kwargs = negative_sampler_kwargs
+
     # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
         loss = SLCWATrainingLoop._process_batch_static(
@@ -168,9 +180,19 @@ class SLCWALitModule(LitModule):
         self, triples_factory: CoreTriplesFactory, shuffle: bool = False
     ) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
-            dataset=triples_factory.create_slcwa_instances(),
-            batch_size=self.batch_size,
-            shuffle=shuffle,
+            dataset=triples_factory.create_slcwa_instances(
+                batch_size=self.batch_size,
+                # TODO:
+                # shuffle=shuffle,
+                # drop_last=drop_last,
+                negative_sampler=self.negative_sampler,
+                negative_sampler_kwargs=self.negative_sampler_kwargs,
+                # sampler=sampler,
+            ),
+            # shuffle=shuffle,
+            # disable automatic batching in data loader
+            sampler=None,
+            batch_size=None,
         )
 
 
