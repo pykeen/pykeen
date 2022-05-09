@@ -27,6 +27,7 @@ has some nice features:
 
 """
 
+from abc import abstractmethod
 import pytorch_lightning
 import torch
 import torch.utils.data
@@ -43,11 +44,8 @@ __all__ = [
 ]
 
 
-class LitLCWAModule(pytorch_lightning.LightningModule):
-    """A PyTorch Lightning module for training a model with LCWA training loop.
-
-    .. seealso:: https://github.com/pykeen/pykeen/pull/905
-    """
+class LitModule(pytorch_lightning.LightningModule):
+    """A base module for training models with PyTorch Lightning."""
 
     def __init__(
         self,
@@ -105,13 +103,10 @@ class LitLCWAModule(pytorch_lightning.LightningModule):
         """
         return self.model.predict_t(x)
 
-    def _step(self, batch, prefix: str):
-        """Refactored step."""
-        hr_batch, labels = batch
-        scores = self.model.score_t(hr_batch=hr_batch)
-        loss = self.loss.process_lcwa_scores(predictions=scores, labels=labels)
-        self.log(f"{prefix}_loss", loss)
-        return loss
+    @abstractmethod
+    def _step(batch, prefix: str):
+        """Perform a step and log with the given prefix."""
+        raise NotImplementedError
 
     def training_step(self, batch, batch_idx):
         """Perform a training step."""
@@ -121,13 +116,10 @@ class LitLCWAModule(pytorch_lightning.LightningModule):
         """Perform a validation step."""
         return self._step(batch, prefix="val")
 
+    @abstractmethod
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:
         """Create a data loader."""
-        return torch.utils.data.DataLoader(
-            dataset=triples_factory.create_lcwa_instances(),
-            batch_size=self.batch_size,
-            shuffle=shuffle,
-        )
+        raise NotImplementedError
 
     def train_dataloader(self):
         """Create the training data loader."""
@@ -135,6 +127,7 @@ class LitLCWAModule(pytorch_lightning.LightningModule):
 
     def val_dataloader(self):
         """Create the validation data loader."""
+        # TODO: In sLCWA, we still want to calculate validation *metrics* in LCWA
         return self._dataloader(triples_factory=self.dataset.validation, shuffle=False)
 
     def configure_optimizers(self):
@@ -144,22 +137,52 @@ class LitLCWAModule(pytorch_lightning.LightningModule):
         )
 
 
-def _main():
-    """Run PyTorch lightning model."""
-    model = LitLCWAModule(
-        dataset="fb15k237",
-        dataset_kwargs=dict(create_inverse_triples=True),
-        model="mure",
-        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits"),
-        batch_size=128,
-    )
-    trainer = pytorch_lightning.Trainer(
-        accelerator="auto",  # automatically choose accelerator
-        logger=False,  # defaults to TensorBoard; explicitly disabled here
-        precision=16,  # mixed precision training
-    )
-    trainer.fit(model=model)
+class LitSLCWAModule(LitModule):
+    """A PyTorch Lightning module for training a model with sLCWA training loop."""
+
+    # docstr-coverage: inherited
+    def _step(self, batch, prefix: str):  # noqa: D102
+        positives, negatives, masks = batch
+        loss = self.loss.process_slcwa_scores(
+            positive_scores=self.model.score_hrt(hrt_batch=positives),
+            negative_scores=self.model.score_hrt(hrt_batch=negatives),
+            batch_filter=masks,
+            num_entities=self.model.num_entities,
+        )
+        self.log(f"{prefix}_loss", loss)
+        return loss
+
+    # docstr-coverage: inherited
+    def _dataloader(
+        self, triples_factory: CoreTriplesFactory, shuffle: bool = False
+    ) -> torch.utils.data.DataLoader:  # noqa: D102
+        return torch.utils.data.DataLoader(
+            dataset=triples_factory.create_slcwa_instances(),
+            batch_size=self.batch_size,
+            shuffle=shuffle,
+        )
 
 
-if __name__ == "__main__":
-    _main()
+class LitLCWAModule(LitModule):
+    """A PyTorch Lightning module for training a model with LCWA training loop.
+
+    .. seealso:: https://github.com/pykeen/pykeen/pull/905
+    """
+
+    # docstr-coverage: inherited
+    def _step(self, batch, prefix: str):  # noqa: D102
+        hr_batch, labels = batch
+        scores = self.model.score_t(hr_batch=hr_batch)
+        loss = self.loss.process_lcwa_scores(predictions=scores, labels=labels)
+        self.log(f"{prefix}_loss", loss)
+        return loss
+
+    # docstr-coverage: inherited
+    def _dataloader(
+        self, triples_factory: CoreTriplesFactory, shuffle: bool = False
+    ) -> torch.utils.data.DataLoader:  # noqa: D102
+        return torch.utils.data.DataLoader(
+            dataset=triples_factory.create_lcwa_instances(),
+            batch_size=self.batch_size,
+            shuffle=shuffle,
+        )
