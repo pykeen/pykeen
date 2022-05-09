@@ -182,3 +182,4 @@ random_seed_option = click.option(
     show_default=True,
     help="Random seed for PyTorch, NumPy, and Python.",
 )
+inverse_triples_option = click.option("-I", "--create-inverse-triples", is_flag=True, help="Model inverse triples")
