@@ -41,7 +41,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-34">Datasets</a> •
+  <a href="#datasets-35">Datasets</a> •
   <a href="#inductive-datasets">Inductive Datasets (5)</a> •
   <a href="#models-42">Models</a> •
   <a href="#supporters">Support</a> •
@@ -143,7 +143,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | OpenEA Family                      | [`pykeen.datasets.OpenEA`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenEA.html)                 | [Sun *et al*., 2020](http://www.vldb.org/pvldb/vol13/p2326-sun.pdf)                                                     |      15000 |         248 |     38265 |
 | PharmKG                            | [`pykeen.datasets.PharmKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG.html)               | [Zheng *et al*., 2020](https://doi.org/10.1093/bib/bbaa344)                                                             |     188296 |          39 |   1093236 |
 | PharmKG8k                          | [`pykeen.datasets.PharmKG8k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG8k.html)           | [Zheng *et al*., 2020](https://doi.org/10.1093/bib/bbaa344)                                                             |       7247 |          28 |    485787 |
-| PrimeKG                            | [`pykeen.datasets.PrimeKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PrimeKG.html)               | [Chandak *et al*., 2022](https://doi.org/10.1101/2022.05.01.489928)            |     129375 |          30 |   8100498 |
+| PrimeKG                            | [`pykeen.datasets.PrimeKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PrimeKG.html)               | [Chandak *et al*., 2022](https://doi.org/10.1101/2022.05.01.489928)                                                     |     129375 |          30 |   8100498 |
 | Unified Medical Language System    | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                     | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets)                                                   |        135 |          46 |      6529 |
 | WD50K (triples)                    | [`pykeen.datasets.WD50KT`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WD50KT.html)                 | [Galkin *et al*., 2020](https://www.aclweb.org/anthology/2020.emnlp-main.596/)                                          |      40107 |         473 |    232344 |
 | Wikidata5M                         | [`pykeen.datasets.Wikidata5M`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Wikidata5M.html)         | [Wang *et al*., 2019](https://arxiv.org/abs/1911.06136)                                                                 |    4594149 |         822 |  20624239 |
