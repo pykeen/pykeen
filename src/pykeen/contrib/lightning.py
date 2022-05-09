@@ -28,19 +28,22 @@ has some nice features:
 """
 
 from abc import abstractmethod
+
+import click
 import pytorch_lightning
 import torch
 import torch.utils.data
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
 from pykeen.datasets import get_dataset
 from pykeen.datasets.base import Dataset
 from pykeen.models import Model, model_resolver
+from pykeen.models.cli import options
 from pykeen.optimizers import optimizer_resolver
 from pykeen.triples.triples_factory import CoreTriplesFactory
 
 __all__ = [
-    "LitLCWAModule",
+    "LCWALitModule",
 ]
 
 
@@ -137,7 +140,7 @@ class LitModule(pytorch_lightning.LightningModule):
         )
 
 
-class LitSLCWAModule(LitModule):
+class SLCWALitModule(LitModule):
     """A PyTorch Lightning module for training a model with sLCWA training loop."""
 
     # docstr-coverage: inherited
@@ -163,7 +166,7 @@ class LitSLCWAModule(LitModule):
         )
 
 
-class LitLCWAModule(LitModule):
+class LCWALitModule(LitModule):
     """A PyTorch Lightning module for training a model with LCWA training loop.
 
     .. seealso:: https://github.com/pykeen/pykeen/pull/905
@@ -186,3 +189,35 @@ class LitLCWAModule(LitModule):
             batch_size=self.batch_size,
             shuffle=shuffle,
         )
+
+
+lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
+    base=LitModule,
+    default=SLCWALitModule,
+)
+
+
+@click.command()
+@lit_module_resolver.get_option("-tl", "--training-loop")
+def _main(
+    training_loop: HintOrType[LitModule],
+):
+    """Run PyTorch lightning model."""
+    lit = lit_module_resolver.make(
+        training_loop,
+        dataset="fb15k237",
+        dataset_kwargs=dict(create_inverse_triples=True),
+        model="mure",
+        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits"),
+        batch_size=128,
+    )
+    trainer = pytorch_lightning.Trainer(
+        accelerator="auto",  # automatically choose accelerator
+        logger=False,  # defaults to TensorBoard; explicitly disabled here
+        precision=16,  # mixed precision training
+    )
+    trainer.fit(model=lit)
+
+
+if __name__ == "__main__":
+    _main()
