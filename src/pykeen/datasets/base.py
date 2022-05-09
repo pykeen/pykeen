@@ -892,6 +892,7 @@ class SingleTabbedDataset(TabbedDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
+        download_kwargs: Optional[Dict[str, Any]] = None,
         read_csv_kwargs: Optional[Dict[str, Any]] = None,
     ):
         """Initialize dataset.
@@ -906,6 +907,7 @@ class SingleTabbedDataset(TabbedDataset):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
+        :param download_kwargs: Keyword arguments to pass through to :func:`pystow.utils.download`.
         :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
 
         :raises ValueError: if there's no URL specified and there is no data already at the calculated path
@@ -919,6 +921,7 @@ class SingleTabbedDataset(TabbedDataset):
 
         self.name = name or name_from_url(url)
 
+        self.download_kwargs = download_kwargs or {}
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", "\t")
 
@@ -935,7 +938,7 @@ class SingleTabbedDataset(TabbedDataset):
     def _get_df(self) -> pd.DataFrame:
         if not self._get_path().is_file():
             logger.info("downloading data from %s to %s", self.url, self._get_path())
-            download(url=self.url, path=self._get_path())  # noqa:S310
+            download(url=self.url, path=self._get_path(), **self.download_kwargs)  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
 
         usecols = self.read_csv_kwargs.get("usecols")

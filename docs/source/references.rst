@@ -110,3 +110,6 @@ References
 
 .. [hoyt2022] Hoyt, C.T., *et al.* (2022) `A Unified Framework for Rank-based Evaluation Metrics for
    Link Prediction in Knowledge Graphs <https://arxiv.org/abs/2203.07544>`_. *arXiv*, 2203.07544.
+
+.. [chandak2022] Chandak, P., *et al* (2022). `Building a knowledge graph to enable precision medicine
+   <https://doi.org/10.1101/2022.05.01.489928>`_. *bioRxiv*, 2022.05.01.489928.
