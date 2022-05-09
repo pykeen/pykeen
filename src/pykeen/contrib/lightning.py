@@ -41,7 +41,7 @@ from pykeen.losses import Loss, loss_resolver
 from pykeen.models import Model, model_resolver
 from pykeen.models.cli import options
 from pykeen.optimizers import optimizer_resolver
-from pykeen.training.slcwa import SLCWATrainingLoop
+from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from pykeen.triples.triples_factory import CoreTriplesFactory
 
 __all__ = [
@@ -182,9 +182,18 @@ class LCWALitModule(LitModule):
 
     # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
-        hr_batch, labels = batch
-        scores = self.model.score_t(hr_batch=hr_batch)
-        loss = self.loss.process_lcwa_scores(predictions=scores, labels=labels)
+        loss = LCWATrainingLoop._process_batch_static(
+            model=self.model,
+            score_method=self.model.score_t,
+            loss=self.loss,
+            num_targets=self.model.num_entities,
+            mode=None,
+            batch=batch,
+            start=None,
+            stop=None,
+            label_smoothing=0.0,
+            slice_size=None,
+        )
         self.log(f"{prefix}_loss", loss)
         return loss
 

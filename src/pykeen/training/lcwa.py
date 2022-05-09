@@ -4,10 +4,14 @@
 
 import logging
 from math import ceil
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
 from torch.utils.data import DataLoader
+
+from ..typing import InductiveMode
+from ..losses import Loss
+from ..models import Model
 
 from .training_loop import TrainingLoop
 from ..triples import CoreTriplesFactory
@@ -107,6 +111,38 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
         return batch[0].shape[0]
 
+    @staticmethod
+    def _process_batch_static(
+        model: Model,
+        score_method: Callable,
+        loss: Loss,
+        num_targets: int,
+        mode: InductiveMode,
+        batch: LCWABatchType,
+        start: int,
+        stop: int,
+        label_smoothing: float = 0.0,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        # Split batch components
+        batch_pairs, batch_labels_full = batch
+
+        # Send batch to device
+        batch_pairs = batch_pairs[start:stop].to(device=model.device)
+        batch_labels_full = batch_labels_full[start:stop].to(device=model.device)
+
+        predictions = score_method(batch_pairs, slice_size=slice_size, mode=mode)
+
+        return (
+            loss.process_lcwa_scores(
+                predictions=predictions,
+                labels=batch_labels_full,
+                label_smoothing=label_smoothing,
+                num_entities=num_targets,
+            )
+            + model.collect_regularization_term()
+        )
+
     # docstr-coverage: inherited
     def _process_batch(
         self,
@@ -116,23 +152,17 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # Split batch components
-        batch_pairs, batch_labels_full = batch
-
-        # Send batch to device
-        batch_pairs = batch_pairs[start:stop].to(device=self.device)
-        batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
-
-        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode=self.mode)
-
-        return (
-            self.loss.process_lcwa_scores(
-                predictions=predictions,
-                labels=batch_labels_full,
-                label_smoothing=label_smoothing,
-                num_entities=self.num_targets,
-            )
-            + self.model.collect_regularization_term()
+        return self._process_batch_static(
+            model=self.model,
+            score_method=self.score_method,
+            loss=self.loss,
+            num_targets=self.num_targets,
+            mode=self.mode,
+            batch=batch,
+            start=start,
+            stop=stop,
+            label_smoothing=label_smoothing,
+            slice_size=slice_size,
         )
 
     # docstr-coverage: inherited
