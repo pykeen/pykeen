@@ -35,8 +35,9 @@ import torch
 import torch.utils.data
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
-from pykeen.datasets import get_dataset
+from pykeen.datasets import dataset_resolver, get_dataset
 from pykeen.datasets.base import Dataset
+from pykeen.losses import Loss, loss_resolver
 from pykeen.models import Model, model_resolver
 from pykeen.models.cli import options
 from pykeen.optimizers import optimizer_resolver
@@ -199,22 +200,36 @@ lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
 
 @click.command()
 @lit_module_resolver.get_option("-tl", "--training-loop")
+@dataset_resolver.get_option("-d", "--dataset", default="nations")
+@options.inverse_triples_option
+@model_resolver.get_option("-m", "--model", default="mure")
+@loss_resolver.get_option("-l", "--loss", default="bcewithlogits")
+@options.batch_size_option
+@click.option("-b", "--batch-size", type=int, default=128)
+@click.option("-mp", "--mixed-precision", is_flag=True)
 def _main(
     training_loop: HintOrType[LitModule],
+    dataset: HintOrType[Dataset],
+    create_inverse_triples: bool,
+    model: HintOrType[Model],
+    loss: HintOrType[Loss],
+    batch_size: int,
+    embedding_dim: int,
+    mixed_precision: bool,
 ):
     """Run PyTorch lightning model."""
     lit = lit_module_resolver.make(
         training_loop,
-        dataset="fb15k237",
-        dataset_kwargs=dict(create_inverse_triples=True),
-        model="mure",
-        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits"),
-        batch_size=128,
+        dataset=dataset,
+        dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
+        model=model,
+        model_kwargs=dict(embedding_dim=embedding_dim, loss=loss),
+        batch_size=batch_size,
     )
     trainer = pytorch_lightning.Trainer(
         accelerator="auto",  # automatically choose accelerator
         logger=False,  # defaults to TensorBoard; explicitly disabled here
-        precision=16,  # mixed precision training
+        precision=16 if mixed_precision else None,  # mixed precision training
     )
     trainer.fit(model=lit)
 
