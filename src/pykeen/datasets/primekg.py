@@ -35,6 +35,9 @@ class PrimeKG(SingleTabbedDataset):
         entities: 129375
         relations: 30
         triples: 8100498
+        training: 6479992
+        testing: 809999
+        validation: 810000
     """
 
     def __init__(
