@@ -113,7 +113,7 @@ class LitModule(pytorch_lightning.LightningModule):
         return self.model.predict_t(x)
 
     @abstractmethod
-    def _step(batch, prefix: str):
+    def _step(self, batch, prefix: str):
         """Perform a step and log with the given prefix."""
         raise NotImplementedError
 
