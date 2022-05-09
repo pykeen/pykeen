@@ -54,6 +54,9 @@ class PrimeKG(SingleTabbedDataset):
             name="primekg.csv",
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
+            download_kwargs=dict(
+                backend="requests",
+            ),
             read_csv_kwargs=dict(
                 usecols=["x_name", "relation", "y_name"],
                 sep=",",
