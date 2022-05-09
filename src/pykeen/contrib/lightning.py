@@ -44,7 +44,10 @@ from pykeen.optimizers import optimizer_resolver
 from pykeen.triples.triples_factory import CoreTriplesFactory
 
 __all__ = [
+    "LitModule",
+    "lit_module_resolver",
     "LCWALitModule",
+    "SLCWALitModule",
 ]
 
 
