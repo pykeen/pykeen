@@ -175,5 +175,10 @@ class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase)
         # 2: blue: 0, 5
         colors = torch.as_tensor(data=[2, 1, 0, 0, 1, 2, 1, 0, 0, 1], dtype=torch.long)
         rwpe_vectors = templates[colors]
-        initializer = pykeen.nn.init.RandomWalkPositionalEncodingInitializer(mapped_triples=decalin_triples, dim=5)
+        initializer = pykeen.nn.init.RandomWalkPositionalEncodingInitializer(
+            mapped_triples=decalin_triples,
+            dim=5,
+            # the example includes the first power
+            skip_first_power=False,
+        )
         assert torch.allclose(initializer.tensor, rwpe_vectors, rtol=1.0e-03)
