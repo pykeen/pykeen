@@ -377,7 +377,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         adj = torch_ppr.utils.edge_index_to_sparse_matrix(edge_index=edge_index, num_nodes=num_entities)
         adj = torch_ppr.utils.prepare_page_rank_adjacency(adj=adj)
         # allocate tensor
-        tensor = torch.empty(num_entities, dim)
+        tensor = torch.zeros(num_entities, dim)
         # note: create tensor to extract diagonals
         # torch.diag does not work with sparse tensors
         diag_indices = torch.arange(num_entities).unsqueeze(0).repeat(2, 1)
@@ -389,8 +389,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             # extract diagonal; torch.diag does not work with sparse tensors
             diag = (matrix * one_diag).coalesce()
             indices = diag.indices()
-            assert (indices == diag_indices).all()
-            tensor[:, i] = diag.values() * ((i + 1) ** (space_dim / 2))
+            tensor[indices, i] = diag.values() * ((i + 1) ** (space_dim / 2))
         super().__init__(tensor=tensor)
 
 
