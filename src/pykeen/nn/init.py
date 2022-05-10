@@ -335,6 +335,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         edge_index: Optional[torch.Tensor] = None,
         dim: int,
         num_entities: Optional[int] = None,
+        space_dim: Optional[int] = 0,
     ) -> None:
         """
         Initialize the positional encoding.
@@ -356,6 +357,12 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             the dimensionality
         :param num_entities:
             the number of entities. If `None`, it will be inferred from `edge_index`
+        :param space_dim:
+            estimated dimensionality of the space. Used to
+            correct the random-walk diagonal by a factor `k^(space_dim/2)`.
+            In euclidean space, this correction means that the height of
+            the gaussian distribution stays almost constant across the number of
+            steps, if `space_dim` is the dimension of the euclidean space.
         """
         if triples_factory is not None:
             mapped_triples = triples_factory.mapped_triples
@@ -378,7 +385,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             diag = (adj * one_diag).coalesce()
             indices = diag.indices()
             assert (indices == diag_indices).all()
-            tensor[:, i] = diag.values()
+            tensor[:, i] = diag.values() * (i ** (space_dim / 2))
         super().__init__(tensor=tensor)
 
 
