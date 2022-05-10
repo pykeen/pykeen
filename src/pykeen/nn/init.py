@@ -374,8 +374,9 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             edge_index = mapped_triples[:, 0::2].t()
         # create random walk matrix
         num_entities = torch_ppr.utils.prepare_num_nodes(edge_index=edge_index, num_nodes=num_entities)
-        adj = torch_ppr.utils.edge_index_to_sparse_matrix(edge_index=edge_index, num_nodes=num_entities)
-        adj = torch_ppr.utils.prepare_page_rank_adjacency(adj=adj)
+        # TODO: wait for torch-ppr to forward num_entities
+        adj = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index)
+        assert adj.shape == (num_entities, num_entities)
         # allocate tensor
         tensor = torch.zeros(num_entities, dim)
         # note: create tensor to extract diagonals
