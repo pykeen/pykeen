@@ -2,7 +2,7 @@
 
 """Utilities for neural network components."""
 
-from typing import Optional, Sequence, Union
+from typing import Iterable, Optional, Sequence, Union
 
 import torch
 from more_itertools import chunked
@@ -90,3 +90,72 @@ class TransformerEncoder(nn.Module):
             [self(batch) for batch in chunked(tqdm(labels), batch_size)],
             dim=0,
         )
+
+
+def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Tensor]:
+    """
+    Iterate over matrix powers.
+
+    :param matrix: shape: `(n, n)`
+        the square matrix
+    :param max_iter:
+        the maximum number of iterations.
+
+    :yields: increasing matrix powers
+    """
+    a = matrix
+    for _ in range(max_iter):
+        # TODO: should we add a densification once the sparsify of a becomes too low?
+        # torch.sparse.mm
+        # - sparse x sparse -> sparse
+        # - sparse x dense -> dense
+        a = torch.sparse.mm(matrix, a)
+        yield a
+
+
+def sparse_eye(n: int) -> torch.Tensor:
+    """
+    Create a sparse diagonal matrix.
+
+    .. note ::
+        this is a work-around as long as there is no torch built-in
+
+    :param n:
+        the size
+
+    :return: shape: `(n, n)`, sparse
+        a sparse diagonal matrix
+    """
+    diag_indices = torch.arange(n).unsqueeze(0).repeat(2, 1)
+    return torch.sparse_coo_tensor(indices=diag_indices, values=torch.ones(n))
+
+
+def extract_diagonal_sparse_or_dense(matrix: torch.Tensor, eye: Optional[torch.Tensor]) -> torch.Tensor:
+    """
+    Extract diagonal from a potentially sparse matrix.
+
+    .. note ::
+        this is a work-around as long as `torch.diag` does not work for sparse tensors
+
+    :param matrix: shape: `(n, n)`
+        the matrix
+    :param eye:
+        a prepared sparse eye matrix of appropriate shape
+
+    :return:
+        the diagonal values.
+    """
+    if not matrix.is_sparse:
+        return torch.diag(matrix)
+
+    n = matrix.shape[0]
+    if eye is None:
+        eye = sparse_eye(n=n)
+
+    # we need to use indices here, since there may be zero diagonal entries
+    diag = (matrix * eye).coalesce()
+    indices = diag.indices()
+    values = diag.values()
+    x = torch.zeros(n)
+    x[indices] = values
+    return x

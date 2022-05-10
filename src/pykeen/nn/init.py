@@ -15,7 +15,7 @@ import torch_ppr.utils
 from class_resolver import FunctionResolver
 from torch.nn import functional
 
-from .utils import TransformerEncoder
+from .utils import TransformerEncoder, extract_diagonal_sparse_or_dense, iter_matrix_power, sparse_eye
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import MappedTriples
 from ..utils import compose
@@ -375,21 +375,20 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         # create random walk matrix
         adj = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
         num_entities = adj.shape[0]
-        # allocate tensor
-        tensor = torch.zeros(num_entities, dim)
-        # note: create tensor to extract diagonals
-        # torch.diag does not work with sparse tensors
-        diag_indices = torch.arange(num_entities).unsqueeze(0).repeat(2, 1)
-        one_diag = torch.sparse_coo_tensor(indices=diag_indices, values=torch.ones(num_entities))
-        # iterate
-        matrix = adj
-        for i in range(dim):
-            matrix = torch.sparse.mm(matrix, adj)
-            # extract diagonal; torch.diag does not work with sparse tensors
-            diag = (matrix * one_diag).coalesce()
-            indices = diag.indices()
-            # we need to use indices here, since there may be zero diagonal entries
-            tensor[indices, i] = diag.values() * ((i + 1) ** (space_dim / 2))
+
+        tensor = torch.stack(
+            [
+                (i ** (space_dim / 2)) * diag
+                for i, diag in enumerate(
+                    map(
+                        functools.partial(extract_diagonal_sparse_or_dense, eye=sparse_eye(n=num_entities)),
+                        iter_matrix_power(matrix=adj, max_iter=dim),
+                    ),
+                    start=1,
+                )
+            ],
+            dim=-1,
+        )
         super().__init__(tensor=tensor)
 
 
