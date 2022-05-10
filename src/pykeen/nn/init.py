@@ -373,10 +373,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
                 logger.warning("Ignoring edge_index, since mapped_triples is present.")
             edge_index = mapped_triples[:, 0::2].t()
         # create random walk matrix
-        num_entities = torch_ppr.utils.prepare_num_nodes(edge_index=edge_index, num_nodes=num_entities)
-        # TODO: wait for torch-ppr to forward num_entities
-        adj = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index)
-        assert adj.shape == (num_entities, num_entities)
+        adj = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
         # allocate tensor
         tensor = torch.zeros(num_entities, dim)
         # note: create tensor to extract diagonals
@@ -390,6 +387,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             # extract diagonal; torch.diag does not work with sparse tensors
             diag = (matrix * one_diag).coalesce()
             indices = diag.indices()
+            # we need to use indices here, since there may be zero diagonal entries
             tensor[indices, i] = diag.values() * ((i + 1) ** (space_dim / 2))
         super().__init__(tensor=tensor)
 
