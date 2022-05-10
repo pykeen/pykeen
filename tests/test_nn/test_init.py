@@ -174,10 +174,10 @@ class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase)
                 [0.4444, 0.0000, 0.3179],  # node 5
                 [0.4167, 0.0000, 0.2824],  # node 6
                 [0.5000, 0.0000, 0.3542],  # node 7
-                [0.5000, 0.0000, 0.3542],  # node 8,
+                [0.5000, 0.0000, 0.3542],  # node 8
                 [0.4167, 0.0000, 0.2824],  # node 9
             ]
         )
 
         initializer = pykeen.nn.init.RandomWalkPositionalEncodingInitializer(mapped_triples=decalin_triples, dim=3)
-        assert torch.allclose(initializer.tensor, rwpe_vectors)
+        assert torch.allclose(initializer.tensor, rwpe_vectors, rtol=1.0e-03)
