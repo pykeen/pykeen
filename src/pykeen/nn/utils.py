@@ -105,10 +105,14 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
     """
     a = matrix
     for _ in range(max_iter):
-        # TODO: should we add a densification once the sparsify of a becomes too low?
-        # torch.sparse.mm
-        # - sparse x sparse -> sparse
-        # - sparse x dense -> dense
+        # if the sparsity becomes too low, convert to a dense matrix
+        # note: this heuristic is based on the memory consumption,
+        # for a sparse matrix, we store 3 values per nnz (row index, column index, value)
+        # performance-wise, it likely makes sense to switch even earlier
+        # `torch.sparse.mm` can also deal with dense 2nd argument
+        if a.is_sparse and a._nnz() >= a.numel() // 4:
+            a = a.to_dense()
+
         a = torch.sparse.mm(matrix, a)
         yield a
 
