@@ -3,7 +3,6 @@
 """Embedding weight initialization routines."""
 
 import functools
-from lib2to3.pgen2.token import OP
 import logging
 import math
 from typing import Optional, Sequence
@@ -16,10 +15,8 @@ import torch_ppr.utils
 from class_resolver import FunctionResolver
 from torch.nn import functional
 
-from pykeen.triples.triples_factory import CoreTriplesFactory
-
 from .utils import TransformerEncoder
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import MappedTriples
 from ..utils import compose
 
@@ -34,6 +31,7 @@ __all__ = [
     "init_phases",
     "PretrainedInitializer",
     "LabelBasedInitializer",
+    "RandomWalkPositionalEncodingInitializer",
     "initializer_resolver",
 ]
 
