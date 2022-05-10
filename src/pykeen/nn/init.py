@@ -312,7 +312,7 @@ class LabelBasedInitializer(PretrainedInitializer):
 
 
 class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
-    """
+    r"""
     Initialize nodes via random-walk positional encoding.
 
     The random walk positional encoding is given as
