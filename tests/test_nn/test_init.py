@@ -125,8 +125,7 @@ class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase)
         """Prepare for test."""
         dataset = Nations()
         self.initializer = pykeen.nn.init.RandomWalkPositionalEncodingInitializer(
-            edge_index=dataset.training.mapped_triples[:, [0, 2]].t(),
-            dim=3,
+            triples_factory=dataset.training, dim=3
         )
         self.num_entities = dataset.num_entities
         self.shape = self.initializer.tensor.shape[1:]
