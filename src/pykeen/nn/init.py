@@ -365,8 +365,12 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             steps, if `space_dim` is the dimension of the euclidean space.
         """
         if triples_factory is not None:
+            if mapped_triples is not None:
+                logger.warning("Ignoring mapped_triples, since triples_factory is present.")
             mapped_triples = triples_factory.mapped_triples
         if mapped_triples is not None:
+            if edge_index is not None:
+                logger.warning("Ignoring edge_index, since mapped_triples is present.")
             edge_index = mapped_triples[:, 0::2].t()
         # create random walk matrix
         num_entities = torch_ppr.utils.prepare_num_nodes(edge_index=edge_index, num_nodes=num_entities)
