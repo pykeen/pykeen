@@ -124,8 +124,21 @@ class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase)
     def setUp(self) -> None:
         """Prepare for test."""
         dataset = Nations()
+        self.triples_factory = dataset.training
         self.initializer = pykeen.nn.init.RandomWalkPositionalEncodingInitializer(
-            triples_factory=dataset.training, dim=3
+            triples_factory=self.triples_factory, dim=3
         )
         self.num_entities = dataset.num_entities
         self.shape = self.initializer.tensor.shape[1:]
+
+    def test_invariances(self):
+        """Test some invariances."""
+        self.initializer: pykeen.nn.init.PretrainedInitializer
+        x = self.initializer.tensor
+        # value range
+        assert (x >= 0).all()
+        assert (x <= 1).all()
+        # highest degree node has largest value
+        uniq, counts = self.triples_factory.mapped_triples[:, 0::2].unique(return_counts=True)
+        center = uniq[counts.argmax()]
+        assert (x.argmax(dim=0) == center).all()
