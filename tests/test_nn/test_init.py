@@ -146,29 +146,20 @@ class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase)
     def test_decalin(self):
         """Test decalin example."""
         # Decalin molecule from Fig 4 page 15 from the paper https://arxiv.org/pdf/2110.07875.pdf
-        # dummy relation type 0
-        decalin_triples = torch.tensor(
+        source, target = torch.as_tensor(
             [
-                [1, 0, 2],
-                [2, 0, 3],
-                [3, 0, 4],
-                [4, 0, 5],
-                [5, 0, 6],
-                [5, 0, 0],
-                [0, 0, 1],
-                [0, 0, 9],
-                [6, 0, 7],
-                [7, 0, 8],
-                [8, 0, 9],
-            ],
-            dtype=torch.long,
+                [1, 2, 3, 4, 5, 5, 0, 0, 6, 7, 8],
+                [2, 3, 4, 5, 6, 0, 1, 9, 7, 8, 9],
+            ]
         )
+        # create triples with a dummy relation type 0
+        decalin_triples = torch.stack([source, torch.zeros_like(source), target], dim=-1)
         templates = torch.as_tensor(
             data=[
                 [0.0000, 0.5000, 0.0000, 0.3542, 0.0000],  # green
                 [0.0000, 0.4167, 0.0000, 0.2824, 0.0000],  # red
                 [0.0000, 0.4444, 0.0000, 0.3179, 0.0000],  # blue
-            ]
+            ],
         )
         # 0: green: 2, 3, 7, 8
         # 1: red: 1, 4, 6, 9
