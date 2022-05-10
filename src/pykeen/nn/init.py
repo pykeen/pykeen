@@ -3,6 +3,7 @@
 """Embedding weight initialization routines."""
 
 import functools
+from lib2to3.pgen2.token import OP
 import logging
 import math
 from typing import Optional, Sequence
@@ -11,13 +12,16 @@ import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
+import torch_ppr.utils
 from class_resolver import FunctionResolver
 from torch.nn import functional
 
+from pykeen.triples.triples_factory import CoreTriplesFactory
+
 from .utils import TransformerEncoder
 from ..triples import TriplesFactory
+from ..typing import MappedTriples
 from ..utils import compose
-import torch_ppr.utils
 
 __all__ = [
     "xavier_uniform_",
@@ -328,13 +332,26 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
     def __init__(
         self,
         *,
-        edge_index: torch.Tensor,
+        triples_factory: Optional[CoreTriplesFactory] = None,
+        mapped_triples: Optional[MappedTriples] = None,
+        edge_index: Optional[torch.Tensor] = None,
         dim: int,
         num_entities: Optional[int] = None,
     ) -> None:
         """
         Initialize the positional encoding.
 
+        One of `triples_factory`, `mapped_triples` or `edge_index` will be used.
+        The preference order is:
+
+        1. `triples_factory`
+        2. `mapped_triples`
+        3. `edge_index`
+
+        :param triples_factory:
+            the triples factory
+        :param mapped_triples: shape: `(m, 3)`
+            the mapped triples
         :param edge_index: shape: `(2, m)`
             the edge index
         :param dim:
@@ -342,6 +359,10 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         :param num_entities:
             the number of entities. If `None`, it will be inferred from `edge_index`
         """
+        if triples_factory is not None:
+            mapped_triples = triples_factory.mapped_triples
+        if mapped_triples is not None:
+            edge_index = mapped_triples[:, 0::2].t()
         # create random walk matrix
         num_entities = torch_ppr.utils.prepare_num_nodes(edge_index=edge_index, num_nodes=num_entities)
         adj = torch_ppr.utils.edge_index_to_sparse_matrix(edge_index=edge_index, num_nodes=num_entities)
