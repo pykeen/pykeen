@@ -335,7 +335,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         edge_index: Optional[torch.Tensor] = None,
         dim: int,
         num_entities: Optional[int] = None,
-        space_dim: Optional[int] = 0,
+        space_dim: int = 0,
     ) -> None:
         """
         Initialize the positional encoding.
@@ -380,13 +380,13 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         one_diag = torch.sparse_coo_tensor(indices=diag_indices, values=torch.ones(num_entities))
         # iterate
         matrix = adj
-        for i in range(1, dim+1):
+        for i in range(dim):
             matrix = torch.sparse.mm(matrix, adj)
             # extract diagonal; torch.diag does not work with sparse tensors
             diag = (matrix * one_diag).coalesce()
             indices = diag.indices()
             assert (indices == diag_indices).all()
-            tensor[:, i-1] = diag.values() * (i ** (space_dim / 2))  # i starts from 1
+            tensor[:, i] = diag.values() * ((i + 1) ** (space_dim / 2))
         super().__init__(tensor=tensor)
 
 
