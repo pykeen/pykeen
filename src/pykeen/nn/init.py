@@ -3,6 +3,7 @@
 """Embedding weight initialization routines."""
 
 import functools
+import itertools
 import logging
 import math
 from typing import Optional, Sequence
@@ -336,6 +337,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         dim: int,
         num_entities: Optional[int] = None,
         space_dim: int = 0,
+        skip_first_power: bool = True,
     ) -> None:
         """
         Initialize the positional encoding.
@@ -363,6 +365,9 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             In euclidean space, this correction means that the height of
             the gaussian distribution stays almost constant across the number of
             steps, if `space_dim` is the dimension of the euclidean space.
+        :param skip_first_power:
+            in most cases the adjacencies diagonal values will be zeros (since reflexive edges are not that common).
+            This flag enables skipping the first matrix power.
         """
         if triples_factory is not None:
             if mapped_triples is not None:
@@ -375,20 +380,17 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         # create random walk matrix
         adj = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
         num_entities = adj.shape[0]
-
-        tensor = torch.stack(
-            [
-                (i ** (space_dim / 2)) * diag
-                for i, diag in enumerate(
-                    map(
-                        functools.partial(extract_diagonal_sparse_or_dense, eye=sparse_eye(n=num_entities)),
-                        iter_matrix_power(matrix=adj, max_iter=dim),
-                    ),
-                    start=1,
-                )
-            ],
-            dim=-1,
-        )
+        # create a generator of matrix powers
+        powers = iter_matrix_power(matrix=adj, max_iter=dim)
+        # in most cases A**1 diagonal values will be zeros (since reflexive edges are not that common)
+        # so we might want to skip the first
+        if skip_first_power:
+            powers = itertools.islice(powers, 1, None)
+        # prepare an extractor for diagonal entries with densification if necessary
+        diag_extractor = functools.partial(extract_diagonal_sparse_or_dense, eye=sparse_eye(n=num_entities))
+        # an iterator over the power diagonal
+        diagonals = map(diag_extractor, powers)
+        tensor = torch.stack([(i ** (space_dim / 2)) * diag for i, diag in enumerate(diagonals, start=1)], dim=-1)
         super().__init__(tensor=tensor)
 
 
