@@ -123,9 +123,41 @@ class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase)
 
     def setUp(self) -> None:
         """Prepare for test."""
+
+        # Decalin molecule from Fig 4 page 15 from the paper https://arxiv.org/pdf/2110.07875.pdf
+        # dummy relation type 0
+        decalin_triples = torch.tensor([
+            [1, 0, 2],
+            [2, 0, 3],
+            [3, 0, 4],
+            [4, 0, 5],
+            [5, 0, 6],
+            [5, 0, 0],
+            [0, 0, 1],
+            [0, 0, 9],
+            [6, 0, 7],
+            [7, 0, 8],
+            [8, 0, 9],
+        ], dtype=torch.long)
+
+        rwpe_vectors = torch.tensor([
+            [0.4444, 0.0000, 0.3179],  # node 0
+            [0.4167, 0.0000, 0.2824],  # node 1
+            [0.5000, 0.0000, 0.3542],  # node 2
+            [0.5000, 0.0000, 0.3542],  # node 3
+            [0.4167, 0.0000, 0.2824],  # node 4
+            [0.4444, 0.0000, 0.3179],  # node 5
+            [0.4167, 0.0000, 0.2824],  # node 6
+            [0.5000, 0.0000, 0.3542],  # node 7
+            [0.5000, 0.0000, 0.3542],  # node 8,
+            [0.4167, 0.0000, 0.2824],  # node 9
+        ])
         dataset = Nations()
         self.initializer = pykeen.nn.init.RandomWalkPositionalEncodingInitializer(
-            triples_factory=dataset.training, dim=3
+            #triples_factory=dataset.training,
+            mapped_triples=decalin_triples,
+            dim=3
         )
         self.num_entities = dataset.num_entities
         self.shape = self.initializer.tensor.shape[1:]
+        assert torch.allclose(self.initializer.tensor, rwpe_vectors)
