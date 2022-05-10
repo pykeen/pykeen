@@ -142,3 +142,42 @@ class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase)
         uniq, counts = self.triples_factory.mapped_triples[:, 0::2].unique(return_counts=True)
         center = uniq[counts.argmax()]
         assert (x.argmax(dim=0) == center).all()
+
+    def test_decalin(self):
+        """Test decalin example."""
+        # Decalin molecule from Fig 4 page 15 from the paper https://arxiv.org/pdf/2110.07875.pdf
+        # dummy relation type 0
+        decalin_triples = torch.tensor(
+            [
+                [1, 0, 2],
+                [2, 0, 3],
+                [3, 0, 4],
+                [4, 0, 5],
+                [5, 0, 6],
+                [5, 0, 0],
+                [0, 0, 1],
+                [0, 0, 9],
+                [6, 0, 7],
+                [7, 0, 8],
+                [8, 0, 9],
+            ],
+            dtype=torch.long,
+        )
+
+        rwpe_vectors = torch.tensor(
+            [
+                [0.4444, 0.0000, 0.3179],  # node 0
+                [0.4167, 0.0000, 0.2824],  # node 1
+                [0.5000, 0.0000, 0.3542],  # node 2
+                [0.5000, 0.0000, 0.3542],  # node 3
+                [0.4167, 0.0000, 0.2824],  # node 4
+                [0.4444, 0.0000, 0.3179],  # node 5
+                [0.4167, 0.0000, 0.2824],  # node 6
+                [0.5000, 0.0000, 0.3542],  # node 7
+                [0.5000, 0.0000, 0.3542],  # node 8,
+                [0.4167, 0.0000, 0.2824],  # node 9
+            ]
+        )
+
+        initializer = pykeen.nn.init.RandomWalkPositionalEncodingInitializer(mapped_triples=decalin_triples, dim=3)
+        assert torch.allclose(initializer.tensor, rwpe_vectors)
