@@ -116,3 +116,17 @@ class LabelBasedInitializerTestCase(cases.InitializerTestCase):
         )
         self.num_entities = dataset.num_entities
         self.shape = self.initializer.tensor.shape[1:]
+
+
+class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase):
+    """Tests for random-walk positional encoding."""
+
+    def setUp(self) -> None:
+        """Prepare for test."""
+        dataset = Nations()
+        self.initializer = pykeen.nn.init.RandomWalkPositionalEncodingInitializer(
+            edge_index=dataset.training.mapped_triples[:, [0, 2]].t(),
+            dim=3,
+        )
+        self.num_entities = dataset.num_entities
+        self.shape = self.initializer.tensor.shape[1:]

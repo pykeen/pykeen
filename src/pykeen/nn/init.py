@@ -17,6 +17,7 @@ from torch.nn import functional
 from .utils import TransformerEncoder
 from ..triples import TriplesFactory
 from ..utils import compose
+import torch_ppr.utils
 
 __all__ = [
     "xavier_uniform_",
@@ -306,6 +307,60 @@ class LabelBasedInitializer(PretrainedInitializer):
             labels=labels,
             **kwargs,
         )
+
+
+class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
+    """
+    Initialize nodes via random-walk positional encoding.
+
+    The random walk positional encoding is given as
+
+    .. math::
+        \mathbf{x}_i = [\mathbf{R}_{i, i}, \mathbf{R}^{2}_{i, i}, \ldots, \mathbf{R}^{d}_{i, i}] \in \mathbb{R}^{d}
+
+    where $\mathbf{R} := \mathbf{A}\mathbf{D}^{-1}$ is the random walk matrix, with
+    $\mathbf{D} := \sum_i \mathbf{A}_{i, i}$.
+
+    .. seealso::
+        https://arxiv.org/abs/2110.07875
+    """
+
+    def __init__(
+        self,
+        *,
+        edge_index: torch.Tensor,
+        dim: int,
+        num_entities: Optional[int] = None,
+    ) -> None:
+        """
+        Initialize the positional encoding.
+
+        :param edge_index: shape: `(2, m)`
+            the edge index
+        :param dim:
+            the dimensionality
+        :param num_entities:
+            the number of entities. If `None`, it will be inferred from `edge_index`
+        """
+        # create random walk matrix
+        num_entities = torch_ppr.utils.prepare_num_nodes(edge_index=edge_index, num_nodes=num_entities)
+        adj = torch_ppr.utils.edge_index_to_sparse_matrix(edge_index=edge_index, num_nodes=num_entities)
+        adj = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index)
+        # allocate tensor
+        tensor = torch.empty(num_entities, dim)
+        # note: create tensor to extract diagonals
+        # torch.diag does not work with sparse tensors
+        diag_indices = torch.arange(num_entities).unsqueeze(0).repeat(2, 1)
+        one_diag = torch.sparse_coo_tensor(indices=diag_indices, values=torch.ones(num_entities))
+        # iterate
+        for i in range(dim):
+            adj = torch.sparse.mm(adj, adj)
+            # extract diagonal; torch.diag does not work with sparse tensors
+            diag = (adj * one_diag).coalesce()
+            indices = diag.indices()
+            assert (indices == diag_indices).all()
+            tensor[:, i] = diag.values()
+        super().__init__(tensor=tensor)
 
 
 initializer_resolver = FunctionResolver(
