@@ -390,7 +390,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         diag_extractor = functools.partial(extract_diagonal_sparse_or_dense, eye=sparse_eye(n=num_entities))
         # an iterator over the power diagonal
         diagonals = map(diag_extractor, powers)
-        tensor = torch.stack([(i ** (space_dim / 2)) * diag for i, diag in enumerate(diagonals, start=1)], dim=-1)
+        tensor = torch.stack([(i ** (space_dim / 2.0)) * diag for i, diag in enumerate(diagonals, start=1)], dim=-1)
         super().__init__(tensor=tensor)
 
 
