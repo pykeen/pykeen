@@ -1,9 +1,17 @@
 """Benchmarks for random walk positional encoding."""
+import itertools
 import multiprocessing
+import random
+from typing import Sequence
+
+import numpy
+import pandas
+import seaborn
 import torch
-from torch.utils.benchmark import Timer, Compare
+from torch.utils.benchmark import Compare, Timer
+from tqdm.auto import tqdm
+
 from pykeen.nn.utils import sparse_eye
-from tqdm.contrib.itertools import product
 
 
 def extract_diagonal_explicit_loop(matrix: torch.Tensor) -> torch.Tensor:
@@ -64,6 +72,22 @@ def test_extract_diagonal():
     assert torch.allclose(extract_diagonal_manual_coalesce(matrix=matrix), reference)
 
 
+class Grid:
+    def __init__(self, *iters: Sequence, shuffle: bool = False) -> None:
+        self.size = numpy.prod(map(len, iters))
+        grid = itertools.product(*iters)
+        if shuffle:
+            grid = list(grid)
+            random.shuffle(grid)
+        self.grid = grid
+
+    def __len__(self) -> int:
+        return self.size
+
+    def __iter__(self):
+        yield from self.grid
+
+
 def time_extract_diagonal(fast: bool = False):
     """Time the different variants."""
     n_cpu = multiprocessing.cpu_count()
@@ -73,7 +97,7 @@ def time_extract_diagonal(fast: bool = False):
     n_grid = (4_000, 8_000, 16_000, 32_000, 64_000)
     methods = (
         "extract_diagonal_coalesce(matrix=matrix, eye=eye)",
-        "extract_diagonal_explicit_loop(matrix=matrix)",
+        # "extract_diagonal_explicit_loop(matrix=matrix)",
         "extract_diagonal_manual_coalesce(matrix=matrix)",
     )
     # fast run
@@ -82,11 +106,16 @@ def time_extract_diagonal(fast: bool = False):
         n_grid = (8_000,)
         density_grid = (1.0e-02,)
     measurements = []
-    for stmt, num_threads, n, density in product(
-        methods,
-        num_threads_grid,
-        n_grid,
-        density_grid,
+    data = []
+    for stmt, num_threads, n, density in tqdm(
+        Grid(
+            methods,
+            num_threads_grid,
+            n_grid,
+            density_grid,
+            # we shuffle here to have a more consistent time estimate of tqdm
+            shuffle=True,
+        ),
         unit="configuration",
         unit_scale=True,
     ):
@@ -105,12 +134,22 @@ def time_extract_diagonal(fast: bool = False):
             label=f"density={density}",
             num_threads=num_threads,
         ).blocked_autorange()
-        # print(measurement)
+        print(measurement)
         measurements.append(measurement)
+        method = stmt.split("(")[0].replace("extract_diagonal_", "")
+        data.append((method, n, density, num_threads, measurement.median, measurement.mean, measurement.iqr))
     comparison = Compare(measurements)
     comparison.colorize()
     comparison.trim_significant_figures()
     comparison.print()
+    df = pandas.DataFrame(data=data, columns=["method", "n", "density", "num_threads", "median", "mean", "iqr"])
+    df.to_csv("./times.tsv", sep="\t", index=False)
+    grid: seaborn.FacetGrid = seaborn.relplot(
+        data=df, x="n", y="median", hue="method", size="density", style="num_threads", kind="line",
+    )
+    grid.set(xscale="log", ylabel="median time [s]")
+    grid.tight_layout()
+    grid.savefig("./times.svg")
 
 
 if __name__ == "__main__":
