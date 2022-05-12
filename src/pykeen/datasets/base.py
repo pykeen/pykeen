@@ -78,8 +78,6 @@ class Dataset:
     testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the training triples
     validation: Optional[CoreTriplesFactory]
-    #: All datasets should take care of inverse triple creation
-    create_inverse_triples: bool
     #: the dataset's name
     metadata: Optional[Mapping[str, Any]] = None
 
@@ -129,6 +127,11 @@ class Dataset:
     def num_relations(self):  # noqa: D401
         """The number of relations."""
         return self.training.num_relations
+
+    @property
+    def create_inverse_triples(self):
+        """Return whether inverse triples are created *for the training factory*."""
+        return self.training.create_inverse_triples
 
     @classmethod
     def docdata(cls, *parts: str) -> Any:
@@ -307,11 +310,6 @@ class EagerDataset(Dataset):
         self.training = training
         self.testing = testing
         self.validation = validation
-        self.create_inverse_triples = (
-            training.create_inverse_triples
-            and testing.create_inverse_triples
-            and (self.validation is None or self.validation.create_inverse_triples)
-        )
         self.metadata = metadata
 
     # docstr-coverage: inherited
@@ -416,7 +414,7 @@ class PathDataset(LazyDataset):
         self.testing_path = pathlib.Path(testing_path)
         self.validation_path = pathlib.Path(validation_path) if validation_path else None
 
-        self.create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
 
         if eager:
@@ -426,7 +424,7 @@ class PathDataset(LazyDataset):
     def _load(self) -> None:
         self._training = TriplesFactory.from_path(
             path=self.training_path,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=self._create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
         self._testing = TriplesFactory.from_path(
@@ -654,7 +652,7 @@ class PackedZipRemoteDataset(LazyDataset):
         self.relative_training_path = pathlib.PurePath(relative_training_path)
         self.relative_testing_path = pathlib.PurePath(relative_testing_path)
         self.relative_validation_path = pathlib.PurePath(relative_validation_path)
-        self.create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = create_inverse_triples
         if eager:
             self._load()
             self._load_validation()
@@ -700,7 +698,7 @@ class PackedZipRemoteDataset(LazyDataset):
                 )
                 return TriplesFactory.from_labeled_triples(
                     triples=df.values,
-                    create_inverse_triples=self.create_inverse_triples,
+                    create_inverse_triples=self._create_inverse_triples,
                     metadata={"path": relative_path},
                     entity_to_id=entity_to_id,
                     relation_to_id=relation_to_id,
@@ -746,7 +744,7 @@ class CompressedSingleDataset(LazyDataset):
         self.random_state = random_state
         self.delimiter = delimiter or "\t"
         self.url = url
-        self.create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = create_inverse_triples
         self._relative_path = pathlib.PurePosixPath(relative_path)
 
         if eager:
@@ -760,7 +758,7 @@ class CompressedSingleDataset(LazyDataset):
         tf_path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=self._create_inverse_triples,
             metadata={"path": tf_path},
         )
         self._training, self._testing, self._validation = cast(
@@ -843,7 +841,7 @@ class TabbedDataset(LazyDataset):
 
         self._triples_factory = None
         self.random_state = random_state
-        self.create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = create_inverse_triples
         self._training = None
         self._testing = None
         self._validation = None
@@ -862,7 +860,7 @@ class TabbedDataset(LazyDataset):
         path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=self._create_inverse_triples,
             metadata=dict(path=path) if path else None,
         )
         self._training, self._testing, self._validation = cast(
