@@ -1455,8 +1455,22 @@ def iter_weisfeiler_lehman(
     """
     Iterate Weisfeiler-Lehman colors.
 
+    The Weisfeiler-Lehman algorithm starts from a uniformly node-colored graph, and iteratively counts the colors in
+    each nodes' neighborhood, and hashes these multi-sets into a new set of colors.
+
+    .. note::
+        more precisely, this implementation calculates the results of the 1-Weisfeiler-Lehman algorithm. There is a
+        hierarchy of k-WL tests, which color k-tuples of nodes instead of single nodes.
+
+    .. note::
+        Graph Neural Networks are closely related to the 1-WL test, cf. e.g., https://arxiv.org/abs/1810.02244
+
     .. note::
         the implementation creates intermediate dense tensors of shape `(num_nodes, num_colors)`
+
+    .. seealso::
+        https://www.jmlr.org/papers/volume12/shervashidze11a/shervashidze11a.pdf
+        https://towardsdatascience.com/expressive-power-of-graph-neural-networks-and-the-weisefeiler-lehman-test-b883db3c7c49
 
     :param edge_index: shape: `(2, m)`
         the edge list
