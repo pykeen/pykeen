@@ -3,7 +3,6 @@
 """Embedding weight initialization routines."""
 
 import functools
-import itertools
 import logging
 import math
 from typing import Optional, Sequence
@@ -16,7 +15,7 @@ import torch_ppr.utils
 from class_resolver import FunctionResolver
 from torch.nn import functional
 
-from .utils import TransformerEncoder, safe_diagonal, iter_matrix_power
+from .utils import TransformerEncoder, iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import MappedTriples
 from ..utils import compose
