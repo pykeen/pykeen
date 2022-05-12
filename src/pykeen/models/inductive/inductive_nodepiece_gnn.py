@@ -8,11 +8,10 @@ from typing import Iterable, Optional, Tuple, cast
 import torch
 from torch import nn
 
-from pykeen.utils import get_edge_index
-
 from .inductive_nodepiece import InductiveNodePiece
 from ...nn.representation import CompGCNLayer
 from ...typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
+from ...utils import get_edge_index
 
 __all__ = [
     "InductiveNodePieceGNN",
