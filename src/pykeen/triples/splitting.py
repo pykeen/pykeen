@@ -215,12 +215,11 @@ class Cleaner:
     ) -> Sequence[MappedTriples]:
         """Cleanup a list of triples array with respect to the first array."""
         reference, *others = triples_groups
-        # [...] is necessary for Python 3.7 compatibility
         result = []
         for other in others:
             reference, other = self.cleanup_pair(reference=reference, other=other, random_state=random_state)
             result.append(other)
-        return [reference, *result]
+        return reference, *result
 
 
 def _prepare_cleanup(
