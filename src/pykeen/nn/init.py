@@ -11,13 +11,14 @@ import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
+import torch_ppr.utils
 from class_resolver import FunctionResolver, Hint, OptionalKwargs
 from more_itertools import last
 from torch.nn import functional
 
-from .utils import TransformerEncoder
+from .utils import TransformerEncoder, iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Initializer
+from ..typing import Initializer, MappedTriples
 from ..utils import compose, iter_weisfeiler_lehman
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "init_phases",
     "PretrainedInitializer",
     "LabelBasedInitializer",
+    "RandomWalkPositionalEncodingInitializer",
     "initializer_resolver",
 ]
 
@@ -373,6 +375,85 @@ class WeisfeilerLehmanInitializer:
         # init entity representations according to the color
         x[:] = color_representation[self.colors]
         return x
+
+
+class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
+    r"""
+    Initialize nodes via random-walk positional encoding.
+
+    The random walk positional encoding is given as
+
+    .. math::
+        \mathbf{x}_i = [\mathbf{R}_{i, i}, \mathbf{R}^{2}_{i, i}, \ldots, \mathbf{R}^{d}_{i, i}] \in \mathbb{R}^{d}
+
+    where $\mathbf{R} := \mathbf{A}\mathbf{D}^{-1}$ is the random walk matrix, with
+    $\mathbf{D} := \sum_i \mathbf{A}_{i, i}$.
+
+    .. seealso::
+        https://arxiv.org/abs/2110.07875
+    """
+
+    def __init__(
+        self,
+        *,
+        triples_factory: Optional[CoreTriplesFactory] = None,
+        mapped_triples: Optional[MappedTriples] = None,
+        edge_index: Optional[torch.Tensor] = None,
+        dim: int,
+        num_entities: Optional[int] = None,
+        space_dim: int = 0,
+        skip_first_power: bool = True,
+    ) -> None:
+        """
+        Initialize the positional encoding.
+
+        One of `triples_factory`, `mapped_triples` or `edge_index` will be used.
+        The preference order is:
+
+        1. `triples_factory`
+        2. `mapped_triples`
+        3. `edge_index`
+
+        :param triples_factory:
+            the triples factory
+        :param mapped_triples: shape: `(m, 3)`
+            the mapped triples
+        :param edge_index: shape: `(2, m)`
+            the edge index
+        :param dim:
+            the dimensionality
+        :param num_entities:
+            the number of entities. If `None`, it will be inferred from `edge_index`
+        :param space_dim:
+            estimated dimensionality of the space. Used to
+            correct the random-walk diagonal by a factor `k^(space_dim/2)`.
+            In euclidean space, this correction means that the height of
+            the gaussian distribution stays almost constant across the number of
+            steps, if `space_dim` is the dimension of the euclidean space.
+        :param skip_first_power:
+            in most cases the adjacencies diagonal values will be zeros (since reflexive edges are not that common).
+            This flag enables skipping the first matrix power.
+        """
+        if triples_factory is not None:
+            if mapped_triples is not None:
+                logger.warning("Ignoring mapped_triples, since triples_factory is present.")
+            mapped_triples = triples_factory.mapped_triples
+        if mapped_triples is not None:
+            if edge_index is not None:
+                logger.warning("Ignoring edge_index, since mapped_triples is present.")
+            edge_index = mapped_triples[:, 0::2].t()
+        # create random walk matrix
+        rw = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
+        # stack diagonal entries of powers of rw
+        tensor = torch.stack(
+            [
+                (i ** (space_dim / 2.0)) * safe_diagonal(matrix=power)
+                for i, power in enumerate(iter_matrix_power(matrix=rw, max_iter=dim), start=1)
+                if not skip_first_power or i > 1
+            ],
+            dim=-1,
+        )
+        super().__init__(tensor=tensor)
 
 
 initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
