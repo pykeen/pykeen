@@ -104,9 +104,10 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
 
     :yields: increasing matrix powers
     """
+    # TODO: check CSR vs. COO?
+    yield matrix
     a = matrix
-    for _ in range(max_iter):
-        yield a
+    for _ in range(max_iter - 1):
         # if the sparsity becomes too low, convert to a dense matrix
         # note: this heuristic is based on the memory consumption,
         # for a sparse matrix, we store 3 values per nnz (row index, column index, value)
@@ -115,6 +116,7 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
         if a.is_sparse and a._nnz() >= a.numel() // 4:
             a = a.to_dense()
         a = torch.sparse.mm(matrix, a)
+        yield a
 
 
 def extract_diagonal_sparse_or_dense(matrix: torch.Tensor) -> torch.Tensor:
