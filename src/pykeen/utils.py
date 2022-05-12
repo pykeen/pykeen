@@ -1447,6 +1447,77 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
         yield torch.view_as_complex(x)
 
 
+def iter_weisfeiler_lehman(
+    edge_index: torch.LongTensor,
+    max_iter: int,
+    num_nodes: Optional[int] = None,
+) -> Iterable[torch.Tensor]:
+    """
+    Iterate Weisfeiler-Lehman colors.
+
+    .. note::
+        the implementation creates intermediate dense tensors of shape `(num_nodes, num_colors)`
+
+    :param edge_index: shape: `(2, m)`
+        the edge list
+    :param max_iter:
+        the maximum number of iterations
+    :param num_nodes:
+        the number of nodes. If None, will be inferred from the edge index.
+
+    :raises ValueError:
+        if the number of nodes exceeds `torch.long` (this cannot happen in practice, as the edge index tensor
+        construction would already fail earlier)
+
+    :yields: the colors for each Weisfeiler-Lehman iteration
+    """
+    num_nodes = num_nodes or edge_index.max().item() + 1
+    colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
+
+    # initial: degree
+    unique, counts = edge_index.unique(return_counts=True)
+    colors[unique] = counts
+
+    # hash
+    colors = colors.unique(return_inverse=True)[1]
+    yield colors
+    # determine small integer type for dense count array
+    for idtype in (torch.int8, torch.int16, torch.int32, torch.int64):
+        if torch.iinfo(idtype).max >= num_nodes:
+            dense_dtype = idtype
+            logger.debug(f"Selected dense dtype: {dense_dtype}")
+            break
+    else:
+        raise ValueError(f"{num_nodes} too large")
+
+    adj = torch.sparse_coo_tensor(
+        indices=edge_index, values=torch.ones(size=edge_index[0].shape), device=edge_index.device
+    )
+    for _ in range(max_iter - 1):
+        # message passing: collect colors of neighbors
+        # dense colors: shape: (n, c)
+        # adj:          shape: (n, n)
+        color_sparse = torch.sparse_coo_tensor(
+            indices=torch.stack([torch.arange(num_nodes, device=colors.device), colors], dim=0),
+            # values need to be float, since torch.sparse.mm does not support integer dtypes
+            values=torch.ones_like(colors, dtype=torch.get_default_dtype()),
+            # size: will be correctly inferred
+        )
+
+        # hash
+        color_dense = torch.sparse.mm(adj, color_sparse).to(dtype=dense_dtype).to_dense()
+        colors = color_dense.unique(dim=0, return_inverse=True)[1]
+
+        # hash
+        yield colors
+
+        # unique color for each node
+        if colors.max() >= num_nodes - 1:
+            break
+    else:
+        logger.debug(f"Weisfeiler-Lehman did not converge after {max_iter} iterations.")
+
+
 if __name__ == "__main__":
     import doctest
 
