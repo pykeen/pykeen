@@ -116,6 +116,7 @@ __all__ = [
     "logcumsumexp",
     "get_connected_components",
     "normalize_path",
+    "get_edge_index",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1537,6 +1538,42 @@ def iter_weisfeiler_lehman(
             break
     else:
         logger.debug(f"Weisfeiler-Lehman did not converge after {max_iter} iterations.")
+
+
+def get_edge_index(
+    *,
+    # cannot use Optional[pykeen.triples.CoreTriplesFactory] due to cyclic imports
+    triples_factory: Optional[Any] = None,
+    mapped_triples: Optional[MappedTriples] = None,
+    edge_index: Optional[torch.LongTensor] = None,
+) -> torch.LongTensor:
+    """
+    Get the edge index from a number of different sources.
+
+    :param triples_factory:
+        the triples factory
+    :param mapped_triples: shape: `(m, 3)`
+        ID-based triples
+    :param edge_index: shape: `(2, m)`
+        the edge index
+
+    :raises ValueError:
+        if none of the source was different from `None`
+
+    :return: shape: `(2, m)`
+        the edge index
+    """
+    if triples_factory is not None:
+        if mapped_triples is not None:
+            logger.warning("Ignoring mapped_triples, since triples_factory is present.")
+        mapped_triples = triples_factory.mapped_triples
+    if mapped_triples is not None:
+        if edge_index is not None:
+            logger.warning("Ignoring edge_index, since mapped_triples is present.")
+        edge_index = mapped_triples[:, 0::2].t()
+    if edge_index is None:
+        raise ValueError("At least one of the parameters must be different to None.")
+    return edge_index
 
 
 if __name__ == "__main__":

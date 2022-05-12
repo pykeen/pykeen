@@ -66,7 +66,7 @@ from torch import nn
 from .representation import Representation
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import OneOrSequence
-from ..utils import upgrade_to_sequence
+from ..utils import get_edge_index, upgrade_to_sequence
 
 __all__ = [
     # abstract
@@ -224,7 +224,7 @@ class MessagePassingRepresentation(Representation, ABC):
             )
 
         # buffer edge index for message passing
-        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="edge_index", tensor=get_edge_index(triples_factory=triples_factory))
 
         self.restrict_k_hop = restrict_k_hop
 

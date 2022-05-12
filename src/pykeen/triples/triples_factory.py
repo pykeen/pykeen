@@ -46,7 +46,14 @@ from ..typing import (
     RelationMapping,
     TorchRandomHint,
 )
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping, normalize_path, triple_tensor_to_set
+from ..utils import (
+    compact_mapping,
+    format_relative_comparison,
+    get_edge_index,
+    invert_mapping,
+    normalize_path,
+    triple_tensor_to_set,
+)
 
 __all__ = [
     "KGInfo",
@@ -1182,7 +1189,7 @@ class TriplesFactory(CoreTriplesFactory):
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
         return self._word_cloud(
-            ids=self.mapped_triples[:, [0, 2]],
+            ids=get_edge_index(mapped_triples=self.mapped_triples).t(),
             id_to_label=self.entity_labeling.id_to_label,
             top=top or 100,
         )

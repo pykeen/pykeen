@@ -19,7 +19,7 @@ from torch.nn import functional
 from .utils import TransformerEncoder, iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Initializer, MappedTriples
-from ..utils import compose, iter_weisfeiler_lehman
+from ..utils import compose, get_edge_index, iter_weisfeiler_lehman
 
 __all__ = [
     "xavier_uniform_",
@@ -349,12 +349,9 @@ class WeisfeilerLehmanInitializer:
         :param kwargs:
             additional keyword-based parameters passed to :func:`pykeen.utils.iter_weisfeiler_lehman`
         """
-        # normalize edge_index  # TODO: refactor
-        if triples_factory is not None:
-            mapped_triples = triples_factory.mapped_triples
-            num_entities = triples_factory.num_entities
-        if mapped_triples is not None:
-            edge_index = mapped_triples[:, 0::2].t()
+        edge_index = get_edge_index(
+            triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
+        )
 
         # get coloring
         self.colors = last(iter_weisfeiler_lehman(edge_index=edge_index, num_nodes=num_entities, **kwargs))
@@ -434,14 +431,9 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             in most cases the adjacencies diagonal values will be zeros (since reflexive edges are not that common).
             This flag enables skipping the first matrix power.
         """
-        if triples_factory is not None:
-            if mapped_triples is not None:
-                logger.warning("Ignoring mapped_triples, since triples_factory is present.")
-            mapped_triples = triples_factory.mapped_triples
-        if mapped_triples is not None:
-            if edge_index is not None:
-                logger.warning("Ignoring edge_index, since mapped_triples is present.")
-            edge_index = mapped_triples[:, 0::2].t()
+        edge_index = get_edge_index(
+            triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
+        )
         # create random walk matrix
         rw = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
         # stack diagonal entries of powers of rw
