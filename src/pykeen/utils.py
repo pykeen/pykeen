@@ -1449,7 +1449,7 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
 
 def iter_weisfeiler_lehman(
     edge_index: torch.LongTensor,
-    max_iter: int,
+    max_iter: int = 2,
     num_nodes: Optional[int] = None,
 ) -> Iterable[torch.Tensor]:
     """
