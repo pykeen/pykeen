@@ -1494,6 +1494,7 @@ def iter_weisfeiler_lehman(
     #       this is rather useless
 
     # initial: degree
+    # note: we calculate this separately, since we can use a more efficient implementation for the first step
     unique, counts = edge_index.unique(return_counts=True)
     colors[unique] = counts
 
