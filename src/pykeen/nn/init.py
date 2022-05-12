@@ -15,10 +15,9 @@ from class_resolver import FunctionResolver, Hint, OptionalKwargs
 from more_itertools import last
 from torch.nn import functional
 
-from pykeen.typing import Initializer
-
 from .utils import TransformerEncoder
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..typing import Initializer
 from ..utils import compose, iter_weisfeiler_lehman
 
 __all__ = [
