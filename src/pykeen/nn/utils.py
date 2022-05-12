@@ -104,7 +104,6 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
 
     :yields: increasing matrix powers
     """
-    # TODO: check CSR vs. COO?
     yield matrix
     a = matrix
     for _ in range(max_iter - 1):
@@ -115,7 +114,12 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
         # `torch.sparse.mm` can also deal with dense 2nd argument
         if a.is_sparse and a._nnz() >= a.numel() // 4:
             a = a.to_dense()
-        a = torch.sparse.mm(matrix, a)
+        # note: torch.sparse.mm only works for COO matrices;
+        #       @ only works for CSR matrices
+        if matrix.is_sparse_csr:
+            a = matrix @ a
+        else:
+            a = torch.sparse.mm(matrix, a)
         yield a
 
 
