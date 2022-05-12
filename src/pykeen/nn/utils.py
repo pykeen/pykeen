@@ -13,7 +13,7 @@ from ..utils import get_preferred_device
 
 __all__ = [
     "TransformerEncoder",
-    "extract_diagonal_sparse_or_dense",
+    "safe_diagonal",
 ]
 
 
@@ -123,7 +123,7 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
         yield a
 
 
-def extract_diagonal_sparse_or_dense(matrix: torch.Tensor) -> torch.Tensor:
+def safe_diagonal(matrix: torch.Tensor) -> torch.Tensor:
     """
     Extract diagonal from a potentially sparse matrix.
 
@@ -138,6 +138,10 @@ def extract_diagonal_sparse_or_dense(matrix: torch.Tensor) -> torch.Tensor:
     """
     if not matrix.is_sparse:
         return torch.diagonal(matrix)
+
+    # convert to COO, if necessary
+    if matrix.is_sparse_csr:
+        matrix = matrix.to_sparse_coo()
 
     n = matrix.shape[0]
     # we need to use indices here, since there may be zero diagonal entries
