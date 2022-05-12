@@ -114,6 +114,14 @@ def init_phases(x: torch.Tensor) -> torch.Tensor:
     .. seealso ::
         :func:`torch.view_as_real`
     """
+    # backwards compatibility
+    if x.shape[-1] != 2:
+        new_shape = (*x.shape[:-1], -1, 2)
+        logger.warning(
+            f"The input tensor shape, {tuple(x.shape)}, does not comply with the canonical complex tensor shape, "
+            f"(..., 2), cf. https://pytorch.org/docs/stable/complex_numbers.html. We'll try to reshape to {new_shape}",
+        )
+        x = x.view(*new_shape)
     phases = 2 * np.pi * torch.rand_like(torch.view_as_complex(x).real)
     return torch.view_as_real(torch.complex(real=phases.cos(), imag=phases.sin())).detach()
 

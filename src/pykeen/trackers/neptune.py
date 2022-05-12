@@ -74,6 +74,7 @@ class NeptuneResultTracker(ResultTracker):
         if tags:
             self.experiment.append_tags(*tags)
 
+    # docstr-coverage: inherited
     def log_metrics(
         self,
         metrics: Mapping[str, float],
@@ -84,6 +85,7 @@ class NeptuneResultTracker(ResultTracker):
         for k, v in metrics.items():
             self._help_log(k, step, v)
 
+    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(params, prefix=prefix)
         for k, v in params.items():

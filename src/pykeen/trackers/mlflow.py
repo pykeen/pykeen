@@ -48,11 +48,13 @@ class MLFlowResultTracker(ResultTracker):
         if experiment_name is not None:
             self.mlflow.set_experiment(experiment_name)
 
+    # docstr-coverage: inherited
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         self.mlflow.start_run(run_name=run_name)
         if self.tags is not None:
             self.mlflow.set_tags(tags=self.tags)
 
+    # docstr-coverage: inherited
     def log_metrics(
         self,
         metrics: Mapping[str, float],
@@ -62,10 +64,12 @@ class MLFlowResultTracker(ResultTracker):
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         self.mlflow.log_metrics(metrics=metrics, step=step)
 
+    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.mlflow.log_params(params=params)
 
+    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         status = self.mlflow.entities.RunStatus.FINISHED if success else self.mlflow.entities.RunStatus.FAILED
         self.mlflow.end_run(status=self.mlflow.entities.RunStatus.to_string(status))

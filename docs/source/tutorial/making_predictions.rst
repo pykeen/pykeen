@@ -18,7 +18,7 @@ After training a model, there are four high-level interfaces for making predicti
 2. :func:`pykeen.models.predict.get_relation_prediction_df` for a given head/tail pair
 3. :func:`pykeen.models.predict.get_head_prediction_df` for a given relation/tail pair
 4. :func:`pykeen.models.predict.get_all_prediction_df` for prioritizing links
-5. :func:`pykeen.models.predict.predict_triples` for computing scores for explicitly provided triples
+5. :func:`pykeen.models.predict.predict_triples_df` for computing scores for explicitly provided triples
 
 Scientifically, :func:`pykeen.models.predict.get_all_prediction_df` is the most interesting in a scenario where
 predictions could be tested and validated experimentally.

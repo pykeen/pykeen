@@ -20,7 +20,7 @@ from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import Representation
 from ..regularizers import Regularizer
-from ..triples import CoreTriplesFactory
+from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes, get_batchnorm_modules
 
@@ -121,6 +121,7 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
@@ -262,7 +263,7 @@ class ERModel(
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         interaction: Union[
             str,
             Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],

@@ -26,6 +26,7 @@ from typing import (
     Iterable,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Set,
@@ -57,6 +58,7 @@ __all__ = [
     "clamp_norm",
     "compact_mapping",
     "create_relation_to_entity_set_mapping",
+    "ensure_complex",
     "ensure_torch_random_state",
     "format_relative_comparison",
     "invert_mapping",
@@ -112,6 +114,7 @@ __all__ = [
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
     "logcumsumexp",
+    "get_connected_components",
     "normalize_path",
 ]
 
@@ -877,15 +880,15 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
 
 def extend_batch(
     batch: MappedTriples,
-    all_ids: List[int],
+    max_id: int,
     dim: int,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
     :param batch: shape: (batch_size, 2)
         The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
+    :param max_id:
+        The maximum IDs to enumerate.
     :param dim: in {0,1,2}
         The column along which to insert the enumerated IDs.
 
@@ -893,10 +896,10 @@ def extend_batch(
         A large batch, where every pair from the original batch is combined with every ID.
     """
     # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
+    extended_batch = batch.repeat_interleave(repeats=max_id, dim=0)
 
     # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
+    ids = torch.arange(max_id, device=batch.device)
 
     # Extend all IDs to the number of pairs such that each ID can be combined with every pair
     extended_ids = ids.repeat(batch.shape[0])
@@ -1323,6 +1326,52 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     return out
 
 
+def find(x: X, parent: MutableMapping[X, X]) -> X:
+    """Find step of union-find data structure with path compression."""
+    # check validity
+    if x not in parent:
+        raise ValueError(f"Unknown element: {x}.")
+    # path compression
+    while parent[x] != x:
+        x, parent[x] = parent[x], parent[parent[x]]
+    return x
+
+
+def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
+    """
+    Calculate the connected components for a graph given as edge list.
+
+    The implementation uses a `union-find <https://en.wikipedia.org/wiki/Disjoint-set_data_structure>`_ data structure
+    with path compression.
+
+    :param pairs:
+        the edge list, i.e., pairs of node ids.
+
+    :return:
+        a collection of connected components, i.e., a collection of disjoint collections of node ids.
+    """
+    parent: Dict[X, X] = dict()
+    for x, y in pairs:
+        parent.setdefault(x, x)
+        parent.setdefault(y, y)
+        # get representatives
+        x = find(x=x, parent=parent)
+        y = find(x=y, parent=parent)
+        # already merged
+        if x == y:
+            continue
+        # make x the smaller one
+        if y < x:  # type: ignore
+            x, y = y, x
+        # merge
+        parent[y] = x
+    # extract partitions
+    result = defaultdict(list)
+    for k, v in parent.items():
+        result[v].append(k)
+    return list(result.values())
+
+
 PathType = Union[str, pathlib.Path, TextIO]
 
 
@@ -1376,6 +1425,26 @@ def normalize_path(
             directory = path.parent
         directory.mkdir(exist_ok=True, parents=True)
     return path
+
+
+def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
+    """
+    Ensure that all tensors are of complex dtype.
+
+    Reshape and convert if necessary.
+
+    :param xs:
+        the tensors
+
+    :yields: complex tensors.
+    """
+    for x in xs:
+        if x.is_complex():
+            yield x
+            continue
+        if x.shape[-1] != 2:
+            x = x.view(*x.shape[:-1], -1, 2)
+        yield torch.view_as_complex(x)
 
 
 if __name__ == "__main__":

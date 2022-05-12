@@ -60,6 +60,7 @@ class AnchorSearcher(ABC):
 class CSGraphAnchorSearcher(AnchorSearcher):
     """Find closest anchors using :class:`scipy.sparse.csgraph`."""
 
+    # docstr-coverage: inherited
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
         adjacency = edge_index_to_sparse_matrix(edge_index=edge_index).tocsr()
@@ -90,6 +91,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         """
         self.max_iter = max_iter
 
+    # docstr-coverage: inherited
     def extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().extra_repr()
         yield f"max_iter={self.max_iter}"
@@ -213,6 +215,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
             tokens[i, : len(chosen)] = chosen
         return tokens
 
+    # docstr-coverage: inherited
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         adjacency = self.create_adjacency(edge_index=edge_index)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
@@ -242,6 +245,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         self.page_rank_kwargs = page_rank_kwargs or {}
         self.use_tqdm = use_tqdm
 
+    # docstr-coverage: inherited
     def extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield f"batch_size={self.batch_size}"
         yield f"use_tqdm={self.use_tqdm}"
@@ -269,6 +273,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             ]
         )[:, ::-1]
 
+    # docstr-coverage: inherited
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         n = edge_index.max().item() + 1
         result = numpy.full(shape=(n, k), fill_value=-1)

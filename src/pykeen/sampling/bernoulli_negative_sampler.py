@@ -70,6 +70,7 @@ class BernoulliNegativeSampler(NegativeSampler):
             # Set parameter for Bernoulli distribution
             self.corrupt_head_probability[r] = tph / (tph + hpt)
 
+    # docstr-coverage: inherited
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
         batch_shape = positive_batch.shape[:-1]
 
