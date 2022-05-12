@@ -22,7 +22,7 @@ from torch import nn
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.representation import Representation, build_representation
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import CoreTriplesFactory, relation_inverter
+from ..triples import KGInfo, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
@@ -67,7 +67,7 @@ class Model(nn.Module, ABC):
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
@@ -592,7 +592,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         regularizer: Optional[Regularizer] = None,
         **kwargs,
     ) -> None:
@@ -615,9 +615,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             )
         else:
             self.regularizer = NoRegularizer()
-
-        self._entity_ids = triples_factory.entity_ids
-        self._relation_ids = triples_factory.relation_ids
 
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         super().__init_subclass__(**kwargs)
@@ -664,7 +661,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_t function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self._entity_ids), dim=2)
+        hrt_batch = extend_batch(batch=hr_batch, max_id=self.num_entities, dim=2)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
@@ -694,7 +691,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_h function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self._entity_ids), dim=0)
+        hrt_batch = extend_batch(batch=rt_batch, max_id=self.num_entities, dim=0)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
@@ -724,7 +721,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_r function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self._relation_ids), dim=1)
+        hrt_batch = extend_batch(batch=ht_batch, max_id=self.num_relations, dim=1)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
@@ -755,7 +752,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         entity_representations: HintOrType[Representation] = None,
         entity_representations_kwargs: OptionalKwargs = None,
         relation_representations: HintOrType[Representation] = None,
