@@ -16,7 +16,7 @@ import torch_ppr.utils
 from class_resolver import FunctionResolver
 from torch.nn import functional
 
-from .utils import TransformerEncoder, extract_diagonal_sparse_or_dense, iter_matrix_power, sparse_eye
+from .utils import TransformerEncoder, extract_diagonal_sparse_or_dense, iter_matrix_power
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import MappedTriples
 from ..utils import compose
@@ -387,7 +387,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         if skip_first_power:
             powers = itertools.islice(powers, 1, None)
         # prepare an extractor for diagonal entries with densification if necessary
-        diag_extractor = functools.partial(extract_diagonal_sparse_or_dense, eye=sparse_eye(n=num_entities))
+        diag_extractor = extract_diagonal_sparse_or_dense
         # an iterator over the power diagonal
         diagonals = map(diag_extractor, powers)
         tensor = torch.stack([(i ** (space_dim / 2.0)) * diag for i, diag in enumerate(diagonals, start=1)], dim=-1)

@@ -13,6 +13,7 @@ from ..utils import get_preferred_device
 
 __all__ = [
     "TransformerEncoder",
+    "extract_diagonal_sparse_or_dense",
 ]
 
 
@@ -116,49 +117,27 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
         a = torch.sparse.mm(matrix, a)
 
 
-def sparse_eye(n: int) -> torch.Tensor:
-    """
-    Create a sparse diagonal matrix.
-
-    .. note ::
-        this is a work-around as long as there is no torch built-in
-
-    :param n:
-        the size
-
-    :return: shape: `(n, n)`, sparse
-        a sparse diagonal matrix
-    """
-    diag_indices = torch.arange(n).unsqueeze(0).repeat(2, 1)
-    return torch.sparse_coo_tensor(indices=diag_indices, values=torch.ones(n))
-
-
-def extract_diagonal_sparse_or_dense(matrix: torch.Tensor, eye: Optional[torch.Tensor]) -> torch.Tensor:
+def extract_diagonal_sparse_or_dense(matrix: torch.Tensor) -> torch.Tensor:
     """
     Extract diagonal from a potentially sparse matrix.
 
     .. note ::
-        this is a work-around as long as `torch.diag` does not work for sparse tensors
+        this is a work-around as long as `torch.diagonal` does not work for sparse tensors
 
     :param matrix: shape: `(n, n)`
         the matrix
-    :param eye:
-        a prepared sparse eye matrix of appropriate shape
 
-    :return:
+    :return: shape: `(n,)`
         the diagonal values.
     """
     if not matrix.is_sparse:
-        return torch.diag(matrix)
+        return torch.diagonal(matrix)
 
     n = matrix.shape[0]
-    if eye is None:
-        eye = sparse_eye(n=n)
-
     # we need to use indices here, since there may be zero diagonal entries
-    diag = (matrix * eye).coalesce()
-    indices = diag.indices()
-    values = diag.values()
-    x = torch.zeros(n)
-    x[indices] = values
-    return x
+    indices = matrix._indices()
+    mask = indices[0] == indices[1]
+    diagonal_values = matrix._values()[mask]
+    diagonal_indices = indices[0][mask]
+
+    return torch.zeros(n, device=matrix.device).scatter_add(dim=0, index=diagonal_indices, src=diagonal_values)
