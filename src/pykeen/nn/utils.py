@@ -2,19 +2,51 @@
 
 """Utilities for neural network components."""
 
+import logging
 from typing import Iterable, Optional, Sequence, Union
 
 import torch
 from more_itertools import chunked
 from torch import nn
+from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
-from ..utils import get_preferred_device
+from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 
 __all__ = [
     "TransformerEncoder",
     "safe_diagonal",
 ]
+
+logger = logging.getLogger(__name__)
+memory_utilization_maximizer = MemoryUtilizationMaximizer()
+
+
+@memory_utilization_maximizer
+def _encode_all_memory_utilization_optimized(
+    encoder: "TransformerEncoder",
+    labels: Sequence[str],
+    batch_size: int,
+) -> torch.Tensor:
+    """
+    Encode all labels with the given batch-size.
+
+    Wrapped by memory utilization maximizer to automatically reduce the batch size if needed.
+
+    :param encoder:
+        the encoder
+    :param labels:
+        the labels to encode
+    :param batch_size:
+        the batch size to use. Will automatically be reduced if necessary.
+
+    :return: shape: `(len(labels), dim)`
+        the encoded labels
+    """
+    return torch.cat(
+        [encoder(batch) for batch in chunked(tqdm(map(str, labels), leave=False), batch_size)],
+        dim=0,
+    )
 
 
 class TransformerEncoder(nn.Module):
@@ -50,13 +82,15 @@ class TransformerEncoder(nn.Module):
         self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path=pretrained_model_name_or_path
         )
-        self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path).to(
+            resolve_device()
+        )
         self.max_length = max_length or 512
 
     def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
         """Encode labels via the provided model and tokenizer."""
-        if isinstance(labels, str):
-            labels = [labels]
+        labels = upgrade_to_sequence(labels)
+        labels = list(map(str, labels))
         return self.model(
             **self.tokenizer(
                 labels,
@@ -71,7 +105,7 @@ class TransformerEncoder(nn.Module):
     def encode_all(
         self,
         labels: Sequence[str],
-        batch_size: int = 1,
+        batch_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """Encode all labels (inference mode & batched).
 
@@ -82,15 +116,15 @@ class TransformerEncoder(nn.Module):
             means that the labels are encoded one-by-one, while ``batch_size=len(labels)``
             would correspond to encoding all at once.
             Larger batch sizes increase memory requirements, but may be computationally
-            more efficient.
+            more efficient. `batch_size` can also be set to `None` to enable automatic batch
+            size maximization for the employed hardware.
 
         :returns: shape: (len(labels), dim)
             a tensor representing the encodings for all labels
         """
-        return torch.cat(
-            [self(batch) for batch in chunked(tqdm(labels), batch_size)],
-            dim=0,
-        )
+        return _encode_all_memory_utilization_optimized(
+            encoder=self, labels=labels, batch_size=batch_size or len(labels)
+        ).detach()
 
 
 def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Tensor]:
