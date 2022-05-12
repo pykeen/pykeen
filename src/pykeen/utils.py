@@ -880,15 +880,15 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
 
 def extend_batch(
     batch: MappedTriples,
-    all_ids: List[int],
+    max_id: int,
     dim: int,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
     :param batch: shape: (batch_size, 2)
         The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
+    :param max_id:
+        The maximum IDs to enumerate.
     :param dim: in {0,1,2}
         The column along which to insert the enumerated IDs.
 
@@ -896,10 +896,10 @@ def extend_batch(
         A large batch, where every pair from the original batch is combined with every ID.
     """
     # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
+    extended_batch = batch.repeat_interleave(repeats=max_id, dim=0)
 
     # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
+    ids = torch.arange(max_id, device=batch.device)
 
     # Extend all IDs to the number of pairs such that each ID can be combined with every pair
     extended_ids = ids.repeat(batch.shape[0])
