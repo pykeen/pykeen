@@ -1490,6 +1490,8 @@ def iter_weisfeiler_lehman(
     """
     num_nodes = num_nodes or edge_index.max().item() + 1
     colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
+    # note: in theory, we could return this uniform coloring as the first coloring; however, for featurization,
+    #       this is rather useless
 
     # initial: degree
     unique, counts = edge_index.unique(return_counts=True)
@@ -1498,6 +1500,7 @@ def iter_weisfeiler_lehman(
     # hash
     colors = colors.unique(return_inverse=True)[1]
     yield colors
+
     # determine small integer type for dense count array
     for idtype in (torch.int8, torch.int16, torch.int32, torch.int64):
         if torch.iinfo(idtype).max >= num_nodes:
