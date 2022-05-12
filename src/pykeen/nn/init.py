@@ -378,19 +378,16 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
                 logger.warning("Ignoring edge_index, since mapped_triples is present.")
             edge_index = mapped_triples[:, 0::2].t()
         # create random walk matrix
-        adj = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
-        num_entities = adj.shape[0]
-        # create a generator of matrix powers
-        powers = iter_matrix_power(matrix=adj, max_iter=dim)
-        # in most cases A**1 diagonal values will be zeros (since reflexive edges are not that common)
-        # so we might want to skip the first
-        if skip_first_power:
-            powers = itertools.islice(powers, 1, None)
-        # prepare an extractor for diagonal entries with densification if necessary
-        diag_extractor = extract_diagonal_sparse_or_dense
-        # an iterator over the power diagonal
-        diagonals = map(diag_extractor, powers)
-        tensor = torch.stack([(i ** (space_dim / 2.0)) * diag for i, diag in enumerate(diagonals, start=1)], dim=-1)
+        rw = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
+        # stack diagonal entries of powers of rw
+        tensor = torch.stack(
+            [
+                (i ** (space_dim / 2.0)) * extract_diagonal_sparse_or_dense(matrix=power)
+                for i, power in enumerate(iter_matrix_power(matrix=rw, max_iter=dim), start=1)
+                if not skip_first_power or i > 1
+            ],
+            dim=-1,
+        )
         super().__init__(tensor=tensor)
 
 
