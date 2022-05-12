@@ -2,7 +2,7 @@
 
 """Utilities for neural network components."""
 
-from typing import Optional, Sequence, Union
+from typing import Iterable, Optional, Sequence, Union
 
 import torch
 from more_itertools import chunked
@@ -13,6 +13,7 @@ from ..utils import get_preferred_device
 
 __all__ = [
     "TransformerEncoder",
+    "safe_diagonal",
 ]
 
 
@@ -90,3 +91,63 @@ class TransformerEncoder(nn.Module):
             [self(batch) for batch in chunked(tqdm(labels), batch_size)],
             dim=0,
         )
+
+
+def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Tensor]:
+    """
+    Iterate over matrix powers.
+
+    :param matrix: shape: `(n, n)`
+        the square matrix
+    :param max_iter:
+        the maximum number of iterations.
+
+    :yields: increasing matrix powers
+    """
+    yield matrix
+    a = matrix
+    for _ in range(max_iter - 1):
+        # if the sparsity becomes too low, convert to a dense matrix
+        # note: this heuristic is based on the memory consumption,
+        # for a sparse matrix, we store 3 values per nnz (row index, column index, value)
+        # performance-wise, it likely makes sense to switch even earlier
+        # `torch.sparse.mm` can also deal with dense 2nd argument
+        if a.is_sparse and a._nnz() >= a.numel() // 4:
+            a = a.to_dense()
+        # note: torch.sparse.mm only works for COO matrices;
+        #       @ only works for CSR matrices
+        if matrix.is_sparse_csr:
+            a = matrix @ a
+        else:
+            a = torch.sparse.mm(matrix, a)
+        yield a
+
+
+def safe_diagonal(matrix: torch.Tensor) -> torch.Tensor:
+    """
+    Extract diagonal from a potentially sparse matrix.
+
+    .. note ::
+        this is a work-around as long as `torch.diagonal` does not work for sparse tensors
+
+    :param matrix: shape: `(n, n)`
+        the matrix
+
+    :return: shape: `(n,)`
+        the diagonal values.
+    """
+    if not matrix.is_sparse:
+        return torch.diagonal(matrix)
+
+    # convert to COO, if necessary
+    if matrix.is_sparse_csr:
+        matrix = matrix.to_sparse_coo()
+
+    n = matrix.shape[0]
+    # we need to use indices here, since there may be zero diagonal entries
+    indices = matrix._indices()
+    mask = indices[0] == indices[1]
+    diagonal_values = matrix._values()[mask]
+    diagonal_indices = indices[0][mask]
+
+    return torch.zeros(n, device=matrix.device).scatter_add(dim=0, index=diagonal_indices, src=diagonal_values)
