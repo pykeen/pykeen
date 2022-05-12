@@ -11,12 +11,15 @@ import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
-from class_resolver import FunctionResolver
+from class_resolver import FunctionResolver, Hint, OptionalKwargs
+from more_itertools import last
 from torch.nn import functional
 
+from pykeen.typing import Initializer
+
 from .utils import TransformerEncoder
-from ..triples import TriplesFactory
-from ..utils import compose
+from ..triples import CoreTriplesFactory, TriplesFactory
+from ..utils import compose, iter_weisfeiler_lehman
 
 __all__ = [
     "xavier_uniform_",
@@ -308,7 +311,72 @@ class LabelBasedInitializer(PretrainedInitializer):
         )
 
 
-initializer_resolver = FunctionResolver(
+class WeisfeilerLehmanInitializer:
+    """An initializer based on an encoding of categorical colors from the Weisfeiler-Lehman algorithm."""
+
+    def __init__(
+        self,
+        *,
+        # the color initializer
+        color_initializer: Hint[Initializer] = None,
+        color_initializer_kwargs: OptionalKwargs = None,
+        # variants for the edge index
+        edge_index: Optional[torch.LongTensor] = None,
+        num_entities: Optional[int] = None,
+        mapped_triples: Optional[torch.LongTensor] = None,
+        triples_factory: Optional[CoreTriplesFactory] = None,
+        # additional parameters for iter_weisfeiler_lehman
+        **kwargs,
+    ) -> None:
+        """
+        Initialize the initializer.
+
+        :param color_initializer:
+            the initializer for initialization color representations, or a hint thereof
+        :param color_initializer_kwargs:
+            additional keyword-based parameters for the color initializer
+
+        :param edge_index: shape: (2, m)
+            the edge index
+        :param num_entities:
+            the number of entities. can be inferred
+        :param mapped_triples: shape: (m, 3)
+            the Id-based triples
+        :param triples_factory:
+            the triples factory
+
+        :param kwargs:
+            additional keyword-based parameters passed to :func:`pykeen.utils.iter_weisfeiler_lehman`
+        """
+        # normalize edge_index  # TODO: refactor
+        if triples_factory is not None:
+            mapped_triples = triples_factory.mapped_triples
+            num_entities = triples_factory.num_entities
+        if mapped_triples is not None:
+            edge_index = mapped_triples[:, 0::2].t()
+
+        # get coloring
+        self.colors = last(iter_weisfeiler_lehman(edge_index=edge_index, num_nodes=num_entities, **kwargs))
+        # make color initializer
+        self.color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
+
+    @property
+    def num_colors(self) -> int:
+        """Return the number of colors."""
+        return self.colors.max().item() + 1
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Initialize the tensor."""
+        if x.shape[0] != self.num_colors:
+            raise ValueError(f"shape does not match: expected shape[0]={self.num_colors} but got {x.shape}")
+        # initialize color representations
+        color_representation = self.color_initializer(x.new_empty(self.num_colors, *x.shape[1:]))
+        # init entity representations according to the color
+        x[:] = color_representation[self.colors]
+        return x
+
+
+initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
     [
         getattr(torch.nn.init, func)
         for func in dir(torch.nn.init)
