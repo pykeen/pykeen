@@ -56,13 +56,12 @@ relation representations and a DistMult interaction function.
 """
 
 from abc import ABC, abstractmethod
-from typing import Collection, Optional, Sequence
+from typing import Collection, Literal, Optional, Sequence
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
-from typing_extensions import Literal
 
 from .representation import Representation
 from ..triples.triples_factory import CoreTriplesFactory
