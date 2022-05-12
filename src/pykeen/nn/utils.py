@@ -104,7 +104,7 @@ class TransformerEncoder(nn.Module):
     def encode_all(
         self,
         labels: Sequence[str],
-        batch_size: int = None,
+        batch_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """Encode all labels (inference mode & batched).
 
