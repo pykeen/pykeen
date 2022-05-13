@@ -1501,6 +1501,7 @@ def iter_weisfeiler_lehman(
 
     # hash
     colors = colors.unique(return_inverse=True)[1]
+    num_colors = colors.max() + 1
     yield colors
 
     # determine small integer type for dense count array
@@ -1518,7 +1519,7 @@ def iter_weisfeiler_lehman(
         device=edge_index.device,
         size=(num_nodes, num_nodes),
     )
-    for _ in range(max_iter - 1):
+    for i in range(2, max_iter + 1):
         # message passing: collect colors of neighbors
         # dense colors: shape: (n, c)
         # adj:          shape: (n, n)
@@ -1528,17 +1529,29 @@ def iter_weisfeiler_lehman(
             values=torch.ones_like(colors, dtype=torch.get_default_dtype()),
             # size: will be correctly inferred
         )
-
-        # hash
         color_dense = torch.sparse.mm(adj, color_sparse).to(dtype=dense_dtype).to_dense()
-        colors = color_dense.unique(dim=0, return_inverse=True)[1]
+
+        # concat with old colors
+        colors = torch.cat([colors.unsqueeze(dim=-1), color_dense], dim=-1)
 
         # hash
+        colors = colors.unique(dim=0, return_inverse=True)[1]
         yield colors
 
-        # unique color for each node
-        if colors.max() >= num_nodes - 1:
+        # convergence check
+        new_num_colors = colors.max() + 1
+
+        # each node has a unique color
+        if new_num_colors >= (num_nodes - 1):
+            logger.debug(f"Weisfeiler-Lehman terminated with unique colors for each node after {i} iterations")
             break
+
+        # the number of colors did not improve in the last iteration
+        if num_colors >= new_num_colors:
+            logger.debug(f"Weisfeiler-Lehman could not further refine coloring in iteration {i}")
+            break
+
+        num_colors = new_num_colors
     else:
         logger.debug(f"Weisfeiler-Lehman did not converge after {max_iter} iterations.")
 
