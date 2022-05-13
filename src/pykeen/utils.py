@@ -1492,7 +1492,7 @@ def _weisfeiler_lehman_iteration_approx(
     decimals: int = 6,
 ) -> torch.Tensor:
     """
-    An approximate variant of WL with lower memory complexity.
+    Perform an approximate  single Weisfeiler-Lehman iteration.
 
     It utilizes the trick from https://arxiv.org/abs/2001.09621 of replacing node indicator functions by
     randomly drawn functions of fixed and low dimensionality.
