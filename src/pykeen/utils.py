@@ -1485,10 +1485,57 @@ def _weisfeiler_lehman_iteration(
     return colors.unique(dim=0, return_inverse=True)[1]
 
 
+def _weisfeiler_lehman_iteration_approx(
+    adj: torch.Tensor,
+    colors: torch.LongTensor,
+    dim: int = 32,
+    decimals: int = 6,
+) -> torch.Tensor:
+    """
+    An approximate variant of WL with lower memory complexity.
+
+    It utilizes the trick from https://arxiv.org/abs/2001.09621 of replacing node indicator functions by
+    randomly drawn functions of fixed and low dimensionality.
+
+    :param adj: shape: `(n, n)`
+        the adjacency matrix
+    :param colors: shape: `(n,)`
+        the node colors (as integers)
+    :param dim:
+        the dimensionality of the random node indicator functions
+    :param decimals:
+        the number of decimals to round to
+
+    :return: shape: `(n,)`
+        the new node colors
+    """
+    num_colors = colors.max() + 1
+
+    # create random indicator functions of low dimensionality
+    rand = torch.rand(num_colors, dim, device=colors.device)
+    x = rand[colors]
+
+    # collect neighbors' colors
+    x = torch.sparse.mm(adj, x)
+
+    # round to avoid numerical effects
+    x = torch.round(x, decimals=decimals)
+
+    # hash first
+    new_colors = x.unique(return_inverse=True, dim=0)[1]
+
+    # concat with old colors
+    colors = torch.stack([colors, new_colors], dim=-1)
+
+    # re-hash
+    return colors.unique(return_inverse=True, dim=0)[1]
+
+
 def iter_weisfeiler_lehman(
     edge_index: torch.LongTensor,
     max_iter: int = 2,
     num_nodes: Optional[int] = None,
+    approximate: bool = False,
 ) -> Iterable[torch.Tensor]:
     """
     Iterate Weisfeiler-Lehman colors.
@@ -1519,6 +1566,8 @@ def iter_weisfeiler_lehman(
         the maximum number of iterations
     :param num_nodes:
         the number of nodes. If None, will be inferred from the edge index.
+    :param approximate:
+        whether to use an approximate, but more memory-efficient implementation.
 
     :raises ValueError:
         if the number of nodes exceeds `torch.long` (this cannot happen in practice, as the edge index tensor
@@ -1526,6 +1575,9 @@ def iter_weisfeiler_lehman(
 
     :yields: the colors for each Weisfeiler-Lehman iteration
     """
+    # only keep connectivity, but remove multiplicity
+    edge_index = edge_index.unique(dim=1)
+
     num_nodes = num_nodes or edge_index.max().item() + 1
     colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
     # note: in theory, we could return this uniform coloring as the first coloring; however, for featurization,
@@ -1557,7 +1609,10 @@ def iter_weisfeiler_lehman(
         size=(num_nodes, num_nodes),
     )
     for i in range(2, max_iter + 1):
-        colors = _weisfeiler_lehman_iteration(adj=adj, colors=colors, dense_dtype=dense_dtype)
+        if approximate:
+            colors = _weisfeiler_lehman_iteration_approx(adj=adj, colors=colors)
+        else:
+            colors = _weisfeiler_lehman_iteration(adj=adj, colors=colors, dense_dtype=dense_dtype)
         yield colors
 
         # convergence check
