@@ -12,13 +12,14 @@ import torch
 import torch.nn
 import torch.nn.init
 import torch_ppr.utils
-from class_resolver import FunctionResolver
+from class_resolver import FunctionResolver, Hint, OptionalKwargs
+from more_itertools import last
 from torch.nn import functional
 
 from .utils import TransformerEncoder, iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import MappedTriples
-from ..utils import compose
+from ..typing import Initializer, MappedTriples
+from ..utils import compose, get_edge_index, iter_weisfeiler_lehman
 
 __all__ = [
     "xavier_uniform_",
@@ -311,6 +312,68 @@ class LabelBasedInitializer(PretrainedInitializer):
         )
 
 
+class WeisfeilerLehmanInitializer:
+    """An initializer based on an encoding of categorical colors from the Weisfeiler-Lehman algorithm."""
+
+    def __init__(
+        self,
+        *,
+        # the color initializer
+        color_initializer: Hint[Initializer] = None,
+        color_initializer_kwargs: OptionalKwargs = None,
+        # variants for the edge index
+        edge_index: Optional[torch.LongTensor] = None,
+        num_entities: Optional[int] = None,
+        mapped_triples: Optional[torch.LongTensor] = None,
+        triples_factory: Optional[CoreTriplesFactory] = None,
+        # additional parameters for iter_weisfeiler_lehman
+        **kwargs,
+    ) -> None:
+        """
+        Initialize the initializer.
+
+        :param color_initializer:
+            the initializer for initialization color representations, or a hint thereof
+        :param color_initializer_kwargs:
+            additional keyword-based parameters for the color initializer
+
+        :param edge_index: shape: (2, m)
+            the edge index
+        :param num_entities:
+            the number of entities. can be inferred
+        :param mapped_triples: shape: (m, 3)
+            the Id-based triples
+        :param triples_factory:
+            the triples factory
+
+        :param kwargs:
+            additional keyword-based parameters passed to :func:`pykeen.utils.iter_weisfeiler_lehman`
+        """
+        edge_index = get_edge_index(
+            triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
+        )
+
+        # get coloring
+        self.colors = last(iter_weisfeiler_lehman(edge_index=edge_index, num_nodes=num_entities, **kwargs))
+        # make color initializer
+        self.color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
+
+    @property
+    def num_colors(self) -> int:
+        """Return the number of colors."""
+        return self.colors.max().item() + 1
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Initialize the tensor."""
+        if x.shape[0] != self.colors.shape[0]:
+            raise ValueError(f"shape does not match: expected shape[0]={self.colors.shape[0]} but got {x.shape}")
+        # initialize color representations
+        color_representation = self.color_initializer(x.new_empty(self.num_colors, *x.shape[1:]))
+        # init entity representations according to the color
+        x[:] = color_representation[self.colors]
+        return x
+
+
 class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
     r"""
     Initialize nodes via random-walk positional encoding.
@@ -368,14 +431,9 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
             in most cases the adjacencies diagonal values will be zeros (since reflexive edges are not that common).
             This flag enables skipping the first matrix power.
         """
-        if triples_factory is not None:
-            if mapped_triples is not None:
-                logger.warning("Ignoring mapped_triples, since triples_factory is present.")
-            mapped_triples = triples_factory.mapped_triples
-        if mapped_triples is not None:
-            if edge_index is not None:
-                logger.warning("Ignoring edge_index, since mapped_triples is present.")
-            edge_index = mapped_triples[:, 0::2].t()
+        edge_index = get_edge_index(
+            triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
+        )
         # create random walk matrix
         rw = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
         # stack diagonal entries of powers of rw
@@ -390,7 +448,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         super().__init__(tensor=tensor)
 
 
-initializer_resolver = FunctionResolver(
+initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
     [
         getattr(torch.nn.init, func)
         for func in dir(torch.nn.init)

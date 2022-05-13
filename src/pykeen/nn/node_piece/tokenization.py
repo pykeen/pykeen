@@ -18,7 +18,7 @@ from .loader import PrecomputedTokenizerLoader, precomputed_tokenizer_loader_res
 from .utils import random_sample_no_replacement
 from ...constants import PYKEEN_MODULE
 from ...typing import MappedTriples
-from ...utils import format_relative_comparison
+from ...utils import format_relative_comparison, get_edge_index
 
 __all__ = [
     # Resolver
@@ -133,7 +133,7 @@ class AnchorTokenizer(Tokenizer):
         num_entities: int,
         num_relations: int,
     ) -> torch.LongTensor:  # noqa: D102
-        edge_index = mapped_triples[:, [0, 2]].numpy().T
+        edge_index = get_edge_index(mapped_triples=mapped_triples).numpy()
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
         anchors = self.anchor_selection(edge_index=edge_index)

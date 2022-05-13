@@ -118,6 +118,16 @@ class LabelBasedInitializerTestCase(cases.InitializerTestCase):
         self.shape = self.initializer.tensor.shape[1:]
 
 
+class WeisfeilerLehmanInitializerTestCase(cases.InitializerTestCase):
+    """Tests for Weisfeiler-Lehman features."""
+
+    def setUp(self) -> None:
+        """Prepare for test."""
+        dataset = Nations()
+        self.initializer = pykeen.nn.init.WeisfeilerLehmanInitializer(triples_factory=dataset.training)
+        self.num_entities = dataset.num_entities
+
+
 class RandomWalkPositionalEncodingInitializerTestCase(cases.InitializerTestCase):
     """Tests for random-walk positional encoding."""
 
