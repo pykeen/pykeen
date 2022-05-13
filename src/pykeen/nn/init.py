@@ -365,8 +365,8 @@ class WeisfeilerLehmanInitializer:
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         """Initialize the tensor."""
-        if x.shape[0] != self.num_colors:
-            raise ValueError(f"shape does not match: expected shape[0]={self.num_colors} but got {x.shape}")
+        if x.shape[0] != self.colors.shape[0]:
+            raise ValueError(f"shape does not match: expected shape[0]={self.colors.shape[0]} but got {x.shape}")
         # initialize color representations
         color_representation = self.color_initializer(x.new_empty(self.num_colors, *x.shape[1:]))
         # init entity representations according to the color
