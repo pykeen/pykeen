@@ -25,7 +25,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
-from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device, upgrade_to_sequence
+from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
 
 __all__ = [
     "Representation",
@@ -808,7 +808,7 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         # register buffers for adjacency matrix; we use the same format as PyTorch Geometric
         # TODO: This always uses all training triples for message passing
-        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="edge_index", tensor=get_edge_index(triples_factory=triples_factory))
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
         # initialize buffer of enriched representations
