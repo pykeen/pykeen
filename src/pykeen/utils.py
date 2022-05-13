@@ -1448,6 +1448,43 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
         yield torch.view_as_complex(x)
 
 
+def _weisfeiler_lehman_iteration(
+    adj: torch.Tensor,
+    colors: torch.LongTensor,
+    dense_dtype: torch.dtype = torch.long,
+) -> torch.Tensor:
+    """
+    Perform a single Weisfeiler-Lehman iteration.
+
+    :param adj: shape: `(n, n)`
+        the adjacency matrix
+    :param colors: shape: `(n,)`
+        the node colors (as integers)
+    :param dense_dtype:
+        a datatype for storing integers of sufficient capacity to store `n`
+
+    :return: shape: `(n,)`
+        the new node colors
+    """
+    num_nodes = colors.shape[0]
+    # message passing: collect colors of neighbors
+    # dense colors: shape: (n, c)
+    # adj:          shape: (n, n)
+    color_sparse = torch.sparse_coo_tensor(
+        indices=torch.stack([torch.arange(num_nodes, device=colors.device), colors], dim=0),
+        # values need to be float, since torch.sparse.mm does not support integer dtypes
+        values=torch.ones_like(colors, dtype=torch.get_default_dtype()),
+        # size: will be correctly inferred
+    )
+    color_dense = torch.sparse.mm(adj, color_sparse).to(dtype=dense_dtype).to_dense()
+
+    # concat with old colors
+    colors = torch.cat([colors.unsqueeze(dim=-1), color_dense], dim=-1)
+
+    # hash
+    return colors.unique(dim=0, return_inverse=True)[1]
+
+
 def iter_weisfeiler_lehman(
     edge_index: torch.LongTensor,
     max_iter: int = 2,
@@ -1520,22 +1557,7 @@ def iter_weisfeiler_lehman(
         size=(num_nodes, num_nodes),
     )
     for i in range(2, max_iter + 1):
-        # message passing: collect colors of neighbors
-        # dense colors: shape: (n, c)
-        # adj:          shape: (n, n)
-        color_sparse = torch.sparse_coo_tensor(
-            indices=torch.stack([torch.arange(num_nodes, device=colors.device), colors], dim=0),
-            # values need to be float, since torch.sparse.mm does not support integer dtypes
-            values=torch.ones_like(colors, dtype=torch.get_default_dtype()),
-            # size: will be correctly inferred
-        )
-        color_dense = torch.sparse.mm(adj, color_sparse).to(dtype=dense_dtype).to_dense()
-
-        # concat with old colors
-        colors = torch.cat([colors.unsqueeze(dim=-1), color_dense], dim=-1)
-
-        # hash
-        colors = colors.unique(dim=0, return_inverse=True)[1]
+        colors = _weisfeiler_lehman_iteration(adj=adj, colors=colors, dense_dtype=dense_dtype)
         yield colors
 
         # convergence check
