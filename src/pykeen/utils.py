@@ -1513,7 +1513,10 @@ def iter_weisfeiler_lehman(
         raise ValueError(f"{num_nodes} too large")
 
     adj = torch.sparse_coo_tensor(
-        indices=edge_index, values=torch.ones(size=edge_index[0].shape), device=edge_index.device
+        indices=edge_index,
+        values=torch.ones(size=edge_index[0].shape),
+        device=edge_index.device,
+        size=(num_nodes, num_nodes),
     )
     for _ in range(max_iter - 1):
         # message passing: collect colors of neighbors
