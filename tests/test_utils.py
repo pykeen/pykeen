@@ -16,6 +16,8 @@ import pytest
 import torch
 
 from pykeen.utils import (
+    _weisfeiler_lehman_iteration,
+    _weisfeiler_lehman_iteration_approx,
     calculate_broadcasted_elementwise_result_shape,
     clamp_norm,
     combine_complex,
@@ -365,3 +367,21 @@ class TestUtils(unittest.TestCase):
             color_count = num_unique_colors
             count += 1
         assert count == max_iter
+
+    def test_weisfeiler_lehman_approximation(self):
+        """Verify approximate WL."""
+        _, generator, _ = set_random_seed(seed=42)
+        num_nodes = 13
+        num_edges = 31
+        edge_index = torch.randint(num_nodes, size=(2, num_edges), generator=generator)
+        # ensure each node participates in at least one edge
+        edge_index[0, :num_nodes] = torch.arange(num_nodes)
+        edge_index = edge_index.unique(dim=1)
+        adj = torch.sparse_coo_tensor(indices=edge_index, values=torch.ones(size=edge_index[0].shape))
+        colors = torch.randint(3, size=(num_nodes,))
+        reference = _weisfeiler_lehman_iteration(adj=adj, colors=colors)
+        approx = _weisfeiler_lehman_iteration_approx(adj=adj, colors=colors, dim=4)
+        # normalize
+        sim_ref = reference[None, :] == reference[:, None]
+        sim_approx = approx[None, :] == approx[:, None]
+        assert torch.allclose(sim_ref, sim_approx)
