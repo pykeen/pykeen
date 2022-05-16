@@ -1335,7 +1335,51 @@ class InfoNCELoss(SetwiseLoss):
         super().__init__(reduction=reduction)
         self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
         self.margin = margin
+        # TODO: it would be better to move label-smoothing into the torch native function
         self.cross_entropy = nn.CrossEntropyLoss(reduction=reduction)
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+        # determine positive; do not check with == since the labels are floats
+        pos_mask = labels > 0.5
+        # get indices of positives, shape: (nnz, ndim)
+        batch_ind = pos_mask.nonzero()[:, 0]
+        # select rows of negatives
+        negative_scores = predictions[batch_ind]
+        # select positive scores
+        positive_scores = predictions[pos_mask]
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        negative_scores = prepare_negative_scores_for_softmax(
+            batch_filter=batch_filter,
+            negative_scores=negative_scores,
+            # we do not allow full -inf rows, since we compute the softmax over this tensor
+            no_inf_rows=True,
+        )
+
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
     def forward(
         self,
@@ -1360,8 +1404,10 @@ class InfoNCELoss(SetwiseLoss):
         scores = torch.cat([pos_scores, neg_scores], dim=-1)
         # divide by temperature
         scores = scores / self.inverse_softmax_temperature
+        # create index-based target for CE loss
+        target = scores.new_zeros(size=scores.shape[:-1], dtype=torch.long)
         # calculate cross entropy loss
-        return self.cross_entropy.forward(scores, target=scores.new_zeros(size=scores.shape[:-1], dtype=torch.long))
+        return self.cross_entropy(scores, target=target)
 
 
 @parse_docdata
