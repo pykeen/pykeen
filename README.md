@@ -229,7 +229,7 @@ The following inductive datasets are built in to PyKEEN.
 | Pointwise Hinge                      | [`pykeen.losses.PointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.PointwiseHingeLoss.html)         | The pointwise hinge loss.                                                                             |
 | Soft margin ranking                  | [`pykeen.losses.SoftMarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftMarginRankingLoss.html)   | The soft pairwise hinge loss (i.e., soft margin ranking loss).                                        |
 | Softplus                             | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)                     | The pointwise logistic loss (i.e., softplus loss).                                                    |
-| Soft Pointwise Hinge                 | [`pykeen.losses.SoftPointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftPointwiseHingeLoss.html) | The soft pointwise hinge loss .                                                                       |
+| Soft Pointwise Hinge                 | [`pykeen.losses.SoftPointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftPointwiseHingeLoss.html) | The soft pointwise hinge loss.                                                                        |
 
 ### Regularizers (5)
 
