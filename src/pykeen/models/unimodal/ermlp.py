@@ -82,6 +82,7 @@ class ERMLP(EntityRelationEmbeddingModel):
             self.linear2,
         )
 
+    # docstr-coverage: inherited
     def _reset_parameters_(self):  # noqa: D102
         # The authors do not specify which initialization was used. Hence, we use the pytorch default.
         super()._reset_parameters_()
@@ -92,6 +93,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.linear2.bias)
         nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain("relu"))
 
+    # docstr-coverage: inherited
     def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
@@ -107,6 +109,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         # Compute scores
         return self.mlp(x_s)
 
+    # docstr-coverage: inherited
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
@@ -133,6 +136,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         scores = scores.view(-1, self.num_entities)
         return scores
 
+    # docstr-coverage: inherited
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)

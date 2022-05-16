@@ -101,6 +101,14 @@ class DimensionError(ValueError):
     """Raised when the wrong dimensions were supplied."""
 
     def __init__(self, given, expected):
+        """
+        Initialize the error.
+
+        :param given:
+            the given keys
+        :param expected:
+            the expected keys
+        """
         self.given = given
         self.expected = expected
 
@@ -166,7 +174,7 @@ def _normalize_representation_kwargs(
         raise DimensionError(set(dimensions), interaction.get_dimensions())
     if entity_representations_kwargs is None:
         # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
-        if interaction.tail_entity_shape is not None:
+        if interaction._tail_entity_shape is not None:
             raise NotImplementedError
         entity_representations_kwargs = [
             dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.entity_shape

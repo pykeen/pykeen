@@ -20,7 +20,7 @@ def _generate(model, config, path):  # noqa: D202
     def _x(test_case: unittest.TestCase):
         errors = get_configuration_errors(path)
         if errors:
-            msg = f"Errors found in {model}/{config}:\n" + "\n".join(f"  {error}" for error in errors)
+            msg = f"Errors found in {model}: {config}:\n" + "\n".join(f"  {error}" for error in errors)
             test_case.fail(msg)
 
     return _x

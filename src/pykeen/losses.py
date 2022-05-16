@@ -162,6 +162,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 """  # noqa: E501
 
 import logging
+import math
 from textwrap import dedent
 from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
@@ -186,6 +187,7 @@ __all__ = [
     "BCEWithLogitsLoss",
     "CrossEntropyLoss",
     "FocalLoss",
+    "InfoNCELoss",
     "MarginRankingLoss",
     "MSELoss",
     "NSSALoss",
@@ -260,13 +262,20 @@ _REDUCTION_METHODS = dict(
 class Loss(_Loss):
     """A loss function."""
 
+    #: synonyms of this loss
     synonyms: ClassVar[Optional[Set[str]]] = None
 
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, size_average=None, reduce=None, reduction: str = "mean"):
-        super().__init__(size_average=size_average, reduce=reduce, reduction=reduction)
+    def __init__(self, reduction: str = "mean"):
+        """
+        Initialize the loss.
+
+        :param reduction:
+            the reduction, cf. `_Loss.__init__`
+        """
+        super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
     def process_slcwa_scores(
@@ -399,6 +408,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
     synonyms = {"Negative Log Likelihood Loss"}
 
+    # docstr-coverage: inherited
     def forward(
         self,
         scores: torch.FloatTensor,
@@ -421,6 +431,7 @@ class MSELoss(PointwiseLoss):
 
     synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
+    # docstr-coverage: inherited
     def forward(
         self,
         scores: torch.FloatTensor,
@@ -463,6 +474,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
+    # docstr-coverage: inherited
     def process_slcwa_scores(
         self,
         positive_scores: torch.FloatTensor,
@@ -486,6 +498,7 @@ class MarginPairwiseLoss(PairwiseLoss):
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
+    # docstr-coverage: inherited
     def process_lcwa_scores(
         self,
         predictions: torch.FloatTensor,
@@ -610,6 +623,14 @@ class SoftMarginRankingLoss(MarginPairwiseLoss):
     )
 
     def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+        """
+        Initialize the loss.
+
+        :param margin:
+            the margin, cf. :meth:`MarginPairwiseLoss.__init__`
+        :param reduction:
+            the reduction, cf. :meth:`MarginPairwiseLoss.__init__`
+        """
         super().__init__(margin=margin, margin_activation="softplus", reduction=reduction)
 
 
@@ -637,6 +658,12 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
     def __init__(self, reduction: str = "mean"):
+        """
+        Initialize the loss.
+
+        :param reduction:
+            the reduction, cf. :meth:`SoftMarginRankingLoss.__init__`
+        """
         super().__init__(margin=0.0, reduction=reduction)
 
 
@@ -788,6 +815,7 @@ class DoubleMarginLoss(PointwiseLoss):
         self.positive_weight = positive_negative_balance
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
+    # docstr-coverage: inherited
     def process_slcwa_scores(
         self,
         positive_scores: torch.FloatTensor,
@@ -822,6 +850,7 @@ class DoubleMarginLoss(PointwiseLoss):
         negative_loss = self._reduction_method(self.margin_activation(self.negative_margin + negative_scores))
         return self.positive_weight * positive_loss + self.negative_weight * negative_loss
 
+    # docstr-coverage: inherited
     def process_lcwa_scores(
         self,
         predictions: torch.FloatTensor,
@@ -882,6 +911,16 @@ class DeltaPointwiseLoss(PointwiseLoss):
         margin_activation: Hint[nn.Module] = "softplus",
         reduction: str = "mean",
     ) -> None:
+        """
+        Initialize the loss.
+
+        :param margin:
+            the margin, cf. :meth:`PointwiseLoss.__init__`
+        :param margin_activation:
+            the margin activation, or a hint thereof, cf. `margin_activation_resolver`.
+        :param reduction:
+            the reduction, cf. :meth:`PointwiseLoss.__init__`
+        """
         super().__init__(reduction=reduction)
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
@@ -918,6 +957,14 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
     )
 
     def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+        """
+        Initialize the loss.
+
+        :param margin:
+            the margin, cf. :meth:`DeltaPointwiseLoss.__init__`
+        :param reduction:
+            the reduction, cf. :meth:`DeltaPointwiseLoss.__init__`
+        """
         super().__init__(margin=margin, margin_activation="relu", reduction=reduction)
 
 
@@ -942,6 +989,14 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
     )
 
     def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+        """
+        Initialize the loss.
+
+        :param margin:
+            the margin, cf. :meth:`DeltaPointwiseLoss.__init__`
+        :param reduction:
+            the reduction, cf. :meth:`DeltaPointwiseLoss.__init__`
+        """
         super().__init__(margin=margin, margin_activation="softplus", reduction=reduction)
 
 
@@ -967,6 +1022,12 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
     hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
     def __init__(self, reduction: str = "mean") -> None:
+        """
+        Initialize the loss.
+
+        :param reduction:
+            the reduction, cf. :meth:`SoftPointwiseHingeLoss.__init__`
+        """
         super().__init__(margin=0.0, reduction=reduction)
 
 
@@ -982,6 +1043,7 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
     name: Binary cross entropy (after sigmoid)
     """
 
+    # docstr-coverage: inherited
     def forward(
         self,
         logits: torch.FloatTensor,
@@ -1043,6 +1105,7 @@ class CrossEntropyLoss(SetwiseLoss):
     name: Cross entropy
     """
 
+    # docstr-coverage: inherited
     def process_slcwa_scores(
         self,
         positive_scores: torch.FloatTensor,
@@ -1075,6 +1138,7 @@ class CrossEntropyLoss(SetwiseLoss):
             reduction=self.reduction,
         )
 
+    # docstr-coverage: inherited
     def process_lcwa_scores(
         self,
         predictions: torch.FloatTensor,
@@ -1124,6 +1188,7 @@ class NSSALoss(SetwiseLoss):
         self.inverse_softmax_temperature = adversarial_temperature
         self.margin = margin
 
+    # docstr-coverage: inherited
     def process_lcwa_scores(
         self,
         predictions: torch.FloatTensor,
@@ -1153,6 +1218,7 @@ class NSSALoss(SetwiseLoss):
             neg_weights=weights[~pos_mask],
         )
 
+    # docstr-coverage: inherited
     def process_slcwa_scores(
         self,
         positive_scores: torch.FloatTensor,
@@ -1217,6 +1283,142 @@ class NSSALoss(SetwiseLoss):
 
 
 @parse_docdata
+class InfoNCELoss(SetwiseLoss):
+    r"""An implementation of the InfoNCE loss with additive margin proposed by [wang2022]_.
+
+    .. math::
+
+        -\log \frac{
+            \exp( (f(k) - \gamma) / \tau )
+        }{
+            \exp ( (f(k) - \gamma) / \tau ) + \sum \exp ( f(k_i^-) / \tau )
+        }
+
+    .. note ::
+        In the official implementation, the margin parameter only seems to be used during *training*.
+        https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L92-L94
+
+    ---
+    name: InfoNCE loss with additive margin
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        log_adversarial_temperature=dict(type=float, low=0.5, high=1.0),
+    )
+    DEFAULT_LOG_ADVERSARIAL_TEMPERATURE: ClassVar[float] = math.log(0.05)
+
+    def __init__(
+        self,
+        margin: float = 0.02,
+        log_adversarial_temperature: float = DEFAULT_LOG_ADVERSARIAL_TEMPERATURE,
+        reduction: str = "mean",
+    ) -> None:
+        r"""Initialize the loss.
+
+        :param margin:
+            The loss's margin (also written as $\gamma$ in the reference paper)
+
+        :param log_adversarial_temperature:
+            The logarithm of the negative sampling temperature (also written as $\tau$ in the reference paper).
+            We follow the suggested parametrization which ensures positive temperatures for all hyperparameter values.
+
+            .. note ::
+                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
+                Its name is only kept for consistency with the nomenclature of [wang2022]_.
+
+            .. note ::
+                In the official implementation, the temperature is a *trainable* parameter, cf.
+                https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L31
+
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+
+        :raises ValueError:
+            if the margin is negative
+        """
+        if margin < 0:
+            raise ValueError(f"Cannot have a negative margin: {margin}")
+        super().__init__(reduction=reduction)
+        self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
+        self.margin = margin
+        # TODO: it would be better to move label-smoothing into the torch native function
+        self.cross_entropy = nn.CrossEntropyLoss(reduction=reduction)
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+        # determine positive; do not check with == since the labels are floats
+        pos_mask = labels > 0.5
+        # get indices of positives, shape: (nnz, ndim)
+        batch_ind = pos_mask.nonzero()[:, 0]
+        # select rows of negatives
+        negative_scores = predictions[batch_ind]
+        # select positive scores
+        positive_scores = predictions[pos_mask]
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        negative_scores = prepare_negative_scores_for_softmax(
+            batch_filter=batch_filter,
+            negative_scores=negative_scores,
+            # we do not allow full -inf rows, since we compute the softmax over this tensor
+            no_inf_rows=True,
+        )
+
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Calculate the loss for the given scores.
+
+        :param pos_scores: shape: `(*batch_dims,)` or `(*batch_dims, 1)`
+            Positive score tensor
+        :param neg_scores: shape: `(*batch_dims, num_neg)`
+            Negative score tensor
+
+        :returns:
+            a scalar loss value
+        """
+        # subtract margin from positive scores
+        pos_scores = pos_scores - self.margin
+        # concatenate scores
+        if pos_scores.ndim < neg_scores.ndim:
+            pos_scores = pos_scores.unsqueeze(dim=-1)
+        scores = torch.cat([pos_scores, neg_scores], dim=-1)
+        # divide by temperature
+        scores = scores / self.inverse_softmax_temperature
+        # create index-based target for CE loss
+        target = scores.new_zeros(size=scores.shape[:-1], dtype=torch.long)
+        # calculate cross entropy loss
+        return self.cross_entropy(scores, target=target)
+
+
+@parse_docdata
 class FocalLoss(PointwiseLoss):
     r"""A module for the focal loss proposed by [lin2018]_.
 
@@ -1273,6 +1475,7 @@ class FocalLoss(PointwiseLoss):
         self.alpha = alpha
         self.gamma = gamma
 
+    # docstr-coverage: inherited
     def forward(
         self,
         prediction: torch.FloatTensor,
@@ -1290,7 +1493,7 @@ class FocalLoss(PointwiseLoss):
         return self._reduction_method(loss)
 
 
-loss_resolver = ClassResolver.from_subclasses(
+loss_resolver: ClassResolver[Loss] = ClassResolver.from_subclasses(
     Loss,
     default=MarginRankingLoss,
     skip={

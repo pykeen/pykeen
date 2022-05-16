@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Mapping, Optional, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
-from ..utils import flatten_dictionary
+from ..utils import flatten_dictionary, normalize_path
 
 if TYPE_CHECKING:
     import torch.utils.tensorboard
@@ -40,19 +40,15 @@ class TensorBoardResultTracker(ResultTracker):
         """
         import torch.utils.tensorboard
 
-        if isinstance(experiment_path, str):
-            path = pathlib.Path(experiment_path)
-        elif isinstance(experiment_path, pathlib.Path):
-            path = experiment_path
-        else:
-            if experiment_name is None:
-                experiment_name = time.strftime("%Y-%m-%d-%H-%M-%S")
-            path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
+        if experiment_name is None:
+            experiment_name = time.strftime("%Y-%m-%d-%H-%M-%S")
+        experiment_path = normalize_path(experiment_path, default=PYKEEN_LOGS.joinpath("tensorboard", experiment_name))
 
         # if we really need access to the path later, we can expose it as a property
         #  via self.writer.log_dir
-        self.writer = torch.utils.tensorboard.SummaryWriter(log_dir=path.resolve())
+        self.writer = torch.utils.tensorboard.SummaryWriter(log_dir=experiment_path)
 
+    # docstr-coverage: inherited
     def log_metrics(
         self,
         metrics: Mapping[str, float],
@@ -64,12 +60,14 @@ class TensorBoardResultTracker(ResultTracker):
             self.writer.add_scalar(tag=key, scalar_value=value, global_step=step)
         self.writer.flush()
 
+    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         for key, value in params.items():
             self.writer.add_text(tag=str(key), text_string=str(value))
         self.writer.flush()
 
+    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.writer.flush()
         self.writer.close()

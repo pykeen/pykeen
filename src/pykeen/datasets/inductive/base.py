@@ -7,13 +7,14 @@ from __future__ import annotations
 import logging
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional, Union
+from typing import Any, Iterable, Mapping, Optional, Union
 
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
 from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
+from ...utils import normalize_path
 
 __all__ = [
     # Base class
@@ -76,7 +77,7 @@ class InductiveDataset:
 
     def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
 
     def __str__(self) -> str:  # noqa: D105
         return (
@@ -154,7 +155,10 @@ class LazyInductiveDataset(InductiveDataset):
         raise NotImplementedError
 
     def _help_cache(
-        self, cache_root: Union[None, str, pathlib.Path], version: str = None, sep_train_inference: bool = False
+        self,
+        cache_root: Union[None, str, pathlib.Path],
+        version: Optional[str] = None,
+        sep_train_inference: bool = False,
     ) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
@@ -166,26 +170,23 @@ class LazyInductiveDataset(InductiveDataset):
         :param sep_train_inference: a flag to store training and inference splits in different folders
         :returns: A path object for the calculated cache root directory
         """
-        if cache_root is None:
-            cache_root = PYKEEN_DATASETS
-        cache_root = pathlib.Path(cache_root).resolve()
-        cache_root = self._extend_cache_root(cache_root=cache_root)
-        # add v1 / v2 / v3 / v4 for inductive splits if available
-        if version is not None:
-            cache_root = cache_root / version
-        cache_root.mkdir(parents=True, exist_ok=True)
+        cache_root = normalize_path(
+            cache_root, *self._cache_sub_directories(version=version), default=PYKEEN_DATASETS, mkdir=True
+        )
         if sep_train_inference:
             # generate subfolders 'training' and  'inference'
-            training = cache_root / "training"
-            training.mkdir(parents=True, exist_ok=True)
-            inference = cache_root / "inference"
-            inference.mkdir(parents=True, exist_ok=True)
+            for name in ("training", "inference"):
+                cache_root.joinpath(name).mkdir(parents=True, exist_ok=True)
         logger.debug("using cache root at %s", cache_root.as_uri())
         return cache_root
 
-    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:
-        """Get appropriate cache sub-directory."""
-        return cache_root.joinpath(self.__class__.__name__.lower())
+    def _cache_sub_directories(self, version: Optional[str]) -> Iterable[str]:
+        """Iterate over appropriate cache sub-directory."""
+        # TODO: use class-resolver normalize?
+        yield self.__class__.__name__.lower()
+        # add v1 / v2 / v3 / v4 for inductive splits if available
+        if version:
+            yield version
 
 
 class DisjointInductivePathDataset(LazyInductiveDataset):
