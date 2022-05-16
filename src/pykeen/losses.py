@@ -1316,7 +1316,8 @@ class NSSALoss(SetwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
-        pos_mask = labels == 1
+        # determine positive; do not check with == since the labels are floats
+        pos_mask = labels > 0.5
 
         # compute negative weights (without gradient tracking)
         # clone is necessary since we modify in-place
