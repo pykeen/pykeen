@@ -1305,9 +1305,13 @@ class InfoNCELoss(SetwiseLoss):
         margin=dict(type=int, low=3, high=30, q=3),
         log_adversarial_temperature=dict(type=float, low=0.5, high=1.0),
     )
+    DEFAULT_LOG_ADVERSARIAL_TEMPERATURE: ClassVar[float] = math.log(0.05)
 
     def __init__(
-        self, margin: float = 0.02, log_adversarial_temperature: float = math.log(0.05), reduction: str = "mean"
+        self,
+        margin: float = 0.02,
+        log_adversarial_temperature: float = DEFAULT_LOG_ADVERSARIAL_TEMPERATURE,
+        reduction: str = "mean",
     ) -> None:
         r"""Initialize the NSSA loss.
 
@@ -1329,6 +1333,9 @@ class InfoNCELoss(SetwiseLoss):
         :param reduction:
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
+
+        :raises ValueError:
+            if the margin is negative
         """
         if margin < 0:
             raise ValueError(f"Cannot have a negative margin: {margin}")
