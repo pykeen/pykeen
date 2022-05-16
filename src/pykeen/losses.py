@@ -1313,7 +1313,7 @@ class InfoNCELoss(SetwiseLoss):
         log_adversarial_temperature: float = DEFAULT_LOG_ADVERSARIAL_TEMPERATURE,
         reduction: str = "mean",
     ) -> None:
-        r"""Initialize the NSSA loss.
+        r"""Initialize the loss.
 
         :param margin:
             The loss's margin (also written as $\gamma$ in the reference paper)
