@@ -1255,7 +1255,7 @@ class InfoNCELoss(CrossEntropyLoss):
     ) -> torch.FloatTensor:  # noqa: D102
         # subtract margin from positive scores
         positive_scores = positive_scores - self.margin
-        # concatenate scores
+        # normalize positive score shape
         if positive_scores.ndim < negative_scores.ndim:
             positive_scores = positive_scores.unsqueeze(dim=-1)
         # divide by temperature
