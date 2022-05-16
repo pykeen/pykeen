@@ -1284,7 +1284,7 @@ class NSSALoss(SetwiseLoss):
 
 @parse_docdata
 class InfoNCELoss(SetwiseLoss):
-    r"""An implementation of the InfoNCE loss with additive margin proposed by [wang2022]_.
+    r"""The InfoNCE loss with additive margin proposed by [wang2022]_.
 
     .. math::
 
