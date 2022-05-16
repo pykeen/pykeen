@@ -187,6 +187,7 @@ __all__ = [
     "BCEWithLogitsLoss",
     "CrossEntropyLoss",
     "FocalLoss",
+    "InfoNCELoss",
     "MarginRankingLoss",
     "MSELoss",
     "NSSALoss",
