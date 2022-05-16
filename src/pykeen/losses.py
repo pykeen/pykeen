@@ -1335,6 +1335,33 @@ class InfoNCELoss(SetwiseLoss):
         super().__init__(reduction=reduction)
         self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
         self.margin = margin
+        self.cross_entropy = nn.CrossEntropyLoss(reduction=reduction)
+
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Calculate the loss for the given scores.
+
+        :param pos_scores: shape: `(*batch_dims,)` or `(*batch_dims, 1)`
+            Positive score tensor
+        :param neg_scores: shape: `(*batch_dims, num_neg)`
+            Negative score tensor
+
+        :returns:
+            a scalar loss value
+        """
+        # subtract margin from positive scores
+        pos_scores = pos_scores - self.margin
+        # concatenate scores
+        if pos_scores.ndim < neg_scores.ndim:
+            pos_scores = pos_scores.unsqueeze(dim=-1)
+        scores = torch.cat([pos_scores, neg_scores], dim=-1)
+        # divide by temperature
+        scores = scores / self.inverse_softmax_temperature
+        # calculate cross entropy loss
+        return self.cross_entropy.forward(scores, target=scores.new_zeros(size=scores.shape[:-1], dtype=torch.long))
 
 
 @parse_docdata
