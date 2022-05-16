@@ -162,6 +162,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 """  # noqa: E501
 
 import logging
+import math
 from textwrap import dedent
 from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
@@ -1278,6 +1279,62 @@ class NSSALoss(SetwiseLoss):
             loss = loss / 2.0
 
         return loss
+
+
+@parse_docdata
+class InfoNCELoss(SetwiseLoss):
+    r"""An implementation of the InfoNCE loss with additive margin proposed by [wang2022]_.
+
+    .. math::
+
+        -\log \frac{
+            \exp( (f(k) - \gamma) / \tau )
+        }{
+            \exp ( (f(k) - \gamma) / \tau ) + \sum \exp ( f(k_i^-) / \tau )
+        }
+
+    .. note ::
+        In the official implementation, the margin parameter only seems to be used during *training*.
+        https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L92-L94
+
+    ---
+    name: InfoNCE loss with additive margin
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        log_adversarial_temperature=dict(type=float, low=0.5, high=1.0),
+    )
+
+    def __init__(
+        self, margin: float = 0.02, log_adversarial_temperature: float = math.log(0.05), reduction: str = "mean"
+    ) -> None:
+        r"""Initialize the NSSA loss.
+
+        :param margin:
+            The loss's margin (also written as $\gamma$ in the reference paper)
+
+        :param log_adversarial_temperature:
+            The logarithm of the negative sampling temperature (also written as $\tau$ in the reference paper).
+            We follow the suggested parametrization which ensures positive temperatures for all hyperparameter values.
+
+            .. note ::
+                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
+                Its name is only kept for consistency with the nomenclature of [wang2022]_.
+
+            .. note ::
+                In the official implementation, the temperature is a *trainable* parameter, cf.
+                https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L31
+
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+        """
+        if margin < 0:
+            raise ValueError(f"Cannot have a negative margin: {margin}")
+        super().__init__(reduction=reduction)
+        self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
+        self.margin = margin
 
 
 @parse_docdata
