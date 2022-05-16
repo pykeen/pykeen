@@ -1162,18 +1162,17 @@ class CrossEntropyLoss(SetwiseLoss):
 class InfoNCELoss(CrossEntropyLoss):
     r"""The InfoNCE loss with additive margin proposed by [wang2022]_.
 
-    .. math::
+    This loss is equivalent to :class:`CrossEntropyLoss`, where the scores have been transformed:
 
-        -\log \frac{
-            \exp( (f(k) - \gamma) / \tau )
-        }{
-            \exp ( (f(k) - \gamma) / \tau ) + \sum \exp ( f(k_i^-) / \tau )
-        }
+    - positive scores are subtracted by the margin `\gamma` and then divided by the temperature `\tau`
 
-    .. note ::
-        In the official implementation, the margin parameter only seems to be used during *training*.
-        https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L92-L94
+        .. math::
+            f'(k) = \frac{f(k) - \gamma}{\tau}
 
+    - negative scores are only divided by the temperature `\tau`
+
+        .. math::
+            f'(k^-) = \frac{f(k^-)}{\tau}
     ---
     name: InfoNCE loss with additive margin
     """
@@ -1194,6 +1193,10 @@ class InfoNCELoss(CrossEntropyLoss):
 
         :param margin:
             The loss's margin (also written as $\gamma$ in the reference paper)
+
+            .. note ::
+                In the official implementation, the margin parameter only seems to be used during *training*.
+                https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L92-L94
 
         :param log_adversarial_temperature:
             The logarithm of the negative sampling temperature (also written as $\tau$ in the reference paper).
