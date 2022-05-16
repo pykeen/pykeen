@@ -1343,8 +1343,6 @@ class InfoNCELoss(SetwiseLoss):
         super().__init__(reduction=reduction)
         self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
         self.margin = margin
-        # TODO: it would be better to move label-smoothing into the torch native function
-        self.cross_entropy = nn.CrossEntropyLoss(reduction=reduction)
 
     # docstr-coverage: inherited
     def process_lcwa_scores(
@@ -1379,23 +1377,21 @@ class InfoNCELoss(SetwiseLoss):
         batch_filter: Optional[torch.BoolTensor] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # Sanity check
-        if label_smoothing:
-            raise UnsupportedLabelSmoothingError(self)
-
+        # we require dense negative scores
         negative_scores = prepare_negative_scores_for_softmax(
             batch_filter=batch_filter,
             negative_scores=negative_scores,
             # we do not allow full -inf rows, since we compute the softmax over this tensor
             no_inf_rows=True,
         )
-
-        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+        # delegate to forward
+        return self(pos_scores=positive_scores, neg_scores=negative_scores, label_smoothing=label_smoothing)
 
     def forward(
         self,
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = 0.0,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores.
 
@@ -1418,7 +1414,12 @@ class InfoNCELoss(SetwiseLoss):
         # create index-based target for CE loss
         target = scores.new_zeros(size=scores.shape[:-1], dtype=torch.long)
         # calculate cross entropy loss
-        return self.cross_entropy(scores, target=target)
+        return functional.cross_entropy(
+            input=scores,
+            target=target,
+            reduction=self.reduction,
+            label_smoothing=label_smoothing or 0.0,
+        )
 
 
 @parse_docdata
