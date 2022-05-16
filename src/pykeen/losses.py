@@ -1178,7 +1178,7 @@ class InfoNCELoss(CrossEntropyLoss):
     """
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=int, low=3, high=30, q=3),
+        margin=dict(type=float, low=0.01, high=0.10),
         log_adversarial_temperature=dict(type=float, low=-3.0, high=3.0),
     )
     DEFAULT_LOG_ADVERSARIAL_TEMPERATURE: ClassVar[float] = math.log(0.05)
