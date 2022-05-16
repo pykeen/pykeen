@@ -370,7 +370,7 @@ class SetwiseLoss(Loss):
 
 @parse_docdata
 class BCEWithLogitsLoss(PointwiseLoss):
-    r"""A module for the binary cross entropy loss.
+    r"""The binary cross entropy loss.
 
     For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
     function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
@@ -419,14 +419,14 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
 @parse_docdata
 class MSELoss(PointwiseLoss):
-    """A module for the mean square error loss.
+    """The mean squared error loss.
 
     .. note::
 
         The related :mod:`torch` module is :class:`torch.nn.MSELoss`, but it can not be used
         interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
-    name: Mean square error
+    name: Mean squared error
     """
 
     synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
@@ -442,7 +442,7 @@ class MSELoss(PointwiseLoss):
 
 
 class MarginPairwiseLoss(PairwiseLoss):
-    r"""Generalized margin ranking loss.
+    r"""The generalized margin ranking loss.
 
     .. math ::
         L(k, \bar{k}) = g(f(\bar{k}) - f(k) + \lambda)
@@ -556,7 +556,7 @@ class MarginPairwiseLoss(PairwiseLoss):
 
 @parse_docdata
 class MarginRankingLoss(MarginPairwiseLoss):
-    r"""A module for the pairwise hinge loss (i.e., margin ranking loss).
+    r"""The pairwise hinge loss (i.e., margin ranking loss).
 
     .. math ::
         L(k, \bar{k}) = \max(0, f(k) - f(\bar{k}) + \lambda)
@@ -600,7 +600,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
 
 @parse_docdata
 class SoftMarginRankingLoss(MarginPairwiseLoss):
-    r"""A module for the soft pairwise hinge loss (i.e., soft margin ranking loss).
+    r"""The soft pairwise hinge loss (i.e., soft margin ranking loss).
 
     .. math ::
         L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k}) + \lambda))
@@ -942,7 +942,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
 @parse_docdata
 class PointwiseHingeLoss(DeltaPointwiseLoss):
     r"""
-    A module for the pointwise hinge loss.
+    The pointwise hinge loss.
 
     .. math ::
         g(s,l) = \max(0, \lambda -\hat{l}*s)
@@ -970,7 +970,7 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
 
 @parse_docdata
 class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
-    r"""A module for the soft pointwise hinge loss .
+    r"""The soft pointwise hinge loss .
 
     This loss is appropriate for interaction functions which do not include a bias term,
     and have a limited value range, e.g., distance-based ones like TransE.
@@ -1002,7 +1002,7 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
 
 @parse_docdata
 class SoftplusLoss(SoftPointwiseHingeLoss):
-    r"""A module for the pointwise logistic loss (i.e., softplus loss).
+    r"""The pointwise logistic loss (i.e., softplus loss).
 
     .. math ::
         g(s, l) = \log(1 + \exp(-\hat{l} \cdot s))
@@ -1033,7 +1033,7 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
 
 @parse_docdata
 class BCEAfterSigmoidLoss(PointwiseLoss):
-    """A module for the numerically unstable version of explicit Sigmoid + BCE loss.
+    """The numerically unstable version of explicit Sigmoid + BCE loss.
 
     .. note::
 
@@ -1095,7 +1095,7 @@ def prepare_negative_scores_for_softmax(
 
 @parse_docdata
 class CrossEntropyLoss(SetwiseLoss):
-    """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
+    """The cross entropy loss that evaluates the cross entropy after softmax output.
 
     .. note::
 
@@ -1272,7 +1272,7 @@ class InfoNCELoss(CrossEntropyLoss):
 
 @parse_docdata
 class NSSALoss(SetwiseLoss):
-    """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.
+    """The self-adversarial negative sampling loss function proposed by [sun2019]_.
 
     ---
     name: Self-adversarial negative sampling
@@ -1401,7 +1401,7 @@ class NSSALoss(SetwiseLoss):
 
 @parse_docdata
 class FocalLoss(PointwiseLoss):
-    r"""A module for the focal loss proposed by [lin2018]_.
+    r"""The focal loss proposed by [lin2018]_.
 
     It is an adaptation of the (binary) cross entropy loss, which deals better with imbalanced data.
     The implementation is strongly inspired by the implementation in
