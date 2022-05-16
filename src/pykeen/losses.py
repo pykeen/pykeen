@@ -1354,18 +1354,21 @@ class InfoNCELoss(SetwiseLoss):
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # Sanity check
-        if label_smoothing:
-            raise UnsupportedLabelSmoothingError(self)
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
-        # get indices of positives, shape: (nnz, ndim)
-        batch_ind = pos_mask.nonzero()[:, 0]
-        # select rows of negatives
-        negative_scores = predictions[batch_ind]
-        # select positive scores
-        positive_scores = predictions[pos_mask]
-        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+        # subtract margin from positive scores
+        predictions = predictions - pos_mask.type_as(predictions) * self.margin
+        # divide by temperature
+        predictions = predictions / self.inverse_softmax_temperature
+        # make sure labels are a proper probability distribution
+        labels = functional.normalize(labels, p=1, dim=-1)
+        # calculate cross entropy loss
+        return functional.cross_entropy(
+            input=predictions,
+            target=labels,
+            reduction=self.reduction,
+            label_smoothing=label_smoothing or 0.0,
+        )
 
     # docstr-coverage: inherited
     def process_slcwa_scores(
