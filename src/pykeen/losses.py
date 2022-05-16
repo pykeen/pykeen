@@ -1130,7 +1130,8 @@ class CrossEntropyLoss(SetwiseLoss):
             dim=-1,
         )
         # use sparse version of cross entropy
-        true_indices = positive_scores.new_zeros(size=(positive_scores.shape[0],), dtype=torch.long)
+        true_indices = positive_scores.new_zeros(size=positive_scores.shape[:-1], dtype=torch.long)
+        # calculate cross entropy loss
         return functional.cross_entropy(
             input=scores,
             target=true_indices,
@@ -1146,11 +1147,123 @@ class CrossEntropyLoss(SetwiseLoss):
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # make sure labels form a proper probability distribution
+        labels = functional.normalize(labels, p=1, dim=-1)
+        # calculate cross entropy loss
         return functional.cross_entropy(
             input=predictions,
             target=labels,
             label_smoothing=label_smoothing or 0.0,
             reduction=self.reduction,
+        )
+
+
+@parse_docdata
+class InfoNCELoss(CrossEntropyLoss):
+    r"""The InfoNCE loss with additive margin proposed by [wang2022]_.
+
+    .. math::
+
+        -\log \frac{
+            \exp( (f(k) - \gamma) / \tau )
+        }{
+            \exp ( (f(k) - \gamma) / \tau ) + \sum \exp ( f(k_i^-) / \tau )
+        }
+
+    .. note ::
+        In the official implementation, the margin parameter only seems to be used during *training*.
+        https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L92-L94
+
+    ---
+    name: InfoNCE loss with additive margin
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        log_adversarial_temperature=dict(type=float, low=0.5, high=1.0),
+    )
+    DEFAULT_LOG_ADVERSARIAL_TEMPERATURE: ClassVar[float] = math.log(0.05)
+
+    def __init__(
+        self,
+        margin: float = 0.02,
+        log_adversarial_temperature: float = DEFAULT_LOG_ADVERSARIAL_TEMPERATURE,
+        reduction: str = "mean",
+    ) -> None:
+        r"""Initialize the loss.
+
+        :param margin:
+            The loss's margin (also written as $\gamma$ in the reference paper)
+
+        :param log_adversarial_temperature:
+            The logarithm of the negative sampling temperature (also written as $\tau$ in the reference paper).
+            We follow the suggested parametrization which ensures positive temperatures for all hyperparameter values.
+
+            .. note ::
+                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
+                Its name is only kept for consistency with the nomenclature of [wang2022]_.
+
+            .. note ::
+                In the official implementation, the temperature is a *trainable* parameter, cf.
+                https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L31
+
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+
+        :raises ValueError:
+            if the margin is negative
+        """
+        if margin < 0:
+            raise ValueError(f"Cannot have a negative margin: {margin}")
+        super().__init__(reduction=reduction)
+        self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
+        self.margin = margin
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # determine positive; do not check with == since the labels are floats
+        pos_mask = labels > 0.5
+        # subtract margin from positive scores
+        predictions = predictions - pos_mask.type_as(predictions) * self.margin
+        # divide by temperature
+        predictions = predictions / self.inverse_softmax_temperature
+        return super().process_lcwa_scores(
+            predictions=predictions,
+            labels=labels,
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
+        )
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # subtract margin from positive scores
+        positive_scores = positive_scores - self.margin
+        # concatenate scores
+        if positive_scores.ndim < negative_scores.ndim:
+            positive_scores = positive_scores.unsqueeze(dim=-1)
+        # divide by temperature
+        positive_scores = positive_scores / self.inverse_softmax_temperature
+        negative_scores = negative_scores / self.inverse_softmax_temperature
+        return super().process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+            label_smoothing=label_smoothing,
+            batch_filter=batch_filter,
+            num_entities=num_entities,
         )
 
 
@@ -1280,146 +1393,6 @@ class NSSALoss(SetwiseLoss):
             loss = loss / 2.0
 
         return loss
-
-
-@parse_docdata
-class InfoNCELoss(SetwiseLoss):
-    r"""The InfoNCE loss with additive margin proposed by [wang2022]_.
-
-    .. math::
-
-        -\log \frac{
-            \exp( (f(k) - \gamma) / \tau )
-        }{
-            \exp ( (f(k) - \gamma) / \tau ) + \sum \exp ( f(k_i^-) / \tau )
-        }
-
-    .. note ::
-        In the official implementation, the margin parameter only seems to be used during *training*.
-        https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L92-L94
-
-    ---
-    name: InfoNCE loss with additive margin
-    """
-
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=int, low=3, high=30, q=3),
-        log_adversarial_temperature=dict(type=float, low=0.5, high=1.0),
-    )
-    DEFAULT_LOG_ADVERSARIAL_TEMPERATURE: ClassVar[float] = math.log(0.05)
-
-    def __init__(
-        self,
-        margin: float = 0.02,
-        log_adversarial_temperature: float = DEFAULT_LOG_ADVERSARIAL_TEMPERATURE,
-        reduction: str = "mean",
-    ) -> None:
-        r"""Initialize the loss.
-
-        :param margin:
-            The loss's margin (also written as $\gamma$ in the reference paper)
-
-        :param log_adversarial_temperature:
-            The logarithm of the negative sampling temperature (also written as $\tau$ in the reference paper).
-            We follow the suggested parametrization which ensures positive temperatures for all hyperparameter values.
-
-            .. note ::
-                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
-                Its name is only kept for consistency with the nomenclature of [wang2022]_.
-
-            .. note ::
-                In the official implementation, the temperature is a *trainable* parameter, cf.
-                https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L31
-
-        :param reduction:
-            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
-            value. From {'mean', 'sum'}.
-
-        :raises ValueError:
-            if the margin is negative
-        """
-        if margin < 0:
-            raise ValueError(f"Cannot have a negative margin: {margin}")
-        super().__init__(reduction=reduction)
-        self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
-        self.margin = margin
-
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # determine positive; do not check with == since the labels are floats
-        pos_mask = labels > 0.5
-        # subtract margin from positive scores
-        predictions = predictions - pos_mask.type_as(predictions) * self.margin
-        # divide by temperature
-        predictions = predictions / self.inverse_softmax_temperature
-        # make sure labels are a proper probability distribution
-        labels = functional.normalize(labels, p=1, dim=-1)
-        # calculate cross entropy loss
-        return functional.cross_entropy(
-            input=predictions,
-            target=labels,
-            reduction=self.reduction,
-            label_smoothing=label_smoothing or 0.0,
-        )
-
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        batch_filter: Optional[torch.BoolTensor] = None,
-        num_entities: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # we require dense negative scores
-        negative_scores = prepare_negative_scores_for_softmax(
-            batch_filter=batch_filter,
-            negative_scores=negative_scores,
-            # we do not allow full -inf rows, since we compute the softmax over this tensor
-            no_inf_rows=True,
-        )
-        # delegate to forward
-        return self(pos_scores=positive_scores, neg_scores=negative_scores, label_smoothing=label_smoothing)
-
-    def forward(
-        self,
-        pos_scores: torch.FloatTensor,
-        neg_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = 0.0,
-    ) -> torch.FloatTensor:
-        """Calculate the loss for the given scores.
-
-        :param pos_scores: shape: `(*batch_dims,)` or `(*batch_dims, 1)`
-            Positive score tensor
-        :param neg_scores: shape: `(*batch_dims, num_neg)`
-            Negative score tensor
-
-        :returns:
-            a scalar loss value
-        """
-        # subtract margin from positive scores
-        pos_scores = pos_scores - self.margin
-        # concatenate scores
-        if pos_scores.ndim < neg_scores.ndim:
-            pos_scores = pos_scores.unsqueeze(dim=-1)
-        scores = torch.cat([pos_scores, neg_scores], dim=-1)
-        # divide by temperature
-        scores = scores / self.inverse_softmax_temperature
-        # create index-based target for CE loss
-        target = scores.new_zeros(size=scores.shape[:-1], dtype=torch.long)
-        # calculate cross entropy loss
-        return functional.cross_entropy(
-            input=scores,
-            target=target,
-            reduction=self.reduction,
-            label_smoothing=label_smoothing or 0.0,
-        )
 
 
 @parse_docdata
