@@ -75,6 +75,7 @@ class LitModule(pytorch_lightning.LightningModule):
         # stored outside of the training loop / optimizer to give access to auto-tuning from Lightning
         batch_size: int = 32,
         learning_rate: float = 1.0e-03,
+        label_smoothing: float = 0.0,
         # optimizer
         optimizer: HintOrType[torch.optim.Optimizer] = None,
         optimizer_kwargs: OptionalKwargs = None,
@@ -98,6 +99,8 @@ class LitModule(pytorch_lightning.LightningModule):
             the training batch size
         :param learning_rate:
             the learning rate
+        :param label_smoothing:
+            the label smoothing
 
         :param optimizer:
             the optimizer, or a hint thereof
@@ -113,6 +116,7 @@ class LitModule(pytorch_lightning.LightningModule):
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.mode = mode
+        self.label_smoothing = label_smoothing
 
     def forward(self, x):
         """
@@ -189,7 +193,7 @@ class SLCWALitModule(LitModule):
             loss=self.loss,
             mode=self.mode,
             batch=batch,
-            label_smoothing=0.0,
+            label_smoothing=self.label_smoothing,
             # TODO: sub-batching / slicing
             slice_size=None,
             start=None,
@@ -234,7 +238,7 @@ class LCWALitModule(LitModule):
             num_targets=self.model.num_entities,
             mode=self.mode,
             batch=batch,
-            label_smoothing=0.0,
+            label_smoothing=self.label_smoothing,
             # TODO: sub-batching / slicing
             start=None,
             stop=None,
