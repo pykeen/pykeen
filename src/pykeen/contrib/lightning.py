@@ -247,14 +247,14 @@ lit_module_resolver: ClassResolver[LitModule] = ClassResolver(
 
 @click.command()
 @lit_module_resolver.get_option("-tl", "--training-loop")
-@dataset_resolver.get_option("-ds", "--dataset", default="nations")
+@dataset_resolver.get_option("--dataset", default="nations")
 @options.inverse_triples_option
 @model_resolver.get_option("-m", "--model", default="mure")
 @loss_resolver.get_option("-l", "--loss", default="bcewithlogits")
 @options.batch_size_option
-@click.option("-ed", "--embedding-dim", type=int, default=128)
+@click.option("--embedding-dim", type=int, default=128)
 @click.option("-b", "--batch-size", type=int, default=128)
-@click.option("-mp", "--mixed-precision", is_flag=True)
+@click.option("--mixed-precision", is_flag=True)
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
