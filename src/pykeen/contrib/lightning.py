@@ -246,6 +246,7 @@ lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
     default=SLCWALitModule,
     # note: since this file is executed via __main__, its module name is replaced by __name__
     #       hence, the two classes' fully qualified names start with "_" and are considered private
+    # cf. https://github.com/cthoyt/class-resolver/issues/39
     exclude_private=False,
 )
 
