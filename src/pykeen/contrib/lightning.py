@@ -230,18 +230,12 @@ class LCWALitModule(LitModule):
         )
 
 
-# TODO: this does not seem to work
-# lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
-#     base=LitModule,
-#     default=SLCWALitModule,
-# )
-lit_module_resolver: ClassResolver[LitModule] = ClassResolver(
-    classes={
-        SLCWALitModule,
-        LCWALitModule,
-    },
+lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
     base=LitModule,
     default=SLCWALitModule,
+    # note: since this file is executed via __main__, its module name is replaced by __name__
+    #       hence, the two classes' fully qualified names start with "_" and are considered private
+    exclude_private=False,
 )
 
 
