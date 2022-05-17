@@ -113,3 +113,6 @@ References
 
 .. [chandak2022] Chandak, P., *et al* (2022). `Building a knowledge graph to enable precision medicine
    <https://doi.org/10.1101/2022.05.01.489928>`_. *bioRxiv*, 2022.05.01.489928.
+
+.. [wang2022] Wang, L., *et al* (2022). `SimKGC: Simple Contrastive Knowledge Graph Completion with
+   Pre-trained Language Models <https://arxiv.org/abs/2203.02167>`_. *arXiv*, 2203.02167.
