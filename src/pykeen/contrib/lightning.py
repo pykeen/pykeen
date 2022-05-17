@@ -156,6 +156,17 @@ class SLCWALitModule(LitModule):
         negative_sampler_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
+        """
+        Initialize the lightning module.
+
+        :param negative_sampler:
+            the negative sampler, cf. :meth:`pykeen.triples.CoreTriplesFactory.create_slcwa_instances`
+        :param negative_sampler_kwargs:
+            keyword-based parameters passed to the negative sampler, cf.
+            :meth:`pykeen.triples.CoreTriplesFactory.create_slcwa_instances`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`LitModule.__init__`
+        """
         super().__init__(**kwargs)
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
