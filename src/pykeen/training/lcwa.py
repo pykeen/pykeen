@@ -9,13 +9,12 @@ from typing import Callable, Optional, Union
 import torch
 from torch.utils.data import DataLoader
 
-from ..typing import InductiveMode
+from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models import Model
-
-from .training_loop import TrainingLoop
 from ..triples import CoreTriplesFactory
 from ..triples.instances import LCWABatchType, LCWASampleType
+from ..typing import InductiveMode
 
 __all__ = [
     "LCWATrainingLoop",
@@ -116,11 +115,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         model: Model,
         score_method: Callable,
         loss: Loss,
-        num_targets: int,
-        mode: InductiveMode,
+        num_targets: Optional[int],
+        mode: Optional[InductiveMode],
         batch: LCWABatchType,
-        start: int,
-        stop: int,
+        start: Optional[int],
+        stop: Optional[int],
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:

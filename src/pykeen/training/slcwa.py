@@ -83,10 +83,10 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
     def _process_batch_static(
         model: Model,
         loss: Loss,
-        mode: InductiveMode,
+        mode: Optional[InductiveMode],
         batch: SLCWABatch,
-        start: int,
-        stop: int,
+        start: Optional[int],
+        stop: Optional[int],
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
@@ -135,7 +135,16 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        return self._process_batch_static()
+        return self._process_batch_static(
+            model=self.model,
+            loss=self.loss,
+            mode=self.mode,
+            batch=batch,
+            start=start,
+            stop=stop,
+            label_smoothing=label_smoothing,
+            slice_size=slice_size,
+        )
 
     # docstr-coverage: inherited
     def _slice_size_search(

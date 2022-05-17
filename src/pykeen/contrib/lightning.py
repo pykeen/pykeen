@@ -41,9 +41,9 @@ from pykeen.losses import Loss, loss_resolver
 from pykeen.models import Model, model_resolver
 from pykeen.models.cli import options
 from pykeen.optimizers import optimizer_resolver
+from pykeen.sampling import NegativeSampler
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from pykeen.triples.triples_factory import CoreTriplesFactory
-from pykeen.sampling import NegativeSampler
 
 __all__ = [
     "LitModule",
