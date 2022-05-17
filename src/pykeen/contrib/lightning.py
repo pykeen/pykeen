@@ -56,7 +56,12 @@ __all__ = [
 
 
 class LitModule(pytorch_lightning.LightningModule):
-    """A base module for training models with PyTorch Lightning."""
+    """
+    A base module for training models with PyTorch Lightning.
+
+    .. seealso::
+        :class:`pykeen.training.training_loop.TrainingLoop`
+    """
 
     def __init__(
         self,
