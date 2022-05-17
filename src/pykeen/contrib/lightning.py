@@ -28,6 +28,7 @@ has some nice features:
 """
 
 from abc import abstractmethod
+from typing import Optional
 
 import click
 import pytorch_lightning
@@ -44,6 +45,7 @@ from pykeen.optimizers import optimizer_resolver
 from pykeen.sampling import NegativeSampler
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from pykeen.triples.triples_factory import CoreTriplesFactory
+from pykeen.typing import InductiveMode
 
 __all__ = [
     "LitModule",
@@ -61,6 +63,7 @@ class LitModule(pytorch_lightning.LightningModule):
         # dataset
         dataset: HintOrType[Dataset] = "nations",
         dataset_kwargs: OptionalKwargs = None,
+        mode: Optional[InductiveMode] = None,
         # model
         model: HintOrType[Model] = "distmult",
         model_kwargs: OptionalKwargs = None,
@@ -78,6 +81,8 @@ class LitModule(pytorch_lightning.LightningModule):
             the dataset, or a hint thereof
         :param dataset_kwargs:
             additional keyword-based parameters passed to the dataset
+        :param mode:
+            the inductive mode; defaults to transductive training
 
         :param model:
             the model, or a hint thereof
@@ -102,6 +107,7 @@ class LitModule(pytorch_lightning.LightningModule):
         self.optimizer_kwargs = optimizer_kwargs
         self.learning_rate = learning_rate
         self.batch_size = batch_size
+        self.mode = mode
 
     def forward(self, x):
         """
@@ -176,12 +182,13 @@ class SLCWALitModule(LitModule):
         loss = SLCWATrainingLoop._process_batch_static(
             model=self.model,
             loss=self.loss,
-            mode=None,  # TODO: ?
+            mode=self.mode,
             batch=batch,
+            label_smoothing=0.0,
+            # TODO: sub-batching / slicing
+            slice_size=None,
             start=None,
             stop=None,
-            label_smoothing=0.0,  # TODO:
-            slice_size=None,
         )
         self.log(f"{prefix}_loss", loss)
         return loss
@@ -220,11 +227,12 @@ class LCWALitModule(LitModule):
             score_method=self.model.score_t,
             loss=self.loss,
             num_targets=self.model.num_entities,
-            mode=None,
+            mode=self.mode,
             batch=batch,
+            label_smoothing=0.0,
+            # TODO: sub-batching / slicing
             start=None,
             stop=None,
-            label_smoothing=0.0,
             slice_size=None,
         )
         self.log(f"{prefix}_loss", loss)
