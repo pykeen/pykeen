@@ -1,13 +1,13 @@
 """Tests for training with PyTorch Lightning."""
-from typing import Any, ClassVar, Mapping
 import unittest
-import unittest_templates
+from typing import Any, ClassVar, Mapping
 
-from pykeen.contrib.lightning import LCWALitModule, SLCWALitModule
+import unittest_templates
 
 try:
     import pytorch_lightning
-    from pykeen.contrib.lightning import LitModule, LCWALitModule, SLCWALitModule
+
+    from pykeen.contrib.lightning import LCWALitModule, LitModule, SLCWALitModule
 except ImportError:
     pytorch_lightning = None
     LitModule = LCWALitModule = SLCWALitModule = None
