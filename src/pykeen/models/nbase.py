@@ -502,7 +502,7 @@ class ERModel(
         :param mode:
             the inductive mode
 
-        :raises NotImplementedError:
+        :raises ValueError:
             if the model does not support the given inductive mode, e.g.,
             because it is purely transductive
 
@@ -510,7 +510,7 @@ class ERModel(
             the entity representations for the given inductive mode
         """
         if mode is not None:
-            raise NotImplementedError
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105

@@ -168,7 +168,8 @@ class InductiveNodePiece(ERModel):
     def _get_entity_representations_from_inductive_mode(
         self, *, mode: Optional[InductiveMode]
     ) -> Sequence[Representation]:  # noqa: D102
-        assert mode is not None, "Inductive mode must be explicitly set for inductive models"
+        if mode is None:
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         if mode == TRAINING:
             return self.entity_representations
         else:
