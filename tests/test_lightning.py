@@ -7,6 +7,7 @@ import pytest
 from pykeen.contrib.lightning import lit_module_resolver, lit_pipeline
 from pykeen.datasets import get_dataset
 from pykeen.models import *
+from pykeen.typing import TRAINING
 
 EMBEDDING_DIM = 8
 MODEL_CONFIGURATIONS = {
@@ -65,9 +66,11 @@ def test_lit_training(model, model_kwargs, training_loop):
     # some model require access to the training triples
     if "triples_factory" in model_kwargs:
         model_kwargs["triples_factory"] = dataset.training
+    mode = None
     if issubclass(model, InductiveNodePiece):
         # fake an inference factory
         model_kwargs["inference_factory"] = dataset.training
+        mode = TRAINING
     lit_pipeline(
         training_loop=training_loop,
         training_loop_kwargs=dict(
@@ -77,6 +80,7 @@ def test_lit_training(model, model_kwargs, training_loop):
             dataset=dataset,
             model_kwargs=model_kwargs,
             batch_size=8,
+            mode=mode,
         ),
         trainer_kwargs=dict(
             # automatically choose accelerator
