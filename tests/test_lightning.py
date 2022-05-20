@@ -10,6 +10,7 @@ from pykeen.models import *
 from pykeen.typing import TRAINING
 
 EMBEDDING_DIM = 8
+# TODO: this could be shared with the model tests
 MODEL_CONFIGURATIONS = {
     AutoSF: dict(embedding_dim=EMBEDDING_DIM),
     BoxE: dict(embedding_dim=EMBEDDING_DIM),
