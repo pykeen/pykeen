@@ -168,12 +168,14 @@ class InductiveNodePiece(ERModel):
     def _get_entity_representations_from_inductive_mode(
         self, *, mode: Optional[InductiveMode]
     ) -> Sequence[Representation]:  # noqa: D102
-        if mode is None:
-            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         if mode == TRAINING:
             return self.entity_representations
-        else:
+        elif mode == TESTING or mode == VALIDATION:
             return self.inference_representation
+        elif mode is None:
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
 
     # docstr-coverage: inherited
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa: D102
