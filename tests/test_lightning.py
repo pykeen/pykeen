@@ -6,7 +6,43 @@ import pytest
 
 from pykeen.contrib.lightning import lit_module_resolver, lit_pipeline
 from pykeen.datasets import get_dataset
-from pykeen.models import *
+from pykeen.models import (
+    CP,
+    ERMLP,
+    ERMLPE,
+    KG2E,
+    NTN,
+    RESCAL,
+    RGCN,
+    SE,
+    UM,
+    AutoSF,
+    BoxE,
+    CompGCN,
+    ComplEx,
+    ConvE,
+    ConvKB,
+    CrossE,
+    DistMA,
+    DistMult,
+    HolE,
+    InductiveNodePiece,
+    InductiveNodePieceGNN,
+    MuRE,
+    NodePiece,
+    PairRE,
+    ProjE,
+    QuatE,
+    RotatE,
+    SimplE,
+    TorusE,
+    TransD,
+    TransE,
+    TransF,
+    TransH,
+    TransR,
+    TuckER,
+)
 from pykeen.typing import TRAINING
 
 EMBEDDING_DIM = 8
