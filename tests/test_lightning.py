@@ -1,28 +1,17 @@
 """Tests for training with PyTorch Lightning."""
+
 import itertools
-import unittest
 
 import pytest
+import pytorch_lightning
 
+from pykeen.contrib.lightning import lit_module_resolver
 from pykeen.models import model_resolver
 
-try:
-    import pytorch_lightning
-
-    from pykeen.contrib.lightning import lit_module_resolver
-
-    LIT_MODULES = lit_module_resolver.lookup_dict.keys()
-except ImportError:
-    pytorch_lightning = None
-    lit_module_resolver = None
-    LIT_MODULES = []
-
+LIT_MODULES = lit_module_resolver.lookup_dict.keys()
 INTERACTIONS = model_resolver.lookup_dict.keys()
 
 
-@unittest.skipIf(
-    pytorch_lightning is None, reason="PyTorch Lightning tests require `pytorch-lightning` to be installed"
-)
 # test combinations of models with training loops
 @pytest.mark.parametrize(("model", "training_loop"), itertools.product(INTERACTIONS, LIT_MODULES))
 def test_lit_training(model, training_loop):
