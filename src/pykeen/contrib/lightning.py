@@ -160,6 +160,10 @@ class LitModule(pytorch_lightning.LightningModule):
             self.optimizer, self.optimizer_kwargs, params=self.parameters(), lr=self.learning_rate
         )
 
+    def on_before_zero_grad(self, optimizer: torch.optim.Optimizer) -> None:  # noqa: D102
+        # call post_parameter_update
+        self.model.post_parameter_update()
+
 
 class SLCWALitModule(LitModule):
     """A PyTorch Lightning module for training a model with sLCWA training loop."""
