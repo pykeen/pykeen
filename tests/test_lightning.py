@@ -4,92 +4,59 @@ import itertools
 
 import pytest
 
-from pykeen.contrib.lightning import lit_module_resolver, lit_pipeline
+try:
+    from pykeen.contrib.lightning import lit_module_resolver
+
+    LIT_MODULES = lit_module_resolver.lookup_dict.keys()
+except ImportError:
+    LIT_MODULES = []
+from pykeen import models
 from pykeen.datasets import get_dataset
-from pykeen.models import (
-    CP,
-    ERMLP,
-    ERMLPE,
-    KG2E,
-    NTN,
-    RESCAL,
-    RGCN,
-    SE,
-    UM,
-    AutoSF,
-    BoxE,
-    CompGCN,
-    ComplEx,
-    ConvE,
-    ConvKB,
-    CrossE,
-    DistMA,
-    DistMult,
-    HolE,
-    InductiveNodePiece,
-    InductiveNodePieceGNN,
-    MuRE,
-    NodePiece,
-    PairRE,
-    ProjE,
-    QuatE,
-    RotatE,
-    SimplE,
-    TorusE,
-    TransD,
-    TransE,
-    TransF,
-    TransH,
-    TransR,
-    TuckER,
-)
 from pykeen.typing import TRAINING
 
 EMBEDDING_DIM = 8
 # TODO: this could be shared with the model tests
 MODEL_CONFIGURATIONS = {
-    AutoSF: dict(embedding_dim=EMBEDDING_DIM),
-    BoxE: dict(embedding_dim=EMBEDDING_DIM),
-    CompGCN: dict(embedding_dim=EMBEDDING_DIM),
-    ComplEx: dict(embedding_dim=EMBEDDING_DIM),
-    ConvE: dict(embedding_dim=EMBEDDING_DIM),
-    ConvKB: dict(embedding_dim=EMBEDDING_DIM, num_filters=2),
-    CP: dict(embedding_dim=EMBEDDING_DIM, rank=3),
-    CrossE: dict(embedding_dim=EMBEDDING_DIM),
-    DistMA: dict(embedding_dim=EMBEDDING_DIM),
-    DistMult: dict(embedding_dim=EMBEDDING_DIM),
-    ERMLP: dict(embedding_dim=EMBEDDING_DIM),
-    ERMLPE: dict(embedding_dim=EMBEDDING_DIM),
+    models.AutoSF: dict(embedding_dim=EMBEDDING_DIM),
+    models.BoxE: dict(embedding_dim=EMBEDDING_DIM),
+    models.CompGCN: dict(embedding_dim=EMBEDDING_DIM),
+    models.ComplEx: dict(embedding_dim=EMBEDDING_DIM),
+    models.ConvE: dict(embedding_dim=EMBEDDING_DIM),
+    models.ConvKB: dict(embedding_dim=EMBEDDING_DIM, num_filters=2),
+    models.CP: dict(embedding_dim=EMBEDDING_DIM, rank=3),
+    models.CrossE: dict(embedding_dim=EMBEDDING_DIM),
+    models.DistMA: dict(embedding_dim=EMBEDDING_DIM),
+    models.DistMult: dict(embedding_dim=EMBEDDING_DIM),
+    models.ERMLP: dict(embedding_dim=EMBEDDING_DIM),
+    models.ERMLPE: dict(embedding_dim=EMBEDDING_DIM),
     # FixedModel: dict(embedding_dim=EMBEDDING_DIM),
-    HolE: dict(embedding_dim=EMBEDDING_DIM),
-    InductiveNodePiece: dict(embedding_dim=EMBEDDING_DIM),
-    InductiveNodePieceGNN: dict(embedding_dim=EMBEDDING_DIM),
-    KG2E: dict(embedding_dim=EMBEDDING_DIM),
-    MuRE: dict(embedding_dim=EMBEDDING_DIM),
-    NodePiece: dict(embedding_dim=EMBEDDING_DIM),
-    NTN: dict(embedding_dim=EMBEDDING_DIM),
-    PairRE: dict(embedding_dim=EMBEDDING_DIM),
-    ProjE: dict(embedding_dim=EMBEDDING_DIM),
-    QuatE: dict(embedding_dim=EMBEDDING_DIM),
-    RESCAL: dict(embedding_dim=EMBEDDING_DIM),
-    RGCN: dict(embedding_dim=EMBEDDING_DIM),
-    RotatE: dict(embedding_dim=EMBEDDING_DIM),
-    SE: dict(embedding_dim=EMBEDDING_DIM),
-    SimplE: dict(embedding_dim=EMBEDDING_DIM),
-    TorusE: dict(embedding_dim=EMBEDDING_DIM),
-    TransD: dict(embedding_dim=EMBEDDING_DIM),
-    TransE: dict(embedding_dim=EMBEDDING_DIM),
-    TransF: dict(embedding_dim=EMBEDDING_DIM),
-    TransH: dict(embedding_dim=EMBEDDING_DIM),
-    TransR: dict(embedding_dim=EMBEDDING_DIM, relation_dim=3),
-    TuckER: dict(embedding_dim=EMBEDDING_DIM),
-    UM: dict(embedding_dim=EMBEDDING_DIM),
+    models.HolE: dict(embedding_dim=EMBEDDING_DIM),
+    models.InductiveNodePiece: dict(embedding_dim=EMBEDDING_DIM),
+    models.InductiveNodePieceGNN: dict(embedding_dim=EMBEDDING_DIM),
+    models.KG2E: dict(embedding_dim=EMBEDDING_DIM),
+    models.MuRE: dict(embedding_dim=EMBEDDING_DIM),
+    models.NodePiece: dict(embedding_dim=EMBEDDING_DIM),
+    models.NTN: dict(embedding_dim=EMBEDDING_DIM),
+    models.PairRE: dict(embedding_dim=EMBEDDING_DIM),
+    models.ProjE: dict(embedding_dim=EMBEDDING_DIM),
+    models.QuatE: dict(embedding_dim=EMBEDDING_DIM),
+    models.RESCAL: dict(embedding_dim=EMBEDDING_DIM),
+    models.RGCN: dict(embedding_dim=EMBEDDING_DIM),
+    models.RotatE: dict(embedding_dim=EMBEDDING_DIM),
+    models.SE: dict(embedding_dim=EMBEDDING_DIM),
+    models.SimplE: dict(embedding_dim=EMBEDDING_DIM),
+    models.TorusE: dict(embedding_dim=EMBEDDING_DIM),
+    models.TransD: dict(embedding_dim=EMBEDDING_DIM),
+    models.TransE: dict(embedding_dim=EMBEDDING_DIM),
+    models.TransF: dict(embedding_dim=EMBEDDING_DIM),
+    models.TransH: dict(embedding_dim=EMBEDDING_DIM),
+    models.TransR: dict(embedding_dim=EMBEDDING_DIM, relation_dim=3),
+    models.TuckER: dict(embedding_dim=EMBEDDING_DIM),
+    models.UM: dict(embedding_dim=EMBEDDING_DIM),
 }
 TEST_CONFIGURATIONS = (
     (model, model_config, lit)
-    for (model, model_config), lit in itertools.product(
-        MODEL_CONFIGURATIONS.items(), lit_module_resolver.lookup_dict.keys()
-    )
+    for (model, model_config), lit in itertools.product(MODEL_CONFIGURATIONS.items(), LIT_MODULES)
 )
 
 
@@ -97,14 +64,16 @@ TEST_CONFIGURATIONS = (
 @pytest.mark.parametrize(("model", "model_kwargs", "training_loop"), TEST_CONFIGURATIONS)
 def test_lit_training(model, model_kwargs, training_loop):
     """Test training models with PyTorch Lightning."""
+    from pykeen.contrib.lightning import lit_pipeline
+
     # some models require inverse relations
-    create_inverse_triples = model is not RGCN
+    create_inverse_triples = model is not models.RGCN
     dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=create_inverse_triples))
     # some model require access to the training triples
     if "triples_factory" in model_kwargs:
         model_kwargs["triples_factory"] = dataset.training
     mode = None
-    if issubclass(model, InductiveNodePiece):
+    if issubclass(model, models.InductiveNodePiece):
         # fake an inference factory
         model_kwargs["inference_factory"] = dataset.training
         mode = TRAINING
