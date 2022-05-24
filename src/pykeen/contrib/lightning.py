@@ -160,6 +160,7 @@ class LitModule(pytorch_lightning.LightningModule):
             self.optimizer, self.optimizer_kwargs, params=self.parameters(), lr=self.learning_rate
         )
 
+    # docstr-coverage: inherited
     def on_before_zero_grad(self, optimizer: torch.optim.Optimizer) -> None:  # noqa: D102
         # call post_parameter_update
         self.model.post_parameter_update()
