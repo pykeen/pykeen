@@ -160,6 +160,11 @@ class LitModule(pytorch_lightning.LightningModule):
             self.optimizer, self.optimizer_kwargs, params=self.parameters(), lr=self.learning_rate
         )
 
+    # docstr-coverage: inherited
+    def on_before_zero_grad(self, optimizer: torch.optim.Optimizer) -> None:  # noqa: D102
+        # call post_parameter_update
+        self.model.post_parameter_update()
+
 
 class SLCWALitModule(LitModule):
     """A PyTorch Lightning module for training a model with sLCWA training loop."""
@@ -268,6 +273,29 @@ lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
 )
 
 
+def lit_pipeline(
+    training_loop: HintOrType[LitModule] = None,
+    training_loop_kwargs: OptionalKwargs = None,
+    trainer_kwargs: OptionalKwargs = None,
+) -> None:
+    """
+    Create a :class:`LitModule` and run :class:`pytorch_lightning.Trainer` with it.
+
+    .. note::
+        this method modifies the model's parameters in-place.
+
+    :param training_loop:
+        the training loop or a hint thereof
+    :param training_loop_kwargs:
+        keyword-based parameters passed to the respective :class:`LitModule` subclass upon instantiation.
+    :param trainer_kwargs:
+        keyword-based parameters passed to :class:`pytorch_lightning.Trainer`
+    """
+    pytorch_lightning.Trainer(**(trainer_kwargs or {})).fit(
+        model=lit_module_resolver.make(training_loop, pos_kwargs=training_loop_kwargs)
+    )
+
+
 @click.command()
 @lit_module_resolver.get_option("-tl", "--training-loop")
 @dataset_resolver.get_option("--dataset", default="nations")
@@ -278,6 +306,7 @@ lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
 @click.option("--embedding-dim", type=int, default=128)
 @click.option("-b", "--batch-size", type=int, default=128)
 @click.option("--mixed-precision", is_flag=True)
+@options.number_epochs_option
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
@@ -287,27 +316,30 @@ def _main(
     batch_size: int,
     embedding_dim: int,
     mixed_precision: bool,
+    number_epochs: int,
 ):
     """Run PyTorch lightning model."""
-    lit = lit_module_resolver.make(
-        training_loop,
-        dataset=dataset,
-        dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
-        model=model,
-        model_kwargs=dict(embedding_dim=embedding_dim, loss=loss),
-        batch_size=batch_size,
+    lit_pipeline(
+        training_loop=training_loop,
+        training_loop_kwargs=dict(
+            dataset=dataset,
+            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
+            model=model,
+            model_kwargs=dict(embedding_dim=embedding_dim, loss=loss),
+            batch_size=batch_size,
+        ),
+        trainer_kwargs=dict(
+            # automatically choose accelerator
+            accelerator="auto",
+            # defaults to TensorBoard; explicitly disabled here
+            logger=False,
+            # disable checkpointing
+            enable_checkpointing=False,
+            # mixed precision training
+            precision=16 if mixed_precision else 32,
+            max_epochs=number_epochs,
+        ),
     )
-    trainer = pytorch_lightning.Trainer(
-        # automatically choose accelerator
-        accelerator="auto",
-        # defaults to TensorBoard; explicitly disabled here
-        logger=False,
-        # disable checkpointing
-        enable_checkpointing=False,
-        # mixed precision training
-        precision=16 if mixed_precision else 32,
-    )
-    trainer.fit(model=lit)
 
 
 if __name__ == "__main__":
