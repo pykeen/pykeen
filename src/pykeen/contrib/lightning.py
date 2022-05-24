@@ -281,6 +281,9 @@ def lit_pipeline(
     """
     Create a :class:`LitModule` and run :class:`pytorch_lightning.Trainer` with it.
 
+    .. note::
+        this method modifies the model's parameters in-place.
+
     :param training_loop:
         the training loop or a hint thereof
     :param training_loop_kwargs:
@@ -288,9 +291,9 @@ def lit_pipeline(
     :param trainer_kwargs:
         keyword-based parameters passed to :class:`pytorch_lightning.Trainer`
     """
-    lit = lit_module_resolver.make(training_loop, pos_kwargs=training_loop_kwargs)
-    trainer = pytorch_lightning.Trainer(**(trainer_kwargs or {}))
-    trainer.fit(model=lit)
+    pytorch_lightning.Trainer(**(trainer_kwargs or {})).fit(
+        model=lit_module_resolver.make(training_loop, pos_kwargs=training_loop_kwargs)
+    )
 
 
 @click.command()
