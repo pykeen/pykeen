@@ -69,20 +69,23 @@ def test_lit_training(model, model_kwargs, training_loop):
     # some models require inverse relations
     create_inverse_triples = model is not models.RGCN
     dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=create_inverse_triples))
+
     # some model require access to the training triples
     if "triples_factory" in model_kwargs:
         model_kwargs["triples_factory"] = dataset.training
-    mode = None
+
+    # inductive models require an inductive mode to be set, and an inference factory to be passed
     if issubclass(model, models.InductiveNodePiece):
         # fake an inference factory
         model_kwargs["inference_factory"] = dataset.training
         mode = TRAINING
+    else:
+        mode = None
+
     lit_pipeline(
         training_loop=training_loop,
         training_loop_kwargs=dict(
             model=model,
-            # use a small configuration for testing
-            # TODO: this does not properly work for all models
             dataset=dataset,
             model_kwargs=model_kwargs,
             batch_size=8,
