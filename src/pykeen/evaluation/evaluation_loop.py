@@ -4,7 +4,8 @@
 import dataclasses
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Collection, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, cast
+import logging
+from typing import Any, Collection, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
 
 import numpy
 import pandas
@@ -20,7 +21,10 @@ from .evaluator import Evaluator, MetricResults, filter_scores_
 from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples import CoreTriplesFactory
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
+from ..utils import upgrade_to_sequence
+
+logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
 
@@ -259,12 +263,16 @@ class FilterIndex:
 
 
 def get_mapped_triples(
+    x: Union[None, MappedTriples, CoreTriplesFactory],
+    *,
     mapped_triples: Optional[MappedTriples],
     factory: Optional[CoreTriplesFactory],
 ) -> MappedTriples:
     """
     Get ID-based triples either directly, or from a factory.
 
+    :param x:
+        either of ID-based triples, a factory, or None.
     :param mapped_triples: shape: (n, 3)
         the ID-based triples
     :param factory:
@@ -273,6 +281,10 @@ def get_mapped_triples(
     :return:
         the ID-based triples
     """
+    if x is not None:
+        if isinstance(x, CoreTriplesFactory):
+            return x.mapped_triples
+        return x
     if mapped_triples is not None:
         return mapped_triples
     if factory is None:
@@ -292,6 +304,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         factory: Optional[CoreTriplesFactory] = None,
         targets: Optional[Collection[Target]] = None,
         filtered: bool = True,
+        additional_filter_triples: Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]] = None,
     ) -> None:
         """
         Create a PyTorch dataset for link prediction evaluation.
@@ -304,17 +317,19 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
             the prediction targets. Defaults to head and tail prediction
         :param filtered:
             whether to use filtered evaluation, i.e., prepare filter indices
+        :param additional_filter_triples:
+            additional filter triples to use for creating the filter
 
         :raises ValueError:
             if none of mapped_triples or factory is provided
         """
-        # TODO: additional filter triples
         super().__init__()
 
         # input normalization
         if targets is None:
             targets = [LABEL_HEAD, LABEL_TAIL]
         mapped_triples = get_mapped_triples(mapped_triples=mapped_triples, factory=factory)
+        additional_filter_triples = list(map(get_mapped_triples, upgrade_to_sequence(additional_filter_triples or [])))
 
         self.mapped_triples = mapped_triples
         self.num_triples = mapped_triples.shape[0]
@@ -322,7 +337,12 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
 
         # prepare filter indices if required
         if filtered:
-            df = pandas.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+            if not additional_filter_triples:
+                logger.warning("Enabled filtered evaluation, but not additional filter triples are passed.")
+            df = pandas.DataFrame(
+                data=torch.cat([mapped_triples, *additional_filter_triples]),
+                columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+            )
             self.filter_indices = {target: FilterIndex.from_df(df=df, target=target) for target in targets}
         else:
             self.filter_indices = None
