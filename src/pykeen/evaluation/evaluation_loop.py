@@ -265,8 +265,8 @@ class FilterIndex:
 def get_mapped_triples(
     x: Union[None, MappedTriples, CoreTriplesFactory] = None,
     *,
-    mapped_triples: Optional[MappedTriples],
-    factory: Optional[CoreTriplesFactory],
+    mapped_triples: Optional[MappedTriples] = None,
+    factory: Optional[CoreTriplesFactory] = None,
 ) -> MappedTriples:
     """
     Get ID-based triples either directly, or from a factory.
@@ -329,7 +329,9 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         if targets is None:
             targets = [LABEL_HEAD, LABEL_TAIL]
         mapped_triples = get_mapped_triples(mapped_triples=mapped_triples, factory=factory)
-        additional_filter_triples = list(map(get_mapped_triples, upgrade_to_sequence(additional_filter_triples or [])))
+        additional_filter_triples = [
+            get_mapped_triples(x) for x in upgrade_to_sequence(additional_filter_triples or [])
+        ]
 
         self.mapped_triples = mapped_triples
         self.num_triples = mapped_triples.shape[0]
