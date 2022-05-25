@@ -5,7 +5,7 @@ import dataclasses
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Collection, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, Collection, DefaultDict, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
 
 import numpy
 import pandas
@@ -16,7 +16,6 @@ from torch.utils.data.dataloader import DataLoader
 from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
-from . import evaluator_resolver
 from .evaluator import Evaluator, MetricResults, filter_scores_
 from ..constants import TARGET_TO_INDEX
 from ..models import Model
@@ -375,8 +374,8 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
     ) -> Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]:
         """Collate batches by grouping by target."""
         # group by target
-        triples: Mapping[Target, List[torch.LongTensor]] = defaultdict(list)
-        nnz: Mapping[Target, List[torch.LongTensor]] = defaultdict(list)
+        triples: DefaultDict[Target, List[torch.LongTensor]] = defaultdict(list)
+        nnz: DefaultDict[Target, List[torch.LongTensor]] = defaultdict(list)
         for target, triple, opt_nnz in batch:
             triples[target].append(triple)
             if opt_nnz is not None:
@@ -436,6 +435,9 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain the keys
             `dataset` or `evaluator`.
         """
+        # avoid cyclic imports
+        from . import evaluator_resolver
+
         # TODO: it would be better to allow separate batch sizes for entity/relation prediction
         evaluator = evaluator_resolver.make(evaluator, pos_kwargs=evaluator_kwargs)
         super().__init__(
