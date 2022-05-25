@@ -278,6 +278,9 @@ def get_mapped_triples(
     :param factory:
         the triples factory
 
+    :raises ValueError:
+        if all inputs are None
+
     :return:
         the ID-based triples
     """
@@ -319,9 +322,6 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
             whether to use filtered evaluation, i.e., prepare filter indices
         :param additional_filter_triples:
             additional filter triples to use for creating the filter
-
-        :raises ValueError:
-            if none of mapped_triples or factory is provided
         """
         super().__init__()
 
