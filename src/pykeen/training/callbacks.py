@@ -72,6 +72,7 @@ __all__ = [
     "TrainingCallback",
     "StopperTrainingCallback",
     "TrackerTrainingCallback",
+    "EvaluationLoopTrainingCallback",
     "EvaluationTrainingCallback",
     "MultiTrainingCallback",
     "GradientNormClippingTrainingCallback",
