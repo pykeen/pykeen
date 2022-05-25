@@ -436,6 +436,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain the keys
             `dataset` or `evaluator`.
         """
+        # TODO: it would be better to allow separate batch sizes for entity/relation prediction
         evaluator = evaluator_resolver.make(evaluator, pos_kwargs=evaluator_kwargs)
         super().__init__(
             dataset=LCWAEvaluationDataset(
