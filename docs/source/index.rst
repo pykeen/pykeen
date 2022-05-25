@@ -71,6 +71,7 @@ PyKEEN
    :name: appendix
    :maxdepth: 2
 
+   analysis/index
    references
 
 Indices and Tables
