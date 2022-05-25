@@ -258,6 +258,28 @@ class FilterIndex:
         return self.indices[low:high]
 
 
+def get_mapped_triples(
+    mapped_triples: Optional[MappedTriples],
+    factory: Optional[CoreTriplesFactory],
+) -> MappedTriples:
+    """
+    Get ID-based triples either directly, or from a factory.
+
+    :param mapped_triples: shape: (n, 3)
+        the ID-based triples
+    :param factory:
+        the triples factory
+
+    :return:
+        the ID-based triples
+    """
+    if mapped_triples is not None:
+        return mapped_triples
+    if factory is None:
+        raise ValueError("Needs at least one of `mapped_triples` and `factory`.")
+    return factory.mapped_triples
+
+
 class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]]):
     """A dataset for link prediction evaluation."""
 
@@ -290,12 +312,9 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         super().__init__()
 
         # input normalization
-        if mapped_triples is None:
-            if factory is None:
-                raise ValueError("Needs at least one of `mapped_triples` and `factory`.")
-            mapped_triples = factory.mapped_triples
         if targets is None:
             targets = [LABEL_HEAD, LABEL_TAIL]
+        mapped_triples = get_mapped_triples(mapped_triples=mapped_triples, factory=factory)
 
         self.mapped_triples = mapped_triples
         self.num_triples = mapped_triples.shape[0]
