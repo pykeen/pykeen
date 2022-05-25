@@ -296,12 +296,22 @@ class Evaluator(ABC):
             values_dict[key] = start_value
             values_dict["slice_size"] = None
         elif key == "slice_size":
-            # Since the batch_size search with size 1, i.e. one tuple ((h, r) or (r, t)) scored on all entities,
-            # must have failed to start slice_size search, we start with trying half the entities.
-            # TODO: this is only for entity prediction; for relation prediction, we need a different value here
             if start_value is None:
-                start_value = ceil(model.num_entities / 2)
-            self._check_slicing_availability(model, batch_size=1)
+                # Since the batch_size search with size 1, i.e. one tuple ((h, r), (h, t) or (r, t)) scored on all
+                # entities/relations, must have failed to start slice_size search, we start with trying half the
+                # entities/relations.
+                targets: Collection[Target] = kwargs.get("targets", (LABEL_HEAD, LABEL_TAIL))
+                predict_entities = bool({LABEL_HEAD, LABEL_TAIL}.intersection(targets))
+                predict_relations = LABEL_RELATION in targets
+                max_id = -1
+                if predict_entities:
+                    max_id = max(max_id, model.num_entities)
+                if predict_relations:
+                    max_id = max(max_id, model.num_relations)
+                start_value = ceil(max_id / 2)
+            self._check_slicing_availability(
+                model, batch_size=1, entities=predict_entities, relations=predict_relations
+            )
             values_dict[key] = start_value
             values_dict["batch_size"] = 1
         else:
@@ -367,17 +377,13 @@ class Evaluator(ABC):
         return cast(Tuple[int, bool], (values_dict[key], evaluated_once))
 
     @staticmethod
-    def _check_slicing_availability(model: Model, batch_size: int) -> None:
-        # TODO: only valid for entity prediction
+    def _check_slicing_availability(model: Model, batch_size: int, entities: bool, relations: bool) -> None:
         # Test if slicing is implemented for the required functions of this model
-        if model.use_inverse_triples:
-            if not model.can_slice_t:
-                raise MemoryError(
-                    f"The current model can't be evaluated on this hardware with these parameters, as "
-                    f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "
-                    f"this model yet."
-                )
-        elif not model.can_slice_t or not model.can_slice_h:
+        if any(
+            (entities and model.use_inverse_triples and not model.can_slice_t)
+            or (entities and not model.use_inverse_triples and not (model.can_slice_t and model.can_slice_h))
+            or (relations and not model.can_slice_r)
+        ):
             raise MemoryError(
                 f"The current model can't be evaluated on this hardware with these parameters, as "
                 f"evaluation batch_size={batch_size} is too big and slicing is not implemented for this "
