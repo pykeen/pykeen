@@ -367,6 +367,7 @@ class Evaluator(ABC):
 
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int) -> None:
+        # TODO: only valid for entity prediction
         # Test if slicing is implemented for the required functions of this model
         if model.use_inverse_triples:
             if not model.can_slice_t:
