@@ -329,9 +329,6 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         if targets is None:
             targets = [LABEL_HEAD, LABEL_TAIL]
         mapped_triples = get_mapped_triples(mapped_triples=mapped_triples, factory=factory)
-        additional_filter_triples = [
-            get_mapped_triples(x) for x in upgrade_to_sequence(additional_filter_triples or [])
-        ]
 
         self.mapped_triples = mapped_triples
         self.num_triples = mapped_triples.shape[0]
@@ -342,11 +339,18 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
             if not additional_filter_triples:
                 logger.warning("Enabled filtered evaluation, but not additional filter triples are passed.")
             df = pandas.DataFrame(
-                data=torch.cat([mapped_triples, *additional_filter_triples]),
+                data=torch.cat(
+                    [
+                        mapped_triples,
+                        *(get_mapped_triples(x) for x in upgrade_to_sequence(additional_filter_triples or [])),
+                    ]
+                ),
                 columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
             )
             self.filter_indices = {target: FilterIndex.from_df(df=df, target=target) for target in targets}
         else:
+            if additional_filter_triples:
+                logger.warning("Passed additional filter triples, but filtered evaluation is disabled.")
             self.filter_indices = None
 
     @property
