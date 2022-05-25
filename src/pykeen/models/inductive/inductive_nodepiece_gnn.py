@@ -109,7 +109,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         mode: InductiveMode = None,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape with a GNN encoder."""
-        entity_representations = self._entity_representation_from_mode(mode=mode)
+        entity_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
 
         # Extract all entity and relation representations
         x_e, x_r = entity_representations[0](), self.relation_representations[0]()
