@@ -269,6 +269,7 @@ class Evaluator(ABC):
             key="slice_size",
             # Since the batch_size search with size 1, i.e. one tuple ((h, r) or (r, t)) scored on all entities,
             # must have failed to start slice_size search, we start with trying half the entities.
+            # TODO: this is only for entity prediction; for relation prediction, we need a different value here
             start_value=ceil(model.num_entities / 2),
             model=model,
             mapped_triples=mapped_triples,
