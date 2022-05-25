@@ -5,6 +5,7 @@
 from class_resolver import ClassResolver
 
 from .classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
+from .evaluation_loop import LCWAEvaluationLoop
 from .evaluator import Evaluator, MetricResults, evaluate
 from .rank_based_evaluator import (
     MacroRankBasedEvaluator,
@@ -20,6 +21,7 @@ __all__ = [
     "RankBasedEvaluator",
     "RankBasedMetricResults",
     "MacroRankBasedEvaluator",
+    "LCWAEvaluationLoop",
     "SampledRankBasedEvaluator",
     "ClassificationEvaluator",
     "ClassificationMetricResults",
