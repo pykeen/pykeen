@@ -263,7 +263,7 @@ class FilterIndex:
 
 
 def get_mapped_triples(
-    x: Union[None, MappedTriples, CoreTriplesFactory],
+    x: Union[None, MappedTriples, CoreTriplesFactory] = None,
     *,
     mapped_triples: Optional[MappedTriples],
     factory: Optional[CoreTriplesFactory],
