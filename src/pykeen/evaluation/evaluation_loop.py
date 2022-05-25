@@ -452,6 +452,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         # note: most of the time, this loop will only make a single iteration, since the evaluation dataset typically is
         #       not shuffled, and contains evaluation ranking tasks sorted by target
         for target, (hrt_batch, filter_batch) in batch.items():
+            # TODO: in theory, we could make a single score calculation for e.g., {(h, r, t1), (h, r, t1), ..., (h, r, tk)}
             # predict scores for all candidates
             scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode)
             true_scores = dense_positive_mask = None
