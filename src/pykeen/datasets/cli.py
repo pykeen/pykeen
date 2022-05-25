@@ -444,7 +444,7 @@ def degree(
         value_vars=["mean", "variance", "skewness", "kurtosis"],
         var_name="statistic",
     )
-    grid: sns.FacetGrid = sns.relplot(
+    grid_1: sns.FacetGrid = sns.relplot(  # type: ignore
         data=df,
         hue="dataset",
         x="num_triples",
@@ -459,30 +459,30 @@ def degree(
         height=2.5,
         hue_order=sorted(df["dataset"].unique()),
     )
-    grid.fig.suptitle("Dataset Degree Distributions", x=0.4, y=0.98)
+    grid_1.fig.suptitle("Dataset Degree Distributions", x=0.4, y=0.98)
     plt.subplots_adjust(top=0.85)
     sns.move_legend(
-        grid,
+        grid_1,
         "lower center",
         bbox_to_anchor=(0.45, -0.35),
         ncol=6,
         title=None,
         frameon=False,
     )
-    grid.tight_layout()
-    grid.set(xscale="log", yscale="log", xlabel="Triples")
+    grid_1.tight_layout()
+    grid_1.set(xscale="log", yscale="log", xlabel="Triples")
     path = base_path.with_suffix(suffix=".pdf")
-    grid.savefig(path)
-    grid.savefig(IMG_DIR.joinpath("dataset_degree_distributions.svg"))
+    grid_1.savefig(path)
+    grid_1.savefig(IMG_DIR.joinpath("dataset_degree_distributions.svg"))
     logger.info(f"Saved plot to {path}")
 
     # Plot: difference between mean head and tail degree
-    df2 = df.loc[df["statistic"] == "mean"].pivot(
+    df_2 = df.loc[df["statistic"] == "mean"].pivot(
         index=["dataset", "split", "num_triples"], columns="target", values="value"
     )
-    df2["difference"] = df2["head"] - df2["tail"]
-    grid: sns.FacetGrid = sns.relplot(
-        data=df2,
+    df_2["difference"] = df_2["head"] - df_2["tail"]
+    grid_2: sns.FacetGrid = sns.relplot(  # type: ignore
+        data=df_2,
         hue="dataset",
         x="num_triples",
         style=None if restrict_split is not None else "split",
@@ -491,20 +491,20 @@ def degree(
         aspect=4,
         hue_order=sorted(df["dataset"].unique()),
     )
-    grid.fig.suptitle("Dataset Mean Degree Imbalance", x=0.4, y=0.98)
+    grid_2.fig.suptitle("Dataset Mean Degree Imbalance", x=0.4, y=0.98)
     sns.move_legend(
-        grid,
+        grid_2,
         "lower center",
         bbox_to_anchor=(0.45, -0.55),
         ncol=6,
         title=None,
         frameon=False,
     )
-    grid.tight_layout()
-    grid.set(xscale="log", yscale="symlog", xlabel="Triples")
+    grid_2.tight_layout()
+    grid_2.set(xscale="log", yscale="symlog", xlabel="Triples")
     path = base_path.with_name("degree-imbalance").with_suffix(suffix=".pdf")
-    grid.savefig(path)
-    grid.savefig(IMG_DIR.joinpath("degree_imbalance.svg"))
+    grid_2.savefig(path)
+    grid_2.savefig(IMG_DIR.joinpath("degree_imbalance.svg"))
     logger.info(f"Saved plot to {path}")
 
 
