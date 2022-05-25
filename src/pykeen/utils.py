@@ -116,6 +116,7 @@ __all__ = [
     "logcumsumexp",
     "get_connected_components",
     "normalize_path",
+    "get_edge_index",
 ]
 
 logger = logging.getLogger(__name__)
@@ -880,15 +881,15 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
 
 def extend_batch(
     batch: MappedTriples,
-    all_ids: List[int],
+    max_id: int,
     dim: int,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
     :param batch: shape: (batch_size, 2)
         The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
+    :param max_id:
+        The maximum IDs to enumerate.
     :param dim: in {0,1,2}
         The column along which to insert the enumerated IDs.
 
@@ -896,10 +897,10 @@ def extend_batch(
         A large batch, where every pair from the original batch is combined with every ID.
     """
     # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
+    extended_batch = batch.repeat_interleave(repeats=max_id, dim=0)
 
     # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
+    ids = torch.arange(max_id, device=batch.device)
 
     # Extend all IDs to the number of pairs such that each ID can be combined with every pair
     extended_ids = ids.repeat(batch.shape[0])
@@ -1445,6 +1446,227 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
         if x.shape[-1] != 2:
             x = x.view(*x.shape[:-1], -1, 2)
         yield torch.view_as_complex(x)
+
+
+def _weisfeiler_lehman_iteration(
+    adj: torch.Tensor,
+    colors: torch.LongTensor,
+    dense_dtype: torch.dtype = torch.long,
+) -> torch.Tensor:
+    """
+    Perform a single Weisfeiler-Lehman iteration.
+
+    :param adj: shape: `(n, n)`
+        the adjacency matrix
+    :param colors: shape: `(n,)`
+        the node colors (as integers)
+    :param dense_dtype:
+        a datatype for storing integers of sufficient capacity to store `n`
+
+    :return: shape: `(n,)`
+        the new node colors
+    """
+    num_nodes = colors.shape[0]
+    # message passing: collect colors of neighbors
+    # dense colors: shape: (n, c)
+    # adj:          shape: (n, n)
+    color_sparse = torch.sparse_coo_tensor(
+        indices=torch.stack([torch.arange(num_nodes, device=colors.device), colors], dim=0),
+        # values need to be float, since torch.sparse.mm does not support integer dtypes
+        values=torch.ones_like(colors, dtype=torch.get_default_dtype()),
+        # size: will be correctly inferred
+    )
+    color_dense = torch.sparse.mm(adj, color_sparse).to(dtype=dense_dtype).to_dense()
+
+    # concat with old colors
+    colors = torch.cat([colors.unsqueeze(dim=-1), color_dense], dim=-1)
+
+    # hash
+    return colors.unique(dim=0, return_inverse=True)[1]
+
+
+def _weisfeiler_lehman_iteration_approx(
+    adj: torch.Tensor,
+    colors: torch.LongTensor,
+    dim: int = 32,
+    decimals: int = 6,
+) -> torch.Tensor:
+    """
+    Perform an approximate  single Weisfeiler-Lehman iteration.
+
+    It utilizes the trick from https://arxiv.org/abs/2001.09621 of replacing node indicator functions by
+    randomly drawn functions of fixed and low dimensionality.
+
+    :param adj: shape: `(n, n)`
+        the adjacency matrix
+    :param colors: shape: `(n,)`
+        the node colors (as integers)
+    :param dim:
+        the dimensionality of the random node indicator functions
+    :param decimals:
+        the number of decimals to round to
+
+    :return: shape: `(n,)`
+        the new node colors
+    """
+    num_colors = colors.max() + 1
+
+    # create random indicator functions of low dimensionality
+    rand = torch.rand(num_colors, dim, device=colors.device)
+    x = rand[colors]
+
+    # collect neighbors' colors
+    x = torch.sparse.mm(adj, x)
+
+    # round to avoid numerical effects
+    x = torch.round(x, decimals=decimals)
+
+    # hash first
+    new_colors = x.unique(return_inverse=True, dim=0)[1]
+
+    # concat with old colors
+    colors = torch.stack([colors, new_colors], dim=-1)
+
+    # re-hash
+    return colors.unique(return_inverse=True, dim=0)[1]
+
+
+def iter_weisfeiler_lehman(
+    edge_index: torch.LongTensor,
+    max_iter: int = 2,
+    num_nodes: Optional[int] = None,
+    approximate: bool = False,
+) -> Iterable[torch.Tensor]:
+    """
+    Iterate Weisfeiler-Lehman colors.
+
+    The Weisfeiler-Lehman algorithm starts from a uniformly node-colored graph, and iteratively counts the colors in
+    each nodes' neighborhood, and hashes these multi-sets into a new set of colors.
+
+    .. note::
+        more precisely, this implementation calculates the results of the 1-Weisfeiler-Lehman algorithm. There is a
+        hierarchy of k-WL tests, which color k-tuples of nodes instead of single nodes
+
+    .. note::
+        Graph Neural Networks are closely related to the 1-WL test, cf. e.g., https://arxiv.org/abs/1810.02244
+
+    .. note::
+        colorings based on the WL test have been used to define graph kernels, cf., e.g.,
+        https://www.jmlr.org/papers/volume12/shervashidze11a/shervashidze11a.pdf
+
+    .. note::
+        the implementation creates intermediate dense tensors of shape `(num_nodes, num_colors)`
+
+    .. seealso::
+        https://towardsdatascience.com/expressive-power-of-graph-neural-networks-and-the-weisefeiler-lehman-test-b883db3c7c49
+
+    :param edge_index: shape: `(2, m)`
+        the edge list
+    :param max_iter:
+        the maximum number of iterations
+    :param num_nodes:
+        the number of nodes. If None, will be inferred from the edge index.
+    :param approximate:
+        whether to use an approximate, but more memory-efficient implementation.
+
+    :raises ValueError:
+        if the number of nodes exceeds `torch.long` (this cannot happen in practice, as the edge index tensor
+        construction would already fail earlier)
+
+    :yields: the colors for each Weisfeiler-Lehman iteration
+    """
+    # only keep connectivity, but remove multiplicity
+    edge_index = edge_index.unique(dim=1)
+
+    num_nodes = num_nodes or edge_index.max().item() + 1
+    colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
+    # note: in theory, we could return this uniform coloring as the first coloring; however, for featurization,
+    #       this is rather useless
+
+    # initial: degree
+    # note: we calculate this separately, since we can use a more efficient implementation for the first step
+    unique, counts = edge_index.unique(return_counts=True)
+    colors[unique] = counts
+
+    # hash
+    colors = colors.unique(return_inverse=True)[1]
+    num_colors = colors.max() + 1
+    yield colors
+
+    # determine small integer type for dense count array
+    for idtype in (torch.int8, torch.int16, torch.int32, torch.int64):
+        if torch.iinfo(idtype).max >= num_nodes:
+            dense_dtype = idtype
+            logger.debug(f"Selected dense dtype: {dense_dtype}")
+            break
+    else:
+        raise ValueError(f"{num_nodes} too large")
+
+    adj = torch.sparse_coo_tensor(
+        indices=edge_index,
+        values=torch.ones(size=edge_index[0].shape),
+        device=edge_index.device,
+        size=(num_nodes, num_nodes),
+    )
+    for i in range(2, max_iter + 1):
+        if approximate:
+            colors = _weisfeiler_lehman_iteration_approx(adj=adj, colors=colors)
+        else:
+            colors = _weisfeiler_lehman_iteration(adj=adj, colors=colors, dense_dtype=dense_dtype)
+        yield colors
+
+        # convergence check
+        new_num_colors = colors.max() + 1
+
+        # each node has a unique color
+        if new_num_colors >= (num_nodes - 1):
+            logger.debug(f"Weisfeiler-Lehman terminated with unique colors for each node after {i} iterations")
+            break
+
+        # the number of colors did not improve in the last iteration
+        if num_colors >= new_num_colors:
+            logger.debug(f"Weisfeiler-Lehman could not further refine coloring in iteration {i}")
+            break
+
+        num_colors = new_num_colors
+    else:
+        logger.debug(f"Weisfeiler-Lehman did not converge after {max_iter} iterations.")
+
+
+def get_edge_index(
+    *,
+    # cannot use Optional[pykeen.triples.CoreTriplesFactory] due to cyclic imports
+    triples_factory: Optional[Any] = None,
+    mapped_triples: Optional[MappedTriples] = None,
+    edge_index: Optional[torch.LongTensor] = None,
+) -> torch.LongTensor:
+    """
+    Get the edge index from a number of different sources.
+
+    :param triples_factory:
+        the triples factory
+    :param mapped_triples: shape: `(m, 3)`
+        ID-based triples
+    :param edge_index: shape: `(2, m)`
+        the edge index
+
+    :raises ValueError:
+        if none of the source was different from `None`
+
+    :return: shape: `(2, m)`
+        the edge index
+    """
+    if triples_factory is not None:
+        if mapped_triples is not None:
+            logger.warning("Ignoring mapped_triples, since triples_factory is present.")
+        mapped_triples = triples_factory.mapped_triples
+    if mapped_triples is not None:
+        if edge_index is not None:
+            logger.warning("Ignoring edge_index, since mapped_triples is present.")
+        edge_index = mapped_triples[:, 0::2].t()
+    if edge_index is None:
+        raise ValueError("At least one of the parameters must be different to None.")
+    return edge_index
 
 
 if __name__ == "__main__":

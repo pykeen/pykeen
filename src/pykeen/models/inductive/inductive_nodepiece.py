@@ -3,7 +3,7 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional
+from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
@@ -14,6 +14,7 @@ from ...nn import (
     DistMultInteraction,
     Interaction,
     NodePieceRepresentation,
+    Representation,
     SubsetRepresentation,
     representation_resolver,
 )
@@ -163,14 +164,21 @@ class InductiveNodePiece(ERModel):
             self.num_valid_entities = validation_factory.num_entities
             self.num_test_entities = test_factory.num_entities
 
-    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
-        assert mode is not None, "Inductive mode must be explicitly set for inductive models"
+    # docstr-coverage: inherited
+    def _get_entity_representations_from_inductive_mode(
+        self, *, mode: Optional[InductiveMode]
+    ) -> Sequence[Representation]:  # noqa: D102
         if mode == TRAINING:
             return self.entity_representations
-        else:
+        elif mode == TESTING or mode == VALIDATION:
             return self.inference_representation
+        elif mode is None:
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
 
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
+    # docstr-coverage: inherited
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa: D102
         if mode == TRAINING:
             return self.num_train_entities
         elif mode == TESTING:
