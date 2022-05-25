@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
+from timeit import default_timer
 from typing import (
     Any,
     Callable,
@@ -109,6 +110,7 @@ __all__ = [
     "product_normalize",
     "compute_box",
     "point_to_box_distance",
+    "timer",
     "get_devices",
     "get_preferred_device",
     "triple_tensor_to_set",
@@ -1248,6 +1250,34 @@ def boxe_kg_arity_position_score(
 
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+def timer(
+    callback: Callable[[str], Any] = None,
+    formatter: Optional[Callable[[float, str], str]] = None,
+) -> Callable[[Callable], Callable]:
+    """Create a timing decorator."""
+    if callback is None:
+        callback = logging.info
+    if formatter is None:
+        formatter = "{0} took {1:2.5f} seconds.".format
+
+    # TODO: use decorator library to preserve signatures (and reduce code)
+    def wrapper(func: Callable) -> Callable:
+        """Creates the wrapper."""
+
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            """The wrapped function."""
+            time = default_timer()
+            res = func(*args, **kwargs)
+            time = default_timer() - time
+            callback(formatter(func.__name__, time))
+            return res
+
+        return wrapped
+
+    return wrapper
 
 
 def getattr_or_docdata(cls, key: str) -> str:
