@@ -157,14 +157,31 @@ class Evaluator(ABC):
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
-        use_tqdm: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, str]] = None,
-        restrict_entities_to: Optional[torch.LongTensor] = None,
-        do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        **kwargs,
     ) -> MetricResults:
-        """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
+        """
+        Run :func:`pykeen.evaluation.evaluate` with this evaluator.
+
+        This method will re-use the stored optimized batch and slice size, as well as the evaluator's inductive mode.
+
+        :param model:
+            the model to evaluate.
+        :param batch_size:
+            the batch size to use, or `None` to trigger automatic memory optimization
+        :param slice_size:
+            the slice size to use
+        :param kwargs:
+            the keyword-based parameters passed to :func:`pykeen.evaluation.evaluate`
+
+        :return:
+            the evaluation results
+        """
+        # add mode parameter
+        mode = kwargs.pop("mode", None)
+        if mode is not None:
+            logger.warning(f"Ignoring provided mode={mode}, and use the evaluator's mode={self.mode} instead")
+        kwargs["mode"] = self.mode
+
         if batch_size is None and self.automatic_memory_optimization:
             # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
             if model.device.type == "cpu":
@@ -176,12 +193,8 @@ class Evaluator(ABC):
                 batch_size, slice_size = self.batch_and_slice(
                     model=model,
                     mapped_triples=mapped_triples,
-                    additional_filter_triples=additional_filter_triples,
                     batch_size=batch_size,
-                    device=device,
-                    use_tqdm=False,
-                    restrict_entities_to=restrict_entities_to,
-                    do_time_consuming_checks=do_time_consuming_checks,
+                    **kwargs,
                 )
                 # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
                 self.batch_size = batch_size
@@ -192,17 +205,11 @@ class Evaluator(ABC):
 
         rv = evaluate(
             model=model,
-            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             evaluator=self,
             batch_size=batch_size,
             slice_size=slice_size,
-            device=device,
-            use_tqdm=use_tqdm,
-            tqdm_kwargs=tqdm_kwargs,
-            restrict_entities_to=restrict_entities_to,
-            do_time_consuming_checks=do_time_consuming_checks,
-            mode=self.mode,
+            **kwargs,
         )
         # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
         return cast(MetricResults, rv)
@@ -212,11 +219,7 @@ class Evaluator(ABC):
         model: Model,
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
-        use_tqdm: bool = False,
-        restrict_entities_to: Optional[torch.LongTensor] = None,
-        do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        **kwargs,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -234,17 +237,8 @@ class Evaluator(ABC):
             The triples on which to evaluate.
         :param batch_size:
             The initial batch size to start with. None defaults to number_of_triples.
-        :param device:
-            The device on which the evaluation shall be run. If None is given, use the model's device.
-        :param use_tqdm:
-            Should a progress bar be displayed?
-        :param restrict_entities_to:
-            Whether to restrict the evaluation to certain entities of interest.
-        :param do_time_consuming_checks:
-            whether to perform time-consuming input validation for restricted evaluation
-        :param additional_filter_triples:
-            Additional true triples to filter out during filtered evaluation. Only needed if the evaluator is in
-            filtered mode.
+        :param kwargs:
+            additional keyword-based parameters passed to :func:`pykeen.evaluation.evaluate`
 
         :return:
             Maximum possible batch size and, if necessary, the slice_size, which defaults to None.
@@ -252,34 +246,31 @@ class Evaluator(ABC):
         :raises MemoryError:
             If it is not possible to evaluate the model on the hardware at hand with the given parameters.
         """
+        # do not display progress bar while searching
+        kwargs["use_tqdm"] = False
+        # start by searching for batch_size
         batch_size, evaluated_once = self._param_size_search(
             key="batch_size",
             start_value=batch_size,
             model=model,
-            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
-            device=device,
-            use_tqdm=use_tqdm,
-            restrict_entities_to=restrict_entities_to,
-            do_time_consuming_checks=do_time_consuming_checks,
+            **kwargs,
         )
 
         if evaluated_once:  # slice_size = None
             return batch_size, None
 
         # We need to try slicing, if the evaluation for the batch_size search never succeeded
+        # we do not need to repeat time-consuming checks
+        kwargs["do_time_consuming_checks"] = False
         slice_size, evaluated_once = self._param_size_search(
             key="slice_size",
             # Since the batch_size search with size 1, i.e. one tuple ((h, r) or (r, t)) scored on all entities,
             # must have failed to start slice_size search, we start with trying half the entities.
             start_value=ceil(model.num_entities / 2),
             model=model,
-            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
-            device=device,
-            use_tqdm=use_tqdm,
-            restrict_entities_to=restrict_entities_to,
-            do_time_consuming_checks=False,
+            **kwargs,
         )
         if not evaluated_once:
             raise MemoryError("The current model can't be trained on this hardware with these parameters.")
@@ -292,11 +283,7 @@ class Evaluator(ABC):
         start_value: Optional[int],
         model: Model,
         mapped_triples: MappedTriples,
-        device: Optional[torch.device] = None,
-        use_tqdm: bool = False,
-        restrict_entities_to: Optional[torch.LongTensor] = None,
-        do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        **kwargs,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -327,17 +314,12 @@ class Evaluator(ABC):
                 torch.cuda.empty_cache()
                 evaluate(
                     model=model,
-                    additional_filter_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
                     evaluator=self,
                     only_size_probing=True,
-                    device=device,
-                    use_tqdm=use_tqdm,
-                    restrict_entities_to=restrict_entities_to,
-                    do_time_consuming_checks=do_time_consuming_checks,
                     batch_size=values_dict.get("batch_size"),
                     slice_size=values_dict.get("slice_size"),
-                    mode=self.mode,
+                    **kwargs,
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
