@@ -317,6 +317,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
             )
         return self._evaluation_loop
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return

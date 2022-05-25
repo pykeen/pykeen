@@ -30,9 +30,15 @@ def _hasher(d: Mapping[str, Any]) -> int:
     Calculate hash based on ID of dataset.
 
     This means that we can have separate batch sizes for different evaluation datasets.
+
+    :param d:
+        the dictionary of keyword-based parameters
+
+    :return:
+        the dataset's ID
     """
     obj = d["loop"]
-    assert hasattr(obj, "dataset")
+    assert isinstance(obj, EvaluationLoop)
     obj = obj.dataset
     return id(obj)
 
@@ -216,6 +222,9 @@ class FilterIndex:
         :param target:
             the prediction target
 
+        :raises ValueError:
+            if some of the expected columns are missing
+
         :return:
             a filter index object
         """
@@ -273,6 +282,9 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
             the prediction targets. Defaults to head and tail prediction
         :param filtered:
             whether to use filtered evaluation, i.e., prepare filter indices
+
+        :raises ValueError:
+            if none of mapped_triples or factory is provided
         """
         # TODO: additional filter triples
         super().__init__()
