@@ -166,6 +166,8 @@ class Evaluator(ABC):
 
         :param model:
             the model to evaluate.
+        :param mapped_triples: shape: (n, 3)
+            the ID-based evaluation triples
         :param batch_size:
             the batch size to use, or `None` to trigger automatic memory optimization
         :param slice_size:
