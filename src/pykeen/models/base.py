@@ -393,7 +393,7 @@ class Model(nn.Module, ABC):
         ht_batch: torch.LongTensor,
         *,
         slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode],
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
