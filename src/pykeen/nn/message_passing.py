@@ -75,9 +75,6 @@ class Decomposition(nn.Module, ABC):
         self.num_relations = num_relations
         self.output_dim = output_dim
 
-        # decide on stacking direction based on dimensions
-        self.horizontal_stacking = use_horizontal_stacking(input_dim=self.input_dim, output_dim=self.output_dim)
-
     def extra_repr(self) -> str:
         """Return additional components for the output of `repr`."""
         return ", ".join(self.iter_extra_repr())
@@ -87,7 +84,6 @@ class Decomposition(nn.Module, ABC):
         yield f"input_dim={self.input_dim}"
         yield f"output_dim={self.output_dim}"
         yield f"num_relations={self.num_relations}"
-        yield f"horizontal_stacking={self.horizontal_stacking}"
 
     def forward(
         self,
@@ -117,6 +113,7 @@ class Decomposition(nn.Module, ABC):
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
         """
+        horizontal = use_horizontal_stacking(input_dim=self.input_dim, output_dim=self.output_dim)
         adj = adjacency_tensor_to_stacked_matrix(
             num_relations=self.num_relations,
             num_entities=x.shape[0],
@@ -124,9 +121,9 @@ class Decomposition(nn.Module, ABC):
             target=target,
             edge_type=edge_type,
             edge_weights=edge_weights,
-            horizontal=self.horizontal_stacking,
+            horizontal=horizontal,
         )
-        if self.horizontal_stacking:
+        if horizontal:
             x = self.forward_horizontally_stacked(x=x, adj=adj)
         else:
             x = self.forward_vertically_stacked(x=x, adj=adj)
