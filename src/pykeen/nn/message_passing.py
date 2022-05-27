@@ -197,7 +197,9 @@ class BasesDecomposition(Decomposition):
             num_bases = 2
 
         if num_bases > num_relations:
-            raise ValueError("The number of bases should not exceed the number of relations.")
+            logger.warning(
+                f"The number of bases ({num_bases}) should not exceed the number of relations ({num_relations})."
+            )
 
         self.relation_representations = LowRankRepresentation(
             max_id=num_relations,
