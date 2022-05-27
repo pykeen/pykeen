@@ -4,6 +4,7 @@
 
 import logging
 from abc import ABC, abstractmethod
+from math import gcd
 from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
@@ -146,6 +147,8 @@ class Decomposition(nn.Module, ABC):
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
         """
+        # TODO: use a separate full matrix for self-loop
+        # TODO: move accumulator normalization to here
         raise NotImplementedError
 
     @abstractmethod
@@ -188,11 +191,7 @@ class BasesDecomposition(Decomposition):
             is small.
         :raises ValueError: If the ``num_bases`` is greater than ``num_relations``
         """
-        super().__init__(
-            input_dim=input_dim,
-            num_relations=num_relations,
-            output_dim=output_dim,
-        )
+        super().__init__(input_dim=input_dim, num_relations=num_relations, output_dim=output_dim)
 
         # Heuristic for default value
         if num_bases is None:
@@ -354,40 +353,45 @@ class BlockDecomposition(Decomposition):
             The output dimension. If None is given, defaults to input_dim.
         :raises NotImplementedError: If ``input_dim`` is not divisible by ``num_blocks``
         """
-        super().__init__(
-            input_dim=input_dim,
-            num_relations=num_relations,
-            output_dim=output_dim,
-        )
+        super().__init__(input_dim=input_dim, num_relations=num_relations, output_dim=output_dim)
 
+        # normalize num blocks
         if num_blocks is None:
-            logger.info("Using a heuristic to determine the number of blocks.")
-            num_blocks = min(i for i in range(2, input_dim + 1) if input_dim % i == 0)
+            num_blocks = gcd(input_dim, self.output_dim)
+            logger.info(f"Inferred num_blocks={num_blocks} by GCD heuristic.")
+        self.num_blocks = num_blocks
 
-        block_size, remainder = divmod(input_dim, num_blocks)
-        if remainder != 0:
-            raise NotImplementedError(
-                "With block decomposition, the embedding dimension has to be divisible by the number of"
-                f" blocks, but {input_dim} % {num_blocks} != 0.",
+        # determine block sizes
+        # TODO: we could add support for non-divisible sizes by using padding
+        if input_dim % num_blocks or self.output_dim % num_blocks:
+            raise ValueError(
+                "With block decomposition, the embedding dimension has to be divisible by the number of "
+                f"blocks, but {input_dim} % {num_blocks} = {input_dim % num_blocks} (input dim) and "
+                f"{self.output_dim} % {num_blocks} = {self.output_dim % num_blocks} (output dim)",
             )
+        self.input_block_size = input_dim // num_blocks
+        self.output_block_size = self.output_dim // num_blocks
 
+        # (R, nb, bsi, bso)
         self.blocks = nn.Parameter(
             data=torch.empty(
                 num_relations + 1,
                 num_blocks,
-                block_size,
-                block_size,
+                self.input_block_size,
+                self.output_block_size,
             ),
             requires_grad=True,
         )
-        self.num_blocks = num_blocks
-        self.block_size = block_size
 
     # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_blocks={self.num_blocks}"
-        yield f"block_size={self.block_size}"
+        if self.input_block_size == self.output_block_size:
+            yield f"block_size={self.input_block_size}"
+        else:
+            yield f"input_block_size={self.input_block_size}"
+            yield f"output_block_size={self.output_block_size}"
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
