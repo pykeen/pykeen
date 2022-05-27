@@ -1,6 +1,8 @@
 """Filtered models."""
+
 from typing import Optional
 
+import docdata
 import numpy
 import scipy.sparse
 import torch
@@ -10,17 +12,29 @@ from ..base import Model
 from ..baseline.utils import get_csr_matrix
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import InductiveMode
+from docdata import parse_docdata
+__all__ = [
+    "PseudoTypeFilteredModel",
+]
 
-
+@parse_docdata
 class PseudoTypeFilteredModel(Model):
-    """A model which filters predictions by pseudo-types."""
+    """A model which filters predictions by pseudo-types.
+
+    ---
+    citation:
+        author: Berrendorf
+        year: 2022
+        link: https://github.com/pykeen/pykeen/pull/943
+        github: pykeen/pykeen
+    """
 
     def __init__(self, *, triples_factory: CoreTriplesFactory, base: HintOrType[Model] = "rotate", **kwargs) -> None:
         """
         Initialize the model.
 
         :param triples_factory:
-            the (training) triples factory; used for creating the co-occurence counts *and* for instantiating the
+            the (training) triples factory; used for creating the co-occurrence counts *and* for instantiating the
             base model.
         :param base:
             the base model, or a hint thereof.
@@ -91,7 +105,7 @@ class PseudoTypeFilteredModel(Model):
     @staticmethod
     def _mask(
         scores: torch.FloatTensor, batch_indices: torch.LongTensor, index: scipy.sparse.csr_matrix
-    ) -> torch.Tensor:
+    ) -> torch.FloatTensor:
         # get batch indices as numpy array
         i = batch_indices.cpu().numpy()
         # get mask, shape: (batch_size, num_entities/num_relations)
@@ -122,3 +136,9 @@ class PseudoTypeFilteredModel(Model):
             batch_indices=hr_batch[:, 1],
             index=self.tail_per_relation,
         )
+
+    # docstr-coverage: inherited
+    def predict_r(
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:  # noqa: D102
+        raise NotImplementedError
