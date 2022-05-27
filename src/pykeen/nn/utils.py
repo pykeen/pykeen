@@ -16,6 +16,8 @@ from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 __all__ = [
     "TransformerEncoder",
     "safe_diagonal",
+    "adjacency_tensor_to_stacked_matrix",
+    "use_horizontal_stacking",
 ]
 
 logger = logging.getLogger(__name__)
@@ -185,3 +187,81 @@ def safe_diagonal(matrix: torch.Tensor) -> torch.Tensor:
     diagonal_indices = indices[0][mask]
 
     return torch.zeros(n, device=matrix.device).scatter_add(dim=0, index=diagonal_indices, src=diagonal_values)
+
+
+def use_horizontal_stacking(
+    input_dim: int,
+    output_dim: int,
+) -> bool:
+    """
+    Determine a stacking direction based on the input and output dimension.
+
+    The vertical stacking approach is suitable for low dimensional input and high dimensional output,
+    because the projection to low dimensions is done first. While the horizontal stacking approach is good
+    for high dimensional input and low dimensional output as the projection to high dimension is done last.
+
+    :param input_dim:
+        the layer's input dimension
+    :param output_dim:
+        the layer's output dimension
+
+    :return:
+        whether to use horizontal (True) or vertical stacking
+
+    .. seealso :: [thanapalasingam2021]_
+    """
+    return input_dim > output_dim
+
+
+def adjacency_tensor_to_stacked_matrix(
+    num_relations: int,
+    num_entities: int,
+    source: torch.LongTensor,
+    target: torch.LongTensor,
+    edge_type: torch.LongTensor,
+    edge_weights: Optional[torch.FloatTensor] = None,
+    horizontal: bool = True,
+) -> torch.Tensor:
+    """
+    Stack adjacency matrices as described in [thanapalasingam2021]_.
+
+    This method re-arranges the (sparse) adjacency tensor of shape
+    `(num_entities, num_relations, num_entities)` to a sparse adjacency matrix of shape
+    `(num_entities, num_relations * num_entities)` (horizontal stacking) or
+    `(num_entities * num_relations, num_entities)` (vertical stacking). Thereby, we can perform the relation-specific
+    message passing of R-GCN by a single sparse matrix multiplication (and some additional pre- and/or
+    post-processing) of the inputs.
+
+    :param num_relations:
+        the number of relations
+    :param num_entities:
+        the number of entities
+    :param source: shape: (num_triples,)
+        the source entity indices
+    :param target: shape: (num_triples,)
+        the target entity indices
+    :param edge_type: shape: (num_triples,)
+        the edge type, i.e., relation ID
+    :param edge_weights: shape: (num_triples,)
+        scalar edge weights
+    :param horizontal:
+        whether to use horizontal or vertical stacking
+
+    :return: shape: `(num_entities * num_relations, num_entities)` or `(num_entities, num_entities * num_relations)`
+        the stacked adjacency matrix
+    """
+    offset = edge_type * num_entities
+    if horizontal:
+        size = (num_entities, num_relations * num_entities)
+        target = offset + target
+    else:
+        size = (num_relations * num_entities, num_entities)
+        source = offset + source
+    indices = torch.stack([source, target], dim=0)
+    if edge_weights is None:
+        edge_weights = torch.ones_like(source, dtype=torch.get_default_dtype())
+    return torch.sparse_coo_tensor(
+        indices=indices,
+        values=edge_weights,
+        size=size,
+    )
