@@ -13,6 +13,7 @@ from torch import nn
 
 from .init import uniform_norm_p1_
 from .representation import LowRankRepresentation, Representation
+from .utils import adjacency_tensor_to_stacked_matrix
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
 
@@ -322,53 +323,6 @@ class BasesDecomposition(Decomposition):
         yield f"num_bases={self.relation_representations.num_bases}"
 
 
-def _stack_matrices(
-    num_relations: int,
-    num_entities: int,
-    source: torch.LongTensor,
-    target: torch.LongTensor,
-    edge_type: torch.LongTensor,
-    edge_weights: Optional[torch.FloatTensor] = None,
-    horizontal_stacking: bool = True,
-) -> torch.Tensor:
-    """
-    Stack adjacency matrices as described in [thanapalasingam2021]_.
-
-    :param num_relations:
-        the number of relations
-    :param num_entities:
-        the number of entities
-    :param source: shape: (num_triples,)
-        the source entity indices
-    :param target: shape: (num_triples,)
-        the target entity indices
-    :param edge_type: shape: (num_triples,)
-        the edge type, i.e., relation ID
-    :param edge_weights: shape: (num_triples,)
-        scalar edge weights
-    :param horizontal_stacking:
-        whether to use horizontal or vertical stacking
-
-    :return: shape: (num_entities * num_relations, num_entities) / (num_entities, num_entities * num_relations)
-        the stacked adjacency matrix
-    """
-    offset = edge_type * num_entities
-    if horizontal_stacking:
-        size = (num_entities, num_relations * num_entities)
-        target = offset + target
-    else:
-        size = (num_relations * num_entities, num_entities)
-        source = offset + source
-    indices = torch.stack([source, target], dim=0)
-    if edge_weights is None:
-        edge_weights = torch.ones_like(source, dtype=torch.get_default_dtype())
-    return torch.sparse_coo_tensor(
-        indices=indices,
-        values=edge_weights,
-        size=size,
-    )
-
-
 class EfficientBasesDecomposition(BasesDecomposition):
     """
     An efficient implementation of the basis decomposition based on [thanapalasingam2021]_.
@@ -427,14 +381,14 @@ class EfficientBasesDecomposition(BasesDecomposition):
         edge_weights: Optional[torch.FloatTensor] = None,
         accumulator: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        adj = _stack_matrices(
+        adj = adjacency_tensor_to_stacked_matrix(
             num_relations=self.num_relations,
             num_entities=x.shape[0],
             source=source,
             target=target,
             edge_type=edge_type,
             edge_weights=edge_weights,
-            horizontal_stacking=self.horizontal_stacking,
+            horizontal=self.horizontal_stacking,
         )
         # note: we directly access the components of the low-rank representations, since we want to leave the
         #       optimization of chain matrix multiplication to einsum
@@ -633,14 +587,14 @@ class EfficientBlockDecomposition(BlockDecomposition):
         edge_weights: Optional[torch.FloatTensor] = None,
         accumulator: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        adj = _stack_matrices(
+        adj = adjacency_tensor_to_stacked_matrix(
             num_relations=self.num_relations,
             num_entities=x.shape[0],
             source=source,
             target=target,
             edge_type=edge_type,
             edge_weights=edge_weights,
-            horizontal_stacking=self.horizontal_stacking,
+            horizontal=self.horizontal_stacking,
         )
         if self.horizontal_stacking:
             # (n, di) -> (n, nb, bs)
