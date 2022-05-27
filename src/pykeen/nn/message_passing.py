@@ -13,7 +13,7 @@ from torch import nn
 
 from .init import uniform_norm_p1_
 from .representation import LowRankRepresentation, Representation
-from .utils import adjacency_tensor_to_stacked_matrix
+from .utils import HORIZONTAL, VERTICAL, adjacency_tensor_to_stacked_matrix, decide_stacking_direction
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
 
@@ -323,91 +323,6 @@ class BasesDecomposition(Decomposition):
         yield f"num_bases={self.relation_representations.num_bases}"
 
 
-class EfficientBasesDecomposition(BasesDecomposition):
-    """
-    An efficient implementation of the basis decomposition based on [thanapalasingam2021]_.
-
-    The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
-    single sparse matrix multiplication.
-
-    .. seealso ::
-        https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
-    """
-
-    def __init__(
-        self,
-        input_dim: int,
-        num_relations: int,
-        num_bases: Optional[int] = None,
-        output_dim: Optional[int] = None,
-    ):
-        """
-        Initialize the layer.
-
-        :param input_dim: >0
-            The input dimension.
-        :param num_relations: >0
-            The number of relations.
-        :param num_bases: >0
-            The number of bases to use.
-        :param output_dim: >0
-            The output dimension. If None is given, defaults to input_dim.
-        """
-        super().__init__(
-            input_dim=input_dim,
-            num_relations=num_relations,
-            output_dim=output_dim,
-            num_bases=num_bases,
-            # we overwrite the forward method anyway
-            memory_intense=False,
-        )
-        # > The vertical stacking approach is suitable for low dimensional input and high dimensional output,
-        # > because the projection to low dimensions is done first. While the horizontal stacking approach is good
-        # > for high dimensional input and low dimensional output as the projection to high dimension is done last.
-        self.horizontal_stacking = input_dim > self.output_dim
-
-    # docstr-coverage: inherited
-    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().iter_extra_repr()
-        yield f"horizontal_stacking={self.horizontal_stacking}"
-
-    # docstr-coverage: inherited
-    def forward(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-        accumulator: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        adj = adjacency_tensor_to_stacked_matrix(
-            num_relations=self.num_relations,
-            num_entities=x.shape[0],
-            source=source,
-            target=target,
-            edge_type=edge_type,
-            edge_weights=edge_weights,
-            horizontal=self.horizontal_stacking,
-        )
-        # note: we directly access the components of the low-rank representations, since we want to leave the
-        #       optimization of chain matrix multiplication to einsum
-        bases, relation_base_weights = (
-            self.relation_representations.bases(indices=None),
-            self.relation_representations.weight,
-        )
-        if self.horizontal_stacking:
-            x = torch.einsum("ni, rb, bio -> rno", x, relation_base_weights, bases)
-            x = torch.spmm(adj, x.view(-1, self.output_dim))
-        else:
-            x = torch.spmm(adj, x)
-            x = x.view(self.num_relations, -1, self.input_dim)
-            x = torch.einsum("rb, bio, rni -> no", relation_base_weights, bases, x)
-        if accumulator is not None:
-            x = accumulator + x
-        return x
-
-
 class BlockDecomposition(Decomposition):
     r"""Represent relation-specific weight matrices via block-diagonal matrices.
 
@@ -528,54 +443,61 @@ class BlockDecomposition(Decomposition):
         return accumulator.view(-1, self.output_dim)
 
 
-class EfficientBlockDecomposition(BlockDecomposition):
+class EfficientDecomposition(Decomposition):
     """
-    An efficient implementation of the block decomposition based on [thanapalasingam2021]_.
+    A mixin for efficient decompositions based on adjacency tensor stacking based on [thanapalasingam2021]_.
 
     The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
-    single sparse matrix multiplication.
+    single sparse matrix multiplication, cf. :func:`pykeen.nn.utils.adjacency_tensor_to_stacked_matrix`.
 
     .. seealso ::
         https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
     """
 
-    def __init__(
-        self,
-        input_dim: int,
-        num_relations: int,
-        num_blocks: Optional[int] = None,
-        output_dim: Optional[int] = None,
-    ):
+    def __init__(self, **kwargs):
         """
-        Initialize the layer.
+        Initialize the decomposition mixin.
 
-        :param input_dim: >0
-            The input dimension.
-        :param num_relations: >0
-            The number of relations.
-        :param num_blocks: >0
-            The number of blocks to use. Has to be a divisor of input_dim.
-        :param output_dim: >0
-            The output dimension. If None is given, defaults to input_dim.
+        :param kwargs:
+            keyword-based parameters passed to :meth:`super().__init__`.
         """
-        super().__init__(
-            input_dim=input_dim,
-            num_relations=num_relations,
-            output_dim=output_dim,
-            num_blocks=num_blocks,
-        )
-        # > The vertical stacking approach is suitable for low dimensional input and high dimensional output,
-        # > because the projection to low dimensions is done first. While the horizontal stacking approach is good
-        # > for high dimensional input and low dimensional output as the projection to high dimension is done last.
-        self.horizontal_stacking = input_dim > self.output_dim
+        super().__init__(**kwargs)
+        self.stacking = decide_stacking_direction(input_dim=self.input_dim, output_dim=self.output_dim)
 
-        # TODO: We do not want to have a block for the self-loop
-        self.blocks = nn.Parameter(self.blocks[:-1, ...])
+    @abstractmethod
+    def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for horizontally stacked adjacency.
+
+        :param x: shape: `(num_entities, input_dim)`
+            the input entity representations
+        :param adj: shape: `(num_entities, num_relations * num_entities)`, sparse
+            the horizontally stacked adjacency matrix
+
+        :return: shape: `(num_entities, output_dim)`
+            the updated entity representations.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for vertically stacked adjacency.
+
+        :param x: shape: `(num_entities, input_dim)`
+            the input entity representations
+        :param adj: shape: `(num_entities * num_relations, num_entities)`, sparse
+            the vertically stacked adjacency matrix
+
+        :return: shape: `(num_entities, output_dim)`
+            the updated entity representations.
+        """
+        raise NotImplementedError
 
     # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
-        yield f"horizontal_stacking={self.horizontal_stacking}"
+        yield f"stacking={self.stacking}"
 
     # docstr-coverage: inherited
     def forward(
@@ -594,29 +516,95 @@ class EfficientBlockDecomposition(BlockDecomposition):
             target=target,
             edge_type=edge_type,
             edge_weights=edge_weights,
-            horizontal=self.horizontal_stacking,
+            direction=self.stacking,
         )
-        if self.horizontal_stacking:
-            # (n, di) -> (n, nb, bs)
-            x = x.view(x.shape[0], self.num_blocks, self.block_size)
-            # (n, nb, bs), (R, nb, bs, bs) -> (R, n, nb, bs)
-            x = torch.einsum("nbi, rbio -> rnbo", x, self.blocks)
-            # (R, n, nb, bs) -> (R * n, do)
-            x = x.view(-1, self.output_dim)
-            # (n, R * n), (R * n, do) -> (n, do)
-            x = torch.sparse.mm(adj, x)
-        else:  # vertical stacking
-            # (R * n, n), (n, di) -> (R * n, di)
-            x = torch.sparse.mm(adj, x)
-            # (R * n, di) -> (R, n, nb, bs)
-            x = x.view(self.num_relations, -1, self.num_blocks, self.block_size)
-            # (R, nb, bs, bs), (R, n, nb, bs) -> (n, nb, bs)
-            x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x)
-            # (n, nb, bs) -> (n, do)
-            x = x.view(-1, self.output_dim)
+        if self.stacking == HORIZONTAL:
+            x = self.forward_horizontally_stacked(x=x, adj=adj)
+        elif self.stacking == VERTICAL:
+            x = self.forward_vertically_stacked(x=x, adj=adj)
+        else:
+            raise ValueError(f"Invalid stacking direction: {self.stacking}")
         if accumulator is not None:
             x = accumulator + x
         return x
+
+
+class EfficientBasesDecomposition(EfficientDecomposition, BasesDecomposition):
+    """
+    An efficient implementation of the basis decomposition based on [thanapalasingam2021]_.
+
+    The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
+    single sparse matrix multiplication.
+
+    .. seealso ::
+        https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
+    """
+
+    @property
+    def bases(self) -> torch.Tensor:
+        """Return the base representations."""
+        return self.relation_representations.bases(indices=None)
+
+    @property
+    def base_weights(self) -> torch.Tensor:
+        """Return the base weights."""
+        return self.relation_representations.weight
+
+    # docstr-coverage: inherited
+    def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        x = torch.einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
+        return torch.spmm(adj, x.view(-1, self.output_dim))
+
+    # docstr-coverage: inherited
+    def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        x = torch.spmm(adj, x)
+        x = x.view(self.num_relations, -1, self.input_dim)
+        return torch.einsum("rb, bio, rni -> no", self.base_weights, self.bases, x)
+
+
+class EfficientBlockDecomposition(EfficientDecomposition, BlockDecomposition):
+    """
+    An efficient implementation of the block decomposition based on [thanapalasingam2021]_.
+
+    The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
+    single sparse matrix multiplication.
+
+    .. seealso ::
+        https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
+    """
+
+    def __init__(self, **kwargs):
+        """
+        Initialize the layer.
+
+        :param kwargs:
+            keyword-based parameters passed to :meth:`BlockDecomposition.__init__`.
+        """
+        super().__init__(**kwargs)
+        # TODO: We do not want to have a block for the self-loop
+        self.blocks = nn.Parameter(self.blocks[:-1, ...])
+
+    # docstr-coverage: inherited
+    def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        # (n, di) -> (n, nb, bs)
+        x = x.view(x.shape[0], self.num_blocks, self.block_size)
+        # (n, nb, bs), (R, nb, bs, bs) -> (R, n, nb, bs)
+        x = torch.einsum("nbi, rbio -> rnbo", x, self.blocks)
+        # (R, n, nb, bs) -> (R * n, do)
+        x = x.view(-1, self.num_blocks * self.block_size)
+        # (n, R * n), (R * n, do) -> (n, do)
+        return torch.sparse.mm(adj, x)
+
+    # docstr-coverage: inherited
+    def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        # (R * n, n), (n, di) -> (R * n, di)
+        x = torch.sparse.mm(adj, x)
+        # (R * n, di) -> (R, n, nb, bs)
+        x = x.view(self.num_relations, -1, self.num_blocks, self.block_size)
+        # (R, nb, bs, bs), (R, n, nb, bs) -> (n, nb, bs)
+        x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x)
+        # (n, nb, bs) -> (n, do)
+        return x.view(x.shape[0], -1)
 
 
 class RGCNLayer(nn.Module):

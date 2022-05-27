@@ -3,7 +3,7 @@
 """Utilities for neural network components."""
 
 import logging
-from typing import Iterable, Optional, Sequence, Union
+from typing import Iterable, Literal, Optional, Sequence, Union
 
 import torch
 from more_itertools import chunked
@@ -17,6 +17,10 @@ __all__ = [
     "TransformerEncoder",
     "safe_diagonal",
     "adjacency_tensor_to_stacked_matrix",
+    "StackDirection",
+    "HORIZONTAL",
+    "VERTICAL",
+    "decide_stacking_direction",
 ]
 
 logger = logging.getLogger(__name__)
@@ -188,6 +192,37 @@ def safe_diagonal(matrix: torch.Tensor) -> torch.Tensor:
     return torch.zeros(n, device=matrix.device).scatter_add(dim=0, index=diagonal_indices, src=diagonal_values)
 
 
+StackDirection = Literal["horizontal", "vertical"]
+HORIZONTAL: StackDirection = "horizontal"
+VERTICAL: StackDirection = "vertical"
+
+
+def decide_stacking_direction(
+    input_dim: int,
+    output_dim: int,
+) -> StackDirection:
+    """
+    Determine a stacking direction based on the input and output dimension.
+
+    The vertical stacking approach is suitable for low dimensional input and high dimensional output,
+    because the projection to low dimensions is done first. While the horizontal stacking approach is good
+    for high dimensional input and low dimensional output as the projection to high dimension is done last.
+
+    :param input_dim:
+        the layer's input dimension
+    :param output_dim:
+        the layer's output dimension
+
+    :return:
+        the suggested stacking direction
+
+    .. seealso :: [thanapalasingam2021]_
+    """
+    if input_dim > output_dim:
+        return HORIZONTAL
+    return VERTICAL
+
+
 def adjacency_tensor_to_stacked_matrix(
     num_relations: int,
     num_entities: int,
@@ -195,7 +230,7 @@ def adjacency_tensor_to_stacked_matrix(
     target: torch.LongTensor,
     edge_type: torch.LongTensor,
     edge_weights: Optional[torch.FloatTensor] = None,
-    horizontal: bool = True,
+    direction: StackDirection = HORIZONTAL,
 ) -> torch.Tensor:
     """
     Stack adjacency matrices as described in [thanapalasingam2021]_.
@@ -219,19 +254,24 @@ def adjacency_tensor_to_stacked_matrix(
         the edge type, i.e., relation ID
     :param edge_weights: shape: (num_triples,)
         scalar edge weights
-    :param horizontal:
+    :param direction:
         whether to use horizontal or vertical stacking
 
     :return: shape: `(num_entities * num_relations, num_entities)` or `(num_entities, num_entities * num_relations)`
         the stacked adjacency matrix
+
+    :raises ValueError:
+        if the direction is invalid
     """
     offset = edge_type * num_entities
-    if horizontal:
+    if direction == HORIZONTAL:
         size = (num_entities, num_relations * num_entities)
         target = offset + target
-    else:
+    elif direction == VERTICAL:
         size = (num_relations * num_entities, num_entities)
         source = offset + source
+    else:
+        raise ValueError(f"Invalid stacking direction: {direction}")
     indices = torch.stack([source, target], dim=0)
     if edge_weights is None:
         edge_weights = torch.ones_like(source, dtype=torch.get_default_dtype())
