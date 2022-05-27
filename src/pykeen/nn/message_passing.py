@@ -54,16 +54,16 @@ class Decomposition(nn.Module, ABC):
 
     def __init__(
         self,
-        input_dim: int,
         num_relations: int,
+        input_dim: int = 32,
         output_dim: Optional[int] = None,
     ):
         """Initialize the layer.
 
-        :param input_dim: >0
-            The input dimension.
         :param num_relations: >0
             The number of relations.
+        :param input_dim: >0
+            The input dimension.
         :param output_dim: >0
             The output dimension. If None is given, defaults to input_dim.
         """
@@ -296,7 +296,7 @@ class BlockDecomposition(Decomposition):
         :param num_blocks:
             the number of blocks.
         :param kwargs:
-            keyword-based parameters passed to :meth:`BlockDecomposition.__init__`.
+            keyword-based parameters passed to :meth:`Decomposition.__init__`.
         """
         super().__init__(**kwargs)
 
@@ -316,16 +316,19 @@ class BlockDecomposition(Decomposition):
 
         # (R, nb, bsi, bso)
         self.blocks = nn.Parameter(
-            data=xavier_normal_(
-                torch.empty(
-                    self.num_relations,
-                    num_blocks,
-                    self.input_block_size,
-                    self.output_block_size,
-                )
+            data=torch.empty(
+                self.num_relations,
+                num_blocks,
+                self.input_block_size,
+                self.output_block_size,
             ),
             requires_grad=True,
         )
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        """Reset the layer's parameters."""
+        xavier_normal_(self.blocks.data)
 
     # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
@@ -395,8 +398,8 @@ class RGCNLayer(nn.Module):
 
     def __init__(
         self,
-        input_dim: int,
         num_relations: int,
+        input_dim: int = 32,
         output_dim: Optional[int] = None,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
@@ -435,22 +438,19 @@ class RGCNLayer(nn.Module):
             query=decomposition,
             pos_kwargs=decomposition_kwargs,
             input_dim=input_dim,
+            output_dim=output_dim,
             num_relations=num_relations,
         )
-        output_dim = self.fwd.output_dim
         self.bwd = decomposition_resolver.make(
             query=decomposition,
             pos_kwargs=decomposition_kwargs,
             input_dim=input_dim,
+            output_dim=output_dim,
             num_relations=num_relations,
         )
-        self.self_loop = nn.Linear(in_features=input_dim, out_features=output_dim, bias=use_bias)
+        self.self_loop = nn.Linear(in_features=input_dim, out_features=self.fwd.output_dim, bias=use_bias)
         self.dropout = nn.Dropout(p=self_loop_dropout)
         self.activation = activation_resolver.make_safe(query=activation, pos_kwargs=activation_kwargs)
-
-    # docstr-coverage: inherited
-    def reset_parameters(self):  # noqa: D102
-        self.self_loop.reset_parameters()
 
     def forward(
         self,
@@ -459,7 +459,7 @@ class RGCNLayer(nn.Module):
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
-    ):
+    ) -> torch.FloatTensor:
         """
         Calculate enriched entity representations.
 
@@ -537,6 +537,7 @@ class RGCNRepresentation(Representation):
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        cache: bool = True,
         **kwargs,
     ):
         """Instantiate the R-GCN encoder.
@@ -572,10 +573,20 @@ class RGCNRepresentation(Representation):
             Additional keyword based arguments passed to the decomposition upon instantiation.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
+        :param cache:
+            whether to cache representations
+
         :raises ValueError: If the triples factory creates inverse triples.
         """
-        if max_id:
-            assert max_id == triples_factory.num_entities
+        # input validation
+        if max_id and max_id != triples_factory.num_entities:
+            raise ValueError(
+                f"max_id={max_id} differs from triples_factory.num_entities={triples_factory.num_entities}"
+            )
+        if triples_factory.create_inverse_triples:
+            raise ValueError(
+                "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
+            )
 
         # has to be imported now to avoid cyclic imports
         from . import representation_resolver
@@ -586,12 +597,9 @@ class RGCNRepresentation(Representation):
             pos_kwargs=entity_representations_kwargs,
         )
         super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
-        self.entity_embeddings = base_embeddings
 
-        if triples_factory.create_inverse_triples:
-            raise ValueError(
-                "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
-            )
+        # has to be assigned after call to nn.Module init
+        self.entity_embeddings = base_embeddings
 
         # Resolve edge weighting
         self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
@@ -626,6 +634,7 @@ class RGCNRepresentation(Representation):
 
         # buffering of enriched representations
         self.enriched_embeddings = None
+        self.cache = cache
 
     # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
@@ -685,7 +694,8 @@ class RGCNRepresentation(Representation):
             )
 
         # Cache enriched representations
-        self.enriched_embeddings = x
+        if self.cache:
+            self.enriched_embeddings = x
 
         return x
 
