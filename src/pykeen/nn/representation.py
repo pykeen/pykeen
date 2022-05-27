@@ -463,6 +463,11 @@ class LowRankRepresentation(Representation):
         self.bases.reset_parameters()
         self.weight.data = self.weight_initializer(self.weight)
 
+    @property
+    def num_bases(self) -> int:
+        """Return the number of bases."""
+        return self.bases.max_id
+
     # docstr-coverage: inherited
     def _plain_forward(
         self,

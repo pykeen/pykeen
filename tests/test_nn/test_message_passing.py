@@ -2,29 +2,26 @@
 
 """Tests for message passing blocks."""
 
+import unittest_templates
+
 import pykeen.nn.message_passing
 from tests import cases
 
 
 class BlockDecompositionTests(cases.DecompositionTestCase):
-    """Tests for block Decomposition."""
+    """Tests for block decomposition."""
 
     cls = pykeen.nn.message_passing.BlockDecomposition
 
 
-class LowMemoryBasesDecompositionTestCase(cases.BasesDecompositionTestCase):
-    """Tests for BasesDecomposition with low memory requirement."""
+class BasesDecompositionTests(cases.DecompositionTestCase):
+    """Tests for bases decomposition."""
 
-    kwargs = dict(
-        num_bases=4,
-        memory_intense=False,
-    )
+    cls = pykeen.nn.message_passing.BasesDecomposition
 
 
-class HighMemoryBasesDecompositionTestCase(cases.BasesDecompositionTestCase):
-    """Tests for BasesDecomposition with high memory requirement."""
+class DecompositionMetaTestCase(unittest_templates.MetaTestCase):
+    """A test for tests of all decompositions."""
 
-    kwargs = dict(
-        num_bases=4,
-        memory_intense=True,
-    )
+    base_cls = pykeen.nn.message_passing.Decomposition
+    base_test = cases.DecompositionTestCase

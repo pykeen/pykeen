@@ -116,3 +116,6 @@ References
 
 .. [wang2022] Wang, L., *et al* (2022). `SimKGC: Simple Contrastive Knowledge Graph Completion with
    Pre-trained Language Models <https://arxiv.org/abs/2203.02167>`_. *arXiv*, 2203.02167.
+
+.. [thanapalasingam2021] Thanapalasingam, T., *et al* (2021). `Relational Graph Convolutional Networks:
+   A Closer Look <https://arxiv.org/abs/2107.10015>`_. *arXiv*, 2107.10015.
