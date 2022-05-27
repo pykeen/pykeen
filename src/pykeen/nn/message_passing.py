@@ -164,6 +164,10 @@ class Decomposition(nn.Module, ABC):
         """
         raise NotImplementedError
 
+    def reset_parameters(self):
+        """Reset the layer's parameters."""
+        # note: the base class does not have any parameters
+
 
 class BasesDecomposition(Decomposition):
     r"""
@@ -223,6 +227,11 @@ class BasesDecomposition(Decomposition):
     def base_weights(self) -> torch.Tensor:
         """Return the base weights."""
         return self.relation_representations.weight
+
+    # docstr-coverage: inherited
+    def reset_parameters(self):  # noqa: D102
+        # note: the only parameters are inside the relation representation module, which has its own reset_parameters
+        pass
 
     # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
