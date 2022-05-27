@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.9 ]
+        python-version: [ "3.8", "3.10" ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.9 ]
+        python-version: [ "3.8", "3.10" ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -64,14 +64,14 @@ jobs:
       - name: Check documentation build with Sphinx
         run: |
           sudo apt-get install graphviz
-          tox -e docs
+          tox -e docs-test
   tests:
     if: "!contains(github.event.head_commit.message, 'skip ci')"
     name: Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.9 ]
+        python-version: [ "3.8", "3.10" ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -92,7 +92,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.9 ]
+        python-version: [ "3.8", "3.10" ]
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2

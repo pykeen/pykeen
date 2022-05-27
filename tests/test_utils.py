@@ -16,7 +16,8 @@ import pytest
 import torch
 
 from pykeen.utils import (
-    broadcast_cat,
+    _weisfeiler_lehman_iteration,
+    _weisfeiler_lehman_iteration_approx,
     calculate_broadcasted_elementwise_result_shape,
     clamp_norm,
     combine_complex,
@@ -26,6 +27,8 @@ from pykeen.utils import (
     flatten_dictionary,
     get_optimal_sequence,
     get_until_first_blank,
+    iter_weisfeiler_lehman,
+    logcumsumexp,
     project_entity,
     set_random_seed,
     split_complex,
@@ -46,11 +49,11 @@ class TestCompose(unittest.TestCase):
         def _g(x):
             return 2 * x
 
-        fog = compose(_f, _g)
+        fog = compose(_f, _g, name="fog")
         for i in range(5):
             with self.subTest(i=i):
                 self.assertEqual(_g(_f(i)), fog(i))
-                self.assertEqual(_g(_f(i ** 2)), fog(i ** 2))
+                self.assertEqual(_g(_f(i**2)), fog(i**2))
 
 
 class FlattenDictionaryTest(unittest.TestCase):
@@ -333,15 +336,52 @@ class TestUtils(unittest.TestCase):
             # compare result to sequential addition
             assert torch.allclose(result, functools.reduce(operator.mul, tensors[1:], tensors[0]))
 
-    def test_broadcast_cat(self):
-        """Test broadcast_cat."""
-        generator = set_random_seed(seed=42)[1]
-        for shapes in _generate_shapes(generator=generator):
-            tensors = [torch.rand(*shape) for shape in shapes]
+    def test_logcumsumexp(self):
+        """Verify that our numpy implementation gives the same results as the torch variant."""
+        generator = numpy.random.default_rng(seed=42)
+        a = generator.random(size=(21,))
+        r1 = logcumsumexp(a)
+        r2 = torch.logcumsumexp(torch.as_tensor(a), dim=0).numpy()
+        numpy.testing.assert_allclose(r1, r2)
 
-            for dim in range(len(tensors[0].shape)):
-                result = broadcast_cat(tensors, dim=dim)
-                # check result shape
-                assert result.shape == tuple(
-                    sum(dims) if i == dim else max(dims) for i, dims in enumerate(zip(*shapes))
-                )
+    def test_weisfeiler_lehman(self):
+        """Test Weisfeiler Lehman."""
+        _, generator, _ = set_random_seed(seed=42)
+        num_nodes = 13
+        num_edges = 31
+        max_iter = 3
+        edge_index = torch.randint(num_nodes, size=(2, num_edges), generator=generator)
+        # ensure each node participates in at least one edge
+        edge_index[0, :num_nodes] = torch.arange(num_nodes)
+
+        count = 0
+        color_count = 0
+        for colors in iter_weisfeiler_lehman(edge_index=edge_index, max_iter=max_iter):
+            # check type and shape
+            assert torch.is_tensor(colors)
+            assert colors.shape == (num_nodes,)
+            assert colors.dtype == torch.long
+            # number of colors is monotonically increasing
+            num_unique_colors = len(colors.unique())
+            assert num_unique_colors >= color_count
+            color_count = num_unique_colors
+            count += 1
+        assert count == max_iter
+
+    def test_weisfeiler_lehman_approximation(self):
+        """Verify approximate WL."""
+        _, generator, _ = set_random_seed(seed=42)
+        num_nodes = 13
+        num_edges = 31
+        edge_index = torch.randint(num_nodes, size=(2, num_edges), generator=generator)
+        # ensure each node participates in at least one edge
+        edge_index[0, :num_nodes] = torch.arange(num_nodes)
+        edge_index = edge_index.unique(dim=1)
+        adj = torch.sparse_coo_tensor(indices=edge_index, values=torch.ones(size=edge_index[0].shape))
+        colors = torch.randint(3, size=(num_nodes,))
+        reference = _weisfeiler_lehman_iteration(adj=adj, colors=colors)
+        approx = _weisfeiler_lehman_iteration_approx(adj=adj, colors=colors, dim=4)
+        # normalize
+        sim_ref = reference[None, :] == reference[:, None]
+        sim_approx = approx[None, :] == approx[:, None]
+        assert torch.allclose(sim_ref, sim_approx)

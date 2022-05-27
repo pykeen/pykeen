@@ -7,19 +7,56 @@ import itertools
 import logging
 import pathlib
 import re
-from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Type, Union, cast
+import warnings
+from abc import abstractmethod
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Collection,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    TextIO,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
 import torch
+from torch.utils.data import Dataset
 
-from .instances import Instances, LCWAInstances, SLCWAInstances
+from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping
+from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    EntityMapping,
+    LabeledTriples,
+    MappedTriples,
+    RelationMapping,
+    TorchRandomHint,
+)
+from ..utils import (
+    compact_mapping,
+    format_relative_comparison,
+    get_edge_index,
+    invert_mapping,
+    normalize_path,
+    triple_tensor_to_set,
+)
 
 __all__ = [
+    "KGInfo",
     "CoreTriplesFactory",
     "TriplesFactory",
     "create_entity_mapping",
@@ -28,6 +65,8 @@ __all__ = [
     "cat_triples",
     "splits_steps",
     "splits_similarity",
+    "RelationInverter",
+    "relation_inverter",
 ]
 
 logger = logging.getLogger(__name__)
@@ -139,6 +178,59 @@ def _ensure_ids(
     return [label_to_id[l_or_i] if isinstance(l_or_i, str) else l_or_i for l_or_i in labels_or_ids]
 
 
+RelationID = TypeVar("RelationID", int, torch.LongTensor)
+
+
+class RelationInverter:
+    """An interface for inverse-relation ID mapping."""
+
+    # TODO: method is_inverse?
+
+    @abstractmethod
+    def get_inverse_id(self, relation_id: RelationID) -> RelationID:
+        """Get the inverse ID for a given relation."""
+        # TODO: inverse of inverse?
+        raise NotImplementedError
+
+    @abstractmethod
+    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
+        raise NotImplementedError
+
+    @abstractmethod
+    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
+        """Invert relations in a batch (in-place)."""
+        raise NotImplementedError
+
+    def map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:
+        """Map relations of batch, optionally also inverting them."""
+        batch = self._map(batch=batch, index=index)
+        return self.invert_(batch=batch, index=index) if invert else batch
+
+
+class DefaultRelationInverter(RelationInverter):
+    """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
+
+    # docstr-coverage: inherited
+    def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
+        return relation_id + 1
+
+    # docstr-coverage: inherited
+    def _map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:  # noqa: D102
+        batch = batch.clone()
+        batch[:, index] *= 2
+        return batch
+
+    # docstr-coverage: inherited
+    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
+        # The number of relations stored in the triples factory includes the number of inverse relations
+        # Id of inverse relation: relation + 1
+        batch[:, index] += 1
+        return batch
+
+
+relation_inverter = DefaultRelationInverter()
+
+
 @dataclasses.dataclass
 class Labeling:
     """A mapping between labels and IDs."""
@@ -150,10 +242,10 @@ class Labeling:
     id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     def __post_init__(self):
         """Precompute inverse mappings."""
@@ -176,18 +268,125 @@ class Labeling:
         # label
         return self._vectorized_labeler(ids, (unknown_label,))
 
+    @property
+    def max_id(self) -> int:
+        """Return the maximum ID (excl.)."""
+        return max(self.label_to_id.values()) + 1
 
-@dataclasses.dataclass
-class CoreTriplesFactory:
+
+def restrict_triples(
+    mapped_triples: MappedTriples,
+    entities: Optional[Collection[int]] = None,
+    relations: Optional[Collection[int]] = None,
+    invert_entity_selection: bool = False,
+    invert_relation_selection: bool = False,
+) -> MappedTriples:
+    """Select a subset of triples based on the given entity and relation ID selection.
+
+    :param mapped_triples:
+        The ID-based triples.
+    :param entities:
+        The entity IDs of interest. If None, defaults to all entities.
+    :param relations:
+        The relation IDs of interest. If None, defaults to all relations.
+    :param invert_entity_selection:
+        Whether to invert the entity selection, i.e. select those triples without the provided entities.
+    :param invert_relation_selection:
+        Whether to invert the relation selection, i.e. select those triples without the provided relations.
+    :return:
+        A tensor of triples containing the entities and relations of interest.
+    """
+    keep_mask = None
+
+    # Filter for entities
+    if entities is not None:
+        keep_mask = _get_triple_mask(
+            ids=entities,
+            triples=mapped_triples,
+            columns=(0, 2),  # head and entity need to fulfil the requirement
+            invert=invert_entity_selection,
+        )
+
+    # Filter for relations
+    if relations is not None:
+        relation_mask = _get_triple_mask(
+            ids=relations,
+            triples=mapped_triples,
+            columns=1,
+            invert=invert_relation_selection,
+        )
+        keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
+
+    # No filter
+    if keep_mask is None:
+        return mapped_triples
+
+    return mapped_triples[keep_mask]
+
+
+class KGInfo:
+    """An object storing information about the number of entities and relations."""
+
+    #: the number of unique entities
+    num_entities: int
+
+    #: the number of relations (maybe including "artificial" inverse relations)
+    num_relations: int
+
+    #: whether to create inverse triples
+    create_inverse_triples: bool
+
+    #: the number of real relations, i.e., without artificial inverses
+    real_num_relations: int
+
+    def __init__(
+        self,
+        num_entities: int,
+        num_relations: int,
+        create_inverse_triples: bool,
+    ) -> None:
+        """
+        Initialize the information object.
+
+        :param num_entities:
+            the number of entities.
+        :param num_relations:
+            the number of relations, excluding artifical inverse relations.
+        :param create_inverse_triples:
+            whether to create inverse triples
+        """
+        self.num_entities = num_entities
+        self.real_num_relations = num_relations
+        if create_inverse_triples:
+            num_relations *= 2
+        self.num_relations = num_relations
+        self.create_inverse_triples = create_inverse_triples
+
+    def extra_repr(self) -> str:
+        """Extra representation string."""
+        return ", ".join(self._iter_extra_repr())
+
+    def __repr__(self):  # noqa: D105
+        return f"{self.__class__.__name__}({self.extra_repr()})"
+
+    def _iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over extra_repr components."""
+        yield f"num_entities={self.num_entities}"
+        yield f"num_relations={self.num_relations}"
+        yield f"create_inverse_triples={self.create_inverse_triples}"
+
+
+class CoreTriplesFactory(KGInfo):
     """Create instances from ID-based triples."""
+
+    triples_file_name: ClassVar[str] = "numeric_triples.tsv.gz"
+    base_file_name: ClassVar[str] = "base.pth"
 
     def __init__(
         self,
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
-        entity_ids: Collection[int],
-        relation_ids: Collection[int],
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
     ):
@@ -205,13 +404,12 @@ class CoreTriplesFactory:
         :param metadata:
             Arbitrary metadata to go with the graph
         """
-        super().__init__()
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            create_inverse_triples=create_inverse_triples,
+        )
         self.mapped_triples = mapped_triples
-        self._num_entities = num_entities
-        self._num_relations = num_relations
-        self.entity_ids = entity_ids
-        self.relation_ids = relation_ids
-        self.create_inverse_triples = create_inverse_triples
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -222,8 +420,6 @@ class CoreTriplesFactory:
         mapped_triples: MappedTriples,
         num_entities: Optional[int] = None,
         num_relations: Optional[int] = None,
-        entity_ids: Collection[int] = None,
-        relation_ids: Collection[int] = None,
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> "CoreTriplesFactory":
@@ -248,55 +444,38 @@ class CoreTriplesFactory:
             num_entities = mapped_triples[:, [0, 2]].max().item() + 1
         if num_relations is None:
             num_relations = mapped_triples[:, 1].max().item() + 1
-        if entity_ids is None:
-            entity_ids = get_entities(mapped_triples)
-        if relation_ids is None:
-            relation_ids = get_relations(mapped_triples)
         return CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=num_entities,
             num_relations=num_relations,
-            entity_ids=entity_ids,
-            relation_ids=relation_ids,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
 
-    @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of unique entities."""
-        return self._num_entities
-
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of unique relations."""
-        if self.create_inverse_triples:
-            return 2 * self.real_num_relations
-        return self.real_num_relations
-
-    @property
-    def real_num_relations(self) -> int:  # noqa: D401
-        """The number of relations without inverse relations."""
-        return self._num_relations
+    def __eq__(self, __o: object) -> bool:  # noqa: D105
+        if not isinstance(__o, CoreTriplesFactory):
+            return False
+        return (
+            (self.num_entities == __o.num_entities)
+            and (self.num_relations == __o.num_relations)
+            and (self.num_triples == __o.num_triples)
+            and (self.create_inverse_triples == __o.create_inverse_triples)
+            and bool((self.mapped_triples == __o.mapped_triples).all().item())
+        )
 
     @property
     def num_triples(self) -> int:  # noqa: D401
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
-    def extra_repr(self) -> str:
-        """Extra representation string."""
-        d = [
-            ("num_entities", self.num_entities),
-            ("num_relations", self.num_relations),
-            ("num_triples", self.num_triples),
-            ("inverse_triples", self.create_inverse_triples),
-        ]
-        d.extend(sorted(self.metadata.items()))  # type: ignore
-        return ", ".join(f'{k}="{v}"' if isinstance(v, (str, pathlib.Path)) else f"{k}={v}" for k, v in d)
-
-    def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}({self.extra_repr()})"
+    def _iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over extra_repr components."""
+        yield from super()._iter_extra_repr()
+        yield f"num_triples={self.num_triples}"
+        for k, v in sorted(self.metadata.items()):
+            if isinstance(v, (str, pathlib.Path)):
+                v = f'"{v}"'
+            yield f"{k}={v}"
 
     def with_labels(
         self,
@@ -325,11 +504,7 @@ class CoreTriplesFactory:
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:
             raise ValueError("Can not get inverse triple, they have not been created.")
-        return self._get_inverse_relation_id(relation)
-
-    @staticmethod
-    def _get_inverse_relation_id(relation_id: Union[int, torch.LongTensor]) -> Union[int, torch.LongTensor]:
-        return relation_id + 1
+        return relation_inverter.get_inverse_id(relation_id=relation)
 
     def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
         """Add inverse triples if they shall be created."""
@@ -337,29 +512,35 @@ class CoreTriplesFactory:
             return mapped_triples
 
         logger.info("Creating inverse triples.")
-        h, r, t = mapped_triples.t()
-        r = 2 * r
         return torch.cat(
             [
-                torch.stack([h, r, t], dim=-1),
-                torch.stack([t, self._get_inverse_relation_id(r), h], dim=-1),
+                relation_inverter.map(batch=mapped_triples),
+                relation_inverter.map(batch=mapped_triples, invert=True).flip(1),
             ]
         )
 
-    def create_slcwa_instances(self) -> Instances:
+    def create_slcwa_instances(self, *, sampler: Optional[str] = None, **kwargs) -> Dataset:
         """Create sLCWA instances for this factory's triples."""
-        return self._create_instances(SLCWAInstances)
-
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Instances:
-        """Create LCWA instances for this factory's triples."""
-        return self._create_instances(LCWAInstances, target=target)
-
-    def _create_instances(self, instances_cls: Type[Instances], **kwargs) -> Instances:
-        return instances_cls.from_triples(
+        cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
+        if "shuffle" in kwargs:
+            if kwargs.pop("shuffle"):
+                warnings.warn("Training instances are always shuffled.", DeprecationWarning)
+            else:
+                raise AssertionError("If shuffle is provided, it must be True.")
+        return cls(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
             num_relations=self.num_relations,
             **kwargs,
+        )
+
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Dataset:
+        """Create LCWA instances for this factory's triples."""
+        return LCWAInstances.from_triples(
+            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            target=target,
         )
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
@@ -411,8 +592,6 @@ class CoreTriplesFactory:
             mapped_triples=mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
-            entity_ids=self.entity_ids,
-            relation_ids=self.relation_ids,
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
@@ -481,19 +660,35 @@ class CoreTriplesFactory:
             )
         ]
 
-    def get_mask_for_entities(
-        self,
-        entities: Collection[int],
-        invert: bool = False,
-    ) -> torch.BoolTensor:
-        """Get a boolean mask for triples with the given entities."""
-        return _get_triple_mask(
-            ids=entities,
-            triples=self.mapped_triples,
-            columns=(0, 2),  # head and entity need to fulfil the requirement
-            invert=invert,
-            max_id=self.num_entities,
-        )
+    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
+        """Normalize entities to IDs.
+
+        :param entities: A collection of either integer identifiers for entities or
+            string labels for entities (that will get auto-converted)
+        :returns: Integer identifiers for entities
+        :raises ValueError: If the ``entities`` passed are string labels
+            and this triples factory does not have an entity label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
+        for e in entities:
+            if not isinstance(e, int):
+                raise ValueError(f"{self.__class__.__name__} cannot convert entity IDs from {type(e)} to int.")
+        return cast(Collection[int], entities)
+
+    def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:
+        """Normalize relations to IDs.
+
+        :param relations: A collection of either integer identifiers for relations or
+            string labels for relations (that will get auto-converted)
+        :returns: Integer identifiers for relations
+        :raises ValueError: If the ``relations`` passed are string labels
+            and this triples factory does not have a relation label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
+        for e in relations:
+            if not isinstance(e, int):
+                raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")
+        return cast(Collection[int], relations)
 
     def get_mask_for_relations(
         self,
@@ -548,44 +743,110 @@ class CoreTriplesFactory:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
         """
-        keep_mask: Optional[torch.BoolTensor] = None
-
+        # prepare metadata
         extra_metadata = {}
-        # Filter for entities
         if entities is not None:
-            if any(isinstance(e, str) for e in entities):
-                raise ValueError(f"{self.__class__} does not support label-based restriction.")
-            entities = cast(Collection[int], entities)
             extra_metadata["entity_restriction"] = entities
-            keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
-            remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
+            entities = self.entities_to_ids(entities=entities)
+            remaining_entities = (self.num_entities - len(entities)) if invert_entity_selection else len(entities)
             logger.info(f"keeping {format_relative_comparison(remaining_entities, self.num_entities)} entities.")
-
-        # Filter for relations
         if relations is not None:
-            if any(isinstance(r, str) for r in relations):
-                raise ValueError(f"{self.__class__} does not support label-based restriction.")
-            relations = cast(Collection[int], relations)
             extra_metadata["relation_restriction"] = relations
-            relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
-            remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
+            relations = self.relations_to_ids(relations=relations)
+            remaining_relations = (self.num_relations - len(relations)) if invert_relation_selection else len(relations)
             logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
-            keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
-        # No filtering happened
-        if keep_mask is None:
+        # Delegate to function
+        mapped_triples = restrict_triples(
+            mapped_triples=self.mapped_triples,
+            entities=entities,
+            relations=relations,
+            invert_entity_selection=invert_entity_selection,
+            invert_relation_selection=invert_relation_selection,
+        )
+
+        # restrict triples can only remove triples; thus, if the new size equals the old one, nothing has changed
+        if mapped_triples.shape[0] == self.num_triples:
             return self
 
-        num_triples = keep_mask.sum().item()
-        logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
+        logger.info(f"keeping {format_relative_comparison(mapped_triples.shape[0], self.num_triples)} triples.")
+
         return self.clone_and_exchange_triples(
-            mapped_triples=self.mapped_triples[keep_mask],
+            mapped_triples=mapped_triples,
             extra_metadata=extra_metadata,
+        )
+
+    @classmethod
+    # docstr-coverage: inherited
+    def from_path_binary(
+        cls,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> "CoreTriplesFactory":  # noqa: D102
+        """
+        Load triples factory from a binary file.
+
+        :param path:
+            The path, pointing to an existing PyTorch .pt file.
+
+        :return:
+            The loaded triples factory.
+        """
+        path = normalize_path(path)
+        logger.info(f"Loading from {path.as_uri()}")
+        return cls(**cls._from_path_binary(path=path))
+
+    @classmethod
+    def _from_path_binary(
+        cls,
+        path: pathlib.Path,
+    ) -> MutableMapping[str, Any]:
+        # load base
+        data = dict(torch.load(path.joinpath(cls.base_file_name)))
+        # load numeric triples
+        data["mapped_triples"] = torch.as_tensor(
+            pd.read_csv(path.joinpath(cls.triples_file_name), sep="\t", dtype=int).values,
+            dtype=torch.long,
+        )
+        return data
+
+    def to_path_binary(
+        self,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> pathlib.Path:
+        """
+        Save triples factory to path in (PyTorch's .pt) binary format.
+
+        :param path:
+            The path to store the triples factory to.
+        """
+        path = normalize_path(path, mkdir=True)
+
+        # store numeric triples
+        pd.DataFrame(
+            data=self.mapped_triples.numpy(),
+            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+        ).to_csv(path.joinpath(self.triples_file_name), sep="\t", index=False)
+
+        # store metadata
+        torch.save(self._get_binary_state(), path.joinpath(self.base_file_name))
+        logger.info(f"Stored {self} to {path.as_uri()}")
+
+        return path
+
+    def _get_binary_state(self):
+        return dict(
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
         )
 
 
 class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
+
+    file_name_entity_to_id: ClassVar[str] = "entity_to_id"
+    file_name_relation_to_id: ClassVar[str] = "relation_to_id"
 
     def __init__(
         self,
@@ -609,22 +870,21 @@ class TriplesFactory(CoreTriplesFactory):
         :param metadata:
             Arbitrary metadata to go with the graph
         """
+        self.entity_labeling = Labeling(label_to_id=entity_to_id)
+        self.relation_labeling = Labeling(label_to_id=relation_to_id)
         super().__init__(
             mapped_triples=mapped_triples,
-            num_entities=len(entity_to_id),
-            num_relations=len(relation_to_id),
-            entity_ids=sorted(entity_to_id.values()),
-            relation_ids=sorted(relation_to_id.values()),
+            num_entities=self.entity_labeling.max_id,
+            num_relations=self.relation_labeling.max_id,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
-        self.entity_labeling = Labeling(label_to_id=entity_to_id)
-        self.relation_labeling = Labeling(label_to_id=relation_to_id)
 
     @classmethod
     def from_labeled_triples(
         cls,
         triples: LabeledTriples,
+        *,
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
@@ -703,12 +963,14 @@ class TriplesFactory(CoreTriplesFactory):
     def from_path(
         cls,
         path: Union[str, pathlib.Path, TextIO],
+        *,
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         metadata: Optional[Dict[str, Any]] = None,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
     ) -> "TriplesFactory":
         """
         Create a new triples factory from triples stored in a file.
@@ -729,6 +991,8 @@ class TriplesFactory(CoreTriplesFactory):
             kwarg to this function.
         :param load_triples_kwargs: Optional keyword arguments to pass to :func:`load_triples`.
             Could include the ``delimiter`` or a ``column_remapping``.
+        :param kwargs:
+            additional keyword-based parameters, which are ignored.
 
         :return:
             A new triples factory.
@@ -750,6 +1014,64 @@ class TriplesFactory(CoreTriplesFactory):
             },
         )
 
+    def __eq__(self, __o: object) -> bool:  # noqa: D105
+        return (
+            isinstance(__o, TriplesFactory)
+            and super().__eq__(__o)
+            and (self.entity_to_id == __o.entity_to_id)
+            and (self.relation_to_id == __o.relation_to_id)
+        )
+
+    def to_core_triples_factory(self) -> CoreTriplesFactory:
+        """Return this factory as a core factory."""
+        return CoreTriplesFactory(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
+    # docstr-coverage: inherited
+    def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
+        path = super().to_path_binary(path=path)
+        # store entity/relation to ID
+        for name, data in (
+            (
+                self.file_name_entity_to_id,
+                self.entity_to_id,
+            ),
+            (
+                self.file_name_relation_to_id,
+                self.relation_to_id,
+            ),
+        ):
+            pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
+                path.joinpath(f"{name}.tsv.gz"),
+                sep="\t",
+            )
+        return path
+
+    @classmethod
+    def _from_path_binary(cls, path: pathlib.Path) -> MutableMapping[str, Any]:
+        data = super()._from_path_binary(path)
+        # load entity/relation to ID
+        for name in [cls.file_name_entity_to_id, cls.file_name_relation_to_id]:
+            df = pd.read_csv(
+                path.joinpath(f"{name}.tsv.gz"),
+                sep="\t",
+            )
+            data[name] = dict(zip(df["label"], df["id"]))
+        return data
+
+    # docstr-coverage: inherited
+    def _get_binary_state(self):  # noqa: D102
+        return dict(
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
+    # docstr-coverage: inherited
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
@@ -839,23 +1161,12 @@ class TriplesFactory(CoreTriplesFactory):
             axis=1,
         )
 
-    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
-        """Normalize entities to IDs."""
+    # docstr-coverage: inherited
+    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_labeling.label_to_id)
 
-    def get_mask_for_entities(
-        self,
-        entities: Union[Collection[int], Collection[str]],
-        invert: bool = False,
-    ) -> torch.BoolTensor:
-        """Get a boolean mask for triples with the given entities."""
-        return super().get_mask_for_entities(entities=self.entities_to_ids(entities=entities))
-
-    def relations_to_ids(
-        self,
-        relations: Union[Collection[int], Collection[str]],
-    ) -> Collection[int]:
-        """Normalize relations to IDs."""
+    # docstr-coverage: inherited
+    def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_labeling.label_to_id)
 
     def get_mask_for_relations(
@@ -878,7 +1189,7 @@ class TriplesFactory(CoreTriplesFactory):
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
         return self._word_cloud(
-            ids=self.mapped_triples[:, [0, 2]],
+            ids=get_edge_index(mapped_triples=self.mapped_triples).t(),
             id_to_label=self.entity_labeling.id_to_label,
             top=top or 100,
         )
@@ -932,6 +1243,7 @@ class TriplesFactory(CoreTriplesFactory):
         word_cloud = WordCloud()
         return HTML(word_cloud.get_embed_code(text=text, topn=top))
 
+    # docstr-coverage: inherited
     def tensor_to_df(
         self,
         tensor: torch.LongTensor,
@@ -956,6 +1268,7 @@ class TriplesFactory(CoreTriplesFactory):
         columns = list(TRIPLES_DF_COLUMNS) + old_col[3:]
         return data.loc[:, columns]
 
+    # docstr-coverage: inherited
     def new_with_restriction(
         self,
         entities: Union[None, Collection[int], Collection[str]] = None,
@@ -1002,8 +1315,8 @@ def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory
     if len(a) != len(b):
         raise ValueError("Must have same number of triples factories")
 
-    train_1 = _smt(a[0].mapped_triples)
-    train_2 = _smt(b[0].mapped_triples)
+    train_1 = triple_tensor_to_set(a[0].mapped_triples)
+    train_2 = triple_tensor_to_set(b[0].mapped_triples)
 
     # FIXME currently the implementation does not consider the non-training (i.e., second-last entries)
     #  for the number of steps. Consider more interesting way to discuss splits w/ valid
@@ -1019,19 +1332,3 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     steps = splits_steps(a, b)
     n = sum(tf.num_triples for tf in a)
     return 1 - steps / n
-
-
-def _smt(x):
-    return set(tuple(xx.detach().numpy().tolist()) for xx in x)
-
-
-def normalize_path(path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:
-    """Normalize path."""
-    if isinstance(path, TextIO):
-        return pathlib.Path(path.name).resolve()
-    elif isinstance(path, str):
-        return pathlib.Path(path).resolve()
-    elif isinstance(path, pathlib.Path):
-        return path.resolve()
-    else:
-        raise TypeError(f"path is invalid type: {type(path)}")

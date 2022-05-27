@@ -5,6 +5,7 @@
 import inspect
 import json
 import logging
+import pathlib
 import sys
 from typing import Any, Mapping, Optional, Type, Union
 
@@ -30,7 +31,6 @@ _OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
 _SKIP_ARGS = {
     "return",
     "triples_factory",
-    "preferred_device",
     "regularizer",
     # TODO rethink after RGCN update
     "interaction",
@@ -38,6 +38,7 @@ _SKIP_ARGS = {
     "activation_kwargs",
     "edge_weighting",
     "relation_representations",
+    "coefficients",  # from AutoSF
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],
@@ -81,7 +82,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                     logger.debug("Unhandled hint: %s", annotation)
                     continue
                 if parameter.default is None:
-                    logger.warning(
+                    logger.debug(
                         f"Missing handler in {model.__name__} for {name}: "
                         f"type={annotation} default={parameter.default}",
                     )
@@ -116,9 +117,9 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
-    @click.option("-I", "--create-inverse-triples", is_flag=True, help="Model inverse triples")
+    @options.inverse_triples_option
     @click.option("--silent", is_flag=True)
-    @click.option("--output", type=click.File("w"), default=sys.stdout, help="Where to dump the metric results")
+    @click.option("--output-directory", type=pathlib.Path, default=None, help="Where to dump the results")
     def main(
         *,
         device,
@@ -129,7 +130,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         learning_rate,
         evaluator,
         stopper,
-        output,
+        output_directory: Optional[pathlib.Path],
         mlflow_tracking_uri,
         title,
         dataset,
@@ -205,10 +206,15 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             ),
             random_seed=random_seed,
         )
-
-        if not silent:
-            json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)
+        if output_directory:
+            pipeline_result.save_to_directory(
+                directory=output_directory,
+                # TODO: other parameters?
+            )
+        elif not silent:
+            json.dump(pipeline_result.metric_results.to_dict(), sys.stdout, indent=2)
             click.echo("")
+
         return sys.exit(0)
 
     return main

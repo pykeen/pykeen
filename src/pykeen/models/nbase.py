@@ -5,22 +5,24 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
+from class_resolver import OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch import nn
 
 from .base import Model
-from ..losses import Loss
-from ..nn.emb import EmbeddingSpecification, RepresentationModule
+from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
+from ..nn.representation import Representation
 from ..regularizers import Regularizer
-from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
-from ..utils import check_shapes
+from ..triples import KGInfo
+from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
+from ..utils import check_shapes, get_batchnorm_modules
 
 __all__ = [
     "_NewAbstractModel",
@@ -28,13 +30,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-EmbeddingSpecificationHint = Union[
-    None,
-    EmbeddingSpecification,
-    RepresentationModule,
-    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
-]
 
 
 class _NewAbstractModel(Model, ABC):
@@ -58,6 +53,10 @@ class _NewAbstractModel(Model, ABC):
     regularizer_default: ClassVar[Optional[Type[Regularizer]]] = None
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+
+    can_slice_h = True
+    can_slice_r = True
+    can_slice_t = True
 
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
@@ -122,6 +121,7 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
@@ -129,165 +129,102 @@ class _NewAbstractModel(Model, ABC):
             if isinstance(regularizer, Regularizer)
         )
 
-    @abstractmethod
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-        slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
-    ) -> torch.FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail indices and calculates the corresponding score.
-
-        .. note ::
-            All indices which are not None, have to be either 1-element, be of shape `(batch_size,)` or
-            `(batch_size, n)`, where `batch_size` has to be the same for all tensors, but `n` may be different.
-
-        .. note ::
-            If slicing is requested, the corresponding indices have to be None.
-
-        :param h_indices:
-            The head indices. None indicates to use all.
-        :param r_indices:
-            The relation indices. None indicates to use all.
-        :param t_indices:
-            The tail indices. None indicates to use all.
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}.
-
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
-            The score for each triple.
-        """  # noqa: DAR202
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail of each triple and calculates the corresponding score.
-
-        :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-
-        :return: shape: (batch_size, 1), dtype: float
-            The score for each triple.
-        """
-        return self(
-            h_indices=hrt_batch[:, 0],
-            r_indices=hrt_batch[:, 1],
-            t_indices=hrt_batch[:, 2],
-        ).view(hrt_batch.shape[0], 1)
-
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
-        """Forward pass using right side (tail) prediction.
-
-        This method calculates the score for all possible tails for each (head, relation) pair.
-
-        :param hr_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, relation) pairs.
-        :param slice_size:
-            The slice size.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each h-r pair, the scores for all possible tails.
-        """
-        return self(
-            h_indices=hr_batch[:, 0],
-            r_indices=hr_batch[:, 1],
-            t_indices=None,
-            slice_size=slice_size,
-            slice_dim="h",
-        ).view(hr_batch.shape[0], self.num_entities)
-
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
-        """Forward pass using left side (head) prediction.
-
-        This method calculates the score for all possible heads for each (relation, tail) pair.
-
-        :param rt_batch: shape: (batch_size, 2), dtype: long
-            The indices of (relation, tail) pairs.
-        :param slice_size:
-            The slice size.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each r-t pair, the scores for all possible heads.
-        """
-        return self(
-            h_indices=None,
-            r_indices=rt_batch[:, 0],
-            t_indices=rt_batch[:, 1],
-            slice_size=slice_size,
-            slice_dim="t",
-        ).view(rt_batch.shape[0], self.num_entities)
-
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
-        """Forward pass using middle (relation) prediction.
-
-        This method calculates the score for all possible relations for each (head, tail) pair.
-
-        :param ht_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, tail) pairs.
-        :param slice_size:
-            The slice size.
-
-        :return: shape: (batch_size, num_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
-        """
-        return self(
-            h_indices=ht_batch[:, 0],
-            r_indices=None,
-            t_indices=ht_batch[:, 1],
-            slice_size=slice_size,
-            slice_dim="r",
-        ).view(ht_batch.shape[0], self.num_relations)
-
 
 def _prepare_representation_module_list(
-    representations: EmbeddingSpecificationHint,
-    num_embeddings: int,
+    max_id: int,
     shapes: Sequence[str],
     label: str,
+    representations: OneOrManyHintOrType[Representation] = None,
+    representation_kwargs: OneOrManyOptionalKwargs = None,
     skip_checks: bool = False,
-) -> Sequence[RepresentationModule]:
-    """Normalize list of representations and wrap into nn.ModuleList."""
-    # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
-    if representations is None:
-        representations = []
-    if not isinstance(representations, Sequence):
-        representations = [representations]
-    if not skip_checks and len(representations) != len(shapes):
-        raise ValueError(
-            f"Interaction function requires {len(shapes)} {label} representations, but "
-            f"{len(representations)} were given.",
-        )
-    modules = []
-    for r in representations:
-        if not isinstance(r, RepresentationModule):
-            assert isinstance(r, EmbeddingSpecification)
-            r = r.make(num_embeddings=num_embeddings)
-        if r.max_id < num_embeddings:
+) -> Sequence[Representation]:
+    """
+    Normalize list of representations and wrap into nn.ModuleList.
+
+    .. note ::
+        Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
+
+    :param representations:
+        the representations, or hints for them.
+    :param representation_kwargs:
+        additional keyword-based parameters for instantiating representations from hints.
+    :param max_id:
+        the maximum representation ID. Newly instantiated representations will contain that many representations, and
+        pre-instantiated ones have to provide at least that many.
+    :param shapes:
+        the symbolic shapes, which are used for shape verification, if skip_checks is False.
+    :param label:
+        a label to use for error messages (typically, "entities" or "relations").
+    :param skip_checks:
+        whether to skip shape verification.
+
+    :return:
+        a module list of instantiated representation modules.
+
+    :raises ValueError:
+        if the maximum ID or shapes do not match
+    """
+    # TODO: allow max_id being present in representation_kwargs; if it matches max_id
+    # TODO: we could infer some shapes from the given interaction shape information
+    rs = representation_resolver.make_many(representations, kwargs=representation_kwargs, max_id=max_id)
+
+    # check max-id
+    for r in rs:
+        if r.max_id < max_id:
             raise ValueError(
-                f"{r} only provides {r.max_id} {label} representations, but should provide {num_embeddings}.",
+                f"{r} only provides {r.max_id} {label} representations, but should provide {max_id}.",
             )
-        elif r.max_id > num_embeddings:
+        elif r.max_id > max_id:
             logger.warning(
-                f"{r} provides {r.max_id} {label} representations, although only {num_embeddings} are needed."
+                f"{r} provides {r.max_id} {label} representations, although only {max_id} are needed."
                 f"While this is not necessarily wrong, it can indicate an error where the number of {label} "
                 f"representations was chosen wrong.",
             )
-        modules.append(r)
-    if not skip_checks:
-        check_shapes(
-            *zip(
-                (r.shape for r in modules),
-                shapes,
-            ),
-            raise_on_errors=True,
+
+    rs = cast(Sequence[Representation], nn.ModuleList(rs))
+    if skip_checks:
+        return rs
+
+    # check shapes
+    if len(rs) != len(shapes):
+        raise ValueError(
+            f"Interaction function requires {len(shapes)} {label} representations, but {len(rs)} were given."
         )
-    return nn.ModuleList(modules)
+    check_shapes(
+        *zip(
+            (r.shape for r in rs),
+            shapes,
+        ),
+        raise_on_errors=True,
+    )
+    return rs
+
+
+def repeat_if_necessary(
+    scores: torch.FloatTensor,
+    representations: Sequence[Representation],
+    num: Optional[int],
+) -> torch.FloatTensor:
+    """
+    Repeat score tensor if necessary.
+
+    If a model does not have entity/relation representations, the scores for
+    `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
+    only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
+
+    :param scores: shape: (batch_size, ?)
+        the score tensor
+    :param representations:
+        the representations. If empty (i.e. no representations for this 1:n scoring), repetition needs to be applied
+    :param num:
+        the number of times to repeat, if necessary.
+
+    :return:
+        the score tensor, which has been repeated, if necessary
+    """
+    if representations:
+        return scores
+    return scores.repeat(1, num)
 
 
 class ERModel(
@@ -312,31 +249,33 @@ class ERModel(
     """
 
     #: The entity representations
-    entity_representations: Sequence[RepresentationModule]
+    entity_representations: Sequence[Representation]
 
     #: The relation representations
-    relation_representations: Sequence[RepresentationModule]
+    relation_representations: Sequence[Representation]
 
     #: The weight regularizers
     weight_regularizers: List[Regularizer]
 
+    #: The interaction function
+    interaction: Interaction
+
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         interaction: Union[
             str,
             Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
             Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         ],
-        interaction_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_representations: EmbeddingSpecificationHint = None,
-        relation_representations: EmbeddingSpecificationHint = None,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
+        interaction_kwargs: OptionalKwargs = None,
+        entity_representations: OneOrManyHintOrType[Representation] = None,
+        entity_representations_kwargs: OneOrManyOptionalKwargs = None,
+        relation_representations: OneOrManyHintOrType[Representation] = None,
+        relation_representations_kwargs: OneOrManyOptionalKwargs = None,
         skip_checks: bool = False,
+        **kwargs,
     ) -> None:
         """Initialize the module.
 
@@ -347,40 +286,33 @@ class ERModel(
             Additional key-word based parameters given to the interaction module's constructor, if not already
             instantiated.
         :param entity_representations: The entity representation or sequence of representations
+        :param entity_representations_kwargs:
+            additional keyword-based parameters for instantiation of entity representations
         :param relation_representations: The relation representation or sequence of representations
-        :param loss:
-            The loss to use. If None is given, use the loss default specific to the model subclass.
-        :param predict_with_sigmoid:
-            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
-            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
-            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param preferred_device:
-            The preferred device for model training and inference.
-        :param random_seed:
-            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param relation_representations_kwargs:
+            additional keyword-based parameters for instantiation of relation representations
         :param skip_checks:
             whether to skip entity representation checks.
+        :param kwargs:
+            Keyword arguments to pass to the base model
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            predict_with_sigmoid=predict_with_sigmoid,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
-            num_embeddings=triples_factory.num_entities,
-            shapes=self.interaction.entity_shape,
+            representation_kwargs=entity_representations_kwargs,
+            max_id=triples_factory.num_entities,
+            shapes=self.interaction.full_entity_shapes(),
             label="entity",
-            skip_checks=self.interaction.tail_entity_shape is not None or skip_checks,
+            skip_checks=skip_checks,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
-            num_embeddings=triples_factory.num_relations,
+            representation_kwargs=relation_representations_kwargs,
+            max_id=triples_factory.num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
+            skip_checks=skip_checks,
         )
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
@@ -417,92 +349,210 @@ class ERModel(
 
     def forward(
         self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
+        h_indices: torch.LongTensor,
+        r_indices: torch.LongTensor,
+        t_indices: torch.LongTensor,
         slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
+        slice_dim: int = 0,
+        *,
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         """Forward pass.
 
-        This method takes head, relation and tail indices and calculates the corresponding score.
-
-        All indices which are not None, have to be either 1-element or have the same shape, which is the batch size.
+        This method takes head, relation and tail indices and calculates the corresponding scores.
+        It supports broadcasting.
 
         :param h_indices:
-            The head indices. None indicates to use all.
+            The head indices.
         :param r_indices:
-            The relation indices. None indicates to use all.
+            The relation indices.
         :param t_indices:
-            The tail indices. None indicates to use all.
+            The tail indices.
         :param slice_size:
             The slice size.
         :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
+            The dimension along which to slice
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return:
+            The scores
+
+        :raises NotImplementedError:
+            if score repetition becomes necessary
+        """
+        if not self.entity_representations or not self.relation_representations:
+            raise NotImplementedError("repeat scores not implemented for general case.")
+        h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
+        return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
+
+    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
+        """Forward pass.
+
+        This method takes head, relation and tail of each triple and calculates the corresponding score.
+
+        :param hrt_batch: shape: (batch_size, 3), dtype: long
+            The indices of (head, relation, tail) triples.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
+
+        :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
-        h, r, t = self._get_representations(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
-        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-        return self._repeat_scores_if_necessary(
-            scores=scores,
-            h_indices=h_indices,
-            r_indices=r_indices,
-            t_indices=t_indices,
+        # Note: slicing cannot be used here: the indices for score_hrt only have a batch
+        # dimension, and slicing along this dimension is already considered by sub-batching.
+        # Note: we do not delegate to the general method for performance reasons
+        # Note: repetition is not necessary here
+        h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
+        return self.interaction.score_hrt(h=h, r=r, t=t)
+
+    def _check_slicing(self, slice_size: Optional[int]) -> None:
+        """Raise an error, if slicing is requested, but the model does not support it."""
+        if not slice_size:
+            return
+        if get_batchnorm_modules(self):  # if there are any, this is truthy
+            raise ValueError("This model does not support slicing, since it has batch normalization layers.")
+
+    def score_t(
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction.
+
+        This method calculates the score for all possible tails for each (head, relation) pair.
+
+        :param hr_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
+        :param slice_size:
+            The slice size.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
+        """
+        self._check_slicing(slice_size=slice_size)
+        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
+        return repeat_if_necessary(
+            scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
+            representations=self.entity_representations,
+            num=self._get_entity_len(mode=mode),
         )
 
-    def _repeat_scores_if_necessary(
-        self,
-        scores: torch.FloatTensor,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
+    def score_h(
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
-        """Repeat scores for entities/relations if the model does not have representations for one of them."""
-        repeat_relations = len(self.relation_representations) == 0
-        repeat_entities = len(self.entity_representations) == 0
+        """Forward pass using left side (head) prediction.
 
-        if not (repeat_entities or repeat_relations):
-            return scores
+        This method calculates the score for all possible heads for each (relation, tail) pair.
 
-        repeats = [1, 1, 1, 1]
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+        :param slice_size:
+            The slice size.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
-        for i, (flag, ind, num) in enumerate(
-            (
-                (repeat_entities, h_indices, self.num_entities),
-                (repeat_relations, r_indices, self.num_relations),
-                (repeat_entities, t_indices, self.num_entities),
-            ),
-            start=1,
-        ):
-            if flag:
-                if ind is None:
-                    repeats[i] = num
-                else:
-                    batch_size = len(ind)
-                    if scores.shape[0] < batch_size:
-                        repeats[0] = batch_size
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+        self._check_slicing(slice_size=slice_size)
+        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
+        return repeat_if_necessary(
+            scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
+            representations=self.entity_representations,
+            num=self._get_entity_len(mode=mode),
+        )
 
-        return scores.repeat(*repeats)
+    def score_r(
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction.
+
+        This method calculates the score for all possible relations for each (head, tail) pair.
+
+        :param ht_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+        :param slice_size:
+            The slice size.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
+
+        :return: shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+        self._check_slicing(slice_size=slice_size)
+        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
+        return repeat_if_necessary(
+            scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
+            representations=self.relation_representations,
+            num=self.num_relations,
+        )
+
+    def _get_entity_representations_from_inductive_mode(
+        self, *, mode: Optional[InductiveMode]
+    ) -> Sequence[Representation]:
+        """
+        Return the entity representations for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises ValueError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the entity representations for the given inductive mode
+        """
+        if mode is not None:
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
+        return self.entity_representations
+
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105
+        """
+        Return the number of entities for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises NotImplementedError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the number of entities in the given inductive mode
+        """
+        if mode is not None:
+            raise NotImplementedError
+        return self.num_entities
 
     def _get_representations(
         self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
+        h: Optional[torch.LongTensor],
+        r: Optional[torch.LongTensor],
+        t: Optional[torch.LongTensor],
+        *,
+        mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
-        """Get representations for head, relation and tails, in canonical shape."""
-        h, r, t = [
-            [representation.get_in_more_canonical_shape(dim=dim, indices=indices) for representation in representations]
-            for dim, indices, representations in (
-                ("h", h_indices, self.entity_representations),
-                ("r", r_indices, self.relation_representations),
-                ("t", t_indices, self.entity_representations),
+        """Get representations for head, relation and tails."""
+        head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
+        head_representations = [head_representations[i] for i in self.interaction.head_indices()]
+        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
+        hr, rr, tr = [
+            [representation.forward_unique(indices=indices) for representation in representations]
+            for indices, representations in (
+                (h, head_representations),
+                (r, self.relation_representations),
+                (t, tail_representations),
             )
         ]
         # normalization
         return cast(
             Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            tuple(x[0] if len(x) == 1 else x for x in (h, r, t)),
+            tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr)),
         )

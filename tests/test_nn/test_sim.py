@@ -25,6 +25,8 @@ class KullbackLeiblerTests(unittest.TestCase):
         dims = dict(h=self.num_heads, r=self.num_relations, t=self.num_tails)
         (self.h_mean, self.r_mean, self.t_mean), (self.h_var, self.r_var, self.t_var) = [
             [
+                # TODO this is the only place this function is used.
+                #  Is there an alternative so we can remove it?
                 convert_to_canonical_shape(
                     x=torch.rand(self.batch_size, num, self.d),
                     dim=dim,

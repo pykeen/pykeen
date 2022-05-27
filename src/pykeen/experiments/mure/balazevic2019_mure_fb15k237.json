@@ -47,15 +47,13 @@
     }
   },
   "results": {
-    "hits_at_k": {
-      "avg": {
+    "avg": {
+      "hits_at_k": {
         "10": 0.521,
         "3": 0.370,
         "1": 0.245
-      }
-    },
-    "mean_reciprocal_rank": {
-      "avg": 0.336
+      },
+      "mean_reciprocal_rank": 0.336
     }
   }
 }

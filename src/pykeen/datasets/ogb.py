@@ -18,7 +18,7 @@ from ..triples import TriplesFactory
 __all__ = [
     "OGBLoader",
     "OGBBioKG",
-    "OGBWikiKG",
+    "OGBWikiKG2",
 ]
 
 
@@ -36,7 +36,7 @@ class OGBLoader(LazyDataset):
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.cache_root = self._help_cache(cache_root)
-        self.create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = create_inverse_triples
 
     def _load(self) -> None:
         try:
@@ -68,6 +68,8 @@ class OGBLoader(LazyDataset):
         pass
 
     def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
+        # note: we do not use the built-in constants here, since those refer to OGB nomenclature
+        #       (which happens to coincide with ours)
         triples = np.stack([x["head"], x["relation"], x["tail"]], axis=1)
 
         # FIXME these are already identifiers
@@ -75,7 +77,7 @@ class OGBLoader(LazyDataset):
 
         return TriplesFactory.from_labeled_triples(
             triples=triples,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=self._create_inverse_triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
         )
@@ -125,13 +127,13 @@ def _array(df, entity_type_label, entity_label):
 
 
 @parse_docdata
-class OGBWikiKG(OGBLoader):
-    """The OGB WikiKG dataset.
+class OGBWikiKG2(OGBLoader):
+    """The OGB WikiKG2 dataset.
 
-    .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg
+    .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg2
 
     ---
-    name: OGB WikiKG
+    name: OGB WikiKG2
     citation:
         author: Hu
         year: 2020
@@ -146,13 +148,13 @@ class OGBWikiKG(OGBLoader):
         triples: 17137181
     """
 
-    name = "ogbl-wikikg"
+    name = "ogbl-wikikg2"
 
 
 @click.command()
 @verbose_option
 def _main():
-    for _cls in [OGBBioKG, OGBWikiKG]:
+    for _cls in [OGBBioKG, OGBWikiKG2]:
         _cls().summarize()
 
 

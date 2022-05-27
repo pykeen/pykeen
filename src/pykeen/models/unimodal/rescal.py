@@ -9,7 +9,6 @@ from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
@@ -77,18 +76,19 @@ class RESCAL(EntityRelationEmbeddingModel):
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
+            relation_representations_kwargs=dict(
                 shape=(embedding_dim, embedding_dim),  # d x d matrices
                 initializer=relation_initializer,
             ),
             **kwargs,
         )
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         # shape: (b, d)
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
@@ -105,7 +105,8 @@ class RESCAL(EntityRelationEmbeddingModel):
 
         return scores[:, :, 0]
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1])
         t = self.entity_embeddings(indices=None).unsqueeze(dim=0).transpose(-1, -2)
@@ -118,7 +119,8 @@ class RESCAL(EntityRelationEmbeddingModel):
 
         return scores[:, 0, :]
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         """Forward pass using left side (head) prediction."""
         # Get embeddings
         h = self.entity_embeddings(indices=None).unsqueeze(dim=0)

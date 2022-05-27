@@ -9,17 +9,16 @@ from torch.nn import functional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...nn.modules import StructuredEmbeddingInteraction
+from ...nn.modules import SEInteraction
 from ...typing import Constrainer, Initializer
 
 __all__ = [
-    "StructuredEmbedding",
+    "SE",
 ]
 
 
-class StructuredEmbedding(ERModel):
+class SE(ERModel):
     r"""An implementation of the Structured Embedding (SE) published by [bordes2011]_.
 
     SE applies role- and relation-specific projection matrices
@@ -71,22 +70,22 @@ class StructuredEmbedding(ERModel):
             Remaining keyword arguments to forward to :class:`pykeen.models.EntityEmbeddingModel`
         """
         super().__init__(
-            interaction=StructuredEmbeddingInteraction(
+            interaction=SEInteraction(
                 p=scoring_fct_norm,
                 power_norm=False,
             ),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs,
             ),
-            relation_representations=[
-                EmbeddingSpecification(
+            relation_representations_kwargs=[
+                dict(
                     shape=(embedding_dim, embedding_dim),
                     initializer=relation_initializer,
                 ),
-                EmbeddingSpecification(
+                dict(
                     shape=(embedding_dim, embedding_dim),
                     initializer=relation_initializer,
                 ),

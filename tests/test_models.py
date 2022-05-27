@@ -3,9 +3,10 @@
 """Test that models can be executed."""
 
 import importlib
+import itertools
 import os
 import unittest
-from typing import Any, MutableMapping, Optional
+from typing import Any, Iterable, MutableMapping, Optional, Set, Type, Union
 
 import numpy
 import torch
@@ -13,25 +14,24 @@ import unittest_templates
 
 import pykeen.experiments
 import pykeen.models
+from pykeen.datasets.nations import Nations
 from pykeen.models import (
     EntityRelationEmbeddingModel,
     ERModel,
     EvaluationOnlyModel,
+    FixedModel,
     Model,
     _NewAbstractModel,
     _OldAbstractModel,
     model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_novelty_mask, predict
-from pykeen.models.unimodal.node_piece import _ConcatMLP
-from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.nn import EmbeddingSpecification
-from pykeen.nn.emb import Embedding, NodePieceRepresentation
-from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
+from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
+from pykeen.nn import Embedding, NodePieceRepresentation
+from pykeen.nn.perceptron import ConcatMLP
+from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
-from tests.mocks import MockModel
 from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
@@ -42,7 +42,7 @@ SKIP_MODULES = {
     LiteralModel,
     EntityRelationEmbeddingModel,
     ERModel,
-    MockModel,
+    FixedModel,
     SimpleInteractionModel,
     EvaluationOnlyModel,
 }
@@ -60,9 +60,13 @@ class TestCompGCN(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        dim = kwargs.pop("embedding_dim")
         kwargs["encoder_kwargs"] = dict(
-            embedding_specification=EmbeddingSpecification(
-                embedding_dim=(kwargs.pop("embedding_dim")),
+            entity_representations_kwargs=dict(
+                shape=(dim,),
+            ),
+            relation_representations_kwargs=dict(
+                shape=(dim,),
             ),
         )
         return kwargs
@@ -91,6 +95,10 @@ class TestConvE(cases.ModelTestCase):
     #                                 7
     num_constant_init = 7
 
+    def test_predict(self):
+        """Test prediction workflow with inverse relations."""
+        predict(model=self.instance, k=10)
+
 
 class TestConvKB(cases.ModelTestCase):
     """Test the ConvKB model."""
@@ -113,7 +121,7 @@ class TestDistMult(cases.ModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
@@ -134,7 +142,7 @@ class TestDistMult(cases.ModelTestCase):
         actual_k, n_cols = top_triples.shape
         assert n_cols == 3
         if k is None:
-            assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
+            assert actual_k == self.factory.num_entities**2 * self.factory.num_relations
         else:
             assert actual_k == min(k, self.factory.num_triples)
         assert top_scores.shape == (actual_k,)
@@ -243,7 +251,7 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
         """Test that the MLP gets registered properly and is trainable."""
         self.assertIsInstance(self.instance, pykeen.models.NodePiece)
         self.assertIsInstance(self.instance.entity_representations[0], NodePieceRepresentation)
-        self.assertIsInstance(self.instance.entity_representations[0].aggregation, _ConcatMLP)
+        self.assertIsInstance(self.instance.entity_representations[0].aggregation, ConcatMLP)
 
         # Test that the weight in the MLP is trainable (i.e. requires grad)
         keys = [
@@ -258,6 +266,68 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
             tensor = params[key]
             self.assertIsInstance(tensor, torch.Tensor)
             self.assertTrue(tensor.requires_grad)
+
+
+class TestNodePieceAnchors(cases.BaseNodePieceTest):
+    """Test the NodePiece model with anchors."""
+
+    kwargs = dict(
+        tokenizers="anchor",
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["tokenizers_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
+        return kwargs
+
+
+class TestNodePieceJoint(cases.BaseNodePieceTest):
+    """Test the NodePiece model with joint anchor and relation tokenization."""
+
+    num_anchors = 5
+    num_tokens = [3, 2]
+    kwargs = dict(
+        tokenizers=["anchor", "relation"],
+        tokenizers_kwargs=[
+            dict(
+                selection="degree",
+                searcher="scipy-sparse",
+            ),
+            dict(),
+        ],
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["num_tokens"] = self.num_tokens
+        kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = dict(num_anchors=self.num_anchors)
+        return kwargs
+
+    def test_vocabulary_size(self):
+        """Test the expected vocabulary size of the individual tokenizations."""
+        assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
+        node_piece = self.instance.entity_representations[0]
+        assert isinstance(node_piece.token_representations, torch.nn.ModuleList)
+        assert len(node_piece.token_representations) == 2
+        anchor, relation = node_piece.token_representations
+        assert anchor.vocabulary.max_id == self.num_anchors + 1
+        assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
+
+
+class TestInductiveNodePiece(cases.InductiveModelTestCase):
+    """Test the InductiveNodePiece model."""
+
+    cls = pykeen.models.InductiveNodePiece
+    create_inverse_triples = True
+
+
+class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
+    """Test the InductiveNodePieceGNN model."""
+
+    cls = pykeen.models.InductiveNodePieceGNN
+    num_constant_init = 6
+    create_inverse_triples = True
+    train_batch_size = 8
 
 
 class TestNTN(cases.ModelTestCase):
@@ -337,9 +407,7 @@ class TestRotatE(cases.ModelTestCase):
 
         Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
         """
-        relation_abs = (
-            self.instance.relation_embeddings(indices=None).view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
-        )
+        relation_abs = self.instance.relation_representations[0](indices=None).abs()
         assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
 
 
@@ -352,7 +420,7 @@ class TestSimplE(cases.ModelTestCase):
 class TestSE(cases.ModelTestCase):
     """Test the Structured Embedding model."""
 
-    cls = pykeen.models.StructuredEmbedding
+    cls = pykeen.models.SE
 
     def _check_constraints(self):
         """Check model constraints.
@@ -382,7 +450,8 @@ class TestTransD(cases.DistanceModelTestCase):
 
         Entity and relation embeddings have to have at most unit L2 norm.
         """
-        for emb in (self.instance.entity_embeddings, self.instance.relation_embeddings):
+        self.instance: ERModel
+        for emb in (self.instance.entity_representations[0], self.instance.relation_representations[0]):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
 
     def test_score_hrt_manual(self):
@@ -394,7 +463,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=2,
         )
         entity_embeddings._embeddings.weight.data.copy_(weights)
-        self.instance.entity_embeddings = entity_embeddings
 
         projection_weights = torch.as_tensor(data=[[3.0, 3.0], [2.0, 2.0]], dtype=torch.float)
         entity_projection_embeddings = Embedding(
@@ -402,7 +470,7 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=2,
         )
         entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
-        self.instance.entity_projections = entity_projection_embeddings
+        self.instance.entity_representations = torch.nn.ModuleList([entity_embeddings, entity_projection_embeddings])
 
         # relation embeddings
         relation_weights = torch.as_tensor(data=[[4.0], [4.0]], dtype=torch.float)
@@ -411,7 +479,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=1,
         )
         relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
 
         relation_projection_weights = torch.as_tensor(data=[[5.0], [3.0]], dtype=torch.float)
         relation_projection_embeddings = Embedding(
@@ -419,7 +486,9 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=1,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
+        self.instance.relation_representations = torch.nn.ModuleList(
+            [relation_embeddings, relation_projection_embeddings]
+        )
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
@@ -437,7 +506,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=3,
         )
         relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
 
         relation_projection_weights = torch.as_tensor(data=[[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]], dtype=torch.float)
         relation_projection_embeddings = Embedding(
@@ -445,7 +513,9 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=3,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
+        self.instance.relation_representations = torch.nn.ModuleList(
+            [relation_embeddings, relation_projection_embeddings]
+        )
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
@@ -469,7 +539,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=3,
         )
         entity_embeddings._embeddings.weight.data.copy_(weights)
-        self.instance.entity_embeddings = entity_embeddings
 
         projection_weights = torch.as_tensor(data=[[2.0, 2.0, 2.0], [2.0, 2.0, 2.0]], dtype=torch.float)
         entity_projection_embeddings = Embedding(
@@ -477,7 +546,7 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=3,
         )
         entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
-        self.instance.entity_projections = entity_projection_embeddings
+        self.instance.entity_representations = torch.nn.ModuleList([entity_embeddings, entity_projection_embeddings])
 
         # relation embeddings
         relation_weights = torch.as_tensor(data=[[3.0, 3.0], [3.0, 3.0]], dtype=torch.float)
@@ -486,7 +555,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=2,
         )
         relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
 
         relation_projection_weights = torch.as_tensor(data=[[4.0, 4.0], [4.0, 4.0]], dtype=torch.float)
         relation_projection_embeddings = Embedding(
@@ -494,7 +562,9 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=2,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
+        self.instance.relation_representations = torch.nn.ModuleList(
+            [relation_embeddings, relation_projection_embeddings]
+        )
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
@@ -505,27 +575,6 @@ class TestTransD(cases.DistanceModelTestCase):
         second_score = scores[1].item()
         self.assertAlmostEqual(first_score, -18, delta=0.01)
         self.assertAlmostEqual(second_score, -18, delta=0.01)
-
-    def test_project_entity(self):
-        """Test _project_entity."""
-        # random entity embeddings & projections
-        e = torch.rand(1, self.instance.num_entities, self.embedding_dim, generator=self.generator)
-        e = clamp_norm(e, maxnorm=1, p=2, dim=-1)
-        e_p = torch.rand(1, self.instance.num_entities, self.embedding_dim, generator=self.generator)
-
-        # random relation embeddings & projections
-        r = torch.rand(self.batch_size, 1, self.instance.relation_dim, generator=self.generator)
-        r = clamp_norm(r, maxnorm=1, p=2, dim=-1)
-        r_p = torch.rand(self.batch_size, 1, self.instance.relation_dim, generator=self.generator)
-
-        # project
-        e_bot = _project_entity(e=e, e_p=e_p, r=r, r_p=r_p)
-
-        # check shape:
-        assert e_bot.shape == (self.batch_size, self.instance.num_entities, self.instance.relation_dim)
-
-        # check normalization
-        assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
 
 
 class TestTransE(cases.DistanceModelTestCase):
@@ -540,6 +589,24 @@ class TestTransE(cases.DistanceModelTestCase):
         """
         entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+
+    def test_get_all_prediction_df(self):
+        """Test consistency of top-k scoring."""
+        ks = [5, 10]
+        dfs = [
+            get_all_prediction_df(
+                model=self.instance,
+                triples_factory=self.factory,
+                batch_size=1,
+                k=k,
+            )
+            .nlargest(n=min(ks), columns="score")
+            .reset_index(drop=True)
+            for k in ks
+        ]
+        assert set(dfs[0].columns) == set(dfs[0].columns)
+        for column in dfs[0].columns:
+            numpy.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
 
 
 class TestTransF(cases.ModelTestCase):
@@ -570,51 +637,12 @@ class TestTransR(cases.DistanceModelTestCase):
         "relation_dim": 4,
     }
 
-    def test_score_hrt_manual(self):
-        """Manually test interaction function of TransR."""
-        # entity embeddings
-        weights = torch.as_tensor(data=[[2.0, 2.0], [3.0, 3.0]], dtype=torch.float)
-        entity_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=2,
-        )
-        entity_embeddings._embeddings.weight.data.copy_(weights)
-        self.instance.entity_embeddings = entity_embeddings
-
-        # relation embeddings
-        relation_weights = torch.as_tensor(data=[[4.0, 4], [5.0, 5.0]], dtype=torch.float)
-        relation_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=2,
-        )
-        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
-
-        relation_projection_weights = torch.as_tensor(
-            data=[[5.0, 5.0, 6.0, 6.0], [7.0, 7.0, 8.0, 8.0]], dtype=torch.float
-        )
-        relation_projection_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=4,
-        )
-        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
-
-        # Compute Scores
-        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
-        scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
-        first_score = scores[0].item()
-        # second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -32, delta=0.01)
-
     def _check_constraints(self):
         """Check model constraints.
 
         Entity and relation embeddings have to have at most unit L2 norm.
         """
-        for emb in (self.instance.entity_embeddings, self.instance.relation_embeddings):
+        for emb in (self.instance.entity_representations[0], self.instance.relation_representations[0]):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=1.0e-06)
 
 
@@ -632,7 +660,7 @@ class TestTuckEr(cases.ModelTestCase):
 class TestUM(cases.DistanceModelTestCase):
     """Test the Unstructured Model."""
 
-    cls = pykeen.models.UnstructuredModel
+    cls = pykeen.models.UM
 
 
 class TestCrossE(cases.ModelTestCase):
@@ -654,6 +682,12 @@ class TestCP(cases.ModelTestCase):
     """Test the CP model."""
 
     cls = pykeen.models.CP
+
+
+class TestAutoSF(cases.ModelTestCase):
+    """Test the AutoSF model."""
+
+    cls = pykeen.models.AutoSF
 
 
 class TestTesting(unittest_templates.MetaTestCase[Model]):
@@ -700,6 +734,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                         model_names.add(value.__name__)
 
         star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
+        # FIXME definitely a type mismatch going on here
         model_names = _remove_non_models(model_names - SKIP_MODULES)
 
         self.assertEqual(model_names, star_model_names, msg="Forgot to add some imports")
@@ -730,15 +765,15 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                 )
 
 
-def _remove_non_models(elements):
+def _remove_non_models(elements: Iterable[Union[str, Type[Model]]]) -> Set[Type[Model]]:
     rv = set()
     for element in elements:
         try:
-            model_resolver.lookup(element)
-        except ValueError:  # invalid model name - aka not actually a model
+            model_cls = model_resolver.lookup(element)
+        except KeyError:  # invalid model name - aka not actually a model
             continue
         else:
-            rv.add(element)
+            rv.add(model_cls)
     return rv
 
 
@@ -766,13 +801,13 @@ class TestModelUtilities(unittest.TestCase):
     def test_extend_batch(self):
         """Test `_extend_batch()`."""
         batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
-        all_ids = [2 * i for i in range(5)]
+        max_id = 5
 
         batch_size = batch.shape[0]
-        num_choices = len(all_ids)
+        num_choices = max_id
 
         for dim in range(3):
-            h_ext_batch = extend_batch(batch=batch, all_ids=all_ids, dim=dim)
+            h_ext_batch = extend_batch(batch=batch, max_id=max_id, dim=dim)
 
             # check shape
             assert h_ext_batch.shape == (batch_size * num_choices, 3)
@@ -780,7 +815,7 @@ class TestModelUtilities(unittest.TestCase):
             # check content
             actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
             exp_content = set()
-            for i in all_ids:
+            for i in range(max_id):
                 for b in batch:
                     c = list(map(int, b))
                     c.insert(dim, i)
@@ -799,10 +834,75 @@ class ERModelTests(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        embedding_dim = kwargs.pop("embedding_dim")
-        kwargs["entity_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
-        kwargs["relation_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        shape = (kwargs.pop("embedding_dim"),)
+        kwargs["entity_representations_kwargs"] = dict(shape=shape)
+        kwargs["relation_representations_kwargs"] = dict(shape=shape)
         return kwargs
 
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
+
+
+class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.models.FixedModel]):
+    """Test for prediction with inverse relations."""
+
+    cls = pykeen.models.FixedModel
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        # create triples factory with inverse relations
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = self.factory = Nations(create_inverse_triples=True).training
+        return kwargs
+
+    def _combination_batch(
+        self,
+        heads: bool = True,
+        relations: bool = True,
+        tails: bool = True,
+    ) -> torch.LongTensor:
+        """Generate a batch with all combinations."""
+        factors = []
+        if heads:
+            factors.append(range(self.factory.num_entities))
+        if relations:
+            factors.append(range(self.factory.real_num_relations))
+        if tails:
+            factors.append(range(self.factory.num_entities))
+        return torch.as_tensor(
+            data=list(itertools.product(*factors)),
+            dtype=torch.long,
+        )
+
+    def test_predict_hrt(self):
+        """Test predict_hrt."""
+        hrt_batch = self._combination_batch()
+        expected_scores = self.instance._generate_fake_scores(
+            h=hrt_batch[:, 0],
+            r=2 * hrt_batch[:, 1],
+            t=hrt_batch[:, 2],
+        ).unsqueeze(dim=-1)
+        scores = self.instance.predict_hrt(hrt_batch=hrt_batch)
+        assert torch.allclose(scores, expected_scores)
+
+    def test_predict_h(self):
+        """Test predict_h."""
+        rt_batch = self._combination_batch(heads=False)
+        # head prediction via inverse tail prediction
+        expected_scores = self.instance._generate_fake_scores(
+            h=rt_batch[:, 1, None],
+            r=2 * rt_batch[:, 0, None] + 1,
+            t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
+        )
+        scores = self.instance.predict_h(rt_batch=rt_batch)
+        assert torch.allclose(scores, expected_scores)
+
+    def test_predict_t(self):
+        """Test predict_t."""
+        hr_batch = self._combination_batch(tails=False)
+        expected_scores = self.instance._generate_fake_scores(
+            h=hr_batch[:, 0, None],
+            r=2 * hr_batch[:, 1, None],
+            t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
+        )
+        scores = self.instance.predict_t(hr_batch=hr_batch)
+        assert torch.allclose(scores, expected_scores)

@@ -2,13 +2,10 @@
 
 """Implementation of CP model."""
 
-from typing import Any, ClassVar, Mapping, Optional, Tuple, cast
-
-import torch
+from typing import Any, ClassVar, Mapping, Optional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import CPInteraction
 from ...typing import Hint, Initializer, Normalizer
 
@@ -61,9 +58,9 @@ class CP(ERModel):
         """
         super().__init__(
             interaction=CPInteraction,
-            entity_representations=[
+            entity_representations_kwargs=[
                 # head representation
-                EmbeddingSpecification(
+                dict(
                     shape=(rank, embedding_dim),
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs,
@@ -71,7 +68,7 @@ class CP(ERModel):
                     normalizer_kwargs=entity_normalizer_kwargs,
                 ),
                 # tail representation
-                EmbeddingSpecification(
+                dict(
                     shape=(rank, embedding_dim),
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs,
@@ -79,35 +76,10 @@ class CP(ERModel):
                     normalizer_kwargs=entity_normalizer_kwargs,
                 ),
             ],
-            relation_representations=EmbeddingSpecification(
+            relation_representations_kwargs=dict(
                 shape=(rank, embedding_dim),
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
             ),
-            # Since CP uses different representations for entities in head / tail role,
-            # the current solution is a bit hacky, and may be improved. See discussion
-            # on https://github.com/pykeen/pykeen/pull/663.
-            skip_checks=True,
             **kwargs,
-        )
-
-    def _get_representations(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:  # noqa: D102
-        # Override to allow different head and tail entity representations
-        h, r, t = [
-            [representation.get_in_more_canonical_shape(dim=dim, indices=indices) for representation in representations]
-            for dim, indices, representations in (
-                ("h", h_indices, self.entity_representations[0:1]),  # <== this is different
-                ("r", r_indices, self.relation_representations),
-                ("t", t_indices, self.entity_representations[1:2]),  # <== this is different
-            )
-        ]
-        # normalization
-        return cast(
-            Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
-            tuple(x[0] if len(x) == 1 else x for x in (h, r, t)),
         )

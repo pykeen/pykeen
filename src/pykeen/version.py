@@ -16,7 +16,7 @@ __all__ = [
     "env",
 ]
 
-VERSION = "1.6.1-dev"
+VERSION = "1.8.3-dev"
 
 
 @lru_cache(maxsize=2)
@@ -110,7 +110,7 @@ def env(file=None):
     if _in_jupyter():
         return env_html()
     else:
-        print(env_table(), file=file)  # noqa:T001
+        print(env_table(), file=file)  # noqa:T201
 
 
 def _in_jupyter() -> bool:
@@ -127,4 +127,4 @@ def _in_jupyter() -> bool:
 
 
 if __name__ == "__main__":
-    print(get_version(with_git_hash=True))  # noqa:T001
+    print(get_version(with_git_hash=True))  # noqa:T201

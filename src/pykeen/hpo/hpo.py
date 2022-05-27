@@ -13,18 +13,17 @@ from dataclasses import dataclass
 from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
-from optuna import Study, Trial, create_study
+from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
+from optuna import Study, Trial, TrialPruned, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
-from .pruners import pruner_resolver
-from .samplers import sampler_resolver
 from ..constants import USER_DEFINED_CODE
-from ..datasets import get_dataset, has_dataset
+from ..datasets import dataset_resolver, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.rank_based_evaluator import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+from ..evaluation.ranking_metric_lookup import MetricKey
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
@@ -37,7 +36,7 @@ from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
-from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
+from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io, normalize_path
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -56,6 +55,12 @@ class ExtraKeysError(ValueError):
     """Raised on extra keys being used."""
 
     def __init__(self, keys: Iterable[str]):
+        """
+        Initialize the error.
+
+        :param keys:
+            the extra keys
+        """
         super().__init__(sorted(keys))
 
     def __str__(self) -> str:
@@ -120,11 +125,24 @@ class Objective:
     save_model_directory: Optional[str] = None
 
     @staticmethod
-    def _update_stopper_callbacks(stopper_kwargs: Dict[str, Any], trial: Trial) -> None:
+    def _update_stopper_callbacks(
+        stopper_kwargs: Dict[str, Any],
+        trial: Trial,
+        metric: str,
+        result_tracker: ResultTracker,
+    ) -> None:
         """Make a subclass of the EarlyStopper that reports to the trial."""
 
         def _result_callback(_early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
             trial.report(result, step=epoch)
+            if trial.should_prune():
+                # log pruning
+                result_tracker.log_metrics(metrics=dict(pruned=1), step=epoch)
+                # trial was successful, but has to be ended
+                result_tracker.end_run(success=True)
+                # also show info
+                logger.info(f"Pruned trial: {trial} at epoch {epoch} due to {metric}={result}")
+                raise TrialPruned()
 
         def _stopped_callback(_early_stopper: EarlyStopper, _result: Union[float, int], epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
@@ -230,12 +248,12 @@ class Objective:
             kwargs_ranges=self.training_kwargs_ranges,
         )
 
-        _stopper_kwargs = dict(self.stopper_kwargs or {})
-        if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
-            self._update_stopper_callbacks(_stopper_kwargs, trial)
-
         # create result tracker to allow to gracefully close failed trials
         result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
+
+        _stopper_kwargs = dict(self.stopper_kwargs or {})
+        if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
+            self._update_stopper_callbacks(_stopper_kwargs, trial, metric=self.metric, result_tracker=result_tracker)
 
         try:
             result = pipeline(
@@ -287,10 +305,8 @@ class Objective:
         except (MemoryError, RuntimeError) as e:
             # close run in result tracker
             result_tracker.end_run(success=False)
-
-            trial.set_user_attr("failure", str(e))
-            # Will trigger Optuna to set the state of the trial as failed
-            return None
+            # raise the error again (which will be catched in study.optimize)
+            raise e
         else:
             if self.save_model_directory:
                 model_directory = os.path.join(self.save_model_directory, str(trial.number))
@@ -365,9 +381,7 @@ class HpoPipelineResult(Result):
 
     def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        if isinstance(directory, str):
-            directory = pathlib.Path(directory).resolve()
-        directory.mkdir(exist_ok=True, parents=True)
+        directory = normalize_path(directory, mkdir=True)
 
         # Output study information
         with directory.joinpath("study.json").open("w") as file:
@@ -431,6 +445,7 @@ class HpoPipelineResult(Result):
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
+        save_training: bool = False,
     ) -> None:
         """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
 
@@ -438,6 +453,10 @@ class HpoPipelineResult(Result):
         :param replicates: The number of times to retrain the model
         :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
         :param save_replicates: Should the artifacts of the replicates be saved?
+        :param save_training: Should the training triples be saved?
+
+        :raises ValueError:
+            if :data:`"use_testing_data"` is provided in the best pipeline's `config`.
         """
         config = self._get_best_study_config()
 
@@ -451,6 +470,7 @@ class HpoPipelineResult(Result):
             use_testing_data=True,
             move_to_cpu=move_to_cpu,
             save_replicates=save_replicates,
+            save_training=save_training,
         )
 
 
@@ -603,6 +623,8 @@ def hpo_pipeline(
     :param training_loop:
         The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
         to pass to :func:`pykeen.pipeline.pipeline`
+    :param training_loop_kwargs:
+        additional keyword-based parameters passed to the training loop upon instantiation.
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class
         to pass to :func:`pykeen.pipeline.pipeline`. Only allowed when training with sLCWA.
@@ -642,20 +664,54 @@ def hpo_pipeline(
         The keyword arguments passed to the results tracker on instantiation
 
     :param metric:
-        The metric to optimize over. Defaults to :data:`ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX`.
-    :param direction:
-        The direction of optimization. Because the default metric is :data:`ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX`,
-        the default direction is ``maximize``.
+        The metric to optimize over. Defaults to mean reciprocal rank.
 
     :param n_jobs: The number of parallel jobs. If this argument is set to :obj:`-1`, the number is
                 set to CPU counts. If none, defaults to 1.
 
-    .. note::
+    :param save_model_directory:
+        If given, the final model of each trial is saved under this directory.
 
-        The remaining parameters are passed to :func:`optuna.study.create_study`
-        or :meth:`optuna.study.Study.optimize`.
+    :param storage:
+        the study's storage, cf. :func:`optuna.study.create_study`
+
+    :param sampler:
+        the sampler, or a hint thereof, cf. :func:`optuna.study.create_study`
+    :param sampler_kwargs:
+        additional keyword-based parameters for the sampler
+
+    :param pruner:
+        the pruner, or a hint thereof, cf. :func:`optuna.study.create_study`
+    :param pruner_kwargs:
+        additional keyword-based parameters for the pruner
+
+    :param device:
+        the device to use.
+
+    :param study_name:
+        the study's name, cf. :func:`optuna.study.create_study`
+    :param direction:
+        The direction of optimization. Because the default metric is mean reciprocal rank,
+        the default direction is ``maximize``.
+        cf. :func:`optuna.study.create_study`
+    :param load_if_exists:
+        whether to load the study if it already exists, cf. :func:`optuna.study.create_study`
+
+    :param n_trials:
+        the number of trials, cf. :meth:`optuna.study.Study.optimize`.
+    :param timeout:
+        the timeout, cf. :meth:`optuna.study.Study.optimize`.
+    :param n_jobs:
+        the number of jobs, cf. :meth:`optuna.study.Study.optimize`. Defaults to 1.
+
+    :return:
+        the optimization result
+
+    :raises ValueError:
+        if early stopping is enabled, but the number of epochs is to be optimized, too.
     """
     if direction is None:
+        # TODO: use metric.increasing to determine default direction
         direction = "maximize"
 
     study = create_study(
@@ -732,8 +788,7 @@ def hpo_pipeline(
     evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
-    if metric is None:
-        metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+    metric = MetricKey.normalize(metric)
     study.set_user_attr("metric", metric)
     logger.info(f"Attempting to {direction} {metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)
@@ -804,6 +859,7 @@ def hpo_pipeline(
         n_trials=n_trials,
         timeout=timeout,
         n_jobs=n_jobs or 1,
+        catch=(MemoryError, RuntimeError),
     )
 
     return HpoPipelineResult(
@@ -837,6 +893,21 @@ def suggest_kwargs(
     kwargs_ranges: Mapping[str, Any],
     kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Mapping[str, Any]:
+    """
+    Suggest parameters from given dictionaries.
+
+    :param trial:
+        the optuna trial
+    :param prefix:
+        the prefix to be prepended to the name
+    :param kwargs:
+        a dictionary of fixed parameters
+    :param kwargs_ranges:
+        a dictionary of parameters to be sampled with their ranges.
+
+    :return:
+        a dictionary with fixed and sampled parameters
+    """
     _kwargs: Dict[str, Any] = {}
     if kwargs:
         _kwargs.update(kwargs)
@@ -898,7 +969,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     """Suggest an integer in the given range [2^low, 2^high]."""
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
-    choices = [base ** i for i in range(low, high + 1)]
+    choices = [base**i for i in range(low, high + 1)]
     return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
 
@@ -915,7 +986,7 @@ def _set_study_dataset(
             raise ValueError("Cannot specify dataset and training, testing and validation")
         elif isinstance(dataset, (str, pathlib.Path)):
             if isinstance(dataset, str) and has_dataset(dataset):
-                study.set_user_attr("dataset", get_dataset(dataset=dataset).get_normalized_name())
+                study.set_user_attr("dataset", dataset_resolver.normalize(dataset))
             else:
                 # otherwise, dataset refers to a file that should be automatically split
                 study.set_user_attr("dataset", str(dataset))

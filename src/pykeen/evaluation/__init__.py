@@ -2,14 +2,17 @@
 
 """Evaluation."""
 
-import dataclasses
-from typing import Set, Type
+from class_resolver import ClassResolver
 
-from class_resolver import Resolver
-
+from .classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
+from .evaluation_loop import LCWAEvaluationLoop
 from .evaluator import Evaluator, MetricResults, evaluate
-from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
-from .sklearn import SklearnEvaluator, SklearnMetricResults
+from .rank_based_evaluator import (
+    MacroRankBasedEvaluator,
+    RankBasedEvaluator,
+    RankBasedMetricResults,
+    SampledRankBasedEvaluator,
+)
 
 __all__ = [
     "evaluate",
@@ -17,41 +20,18 @@ __all__ = [
     "MetricResults",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
-    "SklearnEvaluator",
-    "SklearnMetricResults",
+    "MacroRankBasedEvaluator",
+    "LCWAEvaluationLoop",
+    "SampledRankBasedEvaluator",
+    "ClassificationEvaluator",
+    "ClassificationMetricResults",
     "evaluator_resolver",
     "metric_resolver",
-    "get_metric_list",
 ]
 
-_EVALUATOR_SUFFIX = "Evaluator"
-_EVALUATORS: Set[Type[Evaluator]] = {
-    RankBasedEvaluator,
-    SklearnEvaluator,
-}
-evaluator_resolver = Resolver(
-    _EVALUATORS,
-    base=Evaluator,  # type: ignore
-    suffix=_EVALUATOR_SUFFIX,
+evaluator_resolver: ClassResolver[Evaluator] = ClassResolver.from_subclasses(
+    base=Evaluator,
     default=RankBasedEvaluator,
 )
 
-_METRICS_SUFFIX = "MetricResults"
-_METRICS: Set[Type[MetricResults]] = {
-    RankBasedMetricResults,
-    SklearnMetricResults,
-}
-metric_resolver = Resolver(
-    _METRICS,
-    suffix=_METRICS_SUFFIX,
-    base=MetricResults,
-)
-
-
-def get_metric_list():
-    """Get info about all metrics across all evaluators."""
-    return [
-        (field, name, value)
-        for name, value in metric_resolver.lookup_dict.items()
-        for field in dataclasses.fields(value)
-    ]
+metric_resolver: ClassResolver[MetricResults] = ClassResolver.from_subclasses(MetricResults)

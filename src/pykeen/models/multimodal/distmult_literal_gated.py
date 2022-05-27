@@ -9,7 +9,6 @@ import torch.nn as nn
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.combinations import GatedCombination
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
 
@@ -49,6 +48,18 @@ class DistMultLiteralGated(LiteralModel):
         input_dropout: float = 0.0,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            the (training) triples factory
+        :param embedding_dim:
+            the embedding dimension
+        :param input_dropout:
+            the input dropout, cf. :meth:`DistMultCombination.__init__`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`LiteralModel.__init__`
+        """
         super().__init__(
             triples_factory=triples_factory,
             interaction=LiteralInteraction(
@@ -59,15 +70,15 @@ class DistMultLiteralGated(LiteralModel):
                     input_dropout=input_dropout,
                 ),
             ),
-            entity_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representations_kwargs=[
+                dict(
+                    shape=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                 ),
             ],
-            relation_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            relation_representations_kwargs=[
+                dict(
+                    shape=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                 ),
             ],

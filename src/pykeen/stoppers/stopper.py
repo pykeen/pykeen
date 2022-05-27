@@ -5,9 +5,11 @@
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Union
+from typing import Any, List, Mapping, Optional, Union
 
 import torch
+
+from ..typing import InductiveMode
 
 __all__ = [
     "Stopper",
@@ -21,6 +23,14 @@ class Stopper(ABC):
     """A harness for stopping training."""
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize the stopper.
+
+        :param args:
+            ignored positional parameters
+        :param args:
+            ignored keyword-based parameters
+        """
         # To make MyPy happy
         self.best_epoch = None
 
@@ -29,7 +39,7 @@ class Stopper(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def should_stop(self, epoch: int) -> bool:
+    def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
         """Validate on validation set and check for termination condition."""
         raise NotImplementedError
 
@@ -40,8 +50,10 @@ class Stopper(ABC):
 
     def _write_from_summary_dict(
         self,
+        *,
         frequency: int,
         patience: int,
+        remaining_patience: int,
         relative_delta: float,
         metric: str,
         larger_is_better: bool,
@@ -75,7 +87,7 @@ class NopStopper(Stopper):
         """Return false; should never evaluate."""
         return False
 
-    def should_stop(self, epoch: int) -> bool:
+    def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
         """Return false; should never stop."""
         return False
 

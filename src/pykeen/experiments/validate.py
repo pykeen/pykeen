@@ -12,6 +12,7 @@ from torch import nn
 
 from .cli import HERE
 from ..datasets import dataset_resolver
+from ..evaluation.ranking_metric_lookup import normalize_flattened_metric_results
 from ..losses import loss_resolver
 from ..models import Model, model_resolver
 from ..optimizers import optimizer_resolver
@@ -24,7 +25,6 @@ _SKIP_NAMES = {
     "loss",
     "entity_embeddings",
     "init",
-    "preferred_device",
     "random_seed",
     "regularizer",
     "relation_embeddings",
@@ -230,5 +230,10 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
             suffix=negative_sampler_resolver.suffix,
             check_kwargs=True,
         )
+
+    try:
+        normalize_flattened_metric_results(configuration.get("results", {}))
+    except ValueError as error:
+        errors.append(f"error in parsing results: {error}")
 
     return errors

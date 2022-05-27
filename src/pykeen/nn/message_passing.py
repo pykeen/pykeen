@@ -4,23 +4,29 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Tuple, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
-from class_resolver import Resolver
-from class_resolver.api import Hint
+from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
+from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.functional import block_diag
 from torch.nn import functional
 
-from pykeen.utils import activation_resolver
+from .init import uniform_norm_p1_
+from .representation import LowRankRepresentation, Representation
+from .weighting import EdgeWeighting, edge_weight_resolver
+from ..triples import CoreTriplesFactory
 
 __all__ = [
+    "RGCNRepresentation",
     "Decomposition",
     "BasesDecomposition",
     "BlockDecomposition",
     "decomposition_resolver",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def _reduce_relation_specific(
@@ -174,6 +180,7 @@ class BasesDecomposition(Decomposition):
         :param memory_intense:
             Enable memory-intense forward pass which may be faster, in particular if the number of different relations
             is small.
+        :raises ValueError: If the ``num_bases`` is greater than ``num_relations``
         """
         super().__init__(
             input_dim=input_dim,
@@ -183,36 +190,23 @@ class BasesDecomposition(Decomposition):
 
         # Heuristic for default value
         if num_bases is None:
-            logging.info("No num_bases was provided. Falling back to 2.")
+            logger.info("No num_bases was provided. Falling back to 2.")
             num_bases = 2
 
         if num_bases > num_relations:
             raise ValueError("The number of bases should not exceed the number of relations.")
 
-        # weights
-        self.bases = nn.Parameter(
-            torch.empty(
-                num_bases,
-                self.input_dim,
-                self.output_dim,
-            ),
-            requires_grad=True,
-        )
-        self.relation_base_weights = nn.Parameter(
-            torch.empty(
-                num_relations,
-                num_bases,
-            ),
-            requires_grad=True,
+        self.relation_representations = LowRankRepresentation(
+            max_id=num_relations,
+            shape=(self.input_dim, self.output_dim),
+            weight_initializer=uniform_norm_p1_,
+            initializer=nn.init.xavier_normal_,
         )
         self.memory_intense = memory_intense
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
-        nn.init.xavier_normal_(self.bases)
-        # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
-        # initialized properly)
-        nn.init.uniform_(self.relation_base_weights)
-        functional.normalize(self.relation_base_weights.data, p=1, dim=1, out=self.relation_base_weights.data)
+        self.relation_representations.reset_parameters()
 
     def _get_weight(self, relation_id: int) -> torch.FloatTensor:
         """Construct weight matrix for a specific relation ID.
@@ -223,7 +217,7 @@ class BasesDecomposition(Decomposition):
         :return:
             A 2-D matrix.
         """
-        return torch.einsum("bij,b->ij", self.bases, self.relation_base_weights[relation_id])
+        return self.relation_representations(indices=torch.as_tensor(relation_id)).squeeze(dim=0)
 
     def _forward_memory_intense(
         self,
@@ -236,10 +230,9 @@ class BasesDecomposition(Decomposition):
     ) -> torch.FloatTensor:
         # other relations
         m = torch.einsum(
-            "mi,mb,bij->mj",
+            "mi,mij->mj",
             x.index_select(dim=0, index=source),
-            self.relation_base_weights.index_select(dim=0, index=edge_type),
-            self.bases,
+            self.relation_representations(indices=edge_type),
         )
         if edge_weights is not None:
             m = m * edge_weights.unsqueeze(dim=-1)
@@ -293,6 +286,7 @@ class BasesDecomposition(Decomposition):
 
         return out
 
+    # docstr-coverage: inherited
     def forward(
         self,
         x: torch.FloatTensor,
@@ -472,6 +466,7 @@ class BlockDecomposition(Decomposition):
             The number of blocks to use. Has to be a divisor of input_dim.
         :param output_dim: >0
             The output dimension. If None is given, defaults to input_dim.
+        :raises NotImplementedError: If ``input_dim`` is not divisible by ``num_blocks``
         """
         super().__init__(
             input_dim=input_dim,
@@ -480,7 +475,7 @@ class BlockDecomposition(Decomposition):
         )
 
         if num_blocks is None:
-            logging.info("Using a heuristic to determine the number of blocks.")
+            logger.info("Using a heuristic to determine the number of blocks.")
             num_blocks = min(i for i in range(2, input_dim + 1) if input_dim % i == 0)
 
         block_size, remainder = divmod(input_dim, num_blocks)
@@ -511,6 +506,7 @@ class BlockDecomposition(Decomposition):
         std = torch.sqrt(torch.as_tensor(2.0)) / (2 * block_size)
         nn.init.normal_(self.blocks, std=std)
 
+    # docstr-coverage: inherited
     def forward(
         self,
         x: torch.FloatTensor,
@@ -727,6 +723,7 @@ class RGCNLayer(nn.Module):
             activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
         self.activation = activation
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         if self.bias is not None:
             nn.init.zeros_(self.bias)
@@ -785,4 +782,211 @@ class RGCNLayer(nn.Module):
         return y
 
 
-decomposition_resolver = Resolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
+decomposition_resolver: ClassResolver[Decomposition] = ClassResolver.from_subclasses(
+    base=Decomposition, default=BasesDecomposition
+)
+
+
+class RGCNRepresentation(Representation):
+    r"""Entity representations enriched by R-GCN.
+
+    The GCN employed by the entity encoder is adapted to include typed edges.
+    The forward pass of the GCN is defined by:
+
+     .. math::
+
+        \textbf{e}_{i}^{l+1} = \sigma \left( \sum_{r \in \mathcal{R}}\sum_{j\in \mathcal{N}_{i}^{r}}
+        \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right)
+
+    where $\mathcal{N}_{i}^{r}$ is the set of neighbors of node $i$ that are connected to
+    $i$ by relation $r$, $c_{i,r}$ is a fixed normalization constant (but it can also be introduced as an additional
+    parameter), and $\textbf{W}_{r}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ and
+    $\textbf{W}_{0}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ are weight matrices of the `l`-th layer of the
+    R-GCN.
+
+    The encoder aggregates for each node $e_i$ the latent representations of its neighbors and its
+    own latent representation $e_{i}^{l}$ into a new latent representation $e_{i}^{l+1}$.
+    In contrast to standard GCN, R-GCN defines relation specific transformations
+    $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
+
+    Since having one matrix for each relation introduces a large number of additional parameters, the authors instead
+    propose to use a decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
+    """
+
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+        max_id: Optional[int] = None,
+        shape: Optional[Sequence[int]] = None,
+        entity_representations: HintOrType[Representation] = None,
+        entity_representations_kwargs: OptionalKwargs = None,
+        num_layers: int = 2,
+        use_bias: bool = True,
+        activation: Hint[nn.Module] = None,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        edge_dropout: float = 0.4,
+        self_loop_dropout: float = 0.2,
+        edge_weighting: Hint[EdgeWeighting] = None,
+        decomposition: Hint[Decomposition] = None,
+        decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
+    ):
+        """Instantiate the R-GCN encoder.
+
+        :param triples_factory:
+            The triples factory holding the training triples used for message passing.
+        :param max_id:
+            The maximum number of IDs. could either be None (the default), or match the triples factory's number of
+            entities.
+        :param shape:
+            the shape information. If None, will propagate the shape information of the base entity representations.
+        :param entity_representations:
+            the base entity representations (or a hint for them)
+        :param entity_representations_kwargs:
+            additional keyword-based parameters for the base entity representations
+        :param num_layers:
+            The number of layers.
+        :param use_bias:
+            Whether to use a bias.
+        :param activation:
+            The activation.
+        :param activation_kwargs:
+            Additional keyword based arguments passed if the activation is not pre-instantiated. Ignored otherwise.
+        :param edge_dropout:
+            The edge dropout to use. Does not apply to self-loops.
+        :param self_loop_dropout:
+            The self-loop dropout to use.
+        :param edge_weighting:
+            The edge weighting mechanism.
+        :param decomposition:
+            The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
+        :param decomposition_kwargs:
+            Additional keyword based arguments passed to the decomposition upon instantiation.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+        :raises ValueError: If the triples factory creates inverse triples.
+        """
+        if max_id:
+            assert max_id == triples_factory.num_entities
+
+        # has to be imported now to avoid cyclic imports
+        from . import representation_resolver
+
+        base_embeddings = representation_resolver.make(
+            entity_representations,
+            max_id=triples_factory.num_entities,
+            pos_kwargs=entity_representations_kwargs,
+        )
+        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
+        self.entity_embeddings = base_embeddings
+
+        if triples_factory.create_inverse_triples:
+            raise ValueError(
+                "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
+            )
+
+        # Resolve edge weighting
+        self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
+
+        # dropout
+        self.edge_dropout = edge_dropout
+        self_loop_dropout = self_loop_dropout or edge_dropout
+
+        # Save graph using buffers, such that the tensors are moved together with the model
+        h, r, t = triples_factory.mapped_triples.t()
+        self.register_buffer("sources", h)
+        self.register_buffer("targets", t)
+        self.register_buffer("edge_types", r)
+
+        dim = base_embeddings.embedding_dim
+        self.layers = nn.ModuleList(
+            RGCNLayer(
+                input_dim=dim,
+                num_relations=triples_factory.num_relations,
+                output_dim=dim,
+                use_bias=use_bias,
+                # no activation on last layer
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/model_builder.py#L275  # noqa: E501
+                activation=activation if i < num_layers - 1 else None,
+                activation_kwargs=activation_kwargs,
+                self_loop_dropout=self_loop_dropout,
+                decomposition=decomposition,
+                decomposition_kwargs=decomposition_kwargs,
+            )
+            for i in range(num_layers)
+        )
+
+        # buffering of enriched representations
+        self.enriched_embeddings = None
+
+    # docstr-coverage: inherited
+    def post_parameter_update(self) -> None:  # noqa: D102
+        super().post_parameter_update()
+
+        # invalidate enriched embeddings
+        self.enriched_embeddings = None
+
+    # docstr-coverage: inherited
+    def reset_parameters(self):  # noqa: D102
+        self.entity_embeddings.reset_parameters()
+
+        for m in self.layers:
+            if hasattr(m, "reset_parameters"):
+                m.reset_parameters()
+            elif any(p.requires_grad for p in m.parameters()):
+                logger.warning("Layers %s has parameters, but no reset_parameters.", m)
+
+    def _real_forward_all(self) -> torch.FloatTensor:
+        if self.enriched_embeddings is not None:
+            return self.enriched_embeddings
+
+        # Bind fields
+        # shape: (num_entities, embedding_dim)
+        x = self.entity_embeddings(indices=None)
+        sources = self.sources
+        targets = self.targets
+        edge_types = self.edge_types
+
+        # Edge dropout: drop the same edges on all layers (only in training mode)
+        if self.training and self.edge_dropout is not None:
+            # Get random dropout mask
+            edge_keep_mask = torch.rand(self.sources.shape[0], device=x.device) > self.edge_dropout
+
+            # Apply to edges
+            sources = sources[edge_keep_mask]
+            targets = targets[edge_keep_mask]
+            edge_types = edge_types[edge_keep_mask]
+
+        # fixed edges -> pre-compute weights
+        if self.edge_weighting is not None and sources.numel() > 0:
+            edge_weights = torch.empty_like(sources, dtype=torch.float32)
+            for r in range(edge_types.max().item() + 1):
+                mask = edge_types == r
+                if mask.any():
+                    edge_weights[mask] = self.edge_weighting(sources[mask], targets[mask])
+        else:
+            edge_weights = None
+
+        for layer in self.layers:
+            x = layer(
+                x=x,
+                source=sources,
+                target=targets,
+                edge_type=edge_types,
+                edge_weights=edge_weights,
+            )
+
+        # Cache enriched representations
+        self.enriched_embeddings = x
+
+        return x
+
+    def _plain_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
+        x = self._real_forward_all()
+        if indices is not None:
+            x = x[indices]
+        return x

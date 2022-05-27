@@ -4,7 +4,6 @@
 
 import ftplib
 import functools
-import inspect
 import itertools as itt
 import json
 import logging
@@ -13,19 +12,25 @@ import operator
 import os
 import pathlib
 import random
+import re
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
 from typing import (
     Any,
     Callable,
+    Collection,
     Dict,
     Generic,
     Iterable,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
+    Set,
+    TextIO,
     Tuple,
     Type,
     TypeVar,
@@ -38,9 +43,9 @@ import torch
 import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
-from class_resolver import Resolver, normalize_string
+from class_resolver import normalize_string
+from docdata import get_docdata
 from torch import nn
-from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
@@ -48,9 +53,12 @@ from .version import get_git_hash
 
 __all__ = [
     "at_least_eps",
+    "broadcast_upgrade_to_sequences",
     "compose",
     "clamp_norm",
     "compact_mapping",
+    "create_relation_to_entity_set_mapping",
+    "ensure_complex",
     "ensure_torch_random_state",
     "format_relative_comparison",
     "invert_mapping",
@@ -68,7 +76,6 @@ __all__ = [
     "fix_dataclass_init_docs",
     "get_benchmark",
     "extended_einsum",
-    "strip_dim",
     "upgrade_to_sequence",
     "ensure_tuple",
     "unpack_singletons",
@@ -82,8 +89,8 @@ __all__ = [
     "get_json_bytes_io",
     "get_df_io",
     "ensure_ftp_directory",
-    "broadcast_cat",
     "get_batchnorm_modules",
+    "get_dropout_modules",
     "calculate_broadcasted_elementwise_result_shape",
     "estimate_cost_of_sequence",
     "get_optimal_sequence",
@@ -96,13 +103,20 @@ __all__ = [
     "convert_to_canonical_shape",
     "get_expected_norm",
     "Bias",
-    "activation_resolver",
     "complex_normalize",
     "lp_norm",
     "powersum_norm",
     "product_normalize",
     "compute_box",
     "point_to_box_distance",
+    "get_devices",
+    "get_preferred_device",
+    "triple_tensor_to_set",
+    "is_triple_tensor_subset",
+    "logcumsumexp",
+    "get_connected_components",
+    "normalize_path",
+    "get_edge_index",
 ]
 
 logger = logging.getLogger(__name__)
@@ -133,6 +147,43 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
         device = torch.device("cpu")
         logger.warning("No cuda devices were available. The model runs on CPU")
     return device
+
+
+class DeviceResolutionError(ValueError):
+    """An error in the resolution of a model's device."""
+
+
+class AmbiguousDeviceError(DeviceResolutionError):
+    """An error raised if there is ambiguity in device resolution."""
+
+    def __init__(self, module: nn.Module) -> None:
+        """Initialize the error."""
+        _info = defaultdict(list)
+        for name, tensor in itt.chain(module.named_parameters(), module.named_buffers()):
+            _info[tensor.data.device].append(name)
+        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
+        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
+
+
+def get_devices(module: nn.Module) -> Collection[torch.device]:
+    """Return the device(s) from each components of the model."""
+    return {tensor.data.device for tensor in itt.chain(module.parameters(), module.buffers())}
+
+
+def get_preferred_device(module: nn.Module, allow_ambiguity: bool = True) -> torch.device:
+    """Return the preferred device."""
+    devices = get_devices(module=module)
+    if len(devices) == 0:
+        raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
+    if len(devices) == 1:
+        return next(iter(devices))
+    if not allow_ambiguity:
+        raise AmbiguousDeviceError(module=module)
+    # try to resolve ambiguous device; there has to be at least one cuda device
+    cuda_devices = {d for d in devices if d.type == "cuda"}
+    if len(cuda_devices) == 1:
+        return next(iter(cuda_devices))
+    raise AmbiguousDeviceError(module=module)
 
 
 X = TypeVar("X")
@@ -208,12 +259,19 @@ def clamp_norm(
 class compose(Generic[X]):  # noqa:N801
     """A class representing the composition of several functions."""
 
-    def __init__(self, *operations: Callable[[X], X]):
+    def __init__(self, *operations: Callable[[X], X], name: str):
         """Initialize the composition with a sequence of operations.
 
         :param operations: unary operations that will be applied in succession
+        :param name: The name of the composed function.
         """
         self.operations = operations
+        self.name = name
+
+    @property
+    def __name__(self) -> str:
+        """Get the name of this composition."""
+        return self.name
 
     def __call__(self, x: X) -> X:
         """Apply the operations in order to the given tensor."""
@@ -332,8 +390,8 @@ def split_complex(
     x: torch.FloatTensor,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """Split a complex tensor into real and imaginary part."""
-    dim = x.shape[-1] // 2
-    return x[..., :dim], x[..., dim:]
+    x = torch.view_as_real(x)
+    return x[..., 0], x[..., 1]
 
 
 def view_complex(x: torch.FloatTensor) -> torch.Tensor:
@@ -352,7 +410,7 @@ def combine_complex(
     x_im: torch.FloatTensor,
 ) -> torch.FloatTensor:
     """Combine a complex tensor from real and imaginary part."""
-    return torch.cat([x_re, x_im], dim=-1)
+    return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
 def fix_dataclass_init_docs(cls: Type) -> Type:
@@ -454,66 +512,14 @@ def format_relative_comparison(
     return f"{part}/{total} ({part / total:2.2%})"
 
 
-def broadcast_cat(
-    tensors: Sequence[torch.FloatTensor],
-    dim: int,
-) -> torch.FloatTensor:
-    """Concatenate tensors with broadcasting support.
-
-    :param tensors:
-        The tensors. Each of the tensors is require to have the same number of dimensions.
-        For each dimension not equal to dim, the extent has to match the other tensors', or be one.
-        If it is one, the tensor is repeated to match the extent of the othe tensors.
-    :param dim:
-        The concat dimension.
-
-    :return: A concatenated, broadcasted tensor.
-
-    :raises ValueError: if the x and y dimensions are not the same
-    :raises ValueError: if broadcasting is not possible
-    """
-    # input validation
-    if len(tensors) == 0:
-        raise ValueError("Must pass at least one tensor.")
-    if len({x.ndimension() for x in tensors}) != 1:
-        raise ValueError(
-            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
-        )
-
-    # base case
-    if len(tensors) == 1:
-        return tensors[0]
-
-    # normalize dim
-    if dim < 0:
-        dim = tensors[0].ndimension() + dim
-
-    # calculate repeats for each tensor
-    repeats = [[1 for _ in t.shape] for t in tensors]
-    for i, dims in enumerate(zip(*(t.shape for t in tensors))):
-        # dimensions along concatenation axis do not need to match
-        if i == dim:
-            continue
-
-        # get desired extent along dimension
-        d_max = max(dims)
-        if not {1, d_max}.issuperset(dims):
-            raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
-
-        for j, td in enumerate(dims):
-            if td != d_max:
-                repeats[j][i] = d_max
-
-    # repeat tensors along axes if necessary
-    tensors = [t.repeat(*r) for t, r in zip(tensors, repeats)]
-
-    # concatenate
-    return torch.cat(tensors, dim=dim)
-
-
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
     return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)]
+
+
+def get_dropout_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
+    """Return all submodules which are dropout layers."""
+    return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.dropout._DropoutNd)]
 
 
 def calculate_broadcasted_elementwise_result_shape(
@@ -601,7 +607,7 @@ def _reorder(
         return tensors
     # determine optimal processing order
     shapes = tuple(tuple(t.shape) for t in tensors)
-    if len(set(s[0] for s in shapes)) < 2:
+    if len(set(s[0] for s in shapes if s)) < 2:
         # heuristic
         return tensors
     order = get_optimal_sequence(*shapes)[1]
@@ -659,11 +665,6 @@ def negative_norm(
     if power_norm:
         assert not isinstance(p, str)
         return -(x.abs() ** p).sum(dim=-1)
-
-    if torch.is_complex(x):
-        assert not isinstance(p, str)
-        # workaround for complex numbers: manually compute norm
-        return -(x.abs() ** p).sum(dim=-1) ** (1 / p)
 
     return -x.norm(p=p, dim=-1)
 
@@ -744,9 +745,11 @@ def project_entity(
     return e_bot
 
 
+# TODO delete when deleting _normalize_dim (below)
 CANONICAL_DIMENSIONS = dict(h=1, r=2, t=3)
 
 
+# TODO delete when deleting convert_to_canonical_shape (below)
 def _normalize_dim(dim: Union[int, str]) -> int:
     """Normalize the dimension selection."""
     if isinstance(dim, int):
@@ -754,6 +757,7 @@ def _normalize_dim(dim: Union[int, str]) -> int:
     return CANONICAL_DIMENSIONS[dim.lower()[0]]
 
 
+# TODO delete? See note in test_sim.py on its only usage
 def convert_to_canonical_shape(
     x: torch.FloatTensor,
     dim: Union[int, str],
@@ -786,18 +790,23 @@ def convert_to_canonical_shape(
     return x.view(*shape, *suffix_shape)
 
 
-def strip_dim(*tensors: torch.FloatTensor, n: int = 4) -> Sequence[torch.FloatTensor]:
-    """Strip the first dimensions.
-
-    :param tensors: The tensors whose first ``n`` dimensions should be independently stripped
-    :param n: The number of initial dimensions to strip
-    :return: A tuple of the reduced tensors
-    """
-    return tuple(tensor.view(tensor.shape[n:]) for tensor in tensors)
-
-
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     """Ensure that the input is a sequence.
+
+    .. note ::
+        While strings are technically also a sequence, i.e.,
+
+        .. code-block:: python
+
+            isinstance("test", typing.Sequence) is True
+
+        this may lead to unexpected behaviour when calling `upgrade_to_sequence("test")`.
+        We thus handle strings as non-sequences. To recover the other behavior, the following may be used:
+
+        .. code-block:: python
+
+            upgrade_to_sequence(tuple("test"))
+
 
     :param x: A literal or sequence of literals
     :return: If a literal was given, a one element tuple with it in it. Otherwise, return the given value.
@@ -806,8 +815,44 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     (1,)
     >>> upgrade_to_sequence((1, 2, 3))
     (1, 2, 3)
+    >>> upgrade_to_sequence("test")
+    ('test',)
+    >>> upgrade_to_sequence(tuple("test"))
+    ('t', 'e', 's', 't')
     """
-    return x if isinstance(x, Sequence) else (x,)
+    return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
+
+
+def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    """Apply upgrade_to_sequence to each input, and afterwards repeat singletons to match the maximum length.
+
+    :param xs: length: m
+        the inputs.
+
+    :return:
+        a sequence of length m, where each element is a sequence and all elements have the same length.
+
+    :raises ValueError:
+        if there is a non-singleton sequence input with length different from the maximum sequence length.
+
+    >>> broadcast_upgrade_to_sequences(1)
+    ((1,),)
+    >>> broadcast_upgrade_to_sequences(1, 2)
+    ((1,), (2,))
+    >>> broadcast_upgrade_to_sequences(1, (2, 3))
+    ((1, 1), (2, 3))
+    """
+    # upgrade to sequence
+    xs_ = [upgrade_to_sequence(x) for x in xs]
+    # broadcast
+    max_len = max(map(len, xs_))
+    for i in range(len(xs_)):
+        x = xs_[i]
+        if len(x) < max_len:
+            if len(x) != 1:
+                raise ValueError(f"Length mismatch: maximum length: {max_len}, but encountered length {len(x)}, too.")
+            xs_[i] = tuple(list(x) * max_len)
+    return tuple(xs_)
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
@@ -834,22 +879,17 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
     return tuple(x[0] if len(x) == 1 else x for x in xs)
 
 
-def _can_slice(fn) -> bool:
-    """Check if a model's score_X function can slice."""
-    return "slice_size" in inspect.getfullargspec(fn).args
-
-
 def extend_batch(
     batch: MappedTriples,
-    all_ids: List[int],
+    max_id: int,
     dim: int,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
     :param batch: shape: (batch_size, 2)
         The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
+    :param max_id:
+        The maximum IDs to enumerate.
     :param dim: in {0,1,2}
         The column along which to insert the enumerated IDs.
 
@@ -857,10 +897,10 @@ def extend_batch(
         A large batch, where every pair from the original batch is combined with every ID.
     """
     # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
+    extended_batch = batch.repeat_interleave(repeats=max_id, dim=0)
 
     # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
+    ids = torch.arange(max_id, device=batch.device)
 
     # Extend all IDs to the number of pairs such that each ID can be combined with every pair
     extended_ids = ids.repeat(batch.shape[0])
@@ -962,20 +1002,6 @@ def get_expected_norm(
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
-activation_resolver = Resolver(
-    classes=(
-        nn.LeakyReLU,
-        nn.PReLU,
-        nn.ReLU,
-        nn.Softplus,
-        nn.Sigmoid,
-        nn.Tanh,
-    ),
-    base=nn.Module,  # type: ignore
-    default=nn.ReLU,
-)
-
-
 class Bias(nn.Module):
     """A module wrapper for adding a bias."""
 
@@ -1023,29 +1049,23 @@ def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize:
 
 
 def complex_normalize(x: torch.Tensor) -> torch.Tensor:
-    r"""Normalize a vector of complex numbers such that each element is of unit-length.
+    r"""Normalize a vector of complex numbers such that each *element* is of unit-length.
 
-    :param x: A tensor formulating complex numbers
-    :returns: A normalized version accoring to the following definition.
-
-    The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
+    Let $x \in \mathbb{C}^d$ denote a complex vector. Then, the operation computes
 
     .. math::
+        x_i' = \frac{x_i}{|x_i|}
 
-        |a + ib| = \sqrt{a^2 + b^2}
+    where $|x_i| = \sqrt{Re(x_i)^2 + Im(x_i)^2}$ is the
+    `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_
 
-    $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
+    :param x:
+        A tensor formulating complex numbers
 
-    .. math::
-        \|x\|^2 = \sum_{i=1}^d |x_i|^2
-                 = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
-                 = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
-                 = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
-                 = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
+    :returns:
+        An elementwise noramlized vector.
     """
-    y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
-    y = functional.normalize(y, p=2, dim=-1)
-    return y.view(*x.shape)
+    return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
 
 
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
@@ -1228,6 +1248,425 @@ def boxe_kg_arity_position_score(
 
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+def getattr_or_docdata(cls, key: str) -> str:
+    """Get the attr or data inside docdata."""
+    if hasattr(cls, key):
+        return getattr(cls, key)
+    getter_key = f"get_{key}"
+    if hasattr(cls, getter_key):
+        return getattr(cls, getter_key)()
+    docdata = get_docdata(cls)
+    if key in docdata:
+        return docdata[key]
+    raise KeyError
+
+
+def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
+    """Convert a tensor of triples to a set of int-tuples."""
+    return set(map(tuple, tensor.tolist()))
+
+
+def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+    """Check whether one tensor of triples is a subset of another one."""
+    return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
+
+
+def create_relation_to_entity_set_mapping(
+    triples: Iterable[Tuple[int, int, int]],
+) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    """
+    Create mappings from relation IDs to the set of their head / tail entities.
+
+    :param triples:
+        The triples.
+
+    :return:
+        A pair of dictionaries, each mapping relation IDs to entity ID sets.
+    """
+    tails = defaultdict(set)
+    heads = defaultdict(set)
+    for h, r, t in triples:
+        heads[r].add(h)
+        tails[r].add(t)
+    return heads, tails
+
+
+camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def camel_to_snake(name: str) -> str:
+    """Convert camel-case to snake case."""
+    # cf. https://stackoverflow.com/a/1176023
+    return camel_to_snake_pattern.sub("_", name).lower()
+
+
+def make_ones_like(prefix: Sequence) -> Sequence[int]:
+    """Create a list of ones of same length as the input sequence."""
+    return [1 for _ in prefix]
+
+
+def logcumsumexp(a: np.ndarray) -> np.ndarray:
+    """Compute ``log(cumsum(exp(a)))``.
+
+    :param a: shape: s
+        the array
+
+    :return: shape s
+        the log-cumsum-exp of the array
+
+    .. seealso ::
+        :func:`scipy.special.logsumexp` and :func:`torch.logcumsumexp`
+    """
+    a_max = np.amax(a)
+    tmp = np.exp(a - a_max)
+    s = np.cumsum(tmp)
+    out = np.log(s)
+    out += a_max
+    return out
+
+
+def find(x: X, parent: MutableMapping[X, X]) -> X:
+    """Find step of union-find data structure with path compression."""
+    # check validity
+    if x not in parent:
+        raise ValueError(f"Unknown element: {x}.")
+    # path compression
+    while parent[x] != x:
+        x, parent[x] = parent[x], parent[parent[x]]
+    return x
+
+
+def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
+    """
+    Calculate the connected components for a graph given as edge list.
+
+    The implementation uses a `union-find <https://en.wikipedia.org/wiki/Disjoint-set_data_structure>`_ data structure
+    with path compression.
+
+    :param pairs:
+        the edge list, i.e., pairs of node ids.
+
+    :return:
+        a collection of connected components, i.e., a collection of disjoint collections of node ids.
+    """
+    parent: Dict[X, X] = dict()
+    for x, y in pairs:
+        parent.setdefault(x, x)
+        parent.setdefault(y, y)
+        # get representatives
+        x = find(x=x, parent=parent)
+        y = find(x=y, parent=parent)
+        # already merged
+        if x == y:
+            continue
+        # make x the smaller one
+        if y < x:  # type: ignore
+            x, y = y, x
+        # merge
+        parent[y] = x
+    # extract partitions
+    result = defaultdict(list)
+    for k, v in parent.items():
+        result[v].append(k)
+    return list(result.values())
+
+
+PathType = Union[str, pathlib.Path, TextIO]
+
+
+def normalize_path(
+    path: Optional[PathType],
+    *other: Union[str, pathlib.Path],
+    mkdir: bool = False,
+    is_file: bool = False,
+    default: Optional[PathType] = None,
+) -> pathlib.Path:
+    """
+    Normalize a path.
+
+    :param path:
+        the path in either of the valid forms.
+    :param other:
+        additional parts to join to the path
+    :param mkdir:
+        whether to ensure that the path refers to an existing directory by creating it if necessary
+    :param is_file:
+        whether the path is intended to be a file - only relevant for creating directories
+    :param default:
+        the default to use if path is None
+
+    :raises TypeError:
+        if `path` is of unsuitable type
+    :raises ValueError:
+        if `path` and `default` are both `None`
+
+    :return:
+        the absolute and resolved path
+    """
+    if path is None:
+        if default is None:
+            raise ValueError("If no default is provided, path cannot be None.")
+        path = default
+    if isinstance(path, TextIO):
+        path = path.name
+    if isinstance(path, str):
+        path = pathlib.Path(path)
+    if not isinstance(path, pathlib.Path):
+        raise TypeError(f"path is invalid type: {type(path)}")
+    if other:
+        path = path.joinpath(*other)
+    # resolve path to make sure it is an absolute path
+    path = path.expanduser().resolve()
+    # ensure directory exists
+    if mkdir:
+        directory = path
+        if is_file:
+            directory = path.parent
+        directory.mkdir(exist_ok=True, parents=True)
+    return path
+
+
+def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
+    """
+    Ensure that all tensors are of complex dtype.
+
+    Reshape and convert if necessary.
+
+    :param xs:
+        the tensors
+
+    :yields: complex tensors.
+    """
+    for x in xs:
+        if x.is_complex():
+            yield x
+            continue
+        if x.shape[-1] != 2:
+            x = x.view(*x.shape[:-1], -1, 2)
+        yield torch.view_as_complex(x)
+
+
+def _weisfeiler_lehman_iteration(
+    adj: torch.Tensor,
+    colors: torch.LongTensor,
+    dense_dtype: torch.dtype = torch.long,
+) -> torch.Tensor:
+    """
+    Perform a single Weisfeiler-Lehman iteration.
+
+    :param adj: shape: `(n, n)`
+        the adjacency matrix
+    :param colors: shape: `(n,)`
+        the node colors (as integers)
+    :param dense_dtype:
+        a datatype for storing integers of sufficient capacity to store `n`
+
+    :return: shape: `(n,)`
+        the new node colors
+    """
+    num_nodes = colors.shape[0]
+    # message passing: collect colors of neighbors
+    # dense colors: shape: (n, c)
+    # adj:          shape: (n, n)
+    color_sparse = torch.sparse_coo_tensor(
+        indices=torch.stack([torch.arange(num_nodes, device=colors.device), colors], dim=0),
+        # values need to be float, since torch.sparse.mm does not support integer dtypes
+        values=torch.ones_like(colors, dtype=torch.get_default_dtype()),
+        # size: will be correctly inferred
+    )
+    color_dense = torch.sparse.mm(adj, color_sparse).to(dtype=dense_dtype).to_dense()
+
+    # concat with old colors
+    colors = torch.cat([colors.unsqueeze(dim=-1), color_dense], dim=-1)
+
+    # hash
+    return colors.unique(dim=0, return_inverse=True)[1]
+
+
+def _weisfeiler_lehman_iteration_approx(
+    adj: torch.Tensor,
+    colors: torch.LongTensor,
+    dim: int = 32,
+    decimals: int = 6,
+) -> torch.Tensor:
+    """
+    Perform an approximate  single Weisfeiler-Lehman iteration.
+
+    It utilizes the trick from https://arxiv.org/abs/2001.09621 of replacing node indicator functions by
+    randomly drawn functions of fixed and low dimensionality.
+
+    :param adj: shape: `(n, n)`
+        the adjacency matrix
+    :param colors: shape: `(n,)`
+        the node colors (as integers)
+    :param dim:
+        the dimensionality of the random node indicator functions
+    :param decimals:
+        the number of decimals to round to
+
+    :return: shape: `(n,)`
+        the new node colors
+    """
+    num_colors = colors.max() + 1
+
+    # create random indicator functions of low dimensionality
+    rand = torch.rand(num_colors, dim, device=colors.device)
+    x = rand[colors]
+
+    # collect neighbors' colors
+    x = torch.sparse.mm(adj, x)
+
+    # round to avoid numerical effects
+    x = torch.round(x, decimals=decimals)
+
+    # hash first
+    new_colors = x.unique(return_inverse=True, dim=0)[1]
+
+    # concat with old colors
+    colors = torch.stack([colors, new_colors], dim=-1)
+
+    # re-hash
+    return colors.unique(return_inverse=True, dim=0)[1]
+
+
+def iter_weisfeiler_lehman(
+    edge_index: torch.LongTensor,
+    max_iter: int = 2,
+    num_nodes: Optional[int] = None,
+    approximate: bool = False,
+) -> Iterable[torch.Tensor]:
+    """
+    Iterate Weisfeiler-Lehman colors.
+
+    The Weisfeiler-Lehman algorithm starts from a uniformly node-colored graph, and iteratively counts the colors in
+    each nodes' neighborhood, and hashes these multi-sets into a new set of colors.
+
+    .. note::
+        more precisely, this implementation calculates the results of the 1-Weisfeiler-Lehman algorithm. There is a
+        hierarchy of k-WL tests, which color k-tuples of nodes instead of single nodes
+
+    .. note::
+        Graph Neural Networks are closely related to the 1-WL test, cf. e.g., https://arxiv.org/abs/1810.02244
+
+    .. note::
+        colorings based on the WL test have been used to define graph kernels, cf., e.g.,
+        https://www.jmlr.org/papers/volume12/shervashidze11a/shervashidze11a.pdf
+
+    .. note::
+        the implementation creates intermediate dense tensors of shape `(num_nodes, num_colors)`
+
+    .. seealso::
+        https://towardsdatascience.com/expressive-power-of-graph-neural-networks-and-the-weisefeiler-lehman-test-b883db3c7c49
+
+    :param edge_index: shape: `(2, m)`
+        the edge list
+    :param max_iter:
+        the maximum number of iterations
+    :param num_nodes:
+        the number of nodes. If None, will be inferred from the edge index.
+    :param approximate:
+        whether to use an approximate, but more memory-efficient implementation.
+
+    :raises ValueError:
+        if the number of nodes exceeds `torch.long` (this cannot happen in practice, as the edge index tensor
+        construction would already fail earlier)
+
+    :yields: the colors for each Weisfeiler-Lehman iteration
+    """
+    # only keep connectivity, but remove multiplicity
+    edge_index = edge_index.unique(dim=1)
+
+    num_nodes = num_nodes or edge_index.max().item() + 1
+    colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
+    # note: in theory, we could return this uniform coloring as the first coloring; however, for featurization,
+    #       this is rather useless
+
+    # initial: degree
+    # note: we calculate this separately, since we can use a more efficient implementation for the first step
+    unique, counts = edge_index.unique(return_counts=True)
+    colors[unique] = counts
+
+    # hash
+    colors = colors.unique(return_inverse=True)[1]
+    num_colors = colors.max() + 1
+    yield colors
+
+    # determine small integer type for dense count array
+    for idtype in (torch.int8, torch.int16, torch.int32, torch.int64):
+        if torch.iinfo(idtype).max >= num_nodes:
+            dense_dtype = idtype
+            logger.debug(f"Selected dense dtype: {dense_dtype}")
+            break
+    else:
+        raise ValueError(f"{num_nodes} too large")
+
+    adj = torch.sparse_coo_tensor(
+        indices=edge_index,
+        values=torch.ones(size=edge_index[0].shape),
+        device=edge_index.device,
+        size=(num_nodes, num_nodes),
+    )
+    for i in range(2, max_iter + 1):
+        if approximate:
+            colors = _weisfeiler_lehman_iteration_approx(adj=adj, colors=colors)
+        else:
+            colors = _weisfeiler_lehman_iteration(adj=adj, colors=colors, dense_dtype=dense_dtype)
+        yield colors
+
+        # convergence check
+        new_num_colors = colors.max() + 1
+
+        # each node has a unique color
+        if new_num_colors >= (num_nodes - 1):
+            logger.debug(f"Weisfeiler-Lehman terminated with unique colors for each node after {i} iterations")
+            break
+
+        # the number of colors did not improve in the last iteration
+        if num_colors >= new_num_colors:
+            logger.debug(f"Weisfeiler-Lehman could not further refine coloring in iteration {i}")
+            break
+
+        num_colors = new_num_colors
+    else:
+        logger.debug(f"Weisfeiler-Lehman did not converge after {max_iter} iterations.")
+
+
+def get_edge_index(
+    *,
+    # cannot use Optional[pykeen.triples.CoreTriplesFactory] due to cyclic imports
+    triples_factory: Optional[Any] = None,
+    mapped_triples: Optional[MappedTriples] = None,
+    edge_index: Optional[torch.LongTensor] = None,
+) -> torch.LongTensor:
+    """
+    Get the edge index from a number of different sources.
+
+    :param triples_factory:
+        the triples factory
+    :param mapped_triples: shape: `(m, 3)`
+        ID-based triples
+    :param edge_index: shape: `(2, m)`
+        the edge index
+
+    :raises ValueError:
+        if none of the source was different from `None`
+
+    :return: shape: `(2, m)`
+        the edge index
+    """
+    if triples_factory is not None:
+        if mapped_triples is not None:
+            logger.warning("Ignoring mapped_triples, since triples_factory is present.")
+        mapped_triples = triples_factory.mapped_triples
+    if mapped_triples is not None:
+        if edge_index is not None:
+            logger.warning("Ignoring edge_index, since mapped_triples is present.")
+        edge_index = mapped_triples[:, 0::2].t()
+    if edge_index is None:
+        raise ValueError("At least one of the parameters must be different to None.")
+    return edge_index
 
 
 if __name__ == "__main__":

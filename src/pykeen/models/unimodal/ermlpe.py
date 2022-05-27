@@ -2,7 +2,7 @@
 
 """An implementation of the extension to ERMLP."""
 
-from typing import Any, ClassVar, Mapping, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
@@ -11,7 +11,6 @@ from torch.nn.init import uniform_
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn.emb import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -63,21 +62,40 @@ class ERMLPE(EntityRelationEmbeddingModel):
     def __init__(
         self,
         *,
-        hidden_dim: int = 300,
+        embedding_dim: int = 200,
+        hidden_dim: Optional[int] = None,
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
-        embedding_dim: int = 200,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension
+        :param hidden_dim:
+            the hidden dimension of the MLP. Defaults to `embedding_dim`
+        :param input_dropout:
+            the input dropout
+        :param hidden_dropout:
+            the hidden layer's dropout
+        :param entity_initializer:
+            the entity representation initializer
+        :param relation_initializer:
+            the relation representation initializer
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`EntityRelationEmbeddingModel.__init__`
+        """
+        hidden_dim = hidden_dim or embedding_dim
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
@@ -100,6 +118,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
             nn.ReLU(),
         )
 
+    # docstr-coverage: inherited
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
         for module in [
@@ -110,7 +129,8 @@ class ERMLPE(EntityRelationEmbeddingModel):
         ]:
             module.reset_parameters()
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim)
         r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim)
@@ -133,7 +153,8 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
         t = self.entity_embeddings(indices=None).transpose(1, 0)
@@ -153,7 +174,8 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)
         t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim)

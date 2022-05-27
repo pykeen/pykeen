@@ -10,7 +10,6 @@ from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -57,12 +56,12 @@ class ERMLP(EntityRelationEmbeddingModel):
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
@@ -83,6 +82,7 @@ class ERMLP(EntityRelationEmbeddingModel):
             self.linear2,
         )
 
+    # docstr-coverage: inherited
     def _reset_parameters_(self):  # noqa: D102
         # The authors do not specify which initialization was used. Hence, we use the pytorch default.
         super()._reset_parameters_()
@@ -93,7 +93,8 @@ class ERMLP(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.linear2.bias)
         nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain("relu"))
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
@@ -108,7 +109,8 @@ class ERMLP(EntityRelationEmbeddingModel):
         # Compute scores
         return self.mlp(x_s)
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -134,7 +136,8 @@ class ERMLP(EntityRelationEmbeddingModel):
         scores = scores.view(-1, self.num_entities)
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    # docstr-coverage: inherited
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0])

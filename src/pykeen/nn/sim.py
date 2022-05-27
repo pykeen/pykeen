@@ -61,7 +61,7 @@ def expected_likelihood(
     safe_sigma = at_least_eps(var)
     sim = batched_dot(
         a=safe_sigma.reciprocal(),
-        b=(mean ** 2),
+        b=(mean**2),
     )
 
     #: b = \log \det \Sigma
@@ -185,7 +185,7 @@ def _vectorized_kl_divergence(
     terms.append(batched_dot(mu.pow(2), r_var_safe_reciprocal))
     # 3. Component
     if exact:
-        terms.append(-torch.as_tensor(data=[h.mean.shape[-1]], device=mu.device))
+        terms.append(-torch.as_tensor(data=[h.mean.shape[-1]], device=mu.device).squeeze())
     # 4. Component
     # ln (det(\Sigma_1) / det(\Sigma_0))
     # = ln det Sigma_1 - ln det Sigma_0
@@ -212,7 +212,16 @@ def _torch_kl_similarity(
 ) -> torch.FloatTensor:
     """Compute KL similarity using torch.distributions.
 
-    .. note ::
+    :param h: shape: (batch_size, num_heads, 1, 1, d)
+        The head entity Gaussian distribution.
+    :param r: shape: (batch_size, 1, num_relations, 1, d)
+        The relation Gaussian distribution.
+    :param t: shape: (batch_size, 1, 1, num_tails, d)
+        The tail entity Gaussian distribution.
+    :return: torch.Tensor, shape: (s_1, ..., s_k)
+        The KL-divergence.
+
+    .. warning ::
         Do not use this method in production code.
     """
     e_mean = h.mean - t.mean

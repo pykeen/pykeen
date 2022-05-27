@@ -90,7 +90,8 @@ reports on functions that are not fully documented.
 
 This project uses [`sphinx`](https://www.sphinx-doc.org) to automatically build
 documentation into a narrative structure. You can check that the documentation
-properly builds with `tox -e docs`.
+properly builds with `tox -e docs-test` and build the docs locally with
+`tox -e docs`.
 
 ### Testing
 

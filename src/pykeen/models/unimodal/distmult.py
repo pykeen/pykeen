@@ -4,13 +4,13 @@
 
 from typing import Any, ClassVar, Mapping, Type
 
-import torch
+from class_resolver import HintOrType, OptionalKwargs
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
+from ...nn.modules import DistMultInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, Hint, Initializer
 
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class DistMult(EntityRelationEmbeddingModel):
+class DistMult(ERModel):
     r"""An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
@@ -36,6 +36,11 @@ class DistMult(EntityRelationEmbeddingModel):
     time it is less expressive. For instance, it is not able to model anti-symmetric relations,
     since $f(h,r, t) = f(t,r,h)$. This can alternatively be formulated with relation vectors
     $\textbf{r}_r \in \mathbb{R}^d$ and the Hadamard operator and the $l_1$ norm.
+
+    .. note::
+
+        DistMult uses a hard constraint on the embedding norm, but applies a (soft) regularization term on the
+        relation vector norms
 
     .. math::
 
@@ -77,6 +82,8 @@ class DistMult(EntityRelationEmbeddingModel):
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = functional.normalize,
         relation_initializer: Hint[Initializer] = xavier_normal_norm_,
+        regularizer: HintOrType[Regularizer] = LpRegularizer,
+        regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize DistMult.
@@ -86,86 +93,30 @@ class DistMult(EntityRelationEmbeddingModel):
             https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
         :param entity_constrainer: Default: constrain entity embeddings to unit length
         :param relation_initializer: Default: relations are initialized to unit length (but not constrained)
+        :param regularizer:
+            the *relation* representation regularizer
+        :param regularizer_kwargs:
+            additional keyword-based parameters. defaults to :attr:`DistMult.regularizer_default_kwargs` for the
+            default regularizer
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
         """
+        if regularizer is LpRegularizer and regularizer_kwargs is None:
+            regularizer_kwargs = DistMult.regularizer_default_kwargs
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            interaction=DistMultInteraction,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
+                # note: DistMult only regularizes the relation embeddings;
+                #       entity embeddings are hard constrained instead
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             ),
             **kwargs,
         )
-
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        WARNING: Does not ensure forward constraints.
-
-        :param h: shape: (..., e)
-            Head embeddings.
-        :param r: shape: (..., e)
-            Relation embeddings.
-        :param t: shape: (..., e)
-            Tail embeddings.
-
-        :return: shape: (...)
-            The scores.
-        """
-        # Bilinear product
-        # *: Elementwise multiplication
-        return torch.sum(h * r * t, dim=-1)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
-
-        # Compute score
-        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-
-        # Rank against all entities
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
-
-        # Rank against all entities
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores

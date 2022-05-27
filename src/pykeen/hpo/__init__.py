@@ -305,8 +305,8 @@ constrainer and regularizer since there could be multiple representations for ei
 relation, or both. Check your desired model's documentation page for the kwargs that you can
 optimize over.
 
-Keys of :data:`pykeen.nn.emb.initializers` can be passed as initializers as strings and
-keys of :data:`pykeen.nn.emb.constrainers` can be passed as constrainers as strings.
+Keys of :data:`pykeen.nn.representation.initializers` can be passed as initializers as strings and
+keys of :data:`pykeen.nn.representation.constrainers` can be passed as constrainers as strings.
 
 The HPO pipeline does not support optimizing over the hyper-parameters for each
 initializer. If you are interested in this, consider rolling your own ablation
@@ -502,16 +502,32 @@ sampling, use :class:`optuna.samplers.RandomSampler` like in:
 ...     model='TransE',
 ... )
 
-Grid search can be performed using :class:`optuna.samplers.GridSampler` like in:
+Grid search can be performed using :class:`optuna.samplers.GridSampler`. Notice that this sampler
+expected an additional `search_space` argument in its `sampler_kwargs`, e.g.,
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> from optuna.samplers import GridSampler
 >>> hpo_pipeline_result = hpo_pipeline(
 ...     n_trials=30,
 ...     sampler=GridSampler,
+...     sampler_kwargs=dict(
+...         search_space={
+...             "model.embedding_dim": [32, 64, 128],
+...             "model.scoring_fct_norm": [1, 2],
+...             "loss.margin": [1.0],
+...             "optimizer.lr": [1.0e-03],
+...             "negative_sampler.num_negs_per_pos": [32],
+...             "training.num_epochs": [100],
+...             "training.batch_size": [128],
+...         },
+...     ),
 ...     dataset='Nations',
 ...     model='TransE',
 ... )
+
+Also notice that the search space of grid search grows fast with increasing number of studied hyper-parameters,
+and thus grid search is less efficient than other search strategies in finding good configurations,
+cf. https://jmlr.csail.mit.edu/papers/v13/bergstra12a.html.
 
 Full Examples
 -------------

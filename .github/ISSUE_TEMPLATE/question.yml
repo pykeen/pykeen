@@ -29,3 +29,5 @@ body:
           required: true
         - label: This is not a feature request (use a different issue template if it is)
           required: true
+        - label: I've read the text explaining why including environment information is important and understand if I omit this information that my issue will be dismissed
+          required: true

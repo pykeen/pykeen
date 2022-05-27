@@ -8,13 +8,15 @@ import pathlib
 import shutil
 import sys
 import time
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 from uuid import uuid4
 
 import click
+import tabulate
 from more_click import verbose_option
+from tqdm.auto import tqdm
 
-from pykeen.utils import CONFIGURATION_FILE_FORMATS
+from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_path
 
 __all__ = [
     "experiments",
@@ -50,6 +52,20 @@ discard_replicates_option = click.option(
     is_flag=True,
     help="Discard trained models after training.",
 )
+extra_config_option = click.option(
+    "--extra-config",
+    type=pathlib.Path,
+    default=None,
+    help="Path to a file with additional configuration, e.g., to add a result tracker.",
+)
+keep_seed_option = click.option(
+    "--keep-seed",
+    is_flag=True,
+    help=(
+        "If a random seed is given in the configuration, keep it rather than discarding. "
+        "Notice that this will render multiple replicates useless."
+    ),
+)
 
 
 @click.group()
@@ -66,6 +82,8 @@ def experiments():
 @discard_replicates_option
 @directory_option
 @verbose_option
+@extra_config_option
+@keep_seed_option
 def reproduce(
     model: str,
     reference: str,
@@ -74,6 +92,8 @@ def reproduce(
     directory: str,
     move_to_cpu: bool,
     discard_replicates: bool,
+    extra_config: Optional[pathlib.Path],
+    keep_seed: bool,
 ):
     """Reproduce a pre-defined experiment included in PyKEEN.
 
@@ -94,6 +114,8 @@ def reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=not discard_replicates,
         file_name=file_name,
+        extra_config=extra_config,
+        keep_seed=keep_seed,
     )
 
 
@@ -103,12 +125,17 @@ def reproduce(
 @move_to_cpu_option
 @discard_replicates_option
 @directory_option
+@extra_config_option
+@keep_seed_option
+@verbose_option
 def run(
     path: str,
     replicates: int,
     directory: str,
     move_to_cpu: bool,
     discard_replicates: bool,
+    extra_config: Optional[pathlib.Path],
+    keep_seed: bool,
 ):
     """Run a single reproduction experiment."""
     _help_reproduce(
@@ -117,6 +144,8 @@ def run(
         directory=directory,
         move_to_cpu=move_to_cpu,
         save_replicates=not discard_replicates,
+        extra_config=extra_config,
+        keep_seed=keep_seed,
     )
 
 
@@ -128,6 +157,8 @@ def _help_reproduce(
     move_to_cpu: bool = False,
     save_replicates: bool = True,
     file_name: Optional[str] = None,
+    extra_config: Optional[pathlib.Path] = None,
+    keep_seed: bool = False,
 ) -> None:
     """Help run the configuration at a given path.
 
@@ -137,11 +168,12 @@ def _help_reproduce(
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param file_name: Name of JSON/YAML file (optional)
+    :param keep_seed:
+        whether to keep a random seed if given as part of the configuration
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
-    if isinstance(path, str):
-        path = pathlib.Path(path).resolve()
+    path = normalize_path(path)
 
     if not path.is_file():
         click.secho(f"Could not find configuration at {path}", fg="red")
@@ -150,15 +182,12 @@ def _help_reproduce(
 
     # Create directory in which all experimental artifacts are saved
     datetime = time.strftime("%Y-%m-%d-%H-%M-%S")
+    experiment_id = f"{datetime}_{uuid4()}"
     if file_name is not None:
-        experiment_id = f"{datetime}_{uuid4()}_{file_name}"
-    else:
-        experiment_id = f"{datetime}_{uuid4()}"
+        experiment_id += f"_{file_name}"
+    output_directory = normalize_path(directory, experiment_id, mkdir=True)
 
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
-    output_directory = directory.joinpath(experiment_id)
-    output_directory.mkdir(exist_ok=True, parents=True)
+    extra_kwargs = {} if extra_config is None else load_configuration(path=extra_config)
 
     replicate_pipeline_from_path(
         path=path,
@@ -167,6 +196,8 @@ def _help_reproduce(
         use_testing_data=True,
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
+        keep_seed=keep_seed,
+        **extra_kwargs,
     )
     shutil.copyfile(path, output_directory.joinpath("configuration_copied").with_suffix(path.suffix))
 
@@ -216,6 +247,43 @@ def ablation(
         move_to_cpu=move_to_cpu,
         discard_replicates=discard_replicates,
     )
+
+
+@experiments.command()
+def validate():
+    """Validate configurations."""
+    from .validate import get_configuration_errors, iterate_config_paths
+
+    has_error = False
+    for _directory_name, _config_name, path in iterate_config_paths():
+        path = path.resolve()
+        errors = get_configuration_errors(path=path)
+        if errors:
+            click.secho(f"Errors in {path.as_uri()}")
+        for error in errors:
+            click.secho(error, err=True, color=True)
+            has_error = True
+    exit(-1 if has_error else 0)
+
+
+def _iter_configurations() -> Iterable[pathlib.Path]:
+    """Iterate over configuration paths."""
+    for ext in CONFIGURATION_FILE_FORMATS:
+        yield from HERE.rglob(f"*{ext}")
+
+
+@experiments.command()
+def list():
+    """List experiment configurations."""
+    data = set()
+    for path in tqdm(_iter_configurations(), unit="configuration", unit_scale=True, leave=False):
+        # clip for node piece configurations
+        reference, model, dataset = path.stem.split("_")[:3]
+        # "pykeen experiments reproduce" expects "model reference dataset"
+        data.add((model, reference, dataset))
+    click.secho(f"There are {len(data)} available experiments. Run via\n")
+    click.secho("\tpykeen experiments reproduce <MODEL> <REFERENCE> <DATASET>\n")
+    click.echo(tabulate.tabulate(sorted(data), headers=("model", "reference", "dataset")))
 
 
 if __name__ == "__main__":

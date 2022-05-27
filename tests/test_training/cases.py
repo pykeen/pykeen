@@ -10,11 +10,12 @@ import unittest_templates
 from torch.optim import Adam, Optimizer
 
 from pykeen.datasets import Nations
-from pykeen.losses import CrossEntropyLoss, Loss
+from pykeen.losses import Loss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.sampling.filtering import Filterer
+from pykeen.trackers.base import PythonResultTracker
 from pykeen.training import TrainingLoop
-from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
+from pykeen.training.training_loop import NonFiniteLossError, NoTrainingBatchError
 from pykeen.triples import TriplesFactory
 
 __all__ = [
@@ -169,6 +170,27 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
 
         self.assertEqual(losses, losses_2)
 
+    def test_result_tracker(self):
+        """Test whether losses are tracked by the result tracker."""
+        self.instance.result_tracker = PythonResultTracker()
+        self.instance.train(
+            triples_factory=self.triples_factory,
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+        )
+        # check non-empty metrics
+        assert self.instance.result_tracker.metrics
+
+    def test_error_on_no_batch(self):
+        """Verify that an error is raised if no training batch is available."""
+        with self.assertRaises(NoTrainingBatchError):
+            self.instance.train(
+                triples_factory=self.triples_factory,
+                num_epochs=self.num_epochs,
+                drop_last=True,
+                batch_size=100_000,
+            )
+
 
 class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
     """A generic test case for sLCWA training loops."""
@@ -181,16 +203,3 @@ class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
         kwargs["negative_sampler"] = "basic"
         kwargs["negative_sampler_kwargs"] = {"filterer": self.filterer_cls}
         return kwargs
-
-    def test_blacklist_loss_on_slcwa(self):
-        """Test an allowed sLCWA loss."""
-        model = TransE(
-            triples_factory=self.triples_factory,
-            loss=CrossEntropyLoss(),
-        )
-        with self.assertRaises(TrainingApproachLossMismatchError):
-            self.cls(
-                model=model,
-                triples_factory=self.triples_factory,
-                automatic_memory_optimization=False,
-            )
