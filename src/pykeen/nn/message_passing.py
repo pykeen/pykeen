@@ -5,7 +5,8 @@
 import logging
 from abc import ABC, abstractmethod
 from math import gcd
-from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
+import math
+from typing import Any, Iterable, Mapping, Optional, Sequence
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
@@ -29,47 +30,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _reduce_relation_specific(
-    relation: int,
-    source: torch.LongTensor,
-    target: torch.LongTensor,
-    edge_type: torch.LongTensor,
-    edge_weights: Optional[torch.FloatTensor],
-) -> Union[Tuple[torch.LongTensor, torch.LongTensor, Optional[torch.FloatTensor]], Tuple[None, None, None]]:
-    """Reduce edge information to one relation.
-
-    :param relation:
-        The relation ID.
-    :param source: shape: (num_edges,)
-        The source node IDs.
-    :param target: shape: (num_edges,)
-        The target node IDs.
-    :param edge_type: shape: (num_edges,)
-        The edge types.
-    :param edge_weights: shape: (num_edges,)
-        The edge weights.
-
-    :return:
-        The source, target, weights for edges related to the desired relation type.
-    """
-    # mask, shape: (num_edges,)
-    edge_mask = edge_type == relation
-    if not edge_mask.any():
-        return None, None, None
-
-    source_r = source[edge_mask]
-    target_r = target[edge_mask]
-    if edge_weights is not None:
-        edge_weights = edge_weights[edge_mask]
-
-    # bi-directional message passing
-    source_r, target_r = torch.cat([source_r, target_r]), torch.cat([target_r, source_r])
-    if edge_weights is not None:
-        edge_weights = torch.cat([edge_weights, edge_weights])
-
-    return source_r, target_r, edge_weights
-
-
 class Decomposition(nn.Module, ABC):
     r"""Base module for relation-specific message passing.
 
@@ -84,6 +44,13 @@ class Decomposition(nn.Module, ABC):
     For an intuition, you can think about a simple low-rank matrix factorization of rank `1`, where $W = w w^T$
     for a $d$-dimensional vector `w`. Then, computing $Wv$ as $(w w^T) v$ gives you an intermediate result of size
     $d \times d$, while you can also compute $w(w^Tv)$, where the intermediate result is just a scalar.
+
+    The implementations use the efficient version based on adjacency tensor stacking from [thanapalasingam2021]_.
+    The adjacency tensor is reshaped into a sparse matrix to support message passing by a
+    single sparse matrix multiplication, cf. :func:`pykeen.nn.utils.adjacency_tensor_to_stacked_matrix`.
+
+    .. note ::
+        this module does neither take care of the self-loop, nor of applying an activation function.
     """
 
     def __init__(
@@ -102,11 +69,15 @@ class Decomposition(nn.Module, ABC):
             The output dimension. If None is given, defaults to input_dim.
         """
         super().__init__()
-        self.input_dim = input_dim
-        self.num_relations = num_relations
+        # input normalization
         if output_dim is None:
             output_dim = input_dim
+        self.input_dim = input_dim
+        self.num_relations = num_relations
         self.output_dim = output_dim
+
+        # decide on stacking direction based on dimensions
+        self.stacking = decide_stacking_direction(input_dim=self.input_dim, output_dim=self.output_dim)
 
     def extra_repr(self) -> str:
         """Return additional components for the output of `repr`."""
@@ -117,8 +88,8 @@ class Decomposition(nn.Module, ABC):
         yield f"input_dim={self.input_dim}"
         yield f"output_dim={self.output_dim}"
         yield f"num_relations={self.num_relations}"
+        yield f"stacking={self.stacking}"
 
-    @abstractmethod
     def forward(
         self,
         x: torch.FloatTensor,
@@ -147,326 +118,24 @@ class Decomposition(nn.Module, ABC):
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
         """
-        raise NotImplementedError
-
-    @abstractmethod
-    def reset_parameters(self):
-        """Reset the parameters of this layer."""
-        raise NotImplementedError
-
-
-class BasesDecomposition(Decomposition):
-    r"""Represent relation-weights as a linear combination of base transformation matrices.
-
-    The basis decomposition represents the relation-specific transformation matrices
-    as a weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
-
-    .. math::
-
-        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
-    """
-
-    def __init__(
-        self,
-        input_dim: int,
-        num_relations: int,
-        num_bases: Optional[int] = None,
-        output_dim: Optional[int] = None,
-        memory_intense: bool = False,
-    ):
-        """Initialize the layer.
-
-        :param input_dim: >0
-            The input dimension.
-        :param num_relations: >0
-            The number of relations.
-        :param num_bases: >0
-            The number of bases to use.
-        :param output_dim: >0
-            The output dimension. If None is given, defaults to input_dim.
-        :param memory_intense:
-            Enable memory-intense forward pass which may be faster, in particular if the number of different relations
-            is small.
-        :raises ValueError: If the ``num_bases`` is greater than ``num_relations``
-        """
-        super().__init__(input_dim=input_dim, num_relations=num_relations, output_dim=output_dim)
-
-        # Heuristic for default value
-        if num_bases is None:
-            logger.info("No num_bases was provided. Falling back to 2.")
-            num_bases = 2
-
-        if num_bases > num_relations:
-            logger.warning(
-                f"The number of bases ({num_bases}) should not exceed the number of relations ({num_relations})."
-            )
-
-        self.relation_representations = LowRankRepresentation(
-            max_id=num_relations,
-            shape=(self.input_dim, self.output_dim),
-            weight_initializer=uniform_norm_p1_,
-            initializer=nn.init.xavier_normal_,
-        )
-        self.memory_intense = memory_intense
-
-    # docstr-coverage: inherited
-    def reset_parameters(self):  # noqa: D102
-        self.relation_representations.reset_parameters()
-
-    def _get_weight(self, relation_id: int) -> torch.FloatTensor:
-        """Construct weight matrix for a specific relation ID.
-
-        :param relation_id:
-            The relation ID.
-
-        :return:
-            A 2-D matrix.
-        """
-        return self.relation_representations(indices=torch.as_tensor(relation_id)).squeeze(dim=0)
-
-    def _forward_memory_intense(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        out: torch.FloatTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:
-        # other relations
-        m = torch.einsum(
-            "mi,mij->mj",
-            x.index_select(dim=0, index=source),
-            self.relation_representations(indices=edge_type),
-        )
-        if edge_weights is not None:
-            m = m * edge_weights.unsqueeze(dim=-1)
-        return out.index_add(dim=0, index=target, source=m)
-
-    def _forward_memory_light(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        out: torch.FloatTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:
-        # other relations
-        for r in range(self.num_relations):
-            # Select source and target indices as well as edge weights for the
-            # currently considered relation
-            source_r, target_r, weights_r = _reduce_relation_specific(
-                relation=r,
-                source=source,
-                target=target,
-                edge_type=edge_type,
-                edge_weights=edge_weights,
-            )
-
-            # skip relations without edges
-            if source_r is None:
-                continue
-
-            # compute message, shape: (num_edges_of_type, output_dim)
-            w = self._get_weight(relation_id=r)
-            # since we may have one node ID appearing multiple times as source
-            # ID, we can save some computation by first reducing to the unique
-            # source IDs, compute transformed representations and afterwards
-            # select these representations for the correct edges.
-            uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
-            # select unique source node representations
-            m = x[uniq_source_r]
-            # transform representations by relation specific weight
-            m = m @ w
-            # select the uniquely transformed representations for each edge
-            m = m.index_select(dim=0, index=inv_source_r)
-
-            # optional message weighting
-            if weights_r is not None:
-                m = m * weights_r.unsqueeze(dim=-1)
-
-            # message aggregation
-            out = out.index_add(dim=0, index=target_r, source=m)
-
-        return out
-
-    # docstr-coverage: inherited
-    def forward(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-        accumulator: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        if accumulator is None:
-            accumulator = torch.zeros_like(x)
-        if self.memory_intense:
-            _forward = self._forward_memory_intense
-        else:
-            _forward = self._forward_memory_light
-        return _forward(
-            x=x,
+        adj = adjacency_tensor_to_stacked_matrix(
+            num_relations=self.num_relations,
+            num_entities=x.shape[0],
             source=source,
             target=target,
             edge_type=edge_type,
-            out=accumulator,
             edge_weights=edge_weights,
+            direction=self.stacking,
         )
-
-    # docstr-coverage: inherited
-    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().iter_extra_repr()
-        yield f"num_bases={self.relation_representations.num_bases}"
-
-
-class BlockDecomposition(Decomposition):
-    r"""Represent relation-specific weight matrices via block-diagonal matrices.
-
-    The block-diagonal decomposition restricts each transformation matrix to a block-diagonal-matrix, i.e.,
-
-    .. math::
-
-        \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
-
-    where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
-    """
-
-    def __init__(
-        self,
-        input_dim: int,
-        num_relations: int,
-        num_blocks: Optional[int] = None,
-        output_dim: Optional[int] = None,
-    ):
-        """Initialize the layer.
-
-        :param input_dim: >0
-            The input dimension.
-        :param num_relations: >0
-            The number of relations.
-        :param num_blocks: >0
-            The number of blocks to use. Has to be a divisor of input_dim.
-        :param output_dim: >0
-            The output dimension. If None is given, defaults to input_dim.
-        :raises NotImplementedError: If ``input_dim`` is not divisible by ``num_blocks``
-        """
-        super().__init__(input_dim=input_dim, num_relations=num_relations, output_dim=output_dim)
-
-        # normalize num blocks
-        if num_blocks is None:
-            num_blocks = gcd(input_dim, self.output_dim)
-            logger.info(f"Inferred num_blocks={num_blocks} by GCD heuristic.")
-        self.num_blocks = num_blocks
-
-        # determine block sizes
-        # TODO: we could add support for non-divisible sizes by using padding
-        if input_dim % num_blocks or self.output_dim % num_blocks:
-            raise ValueError(
-                "With block decomposition, the embedding dimension has to be divisible by the number of "
-                f"blocks, but {input_dim} % {num_blocks} = {input_dim % num_blocks} (input dim) and "
-                f"{self.output_dim} % {num_blocks} = {self.output_dim % num_blocks} (output dim)",
-            )
-        self.input_block_size = input_dim // num_blocks
-        self.output_block_size = self.output_dim // num_blocks
-
-        # (R, nb, bsi, bso)
-        self.blocks = nn.Parameter(
-            data=torch.empty(
-                num_relations + 1,
-                num_blocks,
-                self.input_block_size,
-                self.output_block_size,
-            ),
-            requires_grad=True,
-        )
-
-    # docstr-coverage: inherited
-    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().iter_extra_repr()
-        yield f"num_blocks={self.num_blocks}"
-        if self.input_block_size == self.output_block_size:
-            yield f"block_size={self.input_block_size}"
+        if self.stacking == HORIZONTAL:
+            x = self.forward_horizontally_stacked(x=x, adj=adj)
+        elif self.stacking == VERTICAL:
+            x = self.forward_vertically_stacked(x=x, adj=adj)
         else:
-            yield f"input_block_size={self.input_block_size}"
-            yield f"output_block_size={self.output_block_size}"
-
-    # docstr-coverage: inherited
-    def reset_parameters(self):  # noqa: D102
-        block_size = self.blocks.shape[-1]
-        # Xavier Glorot initialization of each block
-        std = torch.sqrt(torch.as_tensor(2.0)) / (2 * block_size)
-        nn.init.normal_(self.blocks, std=std)
-
-    # docstr-coverage: inherited
-    def forward(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-        accumulator: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # accumulator
-        if accumulator is None:
-            accumulator = torch.zeros_like(x)
-
-        # view as blocks
-        x = x.view(-1, self.num_blocks, self.block_size)
-        accumulator = accumulator.view(-1, self.num_blocks, self.block_size)
-
-        # other relations
-        for r in range(self.num_relations):
-            source_r, target_r, weights_r = _reduce_relation_specific(
-                relation=r,
-                source=source,
-                target=target,
-                edge_type=edge_type,
-                edge_weights=edge_weights,
-            )
-
-            # skip relations without edges
-            if source_r is None:
-                continue
-
-            # compute message, shape: (num_edges_of_type, num_blocks, block_size)
-            uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
-            w_r = self.blocks[r]
-            m = torch.einsum("nbi,bij->nbj", x[uniq_source_r], w_r).index_select(dim=0, index=inv_source_r)
-
-            # optional message weighting
-            if weights_r is not None:
-                m = m * weights_r.unsqueeze(dim=1).unsqueeze(dim=2)
-
-            # message aggregation
-            accumulator.index_add_(dim=0, index=target_r, source=m)
-
-        return accumulator.view(-1, self.output_dim)
-
-
-class EfficientDecomposition(Decomposition):
-    """
-    A mixin for efficient decompositions based on adjacency tensor stacking based on [thanapalasingam2021]_.
-
-    The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
-    single sparse matrix multiplication, cf. :func:`pykeen.nn.utils.adjacency_tensor_to_stacked_matrix`.
-
-    .. seealso ::
-        https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
-    """
-
-    def __init__(self, **kwargs):
-        """
-        Initialize the decomposition mixin.
-
-        :param kwargs:
-            keyword-based parameters passed to :meth:`super().__init__`.
-        """
-        super().__init__(**kwargs)
-        self.stacking = decide_stacking_direction(input_dim=self.input_dim, output_dim=self.output_dim)
+            raise ValueError(f"Invalid stacking direction: {self.stacking}")
+        if accumulator is not None:
+            x = accumulator + x
+        return x
 
     @abstractmethod
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
@@ -498,51 +167,64 @@ class EfficientDecomposition(Decomposition):
         """
         raise NotImplementedError
 
-    # docstr-coverage: inherited
-    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().iter_extra_repr()
-        yield f"stacking={self.stacking}"
-
-    # docstr-coverage: inherited
-    def forward(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-        accumulator: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        adj = adjacency_tensor_to_stacked_matrix(
-            num_relations=self.num_relations,
-            num_entities=x.shape[0],
-            source=source,
-            target=target,
-            edge_type=edge_type,
-            edge_weights=edge_weights,
-            direction=self.stacking,
-        )
-        if self.stacking == HORIZONTAL:
-            x = self.forward_horizontally_stacked(x=x, adj=adj)
-        elif self.stacking == VERTICAL:
-            x = self.forward_vertically_stacked(x=x, adj=adj)
-        else:
-            raise ValueError(f"Invalid stacking direction: {self.stacking}")
-        if accumulator is not None:
-            x = accumulator + x
-        return x
+    @abstractmethod
+    def reset_parameters(self):
+        """Reset the parameters of this layer."""
+        raise NotImplementedError
 
 
-class EfficientBasesDecomposition(EfficientDecomposition, BasesDecomposition):
+class BasesDecomposition(Decomposition):
     """
-    An efficient implementation of the basis decomposition based on [thanapalasingam2021]_.
+    Represent relation-weights as a linear combination of base transformation matrices.
+
+    The basis decomposition represents the relation-specific transformation matrices
+    as a weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
+
+    .. math::
+        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
 
     The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
-    single sparse matrix multiplication.
+    single sparse matrix multiplication, cf. [thanapalasingam2021]_.
 
     .. seealso ::
         https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
     """
+
+    def __init__(self, num_bases: Optional[int] = None, **kwargs):
+        """
+        Initialize the bases decomposition.
+
+        :param num_bases:
+            the number of bases
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Decomposition.__init__`
+        """
+        super().__init__(**kwargs)
+
+        # Heuristic for default value
+        if num_bases is None:
+            num_bases = math.ceil(math.sqrt(self.num_relations))
+            logger.info(f"No num_bases was provided. Using sqrt(num_relations)={num_bases}.")
+
+        if num_bases > self.num_relations:
+            logger.warning(f"The number of bases ({num_bases}) exceeds the number of relations ({self.num_relations}).")
+
+        self.relation_representations = LowRankRepresentation(
+            max_id=self.num_relations,
+            shape=(self.input_dim, self.output_dim),
+            num_bases=num_bases,
+            weight_initializer=uniform_norm_p1_,
+            initializer=nn.init.xavier_normal_,
+        )
+
+    # docstr-coverage: inherited
+    def reset_parameters(self) -> Iterable[str]:  # noqa: D102
+        self.relation_representations.reset_parameters()
+
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_bases={self.relation_representations.num_bases}"
 
     @property
     def bases(self) -> torch.Tensor:
@@ -566,49 +248,134 @@ class EfficientBasesDecomposition(EfficientDecomposition, BasesDecomposition):
         return torch.einsum("rb, bio, rni -> no", self.base_weights, self.bases, x)
 
 
-class EfficientBlockDecomposition(EfficientDecomposition, BlockDecomposition):
-    """
-    An efficient implementation of the block decomposition based on [thanapalasingam2021]_.
+def _make_dim_divisible(dim: int, divisor: int, name: str) -> int:
+    dim_div, remainder = divmod(dim, divisor)
+    if remainder:
+        logger.warning(f"{name}={dim} not divisible by {divisor}.")
+    dim = dim_div * divisor
+    assert dim % divisor == 0
+    return dim
 
-    The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
-    single sparse matrix multiplication.
+
+def _pad_if_necessary(x: torch.Tensor, dim: int) -> torch.Tensor:
+    """Apply padding if necessary."""
+    padding_dim = dim - x.shape[-1]
+    if padding_dim < 0:
+        raise ValueError("Cannot have a negative padding")
+    if padding_dim == 0:
+        return x
+    return torch.cat([x, x.new_zeros(*x.shape[:-1], padding_dim)], dim=-1)
+
+
+def _unpad_if_necessary(x: torch.Tensor, dim: int) -> torch.Tensor:
+    """Remove padding if necessary."""
+    padding_dim = dim - x.shape[-1]
+    if padding_dim < 0:
+        raise ValueError("Cannot have a negative padding")
+    if padding_dim == 0:
+        return x
+    return x[..., :-padding_dim]
+
+
+class BlockDecomposition(Decomposition):
+    """
+    Represent relation-specific weight matrices via block-diagonal matrices.
+
+    The block-diagonal decomposition restricts each transformation matrix to a block-diagonal-matrix, i.e.,
+
+    .. math::
+
+        \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
+
+    where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
+
+    The implementation is based on the efficient version of [thanapalasingam2021]_, which uses a reshaping of the
+    adjacency tensor into a sparse matrix to support message passing by a single sparse matrix multiplication.
 
     .. seealso ::
         https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, num_blocks: Optional[int] = None, **kwargs):
         """
         Initialize the layer.
 
+        :param num_blocks:
+            the number of blocks.
         :param kwargs:
             keyword-based parameters passed to :meth:`BlockDecomposition.__init__`.
         """
         super().__init__(**kwargs)
-        # TODO: We do not want to have a block for the self-loop
-        self.blocks = nn.Parameter(self.blocks[:-1, ...])
+
+        # normalize num blocks
+        if num_blocks is None:
+            num_blocks = gcd(self.input_dim, self.output_dim)
+            logger.info(f"Inferred num_blocks={num_blocks} by GCD heuristic.")
+        self.num_blocks = num_blocks
+
+        # determine necessary padding
+        self.padded_input_dim = _make_dim_divisible(dim=self.input_dim, divisor=num_blocks, name="input_dim")
+        self.padded_output_dim = _make_dim_divisible(dim=self.output_dim, divisor=num_blocks, name="output_dim")
+
+        # determine block sizes
+        self.input_block_size = self.padded_input_dim // num_blocks
+        self.output_block_size = self.padded_output_dim // num_blocks
+
+        # (R, nb, bsi, bso)
+        self.blocks = nn.Parameter(
+            data=torch.empty(
+                self.num_relations,
+                num_blocks,
+                self.input_block_size,
+                self.output_block_size,
+            ),
+            requires_grad=True,
+        )
+
+    # docstr-coverage: inherited
+    def reset_parameters(self) -> Iterable[str]:  # noqa: D102
+        raise NotImplementedError
+
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_blocks={self.num_blocks}"
+        if self.input_block_size == self.output_block_size:
+            yield f"block_size={self.input_block_size}"
+        else:
+            yield f"input_block_size={self.input_block_size}"
+            yield f"output_block_size={self.output_block_size}"
 
     # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
-        # (n, di) -> (n, nb, bs)
-        x = x.view(x.shape[0], self.num_blocks, self.block_size)
-        # (n, nb, bs), (R, nb, bs, bs) -> (R, n, nb, bs)
+        # apply padding if necessary
+        x = _pad_if_necessary(x=x, dim=self.padded_input_dim)
+        # (n, di) -> (n, nb, bsi)
+        x = x.view(x.shape[0], self.num_blocks, self.input_block_size)
+        # (n, nb, bsi), (R, nb, bsi, bso) -> (R, n, nb, bso)
         x = torch.einsum("nbi, rbio -> rnbo", x, self.blocks)
-        # (R, n, nb, bs) -> (R * n, do)
-        x = x.view(-1, self.num_blocks * self.block_size)
+        # (R, n, nb, bso) -> (R * n, do)
+        # TODO: change dimension order to make this contiguous?
+        x = x.reshape(-1, self.num_blocks * self.output_block_size)
         # (n, R * n), (R * n, do) -> (n, do)
-        return torch.sparse.mm(adj, x)
+        x = torch.sparse.mm(adj, x)
+        # remove padding if necessary
+        return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
 
     # docstr-coverage: inherited
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        # apply padding if necessary
+        x = _pad_if_necessary(x=x, dim=self.padded_input_dim)
         # (R * n, n), (n, di) -> (R * n, di)
         x = torch.sparse.mm(adj, x)
-        # (R * n, di) -> (R, n, nb, bs)
-        x = x.view(self.num_relations, -1, self.num_blocks, self.block_size)
-        # (R, nb, bs, bs), (R, n, nb, bs) -> (n, nb, bs)
+        # (R * n, di) -> (R, n, nb, bsi)
+        x = x.view(self.num_relations, -1, self.num_blocks, self.input_block_size)
+        # (R, nb, bsi, bso), (R, n, nb, bsi) -> (n, nb, bso)
         x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x)
-        # (n, nb, bs) -> (n, do)
-        return x.view(x.shape[0], -1)
+        # (n, nb, bso) -> (n, do)
+        x = x.view(x.shape[0], -1)
+        # remove padding if necessary
+        return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
 
 
 class RGCNLayer(nn.Module):
@@ -719,6 +486,7 @@ class RGCNLayer(nn.Module):
         :return: shape: (num_entities, output_dim)
             Enriched entity representations.
         """
+        # TODO: we could cache the stacked adjacency matrices
         # self-loop
         y = self.dropout(self.self_loop(x))
         # forward messages

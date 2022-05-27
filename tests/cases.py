@@ -1613,16 +1613,18 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
 class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
     """Tests for relation-specific weight decomposition message passing classes."""
 
-    #: The input dimension
-    input_dim: int = 3
+    #: the input dimension
+    input_dim: int = 8
+    #: the output dimension
+    output_dim: int = 4
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        self.output_dim = self.input_dim
         self.factory = Nations().training
         self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
-        self.x = torch.rand(self.factory.num_entities, self.input_dim)
+        self.x = torch.rand(self.factory.num_entities, self.input_dim, requires_grad=True)
         kwargs["input_dim"] = self.input_dim
+        kwargs["output_dim"] = self.output_dim
         kwargs["num_relations"] = self.factory.num_relations
         return kwargs
 
@@ -1638,40 +1640,6 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
             )
             assert y.shape == (self.x.shape[0], self.output_dim)
 
-
-class BasesDecompositionTestCase(DecompositionTestCase):
-    """Tests for bases Decomposition."""
-
-    cls = pykeen.nn.message_passing.BasesDecomposition
-
-
-class EfficientDecompositionUtilTestCase(GenericTestCase[pykeen.nn.message_passing.EfficientDecomposition]):
-    """Tests for relation-specific weight decomposition message passing classes."""
-
-    input_dim: int = 8
-    output_dim: int = 4
-    num_entities: int = 13
-    num_relations: int = 7
-    num_triples: int = 101
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        kwargs["input_dim"] = self.input_dim
-        kwargs["output_dim"] = self.output_dim
-        kwargs["num_relations"] = self.num_relations
-        return kwargs
-
-    # docstr-coverage: inherited
-    def post_instantiation_hook(self) -> None:  # noqa: D102
-        self.x = torch.rand(self.num_entities, self.input_dim)
-        self.source, self.edge_type, self.target = generation.generate_triples(
-            num_entities=self.num_entities,
-            num_relations=self.num_relations,
-            num_triples=self.num_triples,
-        ).t()
-        # make sure entities and relations occur at least once
-        self.source[: self.num_entities] = torch.randperm(self.num_entities)
-        self.edge_type[: self.num_relations] = torch.randperm(self.num_relations)
-
     def prepare_adjacency(self, direction: StackDirection) -> torch.Tensor:
         """
         Prepare adjacency matrix for the given stacking direction.
@@ -1683,8 +1651,8 @@ class EfficientDecompositionUtilTestCase(GenericTestCase[pykeen.nn.message_passi
             the adjacency matrix
         """
         return adjacency_tensor_to_stacked_matrix(
-            num_relations=self.num_relations,
-            num_entities=self.num_entities,
+            num_relations=self.factory.num_relations,
+            num_entities=self.factory.num_entities,
             source=self.source,
             target=self.target,
             edge_type=self.edge_type,
@@ -1694,7 +1662,7 @@ class EfficientDecompositionUtilTestCase(GenericTestCase[pykeen.nn.message_passi
     def check_output(self, x: torch.Tensor):
         """Check the output tensor."""
         assert torch.is_tensor(x)
-        assert x.shape == (self.num_entities, self.output_dim)
+        assert x.shape == (self.factory.num_entities, self.output_dim)
         assert x.requires_grad
 
     def test_horizontal(self):
