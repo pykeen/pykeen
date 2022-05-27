@@ -3,7 +3,7 @@
 """Utilities for neural network components."""
 
 import logging
-from typing import Iterable, Literal, Optional, Sequence, Union
+from typing import Iterable, Optional, Sequence, Union
 
 import torch
 from more_itertools import chunked
@@ -17,10 +17,7 @@ __all__ = [
     "TransformerEncoder",
     "safe_diagonal",
     "adjacency_tensor_to_stacked_matrix",
-    "StackDirection",
-    "HORIZONTAL",
-    "VERTICAL",
-    "decide_stacking_direction",
+    "use_horizontal_stacking",
 ]
 
 logger = logging.getLogger(__name__)
@@ -192,15 +189,10 @@ def safe_diagonal(matrix: torch.Tensor) -> torch.Tensor:
     return torch.zeros(n, device=matrix.device).scatter_add(dim=0, index=diagonal_indices, src=diagonal_values)
 
 
-StackDirection = Literal["horizontal", "vertical"]
-HORIZONTAL: StackDirection = "horizontal"
-VERTICAL: StackDirection = "vertical"
-
-
-def decide_stacking_direction(
+def use_horizontal_stacking(
     input_dim: int,
     output_dim: int,
-) -> StackDirection:
+) -> bool:
     """
     Determine a stacking direction based on the input and output dimension.
 
@@ -214,13 +206,11 @@ def decide_stacking_direction(
         the layer's output dimension
 
     :return:
-        the suggested stacking direction
+        whether to use horizontal (True) or vertical stacking
 
     .. seealso :: [thanapalasingam2021]_
     """
-    if input_dim > output_dim:
-        return HORIZONTAL
-    return VERTICAL
+    return input_dim > output_dim
 
 
 def adjacency_tensor_to_stacked_matrix(
@@ -230,7 +220,7 @@ def adjacency_tensor_to_stacked_matrix(
     target: torch.LongTensor,
     edge_type: torch.LongTensor,
     edge_weights: Optional[torch.FloatTensor] = None,
-    direction: StackDirection = HORIZONTAL,
+    horizontal: bool = True,
 ) -> torch.Tensor:
     """
     Stack adjacency matrices as described in [thanapalasingam2021]_.
@@ -254,24 +244,19 @@ def adjacency_tensor_to_stacked_matrix(
         the edge type, i.e., relation ID
     :param edge_weights: shape: (num_triples,)
         scalar edge weights
-    :param direction:
+    :param horizontal:
         whether to use horizontal or vertical stacking
 
     :return: shape: `(num_entities * num_relations, num_entities)` or `(num_entities, num_entities * num_relations)`
         the stacked adjacency matrix
-
-    :raises ValueError:
-        if the direction is invalid
     """
     offset = edge_type * num_entities
-    if direction == HORIZONTAL:
+    if horizontal:
         size = (num_entities, num_relations * num_entities)
         target = offset + target
-    elif direction == VERTICAL:
+    else:
         size = (num_relations * num_entities, num_entities)
         source = offset + source
-    else:
-        raise ValueError(f"Invalid stacking direction: {direction}")
     indices = torch.stack([source, target], dim=0)
     if edge_weights is None:
         edge_weights = torch.ones_like(source, dtype=torch.get_default_dtype())

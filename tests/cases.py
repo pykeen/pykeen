@@ -70,7 +70,7 @@ from pykeen.models.mocks import FixedModel
 from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.nn.representation import Representation
-from pykeen.nn.utils import HORIZONTAL, VERTICAL, StackDirection, adjacency_tensor_to_stacked_matrix
+from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
@@ -1640,12 +1640,12 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
             )
             assert y.shape == (self.x.shape[0], self.output_dim)
 
-    def prepare_adjacency(self, direction: StackDirection) -> torch.Tensor:
+    def prepare_adjacency(self, horizontal: bool) -> torch.Tensor:
         """
         Prepare adjacency matrix for the given stacking direction.
 
-        :param direction:
-            the stacking direction
+        :param horizontal:
+            whether to stack horizontally or vertically
 
         :return:
             the adjacency matrix
@@ -1656,7 +1656,7 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
             source=self.source,
             target=self.target,
             edge_type=self.edge_type,
-            direction=direction,
+            horizontal=horizontal,
         )
 
     def check_output(self, x: torch.Tensor):
@@ -1667,13 +1667,13 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
 
     def test_horizontal(self):
         """Test processing of horizontally stacked matrix."""
-        adj = self.prepare_adjacency(direction=HORIZONTAL)
+        adj = self.prepare_adjacency(horizontal=True)
         x = self.instance.forward_horizontally_stacked(x=self.x, adj=adj)
         self.check_output(x=x)
 
     def test_vertical(self):
         """Test processing of vertically stacked matrix."""
-        adj = self.prepare_adjacency(direction=VERTICAL)
+        adj = self.prepare_adjacency(horizontal=False)
         x = self.instance.forward_vertically_stacked(x=self.x, adj=adj)
         self.check_output(x=x)
 

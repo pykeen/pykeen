@@ -14,7 +14,7 @@ from torch import nn
 
 from .init import uniform_norm_p1_, xavier_normal_
 from .representation import LowRankRepresentation, Representation
-from .utils import HORIZONTAL, VERTICAL, adjacency_tensor_to_stacked_matrix, decide_stacking_direction
+from .utils import adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
 
@@ -76,7 +76,7 @@ class Decomposition(nn.Module, ABC):
         self.output_dim = output_dim
 
         # decide on stacking direction based on dimensions
-        self.stacking = decide_stacking_direction(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.horizontal_stacking = use_horizontal_stacking(input_dim=self.input_dim, output_dim=self.output_dim)
 
     def extra_repr(self) -> str:
         """Return additional components for the output of `repr`."""
@@ -87,7 +87,7 @@ class Decomposition(nn.Module, ABC):
         yield f"input_dim={self.input_dim}"
         yield f"output_dim={self.output_dim}"
         yield f"num_relations={self.num_relations}"
-        yield f"stacking={self.stacking}"
+        yield f"horizontal_stacking={self.horizontal_stacking}"
 
     def forward(
         self,
@@ -114,9 +114,6 @@ class Decomposition(nn.Module, ABC):
             a pre-allocated output accumulator. may be used if multiple different message passing steps are performed
             and accumulated by sum. If none is given, create an accumulator filled with zeroes.
 
-        :raises ValueError:
-            if the stacking is unknown
-
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
         """
@@ -127,14 +124,12 @@ class Decomposition(nn.Module, ABC):
             target=target,
             edge_type=edge_type,
             edge_weights=edge_weights,
-            direction=self.stacking,
+            horizontal=self.horizontal_stacking,
         )
-        if self.stacking == HORIZONTAL:
+        if self.horizontal_stacking:
             x = self.forward_horizontally_stacked(x=x, adj=adj)
-        elif self.stacking == VERTICAL:
-            x = self.forward_vertically_stacked(x=x, adj=adj)
         else:
-            raise ValueError(f"Invalid stacking direction: {self.stacking}")
+            x = self.forward_vertically_stacked(x=x, adj=adj)
         if accumulator is not None:
             x = accumulator + x
         return x
