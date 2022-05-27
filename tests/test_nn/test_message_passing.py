@@ -52,3 +52,22 @@ class DecompositionMetaTestCase(unittest_templates.MetaTestCase):
         # mixin
         pykeen.nn.message_passing.EfficientDecomposition,
     }
+
+
+class EfficientBasesDecompositionUtilTestCase(cases.EfficientDecompositionUtilTestCase):
+    """Test case for efficient bases decomposition utils."""
+
+    cls = pykeen.nn.message_passing.EfficientBasesDecomposition
+
+
+class EfficientBlockDecompositionUtilTestCase(cases.EfficientDecompositionUtilTestCase):
+    """Test case for efficient block decomposition utils."""
+
+    cls = pykeen.nn.message_passing.EfficientBlockDecomposition
+
+
+class EfficientDecompositionUtilMetaTestCase(unittest_templates.MetaTestCase):
+    """Test for tests for efficient decomposition mixin."""
+
+    base_test = cases.EfficientDecompositionUtilTestCase
+    base_cls = pykeen.nn.message_passing.EfficientDecomposition

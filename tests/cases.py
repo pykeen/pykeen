@@ -70,6 +70,7 @@ from pykeen.models.mocks import FixedModel
 from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.nn.representation import Representation
+from pykeen.nn.utils import HORIZONTAL, VERTICAL, StackDirection, adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
@@ -1642,6 +1643,71 @@ class BasesDecompositionTestCase(DecompositionTestCase):
     """Tests for bases Decomposition."""
 
     cls = pykeen.nn.message_passing.BasesDecomposition
+
+
+class EfficientDecompositionUtilTestCase(GenericTestCase[pykeen.nn.message_passing.EfficientDecomposition]):
+    """Tests for relation-specific weight decomposition message passing classes."""
+
+    input_dim: int = 8
+    output_dim: int = 4
+    num_entities: int = 13
+    num_relations: int = 7
+    num_triples: int = 101
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs["input_dim"] = self.input_dim
+        kwargs["output_dim"] = self.output_dim
+        kwargs["num_relations"] = self.num_relations
+        return kwargs
+
+    # docstr-coverage: inherited
+    def post_instantiation_hook(self) -> None:  # noqa: D102
+        self.x = torch.rand(self.num_entities, self.input_dim)
+        self.source, self.edge_type, self.target = generation.generate_triples(
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+        ).t()
+        # make sure entities and relations occur at least once
+        self.source[: self.num_entities] = torch.randperm(self.num_entities)
+        self.edge_type[: self.num_relations] = torch.randperm(self.num_relations)
+
+    def prepare_adjacency(self, direction: StackDirection) -> torch.Tensor:
+        """
+        Prepare adjacency matrix for the given stacking direction.
+
+        :param direction:
+            the stacking direction
+
+        :return:
+            the adjacency matrix
+        """
+        return adjacency_tensor_to_stacked_matrix(
+            num_relations=self.num_relations,
+            num_entities=self.num_entities,
+            source=self.source,
+            target=self.target,
+            edge_type=self.edge_type,
+            direction=direction,
+        )
+
+    def check_output(self, x: torch.Tensor):
+        """Check the output tensor."""
+        assert torch.is_tensor(x)
+        assert x.shape == (self.num_entities, self.output_dim)
+        assert x.requires_grad
+
+    def test_horizontal(self):
+        """Test processing of horizontally stacked matrix."""
+        adj = self.prepare_adjacency(direction=HORIZONTAL)
+        x = self.instance.forward_horizontally_stacked(x=self.x, adj=adj)
+        self.check_output(x=x)
+
+    def test_vertical(self):
+        """Test processing of vertically stacked matrix."""
+        adj = self.prepare_adjacency(direction=VERTICAL)
+        x = self.instance.forward_vertically_stacked(x=self.x, adj=adj)
+        self.check_output(x=x)
 
 
 class LiteralTestCase(InteractionTestCase):
