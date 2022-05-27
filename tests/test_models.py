@@ -377,8 +377,6 @@ class TestRGCNBasis(cases.BaseRGCNTest):
             num_bases=3,
         ),
     }
-    #: one bias per layer
-    num_constant_init = 2
 
 
 class TestRGCNBlock(cases.BaseRGCNTest):
@@ -393,8 +391,6 @@ class TestRGCNBlock(cases.BaseRGCNTest):
         ),
         "edge_weighting": "symmetric",
     }
-    #: one bias per layer
-    num_constant_init = 2
 
 
 class TestRotatE(cases.ModelTestCase):

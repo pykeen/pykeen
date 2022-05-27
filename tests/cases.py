@@ -43,6 +43,7 @@ from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
+import pykeen.evaluation.evaluation_loop
 import pykeen.models
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
@@ -65,9 +66,11 @@ from pykeen.metrics.ranking import (
 )
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.mocks import FixedModel
 from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.nn.representation import Representation
+from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
@@ -1610,16 +1613,18 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
 class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
     """Tests for relation-specific weight decomposition message passing classes."""
 
-    #: The input dimension
-    input_dim: int = 3
+    #: the input dimension
+    input_dim: int = 8
+    #: the output dimension
+    output_dim: int = 4
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        self.output_dim = self.input_dim
         self.factory = Nations().training
         self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
-        self.x = torch.rand(self.factory.num_entities, self.input_dim)
+        self.x = torch.rand(self.factory.num_entities, self.input_dim, requires_grad=True)
         kwargs["input_dim"] = self.input_dim
+        kwargs["output_dim"] = self.output_dim
         kwargs["num_relations"] = self.factory.num_relations
         return kwargs
 
@@ -1635,11 +1640,42 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
             )
             assert y.shape == (self.x.shape[0], self.output_dim)
 
+    def prepare_adjacency(self, horizontal: bool) -> torch.Tensor:
+        """
+        Prepare adjacency matrix for the given stacking direction.
 
-class BasesDecompositionTestCase(DecompositionTestCase):
-    """Tests for bases Decomposition."""
+        :param horizontal:
+            whether to stack horizontally or vertically
 
-    cls = pykeen.nn.message_passing.BasesDecomposition
+        :return:
+            the adjacency matrix
+        """
+        return adjacency_tensor_to_stacked_matrix(
+            num_relations=self.factory.num_relations,
+            num_entities=self.factory.num_entities,
+            source=self.source,
+            target=self.target,
+            edge_type=self.edge_type,
+            horizontal=horizontal,
+        )
+
+    def check_output(self, x: torch.Tensor):
+        """Check the output tensor."""
+        assert torch.is_tensor(x)
+        assert x.shape == (self.factory.num_entities, self.output_dim)
+        assert x.requires_grad
+
+    def test_horizontal(self):
+        """Test processing of horizontally stacked matrix."""
+        adj = self.prepare_adjacency(horizontal=True)
+        x = self.instance.forward_horizontally_stacked(x=self.x, adj=adj)
+        self.check_output(x=x)
+
+    def test_vertical(self):
+        """Test processing of vertically stacked matrix."""
+        adj = self.prepare_adjacency(horizontal=False)
+        x = self.instance.forward_vertically_stacked(x=self.x, adj=adj)
+        self.check_output(x=x)
 
 
 class LiteralTestCase(InteractionTestCase):
@@ -2025,6 +2061,25 @@ class NodePieceTestCase(RepresentationTestCase):
             create_inverse_triples=False,
         )
         return kwargs
+
+
+class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.EvaluationLoop]):
+    """Tests for evaluation loops."""
+
+    batch_size: int = 2
+    factory: CoreTriplesFactory
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.factory = Nations().training
+        kwargs["model"] = FixedModel(triples_factory=self.factory)
+        return kwargs
+
+    @torch.inference_mode()
+    def test_process_batch(self):
+        """Test processing a single batch."""
+        batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
+        self.instance.process_batch(batch=batch)
 
 
 class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
