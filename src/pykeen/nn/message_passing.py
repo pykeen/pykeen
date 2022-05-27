@@ -425,13 +425,19 @@ class EfficientBasesDecomposition(BasesDecomposition):
             edge_weights=edge_weights,
             horizontal_stacking=self.horizontal_stacking,
         )
+        # note: we directly access the components of the low-rank representations, since we want to leave the
+        #       optimization of chain matrix multiplication to einsum
+        bases, relation_base_weights = (
+            self.relation_representations.bases(indices=None),
+            self.relation_representations.weight,
+        )
         if self.horizontal_stacking:
-            x = torch.einsum("ni, rb, bio -> rno", x, self.relation_base_weights, self.bases)
+            x = torch.einsum("ni, rb, bio -> rno", x, relation_base_weights, bases)
             x = torch.spmm(adj, x.view(-1, self.output_dim))
         else:
             x = torch.spmm(adj, x)
             x = x.view(self.num_relations, -1, self.input_dim)
-            x = torch.einsum("rb, bio, rni -> no", self.relation_base_weights, self.bases, x)
+            x = torch.einsum("rb, bio, rni -> no", relation_base_weights, bases, x)
         if accumulator is not None:
             x = accumulator + x
         return x
