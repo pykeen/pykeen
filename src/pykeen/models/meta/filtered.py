@@ -2,20 +2,21 @@
 
 from typing import Optional
 
-import docdata
 import numpy
 import scipy.sparse
 import torch
 from class_resolver import HintOrType
+from docdata import parse_docdata
 
 from ..base import Model
 from ..baseline.utils import get_csr_matrix
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import InductiveMode
-from docdata import parse_docdata
+
 __all__ = [
     "PseudoTypeFilteredModel",
 ]
+
 
 @parse_docdata
 class PseudoTypeFilteredModel(Model):
