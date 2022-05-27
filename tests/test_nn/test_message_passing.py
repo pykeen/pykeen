@@ -2,9 +2,10 @@
 
 """Tests for message passing blocks."""
 
+import unittest_templates
+
 import pykeen.nn.message_passing
 from tests import cases
-import unittest_templates
 
 
 class BlockDecompositionTests(cases.DecompositionTestCase):

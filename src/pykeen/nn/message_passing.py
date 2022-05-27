@@ -3,9 +3,8 @@
 """Various decompositions for R-GCN."""
 
 import logging
-from abc import ABC, abstractmethod
-from math import gcd
 import math
+from abc import ABC, abstractmethod
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
 import torch
@@ -13,7 +12,7 @@ from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from .init import uniform_norm_p1_
+from .init import uniform_norm_p1_, xavier_normal_
 from .representation import LowRankRepresentation, Representation
 from .utils import HORIZONTAL, VERTICAL, adjacency_tensor_to_stacked_matrix, decide_stacking_direction
 from .weighting import EdgeWeighting, edge_weight_resolver
@@ -115,6 +114,9 @@ class Decomposition(nn.Module, ABC):
             a pre-allocated output accumulator. may be used if multiple different message passing steps are performed
             and accumulated by sum. If none is given, create an accumulator filled with zeroes.
 
+        :raises ValueError:
+            if the stacking is unknown
+
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
         """
@@ -167,14 +169,9 @@ class Decomposition(nn.Module, ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def reset_parameters(self):
-        """Reset the parameters of this layer."""
-        raise NotImplementedError
-
 
 class BasesDecomposition(Decomposition):
-    """
+    r"""
     Represent relation-weights as a linear combination of base transformation matrices.
 
     The basis decomposition represents the relation-specific transformation matrices
@@ -216,10 +213,6 @@ class BasesDecomposition(Decomposition):
             weight_initializer=uniform_norm_p1_,
             initializer=nn.init.xavier_normal_,
         )
-
-    # docstr-coverage: inherited
-    def reset_parameters(self) -> Iterable[str]:  # noqa: D102
-        self.relation_representations.reset_parameters()
 
     # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
@@ -278,7 +271,7 @@ def _unpad_if_necessary(x: torch.Tensor, dim: int) -> torch.Tensor:
 
 
 class BlockDecomposition(Decomposition):
-    """
+    r"""
     Represent relation-specific weight matrices via block-diagonal matrices.
 
     The block-diagonal decomposition restricts each transformation matrix to a block-diagonal-matrix, i.e.,
@@ -309,7 +302,7 @@ class BlockDecomposition(Decomposition):
 
         # normalize num blocks
         if num_blocks is None:
-            num_blocks = gcd(self.input_dim, self.output_dim)
+            num_blocks = math.gcd(self.input_dim, self.output_dim)
             logger.info(f"Inferred num_blocks={num_blocks} by GCD heuristic.")
         self.num_blocks = num_blocks
 
@@ -323,18 +316,16 @@ class BlockDecomposition(Decomposition):
 
         # (R, nb, bsi, bso)
         self.blocks = nn.Parameter(
-            data=torch.empty(
-                self.num_relations,
-                num_blocks,
-                self.input_block_size,
-                self.output_block_size,
+            data=xavier_normal_(
+                torch.empty(
+                    self.num_relations,
+                    num_blocks,
+                    self.input_block_size,
+                    self.output_block_size,
+                )
             ),
             requires_grad=True,
         )
-
-    # docstr-coverage: inherited
-    def reset_parameters(self) -> Iterable[str]:  # noqa: D102
-        raise NotImplementedError
 
     # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
