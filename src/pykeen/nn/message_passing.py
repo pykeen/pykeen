@@ -147,8 +147,6 @@ class Decomposition(nn.Module, ABC):
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
         """
-        # TODO: use a separate full matrix for self-loop
-        # TODO: move accumulator normalization to here
         raise NotImplementedError
 
     @abstractmethod
@@ -686,18 +684,13 @@ class RGCNLayer(nn.Module):
             input_dim=input_dim,
             num_relations=num_relations,
         )
-        self.w_self_loop = nn.Parameter(torch.empty(input_dim, output_dim))
-        self.bias = nn.Parameter(torch.empty(output_dim)) if use_bias else None
+        self.self_loop = nn.Linear(in_features=input_dim, out_features=output_dim, bias=use_bias)
         self.dropout = nn.Dropout(p=self_loop_dropout)
-        if activation is not None:
-            activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
-        self.activation = activation
+        self.activation = activation_resolver.make_safe(query=activation, pos_kwargs=activation_kwargs)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
-        if self.bias is not None:
-            nn.init.zeros_(self.bias)
-        nn.init.xavier_normal_(self.w_self_loop)
+        self.self_loop.reset_parameters()
 
     def forward(
         self,
@@ -725,27 +718,11 @@ class RGCNLayer(nn.Module):
             Enriched entity representations.
         """
         # self-loop
-        y = self.dropout(x @ self.w_self_loop)
+        y = self.dropout(self.self_loop(x))
         # forward messages
-        y = self.fwd(
-            x=x,
-            source=source,
-            target=target,
-            edge_type=edge_type,
-            edge_weights=edge_weights,
-            accumulator=y,
-        )
+        y = self.fwd(x=x, source=source, target=target, edge_type=edge_type, edge_weights=edge_weights, accumulator=y)
         # backward messages
-        y = self.bwd(
-            x=x,
-            source=target,
-            target=source,
-            edge_type=edge_type,
-            edge_weights=edge_weights,
-            accumulator=y,
-        )
-        if self.bias is not None:
-            y = y + self.bias
+        y = self.bwd(x=x, source=target, target=source, edge_type=edge_type, edge_weights=edge_weights, accumulator=y)
         # activation
         if self.activation is not None:
             y = self.activation(y)
