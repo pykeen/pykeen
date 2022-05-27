@@ -4,14 +4,12 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
-from torch.functional import block_diag
-from torch.nn import functional
 
 from .init import uniform_norm_p1_
 from .representation import LowRankRepresentation, Representation
@@ -108,8 +106,15 @@ class Decomposition(nn.Module, ABC):
             output_dim = input_dim
         self.output_dim = output_dim
 
-    def extra_repr(self) -> str:  # noqa: D102
-        return f"input_dim={self.input_dim}, " f"output_dim={self.output_dim}, " f"num_relations={self.num_relations}"
+    def extra_repr(self) -> str:
+        """Return additional components for the output of `repr`."""
+        return ", ".join(self.iter_extra_repr())
+
+    def iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over components for `extra_repr`."""
+        yield f"input_dim={self.input_dim}"
+        yield f"output_dim={self.output_dim}"
+        yield f"num_relations={self.num_relations}"
 
     @abstractmethod
     def forward(
@@ -311,8 +316,10 @@ class BasesDecomposition(Decomposition):
             edge_weights=edge_weights,
         )
 
-    def extra_repr(self) -> str:  # noqa: D102
-        return super().extra_repr() + f", num_bases={self.num_bases}"
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_bases={self.relation_representations.num_bases}"
 
 
 def _stack_matrices(
@@ -397,16 +404,20 @@ class EfficientBasesDecomposition(BasesDecomposition):
             num_relations=num_relations,
             output_dim=output_dim,
             num_bases=num_bases,
-            memory_intense=None,
+            # we overwrite the forward method anyway
+            memory_intense=False,
         )
         # > The vertical stacking approach is suitable for low dimensional input and high dimensional output,
         # > because the projection to low dimensions is done first. While the horizontal stacking approach is good
         # > for high dimensional input and low dimensional output as the projection to high dimension is done last.
         self.horizontal_stacking = input_dim > self.output_dim
 
-    def extra_repr(self) -> str:  # noqa: D102
-        return super().extra_repr() + f", horizontal_stacking={self.horizontal_stacking}"
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"horizontal_stacking={self.horizontal_stacking}"
 
+    # docstr-coverage: inherited
     def forward(
         self,
         x: torch.FloatTensor,
@@ -503,9 +514,13 @@ class BlockDecomposition(Decomposition):
         self.num_blocks = num_blocks
         self.block_size = block_size
 
-    def extra_repr(self) -> str:  # noqa: D102
-        return super().extra_repr() + f", num_blocks={self.num_blocks}, block_size={self.block_size}"
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_blocks={self.num_blocks}"
+        yield f"block_size={self.block_size}"
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         block_size = self.blocks.shape[-1]
         # Xavier Glorot initialization of each block
@@ -584,8 +599,8 @@ class EfficientBlockDecomposition(BlockDecomposition):
             The input dimension.
         :param num_relations: >0
             The number of relations.
-        :param num_bases: >0
-            The number of bases to use.
+        :param num_blocks: >0
+            The number of blocks to use. Has to be a divisor of input_dim.
         :param output_dim: >0
             The output dimension. If None is given, defaults to input_dim.
         """
@@ -603,9 +618,12 @@ class EfficientBlockDecomposition(BlockDecomposition):
         # TODO: We do not want to have a block for the self-loop
         self.blocks = nn.Parameter(self.blocks[:-1, ...])
 
-    def extra_repr(self) -> str:  # noqa: D102
-        return super().extra_repr() + f", horizontal_stacking={self.horizontal_stacking}"
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"horizontal_stacking={self.horizontal_stacking}"
 
+    # docstr-coverage: inherited
     def forward(
         self,
         x: torch.FloatTensor,
