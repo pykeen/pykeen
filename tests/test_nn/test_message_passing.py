@@ -4,6 +4,7 @@
 
 import pykeen.nn.message_passing
 from tests import cases
+import unittest_templates
 
 
 class BlockDecompositionTests(cases.DecompositionTestCase):
@@ -40,3 +41,14 @@ class HighMemoryBasesDecompositionTestCase(cases.BasesDecompositionTestCase):
         num_bases=4,
         memory_intense=True,
     )
+
+
+class DecompositionMetaTestCase(unittest_templates.MetaTestCase):
+    """A test for tests of all decompositions."""
+
+    base_cls = pykeen.nn.message_passing.Decomposition
+    base_test = cases.DecompositionTestCase
+    skip_cls = {
+        # mixin
+        pykeen.nn.message_passing.EfficientDecomposition,
+    }
