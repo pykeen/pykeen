@@ -178,7 +178,7 @@ def plot_er(  # noqa: C901
     if not e_reduced and not r_reduced:
         subtitle = ""
     elif reducer_kwargs:
-        subtitle = ", ".join("=".join(item) for item in reducer_kwargs.items())
+        subtitle = ", ".join("=".join((key, str(val))) for key, val in reducer_kwargs.items())
         subtitle = f" using {reducer_cls.__name__} ({subtitle})"
     else:
         subtitle = f" using {reducer_cls.__name__}"
