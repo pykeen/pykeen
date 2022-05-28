@@ -264,9 +264,13 @@ intersphinx_mapping = {
     "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest/", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
+    # See discussion for adding huggingface intersphinx docs at
+    # https://github.com/huggingface/transformers/issues/14728#issuecomment-1133521776
+    'datasets': ('https://huggingface.co/docs/datasets/master/en/', None),
+    'transformers': ('https://huggingface.co/docs/transformers/master/en/', None),
 }
 
 autoclass_content = "both"
 # autodoc_member_order = 'bysource'
-# autodoc_typehints = 'both' # TODO turn on after 4.1 release
+autodoc_typehints = "both"
 # autodoc_preserve_defaults = True
