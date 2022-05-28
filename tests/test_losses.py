@@ -148,6 +148,12 @@ class PairwiseLogisticLossTestCase(cases.GMRLTestCase):
     cls = pykeen.losses.PairwiseLogisticLoss
 
 
+class InfoNCELossTests(cases.SetwiseLossTestCase):
+    """Unit test for InfoNCE loss."""
+
+    cls = pykeen.losses.InfoNCELoss
+
+
 class TestLosses(unittest_templates.MetaTestCase[Loss]):
     """Test that the loss functions all have tests."""
 

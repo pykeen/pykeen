@@ -20,6 +20,7 @@ PyKEEN
    tutorial/representations
    tutorial/node_piece
    tutorial/inductive_lp
+   contrib/lightning
 
 .. toctree::
    :caption: Bring Your Own
@@ -70,6 +71,7 @@ PyKEEN
    :name: appendix
    :maxdepth: 2
 
+   analysis/index
    references
 
 Indices and Tables

@@ -23,6 +23,7 @@ from ..utils import (
     boxe_kg_arity_position_score,
     clamp_norm,
     compute_box,
+    ensure_complex,
     estimate_cost_of_sequence,
     is_cudnn_error,
     make_ones_like,
@@ -95,6 +96,7 @@ def _apply_optional_bn_to_tensor(
 
 
 def _add_cuda_warning(func):
+    # docstr-coverage: excused `wrapped`
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
@@ -135,6 +137,7 @@ def complex_interaction(
     :return: shape: batch_dims
         The scores.
     """
+    h, r, t = ensure_complex(h, r, t)
     # TODO: switch to einsum ?
     # return torch.real(torch.einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
     return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
@@ -392,7 +395,7 @@ def hole_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-) -> torch.FloatTensor:  # noqa: D102
+) -> torch.FloatTensor:
     """Evaluate the HolE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -617,6 +620,7 @@ def rotate_interaction(
     :return: shape: batch_dims
         The scores.
     """
+    h, r, t = ensure_complex(h, r, t)
     if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
         # r expresses a rotation in complex plane.
         # rotate head by relation (=Hadamard product in complex space)

@@ -188,6 +188,53 @@ executed with one of the previous examples.
     >>> # print(results)
 
 
+Preview: Evaluation Loops
+-------------------------
+PyKEEN is currently in the transition to use torch's data-loaders for evaluation, too.
+While not being active for the high-level `pipeline`, you can already use it explicitly:
+
+.. code-block:: python
+
+    >>> # get a dataset
+    >>> from pykeen.datasets import Nations
+    >>> dataset = Nations()
+
+    >>> # Pick a model
+    >>> from pykeen.models import TransE
+    >>> model = TransE(triples_factory=dataset.training)
+
+    >>> # Pick a training approach (sLCWA or LCWA)
+    >>> from pykeen.training import SLCWATrainingLoop
+    >>> training_loop = SLCWATrainingLoop(
+    ...     model=model,
+    ...     triples_factory=dataset.training,
+    ... )
+
+    >>> # Train like Cristiano Ronaldo
+    >>> _ = training_loop.train(
+    ...     triples_factory=training_triples_factory,
+    ...     num_epochs=5,
+    ...     batch_size=256,
+    ...     # NEW: validation evaluation callback
+    ...     callbacks="evaluation-loop",
+    ...     callback_kwargs=dict(
+    ...         prefix="validation",
+    ...         factory=dataset.validation,
+    ...     ),
+    ... )
+
+    >>> # Pick an evaluation loop (NEW)
+    >>> from pykeen.evaluation import LCWAEvaluationLoop
+    >>> evaluation_loop = LCWAEvaluationLoop(
+    ...     model=model,
+    ...     triples_factory=dataset.testing,
+    ... )
+
+    >>> # Evaluate
+    >>> results = evaluation_loop.evaluate()
+    >>> # print(results)
+
+
 Training Callbacks
 ------------------
 PyKEEN allows interaction with the training loop through callbacks.
