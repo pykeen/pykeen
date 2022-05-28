@@ -82,6 +82,7 @@ def plot_er(  # noqa: C901
     entity_embedding_getter=None,
     relation_embedding_getter=None,
     ax=None,
+    subtitle: Optional[str] = None,
     **kwargs,
 ):
     """Plot the reduced entities and relation vectors in 2D.
@@ -105,6 +106,7 @@ def plot_er(  # noqa: C901
         defaults to :func:`_default_relation_embedding_getter`, which just gets ``model.relation_embeddings``. Note,
         the default only works with old-style PyKEEN models.
     :param ax: The matplotlib axis, if pre-defined
+    :param subtitle: A user-defined subtitle. Is inferred if not given. Pass an empty string to not use a subtitle.
     :param kwargs: The keyword arguments passed to `__init__()` of
         the reducer class (e.g., PCA, TSNE)
     :returns: The axis
@@ -175,11 +177,13 @@ def plot_er(  # noqa: C901
     else:
         raise ValueError  # not even possible
 
-    if not e_reduced and not r_reduced:
+    if subtitle is not None:
+        pass  # a specific subtitle has been given
+    elif not e_reduced and not r_reduced:
         subtitle = ""
     elif reducer_kwargs:
-        subtitle = ", ".join("=".join(item) for item in reducer_kwargs.items())
-        subtitle = f" using {reducer_cls.__name__} ({subtitle})"
+        _subtitle_ending = ", ".join(f"{key}={value}" for key, value in reducer_kwargs.items())
+        subtitle = f" using {reducer_cls.__name__} ({_subtitle_ending})"
     else:
         subtitle = f" using {reducer_cls.__name__}"
 
