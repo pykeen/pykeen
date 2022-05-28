@@ -176,7 +176,7 @@ def plot_er(  # noqa: C901
         ymin = e_embeddings[:, 1].min() - margin
     else:
         raise ValueError  # not even possible
-    
+
     if subtitle is not None:
         pass  # a specific subtitle has been given
     elif not e_reduced and not r_reduced:
