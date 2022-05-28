@@ -60,10 +60,10 @@ class TransformerEncoder(nn.Module):
         max_length: Optional[int] = None,
     ):
         """
-        Initialize the encoder.
+        Initialize the encoder using :class:`transformers.AutoModel`.
 
         :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. :func:`transformers.AutoModel.from_pretrained`
+            the name of the pretrained model, or a path, cf. :meth:`transformers.AutoModel.from_pretrained`
         :param max_length: >0, default: 512
             the maximum number of tokens to pad/trim the labels to
 
@@ -164,7 +164,7 @@ def safe_diagonal(matrix: torch.Tensor) -> torch.Tensor:
     Extract diagonal from a potentially sparse matrix.
 
     .. note ::
-        this is a work-around as long as `torch.diagonal` does not work for sparse tensors
+        this is a work-around as long as :func:`torch.diagonal` does not work for sparse tensors
 
     :param matrix: shape: `(n, n)`
         the matrix
