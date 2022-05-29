@@ -902,3 +902,9 @@ class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.m
         )
         scores = self.instance.predict_t(hr_batch=hr_batch)
         assert torch.allclose(scores, expected_scores)
+
+
+class PseudoTypeFilteredModelTests(cases.ModelTestCase):
+    """Tests for the filtered meta model."""
+
+    cls = pykeen.models.meta.filtered.PseudoTypeFilteredModel
