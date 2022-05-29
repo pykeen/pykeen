@@ -31,12 +31,12 @@ class Globi(SingleTabbedDataset):
         link: https://doi.org/10.1016/j.ecoinf.2014.08.005
     single: true
     statistics:
-        entities:
-        relations:
-        triples:
-        training:
-        testing:
-        validation:
+        entities: 404207
+        relations: 39
+        triples: 1966385
+        training: 1573108
+        testing: 196638
+        validation: 196639
     """
 
     def __init__(
