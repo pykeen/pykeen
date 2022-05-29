@@ -30,11 +30,19 @@ class PseudoTypeFilteredModel(Model):
         github: pykeen/pykeen
     """
 
+    head_per_relation: scipy.sparse.csr_matrix
+    tail_per_relation: scipy.sparse.csr_matrix
+    relation_per_head: scipy.sparse.csr_matrix
+    relation_per_tail: scipy.sparse.csr_matrix
+
+    TRAINING_FILL_VALUE: float = -1.0e03
+    INFERENCE_FILL_VALUE: float = float("-inf")
+
     def __init__(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        in_training: bool = False,
+        apply_in_training: bool = False,
         base: HintOrType[Model] = "rotate",
         **kwargs,
     ) -> None:
@@ -74,8 +82,11 @@ class PseudoTypeFilteredModel(Model):
             ).astype(bool)
             for col_indices in (h, t)
         ]
+        self.relation_per_head, self.relation_per_tail = [
+            m.transpose().tocsr() for m in (self.head_per_relation, self.tail_per_relation)
+        ]
 
-        self.in_training = in_training
+        self.apply_in_training = apply_in_training
 
     # docstr-coverage: inherited
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
@@ -93,7 +104,7 @@ class PseudoTypeFilteredModel(Model):
     def score_hrt(
         self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        if self.in_training:
+        if self.apply_in_training:
             raise NotImplementedError
         return self.base.score_hrt(hrt_batch=hrt_batch, mode=mode)
 
@@ -101,35 +112,50 @@ class PseudoTypeFilteredModel(Model):
     def score_h(
         self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        scores = self.base.score_h(rt_batch=rt_batch, slice_size=slice_size, mode=mode)
-        if not self.in_training:
-            return scores
-        return self._mask(scores=scores, batch_indices=rt_batch[:, 0], index=self.head_per_relation, fill_value=-1.0e03)
+        return self._mask(
+            scores=self.base.score_h(rt_batch=rt_batch, slice_size=slice_size, mode=mode),
+            batch_indices=rt_batch[:, 0],
+            index=self.head_per_relation,
+            in_training=True,
+        )
 
     # docstr-coverage: inherited
     def score_r(
         self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        if self.in_training:
-            raise NotImplementedError
-        return self.base.score_r(ht_batch=ht_batch, slice_size=slice_size, mode=mode)
+        return self._mask(
+            self._mask(
+                scores=self.base.score_r(ht_batch=ht_batch, slice_size=slice_size, mode=mode),
+                batch_indices=ht_batch[:, 0],
+                index=self.relation_per_head,
+                in_training=True,
+            ),
+            batch_indices=ht_batch[:, 1],
+            index=self.relation_per_tail,
+            in_training=True,
+        )
 
     # docstr-coverage: inherited
     def score_t(
         self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        scores = self.base.score_t(hr_batch=hr_batch, slice_size=slice_size, mode=mode)
-        if not self.in_training:
-            return scores
-        return self._mask(scores=scores, batch_indices=hr_batch[:, 1], index=self.head_per_relation, fill_value=-1.0e03)
+        return self._mask(
+            scores=self.base.score_t(hr_batch=hr_batch, slice_size=slice_size, mode=mode),
+            batch_indices=hr_batch[:, 1],
+            index=self.head_per_relation,
+            in_training=True,
+        )
 
-    @staticmethod
     def _mask(
+        self,
         scores: torch.FloatTensor,
         batch_indices: torch.LongTensor,
         index: scipy.sparse.csr_matrix,
-        fill_value: float = float("-inf"),
+        in_training: bool,
     ) -> torch.Tensor:
+        if in_training and not self.apply_in_training:
+            return scores
+        fill_value = self.TRAINING_FILL_VALUE if in_training else self.INFERENCE_FILL_VALUE
         # get batch indices as numpy array
         i = batch_indices.cpu().numpy()
         # get mask, shape: (batch_size, num_entities/num_relations)
@@ -149,6 +175,7 @@ class PseudoTypeFilteredModel(Model):
             scores=super().predict_h(rt_batch, slice_size=slice_size, mode=mode),
             batch_indices=rt_batch[:, 0],
             index=self.head_per_relation,
+            in_training=False,
         )
 
     # docstr-coverage: inherited
@@ -159,10 +186,21 @@ class PseudoTypeFilteredModel(Model):
             scores=super().predict_t(hr_batch, slice_size=slice_size, mode=mode),
             batch_indices=hr_batch[:, 1],
             index=self.tail_per_relation,
+            in_training=False,
         )
 
     # docstr-coverage: inherited
     def predict_r(
         self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        raise NotImplementedError
+        return self._mask(
+            scores=self._mask(
+                scores=super().predict_r(ht_batch, slice_size=slice_size, mode=mode),
+                batch_indices=ht_batch[:, 0],
+                index=self.relation_per_head,
+                in_training=False,
+            ),
+            batch_indices=ht_batch[:, 1],
+            index=self.relation_per_tail,
+            in_training=False,
+        )
