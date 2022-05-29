@@ -904,7 +904,7 @@ class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.m
         assert torch.allclose(scores, expected_scores)
 
 
-class PseudoTypeFilteredModelTests(cases.ModelTestCase):
+class CooccurrenceFilteredModelTests(cases.ModelTestCase):
     """Tests for the filtered meta model."""
 
-    cls = pykeen.models.meta.filtered.PseudoTypeFilteredModel
+    cls = pykeen.models.meta.filtered.CooccurrenceFilteredModel

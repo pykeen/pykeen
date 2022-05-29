@@ -14,13 +14,13 @@ from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import InductiveMode
 
 __all__ = [
-    "PseudoTypeFilteredModel",
+    "CooccurrenceFilteredModel",
 ]
 
 
 @parse_docdata
-class PseudoTypeFilteredModel(Model):
-    """A model which filters predictions by pseudo-types.
+class CooccurrenceFilteredModel(Model):
+    """A model which filters predictions by co-occurence
 
     ---
     citation:

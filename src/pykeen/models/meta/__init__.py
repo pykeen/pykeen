@@ -2,4 +2,4 @@
 
 """Models building upon other models."""
 
-from .filtered import PseudoTypeFilteredModel  # noqa:F401
+from .filtered import CooccurrenceFilteredModel  # noqa:F401
