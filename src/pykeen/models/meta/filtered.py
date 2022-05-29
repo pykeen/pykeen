@@ -30,13 +30,22 @@ class PseudoTypeFilteredModel(Model):
         github: pykeen/pykeen
     """
 
-    def __init__(self, *, triples_factory: CoreTriplesFactory, base: HintOrType[Model] = "rotate", **kwargs) -> None:
+    def __init__(
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        in_training: bool = False,
+        base: HintOrType[Model] = "rotate",
+        **kwargs,
+    ) -> None:
         """
         Initialize the model.
 
         :param triples_factory:
             the (training) triples factory; used for creating the co-occurrence counts *and* for instantiating the
             base model.
+        :param in_training:
+            whether to apply the masking also during training
         :param base:
             the base model, or a hint thereof.
         """
@@ -57,15 +66,16 @@ class PseudoTypeFilteredModel(Model):
 
         # index
         h, r, t = numpy.asarray(triples_factory.mapped_triples).T
-        # TODO: binary only?
         self.head_per_relation, self.tail_per_relation = [
             get_csr_matrix(
                 row_indices=r,
                 col_indices=col_indices,
                 shape=(triples_factory.num_relations, triples_factory.num_entities),
-            )
+            ).astype(bool)
             for col_indices in (h, t)
         ]
+
+        self.in_training = in_training
 
     # docstr-coverage: inherited
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
@@ -83,30 +93,43 @@ class PseudoTypeFilteredModel(Model):
     def score_hrt(
         self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
+        if self.in_training:
+            raise NotImplementedError
         return self.base.score_hrt(hrt_batch=hrt_batch, mode=mode)
 
     # docstr-coverage: inherited
     def score_h(
         self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        return self.base.score_h(rt_batch=rt_batch, slice_size=slice_size, mode=mode)
+        scores = self.base.score_h(rt_batch=rt_batch, slice_size=slice_size, mode=mode)
+        if not self.in_training:
+            return scores
+        return self._mask(scores=scores, batch_indices=rt_batch[:, 0], index=self.head_per_relation, fill_value=-1.0e03)
 
     # docstr-coverage: inherited
     def score_r(
         self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
+        if self.in_training:
+            raise NotImplementedError
         return self.base.score_r(ht_batch=ht_batch, slice_size=slice_size, mode=mode)
 
     # docstr-coverage: inherited
     def score_t(
         self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:  # noqa: D102
-        return self.base.score_t(hr_batch=hr_batch, slice_size=slice_size, mode=mode)
+        scores = self.base.score_t(hr_batch=hr_batch, slice_size=slice_size, mode=mode)
+        if not self.in_training:
+            return scores
+        return self._mask(scores=scores, batch_indices=hr_batch[:, 1], index=self.head_per_relation, fill_value=-1.0e03)
 
     @staticmethod
     def _mask(
-        scores: torch.FloatTensor, batch_indices: torch.LongTensor, index: scipy.sparse.csr_matrix
-    ) -> torch.FloatTensor:
+        scores: torch.FloatTensor,
+        batch_indices: torch.LongTensor,
+        index: scipy.sparse.csr_matrix,
+        fill_value: float = float("-inf"),
+    ) -> torch.Tensor:
         # get batch indices as numpy array
         i = batch_indices.cpu().numpy()
         # get mask, shape: (batch_size, num_entities/num_relations)
@@ -114,7 +137,7 @@ class PseudoTypeFilteredModel(Model):
         # get non-zero entries
         rows, cols = [torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero()]
         # set scores for -inf for every non-occuring entry
-        new_scores = scores.new_full(size=scores.shape, fill_value=float("-inf"))
+        new_scores = scores.new_full(size=scores.shape, fill_value=fill_value)
         new_scores[rows, cols] = scores[rows, cols]
         return new_scores
 
