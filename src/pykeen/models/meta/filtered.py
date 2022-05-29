@@ -20,7 +20,7 @@ __all__ = [
 
 @parse_docdata
 class CooccurrenceFilteredModel(Model):
-    """A model which filters predictions by co-occurence
+    """A model which filters predictions by co-occurence.
 
     ---
     citation:
