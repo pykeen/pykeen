@@ -50,6 +50,7 @@ from .umls import UMLS
 from .utils import get_dataset
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
+from .globi import Globi
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 
@@ -95,6 +96,7 @@ __all__ = [
     "PharmKG8k",
     "PharmKG",
     "PrimeKG",
+    "Globi",
 ]
 
 logger = logging.getLogger(__name__)
