@@ -266,8 +266,8 @@ intersphinx_mapping = {
     # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
     # See discussion for adding huggingface intersphinx docs at
     # https://github.com/huggingface/transformers/issues/14728#issuecomment-1133521776
-    'datasets': ('https://huggingface.co/docs/datasets/master/en/', None),
-    'transformers': ('https://huggingface.co/docs/transformers/master/en/', None),
+    "datasets": ("https://huggingface.co/docs/datasets/master/en/", None),
+    "transformers": ("https://huggingface.co/docs/transformers/master/en/", None),
 }
 
 autoclass_content = "both"
