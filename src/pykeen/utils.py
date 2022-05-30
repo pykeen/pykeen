@@ -1679,28 +1679,26 @@ def prepare_filter_triples(
     """Prepare the filter triples from the evaluation triples, and additional filter triples."""
     if torch.is_tensor(additional_filter_triples):
         additional_filter_triples = [additional_filter_triples]
-    if additional_filter_triples is None:
-        if warn:
-            logger.warning(
-                dedent(
-                    """\
-                    The filtered setting was enabled, but there were no `additional_filter_triples`
-                    given. This means you probably forgot to pass (at least) the training triples. Try:
+    if additional_filter_triples is not None:
+        return torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
+    if warn:
+        logger.warning(
+            dedent(
+                """\
+                The filtered setting was enabled, but there were no `additional_filter_triples`
+                given. This means you probably forgot to pass (at least) the training triples. Try:
 
-                        additional_filter_triples=[dataset.training.mapped_triples]
+                    additional_filter_triples=[dataset.training.mapped_triples]
 
-                    Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
 
-                        additional_filter_triples=[
-                            dataset.training.mapped_triples,
-                            dataset.validation.mapped_triples,
-                        ]
-                    """
-                )
+                    additional_filter_triples=[
+                        dataset.training.mapped_triples,
+                        dataset.validation.mapped_triples,
+                    ]
+                """
             )
-    else:
-        mapped_triples = torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
-
+        )
     return mapped_triples
 
 
