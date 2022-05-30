@@ -471,7 +471,7 @@ class ERModel(
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         ht_batch = ht_batch.unsqueeze(dim=1)
-        h, r, t = self._get_representations(h=ht_batch[..., 0], r=r, t=ht_batch[..., 1], mode=mode)
+        h, r, t = self._get_representations(h=ht_batch[..., 0], r=rs, t=ht_batch[..., 1], mode=mode)
         # unsqueeze if necessary
         if rs is None or rs.ndimension() == 1:
             r = parallel_unsqueeze(r, dim=0)
