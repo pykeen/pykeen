@@ -1023,6 +1023,8 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 raise SkipTest(f"score multi t not implemented for {self.cls.__name__}")
             self.assertTupleEqual(tuple(scores.shape), expected_shape)
             self._check_scores(batch, scores)
+            # clear buffers for message passing models
+            self.instance.post_parameter_update()
 
     def test_score_r(self) -> None:
         """Test the model's ``score_r()`` function."""
