@@ -142,6 +142,15 @@ def get_tail_prediction_df(
     ...     model='RotatE',
     ... )
     >>> df = get_tail_prediction_df(result.model, 'brazil', 'accusation', triples_factory=result.training)
+
+    The optional `tails` parameter can be used to restrict prediction to a subset of entities, e.g.
+    >>> df = get_tail_prediction_df(
+    ...     result.model,
+    ...     'brazil',
+    ...     'accusation',
+    ...     triples_factory=result.training,
+    ...     tails=["burma", "china", "india", "indonesia"],
+    ... )
     """
     head_id = triples_factory.entity_to_id[head_label]
     relation_id = triples_factory.relation_to_id[relation_label]
