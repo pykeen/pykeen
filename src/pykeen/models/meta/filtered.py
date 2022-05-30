@@ -37,9 +37,6 @@ class CooccurrenceFilteredModel(Model):
     relation_per_head: scipy.sparse.csr_matrix
     relation_per_tail: scipy.sparse.csr_matrix
 
-    TRAINING_FILL_VALUE: float = -1.0e03
-    INFERENCE_FILL_VALUE: float = float("-inf")
-
     def __init__(
         self,
         *,
@@ -47,6 +44,8 @@ class CooccurrenceFilteredModel(Model):
         additional_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         apply_in_training: bool = False,
         base: HintOrType[Model] = "rotate",
+        training_fill_value: float = -1.0e03,
+        inference_fill_value: float = float("-inf"),
         **kwargs,
     ) -> None:
         """
@@ -61,6 +60,12 @@ class CooccurrenceFilteredModel(Model):
             whether to apply the masking also during training
         :param base:
             the base model, or a hint thereof.
+        :param training_fill_value:
+            the training fill value; for most loss functions, this has to be a finite value, i.e., not infinity
+        :param inference_fill_value:
+            the inference fill value
+        :param kwargs:
+            additional keyword-based parameters passed to the base model upon instantiation
         """
         # avoid cyclic imports
         from .. import model_resolver
@@ -98,6 +103,8 @@ class CooccurrenceFilteredModel(Model):
         ]
 
         self.apply_in_training = apply_in_training
+        self.training_fill_value = training_fill_value
+        self.inference_fill_value = inference_fill_value
 
     # docstr-coverage: inherited
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
@@ -158,7 +165,7 @@ class CooccurrenceFilteredModel(Model):
     ) -> torch.Tensor:
         if in_training and not self.apply_in_training:
             return scores
-        fill_value = self.TRAINING_FILL_VALUE if in_training else self.INFERENCE_FILL_VALUE
+        fill_value = self.training_fill_value if in_training else self.inference_fill_value
         # get batch indices as numpy array
         i = batch_indices.cpu().numpy()
         # get mask, shape: (batch_size, num_entities/num_relations)
