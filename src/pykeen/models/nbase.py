@@ -415,26 +415,17 @@ class ERModel(
         if get_batchnorm_modules(self):  # if there are any, this is truthy
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
+    # docstr-coverage: inherited
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using right side (tail) prediction.
-
-        This method calculates the score for all possible tails for each (head, relation) pair.
-
-        :param hr_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, relation) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each h-r pair, the scores for all possible tails.
-        """
+        self,
+        hr_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        ts: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
+        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=ts, mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
             representations=self.entity_representations,
