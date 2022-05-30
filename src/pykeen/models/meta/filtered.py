@@ -1,6 +1,6 @@
 """Filtered models."""
 
-from typing import Optional
+from typing import Collection, List, Optional, Union
 
 import numpy
 import scipy.sparse
@@ -8,10 +8,12 @@ import torch
 from class_resolver import HintOrType
 from docdata import parse_docdata
 
+from pykeen.evaluation.evaluator import prepare_filter_triples
+
 from ..base import Model
 from ..baseline.utils import get_csr_matrix
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import InductiveMode
+from ...typing import InductiveMode, MappedTriples
 
 __all__ = [
     "CooccurrenceFilteredModel",
@@ -42,6 +44,7 @@ class CooccurrenceFilteredModel(Model):
         self,
         *,
         triples_factory: CoreTriplesFactory,
+        additional_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         apply_in_training: bool = False,
         base: HintOrType[Model] = "rotate",
         **kwargs,
@@ -52,6 +55,8 @@ class CooccurrenceFilteredModel(Model):
         :param triples_factory:
             the (training) triples factory; used for creating the co-occurrence counts *and* for instantiating the
             base model.
+        :param additional_filter_triples:
+            additional triples to use for creating the co-occurrence statistics
         :param in_training:
             whether to apply the masking also during training
         :param base:
@@ -73,7 +78,13 @@ class CooccurrenceFilteredModel(Model):
         self.base = base
 
         # index
-        h, r, t = numpy.asarray(triples_factory.mapped_triples).T
+        h, r, t = (
+            prepare_filter_triples(
+                mapped_triples=triples_factory.mapped_triples, additional_filter_triples=additional_triples or []
+            )
+            .numpy()
+            .T
+        )
         self.head_per_relation, self.tail_per_relation = [
             get_csr_matrix(
                 row_indices=r,
