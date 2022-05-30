@@ -336,7 +336,10 @@ class Model(nn.Module, ABC):
         return scores
 
     def predict_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+        self,
+        rt_batch: torch.LongTensor,
+        *,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -352,20 +355,18 @@ class Model(nn.Module, ABC):
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
             The indices of (relation, tail) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-        :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Model.score_h`
 
-        :return: shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_heads), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
         rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
         if self.use_inverse_triples:
-            scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size, mode=mode)
+            scores = self.score_h_inverse(rt_batch=rt_batch, **kwargs)
         else:
-            scores = self.score_h(rt_batch, slice_size=slice_size, mode=mode)
+            scores = self.score_h(rt_batch, **kwargs)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
