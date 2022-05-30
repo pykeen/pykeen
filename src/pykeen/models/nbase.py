@@ -437,54 +437,46 @@ class ERModel(
             num=self._get_entity_len(mode=mode),
         )
 
+    # docstr-coverage: inherited
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using left side (head) prediction.
-
-        This method calculates the score for all possible heads for each (relation, tail) pair.
-
-        :param rt_batch: shape: (batch_size, 2), dtype: long
-            The indices of (relation, tail) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each r-t pair, the scores for all possible heads.
-        """
+        self,
+        rt_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        hs: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
+        # add broadcast dimension
+        rt_batch = rt_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=hs, r=rt_batch[..., 0], t=rt_batch[..., 1], mode=mode)
+        # unsqueeze if necessary
+        if hs is None or hs.ndimension() == 1:
+            h = parallel_unsqueeze(h, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
+            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode),
         )
 
+    # docstr-coverage: inherited
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using middle (relation) prediction.
-
-        This method calculates the score for all possible relations for each (head, tail) pair.
-
-        :param ht_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, tail) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
-        """
+        self,
+        ht_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        rs: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
+        # add broadcast dimension
+        ht_batch = ht_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=ht_batch[..., 0], r=r, t=ht_batch[..., 1], mode=mode)
+        # unsqueeze if necessary
+        if rs is None or rs.ndimension() == 1:
+            r = parallel_unsqueeze(r, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
+            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.relation_representations,
             num=self.num_relations,
         )
