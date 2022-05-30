@@ -142,7 +142,11 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_t(
+        self, hr_batch: torch.LongTensor, ts: Optional[torch.LongTensor] = None, **kwargs
+    ) -> torch.FloatTensor:  # noqa: D102
+        if ts is not None:
+            raise NotImplementedError
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
         t = self.entity_embeddings(indices=None).unsqueeze(dim=0)

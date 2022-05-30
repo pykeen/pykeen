@@ -2,7 +2,7 @@
 
 """An implementation of TransH."""
 
-from typing import Any, ClassVar, Mapping, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import linalg
@@ -150,7 +150,11 @@ class TransH(EntityRelationEmbeddingModel):
         return -linalg.vector_norm(ph + d_r - pt, ord=2, dim=-1, keepdim=True)
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_t(
+        self, hr_batch: torch.LongTensor, ts: Optional[torch.LongTensor] = None, **kwargs
+    ) -> torch.FloatTensor:  # noqa: D102
+        if ts is not None:
+            raise NotImplementedError
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         d_r = self.relation_embeddings(indices=hr_batch[:, 1])
