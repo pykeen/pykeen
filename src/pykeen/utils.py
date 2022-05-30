@@ -1676,6 +1676,24 @@ def get_edge_index(
     return edge_index
 
 
+def raise_if_present(parameter_name: str):
+    """Create an decorator which raises an error if a parameter is not None."""
+
+    def raise_decorator(func: Callable) -> Callable:
+        """Decorate a function to raise an error if a parameter is present and not None."""
+
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            """Raise an error if a parameter is present and not None."""
+            if kwargs.get(parameter_name) is not None:
+                raise ValueError(f"{parameter_name} != None is not supported")
+            return func(*args, **kwargs)
+
+        return wrapped
+
+    return raise_decorator
+
+
 if __name__ == "__main__":
     import doctest
 

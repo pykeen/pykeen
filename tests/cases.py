@@ -983,6 +983,8 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
         try:
             scores = score(batch, mode=self.mode, **kwargs)
+        except ValueError as error:
+            raise SkipTest() from error
         except NotImplementedError:
             self.fail(msg=f"{score} not yet implemented")
         except RuntimeError as e:
