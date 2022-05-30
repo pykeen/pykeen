@@ -12,6 +12,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...typing import Hint, Initializer
+from ...utils import raise_if_present
 
 __all__ = [
     "ERMLPE",
@@ -154,11 +155,8 @@ class ERMLPE(EntityRelationEmbeddingModel):
         return x
 
     # docstr-coverage: inherited
-    def score_t(
-        self, hr_batch: torch.LongTensor, ts: Optional[torch.LongTensor] = None, **kwargs
-    ) -> torch.FloatTensor:  # noqa: D102
-        if ts is not None:
-            raise NotImplementedError
+    @raise_if_present(parameter_name="ts")
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
         t = self.entity_embeddings(indices=None).transpose(1, 0)
@@ -179,6 +177,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
         return x
 
     # docstr-coverage: inherited
+    @raise_if_present(parameter_name="hs")
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)

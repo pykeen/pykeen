@@ -2,7 +2,7 @@
 
 """TransE."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch.autograd
 from torch import linalg
@@ -12,6 +12,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...typing import Constrainer, Hint, Initializer
+from ...utils import raise_if_present
 
 __all__ = [
     "TransE",
@@ -109,11 +110,8 @@ class TransE(EntityRelationEmbeddingModel):
         return -linalg.vector_norm(h + r - t, dim=-1, ord=self.scoring_fct_norm, keepdim=True)
 
     # docstr-coverage: inherited
-    def score_t(
-        self, hr_batch: torch.LongTensor, ts: Optional[torch.LongTensor] = None, **kwargs
-    ) -> torch.FloatTensor:  # noqa: D102
-        if ts is not None:
-            raise NotImplementedError
+    @raise_if_present(parameter_name="ts")
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -123,6 +121,7 @@ class TransE(EntityRelationEmbeddingModel):
         return -linalg.vector_norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, ord=self.scoring_fct_norm)
 
     # docstr-coverage: inherited
+    @raise_if_present(parameter_name="hs")
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)

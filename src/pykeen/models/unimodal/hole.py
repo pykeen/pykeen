@@ -11,7 +11,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...moves import irfft, rfft
 from ...nn.init import xavier_uniform_
 from ...typing import Constrainer, Hint, Initializer
-from ...utils import clamp_norm
+from ...utils import clamp_norm, raise_if_present
 
 __all__ = [
     "HolE",
@@ -142,11 +142,8 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     # docstr-coverage: inherited
-    def score_t(
-        self, hr_batch: torch.LongTensor, ts: Optional[torch.LongTensor] = None, **kwargs
-    ) -> torch.FloatTensor:  # noqa: D102
-        if ts is not None:
-            raise NotImplementedError
+    @raise_if_present(parameter_name="ts")
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
         t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
@@ -159,6 +156,7 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     # docstr-coverage: inherited
+    @raise_if_present(parameter_name="hs")
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)

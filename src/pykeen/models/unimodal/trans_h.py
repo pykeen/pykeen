@@ -2,7 +2,7 @@
 
 """An implementation of TransH."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 from torch import linalg
@@ -14,6 +14,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import representation_resolver
 from ...regularizers import Regularizer, TransHRegularizer
 from ...typing import Hint, Initializer
+from ...utils import raise_if_present
 
 __all__ = [
     "TransH",
@@ -150,11 +151,8 @@ class TransH(EntityRelationEmbeddingModel):
         return -linalg.vector_norm(ph + d_r - pt, ord=2, dim=-1, keepdim=True)
 
     # docstr-coverage: inherited
-    def score_t(
-        self, hr_batch: torch.LongTensor, ts: Optional[torch.LongTensor] = None, **kwargs
-    ) -> torch.FloatTensor:  # noqa: D102
-        if ts is not None:
-            raise NotImplementedError
+    @raise_if_present(parameter_name="ts")
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         d_r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -171,6 +169,7 @@ class TransH(EntityRelationEmbeddingModel):
         return -linalg.vector_norm(ph[:, None, :] + d_r[:, None, :] - pt, ord=2, dim=-1)
 
     # docstr-coverage: inherited
+    @raise_if_present(parameter_name="hs")
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)
