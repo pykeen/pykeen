@@ -338,7 +338,6 @@ class Model(nn.Module, ABC):
     def predict_h(
         self,
         rt_batch: torch.LongTensor,
-        *,
         **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
@@ -374,7 +373,6 @@ class Model(nn.Module, ABC):
     def predict_t(
         self,
         hr_batch: torch.LongTensor,
-        *,
         **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
@@ -410,7 +408,6 @@ class Model(nn.Module, ABC):
     def predict_r(
         self,
         ht_batch: torch.LongTensor,
-        *,
         **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
@@ -438,19 +435,18 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        *,
         **kwargs,
     ) -> torch.FloatTensor:
         """
         Predict scores for the given target.
-        
+
         :param hrt_batch: shape: (batch_size, 3)
             the full batch
         :param target:
             the target to predict
         :param kwargs:
             additional keyword-based parameters passed to the specific target prediction method.
-        
+
         :return: shape: (batch_size, num)
             the scores
         """
