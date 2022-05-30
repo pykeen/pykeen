@@ -115,7 +115,7 @@ class CooccurrenceFilteredModel(Model):
         batch: torch.LongTensor,
         target: Target,
         in_training: bool,
-    ) -> torch.Tensor:
+    ) -> torch.FloatTensor:
         if in_training and not self.apply_in_training:
             return scores
         fill_value = self.training_fill_value if in_training else self.inference_fill_value
