@@ -517,32 +517,34 @@ def filter_scores_(
 def prepare_filter_triples(
     mapped_triples: MappedTriples,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    warn: bool = True,
 ) -> MappedTriples:
     """Prepare the filter triples from the evaluation triples, and additional filter triples."""
-    if additional_filter_triples is None:
-        logger.warning(
-            dedent(
-                """\
-            The filtered setting was enabled, but there were no `additional_filter_triples`
-            given. This means you probably forgot to pass (at least) the training triples. Try:
-
-                additional_filter_triples=[dataset.training.mapped_triples]
-
-            Or if you want to use the Bordes et al. (2013) approach to filtering, do:
-
-                additional_filter_triples=[
-                    dataset.training.mapped_triples,
-                    dataset.validation.mapped_triples,
-                ]
-        """
-            )
-        )
-        return mapped_triples
-
     if torch.is_tensor(additional_filter_triples):
         additional_filter_triples = [additional_filter_triples]
+    if additional_filter_triples is None:
+        if warn:
+            logger.warning(
+                dedent(
+                    """\
+                    The filtered setting was enabled, but there were no `additional_filter_triples`
+                    given. This means you probably forgot to pass (at least) the training triples. Try:
 
-    return torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
+                        additional_filter_triples=[dataset.training.mapped_triples]
+
+                    Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+
+                        additional_filter_triples=[
+                            dataset.training.mapped_triples,
+                            dataset.validation.mapped_triples,
+                        ]
+                    """
+                )
+            )
+    else:
+        mapped_triples = torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
+
+    return mapped_triples
 
 
 # TODO: consider switching to torch.DataLoader where the preparation of masks/filter batches also takes place
