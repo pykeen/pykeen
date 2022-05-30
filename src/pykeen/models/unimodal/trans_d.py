@@ -2,7 +2,7 @@
 
 """Implementation of TransD."""
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Optional
 
 from class_resolver import OptionalKwargs
 
@@ -65,7 +65,7 @@ class TransD(ERModel):
         self,
         *,
         embedding_dim: int = 50,
-        relation_dim: int = 30,
+        relation_dim: Optional[int] = None,
         interaction_kwargs: OptionalKwargs = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
@@ -73,6 +73,27 @@ class TransD(ERModel):
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the (entity) embedding dimension
+        :param relation_dim:
+            the relation embedding dimension. Defaults to `embedding_dim`.
+        :param interaction_kwargs:
+            additional keyword-based parameters passed to :meth:`TransDInteraction.__init__`
+        :param entity_initializer:
+            the entity representation initializer
+        :param relation_initializer:
+            the relation representation initializer
+        :param entity_constrainer:
+            the entity representation constrainer
+        :param relation_constrainer:
+            the relation representation constrainer
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
+        relation_dim = relation_dim or embedding_dim
         super().__init__(
             interaction=TransDInteraction,
             interaction_kwargs=interaction_kwargs,

@@ -2,12 +2,11 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Collection, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
+from typing import Callable, Collection, Literal, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
 from class_resolver import Hint, HintOrType, HintType
-from typing_extensions import Literal
 
 __all__ = [
     # General types
@@ -50,6 +49,11 @@ __all__ = [
     "TRAINING",
     "TESTING",
     "VALIDATION",
+    # entity alignment sides
+    "EASide",
+    "EA_SIDE_LEFT",
+    "EA_SIDE_RIGHT",
+    "EA_SIDES",
 ]
 
 X = TypeVar("X")
@@ -146,3 +150,9 @@ SIDE_BOTH: TargetBoth = "both"
 ExtendedTarget = Union[Target, TargetBoth]
 SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
 SIDE_MAPPING = {LABEL_HEAD: [LABEL_HEAD], LABEL_TAIL: [LABEL_TAIL], SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL]}
+
+# entity alignment
+EASide = Literal["left", "right"]
+EA_SIDE_LEFT: EASide = "left"
+EA_SIDE_RIGHT: EASide = "right"
+EA_SIDES: Tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)

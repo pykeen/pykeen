@@ -378,8 +378,6 @@ class TestRGCNBasis(cases.BaseRGCNTest):
             num_bases=3,
         ),
     }
-    #: one bias per layer
-    num_constant_init = 2
 
 
 class TestRGCNBlock(cases.BaseRGCNTest):
@@ -394,8 +392,6 @@ class TestRGCNBlock(cases.BaseRGCNTest):
         ),
         "edge_weighting": "symmetric",
     }
-    #: one bias per layer
-    num_constant_init = 2
 
 
 class TestRotatE(cases.ModelTestCase):
@@ -408,9 +404,7 @@ class TestRotatE(cases.ModelTestCase):
 
         Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
         """
-        relation_abs = (
-            self.instance.relation_embeddings(indices=None).view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
-        )
+        relation_abs = self.instance.relation_representations[0](indices=None).abs()
         assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
 
 
@@ -832,13 +826,13 @@ class TestModelUtilities(unittest.TestCase):
     def test_extend_batch(self):
         """Test `_extend_batch()`."""
         batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
-        all_ids = [2 * i for i in range(5)]
+        max_id = 5
 
         batch_size = batch.shape[0]
-        num_choices = len(all_ids)
+        num_choices = max_id
 
         for dim in range(3):
-            h_ext_batch = extend_batch(batch=batch, all_ids=all_ids, dim=dim)
+            h_ext_batch = extend_batch(batch=batch, max_id=max_id, dim=dim)
 
             # check shape
             assert h_ext_batch.shape == (batch_size * num_choices, 3)
@@ -846,7 +840,7 @@ class TestModelUtilities(unittest.TestCase):
             # check content
             actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
             exp_content = set()
-            for i in all_ids:
+            for i in range(max_id):
                 for b in batch:
                     c = list(map(int, b))
                     c.insert(dim, i)

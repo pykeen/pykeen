@@ -41,6 +41,11 @@ from .modules import (
     interaction_resolver,
 )
 from .node_piece import NodePieceRepresentation, TokenizationRepresentation, tokenizer_resolver
+from .pyg import (
+    FeaturizedMessagePassingRepresentation,
+    SimpleMessagePassingRepresentation,
+    TypedMessagePassingRepresentation,
+)
 from .representation import Embedding, Representation, SubsetRepresentation
 
 __all__ = [
@@ -50,6 +55,9 @@ __all__ = [
     "RGCNRepresentation",
     "SubsetRepresentation",
     "TokenizationRepresentation",
+    "SimpleMessagePassingRepresentation",
+    "TypedMessagePassingRepresentation",
+    "FeaturizedMessagePassingRepresentation",
     "init",
     "Interaction",
     "interaction_resolver",

@@ -9,6 +9,7 @@ from unittest import SkipTest
 
 import numpy
 import torch
+import torch.nn.functional
 import unittest_templates
 from torch import nn
 
@@ -16,7 +17,7 @@ import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
 from pykeen.typing import Representation, Sign
-from pykeen.utils import clamp_norm, ensure_tuple, project_entity, view_complex
+from pykeen.utils import clamp_norm, complex_normalize, ensure_tuple, project_entity
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -26,9 +27,9 @@ class ComplExTests(cases.InteractionTestCase):
     """Tests for ComplEx interaction function."""
 
     cls = pykeen.nn.modules.ComplExInteraction
+    dtype = torch.cfloat
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = [view_complex(x) for x in (h, r, t)]
         return (h * r * torch.conj(t)).sum().real
 
 
@@ -43,14 +44,6 @@ class ConvETests(cases.InteractionTestCase):
         kernel_width=1,
         embedding_dim=cases.InteractionTestCase.dim,
     )
-
-    def _get_hrt(
-        self,
-        *shapes: Tuple[int, ...],
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]:  # noqa: D102
-        h, r, t = super()._get_hrt(*shapes)
-        t_bias = torch.rand_like(t[..., 0, None])  # type: torch.FloatTensor
-        return h, r, (t, t_bias)
 
     def _exp_score(
         self,
@@ -266,19 +259,17 @@ class RotatETests(cases.InteractionTestCase):
     """Tests for RotatE interaction function."""
 
     cls = pykeen.nn.modules.RotatEInteraction
+    dtype = torch.cfloat
 
     def _get_hrt(self, *shapes):  # noqa: D102
-        # normalize length of r
         h, r, t = super()._get_hrt(*shapes)
-        rc = view_complex(r)
-        rl = (rc.abs() ** 2).sum(dim=-1).sqrt()
-        r = r / rl.unsqueeze(dim=-1)
+        # normalize rotations to unit modulus
+        r = complex_normalize(r)
         return h, r, t
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = tuple(view_complex(x) for x in (h, r, t))
-        # check for unit length
-        assert torch.allclose((r.abs() ** 2).sum(dim=-1).sqrt(), torch.ones(1))
+        # check for unit modulus
+        assert torch.allclose(r.abs(), torch.ones_like(r.abs()))
         d = h * r - t
         return -(d.abs() ** 2).sum(dim=-1).sqrt()
 

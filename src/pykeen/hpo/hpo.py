@@ -36,7 +36,7 @@ from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
-from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
+from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io, normalize_path
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -55,6 +55,12 @@ class ExtraKeysError(ValueError):
     """Raised on extra keys being used."""
 
     def __init__(self, keys: Iterable[str]):
+        """
+        Initialize the error.
+
+        :param keys:
+            the extra keys
+        """
         super().__init__(sorted(keys))
 
     def __str__(self) -> str:
@@ -375,9 +381,7 @@ class HpoPipelineResult(Result):
 
     def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        if isinstance(directory, str):
-            directory = pathlib.Path(directory).resolve()
-        directory.mkdir(exist_ok=True, parents=True)
+        directory = normalize_path(directory, mkdir=True)
 
         # Output study information
         with directory.joinpath("study.json").open("w") as file:
@@ -889,6 +893,21 @@ def suggest_kwargs(
     kwargs_ranges: Mapping[str, Any],
     kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Mapping[str, Any]:
+    """
+    Suggest parameters from given dictionaries.
+
+    :param trial:
+        the optuna trial
+    :param prefix:
+        the prefix to be prepended to the name
+    :param kwargs:
+        a dictionary of fixed parameters
+    :param kwargs_ranges:
+        a dictionary of parameters to be sampled with their ranges.
+
+    :return:
+        a dictionary with fixed and sampled parameters
+    """
     _kwargs: Dict[str, Any] = {}
     if kwargs:
         _kwargs.update(kwargs)

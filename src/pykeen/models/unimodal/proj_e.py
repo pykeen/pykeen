@@ -67,6 +67,20 @@ class ProjE(ERModel):
         relation_initializer: Hint[Initializer] = xavier_uniform_,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension
+        :param inner_non_linearity:
+            the inner non-linearity, of a hint thereof. cf. :meth:`ProjEInteraction.__init__`
+        :param entity_initializer:
+            the entity representation initializer
+        :param relation_initializer:
+            the relation representation initializer
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         super().__init__(
             interaction=ProjEInteraction,
             interaction_kwargs=dict(

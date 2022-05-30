@@ -24,6 +24,10 @@
     <img src="https://img.shields.io/badge/Optuna-integrated-blue" alt="Optuna integrated" height="20">
   </a>
 
+  <a href="https://pytorchlightning.ai">
+    <img src="https://img.shields.io/badge/-Lightning-792ee5?logo=pytorchlightning&logoColor=white" alt="PyTorch Lightning">
+  </a>
+
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
   </a>
@@ -41,7 +45,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-34">Datasets</a> •
+  <a href="#datasets-36">Datasets</a> •
   <a href="#inductive-datasets">Inductive Datasets (5)</a> •
   <a href="#models-42">Models</a> •
   <a href="#supporters">Support</a> •
@@ -106,7 +110,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (34)
+### Datasets (36)
 
 The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
@@ -132,6 +136,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | Drug Repositioning Knowledge Graph | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                     | [`gnn4dr/DRKG`](https://github.com/gnn4dr/DRKG)                                                                         |      97238 |         107 |   5874257 |
 | FB15k                              | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                   | [Bordes *et al*., 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |      14951 |        1345 |    592213 |
 | FB15k-237                          | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)             | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      14505 |         237 |    310079 |
+| Global Biotic Interactions         | [`pykeen.datasets.Globi`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Globi.html)                   | [Poelen *et al*., 2014](https://doi.org/10.1016/j.ecoinf.2014.08.005)                                                   |     404207 |          39 |   1966385 |
 | Hetionet                           | [`pykeen.datasets.Hetionet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Hetionet.html)             | [Himmelstein *et al*., 2017](https://doi.org/10.7554/eLife.26726)                                                       |      45158 |          24 |   2250197 |
 | Kinships                           | [`pykeen.datasets.Kinships`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Kinships.html)             | [Kemp *et al*., 2006](https://www.aaai.org/Papers/AAAI/2006/AAAI06-061.pdf)                                             |        104 |          25 |     10686 |
 | Nations                            | [`pykeen.datasets.Nations`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Nations.html)               | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets)                                                   |         14 |          55 |      1992 |
@@ -143,6 +148,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | OpenEA Family                      | [`pykeen.datasets.OpenEA`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenEA.html)                 | [Sun *et al*., 2020](http://www.vldb.org/pvldb/vol13/p2326-sun.pdf)                                                     |      15000 |         248 |     38265 |
 | PharmKG                            | [`pykeen.datasets.PharmKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG.html)               | [Zheng *et al*., 2020](https://doi.org/10.1093/bib/bbaa344)                                                             |     188296 |          39 |   1093236 |
 | PharmKG8k                          | [`pykeen.datasets.PharmKG8k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG8k.html)           | [Zheng *et al*., 2020](https://doi.org/10.1093/bib/bbaa344)                                                             |       7247 |          28 |    485787 |
+| PrimeKG                            | [`pykeen.datasets.PrimeKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PrimeKG.html)               | [Chandak *et al*., 2022](https://doi.org/10.1101/2022.05.01.489928)                                                     |     129375 |          30 |   8100498 |
 | Unified Medical Language System    | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                     | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets)                                                   |        135 |          46 |      6529 |
 | WD50K (triples)                    | [`pykeen.datasets.WD50KT`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WD50KT.html)                 | [Galkin *et al*., 2020](https://www.aclweb.org/anthology/2020.emnlp-main.596/)                                          |      40107 |         473 |    232344 |
 | Wikidata5M                         | [`pykeen.datasets.Wikidata5M`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Wikidata5M.html)         | [Wang *et al*., 2019](https://arxiv.org/abs/1911.06136)                                                                 |    4594149 |         822 |  20624239 |
@@ -211,23 +217,24 @@ The following inductive datasets are built in to PyKEEN.
 | TuckER                         | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TuckER.html)                               | [`pykeen.nn.TuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.TuckerInteraction.html)                              | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                            |
 | Unstructured Model             | [`pykeen.models.UM`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.UM.html)                                       | [`pykeen.nn.UMInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.UMInteraction.html)                                      | [Bordes *et al.*, 2014](https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf)                          |
 
-### Losses (13)
+### Losses (14)
 
 | Name                                 | Reference                                                                                                                       | Description                                                                                           |
 |--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| Binary cross entropy (after sigmoid) | [`pykeen.losses.BCEAfterSigmoidLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEAfterSigmoidLoss.html)       | A module for the numerically unstable version of explicit Sigmoid + BCE loss.                         |
-| Binary cross entropy (with logits)   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)           | A module for the binary cross entropy loss.                                                           |
-| Cross entropy                        | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)             | A module for the cross entropy loss that evaluates the cross entropy after softmax output.            |
+| Binary cross entropy (after sigmoid) | [`pykeen.losses.BCEAfterSigmoidLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEAfterSigmoidLoss.html)       | The numerically unstable version of explicit Sigmoid + BCE loss.                                      |
+| Binary cross entropy (with logits)   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)           | The binary cross entropy loss.                                                                        |
+| Cross entropy                        | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)             | The cross entropy loss that evaluates the cross entropy after softmax output.                         |
 | Double Margin                        | [`pykeen.losses.DoubleMarginLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.DoubleMarginLoss.html)             | A limit-based scoring loss, with separate margins for positive and negative elements from [sun2018]_. |
-| Focal                                | [`pykeen.losses.FocalLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.FocalLoss.html)                           | A module for the focal loss proposed by [lin2018]_.                                                   |
-| Margin ranking                       | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)           | A module for the pairwise hinge loss (i.e., margin ranking loss).                                     |
-| Mean square error                    | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                               | A module for the mean square error loss.                                                              |
-| Self-adversarial negative sampling   | [`pykeen.losses.NSSALoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.NSSALoss.html)                             | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.     |
+| Focal                                | [`pykeen.losses.FocalLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.FocalLoss.html)                           | The focal loss proposed by [lin2018]_.                                                                |
+| InfoNCE loss with additive margin    | [`pykeen.losses.InfoNCELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.InfoNCELoss.html)                       | The InfoNCE loss with additive margin proposed by [wang2022]_.                                        |
+| Margin ranking                       | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)           | The pairwise hinge loss (i.e., margin ranking loss).                                                  |
+| Mean squared error                   | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                               | The mean squared error loss.                                                                          |
+| Self-adversarial negative sampling   | [`pykeen.losses.NSSALoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.NSSALoss.html)                             | The self-adversarial negative sampling loss function proposed by [sun2019]_.                          |
 | Pairwise logistic                    | [`pykeen.losses.PairwiseLogisticLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.PairwiseLogisticLoss.html)     | The pairwise logistic loss.                                                                           |
-| Pointwise Hinge                      | [`pykeen.losses.PointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.PointwiseHingeLoss.html)         | A module for the pointwise hinge loss.                                                                |
-| Soft margin ranking                  | [`pykeen.losses.SoftMarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftMarginRankingLoss.html)   | A module for the soft pairwise hinge loss (i.e., soft margin ranking loss).                           |
-| Softplus                             | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)                     | A module for the pointwise logistic loss (i.e., softplus loss).                                       |
-| Soft Pointwise Hinge                 | [`pykeen.losses.SoftPointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftPointwiseHingeLoss.html) | A module for the soft pointwise hinge loss .                                                          |
+| Pointwise Hinge                      | [`pykeen.losses.PointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.PointwiseHingeLoss.html)         | The pointwise hinge loss.                                                                             |
+| Soft margin ranking                  | [`pykeen.losses.SoftMarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftMarginRankingLoss.html)   | The soft pairwise hinge loss (i.e., soft margin ranking loss).                                        |
+| Softplus                             | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)                     | The pointwise logistic loss (i.e., softplus loss).                                                    |
+| Soft Pointwise Hinge                 | [`pykeen.losses.SoftPointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftPointwiseHingeLoss.html) | The soft pointwise hinge loss.                                                                        |
 
 ### Regularizers (5)
 

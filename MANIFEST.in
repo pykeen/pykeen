@@ -9,6 +9,7 @@ prune tests/mlruns
 recursive-include docs/source *.py
 recursive-include docs/source *.rst
 recursive-include docs/source *.png
+recursive-include docs/source *.svg
 
 include docs/Makefile
 include config/config.ini

@@ -20,7 +20,7 @@ from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import Representation
 from ..regularizers import Regularizer
-from ..triples import CoreTriplesFactory
+from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes, get_batchnorm_modules
 
@@ -121,6 +121,7 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
@@ -262,7 +263,7 @@ class ERModel(
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         interaction: Union[
             str,
             Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
@@ -301,9 +302,9 @@ class ERModel(
             representations=entity_representations,
             representation_kwargs=entity_representations_kwargs,
             max_id=triples_factory.num_entities,
-            shapes=self.interaction.entity_shape,
+            shapes=self.interaction.full_entity_shapes(),
             label="entity",
-            skip_checks=self.interaction.tail_entity_shape is not None or skip_checks,
+            skip_checks=skip_checks,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
@@ -311,6 +312,7 @@ class ERModel(
             max_id=triples_factory.num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
+            skip_checks=skip_checks,
         )
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
@@ -491,12 +493,40 @@ class ERModel(
             num=self.num_relations,
         )
 
-    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
+    def _get_entity_representations_from_inductive_mode(
+        self, *, mode: Optional[InductiveMode]
+    ) -> Sequence[Representation]:
+        """
+        Return the entity representations for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises ValueError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the entity representations for the given inductive mode
+        """
         if mode is not None:
-            raise NotImplementedError
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105
+        """
+        Return the number of entities for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises NotImplementedError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the number of entities in the given inductive mode
+        """
         if mode is not None:
             raise NotImplementedError
         return self.num_entities
@@ -510,13 +540,15 @@ class ERModel(
         mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        entity_representations = self._entity_representation_from_mode(mode=mode)
+        head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
+        head_representations = [head_representations[i] for i in self.interaction.head_indices()]
+        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
         hr, rr, tr = [
             [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
-                (h, entity_representations),
+                (h, head_representations),
                 (r, self.relation_representations),
-                (t, entity_representations),
+                (t, tail_representations),
             )
         ]
         # normalization
