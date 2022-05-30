@@ -90,7 +90,7 @@ class CooccurrenceFilteredModel(Model):
 
         # index triples
         mapped_triples = prepare_filter_triples(
-            mapped_triples=triples_factory.mapped_triples, additional_filter_triples=additional_triples or []
+            mapped_triples=triples_factory.mapped_triples, additional_filter_triples=additional_triples, warn=False
         ).numpy()
         nums = [triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_entities]
         self.indexes = {
