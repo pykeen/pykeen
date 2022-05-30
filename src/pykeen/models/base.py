@@ -183,7 +183,12 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+        self,
+        hr_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        ts: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -196,8 +201,10 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
+        :param ts: shape: (num_tails,) | (batch_size, num_tails)
+            tail entities to score against. If None, scores against all entities (from the given mode).
 
-        :return: shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_tails), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
 
