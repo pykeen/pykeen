@@ -1017,7 +1017,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 expected_shape = (self.batch_size, self.factory.num_entities)
             else:
                 expected_shape = (self.batch_size, k)
-            scores = self.instance.score_t(batch, mode=self.mode, ts=ts)
+            try:
+                scores = self.instance.score_t(batch, mode=self.mode, ts=ts)
+            except NotImplementedError:
+                raise SkipTest(f"score multi t not implemented for {self.cls.__name__}")
             self.assertTupleEqual(tuple(scores.shape), expected_shape)
             self._check_scores(batch, scores)
 

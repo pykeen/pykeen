@@ -110,7 +110,11 @@ class ERMLP(EntityRelationEmbeddingModel):
         return self.mlp(x_s)
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_t(
+        self, hr_batch: torch.LongTensor, ts: Optional[torch.LongTensor] = None, **kwargs
+    ) -> torch.FloatTensor:  # noqa: D102
+        if ts is not None:
+            raise NotImplementedError
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         r = self.relation_embeddings(indices=hr_batch[:, 1])
