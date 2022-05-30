@@ -17,7 +17,7 @@ from torch import nn
 
 from .base import Model
 from ..nn import representation_resolver
-from ..nn.modules import Interaction, interaction_resolver
+from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
 from ..nn.representation import Representation
 from ..regularizers import Regularizer
 from ..triples import KGInfo
@@ -425,9 +425,14 @@ class ERModel(
         ts: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=ts, mode=mode)
+        # add broadcast dimension
+        hr_batch = hr_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=hr_batch[..., 0], r=hr_batch[..., 1], t=ts, mode=mode)
+        # unsqueeze if necessary
+        if ts is None or ts.ndimension() == 1:
+            t = parallel_unsqueeze(t, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
+            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode),
         )
