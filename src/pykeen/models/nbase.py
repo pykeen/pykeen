@@ -434,7 +434,7 @@ class ERModel(
         return repeat_if_necessary(
             scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode),
+            num=self._get_entity_len(mode=mode) if ts is None else ts.shape[-1],
         )
 
     # docstr-coverage: inherited
@@ -456,7 +456,7 @@ class ERModel(
         return repeat_if_necessary(
             scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode),
+            num=self._get_entity_len(mode=mode) if hs is None else hs.shape[-1],
         )
 
     # docstr-coverage: inherited
@@ -478,7 +478,7 @@ class ERModel(
         return repeat_if_necessary(
             scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.relation_representations,
-            num=self.num_relations,
+            num=self.num_relations if rs is None else rs.shape[-1],
         )
 
     def _get_entity_representations_from_inductive_mode(
