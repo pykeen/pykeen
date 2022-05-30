@@ -112,31 +112,25 @@ class CooccurrenceFilteredModel(Model):
         return self.base.collect_regularization_term()
 
     # docstr-coverage: inherited
-    def score_hrt(
-        self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         if self.apply_in_training:
             raise NotImplementedError
-        return self.base.score_hrt(hrt_batch=hrt_batch, mode=mode)
+        return self.base.score_hrt(hrt_batch=hrt_batch, **kwargs)
 
     # docstr-coverage: inherited
-    def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
-            scores=self.base.score_h(rt_batch=rt_batch, slice_size=slice_size, mode=mode),
+            scores=self.base.score_h(rt_batch=rt_batch, **kwargs),
             batch_indices=rt_batch[:, 0],
             index=self.head_per_relation,
             in_training=True,
         )
 
     # docstr-coverage: inherited
-    def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
             self._mask(
-                scores=self.base.score_r(ht_batch=ht_batch, slice_size=slice_size, mode=mode),
+                scores=self.base.score_r(ht_batch=ht_batch, **kwargs),
                 batch_indices=ht_batch[:, 0],
                 index=self.relation_per_head,
                 in_training=True,
@@ -147,11 +141,9 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
-            scores=self.base.score_t(hr_batch=hr_batch, slice_size=slice_size, mode=mode),
+            scores=self.base.score_t(hr_batch=hr_batch, **kwargs),
             batch_indices=hr_batch[:, 1],
             index=self.head_per_relation,
             in_training=True,
@@ -179,34 +171,28 @@ class CooccurrenceFilteredModel(Model):
         return new_scores
 
     # docstr-coverage: inherited
-    def predict_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def predict_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
-            scores=super().predict_h(rt_batch, slice_size=slice_size, mode=mode),
+            scores=super().predict_h(rt_batch, **kwargs),
             batch_indices=rt_batch[:, 0],
             index=self.head_per_relation,
             in_training=False,
         )
 
     # docstr-coverage: inherited
-    def predict_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def predict_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
-            scores=super().predict_t(hr_batch, slice_size=slice_size, mode=mode),
+            scores=super().predict_t(hr_batch, **kwargs),
             batch_indices=hr_batch[:, 1],
             index=self.tail_per_relation,
             in_training=False,
         )
 
     # docstr-coverage: inherited
-    def predict_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def predict_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
             scores=self._mask(
-                scores=super().predict_r(ht_batch, slice_size=slice_size, mode=mode),
+                scores=super().predict_r(ht_batch, **kwargs),
                 batch_indices=ht_batch[:, 0],
                 index=self.relation_per_head,
                 in_training=False,
