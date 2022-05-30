@@ -375,8 +375,7 @@ class Model(nn.Module, ABC):
         self,
         hr_batch: torch.LongTensor,
         *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
@@ -386,12 +385,10 @@ class Model(nn.Module, ABC):
 
         :param hr_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, relation) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-        :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Model.score_t`
 
-        :return: shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_tails), dtype: float
             For each h-r pair, the scores for all possible tails.
 
         .. note::
@@ -405,7 +402,7 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         hr_batch = self._prepare_batch(batch=hr_batch, index_relation=1)
-        scores = self.score_t(hr_batch, slice_size=slice_size, mode=mode)
+        scores = self.score_t(hr_batch, **kwargs)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -414,8 +411,7 @@ class Model(nn.Module, ABC):
         self,
         ht_batch: torch.LongTensor,
         *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
@@ -425,17 +421,15 @@ class Model(nn.Module, ABC):
 
         :param ht_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-        :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Model.score_r`
 
-        :return: shape: (batch_size, num_real_relations), dtype: float
+        :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
         self.eval()  # Enforce evaluation mode
         ht_batch = ht_batch.to(self.device)
-        scores = self.score_r(ht_batch, slice_size=slice_size, mode=mode)
+        scores = self.score_r(ht_batch, **kwargs)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -445,18 +439,29 @@ class Model(nn.Module, ABC):
         hrt_batch: MappedTriples,
         target: Target,
         *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode],
+        **kwargs,
     ) -> torch.FloatTensor:
-        """Predict scores for the given target."""
+        """
+        Predict scores for the given target.
+        
+        :param hrt_batch: shape: (batch_size, 3)
+            the full batch
+        :param target:
+            the target to predict
+        :param kwargs:
+            additional keyword-based parameters passed to the specific target prediction method.
+        
+        :return: shape: (batch_size, num)
+            the scores
+        """
         if target == LABEL_TAIL:
-            return self.predict_t(hrt_batch[:, 0:2], slice_size=slice_size, mode=mode)
+            return self.predict_t(hrt_batch[:, 0:2], **kwargs)
 
         if target == LABEL_RELATION:
-            return self.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size, mode=mode)
+            return self.predict_r(hrt_batch[:, 0::2], **kwargs)
 
         if target == LABEL_HEAD:
-            return self.predict_h(hrt_batch[:, 1:3], slice_size=slice_size, mode=mode)
+            return self.predict_h(hrt_batch[:, 1:3], **kwargs)
 
         raise ValueError(f"Unknown target={target}")
 
