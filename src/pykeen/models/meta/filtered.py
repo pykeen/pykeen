@@ -12,6 +12,7 @@ from ..baseline.utils import get_csr_matrix
 from ...constants import TARGET_TO_INDEX
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
+from ...utils import prepare_filter_triples
 
 __all__ = [
     "CooccurrenceFilteredModel",
@@ -68,7 +69,6 @@ class CooccurrenceFilteredModel(Model):
         """
         # avoid cyclic imports
         from .. import model_resolver
-        from ...evaluation.evaluator import prepare_filter_triples
 
         # create base model
         base = model_resolver.make(base, triples_factory=triples_factory, pos_kwargs=kwargs)
