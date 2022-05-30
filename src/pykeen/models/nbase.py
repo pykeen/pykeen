@@ -422,19 +422,19 @@ class ERModel(
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        ts: Optional[torch.LongTensor] = None,
+        tails: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         hr_batch = hr_batch.unsqueeze(dim=1)
-        h, r, t = self._get_representations(h=hr_batch[..., 0], r=hr_batch[..., 1], t=ts, mode=mode)
+        h, r, t = self._get_representations(h=hr_batch[..., 0], r=hr_batch[..., 1], t=tails, mode=mode)
         # unsqueeze if necessary
-        if ts is None or ts.ndimension() == 1:
+        if tails is None or tails.ndimension() == 1:
             t = parallel_unsqueeze(t, dim=0)
         return repeat_if_necessary(
             scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode) if ts is None else ts.shape[-1],
+            num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
         )
 
     # docstr-coverage: inherited
@@ -444,19 +444,19 @@ class ERModel(
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        hs: Optional[torch.LongTensor] = None,
+        heads: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         rt_batch = rt_batch.unsqueeze(dim=1)
-        h, r, t = self._get_representations(h=hs, r=rt_batch[..., 0], t=rt_batch[..., 1], mode=mode)
+        h, r, t = self._get_representations(h=heads, r=rt_batch[..., 0], t=rt_batch[..., 1], mode=mode)
         # unsqueeze if necessary
-        if hs is None or hs.ndimension() == 1:
+        if heads is None or heads.ndimension() == 1:
             h = parallel_unsqueeze(h, dim=0)
         return repeat_if_necessary(
             scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode) if hs is None else hs.shape[-1],
+            num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
         )
 
     # docstr-coverage: inherited
@@ -466,19 +466,19 @@ class ERModel(
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        rs: Optional[torch.LongTensor] = None,
+        relations: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         ht_batch = ht_batch.unsqueeze(dim=1)
-        h, r, t = self._get_representations(h=ht_batch[..., 0], r=rs, t=ht_batch[..., 1], mode=mode)
+        h, r, t = self._get_representations(h=ht_batch[..., 0], r=relations, t=ht_batch[..., 1], mode=mode)
         # unsqueeze if necessary
-        if rs is None or rs.ndimension() == 1:
+        if relations is None or relations.ndimension() == 1:
             r = parallel_unsqueeze(r, dim=0)
         return repeat_if_necessary(
             scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.relation_representations,
-            num=self.num_relations if rs is None else rs.shape[-1],
+            num=self.num_relations if relations is None else relations.shape[-1],
         )
 
     def _get_entity_representations_from_inductive_mode(

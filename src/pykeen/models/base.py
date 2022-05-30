@@ -188,7 +188,7 @@ class Model(nn.Module, ABC):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        ts: Optional[torch.LongTensor] = None,
+        tails: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -201,8 +201,8 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
-        :param ts: shape: (num_tails,) | (batch_size, num_tails)
-            tail entities to score against. If None, scores against all entities (from the given mode).
+        :param tails: shape: (num_tails,) | (batch_size, num_tails)
+            tail entity indices to score against. If `None`, scores against all entities (from the given mode).
 
         :return: shape: (batch_size, num_tails), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -215,7 +215,7 @@ class Model(nn.Module, ABC):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        rs: Optional[torch.LongTensor] = None,
+        relations: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -228,7 +228,7 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
-        :param rs: shape: (num_relations,) | (batch_size, num_relations)
+        :param relations: shape: (num_relations,) | (batch_size, num_relations)
             relations to score against. If None, scores against all relations (from the given mode).
 
         :return: shape: (batch_size, num_real_relations), dtype: float
@@ -244,7 +244,7 @@ class Model(nn.Module, ABC):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        hs: Optional[torch.LongTensor] = None,
+        heads: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -257,7 +257,7 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
-        :param hs: shape: (num_heads,) | (batch_size, num_heads)
+        :param heads: shape: (num_heads,) | (batch_size, num_heads)
             head entities to score against. If None, scores against all entities (from the given mode).
 
         :return: shape: (batch_size, num_heads), dtype: float
@@ -666,14 +666,14 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        ts: Optional[torch.LongTensor] = None,
+        tails: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         logger.warning(
             "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
             "score_t function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = extend_batch(batch=hr_batch, max_id=self.num_entities, dim=2, ids=ts)
+        hrt_batch = extend_batch(batch=hr_batch, max_id=self.num_entities, dim=2, ids=tails)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
@@ -686,14 +686,14 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        hs: Optional[torch.LongTensor] = None,
+        heads: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         logger.warning(
             "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
             "score_h function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = extend_batch(batch=rt_batch, max_id=self.num_entities, dim=0, ids=hs)
+        hrt_batch = extend_batch(batch=rt_batch, max_id=self.num_entities, dim=0, ids=heads)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
@@ -706,14 +706,14 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         *,
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
-        rs: Optional[torch.LongTensor] = None,
+        relations: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         logger.warning(
             "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
             "score_r function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = extend_batch(batch=ht_batch, max_id=self.num_relations, dim=1, ids=rs)
+        hrt_batch = extend_batch(batch=ht_batch, max_id=self.num_relations, dim=1, ids=relations)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
