@@ -906,12 +906,15 @@ def extend_batch(
         ids = ids.unsqueeze(dim=0)
     assert ids.ndimension() == 2
 
+    # normalize batch -> batch.shape: (batch_size, 1, 3)
+    batch = batch.unsqueeze(dim=1)
+
     # allocate memory
     hrt_batch = batch.new_empty(size=(batch.shape[0], ids.shape[-1], 3))
 
     # copy ids
-    for column in range(3):
-        hrt_batch[..., column] = ids if column == dim else batch[..., column]
+    hrt_batch[..., dim] = ids
+    hrt_batch[..., [i for i in range(3) if i != dim]] = batch
 
     # reshape
     return hrt_batch.view(-1, 3)
