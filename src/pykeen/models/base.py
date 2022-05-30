@@ -229,7 +229,7 @@ class Model(nn.Module, ABC):
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
         :param relations: shape: (num_relations,) | (batch_size, num_relations)
-            relations to score against. If None, scores against all relations (from the given mode).
+            relation indices to score against. If None, scores against all relations (from the given mode).
 
         :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
@@ -258,7 +258,7 @@ class Model(nn.Module, ABC):
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
         :param heads: shape: (num_heads,) | (batch_size, num_heads)
-            head entities to score against. If None, scores against all entities (from the given mode).
+            head entity indices to score against. If None, scores against all entities (from the given mode).
 
         :return: shape: (batch_size, num_heads), dtype: float
             For each r-t pair, the scores for all possible heads.
