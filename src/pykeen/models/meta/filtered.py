@@ -1,19 +1,18 @@
 """Filtered models."""
 
-from typing import Collection, List, Optional, Union
+from typing import List, Mapping, Optional, Union
 
-import numpy
 import scipy.sparse
 import torch
 from class_resolver import HintOrType
 from docdata import parse_docdata
 
-from pykeen.evaluation.evaluator import prepare_filter_triples
-
 from ..base import Model
 from ..baseline.utils import get_csr_matrix
+from ...constants import TARGET_TO_INDEX
+from ...evaluation.evaluator import prepare_filter_triples
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import InductiveMode, MappedTriples
+from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 
 __all__ = [
     "CooccurrenceFilteredModel",
@@ -32,10 +31,8 @@ class CooccurrenceFilteredModel(Model):
         github: pykeen/pykeen
     """
 
-    head_per_relation: scipy.sparse.csr_matrix
-    tail_per_relation: scipy.sparse.csr_matrix
-    relation_per_head: scipy.sparse.csr_matrix
-    relation_per_tail: scipy.sparse.csr_matrix
+    #: the indexed filter triples, i.e., sparse masks
+    indexes: Mapping[Target, Mapping[Target, scipy.sparse.csr_matrix]]
 
     def __init__(
         self,
@@ -46,6 +43,7 @@ class CooccurrenceFilteredModel(Model):
         base: HintOrType[Model] = "rotate",
         training_fill_value: float = -1.0e03,
         inference_fill_value: float = float("-inf"),
+        conjunctive: bool = False,
         **kwargs,
     ) -> None:
         """
@@ -64,6 +62,8 @@ class CooccurrenceFilteredModel(Model):
             the training fill value; for most loss functions, this has to be a finite value, i.e., not infinity
         :param inference_fill_value:
             the inference fill value
+        :param conjunctive:
+            whether to use conjuction or disjunction to combine non-filter masks
         :param kwargs:
             additional keyword-based parameters passed to the base model upon instantiation
         """
@@ -82,29 +82,58 @@ class CooccurrenceFilteredModel(Model):
         # assign *after* nn.Module.__init__
         self.base = base
 
-        # index
-        h, r, t = (
-            prepare_filter_triples(
-                mapped_triples=triples_factory.mapped_triples, additional_filter_triples=additional_triples or []
-            )
-            .numpy()
-            .T
-        )
-        self.head_per_relation, self.tail_per_relation = [
-            get_csr_matrix(
-                row_indices=r,
-                col_indices=col_indices,
-                shape=(triples_factory.num_relations, triples_factory.num_entities),
-            ).astype(bool)
-            for col_indices in (h, t)
-        ]
-        self.relation_per_head, self.relation_per_tail = [
-            m.transpose().tocsr() for m in (self.head_per_relation, self.tail_per_relation)
-        ]
-
+        # save constants
+        self.conjunctive = conjunctive
         self.apply_in_training = apply_in_training
         self.training_fill_value = training_fill_value
         self.inference_fill_value = inference_fill_value
+
+        # index triples
+        mapped_triples = prepare_filter_triples(
+            mapped_triples=triples_factory.mapped_triples, additional_filter_triples=additional_triples or []
+        ).numpy()
+        nums = [triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_entities]
+        self.indexes = {
+            row_label: {
+                col_label: get_csr_matrix(
+                    row_indices=mapped_triples[:, row_index],
+                    col_indices=mapped_triples[:, col_index],
+                    shape=(num_rows, num_cols),
+                ).astype(bool)
+                for num_cols, (col_label, col_index) in zip(nums, TARGET_TO_INDEX.items())
+                if col_label != row_label
+            }
+            for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items())
+        }
+
+        # initialize base model's parameters
+        self.reset_parameters_()
+
+    def _mask(
+        self,
+        scores: torch.FloatTensor,
+        batch: torch.LongTensor,
+        target: Target,
+        in_training: bool,
+    ) -> torch.Tensor:
+        if in_training and not self.apply_in_training:
+            return scores
+        fill_value = self.training_fill_value if in_training else self.inference_fill_value
+        # get masks, shape: (batch_size, num_entities/num_relations)
+        first_mask, second_mask = [
+            index[batch_indices.cpu().numpy()]
+            for batch_indices, (target, index) in zip(
+                batch.t(), sorted(self.indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]])
+            )
+        ]
+        # combine masks
+        mask = (first_mask & second_mask) if self.conjunctive else (first_mask | second_mask)
+        # get non-zero entries
+        rows, cols = [torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero()]
+        # set scores for fill value for every non-occuring entry
+        new_scores = scores.new_full(size=scores.shape, fill_value=fill_value)
+        new_scores[rows, cols] = scores[rows, cols]
+        return new_scores
 
     # docstr-coverage: inherited
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
@@ -128,22 +157,17 @@ class CooccurrenceFilteredModel(Model):
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_h(rt_batch=rt_batch, **kwargs),
-            batch_indices=rt_batch[:, 0],
-            index=self.head_per_relation,
+            batch=rt_batch,
+            target=LABEL_HEAD,
             in_training=True,
         )
 
     # docstr-coverage: inherited
     def score_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
-            self._mask(
-                scores=self.base.score_r(ht_batch=ht_batch, **kwargs),
-                batch_indices=ht_batch[:, 0],
-                index=self.relation_per_head,
-                in_training=True,
-            ),
-            batch_indices=ht_batch[:, 1],
-            index=self.relation_per_tail,
+            scores=self.base.score_r(ht_batch=ht_batch, **kwargs),
+            batch=ht_batch,
+            target=LABEL_RELATION,
             in_training=True,
         )
 
@@ -151,38 +175,17 @@ class CooccurrenceFilteredModel(Model):
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_t(hr_batch=hr_batch, **kwargs),
-            batch_indices=hr_batch[:, 1],
-            index=self.head_per_relation,
+            batch=hr_batch,
+            target=LABEL_TAIL,
             in_training=True,
         )
-
-    def _mask(
-        self,
-        scores: torch.FloatTensor,
-        batch_indices: torch.LongTensor,
-        index: scipy.sparse.csr_matrix,
-        in_training: bool,
-    ) -> torch.Tensor:
-        if in_training and not self.apply_in_training:
-            return scores
-        fill_value = self.training_fill_value if in_training else self.inference_fill_value
-        # get batch indices as numpy array
-        i = batch_indices.cpu().numpy()
-        # get mask, shape: (batch_size, num_entities/num_relations)
-        mask = index[i]
-        # get non-zero entries
-        rows, cols = [torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero()]
-        # set scores for -inf for every non-occuring entry
-        new_scores = scores.new_full(size=scores.shape, fill_value=fill_value)
-        new_scores[rows, cols] = scores[rows, cols]
-        return new_scores
 
     # docstr-coverage: inherited
     def predict_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_h(rt_batch, **kwargs),
-            batch_indices=rt_batch[:, 0],
-            index=self.head_per_relation,
+            batch=rt_batch,
+            target=LABEL_HEAD,
             in_training=False,
         )
 
@@ -190,21 +193,16 @@ class CooccurrenceFilteredModel(Model):
     def predict_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_t(hr_batch, **kwargs),
-            batch_indices=hr_batch[:, 1],
-            index=self.tail_per_relation,
+            batch=hr_batch,
+            target=LABEL_TAIL,
             in_training=False,
         )
 
     # docstr-coverage: inherited
     def predict_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._mask(
-            scores=self._mask(
-                scores=super().predict_r(ht_batch, **kwargs),
-                batch_indices=ht_batch[:, 0],
-                index=self.relation_per_head,
-                in_training=False,
-            ),
-            batch_indices=ht_batch[:, 1],
-            index=self.relation_per_tail,
+            scores=super().predict_r(ht_batch, **kwargs),
+            batch=ht_batch,
+            target=LABEL_RELATION,
             in_training=False,
         )
