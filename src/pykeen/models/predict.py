@@ -104,6 +104,7 @@ def get_tail_prediction_df(
     head_label: str,
     relation_label: str,
     *,
+    tails: Optional[Sequence[str]] = None,
     triples_factory: TriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
@@ -145,13 +146,20 @@ def get_tail_prediction_df(
     head_id = triples_factory.entity_to_id[head_label]
     relation_id = triples_factory.relation_to_id[relation_label]
     batch = torch.as_tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
-    scores = model.predict_t(batch, mode=mode)
+    id_labels: Sequence[Tuple[int, str]]
+    if tails is None:
+        id_labels = triples_factory.entity_to_id.items()
+    else:
+        # deduplicate tails
+        tails = set(tails)
+        id_labels = sorted((label, i) for label, i in triples_factory.entity_to_id.items() if label in tails)
+        tails = torch.as_tensor(
+            data=triples_factory.entities_to_ids(entities=tails), dtype=torch.long, device=model.device
+        )
+    scores = model.predict_t(batch, mode=mode, tails=tails)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
-        [
-            (entity_id, entity_label, scores[entity_id])
-            for entity_label, entity_id in triples_factory.entity_to_id.items()
-        ],
+        [(entity_id, entity_label, score) for (entity_id, entity_label), score in zip(id_labels, scores)],
         columns=["tail_id", "tail_label", "score"],
     ).sort_values("score", ascending=False)
 
