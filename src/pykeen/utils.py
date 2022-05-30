@@ -883,6 +883,7 @@ def extend_batch(
     batch: MappedTriples,
     max_id: int,
     dim: int,
+    ids: Optional[torch.LongTensor] = None,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
@@ -890,27 +891,30 @@ def extend_batch(
         The batch.
     :param max_id:
         The maximum IDs to enumerate.
+    :param ids: shape: (num_ids,) | (batch_size, num_ids)
+        explicit IDs
     :param dim: in {0,1,2}
         The column along which to insert the enumerated IDs.
 
     :return: shape: (batch_size * num_choices, 3)
         A large batch, where every pair from the original batch is combined with every ID.
     """
-    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=max_id, dim=0)
+    # normalize ids: -> ids.shape: (batch_size, num_ids)
+    if ids is None:
+        ids = torch.arange(max_id, device=batch.device)
+    if ids.ndimension() < 2:
+        ids = ids.unsqueeze(dim=0)
+    assert ids.ndimension() == 2
 
-    # Create a tensor of all IDs
-    ids = torch.arange(max_id, device=batch.device)
+    # allocate memory
+    hrt_batch = batch.new_empty(size=(batch.shape[0], ids.shape[-1], 3))
 
-    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
-    extended_ids = ids.repeat(batch.shape[0])
+    # copy ids
+    for column in range(3):
+        hrt_batch[..., column] = ids if column == dim else batch[..., column]
 
-    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
-    columns = [extended_batch[:, i] for i in (0, 1)]
-    columns.insert(dim, extended_ids)
-    hrt_batch = torch.stack(columns, dim=-1)
-
-    return hrt_batch
+    # reshape
+    return hrt_batch.view(-1, 3)
 
 
 def check_shapes(
