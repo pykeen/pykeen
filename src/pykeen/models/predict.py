@@ -5,7 +5,8 @@
 import itertools as itt
 import logging
 from abc import abstractmethod
-from typing import Optional, Sequence, Tuple, Union
+from operator import itemgetter
+from typing import Collection, List, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy as np
@@ -99,6 +100,23 @@ def get_head_prediction_df(
     )
 
 
+def _get_entities(
+    ids: Union[None, torch.Tensor, Collection[str]],
+    triples_factory: TriplesFactory,
+    device: torch.device,
+) -> Tuple[List[Tuple[str, int]], Optional[torch.Tensor]]:
+    if ids is None:
+        return sorted(triples_factory.entity_to_id.items(), key=itemgetter(1)), None
+    id_tensor = None
+    if isinstance(ids, torch.Tensor):
+        id_tensor = ids
+        ids = ids.tolist()
+    ids = sorted(set(triples_factory.entities_to_ids(entities=ids)))
+    if id_tensor is None:
+        id_tensor = torch.as_tensor(ids, torch.long, device=device)
+    return [(triples_factory.entity_id_to_label[i], i) for i in ids], id_tensor
+
+
 def get_tail_prediction_df(
     model: Model,
     head_label: str,
@@ -116,6 +134,8 @@ def get_tail_prediction_df(
     :param model: A PyKEEN model
     :param head_label: The string label for the head entity
     :param relation_label: The string label for the relation
+    :param tails:
+        restrict tail prediction to the given entities
     :param triples_factory: Training triples factory
     :param add_novelties: Should the dataframe include a column denoting if the ranked tail entities correspond
         to novel triples?
@@ -155,16 +175,7 @@ def get_tail_prediction_df(
     head_id = triples_factory.entity_to_id[head_label]
     relation_id = triples_factory.relation_to_id[relation_label]
     batch = torch.as_tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
-    id_labels: Sequence[Tuple[int, str]]
-    if tails is None:
-        id_labels = triples_factory.entity_to_id.items()
-    else:
-        # deduplicate tails
-        tails = set(tails)
-        id_labels = sorted((label, i) for label, i in triples_factory.entity_to_id.items() if label in tails)
-        tails = torch.as_tensor(
-            data=triples_factory.entities_to_ids(entities=tails), dtype=torch.long, device=model.device
-        )
+    id_labels, tails = _get_entities(ids=tails, triples_factory=triples_factory, device=model.device)
     scores = model.predict_t(batch, mode=mode, tails=tails)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
