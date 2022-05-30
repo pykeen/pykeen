@@ -1006,6 +1006,21 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert scores.shape == (self.batch_size, self.instance.num_entities)
         self._check_scores(batch, scores)
 
+    def test_score_t_multi(self) -> None:
+        """Test the model's ``score_t()`` function with custom tail candidates."""
+        batch = self.factory.mapped_triples[: self.batch_size, :2].to(self.instance.device)
+        b = self.batch_size
+        n = self.factory.num_entities
+        k = n // 2
+        for ts in (None, torch.randperm(n)[:k], torch.randint(n, size=(b, k))):
+            if ts is None:
+                expected_shape = (self.batch_size, self.factory.num_entities)
+            else:
+                expected_shape = (self.batch_size, k)
+            scores = self.instance.score_t(batch, mode=self.mode, ts=ts)
+            self.assertTupleEqual(tuple(scores.shape), expected_shape)
+            self._check_scores(batch, scores)
+
     def test_score_r(self) -> None:
         """Test the model's ``score_r()`` function."""
         batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
