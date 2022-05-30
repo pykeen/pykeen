@@ -111,7 +111,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         return self.mlp(x_s)
 
     # docstr-coverage: inherited
-    @raise_if_present(parameter_name="ts")
+    @raise_if_present(parameter_name="tails")
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
@@ -139,7 +139,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         return scores
 
     # docstr-coverage: inherited
-    @raise_if_present(parameter_name="hs")
+    @raise_if_present(parameter_name="heads")
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)

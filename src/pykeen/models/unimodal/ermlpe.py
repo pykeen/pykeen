@@ -155,7 +155,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
         return x
 
     # docstr-coverage: inherited
-    @raise_if_present(parameter_name="ts")
+    @raise_if_present(parameter_name="tails")
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
@@ -177,7 +177,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
         return x
 
     # docstr-coverage: inherited
-    @raise_if_present(parameter_name="hs")
+    @raise_if_present(parameter_name="heads")
     def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)
