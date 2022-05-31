@@ -140,8 +140,8 @@ class Representation(nn.Module, ABC):
         .. note ::
             depending on :attr:`Representation.unique`, this implementation will use an optimization for duplicate
             indices. It is generally only recommended if computing individual representation is expensive, e.g.,
-            since it involves message passing, or a large encoder networks, but discouraged for cheap lookups, e.g., a plain
-            embedding lookup.
+            since it involves message passing, or a large encoder networks, but discouraged for cheap lookups, e.g., a
+            plain embedding lookup.
 
         :param indices: shape: s
             The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
