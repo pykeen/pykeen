@@ -5,13 +5,14 @@
 import itertools
 from typing import Any, ClassVar, Mapping, Type
 
+from class_resolver import HintOrType, OptionalKwargs
 from torch.nn import functional
 from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransHInteraction
-from ...regularizers import Regularizer, TransHRegularizer
+from ...regularizers import Regularizer, TransHRegularizer, regularizer_resolver
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -74,6 +75,8 @@ class TransH(ERModel):
         scoring_fct_norm: int = 2,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
+        regularizer: HintOrType[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize TransH.
@@ -108,7 +111,12 @@ class TransH(ERModel):
         )
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
-        # TODO: wait for update from https://github.com/pykeen/pykeen/pull/952
         self.append_weight_regularizer(
-            parameter=itertools.chain(self.entity_representations, self.relation_representations), regularizer=...
+            parameter=itertools.chain(
+                self.entity_representations.parameters(), self.relation_representations.parameters()
+            ),
+            # TODO: wait for update from https://github.com/pykeen/pykeen/pull/952
+            regularizer=self._instantiate_default_regularizer()
+            if regularizer is None
+            else regularizer_resolver.make(regularizer, regularizer_kwargs),
         )
