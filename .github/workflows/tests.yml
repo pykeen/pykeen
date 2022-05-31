@@ -1,14 +1,9 @@
 name: Tests
 
-on:
-  push:
-    branches:
-      - '**'
-      - '!master'
+on: workflow_dispatch
 
 jobs:
   lint:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Lint
     runs-on: ubuntu-latest
     strategy:
@@ -38,7 +33,6 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
@@ -67,7 +61,6 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs-test
   tests:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Tests
     runs-on: ubuntu-latest
     strategy:
@@ -88,7 +81,6 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Windows
     runs-on: windows-latest
     strategy:
@@ -110,7 +102,6 @@ jobs:
       - name: Run slow tests
         run: pytest --durations=20 tests -m "slow"
   tests_completed:
-    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
     runs-on: ubuntu-latest
     steps:
       - name: Step 1
