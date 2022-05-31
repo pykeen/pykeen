@@ -1279,7 +1279,7 @@ class AdversarialLoss(SetwiseLoss):
     def __init__(self, inverse_softmax_temperature: float = 1.0, reduction: str = "mean") -> None:
         """Initialize the adversarial loss.
 
-        :param adversarial_temperature:
+        :param inverse_softmax_temperature:
             the inverse of the softmax temperature
         :param reduction:
             the name of the reduction operation, cf. :meth:`Loss.__init__`
