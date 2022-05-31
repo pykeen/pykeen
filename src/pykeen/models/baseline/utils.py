@@ -23,15 +23,35 @@ def get_csr_matrix(
     row_indices: numpy.ndarray,
     col_indices: numpy.ndarray,
     shape: Tuple[int, int],
+    dtype: numpy.dtype = numpy.float32,
+    norm: Optional[str] = "l1",
 ) -> scipy.sparse.csr_matrix:
-    """Create a sparse matrix, for the given non-zero locations."""
+    """
+    Create a sparse matrix, with ones for the given non-zero locations.
+
+    :param row_indices: shape: (nnz,)
+        the non-zero row indices
+    :param col_indices: shape: (nnz,)
+        the non-zero column indices
+    :param shape:
+        the matrix' shape
+    :param dtype:
+        the data type to use
+    :param norm:
+        if not None, perform row-wise normalization with :func:`sklearn.preprocessing.normalize`
+
+    :return: shape: shape
+        a sparse csr matrix
+    """
     # create sparse matrix of absolute counts
     matrix = scipy.sparse.coo_matrix(
-        (numpy.ones(row_indices.shape, dtype=numpy.float32), (row_indices, col_indices)),
+        (numpy.ones(row_indices.shape, dtype=dtype), (row_indices, col_indices)),
         shape=shape,
     ).tocsr()
+    if not norm:
+        return matrix
     # normalize to relative counts
-    return sklearn_normalize(matrix, norm="l1")
+    return sklearn_normalize(matrix, norm=norm)
 
 
 def marginal_score(

@@ -101,6 +101,14 @@ class DimensionError(ValueError):
     """Raised when the wrong dimensions were supplied."""
 
     def __init__(self, given, expected):
+        """
+        Initialize the error.
+
+        :param given:
+            the given keys
+        :param expected:
+            the expected keys
+        """
         self.given = given
         self.expected = expected
 

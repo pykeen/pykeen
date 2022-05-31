@@ -59,6 +59,7 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
+from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
@@ -71,6 +72,7 @@ __all__ = [
     "TrainingCallback",
     "StopperTrainingCallback",
     "TrackerTrainingCallback",
+    "EvaluationLoopTrainingCallback",
     "EvaluationTrainingCallback",
     "MultiTrainingCallback",
     "GradientNormClippingTrainingCallback",
@@ -140,6 +142,7 @@ class TrackerTrainingCallback(TrainingCallback):
     It logs the loss after each epoch to the given result tracker,
     """
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
@@ -160,6 +163,7 @@ class GradientNormClippingTrainingCallback(TrainingCallback):
         self.max_norm = max_norm
         self.norm_type = norm_type or 2.0
 
+    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_norm_(
             parameters=self.model.get_grad_params(),
@@ -183,6 +187,7 @@ class GradientAbsClippingTrainingCallback(TrainingCallback):
         super().__init__()
         self.clip_value = clip_value
 
+    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_value_(self.model.get_grad_params(), clip_value=self.clip_value)
 
@@ -248,7 +253,9 @@ class EvaluationTrainingCallback(TrainingCallback):
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         self.prefix = prefix
         self.kwargs = kwargs
+        self.batch_size = self.kwargs.pop("batch_size", None)
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return
@@ -256,8 +263,66 @@ class EvaluationTrainingCallback(TrainingCallback):
             model=self.model,
             mapped_triples=self.evaluation_triples,
             device=self.training_loop.device,
+            batch_size=self.evaluator.batch_size or self.batch_size,
             **self.kwargs,
         )
+        self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
+
+
+class EvaluationLoopTrainingCallback(TrainingCallback):
+    """A callback for regular evaluation using new-style evaluation loops."""
+
+    def __init__(
+        self,
+        factory: CoreTriplesFactory,
+        frequency: int = 1,
+        prefix: Optional[str] = None,
+        evaluator: HintOrType[Evaluator] = None,
+        evaluator_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the callback.
+
+        :param factory:
+            the triples factory comprising the evaluation triples
+        :param frequency:
+            the evaluation frequency
+        :param prefix:
+            a prefix to use for logging (e.g., to distinguish between different splits)
+        :param evaluator:
+            the evaluator, or a hint thereof
+        :param evaluator_kwargs:
+            additional keyword-based parameters used for the evaluation instantiation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`EvaluationLoop.evaluate`
+        """
+        super().__init__()
+        self.frequency = frequency
+        self.prefix = prefix
+
+        self.factory = factory
+        self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+        # lazy init
+        self._evaluation_loop = None
+        self.kwargs = kwargs
+
+    @property
+    def evaluation_loop(self):
+        """Return the evaluation loop instance (lazy-initialization)."""
+        if self._evaluation_loop is None:
+            self._evaluation_loop = LCWAEvaluationLoop(
+                triples_factory=self.factory,
+                evaluator=self.evaluator,
+                model=self.model,
+            )
+        return self._evaluation_loop
+
+    # docstr-coverage: inherited
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        if epoch % self.frequency:
+            return
+        result = self.evaluation_loop.evaluate(**self.kwargs)
         self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
@@ -290,6 +355,7 @@ class StopperTrainingCallback(TrainingCallback):
         self.last_best_epoch = last_best_epoch
         self.best_epoch_model_file_path = best_epoch_model_file_path
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if self.stopper.should_evaluate(epoch):
             # TODO how to pass inductive mode
@@ -339,6 +405,7 @@ class MultiTrainingCallback(TrainingCallback):
         super().__init__()
         self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs) if callbacks else []
 
+    # docstr-coverage: inherited
     def register_training_loop(self, loop) -> None:  # noqa: D102
         super().register_training_loop(training_loop=loop)
         for callback in self.callbacks:
@@ -350,22 +417,27 @@ class MultiTrainingCallback(TrainingCallback):
         if self._training_loop is not None:
             callback.register_training_loop(self._training_loop)
 
+    # docstr-coverage: inherited
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss, **kwargs)
 
+    # docstr-coverage: inherited
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_batch(epoch=epoch, batch=batch, **kwargs)
 
+    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.pre_step(**kwargs)
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
 
+    # docstr-coverage: inherited
     def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses, **kwargs)

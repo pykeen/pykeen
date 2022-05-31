@@ -52,7 +52,7 @@ copyright = f"2019-{date.today().year}, PyKEEN Project Team"
 author = "PyKEEN Project Team"
 
 # The full version, including alpha/beta/rc tags.
-release = "1.8.2-dev"
+release = "1.8.3-dev"
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -117,7 +117,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -255,6 +255,7 @@ intersphinx_mapping = {
     "https://docs.python.org/3/": None,
     "torch": ("https://pytorch.org/docs/stable", None),
     "torchvision": ("https://pytorch.org/vision/stable", None),
+    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest/", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "optuna": ("https://optuna.readthedocs.io/en/latest", None),
     "pybel": ("https://pybel.readthedocs.io/en/latest/", None),
@@ -263,9 +264,13 @@ intersphinx_mapping = {
     "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest/", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
+    # See discussion for adding huggingface intersphinx docs at
+    # https://github.com/huggingface/transformers/issues/14728#issuecomment-1133521776
+    "datasets": ("https://huggingface.co/docs/datasets/master/en/", None),
+    "transformers": ("https://huggingface.co/docs/transformers/master/en/", None),
 }
 
 autoclass_content = "both"
 # autodoc_member_order = 'bysource'
-# autodoc_typehints = 'both' # TODO turn on after 4.1 release
+autodoc_typehints = "both"
 # autodoc_preserve_defaults = True

@@ -25,7 +25,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
-from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device, upgrade_to_sequence
+from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
 
 __all__ = [
     "Representation",
@@ -232,6 +232,7 @@ class SubsetRepresentation(Representation):
         super().__init__(max_id=max_id, shape=base.shape, **kwargs)
         self.base = base
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -378,12 +379,14 @@ class Embedding(Representation):
         warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
         return self._embeddings.embedding_dim
 
+    # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
             self._embeddings.weight.data.view(self.num_embeddings, *self._shape),
         ).view(*self._embeddings.weight.data.shape)
 
+    # docstr-coverage: inherited
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
         if self.constrainer is not None:
@@ -394,6 +397,7 @@ class Embedding(Representation):
                 x = torch.view_as_real(x)
             self._embeddings.weight.data = x.view(*self._embeddings.weight.data.shape)
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -454,10 +458,17 @@ class LowRankRepresentation(Representation):
         self.weight = nn.Parameter(torch.empty(max_id, num_bases))
         self.reset_parameters()
 
+    # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         self.bases.reset_parameters()
         self.weight.data = self.weight_initializer(self.weight)
 
+    @property
+    def num_bases(self) -> int:
+        """Return the number of bases."""
+        return self.bases.max_id
+
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -802,16 +813,18 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         # register buffers for adjacency matrix; we use the same format as PyTorch Geometric
         # TODO: This always uses all training triples for message passing
-        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="edge_index", tensor=get_edge_index(triples_factory=triples_factory))
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
         # initialize buffer of enriched representations
         self.enriched_representations = None
 
+    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         # invalidate enriched embeddings
         self.enriched_representations = None
 
+    # docstr-coverage: inherited
     def train(self, mode: bool = True):  # noqa: D102
         # when changing from evaluation to training mode, the buffered representations have been computed without
         # gradient tracking. hence, we need to invalidate them.
@@ -874,6 +887,7 @@ class SingleCompGCNRepresentation(Representation):
         self.position = position
         self.reset_parameters()
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -970,6 +984,7 @@ class LabelBasedTransformerRepresentation(Representation):
             **kwargs,
         )
 
+    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,

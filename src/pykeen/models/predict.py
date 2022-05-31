@@ -373,6 +373,7 @@ class _TopKScoreConsumer(_ScoreConsumer):
         self.result = torch.empty(0, 3, dtype=torch.long, device=device)
         self.scores = torch.empty(0, device=device)
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         head_id_range: Tuple[int, int],
@@ -445,6 +446,7 @@ class _AllConsumer(_ScoreConsumer):
             dim=-1,
         ).view(-1, 3)[:, [1, 0, 2]]
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         head_id_range: Tuple[int, int],

@@ -111,7 +111,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
             else:
                 interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
         except KeyError:
-            click.echo(f"could not look up {model_resolver.normalize_cls(model_cls)}")
+            click.echo(f"could not find corresponding interaction class for {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None
         else:
             seen_interactions.add(interaction_cls)
@@ -120,7 +120,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         model_reference = f"pykeen.models.{model_cls.__name__}"
         docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
-            raise ValueError("All models must have docdata")
+            raise ValueError(f"Missing docdata from {model_reference}")
         if link_fmt:
             model_reference = _fmt_ref(model_reference, link_fmt)
         else:
@@ -598,7 +598,7 @@ def readme(check: bool):
             sys.exit(-1)
 
     with open(readme_path, "w") as file:
-        print(new_readme, file=file)  # noqa:T001
+        print(new_readme, file=file)  # noqa:T201
 
 
 def get_readme() -> str:
