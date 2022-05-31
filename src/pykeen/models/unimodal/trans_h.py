@@ -12,7 +12,7 @@ from torch.nn.init import uniform_
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransHInteraction
-from ...regularizers import Regularizer, TransHRegularizer, regularizer_resolver
+from ...regularizers import NormLimitRegularizer, OrthogonalityRegularizer, Regularizer, regularizer_resolver
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -61,11 +61,18 @@ class TransH(ERModel):
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default: ClassVar[Type[Regularizer]] = TransHRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = NormLimitRegularizer
     #: The settings used by [wang2014]_ for TransH
+    # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
+    # Therefore, apply_only_once is always set to True.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.05,
-        epsilon=1e-5,
+        weight=0.05, apply_only_once=True, dim=-1, p=2, power_norm=True, max_norm=1.0
+    )
+    #: The custom regularizer used by [wang2014]_ for TransH
+    relation_regularizer_default: ClassVar[Type[Regularizer]] = OrthogonalityRegularizer
+    #: The settings used by [wang2014]_ for TransH
+    relation_regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
+        weight=0.05, apply_only_once=True, epsilon=1e-5
     )
 
     def __init__(
@@ -75,8 +82,10 @@ class TransH(ERModel):
         scoring_fct_norm: int = 2,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
-        regularizer: HintOrType[Regularizer] = None,
-        regularizer_kwargs: OptionalKwargs = None,
+        entity_regularizer: HintOrType[Regularizer] = None,
+        entity_regularizer_kwargs: OptionalKwargs = None,
+        relation_regularizer: HintOrType[Regularizer] = None,
+        relation_regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize TransH.
@@ -109,14 +118,24 @@ class TransH(ERModel):
             ],
             **kwargs,
         )
+
+        # normalize regularizers
+        if entity_regularizer is None:
+            entity_regularizer = self.regularizer_default
+            entity_regularizer_kwargs = self.regularizer_default_kwargs
+        if relation_regularizer is None:
+            relation_regularizer = self.relation_regularizer_default
+            relation_regularizer_kwargs = self.relation_regularizer_default_kwargs
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
+        # thus, we need to use a weight regularizer instead of having an Embedding regularizer,
+        # which only regularizes the weights used in a batch
         self.append_weight_regularizer(
-            parameter=itertools.chain(
-                self.entity_representations.parameters(), self.relation_representations.parameters()
-            ),
+            parameter=self.entity_representations[0].parameters(),
+            regularizer=regularizer_resolver.make(entity_regularizer, pos_kwargs=entity_regularizer_kwargs),
+        )
+        self.append_weight_regularizer(
+            parameter=itertools.chain.from_iterable(r.parameters() for r in self.relation_representations),
             # TODO: wait for update from https://github.com/pykeen/pykeen/pull/952
-            regularizer=self._instantiate_default_regularizer()
-            if regularizer is None
-            else regularizer_resolver.make(regularizer, regularizer_kwargs),
+            regularizer=regularizer_resolver.make(relation_regularizer, pos_kwargs=relation_regularizer_kwargs),
         )

@@ -5,13 +5,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from turtle import forward
 from typing import Any, ClassVar, Iterable, Mapping, Optional
 
 import torch
 from class_resolver import ClassResolver, normalize_string
-from torch import linalg, nn
-from torch.nn import functional
+from torch import nn
 
 from .utils import lp_norm, powersum_norm
 
@@ -23,7 +21,7 @@ __all__ = [
     "NoRegularizer",
     "CombinedRegularizer",
     "PowerSumRegularizer",
-    "TransHRegularizer",
+    "OrthogonalityRegularizer",
     # Utils
     "regularizer_resolver",
 ]
@@ -284,8 +282,8 @@ class NormLimitRegularizer(Regularizer):
         return (norm - self.max_norm).relu().sum()
 
 
-class TransHRegularizer(Regularizer):
-    """A regularizer for the soft constraints in TransH."""
+class OrthogonalityRegularizer(Regularizer):
+    """A regularizer for the soft orthogonality constraints from [wang2014]_."""
 
     #: The default strategy for optimizing the TransH regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
@@ -314,7 +312,6 @@ class TransHRegularizer(Regularizer):
         # Therefore, apply_only_once is always set to True.
         super().__init__(weight=weight, **kwargs, apply_only_once=True)
         self.epsilon = epsilon
-        self.entity_regularizer = NormLimitRegularizer(dim=-1, p=2, power_norm=True, max_norm=1.0)
 
     # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -322,19 +319,19 @@ class TransHRegularizer(Regularizer):
 
     # docstr-coverage: inherited
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
-        if len(tensors) != 3:
-            raise KeyError("Expects exactly three tensors")
+        if len(tensors) != 2:
+            raise ValueError("Expects exactly two tensors")
         if self.apply_only_once and self.updated:
             return
-        entity_embeddings, normal_vector_embeddings, relation_embeddings = tensors
-        # Entity soft constraint
-        self.regularization_term += self.entity_regularizer(entity_embeddings)
+        x, y = tensors
 
-        # Orthogonality soft constraint
-        d_r_n = functional.normalize(relation_embeddings, dim=-1)
-        self.regularization_term += torch.sum(
-            functional.relu(torch.sum((normal_vector_embeddings * d_r_n) ** 2, dim=-1) - self.epsilon),
+        # calculate squared cosine similarity; clamp for safe division
+        sq_sim = torch.einsum("...i,...i->...", x, y).pow(2) / (x.norm() * y.norm()).clamp_min(
+            min=torch.finfo(x.dtype).eps
         )
+
+        # orthogonality soft constraint: cosine similarity at most epsilon
+        self.regularization_term += (sq_sim - self.epsilon).relu().sum()
 
         self.updated = True
 

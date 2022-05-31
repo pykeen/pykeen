@@ -14,9 +14,9 @@ from pykeen.regularizers import (
     CombinedRegularizer,
     LpRegularizer,
     NoRegularizer,
+    OrthogonalityRegularizer,
     PowerSumRegularizer,
     Regularizer,
-    TransHRegularizer,
 )
 from pykeen.utils import get_expected_norm, resolve_device
 from tests import cases
@@ -96,7 +96,7 @@ class PowerSumRegularizerTest(cases.RegularizerTestCase):
 class TransHRegularizerTest(unittest.TestCase):
     """Test the TransH regularizer."""
 
-    cls = TransHRegularizer
+    cls = OrthogonalityRegularizer
     generator: torch.Generator
     device: torch.device
 
@@ -182,7 +182,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
     def test_transh_regularizer(self):
         """Test the TransH regularizer only updates once."""
         self.assertNotIn("apply_only_once", TransH.regularizer_default_kwargs)
-        regularizer = TransHRegularizer(
+        regularizer = OrthogonalityRegularizer(
             **TransH.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)
@@ -217,4 +217,4 @@ class TestRegularizerTests(unittest_templates.MetaTestCase[Regularizer]):
 
     base_cls = Regularizer
     base_test = cases.RegularizerTestCase
-    skip_cls = {TransHRegularizer}
+    skip_cls = {OrthogonalityRegularizer}
