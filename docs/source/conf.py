@@ -117,7 +117,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -266,8 +266,8 @@ intersphinx_mapping = {
     # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
     # See discussion for adding huggingface intersphinx docs at
     # https://github.com/huggingface/transformers/issues/14728#issuecomment-1133521776
-    'datasets': ('https://huggingface.co/docs/datasets/master/en/', None),
-    'transformers': ('https://huggingface.co/docs/transformers/master/en/', None),
+    "datasets": ("https://huggingface.co/docs/datasets/master/en/", None),
+    "transformers": ("https://huggingface.co/docs/transformers/master/en/", None),
 }
 
 autoclass_content = "both"

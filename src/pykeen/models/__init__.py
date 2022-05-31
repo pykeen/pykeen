@@ -52,6 +52,7 @@ from class_resolver import ClassResolver, get_subclasses
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
 from .inductive import InductiveNodePiece, InductiveNodePieceGNN
+from .meta import CooccurrenceFilteredModel
 from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
@@ -145,6 +146,8 @@ __all__ = [
     # Evaluation-only models
     "SoftInverseTripleBaseline",
     "MarginalDistributionBaseline",
+    # Meta Models
+    "CooccurrenceFilteredModel",
     # Utils
     "model_resolver",
     "make_model",
