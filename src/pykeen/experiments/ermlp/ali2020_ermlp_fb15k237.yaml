@@ -18,10 +18,15 @@ pipeline:
   optimizer_kwargs:
     lr: 0.005779875816374009
     weight_decay: 0.0
+  stopper: early
+  stopper_kwargs:
+    frequency: 50
+    patience: 2
+    relative_delta: 0.002
   training_kwargs:
     batch_size: 256
     label_smoothing: 0.6431540317057921
-    num_epochs: 201
+    num_epochs: 1000
   training_loop: lcwa
 results:  # comment: these are from a re-trained model with PyKEEN 1.8.1-dev
   realistic:
