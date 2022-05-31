@@ -373,7 +373,7 @@ class Embedding(Representation):
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
-            self._embeddings.weight.data.view(self.num_embeddings, *self._shape),
+            self._embeddings.weight.data.view(self.max_id, *self._shape),
         ).view(*self._embeddings.weight.data.shape)
 
     # docstr-coverage: inherited
