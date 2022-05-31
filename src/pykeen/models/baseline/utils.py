@@ -24,7 +24,7 @@ def get_csr_matrix(
     col_indices: numpy.ndarray,
     shape: Tuple[int, int],
     dtype: numpy.dtype = numpy.float32,
-    normalize: bool = True,
+    norm: Optional[str] = "l1",
 ) -> scipy.sparse.csr_matrix:
     """
     Create a sparse matrix, with ones for the given non-zero locations.
@@ -37,8 +37,8 @@ def get_csr_matrix(
         the matrix' shape
     :param dtype:
         the data type to use
-    :param normalize:
-        whether to perform row-wise l1 normalization
+    :param norm:
+        if not None, perform row-wise normalization with :func:`sklearn.preprocessing.normalize`
 
     :return: shape: shape
         a sparse csr matrix
@@ -48,10 +48,10 @@ def get_csr_matrix(
         (numpy.ones(row_indices.shape, dtype=dtype), (row_indices, col_indices)),
         shape=shape,
     ).tocsr()
-    if not normalize:
+    if not norm:
         return matrix
     # normalize to relative counts
-    return sklearn_normalize(matrix, norm="l1")
+    return sklearn_normalize(matrix, norm=norm)
 
 
 def marginal_score(

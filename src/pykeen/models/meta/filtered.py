@@ -106,7 +106,7 @@ class CooccurrenceFilteredModel(Model):
                     col_indices=mapped_triples[:, col_index],
                     shape=(num_rows, num_cols),
                     dtype=bool,
-                    normalize=False,
+                    norm=None,
                 )
                 for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items())
                 if row_label != col_label
