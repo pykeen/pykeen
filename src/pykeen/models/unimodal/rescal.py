@@ -7,11 +7,10 @@ from typing import Any, ClassVar, Mapping, Type
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.init import uniform_
 
-from pykeen.nn.modules import RESCALInteraction
-
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...regularizers import LpRegularizer, Regularizer, regularizer_resolver
+from ...nn import RESCALInteraction
+from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
 __all__ = [

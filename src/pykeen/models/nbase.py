@@ -11,7 +11,7 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import OptionalKwargs, HintOrType
+from class_resolver import HintOrType, OptionalKwargs
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch import nn
 
@@ -99,22 +99,18 @@ class _NewAbstractModel(Model, ABC):
                 logger.debug("[%3d] Parents to blame: %s", i, parents.get(p_id))
 
     def _instantiate_regularizer(
-        self, regularizer: HintOrType[Regularizer], regularizer_kwargs: OptionalKwargs
+        self,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
     ) -> Optional[Regularizer]:
-        """Instantiate the regularizer from this class's default settings.
-
-        :param kwargs: Additional keyword arguments to be passed through to the ``__init__()`` function of the
-            default regularizer, if one is set.
-
-        :returns: If the default regularizer is None, None is returned.
-        """
         """
         Instantiate a regularizer using the default if None is provided.
 
         The following precendence order is used:
 
         1. If the passed regularizer is not None, use it
-        2. If the regularizer is None, use the default regularizer. In this case, the default kwargs will be used in favour of provided ones.
+        2. If the regularizer is None, use the default regularizer. In this case, the default kwargs will be used in
+           favour of provided ones.
         3. If both, the regularizer and the default regularizer are None, return None.
 
         :param regularizer:
