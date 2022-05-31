@@ -1,8 +1,8 @@
-# RESCAL on FB15k237 from https://arxiv.org/abs/2006.13365
+# RESCAL on WN18RR from https://arxiv.org/abs/2006.13365
 metadata:
-  title: RESCAL on FB15k237 from https://arxiv.org/abs/2006.13365
+  title: RESCAL on WN18RR from https://arxiv.org/abs/2006.13365
 pipeline:
-  dataset: fb15k237
+  dataset: wn18rr
   dataset_kwargs:
     create_inverse_triples: True
   evaluator_kwargs:
@@ -19,11 +19,11 @@ pipeline:
     weight_decay: 0.0
   stopper: early
   stopper_kwargs:
-    delta: 0.002
+    relative_delta: 0.002
     frequency: 50
     patience: 2
   training_kwargs:
     batch_size: 256
     label_smoothing: 0.43600712136607944
-    num_epochs: 951
+    num_epochs: 1000
   training_loop: lcwa

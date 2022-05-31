@@ -17,12 +17,13 @@ pipeline:
   optimizer_kwargs:
     lr: 0.003442653313243005
     weight_decay: 0.0
+  stopper: early
   stopper_kwargs:
-    delta: 0.002
+    relative_delta: 0.002
     frequency: 50
     patience: 2
   training_kwargs:
     batch_size: 512
     label_smoothing: 0.011161012837964961
-    num_epochs: 551
+    num_epochs: 1000
   training_loop: lcwa
