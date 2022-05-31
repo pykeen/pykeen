@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional
-import warnings
 
 import torch
 from class_resolver import ClassResolver, normalize_string
