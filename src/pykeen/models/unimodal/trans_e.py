@@ -4,13 +4,16 @@
 
 from typing import Any, ClassVar, Mapping
 
+from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch.nn import functional
+
+from pykeen.regularizers import Regularizer
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransEInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, Initializer
 
 __all__ = [
     "TransE",
@@ -59,6 +62,8 @@ class TransE(ERModel):
         entity_constrainer: Hint[Constrainer] = functional.normalize,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         relation_constrainer: Hint[Constrainer] = None,
+        regularizer: HintOrType[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize TransE.
@@ -84,11 +89,15 @@ class TransE(ERModel):
                 shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             ),
             relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             ),
             **kwargs,
         )
