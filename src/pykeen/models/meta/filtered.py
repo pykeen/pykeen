@@ -1,6 +1,6 @@
 """Filtered models."""
 
-from typing import List, Mapping, Optional, Union
+from typing import Any, ClassVar, List, Mapping, Optional, Union
 
 import scipy.sparse
 import torch
@@ -30,6 +30,12 @@ class CooccurrenceFilteredModel(Model):
         link: https://github.com/pykeen/pykeen/pull/943
         github: pykeen/pykeen
     """
+
+    #: The default strategy for optimizing the model's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        base=dict(type="categorical", choices=["distmult", "mure", "rescal", "rotate", "transe"]),
+        conjunctive=dict(type=bool),
+    )
 
     #: the indexed filter triples, i.e., sparse masks
     indexes: Mapping[Target, Mapping[Target, scipy.sparse.csr_matrix]]
