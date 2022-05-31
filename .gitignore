@@ -1,5 +1,4 @@
 # Byte-compiled / optimized / DLL files
-pykeen_loc/
 __pycache__/
 *.py[cod]
 *$py.class
