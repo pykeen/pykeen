@@ -94,16 +94,16 @@ class CooccurrenceFilteredModel(Model):
         ).numpy()
         nums = [triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_entities]
         self.indexes = {
-            row_label: {
-                col_label: get_csr_matrix(
+            col_label: {
+                row_label: get_csr_matrix(
                     row_indices=mapped_triples[:, row_index],
                     col_indices=mapped_triples[:, col_index],
                     shape=(num_rows, num_cols),
                 ).astype(bool)
-                for num_cols, (col_label, col_index) in zip(nums, TARGET_TO_INDEX.items())
-                if col_label != row_label
+                for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items())
+                if row_label != col_label
             }
-            for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items())
+            for num_cols, (col_label, col_index) in zip(nums, TARGET_TO_INDEX.items())
         }
 
         # initialize base model's parameters
@@ -122,12 +122,13 @@ class CooccurrenceFilteredModel(Model):
         # get masks, shape: (batch_size, num_entities/num_relations)
         first_mask, second_mask = [
             index[batch_indices.cpu().numpy()]
-            for batch_indices, (target, index) in zip(
+            for batch_indices, (_target, index) in zip(
                 batch.t(), sorted(self.indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]])
             )
         ]
         # combine masks
-        mask = (first_mask & second_mask) if self.conjunctive else (first_mask | second_mask)
+        # note: * is an elementwise and, and + and elementwise or
+        mask = (first_mask * second_mask) if self.conjunctive else (first_mask + second_mask)
         # get non-zero entries
         rows, cols = [torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero()]
         # set scores for fill value for every non-occuring entry
