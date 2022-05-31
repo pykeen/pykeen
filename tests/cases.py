@@ -1455,7 +1455,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     def _test_forward(self, indices: Optional[torch.LongTensor]):
         """Test forward method."""
-        representations = self.instance.forward_unique(indices=indices)
+        representations = self.instance(indices=indices)
         prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
         self._check_result(x=representations, prefix_shape=prefix_shape)
 
