@@ -163,6 +163,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 
 import logging
 import math
+from abc import abstractmethod
 from textwrap import dedent
 from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
@@ -1270,39 +1271,20 @@ class InfoNCELoss(CrossEntropyLoss):
         )
 
 
-@parse_docdata
-class NSSALoss(SetwiseLoss):
-    """The self-adversarial negative sampling loss function proposed by [sun2019]_.
+class AdversarialLoss(SetwiseLoss):
+    """A loss with adversarial weighting of negative samples."""
 
-    ---
-    name: Self-adversarial negative sampling
-    """
+    def __init__(self, inverse_softmax_temperature: float = 1.0, reduction: str = "mean") -> None:
+        """Initialize the adversarial loss.
 
-    synonyms = {"Self-Adversarial Negative Sampling Loss", "Negative Sampling Self-Adversarial Loss"}
-
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=int, low=3, high=30, q=3),
-        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
-    )
-
-    def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = "mean") -> None:
-        """Initialize the NSSA loss.
-
-        :param margin: The loss's margin (also written as gamma in the reference paper)
-        :param adversarial_temperature: The negative sampling temperature (also written as alpha in the reference paper)
-
-            .. note ::
-                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
-                Its name is only kept for consistency with the nomenclature of [sun2019]_.
+        :param adversarial_temperature:
+            the inverse of the softmax temperature
         :param reduction:
-            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
-            value. From {'mean', 'sum'}.
-
-        .. note:: The default hyperparameters are based on the experiments for FB15k-237 in [sun2019]_.
+            the name of the reduction operation, cf. :meth:`Loss.__init__`
         """
         super().__init__(reduction=reduction)
-        self.inverse_softmax_temperature = adversarial_temperature
-        self.margin = margin
+        self.inverse_softmax_temperature = inverse_softmax_temperature
+        self.factor = 0.5 if self._reduction_method is torch.mean else 1.0
 
     # docstr-coverage: inherited
     def process_lcwa_scores(
@@ -1329,7 +1311,7 @@ class NSSALoss(SetwiseLoss):
         positive_scores = predictions[pos_mask]
         negative_scores = predictions[~pos_mask]
 
-        return self(
+        return self.factor * self(
             pos_scores=positive_scores,
             neg_scores=negative_scores,
             neg_weights=weights[~pos_mask],
@@ -1359,12 +1341,13 @@ class NSSALoss(SetwiseLoss):
         assert negative_scores.ndimension() == 2
         weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
-        return self(
+        return self.factor * self(
             pos_scores=positive_scores,
             neg_scores=negative_scores,
             neg_weights=weights,
         )
 
+    @abstractmethod
     def forward(
         self,
         pos_scores: torch.FloatTensor,
@@ -1374,15 +1357,60 @@ class NSSALoss(SetwiseLoss):
         """Calculate the loss for the given scores.
 
         :param pos_scores: shape: s_p
-            Positive score tensor
+            a tensor of positive scores
         :param neg_scores: shape: s_n
-            Negative score tensor
+            a tensor of negative scores
         :param neg_weights: shape: s_n
+            the adversarial weights of the negative scores
 
-        :returns: A loss value
-
-        .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
+        :returns:
+            a scalar loss value
         """
+        raise NotImplementedError
+
+
+@parse_docdata
+class NSSALoss(AdversarialLoss):
+    """The self-adversarial negative sampling loss function proposed by [sun2019]_.
+
+    .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
+
+    ---
+    name: Self-adversarial negative sampling
+    """
+
+    synonyms = {"Self-Adversarial Negative Sampling Loss", "Negative Sampling Self-Adversarial Loss"}
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
+    )
+
+    def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = "mean") -> None:
+        """Initialize the NSSA loss.
+
+        :param margin: The loss's margin (also written as gamma in the reference paper)
+        :param adversarial_temperature: The negative sampling temperature (also written as alpha in the reference paper)
+
+            .. note ::
+                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
+                Its name is only kept for consistency with the nomenclature of [sun2019]_.
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+
+        .. note:: The default hyperparameters are based on the experiments for FB15k-237 in [sun2019]_.
+        """
+        super().__init__(reduction=reduction, inverse_softmax_temperature=adversarial_temperature)
+        self.margin = margin
+
+    # docstr-coverage: inherited
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+        neg_weights: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
         # -w * log sigma(-(m + n)) - log sigma (m + p)
         # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
         # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
@@ -1397,6 +1425,29 @@ class NSSALoss(SetwiseLoss):
             loss = loss / 2.0
 
         return loss
+
+
+class AdversarialBCELoss(AdversarialLoss):
+    """
+    An adversarially weighted BCE loss.
+
+    .. seealso::
+        https://github.com/DeepGraphLearning/torchdrug/blob/20f84170544d594a177e237ef5f3a1cadb2c61e6/torchdrug/tasks/reasoning.py#L89-L100
+    """
+
+    # docstr-coverage: inherited
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+        neg_weights: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self._reduction_method(
+            neg_weights
+            * functional.binary_cross_entropy_with_logits(neg_scores, torch.zeros_like(neg_scores), reduction=None)
+        ) + functional.binary_cross_entropy_with_logits(
+            pos_scores, torch.ones_like(neg_scores), reduction=self.reduction
+        )
 
 
 @parse_docdata
