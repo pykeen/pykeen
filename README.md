@@ -237,15 +237,16 @@ The following inductive datasets are built in to PyKEEN.
 | Softplus                             | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)                     | The pointwise logistic loss (i.e., softplus loss).                                                    |
 | Soft Pointwise Hinge                 | [`pykeen.losses.SoftPointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftPointwiseHingeLoss.html) | The soft pointwise hinge loss.                                                                        |
 
-### Regularizers (5)
+### Regularizers (6)
 
-| Name     | Reference                                                                                                                             | Description                                              |
-|----------|---------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------|
-| combined | [`pykeen.regularizers.CombinedRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.CombinedRegularizer.html) | A convex combination of regularizers.                    |
-| lp       | [`pykeen.regularizers.LpRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.LpRegularizer.html)             | A simple L_p norm based regularizer.                     |
-| no       | [`pykeen.regularizers.NoRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.NoRegularizer.html)             | A regularizer which does not perform any regularization. |
-| powersum | [`pykeen.regularizers.PowerSumRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.PowerSumRegularizer.html) | A simple x^p based regularizer.                          |
-| transh   | [`pykeen.regularizers.TransHRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.TransHRegularizer.html)     | A regularizer for the soft constraints in TransH.        |
+| Name          | Reference                                                                                                                                       | Description                                                            |
+|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| combined      | [`pykeen.regularizers.CombinedRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.CombinedRegularizer.html)           | A convex combination of regularizers.                                  |
+| lp            | [`pykeen.regularizers.LpRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.LpRegularizer.html)                       | A simple L_p norm based regularizer.                                   |
+| no            | [`pykeen.regularizers.NoRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.NoRegularizer.html)                       | A regularizer which does not perform any regularization.               |
+| normlimit     | [`pykeen.regularizers.NormLimitRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.NormLimitRegularizer.html)         | A regularizer which formulates a soft constraint on a maximum norm.    |
+| orthogonality | [`pykeen.regularizers.OrthogonalityRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.OrthogonalityRegularizer.html) | A regularizer for the soft orthogonality constraints from [wang2014]_. |
+| powersum      | [`pykeen.regularizers.PowerSumRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.PowerSumRegularizer.html)           | A simple x^p based regularizer.                                        |
 
 ### Training Loops (2)
 
