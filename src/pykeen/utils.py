@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
+from textwrap import dedent
 from typing import (
     Any,
     Callable,
@@ -117,6 +118,7 @@ __all__ = [
     "get_connected_components",
     "normalize_path",
     "get_edge_index",
+    "prepare_filter_triples",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1676,6 +1678,7 @@ def get_edge_index(
     return edge_index
 
 
+
 def raise_if_present(parameter_name: str):
     """Create an decorator which raises an error if a parameter is not None."""
 
@@ -1692,6 +1695,37 @@ def raise_if_present(parameter_name: str):
         return wrapped
 
     return raise_decorator
+
+
+def prepare_filter_triples(
+    mapped_triples: MappedTriples,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    warn: bool = True,
+) -> MappedTriples:
+    """Prepare the filter triples from the evaluation triples, and additional filter triples."""
+    if torch.is_tensor(additional_filter_triples):
+        additional_filter_triples = [additional_filter_triples]
+    if additional_filter_triples is not None:
+        return torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
+    if warn:
+        logger.warning(
+            dedent(
+                """\
+                The filtered setting was enabled, but there were no `additional_filter_triples`
+                given. This means you probably forgot to pass (at least) the training triples. Try:
+
+                    additional_filter_triples=[dataset.training.mapped_triples]
+
+                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+
+                    additional_filter_triples=[
+                        dataset.training.mapped_triples,
+                        dataset.validation.mapped_triples,
+                    ]
+                """
+            )
+        )
+    return mapped_triples
 
 
 if __name__ == "__main__":
