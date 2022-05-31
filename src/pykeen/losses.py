@@ -183,7 +183,9 @@ __all__ = [
     "MarginPairwiseLoss",
     "PairwiseLoss",
     "SetwiseLoss",
+    "AdversarialLoss",
     # Concrete Classes
+    "AdversarialBCELoss",
     "BCEAfterSigmoidLoss",
     "BCEWithLogitsLoss",
     "CrossEntropyLoss",
