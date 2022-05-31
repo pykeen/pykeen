@@ -84,9 +84,7 @@ class RESCAL(ERModel):
 
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
-        regularizer = self._instantiate_default_regularizer(
-            regularizer=regularizer, regularizer_kwargs=regularizer_kwargs
-        )
+        regularizer = self._instantiate_regularizer(regularizer=regularizer, regularizer_kwargs=regularizer_kwargs)
         super().__init__(
             entity_representations_kwargs=dict(
                 shape=embedding_dim,

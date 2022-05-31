@@ -98,7 +98,7 @@ class _NewAbstractModel(Model, ABC):
             for i, p_id in enumerate(uninitialized_parameters, start=1):
                 logger.debug("[%3d] Parents to blame: %s", i, parents.get(p_id))
 
-    def _instantiate_default_regularizer(
+    def _instantiate_regularizer(
         self, regularizer: HintOrType[Regularizer], regularizer_kwargs: OptionalKwargs
     ) -> Optional[Regularizer]:
         """Instantiate the regularizer from this class's default settings.
