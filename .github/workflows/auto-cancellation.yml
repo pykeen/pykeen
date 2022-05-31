@@ -6,9 +6,9 @@ on: pull_request
 
 jobs:
   cancel:
-    name: auto-cancellation-running-action
+    name: cancel old jobs
     runs-on: ubuntu-latest
-    with:
-      githubToken: '${{ secrets.GITHUB_TOKEN }}'
     steps:
       - uses: fauguste/auto-cancellation-running-action@0.1.4
+        with:
+          githubToken: '${{ secrets.GITHUB_TOKEN }}'
