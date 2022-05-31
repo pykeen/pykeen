@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from turtle import forward
 from typing import Any, ClassVar, Iterable, Mapping, Optional
 
 import torch
@@ -233,6 +234,56 @@ class PowerSumRegularizer(Regularizer):
         return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
 
+class NormLimitRegularizer(Regularizer):
+    """A regularizer which formulates a soft constraint on a maximum norm."""
+
+    def __init__(
+        self,
+        *,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        weight: float = 1.0,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        apply_only_once: bool = False,
+        # regularizer-specific parameters
+        dim: Optional[int] = -1,
+        p: float = 2.0,
+        power_norm: bool = True,
+        max_norm: float = 1.0,
+        **kwargs,
+    ):
+        """
+        Initialize the regularizer.
+
+        :param weight:
+            The relative weight of the regularization
+        :param apply_only_once:
+            Should the regularization be applied more than once after reset?
+        :param dim:
+            the dimension along which to calculate the Lp norm, cf. :func:`powersum_norm`
+        :param p:
+            the parameter $p$ of the Lp norm, cf. :func:`powersum_norm`
+        :param power_norm:
+            whether to use the $p$ power of the norm instead
+        :param max_norm:
+            the maximum norm until which no penalty is added
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
+        """
+        super().__init__(weight=weight, apply_only_once=apply_only_once, **kwargs)
+        self.dim = dim
+        self.p = p
+        self.max_norm = max_norm
+        self.power_norm = power_norm
+
+    # docstr-coverage: inherited
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+        if self.power_norm:
+            norm = powersum_norm(x, p=self.p, dim=self.dim, normalize=False)
+        else:
+            norm = lp_norm(x=x, p=self.p, dim=self.dim, normalize=False)
+        return (norm - self.max_norm).relu().sum()
+
+
 class TransHRegularizer(Regularizer):
     """A regularizer for the soft constraints in TransH."""
 
@@ -263,6 +314,7 @@ class TransHRegularizer(Regularizer):
         # Therefore, apply_only_once is always set to True.
         super().__init__(weight=weight, **kwargs, apply_only_once=True)
         self.epsilon = epsilon
+        self.entity_regularizer = NormLimitRegularizer(dim=-1, p=2, power_norm=True, max_norm=1.0)
 
     # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -276,7 +328,7 @@ class TransHRegularizer(Regularizer):
             return
         entity_embeddings, normal_vector_embeddings, relation_embeddings = tensors
         # Entity soft constraint
-        self.regularization_term += torch.sum(functional.relu(linalg.vector_norm(entity_embeddings, dim=-1) ** 2 - 1.0))
+        self.regularization_term += self.entity_regularizer(entity_embeddings)
 
         # Orthogonality soft constraint
         d_r_n = functional.normalize(relation_embeddings, dim=-1)
