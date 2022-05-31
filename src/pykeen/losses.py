@@ -1442,11 +1442,14 @@ class AdversarialBCELoss(AdversarialLoss):
         neg_scores: torch.FloatTensor,
         neg_weights: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
+        # neg scores might be -inf for masked values -> get rid of those
+        mask = torch.isfinite(neg_scores)
+        neg_weights, neg_scores = neg_weights[mask], neg_scores[mask]
         return self._reduction_method(
             neg_weights
-            * functional.binary_cross_entropy_with_logits(neg_scores, torch.zeros_like(neg_scores), reduction=None)
+            * functional.binary_cross_entropy_with_logits(neg_scores, torch.zeros_like(neg_scores), reduction="none")
         ) + functional.binary_cross_entropy_with_logits(
-            pos_scores, torch.ones_like(neg_scores), reduction=self.reduction
+            pos_scores, torch.ones_like(pos_scores), reduction=self.reduction
         )
 
 

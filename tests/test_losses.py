@@ -14,6 +14,12 @@ from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
 
 
+class AdversarialBCELossTests(cases.SetwiseLossTestCase):
+    """Unit test for adversarially weighted BCE."""
+
+    cls = pykeen.losses.AdversarialBCELoss
+
+
 class CrossEntropyLossTests(cases.SetwiseLossTestCase):
     """Unit test for CrossEntropyLoss."""
 
