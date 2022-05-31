@@ -296,6 +296,10 @@ class ERModel(
         :param kwargs:
             Keyword arguments to pass to the base model
         """
+        # TODO: support "broadcasting" representation regularizers?
+        # e.g. re-use the same regularizer for everything; or
+        # pass a dictionary with keys "entity"/"relation";
+        # values are either a regularizer hint (=the same regularizer for all repr); or a sequence of appropriate length
         super().__init__(triples_factory=triples_factory, **kwargs)
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
