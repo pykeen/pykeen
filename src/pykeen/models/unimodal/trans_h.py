@@ -81,21 +81,38 @@ class TransH(ERModel):
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
         entity_initializer: Hint[Initializer] = uniform_,
-        relation_initializer: Hint[Initializer] = uniform_,
         entity_regularizer: HintOrType[Regularizer] = None,
         entity_regularizer_kwargs: OptionalKwargs = None,
+        relation_initializer: Hint[Initializer] = uniform_,
         relation_regularizer: HintOrType[Regularizer] = None,
         relation_regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize TransH.
 
-        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
-        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param embedding_dim:
+            the entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param scoring_fct_norm:
+            the :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+
+        :param entity_initializer:
+            the entity initializer function
+        :param entity_regularizer:
+            the entity regularizer. Defaults to :attr:`pykeen.models.TransH.regularizer_default`
+        :param entity_regularizer_kwargs:
+            keyword-based parameters for the entity regularizer. If `entity_regularizer` is None,
+            the default from :attr:`pykeen.models.TransH.regularizer_default_kwargs` will be used instead
+
+        :param relation_initializer:
+            relation initializer function
+        :param relation_regularizer:
+            the relation regularizer. Defaults to :attr:`pykeen.models.TransH.relation_regularizer_default`
+        :param relation_regularizer_kwargs:
+            keyword-based parameters for the relation regularizer. If `relation_regularizer` is None,
+            the default from :attr:`pykeen.models.TransH.relation_regularizer_default_kwargs` will be used instead
+
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
         """
         super().__init__(
             interaction=TransHInteraction,
