@@ -9,7 +9,7 @@ import torch
 import unittest_templates
 
 import pykeen.losses
-from pykeen.losses import Loss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, apply_label_smoothing
+from pykeen.losses import Loss, NSSALoss, apply_label_smoothing
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
 
@@ -166,11 +166,13 @@ class TestLosses(unittest_templates.MetaTestCase[Loss]):
     base_cls = Loss
     base_test = cases.LossTestCase
     skip_cls = {
-        PairwiseLoss,
-        PointwiseLoss,
-        SetwiseLoss,
+        # abstract classes
+        pykeen.losses.PairwiseLoss,
+        pykeen.losses.PointwiseLoss,
+        pykeen.losses.SetwiseLoss,
         pykeen.losses.DeltaPointwiseLoss,
         pykeen.losses.MarginPairwiseLoss,
+        pykeen.losses.AdversarialLoss,
     }
 
 

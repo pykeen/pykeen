@@ -338,7 +338,7 @@ class Loss(_Loss):
         :param label_smoothing:
             An optional label smoothing parameter.
         :param num_entities:
-            The number of entities.
+            The number of entities (required for label-smoothing).
 
         :return:
             A scalar loss value.
@@ -1294,10 +1294,6 @@ class AdversarialLoss(SetwiseLoss):
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # Sanity check
-        if label_smoothing:
-            raise UnsupportedLabelSmoothingError(self)
-
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
 
@@ -1315,6 +1311,8 @@ class AdversarialLoss(SetwiseLoss):
             pos_scores=positive_scores,
             neg_scores=negative_scores,
             neg_weights=weights[~pos_mask],
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
         )
 
     # docstr-coverage: inherited
@@ -1345,6 +1343,8 @@ class AdversarialLoss(SetwiseLoss):
             pos_scores=positive_scores,
             neg_scores=negative_scores,
             neg_weights=weights,
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
         )
 
     @abstractmethod
@@ -1353,6 +1353,8 @@ class AdversarialLoss(SetwiseLoss):
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
         neg_weights: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores.
 
@@ -1362,6 +1364,10 @@ class AdversarialLoss(SetwiseLoss):
             a tensor of negative scores
         :param neg_weights: shape: s_n
             the adversarial weights of the negative scores
+        :param label_smoothing:
+            An optional label smoothing parameter.
+        :param num_entities:
+            The number of entities (required for label-smoothing).
 
         :returns:
             a scalar loss value
@@ -1410,7 +1416,12 @@ class NSSALoss(AdversarialLoss):
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
         neg_weights: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
         # -w * log sigma(-(m + n)) - log sigma (m + p)
         # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
         # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
@@ -1441,15 +1452,24 @@ class AdversarialBCELoss(AdversarialLoss):
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
         neg_weights: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # neg scores might be -inf for masked values -> get rid of those
         mask = torch.isfinite(neg_scores)
         neg_weights, neg_scores = neg_weights[mask], neg_scores[mask]
+        # create targets
         return self._reduction_method(
             neg_weights
-            * functional.binary_cross_entropy_with_logits(neg_scores, torch.zeros_like(neg_scores), reduction="none")
+            * functional.binary_cross_entropy_with_logits(
+                neg_scores,
+                apply_label_smoothing(torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities),
+                reduction="none",
+            )
         ) + functional.binary_cross_entropy_with_logits(
-            pos_scores, torch.ones_like(pos_scores), reduction=self.reduction
+            pos_scores,
+            apply_label_smoothing(torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities),
+            reduction=self.reduction,
         )
 
 
