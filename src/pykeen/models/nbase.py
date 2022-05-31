@@ -544,7 +544,7 @@ class ERModel(
         head_representations = [head_representations[i] for i in self.interaction.head_indices()]
         tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
         hr, rr, tr = [
-            [representation.forward_unique(indices=indices) for representation in representations]
+            [representation(indices=indices) for representation in representations]
             for indices, representations in (
                 (h, head_representations),
                 (r, self.relation_representations),

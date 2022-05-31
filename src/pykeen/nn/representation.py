@@ -89,6 +89,7 @@ class Representation(nn.Module, ABC):
         regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
         dropout: Optional[float] = None,
+        unique: Optional[bool] = None,
     ):
         """Initialize the representation module.
 
@@ -106,6 +107,10 @@ class Representation(nn.Module, ABC):
             Additional keyword arguments passed to the regularizer
         :param dropout:
             The optional dropout probability
+        :param unique:
+            whether to optimize for calculating representations for same indices only once. This is only useful if the
+            calculation of representations is either significantly more expensive than an index-based lookup and
+            duplicate indices are expected, e.g., when using negative sampling and large batch sizes
         """
         super().__init__()
         self.max_id = max_id
@@ -113,6 +118,10 @@ class Representation(nn.Module, ABC):
         self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
         self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
+        if unique is None:
+            # heuristic
+            unique = not isinstance(self, Embedding)
+        self.unique = unique
 
     @abstractmethod
     def _plain_forward(
@@ -128,10 +137,11 @@ class Representation(nn.Module, ABC):
     ) -> torch.FloatTensor:
         """Get representations for indices.
 
-        .. note::
-
-            this method is implemented in subclasses. Prefer using `forward_unique` instead,
-            which optimizes for duplicate indices.
+        .. note ::
+            depending on :attr:`Representation.unique`, this implementation will use an optimization for duplicate
+            indices. It is generally only recommended if computing individual representation is expensive, e.g.,
+            since it involves message passing, or a large encoder networks, but discouraged for cheap lookups, e.g., a plain
+            embedding lookup.
 
         :param indices: shape: s
             The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
@@ -140,37 +150,17 @@ class Representation(nn.Module, ABC):
         :return: shape: (``*s``, ``*self.shape``)
             The representations.
         """
+        inverse = None
+        if indices is not None and self.unique:
+            indices, inverse = indices.unique(return_inverse=True)
         x = self._plain_forward(indices=indices)
-        if self.normalizer is not None:
-            x = self.normalizer(x)
-        if self.regularizer is not None:
-            self.regularizer.update(x)
-        if self.dropout is not None:
-            x = self.dropout(x)
-        return x
-
-    def forward_unique(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Get representations for indices.
-
-        :param indices: shape: s
-            The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
-            more efficiently).
-
-        :return: shape: (``*s``, ``*self.shape``)
-            The representations.
-        """
-        if indices is None:
-            return self(None)
-        unique, inverse = indices.unique(return_inverse=True)
-        x_unique = self._plain_forward(indices=unique)
         # normalize *before* repeating
         if self.normalizer is not None:
-            x_unique = self.normalizer(x_unique)
+            x = self.normalizer(x)
+        # repeat if necessary
+        if inverse is not None:
+            x = x[inverse]
         # regularize *after* repeating
-        x = x_unique[inverse]
         if self.regularizer is not None:
             self.regularizer.update(x)
         if self.dropout is not None:
