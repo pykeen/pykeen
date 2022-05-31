@@ -69,13 +69,17 @@ class TransE(ERModel):
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`
-        :param entity_constrainer: Entity constrainer function. Defaults to :func:`torch.nn.init.normalize`
+        :param entity_initializer: Entity initializer function.
+        :param entity_constrainer: Entity constrainer function.
         :param relation_initializer: Relation initializer function.
-            Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`
         :param relation_constrainer: Relation constrainer function. Defaults to none.
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            Remaining keyword arguments to forward to :meth:`pykeen.models.ERModel.__init__`
+        :param regularizer:
+            a regularizer, or a hint thereof. Used for both, entity and relation representations;
+            directly use :class:`ERModel` if you need more flexibility
+        :param regularizer_kwargs:
+            keyword-based parameters for the regularizer
 
         .. seealso::
 
