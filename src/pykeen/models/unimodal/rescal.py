@@ -7,6 +7,8 @@ from typing import Any, ClassVar, Mapping, Type
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.init import uniform_
 
+from pykeen.nn.modules import RESCALInteraction
+
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...regularizers import LpRegularizer, Regularizer, regularizer_resolver
@@ -86,6 +88,7 @@ class RESCAL(ERModel):
         """
         regularizer = self._instantiate_regularizer(regularizer=regularizer, regularizer_kwargs=regularizer_kwargs)
         super().__init__(
+            interaction=RESCALInteraction,
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
