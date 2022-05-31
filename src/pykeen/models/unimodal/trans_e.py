@@ -4,12 +4,11 @@
 
 from typing import Any, ClassVar, Mapping
 
-import torch.autograd
-from torch import linalg
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...nn import TransEInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...typing import Constrainer, Hint, Initializer
 
@@ -18,7 +17,7 @@ __all__ = [
 ]
 
 
-class TransE(EntityRelationEmbeddingModel):
+class TransE(ERModel):
     r"""An implementation of TransE [bordes2013]_.
 
     TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`:
@@ -79,6 +78,8 @@ class TransE(EntityRelationEmbeddingModel):
            - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
         """
         super().__init__(
+            interaction=TransEInteraction,
+            interaction_kwargs=dict(p=scoring_fct_norm),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
@@ -91,39 +92,3 @@ class TransE(EntityRelationEmbeddingModel):
             ),
             **kwargs,
         )
-        self.scoring_fct_norm = scoring_fct_norm
-
-    # docstr-coverage: inherited
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # TODO: Use torch.cdist
-        #  There were some performance/memory issues with cdist, cf.
-        #  https://github.com/pytorch/pytorch/issues?q=cdist however, @mberr thinks
-        #  they are mostly resolved by now. A Benefit would be that we can harness the
-        #  future (performance) improvements made by the core torch developers. However,
-        #  this will require some benchmarking.
-        return -linalg.vector_norm(h + r - t, dim=-1, ord=self.scoring_fct_norm, keepdim=True)
-
-    # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
-
-        # TODO: Use torch.cdist (see note above in score_hrt())
-        return -linalg.vector_norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, ord=self.scoring_fct_norm)
-
-    # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-
-        # TODO: Use torch.cdist (see note above in score_hrt())
-        return -linalg.vector_norm(h[None, :, :] + (r[:, None, :] - t[:, None, :]), dim=-1, ord=self.scoring_fct_norm)
