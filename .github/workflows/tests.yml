@@ -1,10 +1,8 @@
 name: Tests2
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - master
+  workflow_dispatch:
 
 jobs:
   lint:
