@@ -7,12 +7,11 @@ from typing import Any, ClassVar, Mapping
 from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch.nn import functional
 
-from pykeen.regularizers import Regularizer
-
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransEInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
+from ...regularizers import Regularizer
 from ...typing import Constrainer, Initializer
 
 __all__ = [
