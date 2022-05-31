@@ -46,7 +46,6 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
-from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
@@ -68,6 +67,7 @@ from pykeen.metrics.ranking import (
 )
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 from pykeen.models.mocks import FixedModel
 from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
