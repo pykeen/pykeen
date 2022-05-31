@@ -1,0 +1,33 @@
+metadata:
+  title: "Learn FB15K Dataset with TransE as described by Bordes et al., 2013"
+pipeline:
+  dataset: "fb15k"
+  model: "TransE"
+  model_kwargs:
+    embedding_dim: 50
+    scoring_fct_norm: 1
+    entity_initializer: "xavier_uniform"
+    relation_initializer: "xavier_uniform"
+    entity_constrainer: "normalize"
+  optimizer: "SGD"
+  optimizer_kwargs:
+    lr: 0.01
+  loss: "MarginRankingLoss"
+  loss_kwargs:
+    reduction: "mean"
+    margin: 1
+  training_loop: "SLCWA"
+  negative_sampler: "basic"
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  training_kwargs:
+    num_epochs: 1000
+    # batch_size is not mentioned in the paper. We found out that this value works.
+    batch_size: 32
+  evaluator_kwargs:
+    filtered: true
+results:
+  unknown:
+    hits_at_k:
+      10: 0.471
+    mean_rank: 125
