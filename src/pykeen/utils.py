@@ -1720,13 +1720,16 @@ def normalize_with_default(
         the default choice. Used of choice=None.
     :param default_kwargs:
         the default keyword-based parameters
+    
+    :raises ValueError:
+        if choice and default both are None
 
     :return:
         a pair (hint, optional kwargs).
     """
     if choice is None:
         if default is None:
-            raise ValueError()
+            raise ValueError("If choice is None, a default has to be provided.")
         choice = default
         if kwargs is not None:
             logger.warning(
