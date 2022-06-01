@@ -106,11 +106,11 @@ class _NewAbstractModel(Model, ABC):
         """
         Instantiate a regularizer using the default if None is provided.
 
-        The following precendence order is used:
+        The following precedence order is used:
 
         1. If the passed regularizer is not None, use it
-        2. If the regularizer is None, use the default regularizer. In this case, the default kwargs will be used in
-           favour of provided ones.
+        2. If the regularizer is None, use the default regularizer. In this case, the
+           default kwargs will be used in favor of provided ones.
         3. If both, the regularizer and the default regularizer are None, return None.
 
         :param regularizer:
@@ -130,10 +130,12 @@ class _NewAbstractModel(Model, ABC):
                     f"regularizer_kwargs={self.regularizer_default_kwargs}. If you want the explicitly provided "
                     f"kwargs to be used, explicitly provide regularizer={self.regularizer_default} instead of None."
                 )
-            _kwargs = self.regularizer_default_kwargs
-        else:
+            _kwargs = dict(self.regularizer_default_kwargs or {})
+        elif regularizer_kwargs:
             _kwargs = dict(self.regularizer_default_kwargs or {})
             _kwargs.update(regularizer_kwargs)
+        else:
+            _kwargs = dict(self.regularizer_default_kwargs or {})
         return regularizer_resolver.make_safe(regularizer, _kwargs)
 
     def post_parameter_update(self) -> None:
