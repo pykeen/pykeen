@@ -10,7 +10,7 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from collections import Counter
+from collections import ChainMap, Counter
 from typing import (
     Any,
     ClassVar,
@@ -776,12 +776,20 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # Check if regularization term is reset
         self.assertEqual(0.0, model.regularizer.term)
 
+    def _check_reset(self, instance: Optional[Regularizer] = None):
+        """Verify that the regularizer is in resetted state."""
+        if instance is None:
+            instance = self.instance
+        # regularization term should be zero
+        self.assertEqual(0.0, instance.regularization_term.item())
+        # updated should be set to false
+        self.assertFalse(instance.updated)
+
     def test_reset(self) -> None:
         """Test method `reset`."""
         # call method
         self.instance.reset()
-        # regularization term should be zero
-        self.assertEqual(0.0, self.instance.regularization_term)
+        self._check_reset()
 
     def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:
         """Generate input for update."""
@@ -844,6 +852,30 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # check that the expected term is returned
         exp = (self.instance.weight * self.instance.regularization_term).item()
         self.assertEqual(exp, self.instance.pop_regularization_term().item())
+
+        # check that the regularizer is now reset
+        self._check_reset()
+
+    def test_apply_only_once(self):
+        """Test apply-only-once support."""
+        # create another instance with apply_only_once enabled
+        instance = self.cls(**ChainMap(dict(apply_only_once=True), self.instance_kwargs)).to(self.device)
+
+        # test initial state
+        self._check_reset(instance=instance)
+
+        # after first update, should change the term
+        first_tensors = self._generate_update_input()
+        instance.update(*first_tensors)
+        self.assertTrue(instance.updated)
+        self.assertNotEqual(0.0, instance.regularization_term.item())
+        term = instance.regularization_term.clone()
+
+        # after second update, no change should happen
+        second_tensors = self._generate_update_input()
+        instance.update(*second_tensors)
+        self.assertTrue(instance.updated)
+        self.assertEqual(term, instance.regularization_term)
 
 
 class LpRegularizerTest(RegularizerTestCase):

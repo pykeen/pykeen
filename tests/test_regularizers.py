@@ -2,17 +2,16 @@
 
 """Test that regularizers can be executed."""
 
-from typing import Sequence
 import unittest
+from typing import Sequence
 
 import pytest
 import torch
 import unittest_templates
 from torch.nn import functional
 
-from pykeen.models import ConvKB, TransH
 import pykeen.regularizers
-from pykeen.utils import get_expected_norm, resolve_device
+from pykeen.utils import get_expected_norm
 from tests import cases
 from tests.utils import rand
 
@@ -25,17 +24,21 @@ class NoRegularizerTest(cases.RegularizerTestCase):
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return torch.zeros(1, device=x.device, dtype=x.dtype)
 
+    # docstr-coverage: inherited
+    def test_apply_only_once(self):  # noqa: D102
+        raise unittest.SkipTest()
+
 
 class L1RegularizerTest(cases.LpRegularizerTest):
     """Test an L_1 normed regularizer."""
 
-    kwargs = {"p": 1}
+    kwargs = dict(p=1)
 
 
 class NormedL2RegularizerTest(cases.LpRegularizerTest):
     """Test an L_2 normed regularizer."""
 
-    kwargs = {"normalize": True, "p": 2}
+    kwargs = dict(p=2, normalize=True)
 
     @pytest.mark.slow
     def test_expected_norm(self):
@@ -59,28 +62,30 @@ class CombinedRegularizerTest(cases.RegularizerTestCase):
     """Test the combined regularizer."""
 
     cls = pykeen.regularizers.CombinedRegularizer
-    kwargs = {
-        "regularizers": [
+    kwargs = dict(
+        regularizers=[
             pykeen.regularizers.LpRegularizer(weight=0.1, p=1),
             pykeen.regularizers.LpRegularizer(weight=0.7, p=2),
-        ],
-    }
+        ]
+    )
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        regularizers = self.kwargs["regularizers"]
-        return sum(r.weight * r.forward(x) for r in regularizers) / sum(r.weight for r in regularizers)
+        assert isinstance(self.instance, pykeen.regularizers.CombinedRegularizer)
+        regularizers = self.instance.regularizers
+        return sum(r.weight * r(x) for r in regularizers) / sum(r.weight for r in regularizers)
 
 
 class PowerSumRegularizerTest(cases.RegularizerTestCase):
     """Test the power sum regularizer."""
 
     cls = pykeen.regularizers.PowerSumRegularizer
+    kwargs = dict(
+        apply_only_once=True,
+    )
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        kwargs = self.kwargs
-        if kwargs is None:
-            kwargs = {}
-        p = kwargs.get("p", self.instance.p)
+        kwargs = self.instance_kwargs
+        p = kwargs.get("p", 2.0)
         value = x.pow(p).sum(dim=-1).mean()
         if kwargs.get("normalize", False):
             value = value / x.shape[-1]
@@ -93,14 +98,15 @@ class NormLimitRegularizerTest(cases.RegularizerTestCase):
     cls = pykeen.regularizers.NormLimitRegularizer
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        kwargs = self.kwargs
-        if kwargs is None:
-            kwargs = {}
-        p = kwargs.get("p", self.instance.p)
-        value = x.pow(p).sum(dim=-1).mean()
-        if kwargs.get("normalize", False):
-            value = value / x.shape[-1]
-        return value
+        kwargs = self.instance_kwargs
+        p = kwargs.get("p", 2.0)
+        power_norm = kwargs.get("power_norm", True)
+        if power_norm:
+            value = x.pow(p).sum(dim=-1)
+        else:
+            value = x.norm(p=p, dim=-1)
+        max_norm = kwargs.get("max_norm", 1.0)
+        return (value - max_norm).relu().sum()
 
 
 class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
@@ -145,59 +151,6 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
                     *(rand(self.batch_size, 10, generator=self.generator, device=self.device) for _ in range(num)),
                 )
                 self.assertTrue("Expects exactly two tensors" in context.exception)
-
-
-class TestOnlyUpdateOnce(unittest.TestCase):
-    """Tests for when the regularizer should only update once."""
-
-    generator: torch.Generator
-    device: torch.device
-
-    def setUp(self) -> None:
-        """Set up the test case."""
-        self.generator = torch.random.manual_seed(seed=42)
-        self.device = resolve_device()
-
-    def test_lp(self):
-        """Test when the Lp regularizer only updates once, like for ConvKB."""
-        self.assertIn("apply_only_once", ConvKB.regularizer_default_kwargs)
-        self.assertTrue(ConvKB.regularizer_default_kwargs["apply_only_once"])
-        regularizer = pykeen.regularizers.LpRegularizer(
-            **ConvKB.regularizer_default_kwargs,
-        )
-        self._help_test_regularizer(regularizer)
-
-    def test_transh_regularizer(self):
-        """Test the TransH regularizer only updates once."""
-        self.assertNotIn("apply_only_once", TransH.regularizer_default_kwargs)
-        regularizer = pykeen.regularizers.OrthogonalityRegularizer(
-            **TransH.regularizer_default_kwargs,
-        )
-        self._help_test_regularizer(regularizer)
-
-    def _help_test_regularizer(self, regularizer: pykeen.regularizers.Regularizer, n_tensors: int = 3):
-        # ensure regularizer is on correct device
-        regularizer = regularizer.to(self.device)
-
-        self.assertFalse(regularizer.updated)
-        self.assertEqual(0.0, regularizer.regularization_term.item())
-
-        # After first update, should change the term
-        first_tensors = [rand(10, 10, generator=self.generator, device=self.device) for _ in range(n_tensors)]
-        regularizer.update(*first_tensors)
-        self.assertTrue(regularizer.updated)
-        self.assertNotEqual(0.0, regularizer.regularization_term.item())
-        term = regularizer.regularization_term.clone()
-
-        # After second update, no change should happen
-        second_tensors = [rand(10, 10, generator=self.generator, device=self.device) for _ in range(n_tensors)]
-        regularizer.update(*second_tensors)
-        self.assertTrue(regularizer.updated)
-        self.assertEqual(term, regularizer.regularization_term)
-
-        regularizer.reset()
-        self.assertFalse(regularizer.updated)
-        self.assertEqual(0.0, regularizer.regularization_term.item())
 
 
 class TestRegularizerTests(unittest_templates.MetaTestCase[pykeen.regularizers.Regularizer]):
