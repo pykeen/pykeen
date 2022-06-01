@@ -116,8 +116,7 @@ class ConvKB(ERModel):
             ),
             **kwargs,
         )
-        if regularizer is None:
-            regularizer = self._instantiate_default_regularizer()
+        regularizer = self._instantiate_regularizer(regularizer=regularizer)
         # In the code base only the weights of the output layer are used for regularization
         # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
         if regularizer is not None:

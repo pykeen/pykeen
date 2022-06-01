@@ -1,0 +1,54 @@
+# RESCAL on WN18RR from https://arxiv.org/abs/2006.13365
+metadata:
+  title: RESCAL on WN18RR from https://arxiv.org/abs/2006.13365
+pipeline:
+  dataset: wn18rr
+  dataset_kwargs:
+    create_inverse_triples: True
+  evaluator_kwargs:
+    filtered: true
+  loss: crossentropy
+  loss_kwargs:
+    reduction: mean
+  model: rescal
+  model_kwargs:
+    embedding_dim: 256
+  optimizer: adam
+  optimizer_kwargs:
+    lr: 0.001332455387430916
+    weight_decay: 0.0
+  stopper: early
+  stopper_kwargs:
+    relative_delta: 0.002
+    frequency: 50
+    patience: 2
+  training_kwargs:
+    batch_size: 256
+    label_smoothing: 0.43600712136607944
+    num_epochs: 1000
+  training_loop: lcwa
+results:  # produced with pykeen 1.8.3-dev
+  realistic:
+    adjusted_arithmetic_mean_rank: 0.2548262776792504
+    adjusted_arithmetic_mean_rank_index: 0.7452104737535103
+    adjusted_geometric_mean_rank_index: 0.9972928433094598
+    adjusted_inverse_harmonic_mean_rank: 0.4769063472855261
+    arithmetic_mean_rank: 5167.1240234375
+    count: 2924.0
+    geometric_mean_rank: 41.39748764038086
+    harmonic_mean_rank: 2.096213446954399
+    hits_at_1: 0.45348837209302323
+    hits_at_10: 0.518467852257182
+    hits_at_3: 0.48666210670314636
+    hits_at_5: 0.49863201094391246
+    inverse_arithmetic_mean_rank: 0.00019353126117493957
+    inverse_geometric_mean_rank: 0.024156054481863976
+    inverse_harmonic_mean_rank: 0.4770506560068613
+    inverse_median_rank: 0.1666666716337204
+    median_absolute_deviation: 7.41301109252801
+    median_rank: 6.0
+    standard_deviation: 11181.421875
+    variance: 125024200.0
+    z_arithmetic_mean_rank: 69.79388219953854
+    z_geometric_mean_rank: 53.98122969977748
+    z_inverse_harmonic_mean_rank: 4051.823985856195
