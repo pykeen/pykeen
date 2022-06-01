@@ -5,7 +5,11 @@
 import dataclasses
 import logging
 from dataclasses import dataclass
+import pathlib
+import tempfile
 from typing import Any, Callable, List, Mapping, Optional, Union
+from uuid import uuid4
+import torch
 
 from .stopper import Stopper
 from ..evaluation import Evaluator
@@ -166,6 +170,8 @@ class EarlyStopper(Stopper):
     stopped_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Did the stopper ever decide to stop?
     stopped: bool = False
+    #: the path to the weights of the best model
+    best_model_path: Optional[pathlib.Path] = None
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -179,6 +185,8 @@ class EarlyStopper(Stopper):
             relative_delta=self.relative_delta,
             larger_is_better=self.larger_is_better,
         )
+        if self.best_model_path is None:
+            self.best_model_path = pathlib.Path(tempfile.gettempdir(), f"best-model-weights-{uuid4()}.pt")
 
     @property
     def remaining_patience(self) -> int:
@@ -243,7 +251,16 @@ class EarlyStopper(Stopper):
             )
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
+            logger.info(f"Re-loading weights from best epoch from {self.best_model_path}")
+            self.model.load_state_dict(torch.load(self.best_model_path))
             return True
+
+        if self._stopper.is_best:
+            assert self.best_model_path is not None
+            torch.save(self.model.state_dict(), self.best_model_path)
+            logger.info(
+                f"New best result at epoch {epoch}: {self.best_metric}. Saved model weights to {self.best_model_path}",
+            )
 
         for continue_callback in self.continue_callbacks:
             continue_callback(self, result, epoch)
