@@ -137,23 +137,22 @@ class TransH(ERModel):
             **kwargs,
         )
 
-        # normalize regularizers
-        if entity_regularizer is None:
-            entity_regularizer = self.regularizer_default
-            entity_regularizer_kwargs = self.regularizer_default_kwargs
-        if relation_regularizer is None:
-            relation_regularizer = self.relation_regularizer_default
-            relation_regularizer_kwargs = self.relation_regularizer_default_kwargs
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
         # thus, we need to use a weight regularizer instead of having an Embedding regularizer,
         # which only regularizes the weights used in a batch
         self.append_weight_regularizer(
             parameter=self.entity_representations[0].parameters(),
-            regularizer=regularizer_resolver.make(entity_regularizer, pos_kwargs=entity_regularizer_kwargs),
+            regularizer=entity_regularizer,
+            regularizer_kwargs=entity_regularizer_kwargs,
+            # note: the following is already the default
+            # default_regularizer=self.regularizer_default,
+            # default_regularizer_kwargs=self.regularizer_default_kwargs,
         )
         self.append_weight_regularizer(
             parameter=itertools.chain.from_iterable(r.parameters() for r in self.relation_representations),
-            # TODO: wait for update from https://github.com/pykeen/pykeen/pull/952
-            regularizer=regularizer_resolver.make(relation_regularizer, pos_kwargs=relation_regularizer_kwargs),
+            regularizer=relation_regularizer,
+            regularizer_kwargs=relation_regularizer_kwargs,
+            default_regularizer=self.relation_regularizer_default,
+            default_regularizer_kwargs=self.relation_regularizer_default_kwargs,
         )

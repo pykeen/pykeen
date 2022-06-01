@@ -341,8 +341,11 @@ class ERModel(
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
         regularizer: HintOrType[Regularizer],
         regularizer_kwargs: OptionalKwargs = None,
+        default_regularizer: HintOrType[Regularizer] = None,
+        default_regularizer_kwargs: OptionalKwargs = None,
     ) -> None:
-        """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
+        """
+        Add a model weight to a regularizer's weight list, and register the regularizer with the model.
 
         :param parameter:
             The parameter, either as name, or as nn.Parameter object. A list of available parameter names is shown by
@@ -351,10 +354,23 @@ class ERModel(
             the regularizer or a hint thereof
         :param regularizer_kwargs:
             additional keyword-based parameters for the regularizer's instantiation
+        :param default_regularizer:
+            the default regularizer; if None, use :attr:`regularizer_default`
+        :param default_regularizer_kwargs:
+            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
 
         :raises KeyError: If an invalid parameter name was given
         """
-        regularizer = regularizer_resolver.make(regularizer, regularizer_kwargs)
+        # instantiate regularizer
+        regularizer = regularizer_resolver.make(
+            *normalize_with_default(
+                choice=regularizer,
+                kwargs=regularizer_kwargs,
+                default=default_regularizer or self.regularizer_default,
+                default_kwargs=default_regularizer_kwargs or self.regularizer_default_kwargs,
+            )
+        )
+
         # normalize input
         if isinstance(parameter, (str, nn.Parameter)):
             parameter = [parameter]
