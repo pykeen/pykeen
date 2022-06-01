@@ -743,35 +743,24 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     """A test case for quickly defining common tests for regularizers."""
 
     #: The batch size
-    batch_size: int
-    #: The triples factory
-    triples_factory: TriplesFactory
-    #: Class of regularizer to test
-    cls: ClassVar[Type[Regularizer]]
-    #: The constructor parameters to pass to the regularizer
-    kwargs: ClassVar[Optional[Dict[str, Any]]] = None
-    #: The regularizer instance, initialized in setUp
-    instance: Regularizer
-    #: A positive batch
-    positive_batch: MappedTriples
+    batch_size: int = 16
     #: The device
     device: torch.device
 
-    def setUp(self) -> None:
-        """Set up the test case with a triples factory and model."""
+    def post_instantiation_hook(self) -> None:
+        """Move instance to device."""
         self.device = resolve_device()
-        self.triples_factory = Nations().training
-        self.batch_size = 16
-        self.positive_batch = self.triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
-        super().setUp()
         # move test instance to device
         self.instance = self.instance.to(self.device)
 
     def test_model(self) -> None:
         """Test whether the regularizer can be passed to a model."""
+        triples_factory = Nations().training
+        positive_batch = triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
+
         # Use RESCAL as it regularizes multiple tensors of different shape.
         model = RESCAL(
-            triples_factory=self.triples_factory,
+            triples_factory=triples_factory,
             regularizer=self.instance,
         ).to(self.device)
 
@@ -779,7 +768,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         self.assertEqual(model.regularizer, self.instance)
 
         # Forward pass (should update regularizer)
-        model.score_hrt(hrt_batch=self.positive_batch)
+        model.score_hrt(hrt_batch=positive_batch)
 
         # Call post_parameter_update (should reset regularizer)
         model.post_parameter_update()
