@@ -120,6 +120,11 @@ class EarlyStoppingLogic:
         # stop if the result did not improve more than delta for patience evaluations
         return self.remaining_patience <= 0
 
+    @property
+    def is_best(self) -> bool:
+        """Return whether the current result is the (new) best result."""
+        return self.remaining_patience == self.patience
+
 
 @fix_dataclass_init_docs
 @dataclass
