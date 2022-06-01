@@ -296,6 +296,8 @@ class OrthogonalityRegularizer(Regularizer):
         *,
         # could be moved into kwargs, but needs to stay for experiment integrity check
         weight: float = 1.0,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        apply_only_once: bool = True,
         epsilon: float = 1e-5,
         **kwargs,
     ):
@@ -304,19 +306,19 @@ class OrthogonalityRegularizer(Regularizer):
 
         :param weight:
             The relative weight of the regularization
+        :param apply_only_once:
+            Should the regularization be applied more than once after reset?
         :param epsilon:
             a small value used to check for approximate orthogonality
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
-        # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
-        # Therefore, apply_only_once is always set to True.
-        super().__init__(weight=weight, **kwargs, apply_only_once=True)
+        super().__init__(weight=weight, **kwargs, apply_only_once=apply_only_once)
         self.epsilon = epsilon
 
     # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        raise NotImplementedError("TransH regularizer is order-sensitive!")
+        raise NotImplementedError(f"{self.__class__.__name__} regularizer is order-sensitive!")
 
     # docstr-coverage: inherited
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
