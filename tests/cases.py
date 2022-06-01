@@ -17,6 +17,7 @@ from typing import (
     Collection,
     Dict,
     Iterable,
+    List,
     Mapping,
     MutableMapping,
     Optional,
@@ -66,6 +67,7 @@ from pykeen.metrics.ranking import (
 )
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 from pykeen.models.mocks import FixedModel
 from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
@@ -1200,7 +1202,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if issubclass(self.cls, pykeen.models.RGCN) or self.cls is pykeen.models.ERModel:
+        if (
+            issubclass(self.cls, (pykeen.models.RGCN, pykeen.models.CooccurrenceFilteredModel))
+            or self.cls is pykeen.models.ERModel
+        ):
             self.skipTest(f"Cannot choose interaction via CLI for {self.cls}.")
         runner = CliRunner()
         cli = build_cli_from_cls(self.cls)
@@ -1272,77 +1277,40 @@ Traceback
     def _check_constraints(self):
         """Check model constraints."""
 
-    def test_score_h_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+    def _test_score_equality(self, columns: Union[slice, List[int]], name: str) -> None:
+        """Migration tests for non-ERModel models testing for consistent optimized score implementations."""
         if isinstance(self.instance, ERModel):
             raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
+        if isinstance(self.instance, CooccurrenceFilteredModel):
+            raise SkipTest("CooccurrenceFilteredModel fulfils this if its base model fulfils it.")
+        batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
         self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_relations).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores_h = self.instance.score_h(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_h(batch)
+            scores = getattr(self.instance, name)(batch)
+            scores_super = getattr(super(self.instance.__class__, self.instance), name)(batch)
         except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
+            self.fail(msg=f"{name} not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
 
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_h, scores_hrt, atol=1e-06)
+        self.assertIsNotNone(scores)
+        self.assertIsNotNone(scores_super)
+        assert torch.allclose(scores, scores_super, atol=1e-06)
+
+    def test_score_h_with_score_hrt_equality(self) -> None:
+        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+        self._test_score_equality(columns=slice(1, None), name="score_h")
 
     def test_score_r_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
-        if isinstance(self.instance, ERModel):
-            raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
-        self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
-        try:
-            scores_r = self.instance.score_r(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_r(batch)
-        except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_r, scores_hrt, atol=1e-06)
+        self._test_score_equality(columns=[0, 2], name="score_r")
 
     def test_score_t_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
-        if isinstance(self.instance, ERModel):
-            raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, :-1].to(self.instance.device)
-        self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_relations).all()
-        try:
-            scores_t = self.instance.score_t(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_t(batch)
-        except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_t, scores_hrt, atol=1e-06)
+        self._test_score_equality(columns=slice(2), name="score_t")
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
