@@ -778,37 +778,48 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
 
     def test_reset(self) -> None:
         """Test method `reset`."""
-        # Call method
+        # call method
         self.instance.reset()
-
+        # regularization term should be zero
         self.assertEqual(0.0, self.instance.regularization_term)
 
-    def test_update(self) -> None:
-        """Test method `update`."""
-        # Generate random tensors
-        a = rand(self.batch_size, 10, generator=self.generator, device=self.device)
-        b = rand(self.batch_size, 20, generator=self.generator, device=self.device)
+    def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:
+        """Generate input for update."""
+        # generate random tensors
+        return (
+            rand(self.batch_size, 10, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+            rand(self.batch_size, 20, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+        )
 
-        # Call update
-        self.instance.update(a, b)
-
-        # check shape
-        self.assertEqual((1,), self.instance.term.shape)
-
+    def _validate_updated_term(self, inputs: Sequence[torch.FloatTensor]):
+        """Validate the regularization term after updating the regularizer."""
         # compute expected term
-        exp_penalties = torch.stack([self._expected_penalty(x) for x in (a, b)])
+        exp_penalties = torch.stack([self._expected_penalty(x) for x in inputs])
         expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
         assert expected_term.shape == (1,)
 
         self.assertAlmostEqual(self.instance.term.item(), expected_term.item())
 
+    def test_update(self) -> None:
+        """Test method `update`."""
+        # generate inputs
+        inputs = self._generate_update_input()
+
+        # call update
+        self.instance.update(*inputs)
+
+        # check shape
+        self.assertEqual((1,), self.instance.term.shape)
+
+        self._validate_updated_term(inputs=inputs)
+
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
-        # Generate random tensor
+        # generate single random tensor
         x = rand(self.batch_size, 10, generator=self.generator, device=self.device)
 
         # calculate penalty
-        penalty = self.instance.forward(x=x)
+        penalty = self.instance(x=x)
 
         # check shape
         assert penalty.numel() == 1
@@ -827,8 +838,8 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_pop_regularization_term(self):
         """Verify popping a regularization term."""
         # update term
-        x = torch.rand(self.batch_size, 10, generator=self.generator, device=self.device, requires_grad=True)
-        self.instance.update(x)
+        inputs = self._generate_update_input(requires_grad=True)
+        self.instance.update(*inputs)
 
         # check that the expected term is returned
         exp = (self.instance.weight * self.instance.regularization_term).item()
