@@ -44,7 +44,7 @@ import torch
 import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
-from class_resolver import normalize_string
+from class_resolver import HintOrType, OptionalKwargs, normalize_string
 from docdata import get_docdata
 from torch import nn
 
@@ -119,6 +119,7 @@ __all__ = [
     "normalize_path",
     "get_edge_index",
     "prepare_filter_triples",
+    "normalize_with_default",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1700,6 +1701,41 @@ def prepare_filter_triples(
             )
         )
     return mapped_triples
+
+
+def normalize_with_default(
+    choice: HintOrType[X],
+    kwargs: OptionalKwargs = None,
+    default: HintOrType[X] = None,
+    default_kwargs: OptionalKwargs = None,
+) -> Tuple[HintOrType[X], OptionalKwargs]:
+    """
+    Normalize a choice for class resolver, with default options.
+    
+    :param choice:
+        the choice. If None, use the default instead.
+    :param kwargs:
+        the keyword-based parameters for instantiation. Will only be used if choice is *not* None.
+    :param default:
+        the default choice. Used of choice=None.
+    :param default_kwargs:
+        the default keyword-based parameters
+    
+    :return:
+        a pair (hint, optional kwargs).
+    """
+    if choice is None:
+        if default is None:
+            raise ValueError()
+        choice = default
+        if kwargs is not None:
+            logger.warning(
+                f"No choice was provided, but kwargs={kwargs} is not None. Will use the default choice={default} "
+                f"with its default_kwargs={default_kwargs}. If you want the explicitly provided kwargs to be used,"
+                f" explicitly provide choice={default} instead of None."
+            )
+            kwargs = default_kwargs
+    return choice, kwargs
 
 
 if __name__ == "__main__":

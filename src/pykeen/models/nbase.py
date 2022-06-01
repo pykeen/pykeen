@@ -22,7 +22,7 @@ from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
-from ..utils import check_shapes, get_batchnorm_modules
+from ..utils import check_shapes, get_batchnorm_modules, normalize_with_default
 
 __all__ = [
     "_NewAbstractModel",
@@ -121,16 +121,12 @@ class _NewAbstractModel(Model, ABC):
         :return:
             the regularizer instance.
         """
-        if regularizer is None:
-            regularizer = self.regularizer_default
-            if regularizer_kwargs is not None:
-                logger.warning(
-                    f"No regularizer was provided, but regularizer_kwargs={regularizer_kwargs} is not None. "
-                    f"Will use the default regularizer={self.regularizer_default} with "
-                    f"regularizer_kwargs={self.regularizer_default_kwargs}. If you want the explicitly provided "
-                    f"kwargs to be used, explicitly provide regularizer={self.regularizer_default} instead of None."
-                )
-                regularizer_kwargs = self.regularizer_default_kwargs
+        regularizer, regularizer_kwargs = normalize_with_default(
+            choice=regularizer,
+            kwargs=regularizer_kwargs,
+            default=self.regularizer_default,
+            default_kwargs=self.regularizer_default_kwargs,
+        )
         return regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
     def post_parameter_update(self) -> None:
