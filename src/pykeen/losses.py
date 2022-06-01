@@ -185,7 +185,7 @@ __all__ = [
     "SetwiseLoss",
     "AdversarialLoss",
     # Concrete Classes
-    "AdversarialBCELoss",
+    "AdversarialBCEWithLogitsLoss",
     "BCEAfterSigmoidLoss",
     "BCEWithLogitsLoss",
     "CrossEntropyLoss",
@@ -1440,7 +1440,7 @@ class NSSALoss(AdversarialLoss):
         return loss
 
 
-class AdversarialBCELoss(AdversarialLoss):
+class AdversarialBCEWithLogitsLoss(AdversarialLoss):
     """
     An adversarially weighted BCE loss.
 

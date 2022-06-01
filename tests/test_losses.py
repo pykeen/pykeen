@@ -17,7 +17,7 @@ from tests import cases
 class AdversarialBCELossTests(cases.SetwiseLossTestCase):
     """Unit test for adversarially weighted BCE."""
 
-    cls = pykeen.losses.AdversarialBCELoss
+    cls = pykeen.losses.AdversarialBCEWithLogitsLoss
 
 
 class CrossEntropyLossTests(cases.SetwiseLossTestCase):
