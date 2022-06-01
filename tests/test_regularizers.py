@@ -11,14 +11,7 @@ import unittest_templates
 from torch.nn import functional
 
 from pykeen.models import ConvKB, TransH
-from pykeen.regularizers import (
-    CombinedRegularizer,
-    LpRegularizer,
-    NoRegularizer,
-    OrthogonalityRegularizer,
-    PowerSumRegularizer,
-    Regularizer,
-)
+import pykeen.regularizers
 from pykeen.utils import get_expected_norm, resolve_device
 from tests import cases
 from tests.utils import rand
@@ -27,7 +20,7 @@ from tests.utils import rand
 class NoRegularizerTest(cases.RegularizerTestCase):
     """Test the empty regularizer."""
 
-    cls = NoRegularizer
+    cls = pykeen.regularizers.NoRegularizer
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return torch.zeros(1, device=x.device, dtype=x.dtype)
@@ -65,11 +58,11 @@ class NormedL2RegularizerTest(cases.LpRegularizerTest):
 class CombinedRegularizerTest(cases.RegularizerTestCase):
     """Test the combined regularizer."""
 
-    cls = CombinedRegularizer
+    cls = pykeen.regularizers.CombinedRegularizer
     kwargs = {
         "regularizers": [
-            LpRegularizer(weight=0.1, p=1),
-            LpRegularizer(weight=0.7, p=2),
+            pykeen.regularizers.LpRegularizer(weight=0.1, p=1),
+            pykeen.regularizers.LpRegularizer(weight=0.7, p=2),
         ],
     }
 
@@ -81,7 +74,23 @@ class CombinedRegularizerTest(cases.RegularizerTestCase):
 class PowerSumRegularizerTest(cases.RegularizerTestCase):
     """Test the power sum regularizer."""
 
-    cls = PowerSumRegularizer
+    cls = pykeen.regularizers.PowerSumRegularizer
+
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+        kwargs = self.kwargs
+        if kwargs is None:
+            kwargs = {}
+        p = kwargs.get("p", self.instance.p)
+        value = x.pow(p).sum(dim=-1).mean()
+        if kwargs.get("normalize", False):
+            value = value / x.shape[-1]
+        return value
+
+
+class NormLimitRegularizerTest(cases.RegularizerTestCase):
+    """Test the norm-limit regularizer."""
+
+    cls = pykeen.regularizers.NormLimitRegularizer
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         kwargs = self.kwargs
@@ -97,7 +106,7 @@ class PowerSumRegularizerTest(cases.RegularizerTestCase):
 class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
     """Test the orthogonaliy regularizer."""
 
-    cls = OrthogonalityRegularizer
+    cls = pykeen.regularizers.OrthogonalityRegularizer
     kwargs = dict(
         weight=0.5,
         epsilon=1.0e-05,
@@ -153,7 +162,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         """Test when the Lp regularizer only updates once, like for ConvKB."""
         self.assertIn("apply_only_once", ConvKB.regularizer_default_kwargs)
         self.assertTrue(ConvKB.regularizer_default_kwargs["apply_only_once"])
-        regularizer = LpRegularizer(
+        regularizer = pykeen.regularizers.LpRegularizer(
             **ConvKB.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)
@@ -161,12 +170,12 @@ class TestOnlyUpdateOnce(unittest.TestCase):
     def test_transh_regularizer(self):
         """Test the TransH regularizer only updates once."""
         self.assertNotIn("apply_only_once", TransH.regularizer_default_kwargs)
-        regularizer = OrthogonalityRegularizer(
+        regularizer = pykeen.regularizers.OrthogonalityRegularizer(
             **TransH.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)
 
-    def _help_test_regularizer(self, regularizer: Regularizer, n_tensors: int = 3):
+    def _help_test_regularizer(self, regularizer: pykeen.regularizers.Regularizer, n_tensors: int = 3):
         # ensure regularizer is on correct device
         regularizer = regularizer.to(self.device)
 
@@ -191,9 +200,8 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         self.assertEqual(0.0, regularizer.regularization_term.item())
 
 
-class TestRegularizerTests(unittest_templates.MetaTestCase[Regularizer]):
+class TestRegularizerTests(unittest_templates.MetaTestCase[pykeen.regularizers.Regularizer]):
     """Test all regularizers are tested."""
 
-    base_cls = Regularizer
+    base_cls = pykeen.regularizers.Regularizer
     base_test = cases.RegularizerTestCase
-    skip_cls = {OrthogonalityRegularizer}

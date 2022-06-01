@@ -22,6 +22,7 @@ __all__ = [
     "CombinedRegularizer",
     "PowerSumRegularizer",
     "OrthogonalityRegularizer",
+    "NormLimitRegularizer",
     # Utils
     "regularizer_resolver",
 ]
