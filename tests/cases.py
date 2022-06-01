@@ -791,14 +791,12 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
             rand(self.batch_size, 20, generator=self.generator, device=self.device).requires_grad_(requires_grad),
         )
 
-    def _validate_updated_term(self, inputs: Sequence[torch.FloatTensor]):
-        """Validate the regularization term after updating the regularizer."""
-        # compute expected term
+    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        """Calculate the expected updated regularization term."""
         exp_penalties = torch.stack([self._expected_penalty(x) for x in inputs])
         expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
         assert expected_term.shape == (1,)
-
-        self.assertAlmostEqual(self.instance.term.item(), expected_term.item())
+        return expected_term
 
     def test_update(self) -> None:
         """Test method `update`."""
@@ -811,7 +809,9 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # check shape
         self.assertEqual((1,), self.instance.term.shape)
 
-        self._validate_updated_term(inputs=inputs)
+        # check result
+        expected_term = self._expected_updated_term(inputs=inputs)
+        self.assertAlmostEqual(self.instance.term.item(), expected_term.item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""

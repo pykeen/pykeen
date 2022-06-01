@@ -2,6 +2,7 @@
 
 """Test that regularizers can be executed."""
 
+from typing import Sequence
 import unittest
 
 import pytest
@@ -93,70 +94,48 @@ class PowerSumRegularizerTest(cases.RegularizerTestCase):
         return value
 
 
-class TransHRegularizerTest(unittest.TestCase):
-    """Test the TransH regularizer."""
+class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
+    """Test the orthogonaliy regularizer."""
 
     cls = OrthogonalityRegularizer
-    generator: torch.Generator
-    device: torch.device
+    kwargs = dict(
+        weight=0.5,
+        epsilon=1.0e-05,
+    )
 
-    instance: Regularizer
-    num_entities: int
-    num_relations: int
-    entities_weight: torch.Tensor
-    relations_weight: torch.Tensor
-    normal_vector_weight: torch.Tensor
-
-    def setUp(self) -> None:
-        """Set up the test case."""
-        self.generator = torch.random.manual_seed(seed=42)
-        self.device = resolve_device()
-        self.kwargs = {"weight": 0.5, "epsilon": 1e-5}
-        self.instance = self.cls(
-            **(self.kwargs or {}),
-        ).to(self.device)
-        self.num_entities = 10
-        self.num_relations = 5
-        self.entities_weight = rand(self.num_entities, 10, generator=self.generator, device=self.device)
-        self.relations_weight = rand(self.num_relations, 20, generator=self.generator, device=self.device)
-        self.normal_vector_weight = rand(self.num_relations, 20, generator=self.generator, device=self.device)
-
-    def test_update(self):
-        """Test update function of TransHRegularizer."""
-        # Tests that exception will be thrown when more than or less than three tensors are passed
-        with self.assertRaises(KeyError) as context:
-            self.instance.update(
-                self.entities_weight,
-                self.normal_vector_weight,
-                self.relations_weight,
-                rand(self.num_entities, 10, generator=self.generator, device=self.device),
-            )
-            self.assertTrue("Expects exactly three tensors" in context.exception)
-
-            self.instance.update(
-                self.entities_weight,
-                self.normal_vector_weight,
-            )
-            self.assertTrue("Expects exactly three tensors" in context.exception)
-
-        # Test that regularization term is computed correctly
-        self.instance.update(self.entities_weight, self.normal_vector_weight, self.relations_weight)
-        expected_term = self._expected_penalty()
-        weight = self.kwargs.get("weight")
-        self.assertAlmostEqual(self.instance.term.item(), weight * expected_term.item())
-
-    def _expected_penalty(self) -> torch.FloatTensor:  # noqa: D102
-        # Entity soft constraint
-        regularization_term = torch.sum(functional.relu(torch.norm(self.entities_weight, dim=-1) ** 2 - 1.0))
-        epsilon = self.kwargs.get("epsilon")  #
-
-        # Orthogonality soft constraint
-        d_r_n = functional.normalize(self.relations_weight, dim=-1)
-        regularization_term += torch.sum(
-            functional.relu(torch.sum((self.normal_vector_weight * d_r_n) ** 2, dim=-1) - epsilon),
+    # docstr-coverage: inherited
+    def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:  # noqa: D102
+        # same size tensors
+        return (
+            rand(self.batch_size, 12, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+            rand(self.batch_size, 12, generator=self.generator, device=self.device).requires_grad_(requires_grad),
         )
 
-        return regularization_term
+    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        assert len(inputs) == 2
+        x, y = inputs
+        return (
+            self.instance_kwargs["weight"]
+            * (functional.cosine_similarity(x, y) ** 2 - self.instance_kwargs["epsilon"]).relu().sum()
+        )
+
+    # docstr-coverage: inherited
+    def test_forward(self) -> None:  # noqa: D102
+        raise unittest.SkipTest(f"{self.cls.__name__} cannot be applied to a single tensor.")
+
+    # docstr-coverage: inherited
+    def test_model(self) -> None:  # noqa: D102
+        raise unittest.SkipTest(f"{self.cls.__name__} is not supported by all models.")
+
+    def test_update_error(self):
+        """Test update function of TransHRegularizer."""
+        # Tests that exception will be thrown when more than or less than two tensors are passed
+        for num in (1, 3):
+            with self.assertRaises(ValueError) as context:
+                self.instance.update(
+                    *(rand(self.batch_size, 10, generator=self.generator, device=self.device) for _ in range(num)),
+                )
+                self.assertTrue("Expects exactly two tensors" in context.exception)
 
 
 class TestOnlyUpdateOnce(unittest.TestCase):
