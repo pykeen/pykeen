@@ -126,7 +126,8 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
             rand(self.batch_size, 12, generator=self.generator, device=self.device).requires_grad_(requires_grad),
         )
 
-    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+    # docstr-coverage: inherited
+    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
         assert len(inputs) == 2
         return functional.cosine_similarity(*inputs).pow(2).subtract(self.instance_kwargs["epsilon"]).relu().sum()
 
