@@ -122,14 +122,16 @@ class TransH(ERModel):
                 initializer=entity_initializer,
             ),
             relation_representations_kwargs=[
+                # translation vector in hyperplane
                 dict(
                     shape=embedding_dim,
                     initializer=relation_initializer,
                 ),
-                # normal vectors
+                # normal vector of hyperplane
                 dict(
                     shape=embedding_dim,
-                    # Normalise the normal vectors by their l2 norms
+                    initializer=relation_initializer,
+                    # normalise the normal vectors to unit l2 length
                     constrainer=functional.normalize,
                 ),
             ],
