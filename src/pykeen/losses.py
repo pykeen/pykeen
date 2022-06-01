@@ -1440,12 +1440,16 @@ class NSSALoss(AdversarialLoss):
         return loss
 
 
+@parse_docdata
 class AdversarialBCEWithLogitsLoss(AdversarialLoss):
     """
     An adversarially weighted BCE loss.
 
     .. seealso::
         https://github.com/DeepGraphLearning/torchdrug/blob/20f84170544d594a177e237ef5f3a1cadb2c61e6/torchdrug/tasks/reasoning.py#L89-L100
+
+    ---
+    name: Adversarially weighted binary cross entropy (with logits)
     """
 
     # docstr-coverage: inherited
