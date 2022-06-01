@@ -764,8 +764,10 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
             regularizer=self.instance,
         ).to(self.device)
 
-        # Check if regularizer is stored correctly.
-        self.assertEqual(model.regularizer, self.instance)
+        # verify that the regularizer is stored for both, entity and relation representations
+        for r in (model.entity_representations, model.relation_representations):
+            assert len(r) == 1
+            self.assertEqual(r[0].regularizer, self.instance)
 
         # Forward pass (should update regularizer)
         model.score_hrt(hrt_batch=positive_batch)
@@ -774,7 +776,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         model.post_parameter_update()
 
         # Check if regularization term is reset
-        self.assertEqual(0.0, model.regularizer.term)
+        self.assertEqual(0.0, self.instance.term)
 
     def _check_reset(self, instance: Optional[Regularizer] = None):
         """Verify that the regularizer is in resetted state."""

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional
 
@@ -110,6 +111,18 @@ class Regularizer(nn.Module, ABC):
         result = self.weight * self.regularization_term
         self.reset()
         return result
+
+    def post_parameter_update(self):
+        """
+        Reset the regularizer's term.
+
+        .. warning ::
+            Typically, you want to use the regularization term exactly once to calculate gradients via
+            :meth:`pop_regularization_term`. In this case, there should be no need to manually call this method.
+        """
+        if self.updated:
+            warnings.warn("Resetting regularization term without using it; this may be an error.")
+        self.reset()
 
 
 class NoRegularizer(Regularizer):
