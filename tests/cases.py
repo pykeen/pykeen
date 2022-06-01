@@ -850,7 +850,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         self.instance.update(*inputs)
 
         # check that the expected term is returned
-        exp = (self.instance.weight * self.instance.regularization_term).item()
+        exp = (self.instance.weight * self._expected_updated_term(inputs)).item()
         self.assertEqual(exp, self.instance.pop_regularization_term().item())
 
         # check that the regularizer is now reset
