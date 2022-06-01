@@ -905,7 +905,6 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :param hidden_dropout:
             the dropout applied *after* the first layer
         """
-        hidden_dim = hidden_dim or embedding_dim
         super().__init__()
         hidden_dim = hidden_dim or embedding_dim
         hidden_dropout = input_dropout if hidden_dropout is None else hidden_dropout
