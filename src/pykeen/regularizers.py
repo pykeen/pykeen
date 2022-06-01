@@ -10,6 +10,7 @@ from typing import Any, ClassVar, Iterable, Mapping, Optional
 import torch
 from class_resolver import ClassResolver, normalize_string
 from torch import nn
+from torch.nn import functional
 
 from .utils import lp_norm, powersum_norm
 
@@ -326,16 +327,10 @@ class OrthogonalityRegularizer(Regularizer):
             raise ValueError("Expects exactly two tensors")
         if self.apply_only_once and self.updated:
             return
-        x, y = tensors
-
-        # calculate squared cosine similarity; clamp for safe division
-        sq_sim = torch.einsum("...i,...i->...", x, y).pow(2) / (x.norm() * y.norm()).clamp_min(
-            min=torch.finfo(x.dtype).eps
-        )
-
         # orthogonality soft constraint: cosine similarity at most epsilon
-        self.regularization_term += (sq_sim - self.epsilon).relu().sum()
-
+        self.regularization_term = self.regularization_term + (
+            functional.cosine_similarity(*tensors, dim=-1).pow(2).subtract(self.epsilon).relu().sum()
+        )
         self.updated = True
 
 

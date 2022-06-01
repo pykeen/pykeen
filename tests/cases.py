@@ -819,7 +819,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
 
         # check result
         expected_term = self._expected_updated_term(inputs=inputs)
-        self.assertAlmostEqual(self.instance.term.item(), expected_term.item())
+        self.assertAlmostEqual(self.instance.regularization_term.item(), expected_term.item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""

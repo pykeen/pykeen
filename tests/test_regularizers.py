@@ -116,6 +116,8 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
     kwargs = dict(
         weight=0.5,
         epsilon=1.0e-05,
+        # there is an extra test for this case
+        apply_only_once=False,
     )
 
     # docstr-coverage: inherited
