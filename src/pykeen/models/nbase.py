@@ -11,7 +11,7 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import OptionalKwargs
+from class_resolver import OptionalKwargs, HintOrType
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch import nn
 
@@ -19,7 +19,7 @@ from .base import Model
 from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import Representation
-from ..regularizers import Regularizer
+from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes, get_batchnorm_modules
@@ -323,7 +323,8 @@ class ERModel(
     def append_weight_regularizer(
         self,
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
-        regularizer: Regularizer,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
     ) -> None:
         """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
 
@@ -331,10 +332,13 @@ class ERModel(
             The parameter, either as name, or as nn.Parameter object. A list of available parameter names is shown by
              `sorted(dict(self.named_parameters()).keys())`.
         :param regularizer:
-            The regularizer instance which will regularize the weights.
+            the regularizer or a hint thereof
+        :param regularizer_kwargs:
+            additional keyword-based parameters for the regularizer's instantiation
 
         :raises KeyError: If an invalid parameter name was given
         """
+        regularizer = regularizer_resolver.make(regularizer, regularizer_kwargs)
         # normalize input
         if isinstance(parameter, (str, nn.Parameter)):
             parameter = [parameter]
