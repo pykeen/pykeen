@@ -11,7 +11,7 @@ from torch.nn import functional, init
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransHInteraction
-from ...regularizers import NormLimitRegularizer, OrthogonalityRegularizer, Regularizer, regularizer_resolver
+from ...regularizers import NormLimitRegularizer, OrthogonalityRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
 __all__ = [

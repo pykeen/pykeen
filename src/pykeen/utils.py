@@ -1711,7 +1711,7 @@ def normalize_with_default(
 ) -> Tuple[HintOrType[X], OptionalKwargs]:
     """
     Normalize a choice for class resolver, with default options.
-    
+
     :param choice:
         the choice. If None, use the default instead.
     :param kwargs:
@@ -1720,7 +1720,7 @@ def normalize_with_default(
         the default choice. Used of choice=None.
     :param default_kwargs:
         the default keyword-based parameters
-    
+
     :return:
         a pair (hint, optional kwargs).
     """
