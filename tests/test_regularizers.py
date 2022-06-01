@@ -128,11 +128,7 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
 
     def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
         assert len(inputs) == 2
-        x, y = inputs
-        return (
-            self.instance_kwargs["weight"]
-            * (functional.cosine_similarity(x, y) ** 2 - self.instance_kwargs["epsilon"]).relu().sum()
-        )
+        return (functional.cosine_similarity(*inputs).pow(2) - self.instance_kwargs["epsilon"]).relu().sum()
 
     # docstr-coverage: inherited
     def test_forward(self) -> None:  # noqa: D102
