@@ -4,11 +4,12 @@
 
 from typing import Any, ClassVar, Mapping, Type
 
-import torch
+from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.init import uniform_
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...nn import RESCALInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
@@ -17,7 +18,7 @@ __all__ = [
 ]
 
 
-class RESCAL(EntityRelationEmbeddingModel):
+class RESCAL(ERModel):
     r"""An implementation of RESCAL from [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
@@ -61,76 +62,41 @@ class RESCAL(EntityRelationEmbeddingModel):
         embedding_dim: int = 50,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
+        regularizer: HintOrType[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize RESCAL.
 
-        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param embedding_dim:
+            the entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param entity_initializer:
+            entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_initializer:
+            relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param regularizer:
+            the regularizer. Default to :attr:`RESCAL.defaul_regularizer`
+        :param regularizer_kwargs:
+            additional keyword-based parameters for the regularizer
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            remaining keyword arguments to forward to :meth:`pykeen.models.ERModel.__init__`
 
         .. seealso::
 
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
+        regularizer = self._instantiate_regularizer(regularizer=regularizer, regularizer_kwargs=regularizer_kwargs)
         super().__init__(
+            interaction=RESCALInteraction,
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
+                regularizer=regularizer,
             ),
             relation_representations_kwargs=dict(
                 shape=(embedding_dim, embedding_dim),  # d x d matrices
                 initializer=relation_initializer,
+                regularizer=regularizer,
             ),
             **kwargs,
         )
-
-    # docstr-coverage: inherited
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        # shape: (b, d)
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
-        # shape: (b, d, d)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        # shape: (b, d)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=-1)
-
-        # Compute scores
-        scores = h @ r @ t
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores[:, :, 0]
-
-    # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None).unsqueeze(dim=0).transpose(-1, -2)
-
-        # Compute scores
-        scores = h @ r @ t
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores[:, 0, :]
-
-    # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        """Forward pass using left side (head) prediction."""
-        # Get embeddings
-        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=-1)
-
-        # Compute scores
-        scores = h @ r @ t
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores[:, :, 0]
