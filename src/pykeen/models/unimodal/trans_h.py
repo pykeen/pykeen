@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Type
 
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn import functional
-from torch.nn.init import uniform_
+from torch.nn import init
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -80,10 +80,10 @@ class TransH(ERModel):
         *,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
-        entity_initializer: Hint[Initializer] = uniform_,
+        entity_initializer: Hint[Initializer] = init.xavier_normal_,
         entity_regularizer: HintOrType[Regularizer] = None,
         entity_regularizer_kwargs: OptionalKwargs = None,
-        relation_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = init.xavier_normal_,
         relation_regularizer: HintOrType[Regularizer] = None,
         relation_regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
