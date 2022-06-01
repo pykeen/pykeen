@@ -130,8 +130,11 @@ class _NewAbstractModel(Model, ABC):
                     f"regularizer_kwargs={self.regularizer_default_kwargs}. If you want the explicitly provided "
                     f"kwargs to be used, explicitly provide regularizer={self.regularizer_default} instead of None."
                 )
-            regularizer_kwargs = self.regularizer_default_kwargs
-        return regularizer_resolver.make_safe(query=regularizer, pos_kwargs=regularizer_kwargs)
+            _kwargs = self.regularizer_default_kwargs
+        else:
+            _kwargs = dict(self.regularizer_default_kwargs or {})
+            _kwargs.update(regularizer_kwargs)
+        return regularizer_resolver.make_safe(regularizer, _kwargs)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
