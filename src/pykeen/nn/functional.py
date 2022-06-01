@@ -346,18 +346,20 @@ def ermlp_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # same shape
-    *prefix, dim = h.shape
+    # shortcut for same shape
     if h.shape == r.shape and h.shape == t.shape:
-        return final(activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * dim)))).view(prefix)
-
-    # split, shape: (embedding_dim, hidden_dim)
-    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
-    bias = hidden.bias.view(*make_ones_like(prefix), -1)
-    h = torch.einsum("...i,ij->...j", h, head_to_hidden)
-    r = torch.einsum("...i,ij->...j", r, rel_to_hidden)
-    t = torch.einsum("...i,ij->...j", t, tail_to_hidden)
-    return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
+        x = hidden(torch.cat([h, r, t], dim=-1))
+    else:
+        # split weight into head-/relation-/tail-specific sub-matrices
+        *prefix, dim = h.shape
+        x = tensor_sum(
+            hidden.bias.view(*make_ones_like(prefix), -1),
+            *(
+                torch.einsum("...i, ji -> ...j", xx, weight)
+                for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1))
+            ),
+        )
+    return final(activation(x)).squeeze(dim=-1)
 
 
 def ermlpe_interaction(
