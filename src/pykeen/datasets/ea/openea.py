@@ -8,14 +8,13 @@ Get a summary with ``python -m pykeen.datasets.openea``
 import itertools
 import logging
 import pathlib
-from typing import Tuple
+from typing import Literal, Tuple
 
 import click
 import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
-from typing_extensions import Literal  # Python 3.7 compatibility
 
 from .base import EADataset
 from ...constants import PYKEEN_DATASETS_MODULE
@@ -122,6 +121,7 @@ class OpenEA(EADataset):
         # delegate to super class
         super().__init__(**kwargs)
 
+    # docstr-coverage: inherited
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         # left side has files ending with 1, right side with 2
         one_or_two = "1" if side == EA_SIDE_LEFT else "2"
@@ -139,6 +139,7 @@ class OpenEA(EADataset):
             metadata={"path": self.zip_path},
         )
 
+    # docstr-coverage: inherited
     def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
         return read_zipfile_csv(
             path=self.zip_path,

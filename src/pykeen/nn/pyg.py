@@ -56,18 +56,17 @@ relation representations and a DistMult interaction function.
 """
 
 from abc import ABC, abstractmethod
-from typing import Collection, Optional, Sequence
+from typing import Collection, Literal, Optional, Sequence
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
-from typing_extensions import Literal
 
 from .representation import Representation
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import OneOrSequence
-from ..utils import upgrade_to_sequence
+from ..utils import get_edge_index, upgrade_to_sequence
 
 __all__ = [
     # abstract
@@ -82,7 +81,7 @@ try:
     from torch_geometric.nn.conv import MessagePassing
     from torch_geometric.utils import k_hop_subgraph
 
-    layer_resolver = ClassResolver.from_subclasses(
+    layer_resolver: ClassResolver[MessagePassing] = ClassResolver.from_subclasses(
         base=MessagePassing,  # type: ignore
         suffix="Conv",
     )
@@ -225,7 +224,7 @@ class MessagePassingRepresentation(Representation, ABC):
             )
 
         # buffer edge index for message passing
-        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="edge_index", tensor=get_edge_index(triples_factory=triples_factory))
 
         self.restrict_k_hop = restrict_k_hop
 

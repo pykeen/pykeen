@@ -502,16 +502,32 @@ sampling, use :class:`optuna.samplers.RandomSampler` like in:
 ...     model='TransE',
 ... )
 
-Grid search can be performed using :class:`optuna.samplers.GridSampler` like in:
+Grid search can be performed using :class:`optuna.samplers.GridSampler`. Notice that this sampler
+expected an additional `search_space` argument in its `sampler_kwargs`, e.g.,
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> from optuna.samplers import GridSampler
 >>> hpo_pipeline_result = hpo_pipeline(
 ...     n_trials=30,
 ...     sampler=GridSampler,
+...     sampler_kwargs=dict(
+...         search_space={
+...             "model.embedding_dim": [32, 64, 128],
+...             "model.scoring_fct_norm": [1, 2],
+...             "loss.margin": [1.0],
+...             "optimizer.lr": [1.0e-03],
+...             "negative_sampler.num_negs_per_pos": [32],
+...             "training.num_epochs": [100],
+...             "training.batch_size": [128],
+...         },
+...     ),
 ...     dataset='Nations',
 ...     model='TransE',
 ... )
+
+Also notice that the search space of grid search grows fast with increasing number of studied hyper-parameters,
+and thus grid search is less efficient than other search strategies in finding good configurations,
+cf. https://jmlr.csail.mit.edu/papers/v13/bergstra12a.html.
 
 Full Examples
 -------------

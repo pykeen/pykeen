@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional
 
@@ -110,6 +111,18 @@ class Regularizer(nn.Module, ABC):
         self.reset()
         return result
 
+    def post_parameter_update(self):
+        """
+        Reset the regularizer's term.
+
+        .. warning ::
+            Typically, you want to use the regularization term exactly once to calculate gradients via
+            :meth:`pop_regularization_term`. In this case, there should be no need to manually call this method.
+        """
+        if self.updated:
+            warnings.warn("Resetting regularization term without using it; this may be an error.")
+        self.reset()
+
 
 class NoRegularizer(Regularizer):
     """A regularizer which does not perform any regularization.
@@ -120,10 +133,12 @@ class NoRegularizer(Regularizer):
     #: The default strategy for optimizing the no-op regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
+    # docstr-coverage: inherited
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
         pass
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         # always return zero
         return torch.zeros(1, dtype=x.dtype, device=x.device)
@@ -146,18 +161,38 @@ class LpRegularizer(Regularizer):
 
     def __init__(
         self,
+        *,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
         weight: float = 1.0,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        apply_only_once: bool = False,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.0,
-        apply_only_once: bool = False,
-        parameters: Optional[Iterable[nn.Parameter]] = None,
+        **kwargs,
     ):
-        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
+        """
+        Initialize the regularizer.
+
+        :param weight:
+            The relative weight of the regularization
+        :param apply_only_once:
+            Should the regularization be applied more than once after reset?
+        :param dim:
+            the dimension along which to calculate the Lp norm, cf. :func:`lp_norm`
+        :param normalize:
+            whether to normalize the norm by the dimension, cf. :func:`lp_norm`
+        :param p:
+            the parameter $p$ of the Lp norm, cf. :func:`lp_norm`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
+        """
+        super().__init__(weight=weight, apply_only_once=apply_only_once, **kwargs)
         self.dim = dim
         self.normalize = normalize
         self.p = p
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
@@ -175,18 +210,38 @@ class PowerSumRegularizer(Regularizer):
 
     def __init__(
         self,
+        *,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
         weight: float = 1.0,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        apply_only_once: bool = False,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.0,
-        apply_only_once: bool = False,
-        parameters: Optional[Iterable[nn.Parameter]] = None,
+        **kwargs,
     ):
-        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
+        """
+        Initialize the regularizer.
+
+        :param weight:
+            The relative weight of the regularization
+        :param apply_only_once:
+            Should the regularization be applied more than once after reset?
+        :param dim:
+            the dimension along which to calculate the Lp norm, cf. :func:`powersum_norm`
+        :param normalize:
+            whether to normalize the norm by the dimension, cf. :func:`powersum_norm`
+        :param p:
+            the parameter $p$ of the Lp norm, cf. :func:`powersum_norm`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
+        """
+        super().__init__(weight=weight, apply_only_once=apply_only_once, **kwargs)
         self.dim = dim
         self.normalize = normalize
         self.p = p
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
@@ -201,18 +256,32 @@ class TransHRegularizer(Regularizer):
 
     def __init__(
         self,
-        weight: float = 0.05,
+        *,
+        # could be moved into kwargs, but needs to stay for experiment integrity check
+        weight: float = 1.0,
         epsilon: float = 1e-5,
-        parameters: Optional[Iterable[nn.Parameter]] = None,
+        **kwargs,
     ):
+        """
+        Initialize the regularizer.
+
+        :param weight:
+            The relative weight of the regularization
+        :param epsilon:
+            a small value used to check for approximate orthogonality
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
+        """
         # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
         # Therefore, apply_only_once is always set to True.
-        super().__init__(weight=weight, apply_only_once=True, parameters=parameters)
+        super().__init__(weight=weight, **kwargs, apply_only_once=True)
         self.epsilon = epsilon
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         raise NotImplementedError("TransH regularizer is order-sensitive!")
 
+    # docstr-coverage: inherited
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         if len(tensors) != 3:
             raise KeyError("Expects exactly three tensors")
@@ -241,9 +310,19 @@ class CombinedRegularizer(Regularizer):
         self,
         regularizers: Iterable[Regularizer],
         total_weight: float = 1.0,
-        apply_only_once: bool = False,
+        **kwargs,
     ):
-        super().__init__(weight=total_weight, apply_only_once=apply_only_once)
+        """
+        Initialize the regularizer.
+
+        :param regularizers:
+            the base regularizers
+        :param total_weight:
+            the total regularization weight distributed to the base regularizers according to their individual weights
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Regularizer.__init__`
+        """
+        super().__init__(weight=total_weight, **kwargs)
         self.regularizers = nn.ModuleList(regularizers)
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):
@@ -255,10 +334,12 @@ class CombinedRegularizer(Regularizer):
             ).reciprocal(),
         )
 
+    # docstr-coverage: inherited
     @property
     def normalize(self):  # noqa: D102
         return any(r.normalize for r in self.regularizers)
 
+    # docstr-coverage: inherited
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 

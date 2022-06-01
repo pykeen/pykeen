@@ -18,7 +18,7 @@ from .loader import PrecomputedTokenizerLoader, precomputed_tokenizer_loader_res
 from .utils import random_sample_no_replacement
 from ...constants import PYKEEN_MODULE
 from ...typing import MappedTriples
-from ...utils import format_relative_comparison
+from ...utils import format_relative_comparison, get_edge_index
 
 __all__ = [
     # Resolver
@@ -66,6 +66,7 @@ class Tokenizer:
 class RelationTokenizer(Tokenizer):
     """Tokenize entities by representing them as a bag of relations."""
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         mapped_triples: MappedTriples,
@@ -124,6 +125,7 @@ class AnchorTokenizer(Tokenizer):
         self.anchor_selection = anchor_selection_resolver.make(selection, pos_kwargs=selection_kwargs)
         self.searcher = anchor_searcher_resolver.make(searcher, pos_kwargs=searcher_kwargs)
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         mapped_triples: MappedTriples,
@@ -131,7 +133,7 @@ class AnchorTokenizer(Tokenizer):
         num_entities: int,
         num_relations: int,
     ) -> torch.LongTensor:  # noqa: D102
-        edge_index = mapped_triples[:, [0, 2]].numpy().T
+        edge_index = get_edge_index(mapped_triples=mapped_triples).numpy()
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
         anchors = self.anchor_selection(edge_index=edge_index)
@@ -215,6 +217,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
             raise ValueError("Expected pool to contain contiguous keys 0...(N-1)")
         self.randomize_selection = randomize_selection
 
+    # docstr-coverage: inherited
     def __call__(
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
     ) -> Tuple[int, torch.LongTensor]:  # noqa: D102

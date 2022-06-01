@@ -38,6 +38,7 @@ from .dbpedia import DBpedia50
 from .drkg import DRKG
 from .ea import CN3l, EADataset, MTransEDataset, OpenEA, WK3l15k, WK3l120k
 from .freebase import FB15k, FB15k237
+from .globi import Globi
 from .hetionet import Hetionet
 from .kinships import Kinships
 from .literal_base import NumericPathDataset
@@ -45,6 +46,7 @@ from .nations import Nations
 from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .pharmkg import PharmKG, PharmKG8k
+from .primekg import PrimeKG
 from .umls import UMLS
 from .utils import get_dataset
 from .wd50k import WD50KT
@@ -93,6 +95,8 @@ __all__ = [
     "Wikidata5M",
     "PharmKG8k",
     "PharmKG",
+    "PrimeKG",
+    "Globi",
 ]
 
 logger = logging.getLogger(__name__)

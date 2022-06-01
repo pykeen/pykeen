@@ -9,9 +9,15 @@ import torch
 import unittest_templates
 
 import pykeen.losses
-from pykeen.losses import Loss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, apply_label_smoothing
+from pykeen.losses import Loss, NSSALoss, apply_label_smoothing
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
+
+
+class AdversarialBCELossTests(cases.SetwiseLossTestCase):
+    """Unit test for adversarially weighted BCE."""
+
+    cls = pykeen.losses.AdversarialBCEWithLogitsLoss
 
 
 class CrossEntropyLossTests(cases.SetwiseLossTestCase):
@@ -148,17 +154,25 @@ class PairwiseLogisticLossTestCase(cases.GMRLTestCase):
     cls = pykeen.losses.PairwiseLogisticLoss
 
 
+class InfoNCELossTests(cases.SetwiseLossTestCase):
+    """Unit test for InfoNCE loss."""
+
+    cls = pykeen.losses.InfoNCELoss
+
+
 class TestLosses(unittest_templates.MetaTestCase[Loss]):
     """Test that the loss functions all have tests."""
 
     base_cls = Loss
     base_test = cases.LossTestCase
     skip_cls = {
-        PairwiseLoss,
-        PointwiseLoss,
-        SetwiseLoss,
+        # abstract classes
+        pykeen.losses.PairwiseLoss,
+        pykeen.losses.PointwiseLoss,
+        pykeen.losses.SetwiseLoss,
         pykeen.losses.DeltaPointwiseLoss,
         pykeen.losses.MarginPairwiseLoss,
+        pykeen.losses.AdversarialLoss,
     }
 
 

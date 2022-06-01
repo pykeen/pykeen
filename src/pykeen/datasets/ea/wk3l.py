@@ -9,14 +9,13 @@ import itertools
 import logging
 import pathlib
 from abc import ABC
-from typing import ClassVar, Iterable, Mapping, Tuple, Union
+from typing import ClassVar, Iterable, Literal, Mapping, Tuple, Union
 
 import click
 import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
-from typing_extensions import Literal  # Python 3.7 compatibility
 
 from .base import EADataset
 from ...constants import PYKEEN_DATASETS_MODULE
@@ -102,9 +101,11 @@ class MTransEDataset(EADataset, ABC):
             engine="python",
             encoding="utf8",
             dtype=str,
+            keep_default_na=False,
             **kwargs,
         )
 
+    # docstr-coverage: inherited
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         logger.info(f"Loading graph for side: {side}")
         df = self._load_df(key=side, names=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
@@ -113,6 +114,7 @@ class MTransEDataset(EADataset, ABC):
             triples=df.values, metadata=dict(graph_pair=self.graph_pair, side=side)
         )
 
+    # docstr-coverage: inherited
     def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")

@@ -69,7 +69,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         self.numeric_literals = numeric_literals
         self.literals_to_id = literals_to_id
 
+    # docstr-coverage: inherited
     @classmethod
+    # docstr-coverage: inherited
     def from_path(
         cls,
         path: Union[str, pathlib.Path, TextIO],
@@ -83,7 +85,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples = load_triples(path)
         return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
 
+    # docstr-coverage: inherited
     @classmethod
+    # docstr-coverage: inherited
     def from_labeled_triples(
         cls,
         triples: LabeledTriples,
@@ -110,10 +114,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """Return the numeric literals as a tensor."""
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 
+    # docstr-coverage: inherited
     def _iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super()._iter_extra_repr()
         yield f"num_literals={len(self.literals_to_id)}"
 
+    # docstr-coverage: inherited
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
@@ -136,6 +142,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
+    # docstr-coverage: inherited
     def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping

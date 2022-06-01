@@ -23,6 +23,7 @@ from ..utils import (
     boxe_kg_arity_position_score,
     clamp_norm,
     compute_box,
+    ensure_complex,
     estimate_cost_of_sequence,
     is_cudnn_error,
     make_ones_like,
@@ -95,6 +96,7 @@ def _apply_optional_bn_to_tensor(
 
 
 def _add_cuda_warning(func):
+    # docstr-coverage: excused `wrapped`
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
@@ -135,6 +137,7 @@ def complex_interaction(
     :return: shape: batch_dims
         The scores.
     """
+    h, r, t = ensure_complex(h, r, t)
     # TODO: switch to einsum ?
     # return torch.real(torch.einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
     return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
@@ -343,18 +346,20 @@ def ermlp_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # same shape
-    *prefix, dim = h.shape
+    # shortcut for same shape
     if h.shape == r.shape and h.shape == t.shape:
-        return final(activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * dim)))).view(prefix)
-
-    # split, shape: (embedding_dim, hidden_dim)
-    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
-    bias = hidden.bias.view(*make_ones_like(prefix), -1)
-    h = torch.einsum("...i,ij->...j", h, head_to_hidden)
-    r = torch.einsum("...i,ij->...j", r, rel_to_hidden)
-    t = torch.einsum("...i,ij->...j", t, tail_to_hidden)
-    return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
+        x = hidden(torch.cat([h, r, t], dim=-1))
+    else:
+        # split weight into head-/relation-/tail-specific sub-matrices
+        *prefix, dim = h.shape
+        x = tensor_sum(
+            hidden.bias.view(*make_ones_like(prefix), -1),
+            *(
+                torch.einsum("...i, ji -> ...j", xx, weight)
+                for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1))
+            ),
+        )
+    return final(activation(x)).squeeze(dim=-1)
 
 
 def ermlpe_interaction(
@@ -385,14 +390,14 @@ def ermlpe_interaction(
     x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
     # dot product
-    return (x * t).sum(dim=-1)
+    return torch.einsum("...d,...d->...", x, t)
 
 
 def hole_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-) -> torch.FloatTensor:  # noqa: D102
+) -> torch.FloatTensor:
     """Evaluate the HolE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -617,6 +622,7 @@ def rotate_interaction(
     :return: shape: batch_dims
         The scores.
     """
+    h, r, t = ensure_complex(h, r, t)
     if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
         # r expresses a rotation in complex plane.
         # rotate head by relation (=Hadamard product in complex space)
