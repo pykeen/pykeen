@@ -1559,6 +1559,7 @@ loss_resolver: ClassResolver[Loss] = ClassResolver.from_subclasses(
         SetwiseLoss,
         DeltaPointwiseLoss,
         MarginPairwiseLoss,
+        AdversarialLoss,
     },
 )
 for _name, _cls in loss_resolver.lookup_dict.items():
