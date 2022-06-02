@@ -4,21 +4,22 @@
 
 from typing import Any, ClassVar, Mapping
 
-import torch.autograd
-from torch import linalg
+from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...nn import TransEInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...typing import Constrainer, Hint, Initializer
+from ...regularizers import Regularizer
+from ...typing import Constrainer, Initializer
 
 __all__ = [
     "TransE",
 ]
 
 
-class TransE(EntityRelationEmbeddingModel):
+class TransE(ERModel):
     r"""An implementation of TransE [bordes2013]_.
 
     TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`:
@@ -60,70 +61,46 @@ class TransE(EntityRelationEmbeddingModel):
         entity_constrainer: Hint[Constrainer] = functional.normalize,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         relation_constrainer: Hint[Constrainer] = None,
+        regularizer: HintOrType[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize TransE.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`
-        :param entity_constrainer: Entity constrainer function. Defaults to :func:`torch.nn.init.normalize`
+        :param entity_initializer: Entity initializer function.
+        :param entity_constrainer: Entity constrainer function.
         :param relation_initializer: Relation initializer function.
-            Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`
         :param relation_constrainer: Relation constrainer function. Defaults to none.
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            Remaining keyword arguments to forward to :meth:`pykeen.models.ERModel.__init__`
+        :param regularizer:
+            a regularizer, or a hint thereof. Used for both, entity and relation representations;
+            directly use :class:`ERModel` if you need more flexibility
+        :param regularizer_kwargs:
+            keyword-based parameters for the regularizer
 
         .. seealso::
 
            - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
         """
         super().__init__(
+            interaction=TransEInteraction,
+            interaction_kwargs=dict(p=scoring_fct_norm),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             ),
             relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             ),
             **kwargs,
         )
-        self.scoring_fct_norm = scoring_fct_norm
-
-    # docstr-coverage: inherited
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # TODO: Use torch.cdist
-        #  There were some performance/memory issues with cdist, cf.
-        #  https://github.com/pytorch/pytorch/issues?q=cdist however, @mberr thinks
-        #  they are mostly resolved by now. A Benefit would be that we can harness the
-        #  future (performance) improvements made by the core torch developers. However,
-        #  this will require some benchmarking.
-        return -linalg.vector_norm(h + r - t, dim=-1, ord=self.scoring_fct_norm, keepdim=True)
-
-    # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
-
-        # TODO: Use torch.cdist (see note above in score_hrt())
-        return -linalg.vector_norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, ord=self.scoring_fct_norm)
-
-    # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-
-        # TODO: Use torch.cdist (see note above in score_hrt())
-        return -linalg.vector_norm(h[None, :, :] + (r[:, None, :] - t[:, None, :]), dim=-1, ord=self.scoring_fct_norm)
