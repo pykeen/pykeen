@@ -2,6 +2,7 @@
 
 """Test the PyKEEN pipeline function."""
 
+import itertools
 import pathlib
 import tempfile
 import unittest
@@ -22,6 +23,7 @@ from pykeen.models.predict import (
 )
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
+from pykeen.nn.representation import Embedding
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
@@ -448,7 +450,7 @@ class TestAttributes(unittest.TestCase):
     def test_specify_regularizer(self):
         """Test a pipeline that uses a regularizer."""
         for regularizer, cls in [
-            (None, pykeen.regularizers.NoRegularizer),
+            (None, None),
             ("no", pykeen.regularizers.NoRegularizer),
             (NoRegularizer, pykeen.regularizers.NoRegularizer),
             ("powersum", pykeen.regularizers.PowerSumRegularizer),
@@ -463,7 +465,14 @@ class TestAttributes(unittest.TestCase):
                 )
                 self.assertIsInstance(pipeline_result, PipelineResult)
                 self.assertIsInstance(pipeline_result.model, Model)
-                self.assertIsInstance(pipeline_result.model.regularizer, cls)
+                for r in itertools.chain(
+                    pipeline_result.model.entity_representations, pipeline_result.model.relation_representations
+                ):
+                    if isinstance(r, Embedding):
+                        if cls is None:
+                            self.assertIsNone(r.regularizer)
+                        else:
+                            self.assertIsInstance(r.regularizer, cls)
 
 
 class TestPipelineEvaluationFiltering(unittest.TestCase):

@@ -17,7 +17,6 @@ from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
-from ..moves import irfft, rfft
 from ..typing import GaussianDistribution, Sign
 from ..utils import (
     boxe_kg_arity_position_score,
@@ -390,7 +389,7 @@ def ermlpe_interaction(
     x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
     # dot product
-    return (x * t).sum(dim=-1)
+    return torch.einsum("...d,...d->...", x, t)
 
 
 def hole_interaction(
@@ -436,14 +435,14 @@ def circular_correlation(
         The circular correlation between the vectors.
     """
     # Circular correlation of entity embeddings
-    a_fft = rfft(a, dim=-1)
-    b_fft = rfft(b, dim=-1)
+    a_fft = torch.fft.rfft(a, dim=-1)
+    b_fft = torch.fft.rfft(b, dim=-1)
     # complex conjugate
     a_fft = torch.conj(a_fft)
     # Hadamard product in frequency domain
     p_fft = a_fft * b_fft
     # inverse real FFT
-    return irfft(p_fft, n=a.shape[-1], dim=-1)
+    return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
 def kg2e_interaction(
