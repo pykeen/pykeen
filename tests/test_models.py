@@ -209,7 +209,9 @@ class TestHolE(cases.ModelTestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
+        assert all_in_bounds(
+            self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON
+        )
 
 
 class TestKG2EWithKL(cases.BaseKG2ETest):
@@ -583,7 +585,7 @@ class TestTransE(cases.DistanceModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def test_get_all_prediction_df(self):
@@ -619,10 +621,10 @@ class TestTransH(cases.DistanceModelTestCase):
     def _check_constraints(self):
         """Check model constraints.
 
-        Entity embeddings have to have unit L2 norm.
+        Normal vectors of relation-specific hyperplanes have unit length.
         """
-        entity_norms = self.instance.normal_vector_embeddings(indices=None).norm(p=2, dim=-1)
-        assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+        norm = self.instance.relation_representations[1](indices=None).norm(p=2, dim=-1)
+        assert torch.allclose(norm, torch.ones_like(norm))
 
 
 class TestTransR(cases.DistanceModelTestCase):
