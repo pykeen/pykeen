@@ -18,6 +18,7 @@ import pandas as pd
 import torch
 from _operator import itemgetter
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver.utils import normalize_with_default
 from docdata import parse_docdata
 from torch import nn
 
