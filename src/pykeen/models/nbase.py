@@ -12,7 +12,7 @@ from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Se
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs
-from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
 from torch import nn
 
 from .base import Model
@@ -22,7 +22,7 @@ from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
-from ..utils import check_shapes, get_batchnorm_modules, normalize_with_default
+from ..utils import check_shapes, get_batchnorm_modules
 
 __all__ = [
     "_NewAbstractModel",
