@@ -344,6 +344,47 @@ class ERModel(
         # Explicitly call reset_parameters to trigger initialization
         self.reset_parameters_()
 
+    def _get_unique_representation(self, representations: Sequence[Representation], name: str) -> Representation:
+        if len(representations) != 1:
+            raise ValueError(
+                f"{self.__class__.__name__} has {len(self.representations)} different {name} representations, "
+                f"i.e., there is not a single unambiguous one. Please directly use self.{name}_representations "
+                f"instead."
+            )
+        return representations[0]
+
+    @property
+    def entity_embeddings(self) -> Representation:
+        """
+        Get the entity representation, if there is a unique one.
+
+        .. seealso::
+            :attr:`entity_representations`, the general method to access entity representations
+
+        :raises ValueError:
+            if the model has more than one entity representation
+
+        :return:
+            the entity representation
+        """
+        return self._get_unique_representation(representations=self.entity_representations, name="entity")
+
+    @property
+    def relation_embeddings(self) -> Representation:
+        """
+        Get the relation representation, if there is a unique one.
+
+        .. seealso::
+            :attr:`relation_representations`, the general method to access relation representations
+
+        :raises ValueError:
+            if the model has more than one relation representation
+
+        :return:
+            the relation representation
+        """
+        return self._get_unique_representation(representations=self.entity_representations, name="relation")
+
     def append_weight_regularizer(
         self,
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
