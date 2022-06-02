@@ -4,11 +4,13 @@
 
 from typing import Any, ClassVar, Mapping, Optional
 
+from class_resolver import Hint, OptionalKwargs
+
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import HolEInteraction
 from ...nn.init import xavier_uniform_
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -62,26 +64,29 @@ class HolE(ERModel):
         self,
         *,
         embedding_dim: int = 200,
+        # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_representation_kwargs: OptionalKwargs = None,
         relation_initializer: Hint[Constrainer] = xavier_uniform_,
+        relation_representation_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         """Initialize the model."""
-        # TODO: shared regularizer; wait for https://github.com/pykeen/pykeen/pull/952 to be merged
         super().__init__(
             interaction=HolEInteraction,
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
-                # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs or self.entity_constrainer_default_kwargs,
+                **(entity_representation_kwargs or {}),
             ),
             relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
+                **(relation_representation_kwargs or {}),
             ),
             **kwargs,
         )
