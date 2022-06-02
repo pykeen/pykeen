@@ -583,7 +583,7 @@ class TestTransE(cases.DistanceModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
+        entity_norms = self.instance.entity_representation(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def test_get_all_prediction_df(self):
