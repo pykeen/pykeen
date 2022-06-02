@@ -1,0 +1,58 @@
+# ER-MLP on WN18RR from https://arxiv.org/abs/2006.13365
+metadata:
+  title: ER-MLP on WN18RR from https://arxiv.org/abs/2006.13365
+pipeline:
+  dataset: wn18rr
+  dataset_kwargs:
+    create_inverse_triples: True
+  evaluator_kwargs:
+    filtered: true
+  loss: softplus
+  loss_kwargs:
+    reduction: mean
+  model: ermlp
+  model_kwargs:
+    embedding_dim: 64
+    hidden_dim: 64
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 11
+  optimizer: adam
+  optimizer_kwargs:
+    lr: 0.0017090393255693942
+    weight_decay: 0.0
+  stopper: early
+  stopper_kwargs:
+    frequency: 50
+    patience: 2
+    relative_delta: 0.002
+  training_kwargs:
+    batch_size: 128
+    label_smoothing: 0.0
+    num_epochs: 1000
+  training_loop: slcwa
+results:  # comment: these are from a re-trained model with PyKEEN 1.8.1-dev
+  realistic:
+    adjusted_arithmetic_mean_rank: 0.1299383156478674
+    adjusted_arithmetic_mean_rank_index: 0.8701045951694795
+    adjusted_geometric_mean_rank_index: 0.9974326039462115
+    adjusted_inverse_harmonic_mean_rank: 0.43423145933570234
+    arithmetic_mean_rank: 2634.76513671875
+    geometric_mean_rank: 39.311912536621094
+    harmonic_mean_rank: 2.3020918087753826
+    hits_at_k:
+      "1": 0.4076607387140903
+      "3": 0.44596443228454175
+      "5": 0.4582763337893297
+      "10": 0.4781121751025992
+    inverse_arithmetic_mean_rank: 0.0003795404627453536
+    inverse_geometric_mean_rank: 0.025437582284212112
+    inverse_harmonic_mean_rank: 0.4343875410129532
+    inverse_median_rank: 0.05882352963089943
+    median_absolute_deviation: 23.721635496089633
+    median_rank: 17.0
+    standard_deviation: 6373.68896484375
+    variance: 40623908.0
+    z_arithmetic_mean_rank: 81.49104146464603
+    z_geometric_mean_rank: 53.988794678605814
+    z_inverse_harmonic_mean_rank: 3689.2556628028246
