@@ -73,7 +73,29 @@ class HolE(ERModel):
         relation_representation_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
-        """Initialize the model."""
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension (for entities and relations)
+
+        :param entity_initializer:
+            the initializer for entity representations
+        :param entity_constrainer:
+            the constrainer for entity representations
+        :param entity_constrainer_kwargs:
+            keyword-based parameters passed to the constrainer. If None, use :attr:`entity_constrainer_default_kwargs`
+        :param entity_representation_kwargs:
+            additional keyword-based parameters passed to the entity representation
+
+        :param relation_initializer:
+            the initializer for relation representations
+        :param relation_representation_kwargs:
+            additional keyword-based parameters passed to the entity representation
+
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         super().__init__(
             interaction=HolEInteraction,
             entity_representations_kwargs=dict(
