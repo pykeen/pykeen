@@ -1,0 +1,55 @@
+# ER-MLP on FB15k237 from https://arxiv.org/abs/2006.13365
+metadata:
+  title: ER-MLP on FB15k237 from https://arxiv.org/abs/2006.13365
+pipeline:
+  dataset: fb15k237
+  dataset_kwargs:
+    create_inverse_triples: True
+  evaluator_kwargs:
+    filtered: true
+  loss: bceaftersigmoid
+  loss_kwargs:
+    reduction: mean
+  model: ermlp
+  model_kwargs:
+    embedding_dim: 64
+    hidden_dim: 64
+  optimizer: adam
+  optimizer_kwargs:
+    lr: 0.005779875816374009
+    weight_decay: 0.0
+  stopper: early
+  stopper_kwargs:
+    frequency: 50
+    patience: 2
+    relative_delta: 0.002
+  training_kwargs:
+    batch_size: 256
+    label_smoothing: 0.6431540317057921
+    num_epochs: 1000
+  training_loop: lcwa
+results:  # comment: these are from a re-trained model with PyKEEN 1.8.1-dev
+  realistic:
+    adjusted_arithmetic_mean_rank: 0.06767674367509606
+    adjusted_arithmetic_mean_rank_index: 0.9324521424146514
+    adjusted_geometric_mean_rank_index: 0.9974841609394713
+    adjusted_inverse_harmonic_mean_rank: 0.36029523317509216
+    arithmetic_mean_rank: 489.62091064453125
+    geometric_mean_rank: 14.393702507019043
+    harmonic_mean_rank: 2.7720463554071726
+    hits_at_k:
+      "1": 0.271259418729817
+      "3": 0.39803307564340934
+      "5": 0.45743223407378414
+      "10": 0.5395831294647225
+    inverse_arithmetic_mean_rank: 0.0020423964597284794
+    inverse_geometric_mean_rank: 0.06947483122348785
+    inverse_harmonic_mean_rank: 0.36074432812041296
+    inverse_median_rank: 0.125
+    median_absolute_deviation: 10.378215529539213
+    median_rank: 8.0
+    standard_deviation: 1977.827880859375
+    variance: 3911803.0
+    z_arithmetic_mean_rank: 230.8702424924307
+    z_geometric_mean_rank: 142.84785762213127
+    z_inverse_harmonic_mean_rank: 4837.851804229454

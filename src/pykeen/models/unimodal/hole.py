@@ -4,13 +4,13 @@
 
 from typing import Any, ClassVar, Mapping, Optional
 
-import torch
+from class_resolver import Hint, OptionalKwargs
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...moves import irfft, rfft
+from ...nn import HolEInteraction
 from ...nn.init import xavier_uniform_
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class HolE(EntityRelationEmbeddingModel):
+class HolE(ERModel):
     r"""An implementation of HolE [nickel2016]_.
 
     Holographic embeddings (HolE) make use of the circular correlation operator to compute interactions between
@@ -64,105 +64,51 @@ class HolE(EntityRelationEmbeddingModel):
         self,
         *,
         embedding_dim: int = 200,
+        # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_representation_kwargs: OptionalKwargs = None,
         relation_initializer: Hint[Constrainer] = xavier_uniform_,
+        relation_representation_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
-        """Initialize the model."""
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension (for entities and relations)
+
+        :param entity_initializer:
+            the initializer for entity representations
+        :param entity_constrainer:
+            the constrainer for entity representations
+        :param entity_constrainer_kwargs:
+            keyword-based parameters passed to the constrainer. If None, use :attr:`entity_constrainer_default_kwargs`
+        :param entity_representation_kwargs:
+            additional keyword-based parameters passed to the entity representation
+
+        :param relation_initializer:
+            the initializer for relation representations
+        :param relation_representation_kwargs:
+            additional keyword-based parameters passed to the entity representation
+
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         super().__init__(
+            interaction=HolEInteraction,
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
-                # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs or self.entity_constrainer_default_kwargs,
+                **(entity_representation_kwargs or {}),
             ),
             relation_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=relation_initializer,
+                **(relation_representation_kwargs or {}),
             ),
             **kwargs,
         )
-
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        :param h: shape: (batch_size, num_entities, d)
-            Head embeddings.
-        :param r: shape: (batch_size, num_entities, d)
-            Relation embeddings.
-        :param t: shape: (batch_size, num_entities, d)
-            Tail embeddings.
-
-        :return: shape: (batch_size, num_entities)
-            The scores.
-        """
-        # Circular correlation of entity embeddings
-        a_fft = rfft(h, dim=-1)
-        b_fft = rfft(t, dim=-1)
-
-        # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
-        # compatibility: new style fft returns complex tensor
-        if a_fft.ndimension() > 3:
-            a_fft[:, :, :, 1] *= -1
-        else:
-            a_fft = torch.conj(a_fft)
-
-        # Hadamard product in frequency domain
-        p_fft = a_fft * b_fft
-
-        # inverse real FFT, shape: (batch_size, num_entities, d)
-        composite = irfft(p_fft, dim=-1, n=h.shape[-1])
-
-        # inner product with relation embedding
-        scores = torch.sum(r * composite, dim=-1, keepdim=False)
-
-        return scores
-
-    # docstr-coverage: inherited
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
-
-        return scores
-
-    # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        return scores
-
-    # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        return scores

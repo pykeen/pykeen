@@ -863,7 +863,23 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
 
 
 class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ER-MLP (E) interaction function.
+    r"""A stateful module for the ER-MLP (E) interaction function.
+
+    This interaction uses a neural network-based approach similar to ER-MLP and with slight modifications.
+    In ER-MLP, the interaction is:
+
+    .. math::
+
+        f(h, r, t) = \textbf{w}^{T} g(\textbf{W} [\textbf{h}; \textbf{r}; \textbf{t}])
+
+    whereas in ER-MLP (E) the interaction is:
+
+    .. math::
+
+        f(h, r, t) = \textbf{t}^{T} f(\textbf{W} (g(\textbf{W} [\textbf{h}; \textbf{r}]))
+
+    including dropouts and batch-norms between each two hidden layers. Thus, the ConvE interaction can be seen as a
+    special case of ERMLP (E).
 
     .. seealso:: :func:`pykeen.nn.functional.ermlpe_interaction`
     """
@@ -872,10 +888,10 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     def __init__(
         self,
-        embedding_dim: int = 200,
-        hidden_dim: Optional[int] = None,
+        embedding_dim: int = 256,
         input_dropout: float = 0.2,
-        hidden_dropout: float = 0.3,
+        hidden_dim: Optional[int] = None,
+        hidden_dropout: Optional[float] = None,
     ):
         """
         Initialize the interaction module.
@@ -889,8 +905,9 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :param hidden_dropout:
             the dropout applied *after* the first layer
         """
-        hidden_dim = hidden_dim or embedding_dim
         super().__init__()
+        hidden_dim = hidden_dim or embedding_dim
+        hidden_dropout = input_dropout if hidden_dropout is None else hidden_dropout
         self.mlp = nn.Sequential(
             nn.Dropout(input_dropout),
             nn.Linear(2 * embedding_dim, hidden_dim),

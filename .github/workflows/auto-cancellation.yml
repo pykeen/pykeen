@@ -1,0 +1,14 @@
+# automatically cancels jobs of older commits on same branch
+# only runs on PR, so the main branch is unaffected
+# cf. https://github.com/marketplace/actions/auto-cancellation-running-action
+name: auto cancellation running job
+on: pull_request
+
+jobs:
+  cancel:
+    name: cancel old jobs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: fauguste/auto-cancellation-running-action@0.1.4
+        with:
+          githubToken: '${{ secrets.GITHUB_TOKEN }}'
