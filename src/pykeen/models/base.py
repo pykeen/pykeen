@@ -24,8 +24,7 @@ from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn import Interaction, Representation, interaction_resolver, representation_resolver
-from ..nn.representation import Representation, build_representation
-from ..regularizers import NoRegularizer, Regularizer, regularizer_resolver
+from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo, relation_inverter
 from ..typing import (
     LABEL_HEAD,
@@ -39,14 +38,7 @@ from ..typing import (
     TailRepresentation,
     Target,
 )
-from ..utils import (
-    NoRandomSeedNecessary,
-    check_shapes,
-    extend_batch,
-    get_batchnorm_modules,
-    get_preferred_device,
-    set_random_seed,
-)
+from ..utils import NoRandomSeedNecessary, check_shapes, get_batchnorm_modules, get_preferred_device, set_random_seed
 
 __all__ = [
     "Model",

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import torch
 
 from pykeen.datasets import Nations
-from pykeen.models import Model, TransE
+from pykeen.models import FixedModel, Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.utils import resolve_device
 
@@ -82,7 +82,7 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         self.generator = torch.random.manual_seed(seed=42)
         self.triples_factory = MinimalTriplesFactory
         self.device = resolve_device()
-        self.model = SimpleInteractionModel(triples_factory=self.triples_factory).to(self.device)
+        self.model = FixedModel(triples_factory=self.triples_factory).to(self.device)
 
     def test_alignment_of_score_t_fall_back(self) -> None:
         """Test if ``BaseModule.score_t`` aligns with ``BaseModule.score_hrt``."""

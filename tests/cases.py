@@ -107,7 +107,6 @@ from pykeen.utils import (
     unpack_singletons,
 )
 from tests.constants import EPSILON
-from tests.mocks import CustomRepresentation
 from tests.utils import rand
 
 try:
