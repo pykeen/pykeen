@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping
 import torch
 from class_resolver import HintOrType, OptionalKwargs
 
-from ..nbase import ERModel
+from .. import ERModel
 from ...nn.init import init_phases, xavier_uniform_
 from ...nn.modules import RotatEInteraction
 from ...regularizers import Regularizer

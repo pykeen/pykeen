@@ -4,7 +4,7 @@
 
 from typing import Any, ClassVar, Mapping, Optional
 
-from ..nbase import ERModel
+from .. import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import CPInteraction
 from ...typing import Hint, Initializer, Normalizer

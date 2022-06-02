@@ -62,7 +62,7 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
 
 from class_resolver import OptionalKwargs
 
-from .nbase import ERModel
+from . import ERModel
 from ..nn.modules import Interaction, interaction_resolver
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 

@@ -7,7 +7,7 @@ from typing import Any, Mapping, Optional
 import torch
 from class_resolver import Hint
 
-from ..nbase import ERModel
+from .. import ERModel
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.representation import CombinedCompGCNRepresentations
 from ...triples import CoreTriplesFactory

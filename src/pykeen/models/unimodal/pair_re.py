@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 from torch.nn import functional
 from torch.nn.init import uniform_
 
-from ..nbase import ERModel
+from .. import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, NSSALoss
 from ...nn.modules import PairREInteraction

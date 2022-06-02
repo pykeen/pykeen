@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 from class_resolver import Hint
 from torch.nn import functional
 
-from ..nbase import ERModel
+from .. import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import SEInteraction

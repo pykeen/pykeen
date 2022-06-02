@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Type
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn import functional
 
-from ..nbase import ERModel
+from .. import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...nn.modules import DistMultInteraction

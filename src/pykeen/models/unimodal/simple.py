@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
 from class_resolver import OptionalKwargs
 
-from ..nbase import ERModel
+from .. import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import SimplEInteraction

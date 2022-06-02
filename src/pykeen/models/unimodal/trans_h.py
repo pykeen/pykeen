@@ -8,7 +8,7 @@ from typing import Any, ClassVar, Mapping, Type
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn import functional, init
 
-from ..nbase import ERModel
+from .. import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransHInteraction
 from ...regularizers import NormLimitRegularizer, OrthogonalityRegularizer, Regularizer

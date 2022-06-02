@@ -14,6 +14,7 @@ import unittest_templates
 
 import pykeen.experiments
 import pykeen.models
+import pykeen.models.base
 from pykeen.datasets.nations import Nations
 from pykeen.models import (
     EntityRelationEmbeddingModel,
@@ -825,7 +826,7 @@ class TestModelUtilities(unittest.TestCase):
 class ERModelTests(cases.ModelTestCase):
     """Tests for the general ER-Model."""
 
-    cls = pykeen.models.ERModel
+    cls = pykeen.models.base.ERModel
     kwargs = dict(
         interaction="distmult",  # use name to test interaction resolution
     )
