@@ -49,8 +49,9 @@ from ..utils import (
 
 __all__ = [
     "Model",
+    "_NewAbstractModel",
+    "ERModel",
     "_OldAbstractModel",
-    "EntityRelationEmbeddingModel",
 ]
 
 logger = logging.getLogger(__name__)
@@ -759,75 +760,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def _free_graph_and_cache(self):
         self.regularizer.reset()
-
-
-class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
-    """A base module for KGE models that have different embeddings for entities and relations."""
-
-    #: Primary embeddings for entities
-    entity_embeddings: Representation
-
-    #: Primary embeddings for relations
-    relation_embeddings: Representation
-
-    def __init__(
-        self,
-        *,
-        triples_factory: KGInfo,
-        entity_representations: HintOrType[Representation] = None,
-        entity_representations_kwargs: OptionalKwargs = None,
-        relation_representations: HintOrType[Representation] = None,
-        relation_representations_kwargs: OptionalKwargs = None,
-        **kwargs,
-    ) -> None:
-        """Initialize the entity embedding model.
-
-        .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
-        """
-        super().__init__(triples_factory=triples_factory, **kwargs)
-        self.entity_embeddings = build_representation(
-            max_id=triples_factory.num_entities,
-            representation=entity_representations,
-            representation_kwargs=entity_representations_kwargs,
-        )
-        self.relation_embeddings = build_representation(
-            max_id=triples_factory.num_relations,
-            representation=relation_representations,
-            representation_kwargs=relation_representations_kwargs,
-        )
-
-    @property
-    def embedding_dim(self) -> int:  # noqa:D401
-        """The entity embedding dimension."""
-        return self.entity_embeddings.embedding_dim
-
-    @property
-    def entity_representations(self) -> Sequence[Representation]:  # noqa:D401
-        """The entity representations.
-
-        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
-        """
-        return [self.entity_embeddings]
-
-    @property
-    def relation_representations(self) -> Sequence[Representation]:  # noqa:D401
-        """The relation representations.
-
-        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
-        """
-        return [self.relation_embeddings]
-
-    # docstr-coverage: inherited
-    def _reset_parameters_(self):  # noqa: D102
-        self.entity_embeddings.reset_parameters()
-        self.relation_embeddings.reset_parameters()
-
-    # docstr-coverage: inherited
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # make sure to call this first, to reset regularizer state!
-        super().post_parameter_update()
-        self.entity_embeddings.post_parameter_update()
-        self.relation_embeddings.post_parameter_update()
 
 
 def _add_post_reset_parameters(cls: Type[Model]) -> None:

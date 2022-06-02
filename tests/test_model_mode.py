@@ -6,10 +6,9 @@ import unittest
 from dataclasses import dataclass
 
 import torch
-from torch import nn
 
 from pykeen.datasets import Nations
-from pykeen.models import EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.utils import resolve_device
 

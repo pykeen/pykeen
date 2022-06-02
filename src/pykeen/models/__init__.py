@@ -49,7 +49,7 @@ relations and tail entities as input and computes a scalar plausability score fo
 
 from class_resolver import ClassResolver, get_subclasses
 
-from .base import EntityRelationEmbeddingModel, ERModel, Model, _NewAbstractModel, _OldAbstractModel
+from .base import ERModel, Model, _NewAbstractModel, _OldAbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
 from .inductive import InductiveNodePiece, InductiveNodePieceGNN
 from .meta import CooccurrenceFilteredModel
@@ -96,7 +96,6 @@ __all__ = [
     # Base Models
     "Model",
     "_OldAbstractModel",
-    "EntityRelationEmbeddingModel",
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models
@@ -164,6 +163,5 @@ model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
         *get_subclasses(EvaluationOnlyModel),
         # Old style models should never be looked up
         _OldAbstractModel,
-        EntityRelationEmbeddingModel,
     },
 )

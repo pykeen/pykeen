@@ -17,7 +17,6 @@ import pykeen.models
 import pykeen.models.base
 from pykeen.datasets.nations import Nations
 from pykeen.models import (
-    EntityRelationEmbeddingModel,
     ERModel,
     EvaluationOnlyModel,
     FixedModel,
@@ -40,7 +39,6 @@ SKIP_MODULES = {
     _NewAbstractModel,
     # DummyModel,
     LiteralModel,
-    EntityRelationEmbeddingModel,
     ERModel,
     FixedModel,
     EvaluationOnlyModel,
