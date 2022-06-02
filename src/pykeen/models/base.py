@@ -93,6 +93,8 @@ class Model(nn.Module, ABC):
             The triples factory facilitates access to the dataset.
         :param loss:
             The loss to use. If None is given, use the loss default specific to the model subclass.
+        :param loss_kwargs:
+            keyword-based parameters passed to the loss instance upon instantiation
         :param predict_with_sigmoid:
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
@@ -140,6 +142,9 @@ class Model(nn.Module, ABC):
         All non-abstract deriving models should have citation information. Subclasses can further override
         ``__init_subclass__``, but need to remember to call ``super().__init_subclass__`` as well so this
         gets run.
+
+        :param kwargs:
+            ignored keyword-based parameters
         """
         if not inspect.isabstract(cls):
             parse_docdata(cls)
@@ -498,6 +503,9 @@ class Model(nn.Module, ABC):
         ...     model='RotatE',
         ... )
         >>> df = result.model.get_head_prediction_df('accusation', 'brazil', triples_factory=result.training)
+
+        :return:
+            a dataframe of predicted heads
         """
         from .predict import get_head_prediction_df
 
@@ -515,6 +523,9 @@ class Model(nn.Module, ABC):
         :param head_label: The string label for the head entity
         :param tail_label: The string label for the tail entity
         :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_relation_prediction_df`
+
+        :return:
+            a dataframe of predicted relations
         """
         from .predict import get_relation_prediction_df
 
@@ -542,6 +553,9 @@ class Model(nn.Module, ABC):
         ...     model='RotatE',
         ... )
         >>> df = result.model.get_tail_prediction_df('brazil', 'accusation', triples_factory=result.training)
+
+        :return:
+            a dataframe of predicted tails
         """
         from .predict import get_tail_prediction_df
 
@@ -565,11 +579,20 @@ class Model(nn.Module, ABC):
         *,
         mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
-        r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
+        r"""
+        Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
 
         When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
         The forward score is calculated from $f(h,r,t)$ and the inverse score is calculated from $f(t,r_{inv},h)$.
         This function enables users to inspect the scores obtained by using the corresponding inverse triples.
+
+        :param hrt_batch: shape: (b, 3)
+            the batch of triples
+        :param mode:
+            the inductive mode, or None for transductive
+
+        :return:
+            the triple scores obtained by inverse relations
         """
         t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
         return self.score_hrt(hrt_batch=t_r_inv_h, mode=mode)
