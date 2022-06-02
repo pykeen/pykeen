@@ -49,7 +49,7 @@ from ..utils import (
 
 __all__ = [
     "Model",
-    "_NewAbstractModel",
+    "_AbstractModel",
     "ERModel",
 ]
 
@@ -610,7 +610,7 @@ def _add_post_reset_parameters(cls: Type[Model]) -> None:
     cls.__init__ = _new_init  # type: ignore
 
 
-class _NewAbstractModel(Model, ABC):
+class _AbstractModel(Model, ABC):
     """An abstract class for knowledge graph embedding models (KGEMs).
 
     The only function that needs to be implemented for a given subclass is
@@ -823,7 +823,7 @@ def repeat_if_necessary(
 
 class ERModel(
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
-    _NewAbstractModel,
+    _AbstractModel,
 ):
     """A commonly useful base for KGEMs using embeddings and interaction modules.
 
