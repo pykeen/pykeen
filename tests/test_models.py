@@ -33,7 +33,6 @@ from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
-from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
     Model,
@@ -44,7 +43,6 @@ SKIP_MODULES = {
     EntityRelationEmbeddingModel,
     ERModel,
     FixedModel,
-    SimpleInteractionModel,
     EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())

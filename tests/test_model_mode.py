@@ -158,31 +158,6 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         assert all(scores_r_function == scores_hrt_function)
 
 
-# TODO: Remove, since it stems from old-style model
-class SimpleInteractionModel(EntityRelationEmbeddingModel):
-    """A model with a simple interaction function for testing the base model."""
-
-    def __init__(self, *, triples_factory: TriplesFactory):
-        super().__init__(
-            triples_factory=triples_factory,
-            entity_representations_kwargs=dict(embedding_dim=50),
-            relation_representations_kwargs=dict(embedding_dim=50),
-        )
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
-
-        return torch.sum(h + r + t, dim=1)
-
-    def reset_parameters_(self) -> Model:  # noqa: D102
-        pass  # Not needed for unittest
-
-
 @dataclass
 class MinimalTriplesFactory:
     """A triples factory with minial attributes to allow the model to initiate."""
