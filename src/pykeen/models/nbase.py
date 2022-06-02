@@ -354,7 +354,7 @@ class ERModel(
         return representations[0]
 
     @property
-    def entity_embeddings(self) -> Representation:
+    def entity_representation(self) -> Representation:
         """
         Get the entity representation, if there is a unique one.
 
@@ -370,7 +370,7 @@ class ERModel(
         return self._get_unique_representation(representations=self.entity_representations, name="entity")
 
     @property
-    def relation_embeddings(self) -> Representation:
+    def relation_representation(self) -> Representation:
         """
         Get the relation representation, if there is a unique one.
 
