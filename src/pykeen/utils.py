@@ -1678,7 +1678,6 @@ def get_edge_index(
     return edge_index
 
 
-
 def raise_if_present(parameter_name: str):
     """Create an decorator which raises an error if a parameter is not None."""
 
