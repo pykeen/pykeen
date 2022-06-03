@@ -22,7 +22,6 @@ from .inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn import Representation, build_representation
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import KGInfo
 from ..triples import KGInfo, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, get_preferred_device, set_random_seed
