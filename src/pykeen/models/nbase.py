@@ -12,7 +12,7 @@ from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Se
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs
-from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
 from torch import nn
 
 from .base import Model
@@ -121,16 +121,12 @@ class _NewAbstractModel(Model, ABC):
         :return:
             the regularizer instance.
         """
-        if regularizer is None:
-            regularizer = self.regularizer_default
-            if regularizer_kwargs is not None:
-                logger.warning(
-                    f"No regularizer was provided, but regularizer_kwargs={regularizer_kwargs} is not None. "
-                    f"Will use the default regularizer={self.regularizer_default} with "
-                    f"regularizer_kwargs={self.regularizer_default_kwargs}. If you want the explicitly provided "
-                    f"kwargs to be used, explicitly provide regularizer={self.regularizer_default} instead of None."
-                )
-                regularizer_kwargs = self.regularizer_default_kwargs
+        regularizer, regularizer_kwargs = normalize_with_default(
+            choice=regularizer,
+            kwargs=regularizer_kwargs,
+            default=self.regularizer_default,
+            default_kwargs=self.regularizer_default_kwargs,
+        )
         return regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
     def post_parameter_update(self) -> None:
@@ -347,18 +343,38 @@ class ERModel(
     def append_weight_regularizer(
         self,
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
-        regularizer: Regularizer,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
+        default_regularizer: HintOrType[Regularizer] = None,
+        default_regularizer_kwargs: OptionalKwargs = None,
     ) -> None:
-        """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
+        """
+        Add a model weight to a regularizer's weight list, and register the regularizer with the model.
 
         :param parameter:
             The parameter, either as name, or as nn.Parameter object. A list of available parameter names is shown by
              `sorted(dict(self.named_parameters()).keys())`.
         :param regularizer:
-            The regularizer instance which will regularize the weights.
+            the regularizer or a hint thereof
+        :param regularizer_kwargs:
+            additional keyword-based parameters for the regularizer's instantiation
+        :param default_regularizer:
+            the default regularizer; if None, use :attr:`regularizer_default`
+        :param default_regularizer_kwargs:
+            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
 
         :raises KeyError: If an invalid parameter name was given
         """
+        # instantiate regularizer
+        regularizer = regularizer_resolver.make(
+            *normalize_with_default(
+                choice=regularizer,
+                kwargs=regularizer_kwargs,
+                default=default_regularizer or self.regularizer_default,
+                default_kwargs=default_regularizer_kwargs or self.regularizer_default_kwargs,
+            )
+        )
+
         # normalize input
         if isinstance(parameter, (str, nn.Parameter)):
             parameter = [parameter]
