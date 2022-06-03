@@ -86,7 +86,19 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         self.device = resolve_device()
         self.model = FixedModel(triples_factory=self.triples_factory).to(self.device)
 
-    def _test(self, score_func: Callable, dim: Target):
+    def _test(self, score_func: Callable, dim: Target) -> None:
+        """
+        Check whether the output of optimized function matches the output of a repeated batch.
+
+        .. note ::
+            the repeated batch is created via :func:`pykeen.utils.extend_batch` and passed to
+            :meth:`pykeen.models.base.Model.score_hrt`.
+
+        :param score_func:
+            the optimized score function, e.g., :meth:`pykeen.models.base.Model.score_t`
+        :param dim:
+            the dimension
+        """
         batch = torch.tensor([[0, 0], [1, 0]], dtype=torch.long, device=self.device)
         hrt_batch = extend_batch(
             batch=batch,
