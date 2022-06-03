@@ -323,6 +323,7 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: torch.LongTensor,
         invert_relation: bool = False,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -332,6 +333,8 @@ class Model(nn.Module, ABC):
             The indices of (head, relation, tail) triples.
         :param invert_relation:
             whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`score_hrt`.
 
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
@@ -342,13 +345,14 @@ class Model(nn.Module, ABC):
                 index_relation=1,
                 invert_relation=invert_relation,
             ),
+            **kwargs,
         )
 
     def score_h_extended(
         self,
         rt_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
         invert_relation: bool = False,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -356,10 +360,10 @@ class Model(nn.Module, ABC):
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
             The indices of (relation, tail) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
         :param invert_relation:
             whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`score_h`.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -370,14 +374,14 @@ class Model(nn.Module, ABC):
                 index_relation=0,
                 invert_relation=invert_relation,
             ),
-            slice_size=slice_size,
+            **kwargs,
         )
 
     def score_r_extended(
         self,
         ht_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
         invert_relation: bool = False,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -385,23 +389,23 @@ class Model(nn.Module, ABC):
 
         :param ht_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
         :param invert_relation:
             whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`score_r`.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
         if invert_relation:
             raise NotImplementedError
-        return self.score_r(ht_batch=ht_batch, slice_size=slice_size)
+        return self.score_r(ht_batch=ht_batch, **kwargs)
 
     def score_t_extended(
         self,
         hr_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
         invert_relation: bool = False,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -409,10 +413,10 @@ class Model(nn.Module, ABC):
 
         :param hr_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, relation) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
         :param invert_relation:
             whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`score_t`.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -423,7 +427,7 @@ class Model(nn.Module, ABC):
                 index_relation=1,
                 invert_relation=invert_relation,
             ),
-            slice_size=slice_size,
+            **kwargs,
         )
 
     """Prediction methods"""
