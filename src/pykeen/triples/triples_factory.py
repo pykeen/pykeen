@@ -8,7 +8,6 @@ import logging
 import pathlib
 import re
 import warnings
-from abc import abstractmethod
 from typing import (
     Any,
     Callable,
@@ -89,10 +88,7 @@ def create_relation_mapping(relations: set) -> RelationMapping:
     :param relations: set
     """
     # Sorting ensures consistent results when the triples are permuted
-    relation_labels = sorted(
-        set(relations),
-        key=lambda x: (re.sub(f"{INVERSE_SUFFIX}$", "", x), x.endswith(f"{INVERSE_SUFFIX}")),
-    )
+    relation_labels = sorted(relations)
     # Create mapping
     return {str(label): i for (i, label) in enumerate(relation_labels)}
 

@@ -11,8 +11,6 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Type, Union
 from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
@@ -23,10 +21,9 @@ from torch import nn
 
 from .inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn import Embedding, EmbeddingSpecification, RepresentationModule
-from ..nn.representation import Representation, build_representation
+from ..nn import Representation, build_representation
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import KGInfo, relation_inverter
+from ..triples import KGInfo
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
@@ -87,10 +84,8 @@ class Model(nn.Module, ABC):
         """
         Initialize the module.
 
-        :param num_entities:
-            the number of entities
-        :param num_relations:
-            the number of relations.
+        :param triples_factory:
+            The triples factory facilitates access to the dataset.
         :param loss:
             The loss to use. If None is given, use the loss default specific to the model subclass.
         :param predict_with_sigmoid:
@@ -479,9 +474,11 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         if self.use_inverse_relations:
-            scores = self.score_t_extended(hr_batch=rt_batch.flip(1), slice_size=slice_size, mode=mode, invert_relation=True)
+            scores = self.score_t_extended(
+                hr_batch=rt_batch.flip(1), slice_size=slice_size, mode=mode, invert_relation=True
+            )
         else:
-            scores = self.score_h_extended(rt_batch=rt_batch, slice_size=slice_sizemode=mode)
+            scores = self.score_h_extended(rt_batch=rt_batch, slice_size=slice_size, mode=mode)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -680,7 +677,6 @@ class Model(nn.Module, ABC):
         """
         return self.score_hrt_extended(hrt_batch=hrt_batch.flip(1), mode=mode, invert_relation=True)
 
-
     def score_t_inverse(
         self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
     ):
@@ -724,11 +720,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         :param kwargs:
             additional keyword-based arguments passed to Model.__init__
         """
-        super().__init__(
-            num_entities=triples_factory.num_entities,
-            num_relations=triples_factory.num_relations,
-            **kwargs,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         # Regularizer
         if regularizer is not None:
             self.regularizer = regularizer

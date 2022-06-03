@@ -66,7 +66,6 @@ class DefaultRelationInverter(RelationInverter):
         return batch
 
 
-relation_inverter = DefaultRelationInverter()
 relation_inverter_resolver: Resolver[RelationInverter] = Resolver.from_subclasses(
     RelationInverter,
     default=DefaultRelationInverter,

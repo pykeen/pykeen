@@ -8,7 +8,6 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Collection, Optional
-from unittest.mock import patch
 
 import numpy as np
 import torch
