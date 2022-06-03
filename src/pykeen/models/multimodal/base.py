@@ -4,7 +4,7 @@
 
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...nn.init import PretrainedInitializer
 from ...nn.modules import LiteralInteraction
 from ...nn.representation import Embedding, Representation

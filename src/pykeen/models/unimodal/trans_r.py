@@ -8,7 +8,7 @@ import torch
 import torch.autograd
 import torch.nn.init
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransRInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_

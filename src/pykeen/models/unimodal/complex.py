@@ -8,7 +8,7 @@ import torch
 from class_resolver.api import HintOrType
 from torch.nn.init import normal_
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import ComplExInteraction

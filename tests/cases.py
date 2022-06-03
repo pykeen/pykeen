@@ -46,7 +46,6 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
-import pykeen.models.base
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
@@ -70,6 +69,7 @@ from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 from pykeen.models.mocks import FixedModel
+from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.nn.representation import Representation
 from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
@@ -1230,7 +1230,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test running the pipeline on all models."""
         if (
             issubclass(self.cls, (pykeen.models.RGCN, pykeen.models.CooccurrenceFilteredModel))
-            or self.cls is pykeen.models.base.ERModel
+            or self.cls is pykeen.models.ERModel
         ):
             self.skipTest(f"Cannot choose interaction via CLI for {self.cls}.")
         runner = CliRunner()
@@ -1704,7 +1704,7 @@ class InitializerTestCase(unittest.TestCase):
         triples_factory = generation.generate_triples_factory(num_entities=self.num_entities)
         # actual number may be different...
         self.num_entities = triples_factory.num_entities
-        model = pykeen.models.base.ERModel(
+        model = pykeen.models.ERModel(
             triples_factory=triples_factory,
             interaction=self.interaction,
             entity_representations_kwargs=dict(shape=self.shape, initializer=self.initializer, dtype=self.dtype),

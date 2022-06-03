@@ -8,7 +8,7 @@ import torch
 from class_resolver import Hint, HintOrType
 from torch import nn
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...nn.message_passing import Decomposition, RGCNRepresentation
 from ...nn.modules import Interaction
 from ...nn.representation import Representation

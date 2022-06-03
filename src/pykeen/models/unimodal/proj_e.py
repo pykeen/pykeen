@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 from torch import nn
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.init import xavier_uniform_

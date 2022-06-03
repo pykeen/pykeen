@@ -49,12 +49,14 @@ relations and tail entities as input and computes a scalar plausability score fo
 
 from class_resolver import ClassResolver, get_subclasses
 
-from .base import ERModel, Model, _AbstractModel
+from .base import Model
+from .nbase import ERModel, _AbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
 from .inductive import InductiveNodePiece, InductiveNodePieceGNN
 from .meta import CooccurrenceFilteredModel
 from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
+from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
     CP,
@@ -95,6 +97,7 @@ from .unimodal import (
 __all__ = [
     # Base Models
     "Model",
+    "ERModel",
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models

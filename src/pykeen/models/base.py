@@ -11,12 +11,11 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
-from _operator import itemgetter
+from operator import itemgetter
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.utils import normalize_with_default
 from docdata import parse_docdata

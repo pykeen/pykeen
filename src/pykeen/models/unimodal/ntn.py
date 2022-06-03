@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 from class_resolver import Hint, HintOrType
 from torch import nn
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import NTNInteraction
 from ...typing import Initializer

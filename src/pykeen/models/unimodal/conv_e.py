@@ -8,7 +8,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 from torch import nn
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.init import xavier_normal_

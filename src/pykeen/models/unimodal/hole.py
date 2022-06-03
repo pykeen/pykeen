@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 from class_resolver import Hint, OptionalKwargs
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import HolEInteraction
 from ...nn.init import xavier_uniform_

@@ -8,7 +8,7 @@ from typing import Any, Callable, ClassVar, List, Mapping, Optional, Sequence
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import NodePieceRepresentation, SubsetRepresentation, representation_resolver
 from ...nn.modules import DistMultInteraction, Interaction

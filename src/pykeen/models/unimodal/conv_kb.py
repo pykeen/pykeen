@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 from torch.nn.init import uniform_
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer

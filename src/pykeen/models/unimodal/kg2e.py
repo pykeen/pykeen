@@ -8,7 +8,7 @@ import torch
 import torch.autograd
 from torch.nn.init import uniform_
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import KG2EInteraction
 from ...typing import Constrainer, Hint, Initializer

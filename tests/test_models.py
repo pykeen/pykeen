@@ -14,7 +14,6 @@ import unittest_templates
 
 import pykeen.experiments
 import pykeen.models
-import pykeen.models.base
 from pykeen.datasets.nations import Nations
 from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _AbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
@@ -813,7 +812,7 @@ class TestModelUtilities(unittest.TestCase):
 class ERModelTests(cases.ModelTestCase):
     """Tests for the general ER-Model."""
 
-    cls = pykeen.models.base.ERModel
+    cls = pykeen.models.ERModel
     kwargs = dict(
         interaction="distmult",  # use name to test interaction resolution
     )

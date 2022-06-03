@@ -6,9 +6,9 @@ from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn.init import uniform_
 
-from .. import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import NSSALoss
+from ...models import ERModel
 from ...nn.init import uniform_norm_
 from ...nn.modules import BoxEInteraction
 from ...typing import Hint, Initializer

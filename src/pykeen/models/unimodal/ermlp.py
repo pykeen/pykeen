@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn.init import uniform_
 
-from .. import ERModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import ERMLPInteraction
 from ...typing import Hint, Initializer
