@@ -2,6 +2,7 @@
 
 """Test that models are set in the right mode when they're training."""
 
+from typing import Callable
 import unittest
 from dataclasses import dataclass
 
@@ -10,7 +11,8 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.models import FixedModel, Model, TransE
 from pykeen.triples import TriplesFactory
-from pykeen.utils import resolve_device
+from pykeen.typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, Target
+from pykeen.utils import extend_batch, resolve_device
 
 
 class TestBaseModel(unittest.TestCase):
@@ -84,77 +86,28 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         self.device = resolve_device()
         self.model = FixedModel(triples_factory=self.triples_factory).to(self.device)
 
+    def _test(self, score_func: Callable, dim: Target):
+        batch = torch.tensor([[0, 0], [1, 0]], dtype=torch.long, device=self.device)
+        hrt_batch = extend_batch(
+            batch=batch,
+            max_id=self.triples_factory.num_entities if dim != COLUMN_RELATION else self.triples_factory.num_relations,
+            dim=dim,
+        )
+        optimized_output = score_func(batch).flatten()
+        extended_output = self.model.score_hrt(hrt_batch=hrt_batch).flatten()
+        assert torch.allclose(optimized_output, extended_output)
+
     def test_alignment_of_score_t_fall_back(self) -> None:
         """Test if ``BaseModule.score_t`` aligns with ``BaseModule.score_hrt``."""
-        hr_batch = torch.tensor(
-            [
-                [0, 0],
-                [1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        hrt_batch = torch.tensor(
-            [
-                [0, 0, 0],
-                [0, 0, 1],
-                [1, 0, 0],
-                [1, 0, 1],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        scores_t_function = self.model.score_t(hr_batch=hr_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_t_function == scores_hrt_function)
+        self._test(score_func=self.model.score_t, dim=COLUMN_TAIL)
 
     def test_alignment_of_score_h_fall_back(self) -> None:
         """Test if ``BaseModule.score_h`` aligns with ``BaseModule.score_hrt``."""
-        rt_batch = torch.tensor(
-            [
-                [0, 0],
-                [1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        hrt_batch = torch.tensor(
-            [
-                [0, 0, 0],
-                [1, 0, 0],
-                [0, 1, 0],
-                [1, 1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        scores_h_function = self.model.score_h(rt_batch=rt_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_h_function == scores_hrt_function)
+        self._test(score_func=self.model.score_h, dim=COLUMN_HEAD)
 
     def test_alignment_of_score_r_fall_back(self) -> None:
         """Test if ``BaseModule.score_r`` aligns with ``BaseModule.score_hrt``."""
-        ht_batch = torch.tensor(
-            [
-                [0, 0],
-                [1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        hrt_batch = torch.tensor(
-            [
-                [0, 0, 0],
-                [0, 1, 0],
-                [1, 0, 0],
-                [1, 1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        scores_r_function = self.model.score_r(ht_batch=ht_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_r_function == scores_hrt_function)
+        self._test(score_func=self.model.score_r, dim=COLUMN_RELATION)
 
 
 @dataclass
