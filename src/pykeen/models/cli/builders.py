@@ -172,18 +172,21 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         def _triples_factory(path: Optional[str]) -> Optional[TriplesFactory]:
             if path is None:
                 return None
-            return TriplesFactory.from_path(path=path, create_inverse_triples=create_inverse_triples)
+            return TriplesFactory.from_path(path=path)
 
         training = _triples_factory(training_triples_factory)
         testing = _triples_factory(testing_triples_factory)
         validation = _triples_factory(validation_triples_factory)
+
+        if create_inverse_triples:
+            model_kwargs = model_kwargs or {}
+            model_kwargs["use_inverse_relations"] = True
 
         pipeline_result = pipeline(
             device=device,
             model=model,
             model_kwargs=model_kwargs,
             dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
             training=training,
             testing=testing or training,
             validation=validation,

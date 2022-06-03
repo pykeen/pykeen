@@ -428,7 +428,6 @@ class ERModel(
         """
         if not self.entity_representations or not self.relation_representations:
             raise NotImplementedError("repeat scores not implemented for general case.")
-        # TODO: inverse relations?
         h, r, t = self._get_representations(
             h=h_indices, r=r_indices, t=t_indices, mode=mode, invert_relation=invert_relation
         )
