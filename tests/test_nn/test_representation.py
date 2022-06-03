@@ -32,7 +32,7 @@ class EmbeddingTests(cases.RepresentationTestCase):
 
     def test_backwards_compatibility(self):
         """Test shape and num_embeddings."""
-        assert self.instance.max_id == self.instance.num_embeddings
+        assert self.instance.max_id == self.instance_kwargs["num_embeddings"]
         embedding_dim = int(numpy.prod(self.instance.shape))
         assert self.instance.shape == (embedding_dim,)
 

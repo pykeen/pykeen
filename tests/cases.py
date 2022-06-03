@@ -65,11 +65,10 @@ from pykeen.metrics.ranking import (
     RankBasedMetric,
     generate_num_candidates_and_ranks,
 )
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 from pykeen.models.mocks import FixedModel
-from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.nn.representation import Representation
 from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
@@ -107,7 +106,6 @@ from pykeen.utils import (
     unpack_singletons,
 )
 from tests.constants import EPSILON
-from tests.mocks import CustomRepresentation
 from tests.utils import rand
 
 try:
@@ -1150,15 +1148,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, "test.pt")
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
     @property
     def _cli_extras(self):
@@ -1352,23 +1345,6 @@ Traceback
             except TypeError as error:
                 assert error.args == ("'NoneType' object is not callable",)
             mock_method.assert_called_once()
-
-    def test_custom_representations(self):
-        """Tests whether we can provide custom representations."""
-        if isinstance(self.instance, EntityRelationEmbeddingModel):
-            old_embeddings = self.instance.relation_embeddings
-            self.instance.relation_embeddings = CustomRepresentation(
-                num_entities=self.factory.num_relations,
-                shape=old_embeddings.shape,
-            )
-            # call some functions
-            self.instance.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.instance.relation_embeddings = old_embeddings
-        else:
-            self.skipTest(f"Not testing custom representations for model: {self.instance.__class__.__name__}")
 
 
 class DistanceModelTestCase(ModelTestCase):
