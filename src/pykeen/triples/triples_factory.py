@@ -6,7 +6,6 @@ import dataclasses
 import itertools
 import logging
 import pathlib
-import re
 import warnings
 from typing import (
     Any,
@@ -22,7 +21,6 @@ from typing import (
     Sequence,
     Set,
     TextIO,
-    TypeVar,
     Union,
     cast,
 )
@@ -60,7 +58,6 @@ __all__ = [
     "TriplesFactory",
     "create_entity_mapping",
     "create_relation_mapping",
-    "INVERSE_SUFFIX",
     "cat_triples",
     "splits_steps",
     "splits_similarity",
