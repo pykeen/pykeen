@@ -42,6 +42,7 @@ from .globi import Globi
 from .hetionet import Hetionet
 from .kinships import Kinships
 from .literal_base import NumericPathDataset
+from .multimodal import mcodex
 from .nations import Nations
 from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
