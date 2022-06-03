@@ -15,16 +15,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.nations import Nations
-from pykeen.models import (
-    EntityRelationEmbeddingModel,
-    ERModel,
-    EvaluationOnlyModel,
-    FixedModel,
-    Model,
-    _NewAbstractModel,
-    _OldAbstractModel,
-    model_resolver,
-)
+from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
@@ -32,18 +23,14 @@ from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
-from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
     Model,
-    _OldAbstractModel,
     _NewAbstractModel,
     # DummyModel,
     LiteralModel,
-    EntityRelationEmbeddingModel,
     ERModel,
     FixedModel,
-    SimpleInteractionModel,
     EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
