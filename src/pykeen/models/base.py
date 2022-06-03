@@ -4,45 +4,27 @@
 
 from __future__ import annotations
 
-import functools
 import inspect
 import logging
 import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
-from operator import itemgetter
-from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
-from class_resolver.utils import normalize_with_default
+from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn import Interaction, Representation, interaction_resolver, representation_resolver
-from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo, relation_inverter
-from ..typing import (
-    LABEL_HEAD,
-    LABEL_RELATION,
-    LABEL_TAIL,
-    HeadRepresentation,
-    InductiveMode,
-    MappedTriples,
-    RelationRepresentation,
-    ScorePack,
-    TailRepresentation,
-    Target,
-)
-from ..utils import NoRandomSeedNecessary, check_shapes, get_batchnorm_modules, get_preferred_device, set_random_seed
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
+from ..utils import NoRandomSeedNecessary, get_preferred_device, set_random_seed
 
 __all__ = [
     "Model",
-    "_AbstractModel",
-    "ERModel",
 ]
 
 logger = logging.getLogger(__name__)
@@ -609,17 +591,3 @@ class Model(nn.Module, ABC):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
         return self.score_t(hr_batch=t_r_inv, slice_size=slice_size, mode=mode)
-
-
-def _add_post_reset_parameters(cls: Type[Model]) -> None:
-    # The following lines add in a post-init hook to all subclasses
-    # such that the reset_parameters_() function is run
-    _original_init = cls.__init__
-
-    @functools.wraps(_original_init)
-    def _new_init(self, *args, **kwargs):
-        _original_init(self, *args, **kwargs)
-        self.reset_parameters_()
-
-    # sorry mypy, but this kind of evil must be permitted.
-    cls.__init__ = _new_init  # type: ignore
