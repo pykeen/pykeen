@@ -304,7 +304,7 @@ def lit_pipeline(
 @click.command()
 @lit_module_resolver.get_option("-tl", "--training-loop")
 @dataset_resolver.get_option("--dataset", default="nations")
-@options.inverse_triples_option
+@options.use_inverse_relations_option
 @model_resolver.get_option("-m", "--model", default="mure")
 @loss_resolver.get_option("-l", "--loss", default="bcewithlogits")
 @options.batch_size_option
@@ -315,7 +315,7 @@ def lit_pipeline(
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
-    create_inverse_triples: bool,
+    use_inverse_relations: bool,
     model: HintOrType[Model],
     loss: HintOrType[Loss],
     batch_size: int,
@@ -328,9 +328,8 @@ def _main(
         training_loop=training_loop,
         training_loop_kwargs=dict(
             dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
             model=model,
-            model_kwargs=dict(embedding_dim=embedding_dim, loss=loss),
+            model_kwargs=dict(embedding_dim=embedding_dim, loss=loss, use_inverse_relations=use_inverse_relations),
             batch_size=batch_size,
         ),
         trainer_kwargs=dict(

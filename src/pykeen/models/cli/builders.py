@@ -123,7 +123,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
-    @options.inverse_triples_option
+    @options.use_inverse_relations_option
     @click.option("--silent", is_flag=True)
     @click.option("--output-directory", type=pathlib.Path, default=None, help="Where to dump the results")
     def main(
@@ -147,7 +147,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         num_workers,
         random_seed,
         silent: bool,
-        create_inverse_triples: bool,
+        use_inverse_relations: bool,
         **model_kwargs,
     ):
         """CLI for PyKEEN."""
@@ -177,6 +177,10 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         training = _triples_factory(training_triples_factory)
         testing = _triples_factory(testing_triples_factory)
         validation = _triples_factory(validation_triples_factory)
+
+        if use_inverse_relations:
+            model_kwargs = model_kwargs or {}
+            model_kwargs["use_inverse_relations"] = True
 
         pipeline_result = pipeline(
             device=device,
