@@ -266,20 +266,13 @@ class KGInfo:
     #: the number of unique entities
     num_entities: int
 
-    #: the number of relations (maybe including "artificial" inverse relations)
+    #: the number of relations
     num_relations: int
-
-    #: whether to create inverse triples
-    create_inverse_triples: bool
-
-    #: the number of real relations, i.e., without artificial inverses
-    real_num_relations: int
 
     def __init__(
         self,
         num_entities: int,
         num_relations: int,
-        create_inverse_triples: bool,
     ) -> None:
         """
         Initialize the information object.
@@ -287,16 +280,10 @@ class KGInfo:
         :param num_entities:
             the number of entities.
         :param num_relations:
-            the number of relations, excluding artifical inverse relations.
-        :param create_inverse_triples:
-            whether to create inverse triples
+            the number of relations.
         """
         self.num_entities = num_entities
-        self.real_num_relations = num_relations
-        if create_inverse_triples:
-            num_relations *= 2
         self.num_relations = num_relations
-        self.create_inverse_triples = create_inverse_triples
 
     def extra_repr(self) -> str:
         """Extra representation string."""
@@ -309,7 +296,6 @@ class KGInfo:
         """Iterate over extra_repr components."""
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
-        yield f"create_inverse_triples={self.create_inverse_triples}"
 
 
 class CoreTriplesFactory(KGInfo):
