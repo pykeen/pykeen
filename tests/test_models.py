@@ -15,7 +15,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.nations import Nations
-from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _AbstractModel, model_resolver
+from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
@@ -26,7 +26,7 @@ from tests.constants import EPSILON
 
 SKIP_MODULES = {
     Model,
-    _AbstractModel,
+    _NewAbstractModel,
     # DummyModel,
     LiteralModel,
     ERModel,

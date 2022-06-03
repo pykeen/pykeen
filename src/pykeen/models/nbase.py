@@ -25,14 +25,14 @@ from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, 
 from ..utils import check_shapes, get_batchnorm_modules
 
 __all__ = [
-    "_AbstractModel",
+    "_NewAbstractModel",
     "ERModel",
 ]
 
 logger = logging.getLogger(__name__)
 
 
-class _AbstractModel(Model, ABC):
+class _NewAbstractModel(Model, ABC):
     """An abstract class for knowledge graph embedding models (KGEMs).
 
     The only function that needs to be implemented for a given subclass is
@@ -245,7 +245,7 @@ def repeat_if_necessary(
 
 class ERModel(
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
-    _AbstractModel,
+    _NewAbstractModel,
 ):
     """A commonly useful base for KGEMs using embeddings and interaction modules.
 

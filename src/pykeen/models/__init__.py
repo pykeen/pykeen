@@ -55,7 +55,7 @@ from .inductive import InductiveNodePiece, InductiveNodePieceGNN
 from .meta import CooccurrenceFilteredModel
 from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
-from .nbase import ERModel, _AbstractModel
+from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
     CP,
@@ -155,7 +155,7 @@ model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
     base=Model,
     skip={
         # Abstract Models
-        _AbstractModel,
+        _NewAbstractModel,
         # We might be able to relax this later
         ERModel,
         LiteralModel,
