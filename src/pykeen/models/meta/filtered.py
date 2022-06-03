@@ -58,9 +58,9 @@ class CooccurrenceFilteredModel(Model):
         :param triples_factory:
             the (training) triples factory; used for creating the co-occurrence counts *and* for instantiating the
             base model.
-        :param additional_filter_triples:
+        :param additional_triples:
             additional triples to use for creating the co-occurrence statistics
-        :param in_training:
+        :param apply_in_training:
             whether to apply the masking also during training
         :param base:
             the base model, or a hint thereof.

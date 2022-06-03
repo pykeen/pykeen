@@ -1,0 +1,45 @@
+metadata:
+  title: "Learn FB15K Dataset with TransH as described by Wang et al., 2014"
+pipeline:
+  dataset: "fb15k"
+  model: "TransH"
+  model_kwargs:
+    predict_with_sigmoid: false
+    embedding_dim: 100
+    scoring_fct_norm: 2
+    entity_initializer: "xavier_uniform"
+    entity_regularizer: "NormLimit"
+    entity_regularizer_kwargs:
+      weight: 1.0
+      apply_only_once: true
+      dim: -1
+      p: 2
+      power_norm: true
+      max_norm: 1.0
+    relation_initializer: "xavier_uniform"
+    relation_regularizer: "Orthogonality"
+    relation_regularizer_kwargs:
+      weight: 1.0
+      apply_only_once: true
+      epsilon: 1.0e-05
+  optimizer: "SGD"
+  optimizer_kwargs:
+    lr: 0.005
+  loss: "MarginRankingLoss"
+  loss_kwargs:
+    reduction: "mean"
+    margin: 0.25
+  training_loop: "sLCWA"
+  negative_sampler: "bernoulli"
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  training_kwargs:
+    num_epochs: 500
+    batch_size: 4800
+  evaluator_kwargs:
+    filtered: true
+results:
+  unknown:
+    hits_at_k:
+      10: 0.644
+    mean_rank: 87

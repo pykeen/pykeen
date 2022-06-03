@@ -10,7 +10,7 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from collections import Counter
+from collections import ChainMap, Counter
 from typing import (
     Any,
     ClassVar,
@@ -65,11 +65,10 @@ from pykeen.metrics.ranking import (
     RankBasedMetric,
     generate_num_candidates_and_ranks,
 )
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 from pykeen.models.mocks import FixedModel
-from pykeen.models.nbase import ERModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.nn.representation import Representation
 from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
@@ -107,7 +106,6 @@ from pykeen.utils import (
     unpack_singletons,
 )
 from tests.constants import EPSILON
-from tests.mocks import CustomRepresentation
 from tests.utils import rand
 
 try:
@@ -743,35 +741,24 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     """A test case for quickly defining common tests for regularizers."""
 
     #: The batch size
-    batch_size: int
-    #: The triples factory
-    triples_factory: TriplesFactory
-    #: Class of regularizer to test
-    cls: ClassVar[Type[Regularizer]]
-    #: The constructor parameters to pass to the regularizer
-    kwargs: ClassVar[Optional[Dict[str, Any]]] = None
-    #: The regularizer instance, initialized in setUp
-    instance: Regularizer
-    #: A positive batch
-    positive_batch: MappedTriples
+    batch_size: int = 16
     #: The device
     device: torch.device
 
-    def setUp(self) -> None:
-        """Set up the test case with a triples factory and model."""
+    def post_instantiation_hook(self) -> None:
+        """Move instance to device."""
         self.device = resolve_device()
-        self.triples_factory = Nations().training
-        self.batch_size = 16
-        self.positive_batch = self.triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
-        super().setUp()
         # move test instance to device
         self.instance = self.instance.to(self.device)
 
     def test_model(self) -> None:
         """Test whether the regularizer can be passed to a model."""
+        triples_factory = Nations().training
+        positive_batch = triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
+
         # Use RESCAL as it regularizes multiple tensors of different shape.
         model = RESCAL(
-            triples_factory=self.triples_factory,
+            triples_factory=triples_factory,
             regularizer=self.instance,
         ).to(self.device)
 
@@ -781,7 +768,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
             self.assertEqual(r[0].regularizer, self.instance)
 
         # Forward pass (should update regularizer)
-        model.score_hrt(hrt_batch=self.positive_batch)
+        model.score_hrt(hrt_batch=positive_batch)
 
         # Call post_parameter_update (should reset regularizer)
         model.post_parameter_update()
@@ -789,39 +776,58 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # Check if regularization term is reset
         self.assertEqual(0.0, self.instance.term)
 
+    def _check_reset(self, instance: Optional[Regularizer] = None):
+        """Verify that the regularizer is in resetted state."""
+        if instance is None:
+            instance = self.instance
+        # regularization term should be zero
+        self.assertEqual(0.0, instance.regularization_term.item())
+        # updated should be set to false
+        self.assertFalse(instance.updated)
+
     def test_reset(self) -> None:
         """Test method `reset`."""
-        # Call method
+        # call method
         self.instance.reset()
+        self._check_reset()
 
-        self.assertEqual(0.0, self.instance.regularization_term)
+    def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:
+        """Generate input for update."""
+        # generate random tensors
+        return (
+            rand(self.batch_size, 10, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+            rand(self.batch_size, 20, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+        )
+
+    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        """Calculate the expected updated regularization term."""
+        exp_penalties = torch.stack([self._expected_penalty(x) for x in inputs])
+        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
+        assert expected_term.shape == (1,)
+        return expected_term
 
     def test_update(self) -> None:
         """Test method `update`."""
-        # Generate random tensors
-        a = rand(self.batch_size, 10, generator=self.generator, device=self.device)
-        b = rand(self.batch_size, 20, generator=self.generator, device=self.device)
+        # generate inputs
+        inputs = self._generate_update_input()
 
-        # Call update
-        self.instance.update(a, b)
+        # call update
+        self.instance.update(*inputs)
 
         # check shape
         self.assertEqual((1,), self.instance.term.shape)
 
-        # compute expected term
-        exp_penalties = torch.stack([self._expected_penalty(x) for x in (a, b)])
-        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
-        assert expected_term.shape == (1,)
-
-        self.assertAlmostEqual(self.instance.term.item(), expected_term.item())
+        # check result
+        expected_term = self._expected_updated_term(inputs=inputs)
+        self.assertAlmostEqual(self.instance.regularization_term.item(), expected_term.item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
-        # Generate random tensor
+        # generate single random tensor
         x = rand(self.batch_size, 10, generator=self.generator, device=self.device)
 
         # calculate penalty
-        penalty = self.instance.forward(x=x)
+        penalty = self.instance(x=x)
 
         # check shape
         assert penalty.numel() == 1
@@ -840,12 +846,36 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_pop_regularization_term(self):
         """Verify popping a regularization term."""
         # update term
-        x = torch.rand(self.batch_size, 10, generator=self.generator, device=self.device, requires_grad=True)
-        self.instance.update(x)
+        inputs = self._generate_update_input(requires_grad=True)
+        self.instance.update(*inputs)
 
         # check that the expected term is returned
-        exp = (self.instance.weight * self.instance.regularization_term).item()
+        exp = (self.instance.weight * self._expected_updated_term(inputs)).item()
         self.assertEqual(exp, self.instance.pop_regularization_term().item())
+
+        # check that the regularizer is now reset
+        self._check_reset()
+
+    def test_apply_only_once(self):
+        """Test apply-only-once support."""
+        # create another instance with apply_only_once enabled
+        instance = self.cls(**ChainMap(dict(apply_only_once=True), self.instance_kwargs)).to(self.device)
+
+        # test initial state
+        self._check_reset(instance=instance)
+
+        # after first update, should change the term
+        first_tensors = self._generate_update_input()
+        instance.update(*first_tensors)
+        self.assertTrue(instance.updated)
+        self.assertNotEqual(0.0, instance.regularization_term.item())
+        term = instance.regularization_term.clone()
+
+        # after second update, no change should happen
+        second_tensors = self._generate_update_input()
+        instance.update(*second_tensors)
+        self.assertTrue(instance.updated)
+        self.assertEqual(term, instance.regularization_term)
 
 
 class LpRegularizerTest(RegularizerTestCase):
@@ -1118,15 +1148,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, "test.pt")
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
     @property
     def _cli_extras(self):
@@ -1320,23 +1345,6 @@ Traceback
             except TypeError as error:
                 assert error.args == ("'NoneType' object is not callable",)
             mock_method.assert_called_once()
-
-    def test_custom_representations(self):
-        """Tests whether we can provide custom representations."""
-        if isinstance(self.instance, EntityRelationEmbeddingModel):
-            old_embeddings = self.instance.relation_embeddings
-            self.instance.relation_embeddings = CustomRepresentation(
-                num_entities=self.factory.num_relations,
-                shape=old_embeddings.shape,
-            )
-            # call some functions
-            self.instance.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.instance.relation_embeddings = old_embeddings
-        else:
-            self.skipTest(f"Not testing custom representations for model: {self.instance.__class__.__name__}")
 
 
 class DistanceModelTestCase(ModelTestCase):
