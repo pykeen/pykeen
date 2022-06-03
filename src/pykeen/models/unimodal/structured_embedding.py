@@ -9,7 +9,6 @@ from torch.nn import functional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import SEInteraction
 from ...typing import Constrainer, Initializer
@@ -75,18 +74,18 @@ class SE(ERModel):
                 p=scoring_fct_norm,
                 power_norm=False,
             ),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs,
             ),
-            relation_representations=[
-                EmbeddingSpecification(
+            relation_representations_kwargs=[
+                dict(
                     shape=(embedding_dim, embedding_dim),
                     initializer=relation_initializer,
                 ),
-                EmbeddingSpecification(
+                dict(
                     shape=(embedding_dim, embedding_dim),
                     initializer=relation_initializer,
                 ),

@@ -8,16 +8,15 @@ import timeit
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from math import ceil
-from textwrap import dedent
-from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import pandas
 import torch
 from tqdm.autonotebook import tqdm
 
-from .utils import MetricAnnotation
 from ..constants import TARGET_TO_INDEX
+from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
@@ -28,6 +27,7 @@ from ..utils import (
     is_cudnn_error,
     is_nonzero_larger_than_maxint_error,
     normalize_string,
+    prepare_filter_triples,
     split_list_in_batches_iter,
 )
 
@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 @contextmanager
 def optional_context_manager(condition, context_manager):
+    """Return an optional context manager based on the given condition."""
     if condition:
         with context_manager:
             yield context_manager
@@ -54,9 +55,9 @@ def optional_context_manager(condition, context_manager):
 class MetricResults:
     """Results from computing metrics."""
 
-    metrics: ClassVar[Mapping[str, MetricAnnotation]]
+    metrics: ClassVar[Mapping[str, Type[Metric]]]
 
-    def __init__(self, data):
+    def __init__(self, data: Mapping):
         """Initialize the result wrapper."""
         self.data = data
 
@@ -66,6 +67,7 @@ class MetricResults:
             raise AttributeError
         return self.data[item]
 
+    @abstractmethod
     def get_metric(self, name: str) -> float:
         """Get the given metric from the results.
 
@@ -108,6 +110,8 @@ class Evaluator(ABC):
         :param slice_size: >0. The divisor for the scoring function when using slicing
         :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
             evaluation with regards to the hardware at hand.
+        :param mode:
+            the inductive mode, or None for transductive evaluation
         """
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
@@ -153,14 +157,33 @@ class Evaluator(ABC):
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
-        use_tqdm: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, str]] = None,
-        restrict_entities_to: Optional[torch.LongTensor] = None,
-        do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        **kwargs,
     ) -> MetricResults:
-        """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
+        """
+        Run :func:`pykeen.evaluation.evaluate` with this evaluator.
+
+        This method will re-use the stored optimized batch and slice size, as well as the evaluator's inductive mode.
+
+        :param model:
+            the model to evaluate.
+        :param mapped_triples: shape: (n, 3)
+            the ID-based evaluation triples
+        :param batch_size:
+            the batch size to use, or `None` to trigger automatic memory optimization
+        :param slice_size:
+            the slice size to use
+        :param kwargs:
+            the keyword-based parameters passed to :func:`pykeen.evaluation.evaluate`
+
+        :return:
+            the evaluation results
+        """
+        # add mode parameter
+        mode = kwargs.pop("mode", None)
+        if mode is not None:
+            logger.warning(f"Ignoring provided mode={mode}, and use the evaluator's mode={self.mode} instead")
+        kwargs["mode"] = self.mode
+
         if batch_size is None and self.automatic_memory_optimization:
             # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
             if model.device.type == "cpu":
@@ -172,12 +195,8 @@ class Evaluator(ABC):
                 batch_size, slice_size = self.batch_and_slice(
                     model=model,
                     mapped_triples=mapped_triples,
-                    additional_filter_triples=additional_filter_triples,
                     batch_size=batch_size,
-                    device=device,
-                    use_tqdm=False,
-                    restrict_entities_to=restrict_entities_to,
-                    do_time_consuming_checks=do_time_consuming_checks,
+                    **kwargs,
                 )
                 # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
                 self.batch_size = batch_size
@@ -188,17 +207,11 @@ class Evaluator(ABC):
 
         rv = evaluate(
             model=model,
-            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             evaluator=self,
             batch_size=batch_size,
             slice_size=slice_size,
-            device=device,
-            use_tqdm=use_tqdm,
-            tqdm_kwargs=tqdm_kwargs,
-            restrict_entities_to=restrict_entities_to,
-            do_time_consuming_checks=do_time_consuming_checks,
-            mode=self.mode,
+            **kwargs,
         )
         # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
         return cast(MetricResults, rv)
@@ -208,11 +221,7 @@ class Evaluator(ABC):
         model: Model,
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
-        use_tqdm: bool = False,
-        restrict_entities_to: Optional[torch.LongTensor] = None,
-        do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        **kwargs,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -230,15 +239,8 @@ class Evaluator(ABC):
             The triples on which to evaluate.
         :param batch_size:
             The initial batch size to start with. None defaults to number_of_triples.
-        :param device:
-            The device on which the evaluation shall be run. If None is given, use the model's device.
-        :param use_tqdm:
-            Should a progress bar be displayed?
-        :param restrict_entities_to:
-            Whether to restrict the evaluation to certain entities of interest.
-        :param additional_filter_triples:
-            Additional true triples to filter out during filtered evaluation. Only needed if the evaluator is in
-            filtered mode.
+        :param kwargs:
+            additional keyword-based parameters passed to :func:`pykeen.evaluation.evaluate`
 
         :return:
             Maximum possible batch size and, if necessary, the slice_size, which defaults to None.
@@ -246,34 +248,30 @@ class Evaluator(ABC):
         :raises MemoryError:
             If it is not possible to evaluate the model on the hardware at hand with the given parameters.
         """
+        # do not display progress bar while searching
+        kwargs["use_tqdm"] = False
+        # start by searching for batch_size
         batch_size, evaluated_once = self._param_size_search(
             key="batch_size",
             start_value=batch_size,
             model=model,
-            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
-            device=device,
-            use_tqdm=use_tqdm,
-            restrict_entities_to=restrict_entities_to,
-            do_time_consuming_checks=do_time_consuming_checks,
+            **kwargs,
         )
 
         if evaluated_once:  # slice_size = None
             return batch_size, None
 
         # We need to try slicing, if the evaluation for the batch_size search never succeeded
+        # we do not need to repeat time-consuming checks
+        kwargs["do_time_consuming_checks"] = False
         slice_size, evaluated_once = self._param_size_search(
             key="slice_size",
-            # Since the batch_size search with size 1, i.e. one tuple ((h, r) or (r, t)) scored on all entities,
-            # must have failed to start slice_size search, we start with trying half the entities.
-            start_value=ceil(model.num_entities / 2),
+            # infer start value
+            start_value=None,
             model=model,
-            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
-            device=device,
-            use_tqdm=use_tqdm,
-            restrict_entities_to=restrict_entities_to,
-            do_time_consuming_checks=False,
+            **kwargs,
         )
         if not evaluated_once:
             raise MemoryError("The current model can't be trained on this hardware with these parameters.")
@@ -286,11 +284,7 @@ class Evaluator(ABC):
         start_value: Optional[int],
         model: Model,
         mapped_triples: MappedTriples,
-        device: Optional[torch.device] = None,
-        use_tqdm: bool = False,
-        restrict_entities_to: Optional[torch.LongTensor] = None,
-        do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        **kwargs,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -303,8 +297,21 @@ class Evaluator(ABC):
             values_dict["slice_size"] = None
         elif key == "slice_size":
             if start_value is None:
-                start_value = ceil(model.num_entities / 2)
-            self._check_slicing_availability(model, batch_size=1)
+                # Since the batch_size search with size 1, i.e. one tuple ((h, r), (h, t) or (r, t)) scored on all
+                # entities/relations, must have failed to start slice_size search, we start with trying half the
+                # entities/relations.
+                targets: Collection[Target] = kwargs.get("targets", (LABEL_HEAD, LABEL_TAIL))
+                predict_entities = bool({LABEL_HEAD, LABEL_TAIL}.intersection(targets))
+                predict_relations = LABEL_RELATION in targets
+                max_id = -1
+                if predict_entities:
+                    max_id = max(max_id, model.num_entities)
+                if predict_relations:
+                    max_id = max(max_id, model.num_relations)
+                start_value = ceil(max_id / 2)
+            self._check_slicing_availability(
+                model, batch_size=1, entities=predict_entities, relations=predict_relations
+            )
             values_dict[key] = start_value
             values_dict["batch_size"] = 1
         else:
@@ -321,17 +328,12 @@ class Evaluator(ABC):
                 torch.cuda.empty_cache()
                 evaluate(
                     model=model,
-                    additional_filter_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
                     evaluator=self,
                     only_size_probing=True,
-                    device=device,
-                    use_tqdm=use_tqdm,
-                    restrict_entities_to=restrict_entities_to,
-                    do_time_consuming_checks=do_time_consuming_checks,
                     batch_size=values_dict.get("batch_size"),
                     slice_size=values_dict.get("slice_size"),
-                    mode=self.mode,
+                    **kwargs,
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
@@ -375,20 +377,39 @@ class Evaluator(ABC):
         return cast(Tuple[int, bool], (values_dict[key], evaluated_once))
 
     @staticmethod
-    def _check_slicing_availability(model: Model, batch_size: int) -> None:
-        # Test if slicing is implemented for the required functions of this model
-        if model.use_inverse_relations:
+    def _check_slicing_availability(model: Model, batch_size: int, entities: bool, relations: bool) -> None:
+        """
+        Raise an error if the necessary slicing operations are not supported.
+
+        :param model:
+            the model
+        :param batch_size:
+            the batch-size; only used for creating the error message
+        :param entities:
+            whether entities need to be scored
+        :param relations:
+            whether relations need to be scored
+
+        :raises MemoryError:
+            if the necessary slicing operations are not supported by the model
+        """
+        reasons = []
+        if entities:
+            # if inverse triples are used, we only do score_t (TODO: by default; can this be changed?)
             if not model.can_slice_t:
-                raise MemoryError(
-                    f"The current model can't be evaluated on this hardware with these parameters, as "
-                    f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "
-                    f"this model yet."
-                )
-        elif not model.can_slice_t or not model.can_slice_h:
+                reasons.append("score_t")
+            # otherwise, i.e., without inverse triples, we also need score_h
+            if not model.use_inverse_relations and not model.can_slice_t:
+                reasons.append("score_h")
+        # if relations are to be predicted, we need to slice score_r
+        if relations and not model.can_slice_r:
+            reasons.append("score_r")
+        # raise an error, if any of the required methods cannot slice
+        if reasons:
             raise MemoryError(
                 f"The current model can't be evaluated on this hardware with these parameters, as "
                 f"evaluation batch_size={batch_size} is too big and slicing is not implemented for this "
-                f"model yet."
+                f"model yet (missing support for: {reasons})"
             )
 
 
@@ -420,6 +441,9 @@ def create_sparse_positive_filter_(
         - positives, shape: (2, m)
             The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
+
+    :raises NotImplementedError:
+        if the `filter_col` is not in `{0, 2}`
     """
     if filter_col not in {0, 2}:
         raise NotImplementedError(
@@ -490,37 +514,6 @@ def filter_scores_(
     return scores
 
 
-def prepare_filter_triples(
-    mapped_triples: MappedTriples,
-    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-) -> MappedTriples:
-    """Prepare the filter triples from the evaluation triples, and additional filter triples."""
-    if additional_filter_triples is None:
-        logger.warning(
-            dedent(
-                """\
-            The filtered setting was enabled, but there were no `additional_filter_triples`
-            given. This means you probably forgot to pass (at least) the training triples. Try:
-
-                additional_filter_triples=[dataset.training.mapped_triples]
-
-            Or if you want to use the Bordes et al. (2013) approach to filtering, do:
-
-                additional_filter_triples=[
-                    dataset.training.mapped_triples,
-                    dataset.validation.mapped_triples,
-                ]
-        """
-            )
-        )
-        return mapped_triples
-
-    if torch.is_tensor(additional_filter_triples):
-        additional_filter_triples = [additional_filter_triples]
-
-    return torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
-
-
 # TODO: consider switching to torch.DataLoader where the preparation of masks/filter batches also takes place
 def evaluate(
     model: Model,
@@ -540,7 +533,7 @@ def evaluate(
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     *,
     mode: Optional[InductiveMode],
-) -> Union[MetricResults, List[MetricResults]]:
+) -> MetricResults:
     """Evaluate metrics for model on mapped triples.
 
     The model is used to predict scores for all tails and all heads for each triple. Subsequently, each abstract
@@ -588,10 +581,20 @@ def evaluate(
         Whether the triples have been pre-filtered to adhere to restrict_entities_to / restrict_relations_to. When set
         to True, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the triples
         accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
-    :param additional_filtered_triples:
-        Additional true triples to filter out during filtered evaluation.
+    :param additional_filter_triples:
+        additional true triples to filter out during filtered evaluation.
     :param targets:
         the prediction targets
+    :param mode:
+        the inductive mode, or None for transductive evaluation
+
+    :raises NotImplementedError:
+        if relation prediction evaluation is requested
+    :raises ValueError:
+        if the pre_filtered_triples contain unwanted entities (can only be detected with the time-consuming checks).
+
+    :return:
+        the evaluation results
     """
     if LABEL_RELATION in targets:
         raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
@@ -740,13 +743,18 @@ def _evaluate_batch(
         The relation filter. Can be re-used.
     :param restrict_entities_to:
         Restriction to evaluate only for these entities.
+    :param mode:
+        the inductive mode, or None for transductive evaluation
+
+    :raises ValueError:
+        if all positive triples are required (either due to filtered evaluation, or requiring dense masks).
 
     :return:
         The relation filter, which can be re-used for the same batch.
     """
     scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
 
-    if evaluator.filtered:
+    if evaluator.filtered or evaluator.requires_positive_mask:
         column = TARGET_TO_INDEX[target]
         if all_pos_triples is None:
             raise ValueError(
@@ -761,7 +769,11 @@ def _evaluate_batch(
             relation_filter=relation_filter,
             filter_col=column,
         )
+    else:
+        positive_filter = relation_filter = None
 
+    if evaluator.filtered:
+        assert positive_filter is not None
         # Select scores of true
         true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]]
         # overwrite filtered scores
@@ -775,12 +787,7 @@ def _evaluate_batch(
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:
-        positive_filter, relation_filter = create_sparse_positive_filter_(
-            hrt_batch=batch,
-            all_pos_triples=all_pos_triples,
-            relation_filter=relation_filter,
-            filter_col=column,
-        )
+        assert positive_filter is not None
         positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
     else:
         positive_mask = None
@@ -815,6 +822,10 @@ def get_candidate_set_size(
 
     :param mapped_triples: shape: (n, 3)
         the evaluation triples
+    :param restrict_entities_to:
+        The entity IDs of interest. If None, defaults to all entities. cf. :func:`restrict_triples`.
+    :param restrict_relations_to:
+        The relations IDs of interest. If None, defaults to all relations. cf. :func:`restrict_triples`.
     :param additional_filter_triples: shape: (n, 3)
         additional filter triples besides the evaluation triples themselves. cf. `_prepare_filter_triples`.
     :param num_entities:
@@ -823,7 +834,7 @@ def get_candidate_set_size(
     :return: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates"
         a dataframe of all evaluation triples, with the number of head and tail candidates
     """
-    # optinally restrict triples (nop if no restriction)
+    # optionally restrict triples (nop if no restriction)
     mapped_triples = restrict_triples(
         mapped_triples=mapped_triples,
         entities=restrict_entities_to,

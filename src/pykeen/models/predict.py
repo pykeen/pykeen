@@ -15,9 +15,9 @@ from tqdm.auto import tqdm
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.utils import tensor_to_df, triple_tensor_to_set
+from ..triples.utils import tensor_to_df
 from ..typing import InductiveMode, LabeledTriples, MappedTriples, ScorePack
-from ..utils import is_cuda_oom_error
+from ..utils import is_cuda_oom_error, triple_tensor_to_set
 
 __all__ = [
     "predict",
@@ -373,6 +373,7 @@ class _TopKScoreConsumer(_ScoreConsumer):
         self.result = torch.empty(0, 3, dtype=torch.long, device=device)
         self.scores = torch.empty(0, device=device)
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         head_id_range: Tuple[int, int],
@@ -445,6 +446,7 @@ class _AllConsumer(_ScoreConsumer):
             dim=-1,
         ).view(-1, 3)[:, [1, 0, 2]]
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         head_id_range: Tuple[int, int],

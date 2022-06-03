@@ -23,6 +23,14 @@ class Stopper(ABC):
     """A harness for stopping training."""
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize the stopper.
+
+        :param args:
+            ignored positional parameters
+        :param args:
+            ignored keyword-based parameters
+        """
         # To make MyPy happy
         self.best_epoch = None
 

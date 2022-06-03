@@ -3,22 +3,23 @@
 """Various decompositions for R-GCN."""
 
 import logging
+import math
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Tuple, Union
+from typing import Any, Iterable, Mapping, Optional, Sequence
 
 import torch
-from class_resolver import ClassResolver, Hint
+from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from .emb import EmbeddingSpecification, LowRankEmbeddingRepresentation, RepresentationModule
-from .init import uniform_norm_p1_
+from .init import uniform_norm_p1_, xavier_normal_
+from .representation import LowRankRepresentation, Representation
+from .utils import adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
-from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    "RGCNRepresentations",
+    "RGCNRepresentation",
     "Decomposition",
     "BasesDecomposition",
     "BlockDecomposition",
@@ -26,47 +27,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _reduce_relation_specific(
-    relation: int,
-    source: torch.LongTensor,
-    target: torch.LongTensor,
-    edge_type: torch.LongTensor,
-    edge_weights: Optional[torch.FloatTensor],
-) -> Union[Tuple[torch.LongTensor, torch.LongTensor, Optional[torch.FloatTensor]], Tuple[None, None, None]]:
-    """Reduce edge information to one relation.
-
-    :param relation:
-        The relation ID.
-    :param source: shape: (num_edges,)
-        The source node IDs.
-    :param target: shape: (num_edges,)
-        The target node IDs.
-    :param edge_type: shape: (num_edges,)
-        The edge types.
-    :param edge_weights: shape: (num_edges,)
-        The edge weights.
-
-    :return:
-        The source, target, weights for edges related to the desired relation type.
-    """
-    # mask, shape: (num_edges,)
-    edge_mask = edge_type == relation
-    if not edge_mask.any():
-        return None, None, None
-
-    source_r = source[edge_mask]
-    target_r = target[edge_mask]
-    if edge_weights is not None:
-        edge_weights = edge_weights[edge_mask]
-
-    # bi-directional message passing
-    source_r, target_r = torch.cat([source_r, target_r]), torch.cat([target_r, source_r])
-    if edge_weights is not None:
-        edge_weights = torch.cat([edge_weights, edge_weights])
-
-    return source_r, target_r, edge_weights
 
 
 class Decomposition(nn.Module, ABC):
@@ -83,31 +43,48 @@ class Decomposition(nn.Module, ABC):
     For an intuition, you can think about a simple low-rank matrix factorization of rank `1`, where $W = w w^T$
     for a $d$-dimensional vector `w`. Then, computing $Wv$ as $(w w^T) v$ gives you an intermediate result of size
     $d \times d$, while you can also compute $w(w^Tv)$, where the intermediate result is just a scalar.
+
+    The implementations use the efficient version based on adjacency tensor stacking from [thanapalasingam2021]_.
+    The adjacency tensor is reshaped into a sparse matrix to support message passing by a
+    single sparse matrix multiplication, cf. :func:`pykeen.nn.utils.adjacency_tensor_to_stacked_matrix`.
+
+    .. note ::
+        this module does neither take care of the self-loop, nor of applying an activation function.
     """
 
     def __init__(
         self,
-        input_dim: int,
         num_relations: int,
+        input_dim: int = 32,
         output_dim: Optional[int] = None,
     ):
         """Initialize the layer.
 
-        :param input_dim: >0
-            The input dimension.
         :param num_relations: >0
             The number of relations.
+        :param input_dim: >0
+            The input dimension.
         :param output_dim: >0
             The output dimension. If None is given, defaults to input_dim.
         """
         super().__init__()
-        self.input_dim = input_dim
-        self.num_relations = num_relations
+        # input normalization
         if output_dim is None:
             output_dim = input_dim
+        self.input_dim = input_dim
+        self.num_relations = num_relations
         self.output_dim = output_dim
 
-    @abstractmethod
+    def extra_repr(self) -> str:
+        """Return additional components for the output of `repr`."""
+        return ", ".join(self.iter_extra_repr())
+
+    def iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over components for `extra_repr`."""
+        yield f"input_dim={self.input_dim}"
+        yield f"output_dim={self.output_dim}"
+        yield f"num_relations={self.num_relations}"
+
     def forward(
         self,
         x: torch.FloatTensor,
@@ -136,177 +113,167 @@ class Decomposition(nn.Module, ABC):
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
         """
+        horizontal = use_horizontal_stacking(input_dim=self.input_dim, output_dim=self.output_dim)
+        adj = adjacency_tensor_to_stacked_matrix(
+            num_relations=self.num_relations,
+            num_entities=x.shape[0],
+            source=source,
+            target=target,
+            edge_type=edge_type,
+            edge_weights=edge_weights,
+            horizontal=horizontal,
+        )
+        if horizontal:
+            x = self.forward_horizontally_stacked(x=x, adj=adj)
+        else:
+            x = self.forward_vertically_stacked(x=x, adj=adj)
+        if accumulator is not None:
+            x = accumulator + x
+        return x
+
+    @abstractmethod
+    def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for horizontally stacked adjacency.
+
+        :param x: shape: `(num_entities, input_dim)`
+            the input entity representations
+        :param adj: shape: `(num_entities, num_relations * num_entities)`, sparse
+            the horizontally stacked adjacency matrix
+
+        :return: shape: `(num_entities, output_dim)`
+            the updated entity representations.
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def reset_parameters(self):
-        """Reset the parameters of this layer."""
+    def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for vertically stacked adjacency.
+
+        :param x: shape: `(num_entities, input_dim)`
+            the input entity representations
+        :param adj: shape: `(num_entities * num_relations, num_entities)`, sparse
+            the vertically stacked adjacency matrix
+
+        :return: shape: `(num_entities, output_dim)`
+            the updated entity representations.
+        """
         raise NotImplementedError
+
+    def reset_parameters(self):
+        """Reset the layer's parameters."""
+        # note: the base class does not have any parameters
 
 
 class BasesDecomposition(Decomposition):
-    r"""Represent relation-weights as a linear combination of base transformation matrices.
+    r"""
+    Represent relation-weights as a linear combination of base transformation matrices.
 
     The basis decomposition represents the relation-specific transformation matrices
     as a weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
 
     .. math::
-
         \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
+
+    The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
+    single sparse matrix multiplication, cf. [thanapalasingam2021]_.
+
+    .. seealso ::
+        https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
     """
 
-    def __init__(
-        self,
-        input_dim: int,
-        num_relations: int,
-        num_bases: Optional[int] = None,
-        output_dim: Optional[int] = None,
-        memory_intense: bool = False,
-    ):
-        """Initialize the layer.
-
-        :param input_dim: >0
-            The input dimension.
-        :param num_relations: >0
-            The number of relations.
-        :param num_bases: >0
-            The number of bases to use.
-        :param output_dim: >0
-            The output dimension. If None is given, defaults to input_dim.
-        :param memory_intense:
-            Enable memory-intense forward pass which may be faster, in particular if the number of different relations
-            is small.
+    def __init__(self, num_bases: Optional[int] = None, **kwargs):
         """
-        super().__init__(
-            input_dim=input_dim,
-            num_relations=num_relations,
-            output_dim=output_dim,
-        )
+        Initialize the bases decomposition.
+
+        :param num_bases:
+            the number of bases
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Decomposition.__init__`
+        """
+        super().__init__(**kwargs)
 
         # Heuristic for default value
         if num_bases is None:
-            logger.info("No num_bases was provided. Falling back to 2.")
-            num_bases = 2
+            num_bases = math.ceil(math.sqrt(self.num_relations))
+            logger.info(f"No num_bases was provided. Using sqrt(num_relations)={num_bases}.")
 
-        if num_bases > num_relations:
-            raise ValueError("The number of bases should not exceed the number of relations.")
+        if num_bases > self.num_relations:
+            logger.warning(f"The number of bases ({num_bases}) exceeds the number of relations ({self.num_relations}).")
 
-        self.relation_representations = LowRankEmbeddingRepresentation(
-            max_id=num_relations,
+        self.relation_representations = LowRankRepresentation(
+            max_id=self.num_relations,
             shape=(self.input_dim, self.output_dim),
+            num_bases=num_bases,
             weight_initializer=uniform_norm_p1_,
             initializer=nn.init.xavier_normal_,
         )
-        self.memory_intense = memory_intense
 
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_bases={self.relation_representations.num_bases}"
+
+    @property
+    def bases(self) -> torch.Tensor:
+        """Return the base representations."""
+        return self.relation_representations.bases(indices=None)
+
+    @property
+    def base_weights(self) -> torch.Tensor:
+        """Return the base weights."""
+        return self.relation_representations.weight
+
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
-        self.relation_representations.reset_parameters()
+        # note: the only parameters are inside the relation representation module, which has its own reset_parameters
+        pass
 
-    def _get_weight(self, relation_id: int) -> torch.FloatTensor:
-        """Construct weight matrix for a specific relation ID.
+    # docstr-coverage: inherited
+    def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        x = torch.einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
+        return torch.spmm(adj, x.view(-1, self.output_dim))
 
-        :param relation_id:
-            The relation ID.
+    # docstr-coverage: inherited
+    def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        x = torch.spmm(adj, x)
+        x = x.view(self.num_relations, -1, self.input_dim)
+        return torch.einsum("rb, bio, rni -> no", self.base_weights, self.bases, x)
 
-        :return:
-            A 2-D matrix.
-        """
-        return self.relation_representations(indices=relation_id).squeeze(dim=0)
 
-    def _forward_memory_intense(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        out: torch.FloatTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:
-        # other relations
-        m = torch.einsum(
-            "mi,mij->mj",
-            x.index_select(dim=0, index=source),
-            self.relation_representations(indices=edge_type),
-        )
-        if edge_weights is not None:
-            m = m * edge_weights.unsqueeze(dim=-1)
-        return out.index_add(dim=0, index=target, source=m)
+def _make_dim_divisible(dim: int, divisor: int, name: str) -> int:
+    dim_div, remainder = divmod(dim, divisor)
+    if remainder:
+        logger.warning(f"{name}={dim} not divisible by {divisor}.")
+    dim = dim_div * divisor
+    assert dim % divisor == 0
+    return dim
 
-    def _forward_memory_light(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        out: torch.FloatTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:
-        # other relations
-        for r in range(self.num_relations):
-            # Select source and target indices as well as edge weights for the
-            # currently considered relation
-            source_r, target_r, weights_r = _reduce_relation_specific(
-                relation=r,
-                source=source,
-                target=target,
-                edge_type=edge_type,
-                edge_weights=edge_weights,
-            )
 
-            # skip relations without edges
-            if source_r is None:
-                continue
+def _pad_if_necessary(x: torch.Tensor, dim: int) -> torch.Tensor:
+    """Apply padding if necessary."""
+    padding_dim = dim - x.shape[-1]
+    if padding_dim < 0:
+        raise ValueError("Cannot have a negative padding")
+    if padding_dim == 0:
+        return x
+    return torch.cat([x, x.new_zeros(*x.shape[:-1], padding_dim)], dim=-1)
 
-            # compute message, shape: (num_edges_of_type, output_dim)
-            w = self._get_weight(relation_id=r)
-            # since we may have one node ID appearing multiple times as source
-            # ID, we can save some computation by first reducing to the unique
-            # source IDs, compute transformed representations and afterwards
-            # select these representations for the correct edges.
-            uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
-            # select unique source node representations
-            m = x[uniq_source_r]
-            # transform representations by relation specific weight
-            m = m @ w
-            # select the uniquely transformed representations for each edge
-            m = m.index_select(dim=0, index=inv_source_r)
 
-            # optional message weighting
-            if weights_r is not None:
-                m = m * weights_r.unsqueeze(dim=-1)
-
-            # message aggregation
-            out = out.index_add(dim=0, index=target_r, source=m)
-
-        return out
-
-    def forward(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-        accumulator: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        if accumulator is None:
-            accumulator = torch.zeros_like(x)
-        if self.memory_intense:
-            _forward = self._forward_memory_intense
-        else:
-            _forward = self._forward_memory_light
-        return _forward(
-            x=x,
-            source=source,
-            target=target,
-            edge_type=edge_type,
-            out=accumulator,
-            edge_weights=edge_weights,
-        )
+def _unpad_if_necessary(x: torch.Tensor, dim: int) -> torch.Tensor:
+    """Remove padding if necessary."""
+    padding_dim = dim - x.shape[-1]
+    if padding_dim < 0:
+        raise ValueError("Cannot have a negative padding")
+    if padding_dim == 0:
+        return x
+    return x[..., :-padding_dim]
 
 
 class BlockDecomposition(Decomposition):
-    r"""Represent relation-specific weight matrices via block-diagonal matrices.
+    r"""
+    Represent relation-specific weight matrices via block-diagonal matrices.
 
     The block-diagonal decomposition restricts each transformation matrix to a block-diagonal-matrix, i.e.,
 
@@ -315,105 +282,95 @@ class BlockDecomposition(Decomposition):
         \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
 
     where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
+
+    The implementation is based on the efficient version of [thanapalasingam2021]_, which uses a reshaping of the
+    adjacency tensor into a sparse matrix to support message passing by a single sparse matrix multiplication.
+
+    .. seealso ::
+        https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
     """
 
-    def __init__(
-        self,
-        input_dim: int,
-        num_relations: int,
-        num_blocks: Optional[int] = None,
-        output_dim: Optional[int] = None,
-    ):
-        """Initialize the layer.
-
-        :param input_dim: >0
-            The input dimension.
-        :param num_relations: >0
-            The number of relations.
-        :param num_blocks: >0
-            The number of blocks to use. Has to be a divisor of input_dim.
-        :param output_dim: >0
-            The output dimension. If None is given, defaults to input_dim.
+    def __init__(self, num_blocks: Optional[int] = None, **kwargs):
         """
-        super().__init__(
-            input_dim=input_dim,
-            num_relations=num_relations,
-            output_dim=output_dim,
-        )
+        Initialize the layer.
 
+        :param num_blocks:
+            the number of blocks.
+        :param kwargs:
+            keyword-based parameters passed to :meth:`Decomposition.__init__`.
+        """
+        super().__init__(**kwargs)
+
+        # normalize num blocks
         if num_blocks is None:
-            logger.info("Using a heuristic to determine the number of blocks.")
-            num_blocks = min(i for i in range(2, input_dim + 1) if input_dim % i == 0)
+            num_blocks = math.gcd(self.input_dim, self.output_dim)
+            logger.info(f"Inferred num_blocks={num_blocks} by GCD heuristic.")
+        self.num_blocks = num_blocks
 
-        block_size, remainder = divmod(input_dim, num_blocks)
-        if remainder != 0:
-            raise NotImplementedError(
-                "With block decomposition, the embedding dimension has to be divisible by the number of"
-                f" blocks, but {input_dim} % {num_blocks} != 0.",
-            )
+        # determine necessary padding
+        self.padded_input_dim = _make_dim_divisible(dim=self.input_dim, divisor=num_blocks, name="input_dim")
+        self.padded_output_dim = _make_dim_divisible(dim=self.output_dim, divisor=num_blocks, name="output_dim")
 
+        # determine block sizes
+        self.input_block_size = self.padded_input_dim // num_blocks
+        self.output_block_size = self.padded_output_dim // num_blocks
+
+        # (R, nb, bsi, bso)
         self.blocks = nn.Parameter(
             data=torch.empty(
-                num_relations + 1,
+                self.num_relations,
                 num_blocks,
-                block_size,
-                block_size,
+                self.input_block_size,
+                self.output_block_size,
             ),
             requires_grad=True,
         )
-        self.num_blocks = num_blocks
-        self.block_size = block_size
+        self.reset_parameters()
 
-    def reset_parameters(self):  # noqa: D102
-        block_size = self.blocks.shape[-1]
-        # Xavier Glorot initialization of each block
-        std = torch.sqrt(torch.as_tensor(2.0)) / (2 * block_size)
-        nn.init.normal_(self.blocks, std=std)
+    def reset_parameters(self):
+        """Reset the layer's parameters."""
+        xavier_normal_(self.blocks.data)
 
-    def forward(
-        self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-        accumulator: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # accumulator
-        if accumulator is None:
-            accumulator = torch.zeros_like(x)
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_blocks={self.num_blocks}"
+        if self.input_block_size == self.output_block_size:
+            yield f"block_size={self.input_block_size}"
+        else:
+            yield f"input_block_size={self.input_block_size}"
+            yield f"output_block_size={self.output_block_size}"
 
-        # view as blocks
-        x = x.view(-1, self.num_blocks, self.block_size)
-        accumulator = accumulator.view(-1, self.num_blocks, self.block_size)
+    # docstr-coverage: inherited
+    def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        # apply padding if necessary
+        x = _pad_if_necessary(x=x, dim=self.padded_input_dim)
+        # (n, di) -> (n, nb, bsi)
+        x = x.view(x.shape[0], self.num_blocks, self.input_block_size)
+        # (n, nb, bsi), (R, nb, bsi, bso) -> (R, n, nb, bso)
+        x = torch.einsum("nbi, rbio -> rnbo", x, self.blocks)
+        # (R, n, nb, bso) -> (R * n, do)
+        # TODO: can we change the dimension order to make this contiguous?
+        x = x.reshape(-1, self.num_blocks * self.output_block_size)
+        # (n, R * n), (R * n, do) -> (n, do)
+        x = torch.sparse.mm(adj, x)
+        # remove padding if necessary
+        return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
 
-        # other relations
-        for r in range(self.num_relations):
-            source_r, target_r, weights_r = _reduce_relation_specific(
-                relation=r,
-                source=source,
-                target=target,
-                edge_type=edge_type,
-                edge_weights=edge_weights,
-            )
-
-            # skip relations without edges
-            if source_r is None:
-                continue
-
-            # compute message, shape: (num_edges_of_type, num_blocks, block_size)
-            uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
-            w_r = self.blocks[r]
-            m = torch.einsum("nbi,bij->nbj", x[uniq_source_r], w_r).index_select(dim=0, index=inv_source_r)
-
-            # optional message weighting
-            if weights_r is not None:
-                m = m * weights_r.unsqueeze(dim=1).unsqueeze(dim=2)
-
-            # message aggregation
-            accumulator.index_add_(dim=0, index=target_r, source=m)
-
-        return accumulator.view(-1, self.output_dim)
+    # docstr-coverage: inherited
+    def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
+        # apply padding if necessary
+        x = _pad_if_necessary(x=x, dim=self.padded_input_dim)
+        # (R * n, n), (n, di) -> (R * n, di)
+        x = torch.sparse.mm(adj, x)
+        # (R * n, di) -> (R, n, nb, bsi)
+        x = x.view(self.num_relations, -1, self.num_blocks, self.input_block_size)
+        # (R, nb, bsi, bso), (R, n, nb, bsi) -> (n, nb, bso)
+        x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x)
+        # (n, nb, bso) -> (n, do)
+        x = x.view(x.shape[0], self.num_blocks * self.output_block_size)
+        # remove padding if necessary
+        return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
 
 
 class RGCNLayer(nn.Module):
@@ -442,8 +399,8 @@ class RGCNLayer(nn.Module):
 
     def __init__(
         self,
-        input_dim: int,
         num_relations: int,
+        input_dim: int = 32,
         output_dim: Optional[int] = None,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
@@ -482,26 +439,19 @@ class RGCNLayer(nn.Module):
             query=decomposition,
             pos_kwargs=decomposition_kwargs,
             input_dim=input_dim,
+            output_dim=output_dim,
             num_relations=num_relations,
         )
-        output_dim = self.fwd.output_dim
         self.bwd = decomposition_resolver.make(
             query=decomposition,
             pos_kwargs=decomposition_kwargs,
             input_dim=input_dim,
+            output_dim=output_dim,
             num_relations=num_relations,
         )
-        self.w_self_loop = nn.Parameter(torch.empty(input_dim, output_dim))
-        self.bias = nn.Parameter(torch.empty(output_dim)) if use_bias else None
+        self.self_loop = nn.Linear(in_features=input_dim, out_features=self.fwd.output_dim, bias=use_bias)
         self.dropout = nn.Dropout(p=self_loop_dropout)
-        if activation is not None:
-            activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
-        self.activation = activation
-
-    def reset_parameters(self):  # noqa: D102
-        if self.bias is not None:
-            nn.init.zeros_(self.bias)
-        nn.init.xavier_normal_(self.w_self_loop)
+        self.activation = activation_resolver.make_safe(query=activation, pos_kwargs=activation_kwargs)
 
     def forward(
         self,
@@ -510,7 +460,7 @@ class RGCNLayer(nn.Module):
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
-    ):
+    ) -> torch.FloatTensor:
         """
         Calculate enriched entity representations.
 
@@ -528,38 +478,25 @@ class RGCNLayer(nn.Module):
         :return: shape: (num_entities, output_dim)
             Enriched entity representations.
         """
+        # TODO: we could cache the stacked adjacency matrices
         # self-loop
-        y = self.dropout(x @ self.w_self_loop)
+        y = self.dropout(self.self_loop(x))
         # forward messages
-        y = self.fwd(
-            x=x,
-            source=source,
-            target=target,
-            edge_type=edge_type,
-            edge_weights=edge_weights,
-            accumulator=y,
-        )
+        y = self.fwd(x=x, source=source, target=target, edge_type=edge_type, edge_weights=edge_weights, accumulator=y)
         # backward messages
-        y = self.bwd(
-            x=x,
-            source=target,
-            target=source,
-            edge_type=edge_type,
-            edge_weights=edge_weights,
-            accumulator=y,
-        )
-        if self.bias is not None:
-            y = y + self.bias
+        y = self.bwd(x=x, source=target, target=source, edge_type=edge_type, edge_weights=edge_weights, accumulator=y)
         # activation
         if self.activation is not None:
             y = self.activation(y)
         return y
 
 
-decomposition_resolver = ClassResolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
+decomposition_resolver: ClassResolver[Decomposition] = ClassResolver.from_subclasses(
+    base=Decomposition, default=BasesDecomposition
+)
 
 
-class RGCNRepresentations(RepresentationModule):
+class RGCNRepresentation(Representation):
     r"""Entity representations enriched by R-GCN.
 
     The GCN employed by the entity encoder is adapted to include typed edges.
@@ -588,7 +525,10 @@ class RGCNRepresentations(RepresentationModule):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        embedding_specification: EmbeddingSpecification,
+        max_id: Optional[int] = None,
+        shape: Optional[Sequence[int]] = None,
+        entity_representations: HintOrType[Representation] = None,
+        entity_representations_kwargs: OptionalKwargs = None,
         num_layers: int = 2,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
@@ -598,15 +538,22 @@ class RGCNRepresentations(RepresentationModule):
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Hint[Regularizer] = None,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        cache: bool = True,
+        **kwargs,
     ):
         """Instantiate the R-GCN encoder.
 
         :param triples_factory:
             The triples factory holding the training triples used for message passing.
-        :param embedding_specification:
-            The base embedding specification.
+        :param max_id:
+            The maximum number of IDs. could either be None (the default), or match the triples factory's number of
+            entities.
+        :param shape:
+            the shape information. If None, will propagate the shape information of the base entity representations.
+        :param entity_representations:
+            the base entity representations (or a hint for them)
+        :param entity_representations_kwargs:
+            additional keyword-based parameters for the base entity representations
         :param num_layers:
             The number of layers.
         :param use_bias:
@@ -625,19 +572,35 @@ class RGCNRepresentations(RepresentationModule):
             The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
         :param decomposition_kwargs:
             Additional keyword based arguments passed to the decomposition upon instantiation.
-        :param regularizer:
-            A regularizer, which is applied to the selected embeddings in forward pass
-        :param regularizer_kwargs:
-            Additional keyword arguments passed to the regularizer
-        """
-        base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
-        super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
-        self.entity_embeddings = base_embeddings
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+        :param cache:
+            whether to cache representations
 
+        :raises ValueError: If the triples factory creates inverse triples.
+        """
+        # input validation
+        if max_id and max_id != triples_factory.num_entities:
+            raise ValueError(
+                f"max_id={max_id} differs from triples_factory.num_entities={triples_factory.num_entities}"
+            )
         if triples_factory.create_inverse_triples:
             raise ValueError(
                 "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
             )
+
+        # has to be imported now to avoid cyclic imports
+        from . import representation_resolver
+
+        base_embeddings = representation_resolver.make(
+            entity_representations,
+            max_id=triples_factory.num_entities,
+            pos_kwargs=entity_representations_kwargs,
+        )
+        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
+
+        # has to be assigned after call to nn.Module init
+        self.entity_embeddings = base_embeddings
 
         # Resolve edge weighting
         self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
@@ -672,17 +635,16 @@ class RGCNRepresentations(RepresentationModule):
 
         # buffering of enriched representations
         self.enriched_embeddings = None
+        self.cache = cache
 
-        if regularizer is not None:
-            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
-        self.regularizer = regularizer
-
+    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
 
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
+    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 
@@ -692,7 +654,7 @@ class RGCNRepresentations(RepresentationModule):
             elif any(p.requires_grad for p in m.parameters()):
                 logger.warning("Layers %s has parameters, but no reset_parameters.", m)
 
-    def _real_forward(self) -> torch.FloatTensor:
+    def _real_forward_all(self) -> torch.FloatTensor:
         if self.enriched_embeddings is not None:
             return self.enriched_embeddings
 
@@ -733,18 +695,17 @@ class RGCNRepresentations(RepresentationModule):
             )
 
         # Cache enriched representations
-        self.enriched_embeddings = x
+        if self.cache:
+            self.enriched_embeddings = x
 
         return x
 
-    def forward(
+    def _plain_forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
-        x = self._real_forward()
+        x = self._real_forward_all()
         if indices is not None:
             x = x[indices]
-        if self.regularizer is not None:
-            self.regularizer.update(x)
         return x

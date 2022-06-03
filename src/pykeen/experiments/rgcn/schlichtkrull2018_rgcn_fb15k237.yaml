@@ -36,10 +36,9 @@ pipeline:
     sampler: schlichtkrull
   training_loop: SLCWA
 results:
-  hits_at_k:
-    worst:
+  worst:
+    hits_at_k:
       '1': 0.153
       '10': 0.414
       '3': 0.258
-  mean_reciprocal_rank:
-    worst: 0.248
+    mean_reciprocal_rank: 0.248

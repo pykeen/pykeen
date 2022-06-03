@@ -7,11 +7,11 @@ import json
 import logging
 import pathlib
 import time
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
-from ..utils import normalize_string
+from ..utils import normalize_path, normalize_string
 
 __all__ = [
     "ablation_pipeline",
@@ -140,11 +140,7 @@ def ablation_pipeline(
     :param create_unique_subdir: Defines, whether a unique sub-directory for the experimental artifacts should
         be created. The sub-directory name is defined  by the  current  data + a unique id.
     """
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
-    if create_unique_subdir:
-        directory = _create_path_with_id(directory=directory)
-
+    directory = normalize_path(directory, *iter_unique_ids(disable=not create_unique_subdir))
     directories = prepare_ablation(
         datasets=datasets,
         models=models,
@@ -226,10 +222,12 @@ def _run_ablation_experiments(
         )
 
 
-def _create_path_with_id(directory: pathlib.Path) -> pathlib.Path:
-    """Add unique id to path."""
+def iter_unique_ids(disable: bool = False) -> Iterable[str]:
+    """Iterate unique id to append to a path."""
+    if disable:
+        return []
     datetime = time.strftime("%Y-%m-%d-%H-%M")
-    return directory.joinpath(f"{datetime}_{uuid4()}")
+    yield f"{datetime}_{uuid4()}"
 
 
 def ablation_pipeline_from_config(
@@ -283,9 +281,7 @@ def prepare_ablation_from_path(
         created.
     :return: pairs of output directories and HPO config paths inside those directories
     """
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
-    directory = _create_path_with_id(directory=directory)
+    directory = normalize_path(directory, *iter_unique_ids())
     with open(path) as file:
         config = json.load(file)
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
@@ -424,8 +420,7 @@ def prepare_ablation(  # noqa:C901
             If the dataset is not specified correctly, i.e., dataset is not of type str, or a dictionary containing
             the paths to the training, testing, and validation data.
     """
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
+    directory = normalize_path(path=directory)
     if isinstance(datasets, str):
         datasets = [datasets]
     if isinstance(create_inverse_triples, bool):

@@ -2,14 +2,14 @@
 
 """Implementation of PairRE."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 from torch.nn import functional
 from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
+from ...losses import Loss, NSSALoss
 from ...nn.modules import PairREInteraction
 from ...typing import Hint, Initializer, Normalizer
 
@@ -33,6 +33,13 @@ class PairRE(ERModel):
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         p=dict(type=int, low=1, high=2),
+    )
+
+    #: the default loss function is the self-adversarial negative sampling loss
+    loss_default: ClassVar[Type[Loss]] = NSSALoss
+    #: The default parameters for the default loss function class
+    loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(
+        margin=12.0, adversarial_temperature=1.0, reduction="mean"
     )
 
     #: The default entity normalizer parameters
@@ -89,21 +96,21 @@ class PairRE(ERModel):
         super().__init__(
             interaction=PairREInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 initializer_kwargs=entity_initializer_kwargs,
                 normalizer=entity_normalizer,
                 normalizer_kwargs=entity_normalizer_kwargs,
             ),
-            relation_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            relation_representations_kwargs=[
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=embedding_dim,
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs,
                 ),

@@ -18,7 +18,7 @@ from ..triples import TriplesFactory
 __all__ = [
     "OGBLoader",
     "OGBBioKG",
-    "OGBWikiKG",
+    "OGBWikiKG2",
 ]
 
 
@@ -123,13 +123,13 @@ def _array(df, entity_type_label, entity_label):
 
 
 @parse_docdata
-class OGBWikiKG(OGBLoader):
-    """The OGB WikiKG dataset.
+class OGBWikiKG2(OGBLoader):
+    """The OGB WikiKG2 dataset.
 
-    .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg
+    .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg2
 
     ---
-    name: OGB WikiKG
+    name: OGB WikiKG2
     citation:
         author: Hu
         year: 2020
@@ -144,13 +144,13 @@ class OGBWikiKG(OGBLoader):
         triples: 17137181
     """
 
-    name = "ogbl-wikikg"
+    name = "ogbl-wikikg2"
 
 
 @click.command()
 @verbose_option
 def _main():
-    for _cls in [OGBBioKG, OGBWikiKG]:
+    for _cls in [OGBBioKG, OGBWikiKG2]:
         _cls().summarize()
 
 

@@ -8,21 +8,38 @@ import logging
 import math
 import pathlib
 from textwrap import dedent
-from typing import Iterable, List, Optional, Tuple, Type, Union
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
 import click
 import docdata
 import pandas as pd
-from more_click import log_level_option, verbose_option
+import scipy.stats
+from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
-from . import dataset_resolver, get_dataset
+from .base import Dataset
+from .utils import dataset_regex_option, iter_dataset_instances, max_triples_option, min_triples_option
 from ..constants import PYKEEN_DATASETS
-from ..datasets.base import Dataset
-from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
-from ..evaluation.expectation import expected_hits_at_k, expected_mean_rank
-from ..typing import LABEL_HEAD, LABEL_TAIL
+from ..metrics.ranking import (
+    ArithmeticMeanRank,
+    GeometricMeanRank,
+    HarmonicMeanRank,
+    HitsAtK,
+    InverseArithmeticMeanRank,
+    InverseGeometricMeanRank,
+    InverseHarmonicMeanRank,
+    InverseMedianRank,
+    MedianRank,
+)
+from ..triples import CoreTriplesFactory
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
+
+logger = logging.getLogger(__name__)
+
+ROOT = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
+IMG_DIR = ROOT.joinpath("docs", "source", "img")
 
 
 @click.group()
@@ -32,76 +49,61 @@ def main():
 
 @main.command()
 @verbose_option
-def summarize():
+@dataset_regex_option
+@min_triples_option
+@max_triples_option
+def summarize(dataset_regex: Optional[str], min_triples: Optional[int], max_triples: Optional[int]):
     """Load all datasets."""
-    for name, dataset in _iter_datasets():
+    for name, dataset in iter_dataset_instances(
+        regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
+    ):
         click.secho(f"Loading {name}", fg="green", bold=True)
         try:
-            dataset().summarize(show_examples=None)
+            dataset.summarize(show_examples=None)
         except Exception as e:
             click.secho(f"Failed {name}", fg="red", bold=True)
             click.secho(str(e), fg="red", bold=True)
 
 
-def _get_num_triples(pair: Tuple[str, Type[Dataset]]) -> int:
-    """Extract the number of triples from docdata."""
-    return docdata.get_docdata(pair[1])["statistics"]["triples"]
-
-
-def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None) -> Iterable[Tuple[str, Type[Dataset]]]:
-    it = sorted(
-        dataset_resolver.lookup_dict.items(),
-        key=_get_num_triples,
-    )
-    if max_triples is not None:
-        it = [pair for pair in it if _get_num_triples(pair) <= max_triples]
-    if regex_name_filter is not None:
-        if isinstance(regex_name_filter, str):
-            import re
-
-            regex_name_filter = re.compile(regex_name_filter)
-        it = [(name, dataset) for name, dataset in it if regex_name_filter.match(name)]
-    it_tqdm = tqdm(
-        it,
-        desc="Datasets",
-    )
-    for k, v in it_tqdm:
-        it_tqdm.set_postfix(name=k)
-        yield k, v
-
-
 @main.command()
 @verbose_option
-@click.option("--dataset", help="Regex for filtering datasets by name")
-@click.option("-f", "--force", is_flag=True)
+@dataset_regex_option
+@min_triples_option
+@max_triples_option
+@force_option
 @click.option("--countplots", is_flag=True)
 @click.option("-d", "--directory", type=click.Path(dir_okay=True, file_okay=False, resolve_path=True))
-def analyze(dataset, force: bool, countplots: bool, directory):
+def analyze(
+    dataset_regex: Optional[str],
+    min_triples: Optional[int],
+    max_triples: Optional[int],
+    force: bool,
+    countplots: bool,
+    directory,
+):
     """Generate analysis."""
-    for _name, dataset in _iter_datasets(regex_name_filter=dataset):
-        _analyze(dataset, force, countplots, directory=directory)
+    for name, dataset in iter_dataset_instances(
+        regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
+    ):
+        _analyze(
+            dataset_name=name,
+            dataset=dataset,
+            force=force,
+            countplots=countplots,
+            directory=directory,
+        )
 
 
-def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Path]):
+def _analyze(
+    dataset_name: str,
+    dataset: Dataset,
+    force: bool,
+    countplots: bool,
+    directory: Union[None, str, pathlib.Path],
+):
     from . import analysis
 
-    try:
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-    except ImportError:
-        raise ImportError(
-            dedent(
-                """\
-            Please install plotting dependencies by
-
-                pip install pykeen[plotting]
-
-            or directly by
-
-                pip install matplotlib seaborn
-        """
-            )
-        )
+    plt, sns = _get_plotting_libraries()
 
     # Raise matplotlib level
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
@@ -112,8 +114,6 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
         directory = pathlib.Path(directory)
         directory.mkdir(exist_ok=True, parents=True)
 
-    dataset_instance = get_dataset(dataset=dataset)
-    dataset_name = dataset_instance.get_normalized_name()
     d = directory.joinpath(dataset_name, "analysis")
     d.mkdir(parents=True, exist_ok=True)
 
@@ -128,7 +128,7 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
         if path.exists() and not force:
             df = pd.read_csv(path, sep="\t")
         else:
-            df = func(dataset=dataset_instance)
+            df = func(dataset=dataset)
             df.to_csv(d.joinpath(key).with_suffix(".tsv"), sep="\t", index=False)
         dfs[key] = df
 
@@ -141,7 +141,7 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
         hue="support",
         ax=ax,
     )
-    ax.set_title(f'{docdata.get_docdata(dataset_instance.__class__)["name"]} Relation Injectivity')
+    ax.set_title(f'{docdata.get_docdata(dataset.__class__)["name"]} Relation Injectivity')
     fig.tight_layout()
     fig.savefig(d.joinpath("relation_injectivity.svg"))
     plt.close(fig)
@@ -153,7 +153,7 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
         y="inverse_functionality",
         ax=ax,
     )
-    ax.set_title(f'{docdata.get_docdata(dataset_instance.__class__)["name"]} Relation Functionality')
+    ax.set_title(f'{docdata.get_docdata(dataset.__class__)["name"]} Relation Functionality')
     fig.tight_layout()
     fig.savefig(d.joinpath("relation_functionality.svg"))
     plt.close(fig)
@@ -182,15 +182,39 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
         plt.close(fig)
 
 
+def _get_plotting_libraries():
+    try:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+    except ImportError:
+        raise ImportError(
+            dedent(
+                """\
+            Please install plotting dependencies by
+
+                pip install pykeen[plotting]
+
+            or directly by
+
+                pip install matplotlib seaborn
+        """
+            )
+        )
+    return plt, sns
+
+
 @main.command()
 @verbose_option
-@click.option("--dataset", help="Regex for filtering datasets by name")
-def verify(dataset: str):
+@dataset_regex_option
+@min_triples_option
+@max_triples_option
+def verify(dataset_regex: Optional[str], min_triples: Optional[int], max_triples: Optional[int]):
     """Verify dataset integrity."""
     data = []
     keys = None
-    for name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
-        dataset_instance = get_dataset(dataset=dataset_cls)
+    for name, dataset_instance in iter_dataset_instances(
+        regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
+    ):
         data.append(
             list(
                 itt.chain(
@@ -222,79 +246,266 @@ def verify(dataset: str):
 
 @main.command()
 @verbose_option
-@click.option("-d", "--dataset", help="Regex for filtering datasets by name")
-@click.option("-m", "--max-triples", type=int, default=None)
+@dataset_regex_option
+@max_triples_option
+@min_triples_option
+@click.option(
+    "-s",
+    "--samples",
+    type=int,
+    default=10_000,
+    show_default=True,
+    help="Number of samples for estimating expected values",
+)
 @log_level_option(default=logging.ERROR)
-def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
+@force_option
+@click.option("--output-directory", default=PYKEEN_DATASETS, type=pathlib.Path, show_default=True)
+def expected_metrics(
+    dataset_regex: Optional[str],
+    max_triples: Optional[int],
+    min_triples: Optional[int],
+    log_level: str,
+    samples: int,
+    force: bool,
+    output_directory: pathlib.Path,
+):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
-    directory = PYKEEN_DATASETS
     df_data: List[Tuple[str, str, str, str, float]] = []
-    for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset, max_triples=max_triples):
-        if dataset_cls is OGBWikiKG:
-            click.echo("Skip OGB WikiKG")
-            continue
-        dataset_instance = get_dataset(dataset=dataset_cls)
-        dataset_name = dataset_resolver.normalize_inst(dataset_instance)
-        d = directory.joinpath(dataset_name, "analysis")
-        d.mkdir(parents=True, exist_ok=True)
-        expected_metrics = dict()
-        for key, factory in dataset_instance.factory_dict.items():
-            if key == "training":
-                additional_filter_triples = None
-            elif key == "validation":
-                additional_filter_triples = dataset_instance.training.mapped_triples
-            elif key == "testing":
-                additional_filter_triples = [
-                    dataset_instance.training.mapped_triples,
-                ]
-                if dataset_instance.validation is None:
-                    click.echo(f"WARNING: {dataset_name} does not have validation triples!")
+    for dataset_name, dataset_instance in iter_dataset_instances(
+        regex_name_filter=dataset_regex, max_triples=max_triples, min_triples=min_triples
+    ):
+        adjustments_directory = output_directory.joinpath(dataset_name, "adjustments")
+        adjustments_directory.mkdir(parents=True, exist_ok=True)
+        expected_metrics_path = adjustments_directory.joinpath("expected_metrics.json")
+        if expected_metrics_path.is_file() and not force:
+            expected_metrics_dict = json.loads(expected_metrics_path.read_text())
+        else:
+            expected_metrics_dict = dict()
+            for key, factory in dataset_instance.factory_dict.items():
+                if key == "training":
+                    additional_filter_triples = None
+                elif key == "validation":
+                    additional_filter_triples = dataset_instance.training.mapped_triples
+                elif key == "testing":
+                    additional_filter_triples = [
+                        dataset_instance.training.mapped_triples,
+                    ]
+                    if dataset_instance.validation is None:
+                        click.echo(f"WARNING: {dataset_name} does not have validation triples!")
+                    else:
+                        additional_filter_triples.append(dataset_instance.validation.mapped_triples)
                 else:
-                    additional_filter_triples.append(dataset_instance.validation.mapped_triples)
-            else:
-                raise AssertionError(key)
-            df = get_candidate_set_size(
-                mapped_triples=factory.mapped_triples,
-                additional_filter_triples=additional_filter_triples,
-            )
-            output_path = d.joinpath(f"{key}_candidates.tsv.gz")
-            df.to_csv(output_path, sep="\t", index=False)
+                    raise AssertionError(key)
+                df = get_candidate_set_size(
+                    mapped_triples=factory.mapped_triples,
+                    additional_filter_triples=additional_filter_triples,
+                )
+                output_path = adjustments_directory.joinpath(f"{key}_candidates.tsv.gz")
+                df.to_csv(output_path, sep="\t", index=False)
+                tqdm.write(f"wrote {output_path}")
 
-            # expected metrics
-            ks = (1, 3, 5, 10) + tuple(
-                10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
-            )
-            this_metrics = dict()
-            for label, sides in dict(
-                head=[LABEL_HEAD],
-                tail=[LABEL_TAIL],
-                both=[LABEL_HEAD, LABEL_TAIL],
-            ).items():
-                candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
-                this_metrics[label] = {
-                    "mean_rank": expected_mean_rank(candidate_set_sizes),
-                    **{f"hits_at_{k}": expected_hits_at_k(candidate_set_sizes, k=k) for k in ks},
-                }
-            expected_metrics[key] = this_metrics
-        with d.joinpath("expected_metrics.json").open("w") as file:
-            json.dump(expected_metrics, file, sort_keys=True, indent=4)
+                # expected metrics
+                ks = (1, 3, 5, 10) + tuple(
+                    10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
+                )
+                metrics = [
+                    ArithmeticMeanRank(),
+                    *(HitsAtK(k) for k in ks),
+                    InverseHarmonicMeanRank(),
+                    # Needs simulation
+                    InverseArithmeticMeanRank(),
+                    HarmonicMeanRank(),
+                    GeometricMeanRank(),
+                    InverseGeometricMeanRank(),
+                    MedianRank(),
+                    InverseMedianRank(),
+                ]
+                this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
+                for label, sides in SIDE_MAPPING.items():
+                    num_candidates = df[[f"{side}_candidates" for side in sides]].values.ravel()
+                    this_metrics[label] = {
+                        metric.key: metric.expected_value(
+                            num_candidates=num_candidates,
+                            num_samples=samples,
+                        )
+                        for metric in metrics
+                    }
+                expected_metrics_dict[key] = this_metrics
+            with expected_metrics_path.open("w") as file:
+                json.dump(expected_metrics_dict, file, sort_keys=True, indent=4)
+            tqdm.write(f"wrote {expected_metrics_path}")
 
         df_data.extend(
             (dataset_name, metric, side, part, value)
-            for part, level1 in expected_metrics.items()
+            for part, level1 in expected_metrics_dict.items()
             for side, level2 in level1.items()
             for metric, value in level2.items()
         )
     df = (
-        pd.DataFrame(df_data, columns=["dataset", "metric", "side", "part", "value"])
+        pd.DataFrame(df_data, columns=["dataset", "metric", "side", "split", "value"])
         .sort_values(
-            by=["dataset", "metric", "side", "part"],
+            by=["dataset", "metric", "side", "split"],
         )
         .reset_index(drop=True)
     )
-    df.to_csv(directory.joinpath("expected_metrics.tsv.gz"))
-    click.echo(df.to_markdown(index=False))
+    results_path = output_directory.joinpath("metric_adjustments.tsv.gz")
+    df.to_csv(results_path, sep="\t", index=False)
+    click.secho(f"wrote to {results_path}", fg="green")
+
+    if max_triples is None and min_triples is None and dataset_regex is None:
+        try:
+            from zenodo_client import update_zenodo
+        except ImportError:
+            click.secho("Unable to import `zenodo_client`. Not uploading results", fg="red")
+        else:
+            zenodo_record = "6331629"
+            # See https://zenodo.org/record/6331629
+            rv = update_zenodo(zenodo_record, results_path)
+            click.secho(f"Updated Zenodo record {zenodo_record}: {rv}", fg="green")
+
+
+def _summarize_degree_distribution(factory: CoreTriplesFactory) -> Iterable[List]:
+    df = pd.DataFrame(data=factory.mapped_triples.numpy(), columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    for target in [LABEL_HEAD, LABEL_TAIL]:
+        key = [LABEL_TAIL if target == LABEL_HEAD else LABEL_HEAD, LABEL_RELATION]
+        unique_targets = df.groupby(by=key)[target].nunique()
+        yield [target, *scipy.stats.describe(unique_targets)]
+
+
+# TODO: maybe merge into analyze / make sub-command
+@main.command()
+@verbose_option
+@dataset_regex_option
+@min_triples_option
+@max_triples_option
+@click.option(
+    "-r",
+    "--restrict-split",
+    type=click.Choice(["testing", "training", "validation"], case_sensitive=False),
+    default=None,
+)
+@force_option
+@click.option("--plot", is_flag=True)
+@click.option("-o", "--output-root", type=pathlib.Path, default=PYKEEN_DATASETS.joinpath("analysis"))
+def degree(
+    dataset_regex: Optional[str],
+    min_triples: Optional[int],
+    max_triples: Optional[int],
+    restrict_split: Optional[str],
+    force: bool,
+    plot: bool,
+    output_root: pathlib.Path,
+):
+    """Analyze degree distributions."""
+    output_root.mkdir(exist_ok=True, parents=True)
+    base_path = output_root.joinpath("degree-distributions")
+    path = base_path.with_suffix(suffix=".tsv.gz")
+    if path.is_file() and not force:
+        df = pd.read_csv(path, sep="\t")
+        logger.info(f"Loaded degree statistics from {path}")
+    else:
+        with logging_redirect_tqdm():
+            rows = [
+                (name, split, factory.num_triples, *row)
+                for name, dataset in iter_dataset_instances(
+                    regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
+                )
+                for split, factory in dataset.factory_dict.items()
+                if (restrict_split is None or split == restrict_split)
+                for row in _summarize_degree_distribution(factory=factory)
+            ]
+        df = pd.DataFrame(
+            data=rows,
+            columns=[
+                "dataset",
+                "split",
+                "num_triples",
+                "target",
+                "nobs",
+                "minmax",
+                "mean",
+                "variance",
+                "skewness",
+                "kurtosis",
+            ],
+        )
+        # only save full data
+        if dataset_regex is None and min_triples is None and max_triples is None and restrict_split is None:
+            df.to_csv(path, sep="\t", index=False)
+            logger.info(f"Written degree statistics to {path}")
+    if not plot:
+        return
+    plt, sns = _get_plotting_libraries()
+
+    # Plot: Descriptive Statistics of Degree Distributions per dataset / split vs. number of triples (=size)
+    df = df.melt(
+        id_vars=["dataset", "split", "num_triples", "target"],
+        value_vars=["mean", "variance", "skewness", "kurtosis"],
+        var_name="statistic",
+    )
+    grid_1: sns.FacetGrid = sns.relplot(  # type: ignore
+        data=df,
+        hue="dataset",
+        x="num_triples",
+        style=None if restrict_split is not None else "split",
+        col="statistic",
+        row="target",
+        y="value",
+        facet_kws=dict(
+            margin_titles=True,
+            sharey="col",
+        ),
+        height=2.5,
+        hue_order=sorted(df["dataset"].unique()),
+    )
+    grid_1.fig.suptitle("Dataset Degree Distributions", x=0.4, y=0.98)
+    plt.subplots_adjust(top=0.85)
+    sns.move_legend(
+        grid_1,
+        "lower center",
+        bbox_to_anchor=(0.45, -0.35),
+        ncol=6,
+        title=None,
+        frameon=False,
+    )
+    grid_1.tight_layout()
+    grid_1.set(xscale="log", yscale="log", xlabel="Triples")
+    path = base_path.with_suffix(suffix=".pdf")
+    grid_1.savefig(path)
+    grid_1.savefig(IMG_DIR.joinpath("dataset_degree_distributions.svg"))
+    logger.info(f"Saved plot to {path}")
+
+    # Plot: difference between mean head and tail degree
+    df_2 = df.loc[df["statistic"] == "mean"].pivot(
+        index=["dataset", "split", "num_triples"], columns="target", values="value"
+    )
+    df_2["difference"] = df_2["head"] - df_2["tail"]
+    grid_2: sns.FacetGrid = sns.relplot(  # type: ignore
+        data=df_2,
+        hue="dataset",
+        x="num_triples",
+        style=None if restrict_split is not None else "split",
+        y="difference",
+        height=2.5,
+        aspect=4,
+        hue_order=sorted(df["dataset"].unique()),
+    )
+    grid_2.fig.suptitle("Dataset Mean Degree Imbalance", x=0.4, y=0.98)
+    sns.move_legend(
+        grid_2,
+        "lower center",
+        bbox_to_anchor=(0.45, -0.55),
+        ncol=6,
+        title=None,
+        frameon=False,
+    )
+    grid_2.tight_layout()
+    grid_2.set(xscale="log", yscale="symlog", xlabel="Triples")
+    path = base_path.with_name("degree-imbalance").with_suffix(suffix=".pdf")
+    grid_2.savefig(path)
+    grid_2.savefig(IMG_DIR.joinpath("degree_imbalance.svg"))
+    logger.info(f"Saved plot to {path}")
 
 
 if __name__ == "__main__":

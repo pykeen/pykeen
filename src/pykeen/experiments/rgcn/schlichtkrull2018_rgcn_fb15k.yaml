@@ -60,10 +60,9 @@ pipeline:
 results:
   # results are computed using pessimistic aka worst rank definition, cf.
   # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/evaluation.py#L151-L152
-  hits_at_k:
-    worst:
+  worst:
+    hits_at_k:
       '1': 0.541
       '10': 0.825
       '3': 0.736
-  mean_reciprocal_rank:
-    worst: 0.651
+    mean_reciprocal_rank: 0.651

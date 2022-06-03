@@ -4,13 +4,17 @@
 
 import logging
 from math import ceil
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
+from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
-from ..triples import CoreTriplesFactory, Instances
+from ..losses import Loss
+from ..models import Model
+from ..triples import CoreTriplesFactory
 from ..triples.instances import LCWABatchType, LCWASampleType
+from ..typing import InductiveMode
 
 __all__ = [
     "LCWATrainingLoop",
@@ -82,13 +86,71 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         # of total entities from another inductive inference factory
         self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode=self.mode)
 
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_lcwa_instances(target=self.target)
+    # docstr-coverage: inherited
+    def _create_training_data_loader(
+        self,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        pin_memory: bool,
+        sampler: Optional[str],
+    ) -> DataLoader[LCWABatchType]:  # noqa: D102
+        if sampler:
+            raise NotImplementedError(
+                f"LCWA training does not support non-default batch sampling. Expected sampler=None, but got "
+                f"sampler='{sampler}'.",
+            )
+
+        dataset = triples_factory.create_lcwa_instances(target=self.target)
+        return DataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+            batch_size=batch_size,
+            drop_last=drop_last,
+            shuffle=True,
+            pin_memory=pin_memory,
+            collate_fn=dataset.get_collator(),
+        )
 
     @staticmethod
+    # docstr-coverage: inherited
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
         return batch[0].shape[0]
 
+    @staticmethod
+    def _process_batch_static(
+        model: Model,
+        score_method: Callable,
+        loss: Loss,
+        num_targets: Optional[int],
+        mode: Optional[InductiveMode],
+        batch: LCWABatchType,
+        start: Optional[int],
+        stop: Optional[int],
+        label_smoothing: float = 0.0,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        # Split batch components
+        batch_pairs, batch_labels_full = batch
+
+        # Send batch to device
+        batch_pairs = batch_pairs[start:stop].to(device=model.device)
+        batch_labels_full = batch_labels_full[start:stop].to(device=model.device)
+
+        predictions = score_method(batch_pairs, slice_size=slice_size, mode=mode)
+
+        return (
+            loss.process_lcwa_scores(
+                predictions=predictions,
+                labels=batch_labels_full,
+                label_smoothing=label_smoothing,
+                num_entities=num_targets,
+            )
+            + model.collect_regularization_term()
+        )
+
+    # docstr-coverage: inherited
     def _process_batch(
         self,
         batch: LCWABatchType,
@@ -97,30 +159,24 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # Split batch components
-        batch_pairs, batch_labels_full = batch
-
-        # Send batch to device
-        batch_pairs = batch_pairs[start:stop].to(device=self.device)
-        batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
-
-        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode=self.mode)
-
-        return (
-            self.loss.process_lcwa_scores(
-                predictions=predictions,
-                labels=batch_labels_full,
-                label_smoothing=label_smoothing,
-                num_entities=self.num_targets,
-            )
-            + self.model.collect_regularization_term()
+        return self._process_batch_static(
+            model=self.model,
+            score_method=self.score_method,
+            loss=self.loss,
+            num_targets=self.num_targets,
+            mode=self.mode,
+            batch=batch,
+            start=start,
+            stop=stop,
+            label_smoothing=label_smoothing,
+            slice_size=slice_size,
         )
 
+    # docstr-coverage: inherited
     def _slice_size_search(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
@@ -137,7 +193,6 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 logger.debug(f"Trying slice size {slice_size} now.")
                 self._train(
                     triples_factory=triples_factory,
-                    training_instances=training_instances,
                     num_epochs=1,
                     batch_size=batch_size,
                     sub_batch_size=sub_batch_size,

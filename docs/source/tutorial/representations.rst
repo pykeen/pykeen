@@ -1,8 +1,8 @@
 Representations
 ===============
-In PyKEEN, a :class:`pykeen.nn.emb.RepresentationModule` is used to map
+In PyKEEN, a :class:`pykeen.nn.representation.Representation` is used to map
 integer indices to numeric representations. A simple example is the
-:class:`pykeen.nn.emb.Embedding` class, where the mapping is a simple
+:class:`pykeen.nn.representation.Embedding` class, where the mapping is a simple
 lookup. However, more advanced representation modules are available, too.
 
 Message Passing
@@ -10,9 +10,13 @@ Message Passing
 Message passing representation modules enrich the representations of
 entities by aggregating the information from their graph neighborhood.
 Example implementations from PyKEEN include
-:class:`pykeen.nn.emb.RGCNRepresentations` which uses RGCN layers for
-enrichment, or :class:`pykeen.nn.emb.SingleCompGCNRepresentations`,
+:class:`pykeen.nn.representation.RGCNRepresentation` which uses RGCN layers for
+enrichment, or :class:`pykeen.nn.representation.SingleCompGCNRepresentation`,
 which enrich via CompGCN layers.
+
+Another way to utilize message passing is via the modules provided in :mod:`pykeen.nn.pyg`,
+which allow to use the message passing layers from PyTorch Geometric
+to enrich base representations via message passing.
 
 Decomposition
 -------------
@@ -27,7 +31,7 @@ Low-Rank Factorization
 ~~~~~~~~~~~~~~~~~~~~~~
 A simple method to reduce the number of parameters is to use a low-rank
 decomposition of the embedding matrix, as implemented in
-:class:`pykeen.nn.emb.LowRankEmbeddingRepresentation`. Here, each
+:class:`pykeen.nn.representation.LowRankEmbeddingRepresentation`. Here, each
 representation is a linear combination of shared base representations.
 Typically, the number of bases is chosen smaller than the dimension of
 each base representation.
@@ -37,7 +41,7 @@ NodePiece
 Another example is NodePiece, which takes inspiration
 from tokenization we encounter in, e.g.. NLP, and represents each entity
 as a set of tokens. The implementation in PyKEEN,
-:class:`pykeen.nn.emb.NodePieceRepresentation`, implements a simple yet
+:class:`pykeen.nn.representation.NodePieceRepresentation`, implements a simple yet
 effective variant thereof, which uses a set of randomly chosen incident
 relations (including inverse relations) as tokens.
 
@@ -47,15 +51,15 @@ Label-based
 -----------
 Label-based representations use the entities' (or relations') labels to
 derive representations. To this end,
-:class:`pykeen.nn.emb.LabelBasedTransformerRepresentation` uses a
+:class:`pykeen.nn.representation.LabelBasedTransformerRepresentation` uses a
 (pre-trained) transformer model from the :mod:`transformers` library to encode
 the labels. Since the transformer models have been trained on huge corpora
 of text, their text encodings often contain semantic information, i.e.,
 labels with similar semantic meaning get similar representations. While we
 can also benefit from these strong features by just initializing an
-:class:`pykeen.nn.emb.Embedding` with the vectors, e.g., using
+:class:`pykeen.nn.representation.Embedding` with the vectors, e.g., using
 :class:`pykeen.nn.init.LabelBasedInitializer`, the
-:class:`pykeen.nn.emb.LabelBasedTransformerRepresentation` include the
+:class:`pykeen.nn.representation.LabelBasedTransformerRepresentation` include the
 transformer model as part of the KGE model, and thus allow fine-tuning
 the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
@@ -65,7 +69,7 @@ predictions for entities not seen during training.
 
     from pykeen.pipeline import pipeline
     from pykeen.datasets import get_dataset
-    from pykeen.nn.emb import EmbeddingSpecification, LabelBasedTransformerRepresentation
+    from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
     from pykeen.models import ERModel
 
     dataset = get_dataset(dataset="nations")

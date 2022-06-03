@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Mapping, Optional, Type
+from typing import List, Mapping, Optional, Tuple, Type
 
 import click
 from class_resolver.contrib.optuna import sampler_resolver
@@ -25,20 +25,23 @@ from click_default_group import DefaultGroup
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
+from .datasets.inductive import inductive_dataset_resolver
 from .evaluation import (
     ClassificationMetricResults,
     MetricResults,
     RankBasedMetricResults,
     evaluator_resolver,
-    get_metric_list,
+    metric_resolver,
 )
 from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
+from .metrics.utils import Metric
 from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
 from .models.cli import build_cli_from_cls
 from .nn.modules import LiteralInteraction, interaction_resolver
+from .nn.node_piece.cli import tokenize
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver
@@ -46,7 +49,7 @@ from .stoppers import stopper_resolver
 from .trackers import tracker_resolver
 from .training import training_loop_resolver
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
-from .utils import get_until_first_blank
+from .utils import get_until_first_blank, getattr_or_docdata
 from .version import env_table
 
 HERE = Path(__file__).resolve().parent
@@ -108,7 +111,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
             else:
                 interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
         except KeyError:
-            click.echo(f"could not look up {model_resolver.normalize_cls(model_cls)}")
+            click.echo(f"could not find corresponding interaction class for {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None
         else:
             seen_interactions.add(interaction_cls)
@@ -117,7 +120,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         model_reference = f"pykeen.models.{model_cls.__name__}"
         docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
-            raise ValueError("All models must have docdata")
+            raise ValueError(f"Missing docdata from {model_reference}")
         if link_fmt:
             model_reference = _fmt_ref(model_reference, link_fmt)
         else:
@@ -170,16 +173,28 @@ def importers():
 
 @ls.command()
 @tablefmt_option
-def datasets(tablefmt: str):
+@click.option("--sort-size", is_flag=True)
+def datasets(tablefmt: str, sort_size: bool):
     """List datasets."""
-    click.echo(_help_datasets(tablefmt))
+    click.echo(_help_datasets(tablefmt, sort_size=sort_size))
 
 
-def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None):
+def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None, sort_size: bool = False):
     lines = _get_dataset_lines(tablefmt=tablefmt, link_fmt=link_fmt)
+    if sort_size:
+        lines = sorted(lines, key=lambda line: line[5], reverse=True)
     return tabulate(
         lines,
         headers=["Name", "Documentation", "Citation", "Entities", "Relations", "Triples"],
+        tablefmt=tablefmt,
+    )
+
+
+def _help_inductive_datasets(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_inductive_dataset_lines(tablefmt=tablefmt, link_fmt=link_fmt)
+    return tabulate(
+        lines,
+        headers=["Name", "Documentation", "Citation"],
         tablefmt=tablefmt,
     )
 
@@ -358,19 +373,21 @@ def metrics(tablefmt: str):
 
 
 def _help_metrics(tablefmt):
+    headers = [
+        "Name",
+        "Interval",
+        "Direction",
+        "Description",
+        "Type",
+        # "Closed-Form Expectation",
+        # "Closed-Form Variance",
+    ]
+    if tablefmt != "github":
+        headers.append("Reference")
+        headers[0] = "Metric"
     return tabulate(
         sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[4], t[0])),
-        headers=(
-            [
-                "Name",
-                "Interval",
-                "Direction",
-                "Description",
-                "Type",
-            ]
-            if tablefmt == "github"
-            else ["Metric", "Interval", "Direction", "Description", "Type", "Reference"]
-        ),
+        headers=headers,
         tablefmt=tablefmt,
     )
 
@@ -418,19 +435,23 @@ METRIC_NAMES: Mapping[Type[MetricResults], str] = {
     RankBasedMetricResults: "Ranking",
 }
 
+METRICS_SKIP = {"standard_deviation", "variance", "median_absolute_deviation", "count"}
+
 
 def _get_metrics_lines(tablefmt: str):
     for key, metric, metric_results_cls in get_metric_list():
-        if key in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
+        if key in METRICS_SKIP:
             continue
-        label = metric.name
-        link = metric.link
+        label = getattr_or_docdata(metric, "name")
+        link = getattr_or_docdata(metric, "link")
         yv = [
             f"[{label}]({link})",
-            metric.value_range.notate(),
+            metric.get_range(),
             "📈" if metric.increasing else "📉",
-            metric.description,
+            getattr_or_docdata(metric, "description"),
             METRIC_NAMES[metric_results_cls],
+            # "✓" if metric.closed_expectation else "",
+            # "✓" if metric.closed_variance else "",
         ]
         if tablefmt != "github":
             yv.append(f"pykeen.evaluation.{metric_results_cls.__name__}")
@@ -503,11 +524,54 @@ def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
         yield name, reference, citation_str, entities, relations, triples
 
 
+def _get_inductive_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
+    for name, value in sorted(inductive_dataset_resolver.lookup_dict.items()):
+        reference = f"pykeen.datasets.{value.__name__}"
+        if tablefmt == "rst":
+            reference = f":class:`{reference}`"
+        elif link_fmt is not None:
+            reference = f"[`{reference}`]({link_fmt.format(reference)})"
+        else:
+            reference = f"`{reference}`"
+
+        try:
+            docdata = value.__docdata__
+        except AttributeError:
+            yield name, reference, "", "", "", ""
+            continue
+
+        name = docdata["name"]
+
+        citation_str = ""
+        citation = docdata.get("citation")
+        if citation is not None:
+            author = citation and citation.get("author")
+            year = citation and citation.get("year")
+            link = citation and citation.get("link")
+            github = citation and citation.get("github")
+            if author and year and link:
+                _citation_txt = f"{author.capitalize()} *et al*., {year}"
+                citation_str = _link(_citation_txt, link, tablefmt)
+            elif github:
+                link = f"https://github.com/{github}"
+                citation_str = _link(github if tablefmt == "rst" else f"`{github}`", link, tablefmt)
+        yield name, reference, citation_str
+
+
 def _link(text: str, link: str, fmt: str) -> str:
     if fmt == "rst":
         return f"`{text} <{link}>`_"
     else:
         return f"[{text}]({link})"
+
+
+def get_metric_list() -> List[Tuple[str, Type[Metric], Type[MetricResults]]]:
+    """Get info about all metrics across all evaluators."""
+    return [
+        (metric_key, metric_cls, resolver_cls)
+        for resolver_cls in metric_resolver
+        for metric_key, metric_cls in resolver_cls.metrics.items()
+    ]
 
 
 @main.command()
@@ -534,7 +598,7 @@ def readme(check: bool):
             sys.exit(-1)
 
     with open(readme_path, "w") as file:
-        print(new_readme, file=file)  # noqa:T001
+        print(new_readme, file=file)  # noqa:T201
 
 
 def get_readme() -> str:
@@ -560,6 +624,8 @@ def get_readme() -> str:
         n_losses=len(loss_resolver.lookup_dict),
         datasets=_help_datasets(tablefmt, link_fmt=api_link_fmt),
         n_datasets=len(dataset_resolver.lookup_dict),
+        inductive_datasets=_help_inductive_datasets(tablefmt, link_fmt=api_link_fmt),
+        n_inductive_datasets=len(inductive_dataset_resolver.lookup_dict),
         training_loops=_help_training(
             tablefmt,
             link_fmt="https://pykeen.readthedocs.io/en/latest/reference/training.html#{}",
@@ -596,6 +662,9 @@ for cls in model_resolver.lookup_dict.values():
 # Add HPO command
 main.add_command(optimize)
 main.add_command(experiments)
+
+# Add NodePiece tokenization command
+main.add_command(tokenize)
 
 if __name__ == "__main__":
     main()

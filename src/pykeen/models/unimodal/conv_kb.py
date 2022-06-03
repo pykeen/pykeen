@@ -9,7 +9,6 @@ from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification
 from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
@@ -107,18 +106,17 @@ class ConvKB(ERModel):
                 embedding_dim=embedding_dim,
                 num_filters=num_filters,
             ),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
             ),
             **kwargs,
         )
-        if regularizer is None:
-            regularizer = self._instantiate_default_regularizer()
+        regularizer = self._instantiate_regularizer(regularizer=regularizer)
         # In the code base only the weights of the output layer are used for regularization
         # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
         if regularizer is not None:

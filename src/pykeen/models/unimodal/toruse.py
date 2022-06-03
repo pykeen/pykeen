@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping, Optional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import TorusEInteraction
 from ...typing import Hint, Initializer, Normalizer
 
@@ -62,15 +61,15 @@ class TorusE(ERModel):
         super().__init__(
             interaction=TorusEInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=entity_initializer,
                 initializer_kwargs=entity_initializer_kwargs,
                 normalizer=entity_normalizer,
                 normalizer_kwargs=entity_normalizer_kwargs,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representations_kwargs=dict(
+                shape=embedding_dim,
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
             ),

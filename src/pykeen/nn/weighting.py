@@ -46,8 +46,10 @@ def softmax(
     :param dim:
         The dimension along which to compute the softmax.
 
-    :return:
+    :returns:
         The softmax-ed tensor.
+
+    :raises ImportError: if :mod:`torch_scatter` is not installed
     """
     if torch_scatter is None:
         raise ImportError(
@@ -69,6 +71,12 @@ class EdgeWeighting(nn.Module):
     needs_message: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
+        """
+        Initialize the module.
+
+        :param kwargs:
+            ignored keyword-based parameters.
+        """
         # stub init to enable arbitrary arguments in subclasses
         super().__init__()
 
@@ -107,6 +115,7 @@ def _inverse_frequency_weighting(idx: torch.LongTensor) -> torch.FloatTensor:
 class InverseInDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse in-degree."""
 
+    # docstr-coverage: inherited
     def forward(
         self,
         source: torch.LongTensor,
@@ -124,6 +133,7 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
 class InverseOutDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse out-degree."""
 
+    # docstr-coverage: inherited
     def forward(
         self,
         source: torch.LongTensor,
@@ -141,6 +151,7 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
 class SymmetricEdgeWeighting(EdgeWeighting):
     """Normalize messages by product of inverse sqrt of in-degree and out-degree."""
 
+    # docstr-coverage: inherited
     def forward(
         self,
         source: torch.LongTensor,
@@ -177,6 +188,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
             the number of attention heads
         :param dropout:
             the attention dropout
+        :raises ValueError: If ``message_dim`` is not divisible by ``num_heads``
         """
         super().__init__()
         if 0 != message_dim % num_heads:
@@ -187,6 +199,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
         self.attention_dim = message_dim // num_heads
         self.dropout = nn.Dropout(dropout)
 
+    # docstr-coverage: inherited
     def forward(
         self,
         source: torch.LongTensor,
@@ -219,4 +232,6 @@ class AttentionEdgeWeighting(EdgeWeighting):
         return (message_ * alpha.view(-1, self.num_heads, 1)).view(-1, self.num_heads * self.attention_dim)
 
 
-edge_weight_resolver = ClassResolver.from_subclasses(base=EdgeWeighting, default=SymmetricEdgeWeighting)
+edge_weight_resolver: ClassResolver[EdgeWeighting] = ClassResolver.from_subclasses(
+    base=EdgeWeighting, default=SymmetricEdgeWeighting
+)

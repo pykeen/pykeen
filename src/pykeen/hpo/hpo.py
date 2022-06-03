@@ -23,7 +23,7 @@ from ..constants import USER_DEFINED_CODE
 from ..datasets import dataset_resolver, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.metrics import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+from ..evaluation.ranking_metric_lookup import MetricKey
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
@@ -36,7 +36,7 @@ from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
-from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
+from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io, normalize_path
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -55,6 +55,12 @@ class ExtraKeysError(ValueError):
     """Raised on extra keys being used."""
 
     def __init__(self, keys: Iterable[str]):
+        """
+        Initialize the error.
+
+        :param keys:
+            the extra keys
+        """
         super().__init__(sorted(keys))
 
     def __str__(self) -> str:
@@ -375,9 +381,7 @@ class HpoPipelineResult(Result):
 
     def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        if isinstance(directory, str):
-            directory = pathlib.Path(directory).resolve()
-        directory.mkdir(exist_ok=True, parents=True)
+        directory = normalize_path(directory, mkdir=True)
 
         # Output study information
         with directory.joinpath("study.json").open("w") as file:
@@ -441,6 +445,7 @@ class HpoPipelineResult(Result):
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
+        save_training: bool = False,
     ) -> None:
         """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
 
@@ -448,6 +453,10 @@ class HpoPipelineResult(Result):
         :param replicates: The number of times to retrain the model
         :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
         :param save_replicates: Should the artifacts of the replicates be saved?
+        :param save_training: Should the training triples be saved?
+
+        :raises ValueError:
+            if :data:`"use_testing_data"` is provided in the best pipeline's `config`.
         """
         config = self._get_best_study_config()
 
@@ -461,6 +470,7 @@ class HpoPipelineResult(Result):
             use_testing_data=True,
             move_to_cpu=move_to_cpu,
             save_replicates=save_replicates,
+            save_training=save_training,
         )
 
 
@@ -613,6 +623,8 @@ def hpo_pipeline(
     :param training_loop:
         The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
         to pass to :func:`pykeen.pipeline.pipeline`
+    :param training_loop_kwargs:
+        additional keyword-based parameters passed to the training loop upon instantiation.
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class
         to pass to :func:`pykeen.pipeline.pipeline`. Only allowed when training with sLCWA.
@@ -652,20 +664,54 @@ def hpo_pipeline(
         The keyword arguments passed to the results tracker on instantiation
 
     :param metric:
-        The metric to optimize over. Defaults to :data:`ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX`.
-    :param direction:
-        The direction of optimization. Because the default metric is :data:`ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX`,
-        the default direction is ``maximize``.
+        The metric to optimize over. Defaults to mean reciprocal rank.
 
     :param n_jobs: The number of parallel jobs. If this argument is set to :obj:`-1`, the number is
                 set to CPU counts. If none, defaults to 1.
 
-    .. note::
+    :param save_model_directory:
+        If given, the final model of each trial is saved under this directory.
 
-        The remaining parameters are passed to :func:`optuna.study.create_study`
-        or :meth:`optuna.study.Study.optimize`.
+    :param storage:
+        the study's storage, cf. :func:`optuna.study.create_study`
+
+    :param sampler:
+        the sampler, or a hint thereof, cf. :func:`optuna.study.create_study`
+    :param sampler_kwargs:
+        additional keyword-based parameters for the sampler
+
+    :param pruner:
+        the pruner, or a hint thereof, cf. :func:`optuna.study.create_study`
+    :param pruner_kwargs:
+        additional keyword-based parameters for the pruner
+
+    :param device:
+        the device to use.
+
+    :param study_name:
+        the study's name, cf. :func:`optuna.study.create_study`
+    :param direction:
+        The direction of optimization. Because the default metric is mean reciprocal rank,
+        the default direction is ``maximize``.
+        cf. :func:`optuna.study.create_study`
+    :param load_if_exists:
+        whether to load the study if it already exists, cf. :func:`optuna.study.create_study`
+
+    :param n_trials:
+        the number of trials, cf. :meth:`optuna.study.Study.optimize`.
+    :param timeout:
+        the timeout, cf. :meth:`optuna.study.Study.optimize`.
+    :param n_jobs:
+        the number of jobs, cf. :meth:`optuna.study.Study.optimize`. Defaults to 1.
+
+    :return:
+        the optimization result
+
+    :raises ValueError:
+        if early stopping is enabled, but the number of epochs is to be optimized, too.
     """
     if direction is None:
+        # TODO: use metric.increasing to determine default direction
         direction = "maximize"
 
     study = create_study(
@@ -742,8 +788,7 @@ def hpo_pipeline(
     evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
-    if metric is None:
-        metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+    metric = MetricKey.normalize(metric)
     study.set_user_attr("metric", metric)
     logger.info(f"Attempting to {direction} {metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)
@@ -848,6 +893,21 @@ def suggest_kwargs(
     kwargs_ranges: Mapping[str, Any],
     kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Mapping[str, Any]:
+    """
+    Suggest parameters from given dictionaries.
+
+    :param trial:
+        the optuna trial
+    :param prefix:
+        the prefix to be prepended to the name
+    :param kwargs:
+        a dictionary of fixed parameters
+    :param kwargs_ranges:
+        a dictionary of parameters to be sampled with their ranges.
+
+    :return:
+        a dictionary with fixed and sampled parameters
+    """
     _kwargs: Dict[str, Any] = {}
     if kwargs:
         _kwargs.update(kwargs)

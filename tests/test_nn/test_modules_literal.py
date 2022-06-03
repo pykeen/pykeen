@@ -2,7 +2,9 @@
 
 """Tests for literal interaction functions."""
 
-from typing import Any, MutableMapping
+from typing import Any, MutableMapping, Tuple
+
+import torch
 
 from pykeen.datasets.nations import NationsLiteral
 from pykeen.nn.combinations import ComplExLiteralCombination, DistMultCombination
@@ -37,6 +39,7 @@ class ComplExLiteralTestCase(cases.LiteralTestCase):
     kwargs = dict(
         base=ComplExInteraction(),
     )
+    dtype = torch.cfloat
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -45,9 +48,14 @@ class ComplExLiteralTestCase(cases.LiteralTestCase):
         kwargs["combination"] = ComplExLiteralCombination(
             # typically, the model takes care of adjusting the dimension size for "complex"
             # tensors, but we have to do it manually here for testing purposes
-            entity_embedding_dim=self.dim // 2,
+            entity_embedding_dim=self.dim,
             literal_embedding_dim=literal_embedding_dim,
             input_dropout=0.1,
         )
         self.shape_kwargs["e"] = literal_embedding_dim
         return kwargs
+
+    def _get_hrt(self, *shapes: Tuple[int, ...]):
+        # hotfix for mixed dtypes
+        (hc, hl), r, (tc, tl) = super()._get_hrt(*shapes)
+        return (hc, hl.real), r, (tc, tl.real)

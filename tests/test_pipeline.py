@@ -2,6 +2,7 @@
 
 """Test the PyKEEN pipeline function."""
 
+import itertools
 import pathlib
 import tempfile
 import unittest
@@ -22,6 +23,7 @@ from pykeen.models.predict import (
 )
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
+from pykeen.nn.representation import Embedding
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
@@ -364,8 +366,7 @@ class TestPipelineReplicate(unittest.TestCase):
                     model="transe",
                 ),
                 results={
-                    "hits_at_k": {"best": {"10": 0.538}},
-                    "mean_rank": {"best": 163},
+                    "best": {"hits_at_k": {"10": 0.538}, "mean_rank": 163},
                 },
             ),
             directory=self.tmp_dir_path,
@@ -449,7 +450,7 @@ class TestAttributes(unittest.TestCase):
     def test_specify_regularizer(self):
         """Test a pipeline that uses a regularizer."""
         for regularizer, cls in [
-            (None, pykeen.regularizers.NoRegularizer),
+            (None, None),
             ("no", pykeen.regularizers.NoRegularizer),
             (NoRegularizer, pykeen.regularizers.NoRegularizer),
             ("powersum", pykeen.regularizers.PowerSumRegularizer),
@@ -464,7 +465,14 @@ class TestAttributes(unittest.TestCase):
                 )
                 self.assertIsInstance(pipeline_result, PipelineResult)
                 self.assertIsInstance(pipeline_result.model, Model)
-                self.assertIsInstance(pipeline_result.model.regularizer, cls)
+                for r in itertools.chain(
+                    pipeline_result.model.entity_representations, pipeline_result.model.relation_representations
+                ):
+                    if isinstance(r, Embedding):
+                        if cls is None:
+                            self.assertIsNone(r.regularizer)
+                        else:
+                            self.assertIsInstance(r.regularizer, cls)
 
 
 class TestPipelineEvaluationFiltering(unittest.TestCase):
@@ -516,7 +524,7 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
             random_seed=42,
             filter_validation_when_testing=False,
         )
-        assert results.metric_results.arithmetic_mean_rank["both"]["realistic"] == 2, "The rank should equal 2"
+        assert results.metric_results.get_metric("mr") == 2, "The rank should equal 2"
 
     def test_pipeline_evaluation_filtering_with_validation_triples(self):
         """Test if the evaluator's triple filtering with validation triples works as expected using the pipeline."""
@@ -531,4 +539,4 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
             random_seed=42,
             filter_validation_when_testing=True,
         )
-        assert results.metric_results.arithmetic_mean_rank["both"]["realistic"] == 1, "The rank should equal 1"
+        assert results.metric_results.get_metric("mr") == 1, "The rank should equal 1"

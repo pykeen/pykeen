@@ -11,15 +11,18 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
+from class_resolver import HintOrType, OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
 from torch import nn
 
 from .base import Model
-from ..nn.emb import EmbeddingSpecification, RepresentationModule
+from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
-from ..regularizers import Regularizer
-from ..triples import CoreTriplesFactory
+from ..nn.representation import Representation
+from ..regularizers import Regularizer, regularizer_resolver
+from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
-from ..utils import check_shapes
+from ..utils import check_shapes, get_batchnorm_modules
 
 __all__ = [
     "_NewAbstractModel",
@@ -27,13 +30,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-EmbeddingSpecificationHint = Union[
-    None,
-    EmbeddingSpecification,
-    RepresentationModule,
-    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
-]
 
 
 class _NewAbstractModel(Model, ABC):
@@ -102,20 +98,36 @@ class _NewAbstractModel(Model, ABC):
             for i, p_id in enumerate(uninitialized_parameters, start=1):
                 logger.debug("[%3d] Parents to blame: %s", i, parents.get(p_id))
 
-    def _instantiate_default_regularizer(self, **kwargs) -> Optional[Regularizer]:
-        """Instantiate the regularizer from this class's default settings.
-
-        :param kwargs: Additional keyword arguments to be passed through to the ``__init__()`` function of the
-            default regularizer, if one is set.
-
-        :returns: If the default regularizer is None, None is returned.
+    def _instantiate_regularizer(
+        self,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
+    ) -> Optional[Regularizer]:
         """
-        if self.regularizer_default is None:
-            return None
+        Instantiate a regularizer using the default if None is provided.
 
-        _kwargs = dict(self.regularizer_default_kwargs or {})
-        _kwargs.update(kwargs)
-        return self.regularizer_default(**_kwargs)
+        The following precedence order is used:
+
+        1. If the passed regularizer is not None, use it
+        2. If the regularizer is None, use the default regularizer. In this case, the
+           default kwargs will be used in favor of provided ones.
+        3. If both, the regularizer and the default regularizer are None, return None.
+
+        :param regularizer:
+            the regularizer, or a hint thereof
+        :param regularizer_kwargs:
+            additional keyword-based parameters passed to the regularizer upon instantiation
+
+        :return:
+            the regularizer instance.
+        """
+        regularizer, regularizer_kwargs = normalize_with_default(
+            choice=regularizer,
+            kwargs=regularizer_kwargs,
+            default=self.regularizer_default,
+            default_kwargs=self.regularizer_default_kwargs,
+        )
+        return regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
@@ -125,6 +137,7 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
@@ -134,53 +147,78 @@ class _NewAbstractModel(Model, ABC):
 
 
 def _prepare_representation_module_list(
-    representations: EmbeddingSpecificationHint,
-    num_embeddings: int,
+    max_id: int,
     shapes: Sequence[str],
     label: str,
+    representations: OneOrManyHintOrType[Representation] = None,
+    representation_kwargs: OneOrManyOptionalKwargs = None,
     skip_checks: bool = False,
-) -> Sequence[RepresentationModule]:
-    """Normalize list of representations and wrap into nn.ModuleList."""
-    # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
-    if representations is None:
-        representations = []
-    if not isinstance(representations, Sequence):
-        representations = [representations]
-    if not skip_checks and len(representations) != len(shapes):
-        raise ValueError(
-            f"Interaction function requires {len(shapes)} {label} representations, but "
-            f"{len(representations)} were given.",
-        )
-    modules = []
-    for r in representations:
-        if not isinstance(r, RepresentationModule):
-            assert isinstance(r, EmbeddingSpecification)
-            r = r.make(num_embeddings=num_embeddings)
-        if r.max_id < num_embeddings:
+) -> Sequence[Representation]:
+    """
+    Normalize list of representations and wrap into nn.ModuleList.
+
+    .. note ::
+        Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
+
+    :param representations:
+        the representations, or hints for them.
+    :param representation_kwargs:
+        additional keyword-based parameters for instantiating representations from hints.
+    :param max_id:
+        the maximum representation ID. Newly instantiated representations will contain that many representations, and
+        pre-instantiated ones have to provide at least that many.
+    :param shapes:
+        the symbolic shapes, which are used for shape verification, if skip_checks is False.
+    :param label:
+        a label to use for error messages (typically, "entities" or "relations").
+    :param skip_checks:
+        whether to skip shape verification.
+
+    :return:
+        a module list of instantiated representation modules.
+
+    :raises ValueError:
+        if the maximum ID or shapes do not match
+    """
+    # TODO: allow max_id being present in representation_kwargs; if it matches max_id
+    # TODO: we could infer some shapes from the given interaction shape information
+    rs = representation_resolver.make_many(representations, kwargs=representation_kwargs, max_id=max_id)
+
+    # check max-id
+    for r in rs:
+        if r.max_id < max_id:
             raise ValueError(
-                f"{r} only provides {r.max_id} {label} representations, but should provide {num_embeddings}.",
+                f"{r} only provides {r.max_id} {label} representations, but should provide {max_id}.",
             )
-        elif r.max_id > num_embeddings:
+        elif r.max_id > max_id:
             logger.warning(
-                f"{r} provides {r.max_id} {label} representations, although only {num_embeddings} are needed."
+                f"{r} provides {r.max_id} {label} representations, although only {max_id} are needed."
                 f"While this is not necessarily wrong, it can indicate an error where the number of {label} "
                 f"representations was chosen wrong.",
             )
-        modules.append(r)
-    if not skip_checks:
-        check_shapes(
-            *zip(
-                (r.shape for r in modules),
-                shapes,
-            ),
-            raise_on_errors=True,
+
+    rs = cast(Sequence[Representation], nn.ModuleList(rs))
+    if skip_checks:
+        return rs
+
+    # check shapes
+    if len(rs) != len(shapes):
+        raise ValueError(
+            f"Interaction function requires {len(shapes)} {label} representations, but {len(rs)} were given."
         )
-    return nn.ModuleList(modules)
+    check_shapes(
+        *zip(
+            (r.shape for r in rs),
+            shapes,
+        ),
+        raise_on_errors=True,
+    )
+    return rs
 
 
 def repeat_if_necessary(
     scores: torch.FloatTensor,
-    representations: Sequence[RepresentationModule],
+    representations: Sequence[Representation],
     num: Optional[int],
 ) -> torch.FloatTensor:
     """
@@ -227,10 +265,10 @@ class ERModel(
     """
 
     #: The entity representations
-    entity_representations: Sequence[RepresentationModule]
+    entity_representations: Sequence[Representation]
 
     #: The relation representations
-    relation_representations: Sequence[RepresentationModule]
+    relation_representations: Sequence[Representation]
 
     #: The weight regularizers
     weight_regularizers: List[Regularizer]
@@ -241,15 +279,17 @@ class ERModel(
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         interaction: Union[
             str,
             Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
             Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         ],
-        interaction_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_representations: EmbeddingSpecificationHint = None,
-        relation_representations: EmbeddingSpecificationHint = None,
+        interaction_kwargs: OptionalKwargs = None,
+        entity_representations: OneOrManyHintOrType[Representation] = None,
+        entity_representations_kwargs: OneOrManyOptionalKwargs = None,
+        relation_representations: OneOrManyHintOrType[Representation] = None,
+        relation_representations_kwargs: OneOrManyOptionalKwargs = None,
         skip_checks: bool = False,
         **kwargs,
     ) -> None:
@@ -262,32 +302,40 @@ class ERModel(
             Additional key-word based parameters given to the interaction module's constructor, if not already
             instantiated.
         :param entity_representations: The entity representation or sequence of representations
+        :param entity_representations_kwargs:
+            additional keyword-based parameters for instantiation of entity representations
         :param relation_representations: The relation representation or sequence of representations
+        :param relation_representations_kwargs:
+            additional keyword-based parameters for instantiation of relation representations
         :param skip_checks:
             whether to skip entity representation checks.
         :param kwargs:
             Keyword arguments to pass to the base model
         """
-        super().__init__(
-            num_entities=triples_factory.num_entities,
-            num_relations=triples_factory.num_relations,
-            **kwargs,
-        )
+        # TODO: support "broadcasting" representation regularizers?
+        # e.g. re-use the same regularizer for everything; or
+        # pass a dictionary with keys "entity"/"relation";
+        # values are either a regularizer hint (=the same regularizer for all repr); or a sequence of appropriate length
+        super().__init__(triples_factory=triples_factory, **kwargs)
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
-            num_embeddings=self.num_entities,
-            shapes=self.interaction.entity_shape,
+            representation_kwargs=entity_representations_kwargs,
+            max_id=triples_factory.num_entities,
+            shapes=self.interaction.full_entity_shapes(),
             label="entity",
-            skip_checks=self.interaction.tail_entity_shape is not None or skip_checks,
+            skip_checks=skip_checks,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
+            representation_kwargs=relation_representations_kwargs,
+            # TODO: check this
             # note: this is the *effective* number of relations, since we also need
             # representations for the inverse relations
-            num_embeddings=self.effective_num_relations,
+            max_id=self.effective_num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
+            skip_checks=skip_checks,
         )
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
@@ -298,18 +346,38 @@ class ERModel(
     def append_weight_regularizer(
         self,
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
-        regularizer: Regularizer,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
+        default_regularizer: HintOrType[Regularizer] = None,
+        default_regularizer_kwargs: OptionalKwargs = None,
     ) -> None:
-        """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
+        """
+        Add a model weight to a regularizer's weight list, and register the regularizer with the model.
 
         :param parameter:
             The parameter, either as name, or as nn.Parameter object. A list of available parameter names is shown by
              `sorted(dict(self.named_parameters()).keys())`.
         :param regularizer:
-            The regularizer instance which will regularize the weights.
+            the regularizer or a hint thereof
+        :param regularizer_kwargs:
+            additional keyword-based parameters for the regularizer's instantiation
+        :param default_regularizer:
+            the default regularizer; if None, use :attr:`regularizer_default`
+        :param default_regularizer_kwargs:
+            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
 
         :raises KeyError: If an invalid parameter name was given
         """
+        # instantiate regularizer
+        regularizer = regularizer_resolver.make(
+            *normalize_with_default(
+                choice=regularizer,
+                kwargs=regularizer_kwargs,
+                default=default_regularizer or self.regularizer_default,
+                default_kwargs=default_regularizer_kwargs or self.regularizer_default_kwargs,
+            )
+        )
+
         # normalize input
         if isinstance(parameter, (str, nn.Parameter)):
             parameter = [parameter]
@@ -361,10 +429,14 @@ class ERModel(
         if not self.entity_representations or not self.relation_representations:
             raise NotImplementedError("repeat scores not implemented for general case.")
         # TODO: inverse relations?
-        h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode, invert_relation=invert_relation)
+        h, r, t = self._get_representations(
+            h=h_indices, r=r_indices, t=t_indices, mode=mode, invert_relation=invert_relation
+        )
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, invert_relation: bool = False, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
+    def score_hrt(
+        self, hrt_batch: torch.LongTensor, invert_relation: bool = False, *, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -391,8 +463,20 @@ class ERModel(
         )
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
+    def _check_slicing(self, slice_size: Optional[int]) -> None:
+        """Raise an error, if slicing is requested, but the model does not support it."""
+        if not slice_size:
+            return
+        if get_batchnorm_modules(self):  # if there are any, this is truthy
+            raise ValueError("This model does not support slicing, since it has batch normalization layers.")
+
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None, invert_relation: bool = False,
+        self,
+        hr_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        invert_relation: bool = False,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -409,7 +493,10 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
-        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode, invert_relation=invert_relation)
+        self._check_slicing(slice_size=slice_size)
+        h, r, t = self._get_representations(
+            h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode, invert_relation=invert_relation
+        )
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
             representations=self.entity_representations,
@@ -438,7 +525,10 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
-        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode, invert_relation=invert_relation)
+        self._check_slicing(slice_size=slice_size)
+        h, r, t = self._get_representations(
+            h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode, invert_relation=invert_relation
+        )
         return repeat_if_necessary(
             scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
             representations=self.entity_representations,
@@ -467,19 +557,50 @@ class ERModel(
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
-        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode, invert_relation=invert_relation)
+        self._check_slicing(slice_size=slice_size)
+        h, r, t = self._get_representations(
+            h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode, invert_relation=invert_relation
+        )
         return repeat_if_necessary(
             scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
             representations=self.relation_representations,
             num=self.num_relations,
         )
 
-    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
+    def _get_entity_representations_from_inductive_mode(
+        self, *, mode: Optional[InductiveMode]
+    ) -> Sequence[Representation]:
+        """
+        Return the entity representations for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises ValueError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the entity representations for the given inductive mode
+        """
         if mode is not None:
-            raise NotImplementedError
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105
+        """
+        Return the number of entities for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises NotImplementedError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the number of entities in the given inductive mode
+        """
         if mode is not None:
             raise NotImplementedError
         return self.num_entities
@@ -494,13 +615,15 @@ class ERModel(
         mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        entity_representations = self._entity_representation_from_mode(mode=mode)
+        head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
+        head_representations = [head_representations[i] for i in self.interaction.head_indices()]
+        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
         hr, rr, tr = [
-            [representation.forward_unique(indices=indices) for representation in representations]
+            [representation(indices=indices) for representation in representations]
             for indices, representations in (
-                (h, entity_representations),
+                (h, head_representations),
                 (r, self.relation_representations),
-                (t, entity_representations),
+                (t, tail_representations),
             )
         ]
         # normalization

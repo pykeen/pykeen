@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import functools
 import inspect
-import itertools
 import logging
 import os
 import pickle
@@ -14,20 +13,22 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
-from class_resolver import HintOrType
+from class_resolver import HintOrType, OptionalKwargs
 from docdata import parse_docdata
 from torch import nn
 
 from .inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn import Embedding, EmbeddingSpecification, RepresentationModule
+from ..nn.representation import Representation, build_representation
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import CoreTriplesFactory, relation_inverter
+from ..triples import KGInfo, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
-from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
+from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
 __all__ = [
     "Model",
@@ -36,45 +37,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_num(
-    triples_factory: Optional[CoreTriplesFactory],
-    num_entities: Optional[int],
-    num_relations: Optional[int],
-) -> Tuple[int, int]:
-    if triples_factory is None:
-        if num_entities is None or num_relations is None:
-            raise ValueError("If no triples factory is provided, num_entities and num_relations must be provided.")
-    else:
-        num_entities = num_entities or triples_factory.num_entities
-        if num_entities != triples_factory.num_entities:
-            raise ValueError(
-                f"Inconsistent number of entities between {triples_factory} and num_entities={num_entities}",
-            )
-        num_relations = num_relations or triples_factory.num_relations
-        if num_relations != triples_factory.num_relations:
-            raise ValueError(
-                f"Inconsistent number of relations between {triples_factory} and num_relations={num_relations}",
-            )
-    return num_entities, num_relations
-
-
-class DeviceResolutionError(ValueError):
-    """An error in the resolution of a model's device."""
-
-
-class AmbiguousDeviceError(DeviceResolutionError):
-    """An error raised if there is ambiguity in device resolution."""
-
-    def __init__(self, module: nn.Module) -> None:
-        """Initialize the error."""
-        _info = defaultdict(list)
-        for name, tensor in itertools.chain(module.named_parameters(), module.named_buffers()):
-            _info[tensor.data.device].append(name)
-        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
-        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
-
 
 
 class Model(nn.Module, ABC):
@@ -115,8 +77,7 @@ class Model(nn.Module, ABC):
     def __init__(
         self,
         *,
-        num_entities: int,
-        num_relations: int,
+        triples_factory: KGInfo,
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
@@ -157,10 +118,10 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
-        self.num_entities = num_entities
-        self.num_relations = num_relations
+        self.num_entities = triples_factory.num_entities
+        self.num_relations = triples_factory.num_relations
         self.use_inverse_relations = use_inverse_relations
-        self.relation_inverter = relation_inverter_resolver.make(num_relations=num_relations)
+        self.relation_inverter = relation_inverter_resolver.make(num_relations=triples_factory.num_relations)
 
         """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
@@ -189,26 +150,7 @@ class Model(nn.Module, ABC):
     @property
     def device(self) -> torch.device:
         """Return the model's device."""
-        return self.get_preferred_device(allow_ambiguity=False)
-
-    def get_devices(self) -> Collection[torch.device]:
-        """Return the device(s) from each components of the model."""
-        return {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
-
-    def get_preferred_device(self, allow_ambiguity: bool = True) -> torch.device:
-        """Return the preferred device."""
-        devices = self.get_devices()
-        if len(devices) == 0:
-            raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
-        if len(devices) == 1:
-            return next(iter(devices))
-        if not allow_ambiguity:
-            raise AmbiguousDeviceError(self)
-        # try to resolve ambiguous device; there has to be at least one cuda device
-        cuda_devices = {d for d in devices if d.type == "cuda"}
-        if len(cuda_devices) == 1:
-            return next(iter(cuda_devices))
-        raise AmbiguousDeviceError(self)
+        return get_preferred_device(self, allow_ambiguity=False)
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
@@ -334,6 +276,11 @@ class Model(nn.Module, ABC):
     def num_parameter_bytes(self) -> int:
         """Calculate the number of bytes used for all parameters of the model."""
         return sum(param.numel() * param.element_size() for param in self.parameters(recurse=True))
+
+    @property
+    def num_parameters(self) -> int:
+        """Calculate the number of parameters of the model."""
+        return sum(param.numel() for param in self.parameters(recurse=True))
 
     def save_state(self, path: Union[str, os.PathLike]) -> None:
         """Save the state of the model.
@@ -582,7 +529,7 @@ class Model(nn.Module, ABC):
         ht_batch: torch.LongTensor,
         *,
         slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode],
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
@@ -764,7 +711,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         regularizer: Optional[Regularizer] = None,
         **kwargs,
     ) -> None:
@@ -791,9 +738,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             )
         else:
             self.regularizer = NoRegularizer()
-
-        self._entity_ids = triples_factory.entity_ids
-        self._relation_ids = triples_factory.relation_ids
 
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         super().__init_subclass__(**kwargs)
@@ -840,7 +784,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_t function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self._entity_ids), dim=2)
+        hrt_batch = extend_batch(batch=hr_batch, max_id=self.num_entities, dim=2)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
@@ -870,7 +814,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_h function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self._entity_ids), dim=0)
+        hrt_batch = extend_batch(batch=rt_batch, max_id=self.num_entities, dim=0)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
@@ -900,13 +844,14 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             "score_r function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self._relation_ids), dim=1)
+        hrt_batch = extend_batch(batch=ht_batch, max_id=self.num_relations, dim=1)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self) -> torch.FloatTensor:  # noqa: D102
         return self.regularizer.term
 
@@ -922,16 +867,19 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     #: Primary embeddings for entities
-    entity_embeddings: Embedding
+    entity_embeddings: Representation
+
     #: Primary embeddings for relations
-    relation_embeddings: Embedding
+    relation_embeddings: Representation
 
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
-        entity_representations: EmbeddingSpecification,
-        relation_representations: EmbeddingSpecification,
+        triples_factory: KGInfo,
+        entity_representations: HintOrType[Representation] = None,
+        entity_representations_kwargs: OptionalKwargs = None,
+        relation_representations: HintOrType[Representation] = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
@@ -939,13 +887,15 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.entity_embeddings = entity_representations.make(
-            num_embeddings=triples_factory.num_entities,
-            device=self.device,
+        self.entity_embeddings = build_representation(
+            max_id=triples_factory.num_entities,
+            representation=entity_representations,
+            representation_kwargs=entity_representations_kwargs,
         )
-        self.relation_embeddings = relation_representations.make(
-            num_embeddings=triples_factory.num_relations,
-            device=self.device,
+        self.relation_embeddings = build_representation(
+            max_id=triples_factory.num_relations,
+            representation=relation_representations,
+            representation_kwargs=relation_representations_kwargs,
         )
 
     @property
@@ -954,12 +904,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return self.entity_embeddings.embedding_dim
 
     @property
-    def relation_dim(self) -> int:  # noqa:D401
-        """The relation embedding dimension."""
-        return self.relation_embeddings.embedding_dim
-
-    @property
-    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+    def entity_representations(self) -> Sequence[Representation]:  # noqa:D401
         """The entity representations.
 
         This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
@@ -967,17 +912,19 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return [self.entity_embeddings]
 
     @property
-    def relation_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+    def relation_representations(self) -> Sequence[Representation]:  # noqa:D401
         """The relation representations.
 
         This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
         """
         return [self.relation_embeddings]
 
+    # docstr-coverage: inherited
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
         self.relation_embeddings.reset_parameters()
 
+    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         # make sure to call this first, to reset regularizer state!
         super().post_parameter_update()
