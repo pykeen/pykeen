@@ -4,14 +4,15 @@
 
 import unittest
 from dataclasses import dataclass
+from typing import Callable
 
 import torch
-from torch import nn
 
 from pykeen.datasets import Nations
-from pykeen.models import EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import FixedModel, Model, TransE
 from pykeen.triples import TriplesFactory
-from pykeen.utils import resolve_device
+from pykeen.typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, Target
+from pykeen.utils import extend_batch, resolve_device
 
 
 class TestBaseModel(unittest.TestCase):
@@ -83,104 +84,42 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         self.generator = torch.random.manual_seed(seed=42)
         self.triples_factory = MinimalTriplesFactory
         self.device = resolve_device()
-        self.model = SimpleInteractionModel(triples_factory=self.triples_factory).to(self.device)
+        self.model = FixedModel(triples_factory=self.triples_factory).to(self.device)
+
+    def _test(self, score_func: Callable, dim: Target) -> None:
+        """
+        Check whether the output of optimized function matches the output of a repeated batch.
+
+        .. note ::
+            the repeated batch is created via :func:`pykeen.utils.extend_batch` and passed to
+            :meth:`pykeen.models.base.Model.score_hrt`.
+
+        :param score_func:
+            the optimized score function, e.g., :meth:`pykeen.models.base.Model.score_t`
+        :param dim:
+            the dimension
+        """
+        batch = torch.tensor([[0, 0], [1, 0]], dtype=torch.long, device=self.device)
+        hrt_batch = extend_batch(
+            batch=batch,
+            max_id=self.triples_factory.num_entities if dim != COLUMN_RELATION else self.triples_factory.num_relations,
+            dim=dim,
+        )
+        optimized_output = score_func(batch).flatten()
+        extended_output = self.model.score_hrt(hrt_batch=hrt_batch).flatten()
+        assert torch.allclose(optimized_output, extended_output)
 
     def test_alignment_of_score_t_fall_back(self) -> None:
         """Test if ``BaseModule.score_t`` aligns with ``BaseModule.score_hrt``."""
-        hr_batch = torch.tensor(
-            [
-                [0, 0],
-                [1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        hrt_batch = torch.tensor(
-            [
-                [0, 0, 0],
-                [0, 0, 1],
-                [1, 0, 0],
-                [1, 0, 1],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        scores_t_function = self.model.score_t(hr_batch=hr_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_t_function == scores_hrt_function)
+        self._test(score_func=self.model.score_t, dim=COLUMN_TAIL)
 
     def test_alignment_of_score_h_fall_back(self) -> None:
         """Test if ``BaseModule.score_h`` aligns with ``BaseModule.score_hrt``."""
-        rt_batch = torch.tensor(
-            [
-                [0, 0],
-                [1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        hrt_batch = torch.tensor(
-            [
-                [0, 0, 0],
-                [1, 0, 0],
-                [0, 1, 0],
-                [1, 1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        scores_h_function = self.model.score_h(rt_batch=rt_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_h_function == scores_hrt_function)
+        self._test(score_func=self.model.score_h, dim=COLUMN_HEAD)
 
     def test_alignment_of_score_r_fall_back(self) -> None:
         """Test if ``BaseModule.score_r`` aligns with ``BaseModule.score_hrt``."""
-        ht_batch = torch.tensor(
-            [
-                [0, 0],
-                [1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        hrt_batch = torch.tensor(
-            [
-                [0, 0, 0],
-                [0, 1, 0],
-                [1, 0, 0],
-                [1, 1, 0],
-            ],
-            dtype=torch.long,
-            device=self.device,
-        )
-        scores_r_function = self.model.score_r(ht_batch=ht_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_r_function == scores_hrt_function)
-
-
-# TODO: Remove, since it stems from old-style model
-class SimpleInteractionModel(EntityRelationEmbeddingModel):
-    """A model with a simple interaction function for testing the base model."""
-
-    def __init__(self, *, triples_factory: TriplesFactory):
-        super().__init__(
-            triples_factory=triples_factory,
-            entity_representations_kwargs=dict(embedding_dim=50),
-            relation_representations_kwargs=dict(embedding_dim=50),
-        )
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
-
-        return torch.sum(h + r + t, dim=1)
-
-    def reset_parameters_(self) -> Model:  # noqa: D102
-        pass  # Not needed for unittest
+        self._test(score_func=self.model.score_r, dim=COLUMN_RELATION)
 
 
 @dataclass

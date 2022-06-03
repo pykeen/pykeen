@@ -68,7 +68,13 @@ class InductiveNodePiece(ERModel):
         Initialize the model.
 
         :param triples_factory:
-            the triples factory. Must have create_inverse_triples set to True.
+            the triples factory of training triples. Must have create_inverse_triples set to True.
+        :param inference_factory:
+            the triples factory of inference triples. Must have create_inverse_triples set to True.
+        :param validation_factory:
+            the triples factory of validation triples. Must have create_inverse_triples set to True.
+        :param test_factory:
+            the triples factory of testing triples. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
             :class:`pykeen.nn.NodePieceRepresentation`.
