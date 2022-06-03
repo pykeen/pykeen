@@ -2,9 +2,9 @@
 
 """Test that models are set in the right mode when they're training."""
 
-from typing import Callable
 import unittest
 from dataclasses import dataclass
+from typing import Callable
 
 import torch
 
