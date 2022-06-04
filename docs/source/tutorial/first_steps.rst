@@ -23,19 +23,29 @@ More information on PyTorch's model persistence can be found at:
 https://pytorch.org/tutorials/beginner/saving_loading_models.html.
 
 Loading models trained on other pykeen versions
------------------------------------------------
-If you want to load a model trained on a different version of PyKEEN,
-there is a risk that the model class structure has changed which
-could lead to `ModuleNotFoundError` being raised.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If your model was trained on a different version of PyKEEN,
+you might have difficulty loading the model using
+`torch.load('trained_model.pkl')`.
 
-There are two ways of dealing with this in order of convenience:
+This might be because one or both of the following:
 
-Option 1:
-~~~~~~~~
-You can attempt to instantiate the model class directly
-and only load the state dict from the model file
+1. The model class structure might have changed.
+2. The model weight names might have changed.
 
-Save the model's state_dict using the version of PyKEEN that you used for training:
+Note that PyKEEN currently cannot support model migration.
+Please attempt the following steps to load the model.
+
+If the model class structure has changed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+You will likely see an exception like this one:
+`ModuleNotFoundError: No module named 'pykeen.nn.emb'`
+
+In this case, try to instantiate the model class directly
+and only load the state dict from the model file.
+
+1. Save the model's `state_dict` using the version of PyKEEN
+used for training:
 
 .. code-block:: python
 
@@ -45,8 +55,7 @@ Save the model's state_dict using the version of PyKEEN that you used for traini
     result = pipeline(dataset='Nations', model='RotatE')
     torch.save(result.model.state_dict(), 'v1.7.0/model.state_dict.pt')
 
-
-Then load the model using the version of PyKEEN that you want to use.
+2. Load the model using the version of PyKEEN you want to use.
 First instantiate the model, then load the state dict:
 
 .. code-block:: python
@@ -61,10 +70,18 @@ First instantiate the model, then load the state dict:
     model.load_state_dict(state_dict)
 
 
-Option 2:
-~~~~~~~~
-If also the model definitions have changed in a way that also affects the weight names, option 1 will still fail.
-In this case, you need to inspect the state-dict dictionaries in the different version, and try to match the keys.
+If also the model weight names have changed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+You will likely see an exception like this one:
+
+.. code-block:: python
+
+    RuntimeError: Error(s) in loading state_dict for RotatE:
+	Missing key(s) in state_dict: "entity_representations.0._embeddings.weight", "relation_representations.0._embeddings.weight".
+	Unexpected key(s) in state_dict: "regularizer.weight", "regularizer.regularization_term", "entity_embeddings._embeddings.weight", "relation_embeddings._embeddings.weight".
+
+In this case, you need to inspect the state-dict dictionaries in
+the different version, and try to match the keys.
 Then modify the state dict accordingly before loading it.
 For example:
 
@@ -88,9 +105,11 @@ For example:
         state_dict.pop(name)
     model.load_state_dict(state_dict)
 
-Warning: Even if you manage to load the state dict, there is still a risk that the the weights are used differently
-leading to a difference in model behavior. To be sure that the model is still viable after loading it in a different
-pykeen version you should inspect *how* the model definition has changed.
+Warning: Even if you manage to load the state dict, there is still
+a risk that the the weights are used differentlyleading to a difference
+in model behavior. To be sure that the model is still viable after
+loading it in a different pykeen version you should inspect *how* the
+model definition has changed.
 
 Mapping Entity and Relation Identifiers to their Names
 ------------------------------------------------------
