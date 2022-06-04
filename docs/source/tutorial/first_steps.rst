@@ -70,15 +70,15 @@ First instantiate the model, then load the state dict:
     model.load_state_dict(state_dict)
 
 
-If also the model weight names have changed
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If the model weight names have changed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 You will likely see an exception like this one:
 
 .. code-block:: python
 
     RuntimeError: Error(s) in loading state_dict for RotatE:
-	Missing key(s) in state_dict: "entity_representations.0._embeddings.weight", "relation_representations.0._embeddings.weight".
-	Unexpected key(s) in state_dict: "regularizer.weight", "regularizer.regularization_term", "entity_embeddings._embeddings.weight", "relation_embeddings._embeddings.weight".
+    Missing key(s) in state_dict: "entity_representations.0._embeddings.weight", "relation_representations.0._embeddings.weight".
+    Unexpected key(s) in state_dict: "regularizer.weight", "regularizer.regularization_term", "entity_embeddings._embeddings.weight", "relation_embeddings._embeddings.weight".
 
 In this case, you need to inspect the state-dict dictionaries in
 the different version, and try to match the keys.
