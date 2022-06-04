@@ -105,11 +105,11 @@ For example:
         state_dict.pop(name)
     model.load_state_dict(state_dict)
 
-Warning: Even if you manage to load the state dict, there is still
-a risk that the the weights are used differentlyleading to a difference
-in model behavior. To be sure that the model is still viable after
-loading it in a different pykeen version you should inspect *how* the
-model definition has changed.
+Warning: Even if the state dict can be loaded, there is still
+a risk that the the weights are used differently. This can lead to a
+difference in model behavior. To be sure that the model is still
+functioning the same way, you should also check some model predictions
+and inspect *how* the model definition has changed.
 
 Mapping Entity and Relation Identifiers to their Names
 ------------------------------------------------------
