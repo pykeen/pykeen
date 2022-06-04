@@ -28,7 +28,7 @@ If your model was trained on a different version of PyKEEN,
 you might have difficulty loading the model using
 `torch.load('trained_model.pkl')`.
 
-This might be because one or both of the following:
+This could be due to one or both of the following:
 
 1. The model class structure might have changed.
 2. The model weight names might have changed.
@@ -39,7 +39,7 @@ Please attempt the following steps to load the model.
 If the model class structure has changed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 You will likely see an exception like this one:
-`ModuleNotFoundError: No module named 'pykeen.nn.emb'`
+`ModuleNotFoundError: No module named ...`
 
 In this case, try to instantiate the model class directly
 and only load the state dict from the model file.
@@ -72,7 +72,7 @@ First instantiate the model, then load the state dict:
 
 If the model weight names have changed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You will likely see an exception like this one:
+You will likely see an exception similar to this one:
 
 .. code-block:: python
 
