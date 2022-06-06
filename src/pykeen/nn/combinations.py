@@ -3,7 +3,7 @@
 """Implementation of combinations for the :class:`pykeen.models.LiteralModel`."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Sequence
 
 import torch
 from class_resolver import HintOrType
@@ -24,6 +24,23 @@ __all__ = [
     "ComplExLiteralCombination",
     "GatedCombination",
 ]
+
+
+class NCombination(nn.Module, ABC):
+    """Base class for combinations."""
+
+    @abstractmethod
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        """
+        Combine a sequence of individual representations.
+
+        :param xs: shape: `(*batch_dims, *input_dims_i)`
+            the individual representations
+
+        :return: shape: `(*batch_dims, *output_dims)`
+            a combined representation
+        """
+        raise NotImplementedError
 
 
 class Combination(nn.Module, ABC):
