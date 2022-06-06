@@ -23,11 +23,11 @@ from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
+from ..constants import PYKEEN_MODULE
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
-from ..constants import PYKEEN_MODULE
 
 __all__ = [
     "Representation",
@@ -989,80 +989,145 @@ class LabelBasedTransformerRepresentation(Representation):
         return x[inverse]
 
 
-class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
-    """
-    Textual representations for datasets grounded in Wikidata.
+class WikidataCache:
+    #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
+    WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
+    # image:
+    # https://www.wikidata.org/w/api.php?action=wbgetclaims&property=P18&entity=Qxxx
 
-    The textual description is lazily obtained from Wikidata, and encoded using
-    :class:`LabelBasedTransformerRepresentation`.
-    """
-
-    BASE_URL_PATTERN = "https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json?flavor=dump"
+    def __init__(self) -> None:
+        """Initialize the cache."""
+        self.module = PYKEEN_MODULE.submodule("wikidata")
 
     @staticmethod
     def iter_invalid_ids(ids: Sequence[str]) -> Iterable[str]:
+        """Iterate over invalid IDs."""
         pattern = re.compile(r"Q(\d+)")
         for one_id in ids:
             if not pattern.match(one_id):
                 yield one_id
 
     @staticmethod
-    def _safe_get(d: dict, *keys, default=None) -> Optional[Any]:
+    def _safe_get(d: dict, *keys: str, default=None) -> Optional[Any]:
+        """
+        Get from a nested dictionary with default.
+
+        :param d:
+            the (nested) dictionary
+        :param keys:
+            the sequence of keys
+        :param default:
+            the default value if a key is not present at any level, defaults to None
+        :return: the value, or the default
+        """
         # TODO: move to utils
         for key in keys[:-1]:
             d = d.get(key, {})
         return d.get(keys[-1], default)
 
-    def __init__(self, labels: Sequence[str], language: str = "en", **kwargs):
-        # validate Wikidata Ids
-        invalid_ids = list(self.iter_invalid_ids(ids=labels))
+    @staticmethod
+    def query(wikidata_ids: Sequence[str], language: str = "en") -> Mapping[str, Mapping[str, str]]:
+        """
+        Query the SPARQL endpoints about information for the given IDs.
+
+        :param wikidata_ids:
+            the Wikidata IDs
+        :param language:
+            the label language
+
+        :return:
+            a mapping from Wikidata Ids to dictionaries with the label and description of the entities
+        """
+        # cf. https://github.com/biopragmatics/bioregistry/blob/55584709e287d1d01d51375e0bd836f3c4d25b2e/src/bioregistry/utils.py#L53-L63
+        if not wikidata_ids:
+            return {}
+
+        # is this already part of the requirements?
+        import requests
+
+        qualified = " ".join(f"wd:{i}" for i in wikidata_ids)
+        sparql = f"""
+            SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
+                VALUES ?item {{ {qualified} }}
+                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
+            }}}}
+        """
+
+        logger.debug("running query: %s", sparql)
+        res = requests.get(WikidataCache.WIKIDATA_ENDPOINT, params={"query": sparql, "format": "json"})
+        res.raise_for_status()
+        res_json = res.json()
+        result = {}
+        for entry in res_json["results"]["bindings"]:
+            wikidata_id = WikidataCache._safe_get(entry, "item", "value", default="").rsplit("/", maxsplit=1)[-1]
+            result[wikidata_id] = dict(
+                label=WikidataCache._safe_get(entry, "itemLabel", "value", default=""),
+                description=WikidataCache._safe_get(entry, "itemDescription", "value", default=""),
+            )
+        return result
+
+    def verify_ids(self, ids: Sequence[str]):
+        """Raise error if invalid IDs are encountered."""
+        invalid_ids = list(self.iter_invalid_ids(ids=ids))
         if invalid_ids:
             raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
-        # note: labels is only used for shape inference, so we do not care about wrong labels here
+
+    def _load(self, wikidata_id: str, component: str) -> Optional[str]:
+        """Load information about a Wikidata ID from JSON file."""
+        name = f"{wikidata_id}.json"
+        if not self.module.join(name=name).is_file():
+            return None
+        return self.module.load_json(name=name)[component]
+
+    def _save(self, entries: Mapping[str, Mapping[str, str]]):
+        """Save entries as JSON."""
+        logger.info(f"Saving {len(entries)} entries to {self.module}")
+        for wikidata_id, entry in entries.items():
+            name = f"{wikidata_id}.json"
+            self.module.dump_json(name=name, obj=entry)
+
+    def _get(self, ids: Sequence[str], component: str) -> Sequence[str]:
+        self.verify_ids(ids=ids)
+        # try to load cached first
+        result = [None] * len(ids)
+        for i, wikidata_id in enumerate(ids):
+            result[i] = self._load(wikidata_id=wikidata_id, component=component)
+        # determine missing entries
+        missing = {wikidata_id for wikidata_id, desc in zip(ids, result) if not desc}
+        # retrieve information via SPARQL
+        entries = self.query(wikidata_ids=missing)
+        # save entries
+        self._save(entries=entries)
+        # fill missing descriptions
+        w_to_i = {wikidata_id: i for i, wikidata_id in enumerate(ids)}
+        for wikidata_id, entry in entries.items():
+            result[w_to_i[wikidata_id]] = entry[component]
+        return result
+
+    def get_labels(self, ids: Sequence[str]) -> Sequence[str]:
+        """Get entity labels for the given IDs."""
+        return self._get(ids=ids, component="label")
+
+    def get_descriptions(self, ids: Sequence[str]) -> Sequence[str]:
+        """Get entity descriptions for the given IDs."""
+        return self._get(ids=ids, component="description")
+
+
+class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
+    """
+    Textual representations for datasets grounded in Wikidata.
+
+    The textual description are obtained from Wikidata using :class:`WikidataCache`, and encoded with
+    :class:`LabelBasedTransformerRepresentation`.
+    """
+
+    def __init__(self, labels: Sequence[str], **kwargs):
+        # set up cache
+        cache = WikidataCache()
+        # get labels & descriptions
+        titles = cache.get_labels(ids=labels)
+        descriptions = cache.get_descriptions(ids=labels)
+        # compose labels
+        labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
+        # delegate to super class
         super().__init__(labels=labels, **kwargs)
-        # overwrite labels for lazy init
-        self.labels = [None] * len(labels)
-        self.wikidata_ids = labels
-        self.module = PYKEEN_MODULE.submodule("wikidata")
-        self.language = language
-
-    def _ensure_text(self, i: int):
-        if self.labels[i] is not None:
-            return
-
-        wikidata_id = self.wikidata_ids[i]
-        data = self.module.ensure_json(wikidata_id, "text", url=self.BASE_URL_PATTERN.format(wikidata_id=wikidata_id))
-        # compose textual description
-        title = self._safe_get(
-            data, "entities", wikidata_id, "labels", self.language, "value", default="unknown entity"
-        )
-        description = self._safe_get(
-            data,
-            "entities",
-            wikidata_id,
-            "descriptions",
-            self.language,
-            "value",
-            default="nothing is known about this entity",
-        )
-        self.labels[i] = f"{title}: {description}"
-        logger.debug(f"Retrieved description of {wikidata_id}: {self.labels[i]}")
-
-    def _ensure_texts(self, indices: Optional[torch.LongTensor] = None):
-        if indices is None:
-            indices = range(self.max_id)
-        else:
-            indices = indices.unique().tolist()
-        for i in indices:
-            self._ensure_text(i)
-
-    # docstr-coverage: inherited
-    def _plain_forward(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._ensure_texts(indices=indices)
-        return super()._plain_forward(indices=indices)
-
-    # image:
-    # https://www.wikidata.org/w/api.php?action=wbgetclaims&property=P18&entity=Qxxx
