@@ -13,7 +13,7 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, HintOrType, OptionalKwargs
+from class_resolver import FunctionResolver, HintOrType, OptionalKwargs, OneOrManyHintOrType, OneOrManyOptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
@@ -985,3 +985,64 @@ class LabelBasedTransformerRepresentation(Representation):
             labels=[self.labels[i] for i in uniq.tolist()],
         )
         return x[inverse]
+
+
+class CombinedRepresentation(Representation):
+    """A combined representation."""
+
+    base: Sequence[Representation]
+    combination: nn.Module
+
+    def __init__(
+        self,
+        max_id: int,
+        base: OneOrManyHintOrType[Representation],
+        base_kwargs: OneOrManyOptionalKwargs,
+        combination: HintOrType[nn.Module] = None,
+        combination_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        :param max_id: the number of representations.
+        :param base: the base representations, or hints thereof
+        :param base_kwargs: keyword-based parameters for the instantiation of base representations
+        :param combination: the combination, or a hint thereof
+        :param combination_kwargs: keyword-based parameters to instantiate the combination
+
+        :raises ValueError: if the `max_id` of the base representations does not match
+        """
+        # has to be imported here to avoid cyclic import
+        from . import representation_resolver
+
+        # create base representations
+        base = representation_resolver.make_many(base, base_kwargs=base_kwargs, max_id=max_id)
+
+        # verify same ID range
+        max_ids = set(b.max_id for b in base)
+        if len(max_ids) != 1:
+            # note: we could also relax the requiremen, and set max_id = min(max_ids)
+            raise ValueError(f"Maximum number of Ids does not match! {sorted(max_ids)}")
+
+        # shape inference
+        shape = self.combine(combination=combination, base=base, indices=torch.zeros(size=(1,))).shape[1:]
+
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
+
+        # assign base representations *after* super init
+        self.base = base
+        self.combination = combination
+
+    @staticmethod
+    def combine(
+        combination: nn.Module, base: Sequence[Representation], indices: Optional[torch.LongTensor] = None
+    ) -> torch.FloatTensor:
+        return combination(*(b._plain_forward(indices=indices) for b in base))
+
+    # docstr-coverage: inherited
+    def _plain_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.combine(combination=self.combination, base=self.base, indices=indices)
