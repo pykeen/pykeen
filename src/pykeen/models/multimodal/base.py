@@ -50,11 +50,10 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
             additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """
         literals = triples_factory.get_numeric_literals_tensor()
-        max_id, *shape = literals.shape
+        _max_id, *shape = literals.shape
         entity_representations = tuple(upgrade_to_sequence(entity_representations)) + (Embedding,)
         entity_representations_kwargs = tuple(upgrade_to_sequence(entity_representations_kwargs)) + (
             dict(
-                max_id=max_id,
                 shape=shape,
                 initializer=PretrainedInitializer(tensor=literals),
                 trainable=False,
@@ -65,7 +64,8 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
             interaction=interaction,
             entity_representations=CombinedRepresentation,
             entity_representations_kwargs=dict(
-                max_id=triples_factory.num_entities,
+                # added by ERModel
+                # max_id=triples_factory.num_entities,
                 base=entity_representations,
                 base_kwargs=entity_representations_kwargs,
                 combination=combination,
