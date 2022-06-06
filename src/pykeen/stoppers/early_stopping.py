@@ -220,6 +220,8 @@ class EarlyStopper(Stopper):
 
     def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
+        # for mypy
+        assert self.best_model_path is not None
         # Evaluate
         metric_results = self.evaluator.evaluate(
             model=self.model,
@@ -265,7 +267,6 @@ class EarlyStopper(Stopper):
             return True
 
         if self._stopper.is_best:
-            assert self.best_model_path is not None
             torch.save(self.model.state_dict(), self.best_model_path)
             logger.info(
                 f"New best result at epoch {epoch}: {self.best_metric}. Saved model weights to {self.best_model_path}",
