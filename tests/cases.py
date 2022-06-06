@@ -1452,6 +1452,12 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     batch_size: ClassVar[int] = 2
     num_negatives: ClassVar[int] = 3
+    max_id: ClassVar[int] = 7
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs.update(dict(max_id=self.max_id))
+        return kwargs
 
     def _check_result(self, x: torch.FloatTensor, prefix_shape: Tuple[int, ...]):
         """Check the result."""
@@ -1472,6 +1478,10 @@ class RepresentationTestCase(GenericTestCase[Representation]):
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
+
+    def test_max_id(self):
+        """Test maximum id."""
+        self.assertEqual(self.max_id, self.instance.max_id)
 
     def test_no_indices(self):
         """Test without indices."""
