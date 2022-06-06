@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import functools
 import itertools
 import logging
 import warnings
@@ -15,7 +14,7 @@ import numpy as np
 import torch
 import torch.nn
 from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
-from class_resolver.contrib.torch import activation_resolver
+from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 from torch.nn import functional
 
@@ -998,15 +997,14 @@ class CombinedRepresentation(Representation):
     base: Sequence[Representation]
 
     #: the combination module
-    # TODO: currently, this is a callable
-    combination: nn.Module
+    combination: Callable[[torch.FloatTensor], torch.FloatTensor]
 
     def __init__(
         self,
         max_id: int,
         base: OneOrManyHintOrType[Representation] = None,
         base_kwargs: OneOrManyOptionalKwargs = None,
-        combination: Hint[Callable[[Sequence[torch.FloatTensor]], torch.FloatTensor]] = None,
+        combination: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
         **kwargs,
     ):
         """
@@ -1032,8 +1030,7 @@ class CombinedRepresentation(Representation):
             raise ValueError(f"Maximum number of Ids does not match! {sorted(max_ids)}")
 
         # input normalization
-        if combination is None:
-            combination = functools.partial(torch.cat, dim=-1)
+        combination = aggregation_resolver.make(combination, dim=-1)
 
         # shape inference
         shape = self.combine(
@@ -1060,7 +1057,8 @@ class CombinedRepresentation(Representation):
         :return:
             the combined representations for the given indices
         """
-        return combination([b._plain_forward(indices=indices) for b in base])
+        # TODO: concat may limit the combination choices
+        return combination(torch.cat([b._plain_forward(indices=indices) for b in base], dim=-1))
 
     # docstr-coverage: inherited
     def _plain_forward(
