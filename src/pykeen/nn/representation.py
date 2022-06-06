@@ -18,7 +18,7 @@ from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
 
-from .combinations import NCombination, combination_resolver
+from .combinations import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .utils import TransformerEncoder
@@ -998,14 +998,14 @@ class CombinedRepresentation(Representation):
     base: Sequence[Representation]
 
     #: the combination module
-    combination: NCombination
+    combination: Combination
 
     def __init__(
         self,
         max_id: int,
         base: OneOrManyHintOrType[Representation] = None,
         base_kwargs: OneOrManyOptionalKwargs = None,
-        combination: HintOrType[NCombination] = None,
+        combination: HintOrType[Combination] = None,
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
     ):

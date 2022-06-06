@@ -29,7 +29,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class NCombination(nn.Module, ABC):
+class Combination(nn.Module, ABC):
     """Base class for combinations."""
 
     @abstractmethod
@@ -62,7 +62,7 @@ class NCombination(nn.Module, ABC):
         return self(xs=[torch.empty(size=shape) for shape in input_shapes]).shape
 
 
-class ConcatCombination(NCombination):
+class ConcatCombination(Combination):
     """Combine representation by concatenation."""
 
     def __init__(self, dim: int = -1) -> None:
@@ -102,7 +102,7 @@ class ConcatAggregationCombination(ConcatCombination):
         return self.aggregation(super().forward(xs=xs))
 
 
-class RealCombination(NCombination, ABC):
+class RealCombination(Combination, ABC):
     """A mid-level base class for combinations of real-valued vectors."""
 
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
@@ -133,7 +133,7 @@ class ParameterizedRealCombination(RealCombination):
         return self.module(x)
 
 
-class ComplexCombination(NCombination, ABC):
+class ComplexCombination(Combination, ABC):
     """A mid-level base class for combinations of complex-valued vectors."""
 
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
@@ -271,7 +271,7 @@ class ComplExLiteralCombination(ParameterizedComplexCombination):
         )
 
 
-class GatedCombination(NCombination):
+class GatedCombination(Combination):
     """A module that implements a gated linear transformation for the combination of entities and literals.
 
     Compared to the other Combinations, this combination makes use of a gating mechanism commonly found in RNNs.
@@ -341,7 +341,7 @@ class GatedCombination(NCombination):
         return self.dropout(z * h + (1 - z) * x)
 
 
-combination_resolver: ClassResolver[NCombination] = ClassResolver.from_subclasses(
-    base=NCombination,
+combination_resolver: ClassResolver[Combination] = ClassResolver.from_subclasses(
+    base=Combination,
     default=ConcatCombination,
 )

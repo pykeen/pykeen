@@ -5,7 +5,7 @@
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 
 from ..nbase import ERModel
-from ...nn.combinations import NCombination
+from ...nn.combinations import Combination
 from ...nn.init import PretrainedInitializer
 from ...nn.modules import LiteralInteraction
 from ...nn.representation import CombinedRepresentation, Embedding, Representation
@@ -27,7 +27,7 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         interaction: LiteralInteraction,
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
-        combination: HintOrType[NCombination] = None,
+        combination: HintOrType[Combination] = None,
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
