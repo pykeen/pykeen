@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import itertools
 import logging
+import re
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -26,6 +27,7 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
+from ..constants import PYKEEN_MODULE
 
 __all__ = [
     "Representation",
@@ -985,3 +987,82 @@ class LabelBasedTransformerRepresentation(Representation):
             labels=[self.labels[i] for i in uniq.tolist()],
         )
         return x[inverse]
+
+
+class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
+    """
+    Textual representations for datasets grounded in Wikidata.
+
+    The textual description is lazily obtained from Wikidata, and encoded using
+    :class:`LabelBasedTransformerRepresentation`.
+    """
+
+    BASE_URL_PATTERN = "https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json?flavor=dump"
+
+    @staticmethod
+    def iter_invalid_ids(ids: Sequence[str]) -> Iterable[str]:
+        pattern = re.compile(r"Q(\d+)")
+        for one_id in ids:
+            if not pattern.match(one_id):
+                yield one_id
+
+    @staticmethod
+    def _safe_get(d: dict, *keys, default=None) -> Optional[Any]:
+        # TODO: move to utils
+        for key in keys[:-1]:
+            d = d.get(key, {})
+        return d.get(keys[-1], default)
+
+    def __init__(self, labels: Sequence[str], language: str = "en", **kwargs):
+        # validate Wikidata Ids
+        invalid_ids = list(self.iter_invalid_ids(ids=labels))
+        if invalid_ids:
+            raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
+        # note: labels is only used for shape inference, so we do not care about wrong labels here
+        super().__init__(labels=labels, **kwargs)
+        # overwrite labels for lazy init
+        self.labels = [None] * len(labels)
+        self.wikidata_ids = labels
+        self.module = PYKEEN_MODULE.submodule("wikidata")
+        self.language = language
+
+    def _ensure_text(self, i: int):
+        if self.labels[i] is not None:
+            return
+
+        wikidata_id = self.wikidata_ids[i]
+        data = self.module.ensure_json(wikidata_id, "text", url=self.BASE_URL_PATTERN.format(wikidata_id=wikidata_id))
+        # compose textual description
+        title = self._safe_get(
+            data, "entities", wikidata_id, "labels", self.language, "value", default="unknown entity"
+        )
+        description = self._safe_get(
+            data,
+            "entities",
+            wikidata_id,
+            "descriptions",
+            self.language,
+            "value",
+            default="nothing is known about this entity",
+        )
+        self.labels[i] = f"{title}: {description}"
+        logger.debug(f"Retrieved description of {wikidata_id}: {self.labels[i]}")
+
+    def _ensure_texts(self, indices: Optional[torch.LongTensor] = None):
+        if indices is None:
+            indices = range(self.max_id)
+        else:
+            indices = indices.unique().tolist()
+        for i in indices:
+            self._ensure_text(i)
+
+    # docstr-coverage: inherited
+    def _plain_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        self._ensure_texts(indices=indices)
+        return super()._plain_forward(indices=indices)
+
+    # image:
+    # https://www.wikidata.org/w/api.php?action=wbgetclaims&property=P18&entity=Qxxx
