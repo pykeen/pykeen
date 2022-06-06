@@ -13,13 +13,13 @@ from uuid import uuid4
 import torch
 
 from .stopper import Stopper
+from ..constants import PYKEEN_CHECKPOINTS
 from ..evaluation import Evaluator
 from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import InductiveMode
 from ..utils import fix_dataclass_init_docs
-from ..constants import PYKEEN_CHECKPOINTS
 
 __all__ = [
     "is_improvement",
