@@ -9,8 +9,10 @@ import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import aggregation_resolver
 
+from pykeen.nn.combinations import ConcatAggregationCombination
+
 from .tokenization import Tokenizer, tokenizer_resolver
-from ..representation import Representation
+from ..representation import CombinedRepresentation, Representation
 from ...triples import CoreTriplesFactory
 from ...typing import MappedTriples, OneOrSequence
 from ...utils import broadcast_upgrade_to_sequences
@@ -185,7 +187,7 @@ class HashDiversityInfo(NamedTuple):
     uniques_total: float
 
 
-class NodePieceRepresentation(Representation):
+class NodePieceRepresentation(CombinedRepresentation):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
 
@@ -285,40 +287,31 @@ class NodePieceRepresentation(Representation):
             )
         ]
 
-        # determine shape
-        if shape is None:
-            shapes = {t.vocabulary.shape for t in token_representations}
-            if len(shapes) != 1:
-                raise ValueError(f"Inconsistent token shapes: {shapes}")
-            shape = list(shapes)[0]
-
-        # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape, **kwargs)
-
-        # assign module
-        self.token_representations = torch.nn.ModuleList(token_representations)
-
-        # Assign default aggregation
-        self.aggregation = aggregation_resolver.lookup(aggregation)
-        self.aggregation_index = -(1 + len(shape))
+        super().__init__(
+            max_id=triples_factory.num_entities,
+            base=token_representations,
+            combination=ConcatAggregationCombination,
+            combination_kwargs=dict(aggregation=aggregation, dim=-len(token_representations[0].shape)),
+            **kwargs,
+        )
 
     # docstr-coverage: inherited
     def extra_repr(self) -> str:  # noqa: D102
         aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
         return f"aggregation={aggregation_str}, "
 
-    # docstr-coverage: inherited
-    def _plain_forward(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        return self.aggregation(
-            torch.cat(
-                [tokenization(indices=indices) for tokenization in self.token_representations],
-                dim=self.aggregation_index,
-            ),
-            self.aggregation_index,
-        )
+    # # docstr-coverage: inherited
+    # def _plain_forward(
+    #     self,
+    #     indices: Optional[torch.LongTensor] = None,
+    # ) -> torch.FloatTensor:  # noqa: D102
+    #     return self.aggregation(
+    #         torch.cat(
+    #             [tokenization(indices=indices) for tokenization in self.token_representations],
+    #             dim=self.aggregation_index,
+    #         ),
+    #         self.aggregation_index,
+    #     )
 
     def estimate_diversity(self) -> HashDiversityInfo:
         """

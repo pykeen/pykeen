@@ -135,7 +135,7 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
 
     def test_token_representations(self):
         """Verify that the number of token representations is correct."""
-        assert len(self.instance.token_representations) == 2
+        assert len(self.instance.base) == 2
 
 
 class TokenizationTests(cases.RepresentationTestCase):

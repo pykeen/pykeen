@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
 
 import torch
-from class_resolver import HintOrType, Hint, ClassResolver
+from class_resolver import ClassResolver, Hint, HintOrType
 from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
@@ -47,7 +47,7 @@ class NCombination(nn.Module, ABC):
 
     def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:
         """
-        Calculate the outpu shape for the given input shapes.
+        Calculate the output shape for the given input shapes.
 
         .. note ::
             this method runs a single forward pass if no symbolic computation is available.
@@ -83,7 +83,9 @@ class ConcatCombination(NCombination):
 class ConcatAggregationCombination(ConcatCombination):
     """Combine representation by concatenation followed by an aggregation along the same axis."""
 
-    def __init__(self, aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]], dim: int = -1) -> None:
+    def __init__(
+        self, aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None, dim: int = -1
+    ) -> None:
         """
         Initialize the combination.
 
