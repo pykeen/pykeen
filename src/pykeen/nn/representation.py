@@ -37,6 +37,7 @@ __all__ = [
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
     "SubsetRepresentation",
+    "CombinedRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
