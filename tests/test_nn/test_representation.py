@@ -12,6 +12,7 @@ import unittest_templates
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
+import pykeen.nn.vision
 from pykeen.datasets import get_dataset
 from tests import cases, mocks
 
@@ -234,7 +235,7 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
 class VisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for VisualRepresentation."""
 
-    cls = pykeen.nn.representation.VisualRepresentation
+    cls = pykeen.nn.vision.VisualRepresentation
     kwargs = dict(
         encoder="resnet18",
         layer_name="avgpool",

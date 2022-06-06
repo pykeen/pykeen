@@ -1,0 +1,179 @@
+"""
+A module of vision related components.
+
+Generally requires :module:`torchvision` to be installed.
+"""
+import functools
+import pathlib
+from typing import Any, Callable, Optional, Sequence, Union
+
+import torch
+import torch.nn
+import torch.utils.data
+from class_resolver import OptionalKwargs
+
+from .representation import Representation
+
+try:
+    from PIL import Image
+    from torchvision import models
+    from torchvision import transforms as vision_transforms
+except ImportError:
+    models = vision_transforms = Image = None
+
+
+__all__ = [
+    "VisualRepresentation",
+]
+
+
+def _ensure_vision(instance: object, module: Optional[Any]):
+    if module is None:
+        raise ImportError(f"{instance.__class__.__name__} requires `torchvision` to be installed.")
+
+
+class VisionDataset(torch.utils.data.Dataset):
+    """
+    A dataset of images with data augmentation.
+
+    .. note ::
+        requires `torchvision` to be installed.
+    """
+
+    def __init__(
+        self,
+        images: Sequence[Union[str, pathlib.Path, torch.Tensor]],
+        transforms: Sequence = None,
+        root: Optional[pathlib.Path] = None,
+    ) -> None:
+        """
+        Initialize the dataset.
+
+        :param images: the images, either as (relative) path, or preprocessed tensors.
+        :param transforms:
+            a sequence of transformations to apply to the images,
+            cf. :module:`torchvision.transforms`
+        :param root:
+            the root directory for images
+        """
+        _ensure_vision(self, vision_transforms)
+        super().__init__()
+        if root is None:
+            root = pathlib.Path.cwd()
+        self.root = pathlib.Path(root)
+
+        self.images = images
+        if transforms is None:
+            transforms = [vision_transforms.ToTensor()]
+        transforms.append(vision_transforms.ConvertImageDtype(torch.get_default_dtype()))
+        self.transforms = vision_transforms.Compose(transforms=transforms)
+
+    # docstr-coverage: inherited
+    def __getitem__(self, item: int) -> torch.Tensor:  # noqa: D102
+        _ensure_vision(self, Image)
+        image = self.images[item]
+        if isinstance(image, (str, pathlib.Path)):
+            path = pathlib.Path(image)
+            if not path.is_absolute():
+                path = self.root.joinpath(path)
+            image = Image.open(path)
+        assert torch.is_tensor(image)
+        return self.transforms(image)
+
+    # docstr-coverage: inherited
+    def __len__(self) -> int:  # noqa: D102
+        return len(self.images)
+
+
+class VisualRepresentation(Representation):
+    """Visual representations using a torchvision model."""
+
+    def __init__(
+        self,
+        images: Sequence,
+        encoder: Union[str, torch.nn.Module],
+        layer_name: str,
+        transforms: Optional[Sequence] = None,
+        encoder_kwargs: OptionalKwargs = None,
+        batch_size: int = 32,
+        trainable: bool = True,
+        **kwargs,
+    ):
+        """
+        Initialize the representations.
+
+        :param images:
+            the images, either as tensors, or paths to image files.
+        :param encoder:
+            the encoder to use. If given as a string, lookup in :module:`torchvision.models`
+        :param layer_name:
+            the model's layer name to use for extracting the features, cf.
+            :func:`torchvision.models.feature_extraction.create_feature_extractor`
+        :param transforms:
+            transformations to apply to the images. Notice that stochastic transformations will result in
+            stochastic representations, too.
+        :param encoder_kwargs:
+            additional keyword-based parameters passed to encoder upon instantiation.
+        :param batch_size:
+            the batch size to use during encoding
+        :param trainable:
+            whether the encoder should be trainable
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`.
+            Should not include `max_id` or `shape`.
+        """
+        _ensure_vision(self, models)
+        self.images = VisionDataset(images=images, transforms=transforms)
+
+        if isinstance(encoder, str):
+            cls = getattr(models, encoder)
+            encoder = cls(encoder_kwargs or {})
+
+        pool = functools.partial(torch.mean, dim=(-1, -2))
+
+        encoder = models.feature_extraction.create_feature_extractor(
+            model=encoder, return_nodes={layer_name: "feature"}
+        )
+
+        # infer shape
+        with torch.inference_mode():
+            encoder.eval()
+            shape = self._encode(images=self.images[0].unsqueeze(dim=0), encoder=encoder, pool=pool).shape[1:]
+
+        super().__init__(max_id=len(images), shape=shape, **kwargs)
+
+        self.encoder = encoder
+        self.pool = pool
+        self.batch_size = batch_size or self.max_id
+        self.encoder.train(trainable)
+        self.encoder.requires_grad_(trainable)
+        self.trainable = trainable
+
+    @staticmethod
+    def _encode(
+        images: torch.FloatTensor, encoder: torch.nn.Module, pool: Callable[[torch.FloatTensor], torch.FloatTensor]
+    ) -> torch.FloatTensor:
+        """
+        Encoder images with the given encoder and pooling methods.
+
+        :param images: shape: (batch_size, num_channels, height, width)
+            a batch of images
+        :param encoder:
+            the encoder, returning a dictionary with key "features"
+        :param pool:
+            the pooling method to use
+        :return: shape: (batch_size, dim)
+            the encoded representations.
+        """
+        return pool(encoder(images)["feature"])
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        dataset = self.images
+        if indices is not None:
+            dataset = torch.utils.data.Subset(dataset=dataset, indices=indices)
+        data_loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
+        with torch.inference_mode(mode=not self.trainable):
+            return torch.cat(
+                [self._encode(images=images, encoder=self.encoder, pool=self.pool) for images in data_loader], dim=-1
+            )
