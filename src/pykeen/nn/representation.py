@@ -8,16 +8,17 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn
 from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
-from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
+from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
 
+from .combinations import NCombination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .utils import TransformerEncoder
@@ -997,25 +998,33 @@ class CombinedRepresentation(Representation):
     base: Sequence[Representation]
 
     #: the combination module
-    combination: Callable[[torch.FloatTensor], torch.FloatTensor]
+    combination: NCombination
 
     def __init__(
         self,
         max_id: int,
         base: OneOrManyHintOrType[Representation] = None,
         base_kwargs: OneOrManyOptionalKwargs = None,
-        combination: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+        combination: HintOrType[NCombination] = None,
+        combination_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """
         Initialize the representation.
 
-        :param max_id: the number of representations.
-        :param base: the base representations, or hints thereof
-        :param base_kwargs: keyword-based parameters for the instantiation of base representations
-        :param combination: the combination, or a hint thereof. Defaults to :func:`torch.cat`
+        :param max_id:
+            the number of representations.
+        :param base:
+            the base representations, or hints thereof
+        :param base_kwargs:
+            keyword-based parameters for the instantiation of base representations
+        :param combination:
+            the combination, or a hint thereof
+        :param combination_kwargs:
+            additional keyword-based parameters used to instantiate the combination
 
-        :raises ValueError: if the `max_id` of the base representations does not match
+        :raises ValueError:
+            if the `max_id` of the base representations does not match
         """
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
@@ -1030,12 +1039,9 @@ class CombinedRepresentation(Representation):
             raise ValueError(f"Maximum number of Ids does not match! {sorted(max_ids)}")
 
         # input normalization
-        combination = aggregation_resolver.make(combination, dim=-1)
-
+        combination = combination_resolver.make(combination, combination_kwargs)
         # shape inference
-        shape = self.combine(
-            combination=combination, base=base, indices=torch.zeros(size=(1,), dtype=torch.long)
-        ).shape[1:]
+        shape = combination.output_shape(input_shapes=[b.shape for b in base])
 
         super().__init__(max_id=max_id, shape=shape, **kwargs)
 
@@ -1057,8 +1063,7 @@ class CombinedRepresentation(Representation):
         :return:
             the combined representations for the given indices
         """
-        # TODO: concat may limit the combination choices
-        return combination(torch.cat([b._plain_forward(indices=indices) for b in base], dim=-1))
+        return combination([b._plain_forward(indices=indices) for b in base])
 
     # docstr-coverage: inherited
     def _plain_forward(
