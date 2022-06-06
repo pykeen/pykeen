@@ -2552,7 +2552,9 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
             # Step early stopper
             should_stop = self.instance.should_stop(epoch=epoch)
 
-            if not should_stop:
+            if should_stop:
+                break
+            else:
                 # check storing of results
                 assert self.instance.results == self.mock_losses[: epoch + 1]
                 assert self.instance.best_metric == self.best_results[epoch]
