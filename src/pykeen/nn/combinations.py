@@ -17,7 +17,6 @@ __all__ = [
     "Combination",
     "RealCombination",
     "ParameterizedRealCombination",
-    "ComplexCombination",
     "ParameterizedComplexCombination",
     # Concrete classes
     "LinearDropout",
@@ -133,7 +132,7 @@ class ParameterizedRealCombination(RealCombination):
         return self.module(x)
 
 
-class ParametrizedComplexCombination(Combination, ABC):
+class ParameterizedComplexCombination(Combination, ABC):
     """A mid-level base class for combinations of complex-valued vectors."""
 
     def __init__(self, real_module: nn.Module, imag_module: nn.Module):
@@ -156,6 +155,12 @@ class ParametrizedComplexCombination(Combination, ABC):
         x_re = self.score_real(torch.cat([x_re, literal], dim=-1))
         x_im = self.score_imag(torch.cat([x_im, literal], dim=-1))
         return combine_complex(x_re=x_re, x_im=x_im)
+
+    # docstr-coverage: inherited
+    def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:  # noqa: D102
+        # symbolic output to avoid dtype issue
+        # we only need to consider real part here
+        return self.score_real(torch.cat([torch.empty(shape) for shape in input_shapes], dim=-1)).shape
 
     def score_real(self, x: torch.FloatTensor) -> torch.FloatTensor:
         """Score the combined real part of the entity representation and literals with the parameterized module."""
