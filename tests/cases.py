@@ -28,7 +28,7 @@ from typing import (
     Union,
 )
 from unittest.case import SkipTest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy
 import numpy.random
@@ -75,6 +75,7 @@ from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
+from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingCallback, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
@@ -87,6 +88,8 @@ from pykeen.typing import (
     EA_SIDE_RIGHT,
     LABEL_HEAD,
     LABEL_TAIL,
+    RANK_REALISTIC,
+    SIDE_BOTH,
     TRAINING,
     HeadRepresentation,
     InductiveMode,
@@ -106,6 +109,7 @@ from pykeen.utils import (
     unpack_singletons,
 )
 from tests.constants import EPSILON
+from tests.mocks import MockEvaluator
 from tests.utils import rand
 
 try:
@@ -2476,3 +2480,112 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
     @abstractmethod
     def _verify_manual(self, combined_tf: CoreTriplesFactory):
         """Verify the result of the combination of the manual example."""
+
+
+class LogCallWrapper:
+    """An object which wraps functions and checks whether they have been called."""
+
+    def __init__(self):
+        self.called = set()
+
+    def wrap(self, func):
+        """Wrap the function."""
+        id_func = id(func)
+
+        def wrapped(*args, **kwargs):
+            self.called.add(id_func)
+            return func(*args, **kwargs)
+
+        return wrapped
+
+    def was_called(self, func) -> bool:
+        """Report whether the previously wrapped function has been called."""
+        return id(func) in self.called
+
+
+class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
+    """Base test for early stopper."""
+
+    cls = EarlyStopper
+
+    #: The window size used by the early stopper
+    patience: int = 2
+    #: The mock losses the mock evaluator will return
+    mock_losses: List[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
+    #: The (zeroed) index  - 1 at which stopping will occur
+    stop_constant: int = 4
+    #: The minimum improvement
+    delta: float = 0.0
+    #: The best results
+    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        nations = Nations()
+        kwargs.update(
+            dict(
+                evaluator=MockEvaluator(
+                    key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC),
+                    values=self.mock_losses,
+                    # Set automatic_memory_optimization to false for tests
+                    automatic_memory_optimization=False,
+                ),
+                model=FixedModel(triples_factory=nations.training),
+                training_triples_factory=nations.training,
+                evaluation_triples_factory=nations.validation,
+                patience=self.patience,
+                relative_delta=self.delta,
+                larger_is_better=False,
+            )
+        )
+        return kwargs
+
+    def test_initialization(self):
+        """Test warm-up phase."""
+        for epoch in range(self.patience):
+            should_stop = self.instance.should_stop(epoch=epoch)
+            assert not should_stop
+
+    def test_result_processing(self):
+        """Test that the mock evaluation of the early stopper always gives the right loss."""
+        for epoch in range(len(self.mock_losses)):
+            # Step early stopper
+            should_stop = self.instance.should_stop(epoch=epoch)
+
+            if not should_stop:
+                # check storing of results
+                assert self.instance.results == self.mock_losses[: epoch + 1]
+                assert self.instance.best_metric == self.best_results[epoch]
+
+    def test_should_stop(self):
+        """Test that the stopper knows when to stop."""
+        for epoch in range(self.stop_constant):
+            self.assertFalse(self.instance.should_stop(epoch=epoch))
+        self.assertTrue(self.instance.should_stop(epoch=self.stop_constant))
+
+    def test_result_logging(self):
+        """Test whether result logger is called properly."""
+        self.instance.result_tracker = mock_tracker = Mock()
+        self.instance.should_stop(epoch=0)
+        log_metrics = mock_tracker.log_metrics
+        self.assertIsInstance(log_metrics, Mock)
+        log_metrics.assert_called_once()
+        _, call_args = log_metrics.call_args_list[0]
+        self.assertIn("step", call_args)
+        self.assertEqual(0, call_args["step"])
+        self.assertIn("prefix", call_args)
+        self.assertEqual("validation", call_args["prefix"])
+
+    def test_serialization(self):
+        """Test for serialization."""
+        summary = self.instance.get_summary_dict()
+        new_stopper = EarlyStopper(
+            # not needed for test
+            model=...,
+            evaluator=...,
+            training_triples_factory=...,
+            evaluation_triples_factory=...,
+        )
+        new_stopper._write_from_summary_dict(**summary)
+        for key in summary.keys():
+            assert getattr(self.instance, key) == getattr(new_stopper, key)
