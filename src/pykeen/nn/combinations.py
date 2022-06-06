@@ -2,8 +2,9 @@
 
 """Implementation of combinations for the :class:`pykeen.models.LiteralModel`."""
 
+import logging
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence, Tuple
 
 import torch
 from class_resolver import HintOrType
@@ -25,6 +26,8 @@ __all__ = [
     "GatedCombination",
 ]
 
+logger = logging.getLogger(__name__)
+
 
 class NCombination(nn.Module, ABC):
     """Base class for combinations."""
@@ -41,6 +44,22 @@ class NCombination(nn.Module, ABC):
             a combined representation
         """
         raise NotImplementedError
+
+    def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:
+        """
+        Calculate the outpu shape for the given input shapes.
+
+        .. note ::
+            this method runs a single forward pass if no symbolic computation is available.
+
+        :param input_shapes:
+            the input shapes without the batch dimensions
+
+        :return:
+            the output shape
+        """
+        logger.warning("No symbolic computation of output shape.")
+        return self(xs=[torch.empty(size=shape) for shape in input_shapes]).shape
 
 
 class Combination(nn.Module, ABC):
