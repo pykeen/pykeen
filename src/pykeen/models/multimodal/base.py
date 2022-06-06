@@ -13,7 +13,6 @@ from ...nn.init import PretrainedInitializer
 from ...nn.modules import Interaction
 from ...nn.representation import CombinedRepresentation, Embedding, Representation
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ...utils import upgrade_to_sequence
 
 __all__ = [
