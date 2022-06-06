@@ -4,11 +4,11 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
 
 import torch
-from class_resolver import HintOrType
-from class_resolver.contrib.torch import activation_resolver
+from class_resolver import HintOrType, Hint
+from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
 from ..utils import combine_complex, split_complex
@@ -60,6 +60,27 @@ class NCombination(nn.Module, ABC):
         """
         logger.warning("No symbolic computation of output shape.")
         return self(xs=[torch.empty(size=shape) for shape in input_shapes]).shape
+
+
+class ConcatAggregationCombination(NCombination):
+    """Combine representation by concatenation followed by an aggregation along the same axis."""
+
+    def __init__(self, aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]], dim: int) -> None:
+        """
+        Initialize the combination.
+
+        :param aggregation:
+            the aggregation, or a hint thereof, cf. `aggregation_resolver`
+        :param dim:
+            the concatenation and reduction dimension.
+        """
+        super().__init__()
+        self.dim = dim
+        self.aggregation = aggregation_resolver.make(aggregation, dim=dim)
+
+    # docstr-coverage: inherited
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+        return self.aggregation(torch.cat(xs, dim=self.dim))
 
 
 class Combination(nn.Module, ABC):
