@@ -1667,17 +1667,6 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
         self.check_output(x=x)
 
 
-class LiteralTestCase(InteractionTestCase):
-    """Tests for literal ineractions."""
-
-    cls = LiteralInteraction
-
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h_proj = self.instance.combination(*h)
-        t_proj = self.instance.combination(*t)
-        return self.instance.base(h_proj, r, t_proj)
-
-
 class InitializerTestCase(unittest.TestCase):
     """A test case for initializers."""
 
