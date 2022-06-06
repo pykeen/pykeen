@@ -127,6 +127,14 @@ The following inductive datasets are built in to PyKEEN.
 
 {{ inductive_datasets }}
 
+### Representations ({{ n_representations }})
+
+{{ representations }}
+
+### Interactions ({{ n_interactions }})
+
+{{ interactions }}
+
 ### Models ({{ n_models }})
 
 {{ models }}

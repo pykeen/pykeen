@@ -17,9 +17,10 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import List, Mapping, Optional, Tuple, Type
+from typing import Iterable, List, Mapping, Optional, Tuple, Type
 
 import click
+from class_resolver import ClassResolver
 from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
 from tabulate import tabulate
@@ -40,6 +41,7 @@ from .lr_schedulers import lr_scheduler_resolver
 from .metrics.utils import Metric
 from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
 from .models.cli import build_cli_from_cls
+from .nn import representation_resolver
 from .nn.modules import LiteralInteraction, interaction_resolver
 from .nn.node_piece.cli import tokenize
 from .optimizers import optimizer_resolver
@@ -150,6 +152,8 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
 
 
 def _citation(dd):
+    if "citation" not in dd:
+        return None
     citation = dd["citation"]
     return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
 
@@ -160,6 +164,42 @@ def _fmt_ref(model_reference: str, link_fmt: Optional[str], alt_reference: Optio
     if link_fmt is None:
         return f"`{model_reference}`"
     return f"[`{model_reference}`]({link_fmt.format(alt_reference or model_reference)})"
+
+
+def _get_resolver_lines2(resolver: ClassResolver, link_fmt: str) -> Iterable[Tuple[str, Optional[str]]]:
+    for _, cls in sorted(resolver.lookup_dict.items()):
+        reference = f"{cls.__module__}.{cls.__qualname__}"
+        docdata = getattr(cls, "__docdata__", {})
+        if not docdata:
+            click.secho(message=f"Missing docdata from {reference}", err=True)
+        reference = _fmt_ref(reference, link_fmt, alt_reference=docdata.get("name", None))
+        yield reference, _citation(docdata)
+
+
+def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
+    lines = sorted(_get_resolver_lines2(resolver=interaction_resolver, link_fmt=link_fmt))
+    headers = ["Name", "Citation"]
+    return (
+        tabulate(
+            lines,
+            headers=headers,
+            tablefmt=tablefmt,
+        ),
+        len(lines),
+    )
+
+
+def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
+    lines = sorted(_get_resolver_lines2(resolver=representation_resolver, link_fmt=link_fmt))
+    headers = ["Name", "Citation"]
+    return (
+        tabulate(
+            lines,
+            headers=headers,
+            tablefmt=tablefmt,
+        ),
+        len(lines),
+    )
 
 
 @ls.command()
@@ -207,7 +247,7 @@ def training_loops(tablefmt: str):
 
 
 def _help_training(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(training_loop_resolver.lookup_dict, tablefmt, "training", link_fmt=link_fmt)
+    lines = _get_resolver_lines(training_loop_resolver.lookup_dict, tablefmt, "training", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Description"] if tablefmt == "plain" else ["Name", "Reference", "Description"],
@@ -223,7 +263,7 @@ def negative_samplers(tablefmt: str):
 
 
 def _help_negative_samplers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(negative_sampler_resolver.lookup_dict, tablefmt, "sampling", link_fmt=link_fmt)
+    lines = _get_resolver_lines(negative_sampler_resolver.lookup_dict, tablefmt, "sampling", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Description"] if tablefmt == "plain" else ["Name", "Reference", "Description"],
@@ -239,7 +279,7 @@ def stoppers(tablefmt: str):
 
 
 def _help_stoppers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(stopper_resolver.lookup_dict, tablefmt, "stoppers", link_fmt=link_fmt)
+    lines = _get_resolver_lines(stopper_resolver.lookup_dict, tablefmt, "stoppers", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Description"] if tablefmt == "plain" else ["Name", "Reference", "Description"],
@@ -255,7 +295,7 @@ def evaluators(tablefmt: str):
 
 
 def _help_evaluators(tablefmt, link_fmt: Optional[str] = None):
-    lines = sorted(_get_lines(evaluator_resolver.lookup_dict, tablefmt, "evaluation", link_fmt=link_fmt))
+    lines = sorted(_get_resolver_lines(evaluator_resolver.lookup_dict, tablefmt, "evaluation", link_fmt=link_fmt))
     return tabulate(
         lines,
         headers=["Name", "Description"] if tablefmt == "plain" else ["Name", "Reference", "Description"],
@@ -331,7 +371,7 @@ def regularizers(tablefmt: str):
 
 
 def _help_regularizers(tablefmt, link_fmt: Optional[str] = None):
-    lines = _get_lines(regularizer_resolver.lookup_dict, tablefmt, "regularizers", link_fmt=link_fmt)
+    lines = _get_resolver_lines(regularizer_resolver.lookup_dict, tablefmt, "regularizers", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Reference", "Description"],
@@ -400,7 +440,7 @@ def trackers(tablefmt: str):
 
 
 def _help_trackers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(tracker_resolver.lookup_dict, tablefmt, "trackers", link_fmt=link_fmt)
+    lines = _get_resolver_lines(tracker_resolver.lookup_dict, tablefmt, "trackers", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Reference", "Description"],
@@ -458,7 +498,7 @@ def _get_metrics_lines(tablefmt: str):
         yield tuple(yv)
 
 
-def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
+def _get_resolver_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
     for name, value in sorted(d.items()):
         if tablefmt == "rst":
             if isinstance(value, type):
@@ -615,7 +655,13 @@ def get_readme() -> str:
     tablefmt = "github"
     api_link_fmt = "https://pykeen.readthedocs.io/en/latest/api/{}.html"
     models, n_models = _help_models(tablefmt, link_fmt=api_link_fmt)
+    interactions, n_interactions = _help_interactions(tablefmt, link_fmt=api_link_fmt)
+    representations, n_representations = _help_representations(tablefmt, link_fmt=api_link_fmt)
     return readme_template.render(
+        interactions=interactions,
+        n_interactions=n_interactions,
+        representations=representations,
+        n_representations=n_representations,
         models=models,
         n_models=n_models,
         regularizers=_help_regularizers(tablefmt, link_fmt=api_link_fmt),

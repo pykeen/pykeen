@@ -170,6 +170,62 @@ The following inductive datasets are built in to PyKEEN.
 | NELL            | [`pykeen.datasets.InductiveNELL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveNELL.html)         | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 | WordNet-18 (RR) | [`pykeen.datasets.InductiveWN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveWN18RR.html)     | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 
+### Representations (12)
+
+| Name                                                                                                                                                                                  | Citation   |
+|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| [`pykeen.nn.message_passing.RGCNRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.message_passing.RGCNRepresentation.html)                                       |            |
+| [`pykeen.nn.node_piece.representations.NodePieceRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representations.NodePieceRepresentation.html)       |            |
+| [`pykeen.nn.node_piece.representations.TokenizationRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representations.TokenizationRepresentation.html) |            |
+| [`pykeen.nn.pyg.FeaturizedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.FeaturizedMessagePassingRepresentation.html)                       |            |
+| [`pykeen.nn.pyg.MessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.MessagePassingRepresentation.html)                                           |            |
+| [`pykeen.nn.pyg.SimpleMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.SimpleMessagePassingRepresentation.html)                               |            |
+| [`pykeen.nn.pyg.TypedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.TypedMessagePassingRepresentation.html)                                 |            |
+| [`pykeen.nn.representation.Embedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.Embedding.html)                                                           |            |
+| [`pykeen.nn.representation.LabelBasedTransformerRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.LabelBasedTransformerRepresentation.html)       |            |
+| [`pykeen.nn.representation.LowRankRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.LowRankRepresentation.html)                                   |            |
+| [`pykeen.nn.representation.SingleCompGCNRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.SingleCompGCNRepresentation.html)                       |            |
+| [`pykeen.nn.representation.SubsetRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.SubsetRepresentation.html)                                     |            |
+
+### Interactions (34)
+
+| Name                                                                                                                              | Citation                                                                 |
+|-----------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| [`pykeen.nn.modules.AutoSFInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.AutoSFInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.BoxEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.BoxEInteraction.html)         |                                                                          |
+| [`pykeen.nn.modules.CPInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.CPInteraction.html)             |                                                                          |
+| [`pykeen.nn.modules.ComplExInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.ComplExInteraction.html)   |                                                                          |
+| [`pykeen.nn.modules.ConvEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.ConvEInteraction.html)       |                                                                          |
+| [`pykeen.nn.modules.ConvKBInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.ConvKBInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.CrossEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.CrossEInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.DistMAInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.DistMAInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.DistMultInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.DistMultInteraction.html) |                                                                          |
+| [`pykeen.nn.modules.ERMLPEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.ERMLPEInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.ERMLPInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.ERMLPInteraction.html)       |                                                                          |
+| [`pykeen.nn.modules.HolEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.HolEInteraction.html)         |                                                                          |
+| [`pykeen.nn.modules.KG2EInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.KG2EInteraction.html)         |                                                                          |
+| [`pykeen.nn.modules.LiteralInteraction`](https://pykeen.readthedocs.io/en/latest/api/LiteralE.html)                               | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)             |
+| [`pykeen.nn.modules.MuREInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.MuREInteraction.html)         |                                                                          |
+| [`pykeen.nn.modules.MultiLinearTuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/MultiLinearTucker.html)            | [Tucker *et al.*, 1966](https://dx.doi.org/10.1007/BF02289464)           |
+| [`pykeen.nn.modules.NTNInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.NTNInteraction.html)           |                                                                          |
+| [`pykeen.nn.modules.PairREInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.PairREInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.ProjEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.ProjEInteraction.html)       |                                                                          |
+| [`pykeen.nn.modules.QuatEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.QuatEInteraction.html)       |                                                                          |
+| [`pykeen.nn.modules.RESCALInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.RESCALInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.RotatEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.RotatEInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.SEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.SEInteraction.html)             |                                                                          |
+| [`pykeen.nn.modules.SimplEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.SimplEInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.TorusEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TorusEInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.TransDInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TransDInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.TransEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TransEInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.TransFInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TransFInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.TransHInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TransHInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.TransRInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TransRInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.TransformerInteraction`](https://pykeen.readthedocs.io/en/latest/api/Transformer.html)                        | [Galkin *et al.*, 2020](https://doi.org/10.18653/v1/2020.emnlp-main.596) |
+| [`pykeen.nn.modules.TripleREInteraction`](https://pykeen.readthedocs.io/en/latest/api/TripleRE.html)                              | [Yu *et al.*, 2021](https://vixra.org/abs/2112.0095)                     |
+| [`pykeen.nn.modules.TuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TuckerInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.UMInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.UMInteraction.html)             |                                                                          |
+
 ### Models (43)
 
 | Name                           | Model                                                                                                                                 | Interaction                                                                                                                                | Citation                                                                                                                |
