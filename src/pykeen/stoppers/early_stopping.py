@@ -19,6 +19,7 @@ from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import InductiveMode
 from ..utils import fix_dataclass_init_docs
+from ..constants import PYKEEN_CHECKPOINTS
 
 __all__ = [
     "is_improvement",
@@ -187,7 +188,8 @@ class EarlyStopper(Stopper):
             larger_is_better=self.larger_is_better,
         )
         if self.best_model_path is None:
-            self.best_model_path = pathlib.Path(tempfile.gettempdir(), f"best-model-weights-{uuid4()}.pt")
+            self.best_model_path = PYKEEN_CHECKPOINTS.joinpath(f"best-model-weights-{uuid4()}.pt")
+            logger.info(f"Inferred checkpoint path for best model weights: {self.best_model_path}")
 
     @property
     def remaining_patience(self) -> int:
