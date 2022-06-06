@@ -20,6 +20,7 @@ PyKEEN
    tutorial/representations
    tutorial/node_piece
    tutorial/inductive_lp
+   tutorial/visual_representations
    contrib/lightning
 
 .. toctree::
