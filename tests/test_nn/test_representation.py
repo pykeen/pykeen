@@ -231,6 +231,18 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
     )
 
 
+class WikidataTextRepresentationTests(cases.RepresentationTestCase):
+    """Tests for Wikidata text representations."""
+
+    cls = pykeen.nn.representation.WikidataTextRepresentation
+    kwargs = dict(
+        labels=["Q100", "Q1000"],
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        return super()._pre_instantiation_hook(kwargs)
+
+
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
 
