@@ -133,31 +133,8 @@ class ParameterizedRealCombination(RealCombination):
         return self.module(x)
 
 
-class ComplexCombination(Combination, ABC):
+class ParametrizedComplexCombination(Combination, ABC):
     """A mid-level base class for combinations of complex-valued vectors."""
-
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Split the complex vector, combine the representation parts and literal, score, then recombine."""
-        assert len(xs) == 2
-        x, literal = xs
-        x_re, x_im = split_complex(x)
-        x_re = self.score_real(torch.cat([x_re, literal], dim=-1))
-        x_im = self.score_imag(torch.cat([x_im, literal], dim=-1))
-        return combine_complex(x_re=x_re, x_im=x_im)
-
-    @abstractmethod
-    def score_real(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined real part of the entity representation and literals."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def score_imag(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined imaginary part of the entity representation and literals."""
-        raise NotImplementedError
-
-
-class ParameterizedComplexCombination(ComplexCombination):
-    """A complex combination parametrized by the real scoring module and imaginary soring module."""
 
     def __init__(self, real_module: nn.Module, imag_module: nn.Module):
         """Initialize the parameterized complex combination.
@@ -170,6 +147,15 @@ class ParameterizedComplexCombination(ComplexCombination):
         super().__init__()
         self.real_mod = real_module
         self.imag_mod = imag_module
+
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        """Split the complex vector, combine the representation parts and literal, score, then recombine."""
+        assert len(xs) == 2
+        x, literal = xs
+        x_re, x_im = split_complex(x)
+        x_re = self.score_real(torch.cat([x_re, literal], dim=-1))
+        x_im = self.score_imag(torch.cat([x_im, literal], dim=-1))
+        return combine_complex(x_re=x_re, x_im=x_im)
 
     def score_real(self, x: torch.FloatTensor) -> torch.FloatTensor:
         """Score the combined real part of the entity representation and literals with the parameterized module."""
