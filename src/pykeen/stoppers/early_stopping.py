@@ -174,6 +174,9 @@ class EarlyStopper(Stopper):
     stopped: bool = False
     #: the path to the weights of the best model
     best_model_path: Optional[pathlib.Path] = None
+    #: whether to delete the file with the best model weights after termination
+    #: note: the weights will be re-loaded into the model before
+    clean_up_checkpoint: bool = True
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -256,6 +259,9 @@ class EarlyStopper(Stopper):
                 stopped_callback(self, result, epoch)
             logger.info(f"Re-loading weights from best epoch from {self.best_model_path}")
             self.model.load_state_dict(torch.load(self.best_model_path))
+            if self.clean_up_checkpoint:
+                self.best_model_path.unlink()
+                logger.debug(f"Clean up checkpoint with best weights: {self.best_model_path}")
             return True
 
         if self._stopper.is_best:
