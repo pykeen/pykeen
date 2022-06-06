@@ -102,19 +102,13 @@ class ConcatAggregationCombination(ConcatCombination):
         return self.aggregation(super().forward(xs=xs))
 
 
-class Combination(nn.Module, ABC):
-    """Base class for combinations."""
-
-    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Combine the representation and literal then score."""
-        raise NotImplementedError
-
-
-class RealCombination(Combination, ABC):
+class RealCombination(NCombination, ABC):
     """A mid-level base class for combinations of real-valued vectors."""
 
-    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
         """Combine the entity representation and literal, then score."""
+        assert len(xs) == 2
+        x, literal = xs
         return self.score(torch.cat([x, literal], dim=-1))
 
     @abstractmethod
@@ -139,11 +133,13 @@ class ParameterizedRealCombination(RealCombination):
         return self.module(x)
 
 
-class ComplexCombination(Combination, ABC):
+class ComplexCombination(NCombination, ABC):
     """A mid-level base class for combinations of complex-valued vectors."""
 
-    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
         """Split the complex vector, combine the representation parts and literal, score, then recombine."""
+        assert len(xs) == 2
+        x, literal = xs
         x_re, x_im = split_complex(x)
         x_re = self.score_real(torch.cat([x_re, literal], dim=-1))
         x_im = self.score_imag(torch.cat([x_im, literal], dim=-1))
@@ -275,7 +271,7 @@ class ComplExLiteralCombination(ParameterizedComplexCombination):
         )
 
 
-class GatedCombination(Combination):
+class GatedCombination(NCombination):
     """A module that implements a gated linear transformation for the combination of entities and literals.
 
     Compared to the other Combinations, this combination makes use of a gating mechanism commonly found in RNNs.
@@ -335,8 +331,10 @@ class GatedCombination(Combination):
         self.linlayer_activation = activation_resolver.make(linlayer_activation, linlayer_activation_kwargs)
         self.dropout = nn.Dropout(input_dropout)
 
-    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
         """Calculate a combined embedding given the entity and literal representations."""
+        assert len(xs) == 2
+        x, literal = xs
         combination = torch.cat([x, literal], -1)
         z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
         h = self.linlayer_activation(self.combination_linear_layer(combination))
