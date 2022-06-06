@@ -991,7 +991,13 @@ class LabelBasedTransformerRepresentation(Representation):
 class CombinedRepresentation(Representation):
     """A combined representation."""
 
+    # TODO: upgrade: NodePiece; Literal
+
+    #: the base representations
     base: Sequence[Representation]
+
+    #: the combination module
+    # TODO: currently, this is a callable
     combination: nn.Module
 
     def __init__(
