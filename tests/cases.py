@@ -1517,15 +1517,16 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     """Tests for representations requiring triples factories."""
 
-    num_entities: ClassVar[int] = 8
+    num_entities: ClassVar[int]
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
     create_inverse_triples: bool = False
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.num_entities = self.max_id
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
-            num_entities=self.num_entities,
+            num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
             create_inverse_triples=self.create_inverse_triples,
@@ -2036,18 +2037,21 @@ class NodePieceTestCase(RepresentationTestCase):
     """General test case for node piece representations."""
 
     cls = pykeen.nn.node_piece.NodePieceRepresentation
-    num_entities: ClassVar[int] = 8
+    num_entities: ClassVar[int]
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.num_entities = self.max_id
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
-            num_entities=self.num_entities,
+            num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
             create_inverse_triples=False,
         )
+        # inferred from triples factory
+        kwargs.pop("max_id")
         return kwargs
 
 

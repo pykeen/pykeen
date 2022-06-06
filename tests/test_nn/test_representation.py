@@ -42,7 +42,6 @@ class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.LowRankRepresentation
     kwargs = dict(
-        max_id=10,
         shape=(3, 7),
     )
 
@@ -52,7 +51,6 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.Embedding
     kwargs = dict(
-        num_embeddings=10,
         shape=(3, 7),
     )
 
@@ -65,7 +63,7 @@ class RGCNRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["entity_representations_kwargs"] = dict(embedding_dim=self.num_entities)
+        kwargs["entity_representations_kwargs"] = dict(shape=self.num_entities)
         return kwargs
 
 
@@ -84,6 +82,8 @@ class TestSingleCompGCNRepresentationTests(cases.TriplesFactoryRepresentationTes
             relation_representations_kwargs=dict(embedding_dim=self.dim),
             dims=self.dim,
         )
+        # inferred from triples factory
+        kwargs.pop("max_id")
         return kwargs
 
 
@@ -142,7 +142,7 @@ class TokenizationTests(cases.RepresentationTestCase):
     """Tests for tokenization representation."""
 
     cls = pykeen.nn.node_piece.TokenizationRepresentation
-    max_id: int = 13
+    # max_id: int = 13
     vocabulary_size: int = 5
     num_tokens: int = 3
 
@@ -150,6 +150,8 @@ class TokenizationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["assignment"] = torch.randint(self.vocabulary_size, size=(self.max_id, self.num_tokens))
         kwargs["token_representation_kwargs"] = dict(shape=(self.vocabulary_size,))
+        # inferred from assignment
+        kwargs.pop("max_id")
         return kwargs
 
 
@@ -228,6 +230,18 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
         relation_representation_kwargs=dict(
             shape=embedding_dim,
         ),
+    )
+
+
+class CombinedRepresentationTestCase(cases.RepresentationTestCase):
+    """Test for combined representations."""
+
+    cls = pykeen.nn.representation.CombinedRepresentation
+    kwargs = dict(
+        base_kwargs=[
+            dict(shape=(3,)),
+            dict(shape=(4,)),
+        ]
     )
 
 
