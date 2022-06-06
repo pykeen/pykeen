@@ -2515,6 +2515,7 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
                 patience=self.patience,
                 relative_delta=self.delta,
                 larger_is_better=False,
+                best_model_path=pathlib.Path(tempfile.gettempdir(), "test-best-model-weights.pt"),
             )
         )
         return kwargs
