@@ -231,6 +231,24 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
     )
 
 
+class VisualRepresentationTestCase(cases.RepresentationTestCase):
+    """Tests for VisualRepresentation."""
+
+    cls = pykeen.nn.representation.VisualRepresentation
+    kwargs = dict(
+        encoder="resnet18",
+        layer_name="avgpool",
+        transforms=[],
+        trainable=False,
+    )
+    max_id = 7
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["images"] = list(torch.rand(self.max_id, 3, 28, 28))
+        return kwargs
+
+
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
 
