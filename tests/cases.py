@@ -69,7 +69,7 @@ from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 from pykeen.models.mocks import FixedModel
-from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction
 from pykeen.nn.representation import Representation
 from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver

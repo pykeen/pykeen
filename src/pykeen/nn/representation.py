@@ -1022,6 +1022,9 @@ class CombinedRepresentation(Representation):
             the combination, or a hint thereof
         :param combination_kwargs:
             additional keyword-based parameters used to instantiate the combination
+        :param kwargs:
+            additional keyword-based parameters passed to `Representation.__init__`.
+            May not contain `max_id` or `shape`.
 
         :raises ValueError:
             if the `max_id` of the base representations does not match

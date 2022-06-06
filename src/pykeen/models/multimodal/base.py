@@ -7,7 +7,7 @@ from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwa
 from ..nbase import ERModel
 from ...nn.combinations import Combination
 from ...nn.init import PretrainedInitializer
-from ...nn.modules import LiteralInteraction
+from ...nn.modules import Interaction
 from ...nn.representation import CombinedRepresentation, Embedding, Representation
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
@@ -24,7 +24,7 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
-        interaction: LiteralInteraction,
+        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
         combination: HintOrType[Combination] = None,

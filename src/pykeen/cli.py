@@ -38,9 +38,9 @@ from .hpo.cli import optimize
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .metrics.utils import Metric
-from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
+from .models import model_resolver
 from .models.cli import build_cli_from_cls
-from .nn.modules import LiteralInteraction, interaction_resolver
+from .nn.modules import interaction_resolver
 from .nn.node_piece.cli import tokenize
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
@@ -95,21 +95,11 @@ def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
     )
 
 
-_MODEL_MAP = {
-    DistMultLiteralGated: LiteralInteraction,
-    DistMultLiteral: LiteralInteraction,
-    ComplExLiteral: LiteralInteraction,
-}
-
-
 def _get_model_lines(*, link_fmt: Optional[str] = None):
     seen_interactions = set()
     for _, model_cls in sorted(model_resolver.lookup_dict.items()):
         try:
-            if model_cls in _MODEL_MAP:
-                interaction_cls = _MODEL_MAP[model_cls]
-            else:
-                interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
+            interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
         except KeyError:
             click.echo(f"could not find corresponding interaction class for {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None

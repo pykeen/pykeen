@@ -7,7 +7,6 @@ from typing import Callable, List, NamedTuple, Optional, Sequence, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
-from class_resolver.contrib.torch import aggregation_resolver
 
 from pykeen.nn.combinations import ConcatAggregationCombination
 
@@ -251,9 +250,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         :param max_id:
             Only pass this to check if the number of entities in the triples factories is the same
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
-        :raises ValueError: if the shapes for any vocabulary entry
-            in all token representations are inconsistent
+            additional keyword-based parameters passed to :meth:`CombinedRepresentation.__init__`
         """
         if max_id:
             assert max_id == triples_factory.num_entities

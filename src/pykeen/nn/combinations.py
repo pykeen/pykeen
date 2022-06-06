@@ -15,10 +15,9 @@ from ..utils import combine_complex, split_complex
 
 __all__ = [
     "Combination",
-    "RealCombination",
-    "ParameterizedRealCombination",
-    "ParameterizedComplexCombination",
     # Concrete classes
+    "ConcatCombination",
+    "ConcatAggregationCombination",
     "LinearDropout",
     "DistMultCombination",
     "ComplExLiteralCombination",
@@ -101,76 +100,6 @@ class ConcatAggregationCombination(ConcatCombination):
         return self.aggregation(super().forward(xs=xs))
 
 
-class RealCombination(Combination, ABC):
-    """A mid-level base class for combinations of real-valued vectors."""
-
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Combine the entity representation and literal, then score."""
-        assert len(xs) == 2
-        x, literal = xs
-        return self.score(torch.cat([x, literal], dim=-1))
-
-    @abstractmethod
-    def score(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined entity representation and literals."""
-        raise NotImplementedError
-
-
-class ParameterizedRealCombination(RealCombination):
-    """A real combination parametrized by a scoring module."""
-
-    def __init__(self, module: nn.Module):
-        """Initialize the parameterized real combination.
-
-        :param module: The module used to score the combination of the entity representation and literals.
-        """
-        super().__init__()
-        self.module = module
-
-    def score(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined entity representation and literals with the parameterized module."""
-        return self.module(x)
-
-
-class ParameterizedComplexCombination(Combination, ABC):
-    """A mid-level base class for combinations of complex-valued vectors."""
-
-    def __init__(self, real_module: nn.Module, imag_module: nn.Module):
-        """Initialize the parameterized complex combination.
-
-        :param real_module: The module used to score the combination of the real part of the entity representation
-            and literals.
-        :param imag_module: The module used to score the combination of the imaginary part of the entity
-            representation and literals.
-        """
-        super().__init__()
-        self.real_mod = real_module
-        self.imag_mod = imag_module
-
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Split the complex vector, combine the representation parts and literal, score, then recombine."""
-        assert len(xs) == 2
-        x, literal = xs
-        x_re, x_im = split_complex(x)
-        x_re = self.score_real(torch.cat([x_re, literal], dim=-1))
-        x_im = self.score_imag(torch.cat([x_im, literal], dim=-1))
-        return combine_complex(x_re=x_re, x_im=x_im)
-
-    # docstr-coverage: inherited
-    def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:  # noqa: D102
-        # symbolic output to avoid dtype issue
-        # we only need to consider real part here
-        return self.score_real(torch.cat([torch.empty(shape) for shape in input_shapes], dim=-1)).shape
-
-    def score_real(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined real part of the entity representation and literals with the parameterized module."""
-        return self.real_mod(x)
-
-    def score_imag(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined imaginary part of the entity representation and literals with the parameterized module."""
-        return self.imag_mod(x)
-
-
 class LinearDropout(nn.Sequential):
     """A sequential module that has a linear layer, dropout later, and optional activation layer."""
 
@@ -199,7 +128,7 @@ class LinearDropout(nn.Sequential):
             super().__init__(linear, dropout)
 
 
-class DistMultCombination(ParameterizedRealCombination):
+class DistMultCombination(Combination):
     """The linear/dropout combination used in :class:`pykeen.models.DistMultLiteral`."""
 
     def __init__(
@@ -217,16 +146,25 @@ class DistMultCombination(ParameterizedRealCombination):
         This class does not use an activation in the :class:`LinearDropout` as
         described by [kristiadi2018]_.
         """
-        super().__init__(
-            LinearDropout(
-                entity_embedding_dim=entity_embedding_dim,
-                literal_embedding_dim=literal_embedding_dim,
-                input_dropout=input_dropout,
-            )
+        super().__init__()
+        self.module = LinearDropout(
+            entity_embedding_dim=entity_embedding_dim,
+            literal_embedding_dim=literal_embedding_dim,
+            input_dropout=input_dropout,
         )
 
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        """Combine the entity representation and literal, then score."""
+        assert len(xs) == 2
+        x, literal = xs
+        return self.score(torch.cat([x, literal], dim=-1))
 
-class ComplExLiteralCombination(ParameterizedComplexCombination):
+    def score(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Score the combined entity representation and literals with the parameterized module."""
+        return self.module(x)
+
+
+class ComplExLiteralCombination(Combination):
     """The linear/dropout/tanh combination used in :class:`pykeen.models.ComplExLiteral`."""
 
     def __init__(
@@ -246,20 +184,33 @@ class ComplExLiteralCombination(ParameterizedComplexCombination):
         This class uses a :class:`torch.nn.Tanh` by default for the activation to the :class:`LinearDropout` as
         described by [kristiadi2018]_.
         """
-        super().__init__(
-            real_module=LinearDropout(
-                entity_embedding_dim=entity_embedding_dim,
-                literal_embedding_dim=literal_embedding_dim,
-                input_dropout=input_dropout,
-                activation=activation,
-            ),
-            imag_module=LinearDropout(
-                entity_embedding_dim=entity_embedding_dim,
-                literal_embedding_dim=literal_embedding_dim,
-                input_dropout=input_dropout,
-                activation=activation,
-            ),
+        self.real_mod = LinearDropout(
+            entity_embedding_dim=entity_embedding_dim,
+            literal_embedding_dim=literal_embedding_dim,
+            input_dropout=input_dropout,
+            activation=activation,
         )
+        self.imag_mod = LinearDropout(
+            entity_embedding_dim=entity_embedding_dim,
+            literal_embedding_dim=literal_embedding_dim,
+            input_dropout=input_dropout,
+            activation=activation,
+        )
+
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        """Split the complex vector, combine the representation parts and literal, score, then recombine."""
+        assert len(xs) == 2
+        x, literal = xs
+        x_re, x_im = split_complex(x)
+        x_re = self.real_mod(torch.cat([x_re, literal], dim=-1))
+        x_im = self.imag_mod(torch.cat([x_im, literal], dim=-1))
+        return combine_complex(x_re=x_re, x_im=x_im)
+
+    # docstr-coverage: inherited
+    def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:  # noqa: D102
+        # symbolic output to avoid dtype issue
+        # we only need to consider real part here
+        return self.score_real(torch.cat([torch.empty(shape) for shape in input_shapes], dim=-1)).shape
 
 
 class GatedCombination(Combination):
