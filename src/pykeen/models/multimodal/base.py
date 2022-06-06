@@ -2,6 +2,9 @@
 
 """Base classes for multi-modal models."""
 
+from typing import Tuple
+
+import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 
 from ..nbase import ERModel
@@ -18,13 +21,18 @@ __all__ = [
 ]
 
 
-class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepresentation], autoreset=False):
+class LiteralModel(
+    ERModel[
+        Tuple[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]
+    ],
+    autoreset=False,
+):
     """Base class for models with entity literals that uses combinations from :class:`pykeen.nn.combinations`."""
 
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
-        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        interaction: HintOrType[Interaction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]],
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
         combination: HintOrType[Combination] = None,
