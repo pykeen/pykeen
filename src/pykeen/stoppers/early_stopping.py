@@ -193,6 +193,11 @@ class EarlyStopper(Stopper):
         if self.best_model_path is None:
             self.best_model_path = PYKEEN_CHECKPOINTS.joinpath(f"best-model-weights-{uuid4()}.pt")
             logger.info(f"Inferred checkpoint path for best model weights: {self.best_model_path}")
+        if self.best_model_path.is_file():
+            logger.warning(
+                f"Checkpoint path for best weights does already exist ({self.best_model_path})."
+                f"It will be overwritten."
+            )
 
     @property
     def remaining_patience(self) -> int:
