@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
 
 import torch
-from class_resolver import HintOrType, Hint
+from class_resolver import HintOrType, Hint, ClassResolver
 from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
@@ -62,10 +62,28 @@ class NCombination(nn.Module, ABC):
         return self(xs=[torch.empty(size=shape) for shape in input_shapes]).shape
 
 
-class ConcatAggregationCombination(NCombination):
+class ConcatCombination(NCombination):
+    """Combine representation by concatenation."""
+
+    def __init__(self, dim: int = -1) -> None:
+        """
+        Initialize the combination.
+
+        :param dim:
+            the concatenation dimension
+        """
+        super().__init__()
+        self.dim = dim
+
+    # docstr-coverage: inherited
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+        return torch.cat(xs, dim=self.dim)
+
+
+class ConcatAggregationCombination(ConcatCombination):
     """Combine representation by concatenation followed by an aggregation along the same axis."""
 
-    def __init__(self, aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]], dim: int) -> None:
+    def __init__(self, aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]], dim: int = -1) -> None:
         """
         Initialize the combination.
 
@@ -74,13 +92,12 @@ class ConcatAggregationCombination(NCombination):
         :param dim:
             the concatenation and reduction dimension.
         """
-        super().__init__()
-        self.dim = dim
+        super().__init__(dim=dim)
         self.aggregation = aggregation_resolver.make(aggregation, dim=dim)
 
     # docstr-coverage: inherited
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
-        return self.aggregation(torch.cat(xs, dim=self.dim))
+        return self.aggregation(super().forward(xs=xs))
 
 
 class Combination(nn.Module, ABC):
@@ -322,3 +339,9 @@ class GatedCombination(Combination):
         z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
         h = self.linlayer_activation(self.combination_linear_layer(combination))
         return self.dropout(z * h + (1 - z) * x)
+
+
+combination_resolver: ClassResolver[NCombination] = ClassResolver.from_subclasses(
+    base=NCombination,
+    default=ConcatCombination,
+)
