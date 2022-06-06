@@ -2482,27 +2482,6 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
         """Verify the result of the combination of the manual example."""
 
 
-class LogCallWrapper:
-    """An object which wraps functions and checks whether they have been called."""
-
-    def __init__(self):
-        self.called = set()
-
-    def wrap(self, func):
-        """Wrap the function."""
-        id_func = id(func)
-
-        def wrapped(*args, **kwargs):
-            self.called.add(id_func)
-            return func(*args, **kwargs)
-
-        return wrapped
-
-    def was_called(self, func) -> bool:
-        """Report whether the previously wrapped function has been called."""
-        return id(func) in self.called
-
-
 class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
     """Base test for early stopper."""
 
