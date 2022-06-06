@@ -9,7 +9,7 @@ import torch.nn as nn
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.combinations import DistMultCombination
-from ...nn.modules import DistMultInteraction, LiteralInteraction
+from ...nn.modules import DistMultInteraction
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -57,13 +57,12 @@ class DistMultLiteral(LiteralModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction=LiteralInteraction(
-                base=DistMultInteraction(),
-                combination=DistMultCombination(
-                    entity_embedding_dim=embedding_dim,
-                    literal_embedding_dim=triples_factory.numeric_literals.shape[1],
-                    input_dropout=input_dropout,
-                ),
+            interaction=DistMultInteraction,
+            combination=DistMultCombination,
+            combination_kwargs=dict(
+                entity_embedding_dim=embedding_dim,
+                literal_embedding_dim=triples_factory.numeric_literals.shape[1],
+                input_dropout=input_dropout,
             ),
             entity_representations_kwargs=[
                 dict(
