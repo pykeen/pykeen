@@ -181,9 +181,41 @@ class VisualRepresentation(Representation):
 
 
 class WikidataVisualRepresentation(VisualRepresentation):
-    """Visual representations obtained from Wikidata."""
+    """
+    Visual representations obtained from Wikidata and encoded with a vision encoder.
+
+    Example usage::
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.models import ERModel
+        from pykeen.nn import WikidataVisualRepresentation
+        from pykeen.pipeline import pipeline
+
+        dataset = get_dataset(dataset="codexsmall")
+        entity_representations = WikidataVisualRepresentation.from_dataset(dataset=dataset)
+
+        result = pipeline(
+            dataset=dataset,
+            model=ERModel,
+            model_kwargs=dict(
+                interaction="distmult",
+                entity_representations=entity_representations,
+                relation_representation_kwargs=dict(
+                    shape=entity_representations.shape,
+                ),
+            ),
+        )
+    """
 
     def __init__(self, wikidata_ids: Sequence[str], **kwargs):
-        cache = WikidataCache()
-        images = cache.get_image_paths(wikidata_ids)
-        super().__init__(images=images, **kwargs)
+        """
+        Initialize the representation.
+
+        :param wikidata_ids:
+            the Wikidata IDs
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
+        """
+        super().__init__(images=WikidataCache().get_image_paths(wikidata_ids), **kwargs)
