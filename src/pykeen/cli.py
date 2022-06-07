@@ -24,8 +24,6 @@ from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
-from pykeen.models.base import Model
-
 from .datasets import dataset_resolver
 from .datasets.inductive import inductive_dataset_resolver
 from .evaluation import (
@@ -40,7 +38,7 @@ from .hpo.cli import optimize
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .metrics.utils import Metric
-from .models import model_resolver
+from .models import model_resolver, Model
 from .models.cli import build_cli_from_cls
 from .nn.modules import Interaction, interaction_resolver
 from .nn.node_piece.cli import tokenize
