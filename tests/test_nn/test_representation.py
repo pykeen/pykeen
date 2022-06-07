@@ -232,6 +232,7 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
     )
 
 
+@unittest.skipIf(transformers is None, "Need to install `transformers`")
 class WikidataTextRepresentationTests(cases.RepresentationTestCase):
     """Tests for Wikidata text representations."""
 
