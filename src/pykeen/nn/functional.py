@@ -65,6 +65,7 @@ __all__ = [
     "triple_re_interaction",
     "tucker_interaction",
     "um_interaction",
+    "linea_re_interaction",
 ]
 
 
@@ -1489,3 +1490,46 @@ def multilinear_tucker_interaction(
         The scores.
     """
     return torch.einsum("ijk,...i,...j,...k->...", core_tensor, h, r, t)
+
+
+def linea_re_interaction(
+    # head
+    h: torch.FloatTensor,
+    # relation
+    r_head: torch.FloatTensor,
+    r_mid: torch.FloatTensor,
+    r_tail: torch.FloatTensor,
+    # tail
+    t: torch.FloatTensor,
+    # extension: negative (power) norm
+    p: int = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate the LineaRE interaction function.
+
+    .. note ::
+        the interaction is equivalent to TripleRE interaction without the `u` term.
+
+    :param h: shape: (`*batch_dims`, rank, dim)
+        The head representations.
+    :param r_head: shape: (`*batch_dims`, rank, dim)
+        The relation-specific head multiplicator representations.
+    :param r_mid: shape: (`*batch_dims`, rank, dim)
+        The relation representations.
+    :param r_tail: shape: (`*batch_dims`, rank, dim)
+        The relation-specific tail multiplicator representations.
+    :param t: shape: (`*batch_dims`, rank, dim)
+        The tail representations.
+    :param u:
+        the relation factor offset. If u is not None or 0, this corresponds to TripleREv2.
+    :param p:
+        The p for the norm. cf. :func:`negative_norm_of_sum`.
+    :param power_norm:
+        Whether to return the powered norm. cf. :func:`negative_norm_of_sum`.
+
+    :return: shape: batch_dims
+        The scores.
+    """
+    return triple_re_interaction(
+        h=h, r_head=r_head, r_mid=r_mid, r_tail=r_tail, t=t, u=None, p=p, power_norm=power_norm
+    )

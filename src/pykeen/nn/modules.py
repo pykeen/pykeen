@@ -1999,6 +1999,41 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         )
 
 
+@parse_docdata
+class LinearREInteraction(NormBasedInteraction):
+    r"""
+    The LineaRE interaction described by [peng2020]_.
+
+    The interaction function is given as
+
+    .. math ::
+
+        \| \mathbf{w}_{r}^{h} \odot \mathbf{x}_{h} + \mathbf{b}_r - \mathbf{w}_{r}^{t} \odot \mathbf{x}_{t} \|
+
+    where $\mathbf{w}_{r}^{h}, \mathbf{b}_r, \mathbf{w}_{r}^{t} \in \mathbb{R}^d$ are relation-specific terms,
+    and $\mathbf{x}_{h}, \mathbf{x}_{t} \in \mathbb{R}$ the head and tail entity representation.
+
+    .. note ::
+        the original paper only describes the interaction for $L_1$ norm, but we extend it to the general $L_p$
+        norm as well as its powered variant.
+
+    .. note ::
+        this interaction is equivalent to :class:`TripleREInteraction` without the `u` term
+
+    ---
+    citation:
+        author: Peng
+        year: 2020
+        arxiv: 2004.10037
+        github: pengyanhui/LineaRE
+    """
+
+    # r_head, r_bias, r_tail
+    relation_shape = ("d", "d", "d")
+
+    func = pkf.linea_re_interaction
+
+
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
     Interaction,  # type: ignore
     skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
