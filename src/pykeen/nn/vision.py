@@ -69,6 +69,7 @@ class VisionDataset(torch.utils.data.Dataset):
         self.images = images
         if transforms is None:
             transforms = [vision_transforms.RandomResizedCrop(size=224), vision_transforms.ToTensor()]
+        transforms = list(transforms)
         transforms.append(vision_transforms.ConvertImageDtype(torch.get_default_dtype()))
         self.transforms = vision_transforms.Compose(transforms=transforms)
 
@@ -158,7 +159,7 @@ class VisualRepresentation(Representation):
         images: torch.FloatTensor, encoder: torch.nn.Module, pool: Callable[[torch.FloatTensor], torch.FloatTensor]
     ) -> torch.FloatTensor:
         """
-        Encoder images with the given encoder and pooling methods.
+        Encode images with the given encoder and pooling methods.
 
         :param images: shape: (batch_size, num_channels, height, width)
             a batch of images

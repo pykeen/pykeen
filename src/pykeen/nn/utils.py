@@ -4,12 +4,13 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 import pathlib
 import re
 from itertools import chain
 from textwrap import dedent
-from typing import Any, Collection, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
+from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
 
 import more_itertools
 import requests
@@ -284,7 +285,7 @@ class WikidataCache:
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
     WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
 
-    HEADERS: Mapping[str, str] = {
+    HEADERS: Dict[str, str] = {
         # cf. https://meta.wikimedia.org/wiki/User-Agent_policy
         "User-Agent": (
             f"PyKEEN-Bot/{get_version()} (https://pykeen.github.io; pykeen2019@gmail.com) "
@@ -317,7 +318,7 @@ class WikidataCache:
     @classmethod
     def query(
         cls,
-        sparql: str,
+        sparql: Union[str, Callable[..., str]],
         wikidata_ids: Sequence[str],
         batch_size: int = 256,
     ) -> Iterable[Mapping[str, Any]]:
@@ -345,7 +346,9 @@ class WikidataCache:
                 for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
             )
 
-        sparql = sparql.format(ids=" ".join(f"wd:{i}" for i in wikidata_ids))
+        if isinstance(sparql, str):
+            sparql = sparql.format
+        sparql = sparql(ids=" ".join(f"wd:{i}" for i in wikidata_ids))
         logger.debug("running query: %s", sparql)
         res = requests.get(
             cls.WIKIDATA_ENDPOINT,
@@ -353,7 +356,9 @@ class WikidataCache:
             headers=cls.HEADERS,
         )
         res.raise_for_status()
-        return res.json()["results"]["bindings"]
+        bindings = res.json()["results"]["bindings"]
+        logger.debug(f"Retrieved {len(bindings)} bindings")
+        return bindings
 
     @classmethod
     def query_text(
@@ -373,14 +378,17 @@ class WikidataCache:
             a mapping from Wikidata Ids to dictionaries with the label and description of the entities
         """
         res_json = cls.query(
-            sparql=dedent(
-                f"""
-                SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
-                    VALUES ?item {{ {{ids}} }}
-                    SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
-                }}}}
-            """
-            ).format(language=language),
+            sparql=functools.partial(
+                dedent(
+                    """
+                        SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
+                            VALUES ?item {{ {ids} }}
+                            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
+                        }}}}
+                    """
+                ).format,
+                language=language,
+            ),
             wikidata_ids=wikidata_ids,
             batch_size=batch_size,
         )
@@ -492,6 +500,9 @@ class WikidataCache:
         :param progress:
             whether to display a progress bar
 
+        :raises ValueError:
+            if there are entities for which an image could not be obtained
+
         :return:
             the paths to images for the given IDs.
         """
@@ -502,28 +513,59 @@ class WikidataCache:
             f"Downloading images for {num_missing:,} entities. With the rate limit in place, "
             f"this will take at least {num_missing/10:.2f} seconds.",
         )
+        image_relation_ids = [
+            "P18",  # image
+            "P948",  # page banner
+            "P41",  # flag image
+            "P94",  # coat of arms image
+        ]
         res_json = self.query(
-            sparql=dedent(
-                """
-                    SELECT ?item (SAMPLE(?image) as ?image)
+            sparql=functools.partial(
+                dedent(
+                    """
+                    SELECT ?item ?relation ?image
                     WHERE {{
                         VALUES ?item {{ {ids} }} .
-                        ?item wdt:P18 ?image .
+                        VALUES ?relation {{ {rids} }}
+                        ?item ?relation ?image .
                     }}
-                    GROUP BY ?item
                 """
+                ).format,
+                rids=" ".join(f"wdt:{r}" for r in image_relation_ids),
             ),
             wikidata_ids=missing,
         )
-        for entry in tqdm(
-            rate_limited(res_json, min_avg_time=0.1), disable=not progress, unit="entity", total=len(ids)
-        ):
+        # we can have multiple images per entity -> collect image URLs per image
+        images: Dict[str, Dict[str, List[str]]] = {}
+        for entry in res_json:
+            # entity ID
             wikidata_id = nested_get(entry, "item", "value", default="")
             assert isinstance(wikidata_id, str)  # for mypy
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
+
+            # relation ID
+            relation_id = nested_get(entry, "relation", "value", default="")
+            assert isinstance(relation_id, str)  # for mypy
+            relation_id = relation_id.rsplit("/", maxsplit=1)[-1]
+
+            # image URL
             image_url = nested_get(entry, "image", "value", default=None)
-            if image_url is not None:
-                assert isinstance(image_url, str)  # for mypy
+            assert image_url is not None
+            images.setdefault(wikidata_id, dict()).setdefault(relation_id, []).append(image_url)
+
+        # check whether images are still missing
+        missing = sorted(set(missing).difference(images.keys()))
+        if missing:
+            raise ValueError(f"Could not retrieve an image URL for {len(missing)} entities: {missing}")
+
+        # select on image url per image in a reproducible way
+        for wikidata_id, url_dict in tqdm(rate_limited(images.items(), min_avg_time=0.1), disable=not progress):
+            # traverse relations in order of preference
+            for relation in image_relation_ids:
+                if not url_dict[relation]:
+                    continue
+                # now there is an image available -> select reproducible by URL sorting
+                image_url = sorted(url_dict[relation])[0]
                 ext = image_url.rsplit(".", maxsplit=1)[-1].lower()
                 if ext not in extensions:
                     logger.warning(f"Unknown extension: {ext} for {image_url}")
@@ -533,8 +575,9 @@ class WikidataCache:
                     name=f"{wikidata_id}.{ext}",
                     download_kwargs=dict(backend="requests", headers=self.HEADERS),
                 )
+            else:
+                # did not break -> no image
+                raise ValueError(f"No image for {wikidata_id}")
+
         id_to_path = self._discover_images(extensions=extensions)
-        still_missing = set(id_to_path.keys()).difference(ids)
-        if still_missing:
-            raise NotImplementedError("Cannot deal with unobtainable images.")
         return [id_to_path[i] for i in ids]

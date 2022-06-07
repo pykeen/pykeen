@@ -15,7 +15,7 @@ import random
 import re
 import time
 from abc import ABC, abstractmethod
-from collections import defaultdict, deque
+from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
@@ -1731,8 +1731,6 @@ def rate_limited(xs: Iterable[X], min_avg_time: float = 1.0) -> Iterable[X]:
 
     :param xs:
         the iterable
-    :param window:
-        the window over which to aggregate
     :param min_avg_time:
         the minimum average time per element
 
