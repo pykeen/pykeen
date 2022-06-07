@@ -11,6 +11,7 @@ import unittest_templates
 
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.pyg
 import pykeen.nn.representation
 from pykeen.datasets import get_dataset
 from tests import cases, mocks
@@ -238,9 +239,6 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
     kwargs = dict(
         labels=["Q100", "Q1000"],
     )
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        return super()._pre_instantiation_hook(kwargs)
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
