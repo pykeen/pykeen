@@ -1517,6 +1517,11 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         a = torch.stack([dropout_instance(indices) for _ in range(20)])
         assert not (a[0:1] == a).all()
 
+    def test_str(self):
+        """Test generating the string representation."""
+        # this implicitly tests extra_repr / iter_extra_repr
+        assert isinstance(str(self), str)
+
 
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     """Tests for representations requiring triples factories."""
