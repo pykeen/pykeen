@@ -518,6 +518,8 @@ class WikidataCache:
             "P948",  # page banner
             "P41",  # flag image
             "P94",  # coat of arms image
+            "P154",  # logo image
+            "P242",  # locator map image
         ]
         res_json = self.query(
             sparql=functools.partial(
