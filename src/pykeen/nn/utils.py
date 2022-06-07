@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import re
 from itertools import chain
-from typing import Any, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
+from typing import Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
 
 import more_itertools
 import requests
@@ -427,7 +427,6 @@ class WikidataCache:
     def get_descriptions(self, ids: Sequence[str]) -> Sequence[str]:
         """
         Get entity descriptions for the given IDs.
-
 
         :param ids:
             the Wikidata IDs
