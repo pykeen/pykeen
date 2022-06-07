@@ -483,11 +483,12 @@ class WikidataCache:
         res_json = self.query(
             sparql=dedent(
                 """
-                    SELECT  ?item ?image
+                    SELECT ?item (SAMPLE(?image) as ?image)
                     WHERE {{
-                        VALUES ?item {{ {ids} }}.
+                        VALUES ?item {{ {ids} }} .
                         ?item wdt:P18 ?image .
                     }}
+                    GROUP BY ?item
                 """
             ),
             wikidata_ids=missing,
