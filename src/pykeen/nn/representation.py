@@ -179,6 +179,12 @@ class Representation(nn.Module, ABC):
         """Iterate over components for :meth:`extra_repr`."""
         yield f"max_id={self.max_id}"
         yield f"shape={self.shape}"
+        yield f"unique={self.unique}"
+        if self.normalizer is not None:
+            yield f"normalizer={self.normalizer}"
+        if self.regularizer is not None:
+            yield f"normalizer={self.regularizer}"
+        # dropout will appear automatically, since it is a nn.Module
 
     # docstr-coverage: inherited
     def extra_repr(self) -> str:  # noqa: D102
