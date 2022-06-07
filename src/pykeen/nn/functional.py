@@ -1520,8 +1520,6 @@ def linea_re_interaction(
         The relation-specific tail multiplicator representations.
     :param t: shape: (`*batch_dims`, rank, dim)
         The tail representations.
-    :param u:
-        the relation factor offset. If u is not None or 0, this corresponds to TripleREv2.
     :param p:
         The p for the norm. cf. :func:`negative_norm_of_sum`.
     :param power_norm:
