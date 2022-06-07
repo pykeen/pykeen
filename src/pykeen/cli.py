@@ -38,7 +38,7 @@ from .hpo.cli import optimize
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .metrics.utils import Metric
-from .models import model_resolver, Model
+from .models import Model, model_resolver
 from .models.cli import build_cli_from_cls
 from .nn.modules import Interaction, interaction_resolver
 from .nn.node_piece.cli import tokenize
