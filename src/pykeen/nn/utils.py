@@ -290,12 +290,20 @@ class WikidataCache:
         self.module = PYKEEN_MODULE.submodule("wikidata")
 
     @staticmethod
-    def iter_invalid_ids(ids: Sequence[str]) -> Iterable[str]:
-        """Iterate over invalid IDs."""
+    def verify_ids(ids: Sequence[str]):
+        """
+        Raise error if invalid IDs are encountered.
+
+        :param ids:
+            the ids to verify
+
+        :raises ValueError:
+            if any invalid ID is encountered
+        """
         pattern = re.compile(r"Q(\d+)")
-        for one_id in ids:
-            if not pattern.match(one_id):
-                yield one_id
+        invalid_ids = [one_id for one_id in ids if not pattern.match(one_id)]
+        if invalid_ids:
+            raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
 
     @classmethod
     def query(
@@ -354,12 +362,6 @@ class WikidataCache:
             assert isinstance(description, str)  # for mypy
             result[wikidata_id] = dict(label=label, description=description)
         return result
-
-    def verify_ids(self, ids: Sequence[str]):
-        """Raise error if invalid IDs are encountered."""
-        invalid_ids = list(self.iter_invalid_ids(ids=ids))
-        if invalid_ids:
-            raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
 
     def _load(self, wikidata_id: str, component: str) -> Optional[str]:
         """Load information about a Wikidata ID from JSON file."""
