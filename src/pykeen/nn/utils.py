@@ -17,9 +17,9 @@ from torch import nn
 from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
-from .. import get_version
 from ..constants import PYKEEN_MODULE
 from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
+from ..version import get_version
 
 __all__ = [
     "TransformerEncoder",
@@ -281,6 +281,7 @@ class WikidataCache:
 
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
     WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
+
     # image:
     # https://www.wikidata.org/w/api.php?action=wbgetclaims&property=P18&entity=Qxxx
 
