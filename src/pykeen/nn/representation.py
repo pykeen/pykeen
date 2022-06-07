@@ -1083,3 +1083,9 @@ class CombinedRepresentation(Representation):
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return self.combine(combination=self.combination, base=self.base, indices=indices)
+
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:
+        yield from super().iter_extra_repr()
+        # yield f"base={self.base}" # these will get part of the repr anyway
+        yield f"combination={self.combination}"

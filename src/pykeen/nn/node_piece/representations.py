@@ -291,11 +291,6 @@ class NodePieceRepresentation(CombinedRepresentation):
             **kwargs,
         )
 
-    # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
-        return f"aggregation={aggregation_str}, "
-
     def estimate_diversity(self) -> HashDiversityInfo:
         """
         Estimate the diversity of the tokens via their hashes.
