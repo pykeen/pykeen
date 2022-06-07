@@ -1023,7 +1023,7 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         from pykeen.pipeline import pipeline
 
         dataset = get_dataset(dataset="codexsmall")
-        entity_representations = WikidataTextRepresentation.from_triples_factory(dataset=dataset)
+        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset)
 
         result = pipeline(
             dataset=dataset,
