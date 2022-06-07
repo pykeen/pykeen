@@ -152,7 +152,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None) -> Iterable[Tuple[str, s
         ), _citation(docdata)
 
 
-def _citation(dd):
+def _citation(dd) -> str:
     citation = dd["citation"]
     return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
 
