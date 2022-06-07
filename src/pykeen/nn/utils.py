@@ -2,6 +2,7 @@
 
 """Utilities for neural network components."""
 
+from abc import abstractmethod
 import logging
 from typing import Iterable, Optional, Sequence, Union
 
@@ -14,6 +15,7 @@ from tqdm.auto import tqdm
 from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 
 __all__ = [
+    "TextEncoder",
     "TransformerEncoder",
     "safe_diagonal",
     "adjacency_tensor_to_stacked_matrix",
@@ -26,7 +28,7 @@ memory_utilization_maximizer = MemoryUtilizationMaximizer()
 
 @memory_utilization_maximizer
 def _encode_all_memory_utilization_optimized(
-    encoder: "TransformerEncoder",
+    encoder: "TextEncoder",
     labels: Sequence[str],
     batch_size: int,
 ) -> torch.Tensor:
@@ -51,7 +53,63 @@ def _encode_all_memory_utilization_optimized(
     )
 
 
-class TransformerEncoder(nn.Module):
+class TextEncoder(nn.Module):
+    """An encoder for text."""
+
+    def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
+        """
+        Encode a batch of text.
+
+        :param labels: length: b
+            the texts
+
+        :return: shape: `(b, dim)`
+            an encoding of the texts
+        """
+        labels = upgrade_to_sequence(labels)
+        labels = list(map(str, labels))
+        return self._forward_normalized(texts=labels)
+
+    @abstractmethod
+    def _forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:
+        """
+        Encode a batch of text.
+
+        :param labels: length: b
+            the texts
+
+        :return: shape: `(b, dim)`
+            an encoding of the texts
+        """
+        raise NotImplementedError
+
+    @torch.inference_mode()
+    def encode_all(
+        self,
+        labels: Sequence[str],
+        batch_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """Encode all labels (inference mode & batched).
+
+        :param labels:
+            a sequence of strings to encode
+        :param batch_size:
+            the batch size to use for encoding the labels. ``batch_size=1``
+            means that the labels are encoded one-by-one, while ``batch_size=len(labels)``
+            would correspond to encoding all at once.
+            Larger batch sizes increase memory requirements, but may be computationally
+            more efficient. `batch_size` can also be set to `None` to enable automatic batch
+            size maximization for the employed hardware.
+
+        :returns: shape: (len(labels), dim)
+            a tensor representing the encodings for all labels
+        """
+        return _encode_all_memory_utilization_optimized(
+            encoder=self, labels=labels, batch_size=batch_size or len(labels)
+        ).detach()
+
+
+class TransformerEncoder(TextEncoder):
     """A combination of a tokenizer and a model."""
 
     def __init__(
@@ -89,10 +147,8 @@ class TransformerEncoder(nn.Module):
         )
         self.max_length = max_length or 512
 
-    def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
-        """Encode labels via the provided model and tokenizer."""
-        labels = upgrade_to_sequence(labels)
-        labels = list(map(str, labels))
+    # docstr-coverage: inherited
+    def _forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:  # noqa: D102
         return self.model(
             **self.tokenizer(
                 labels,
@@ -102,31 +158,6 @@ class TransformerEncoder(nn.Module):
                 max_length=self.max_length,
             ).to(get_preferred_device(self.model))
         ).pooler_output
-
-    @torch.inference_mode()
-    def encode_all(
-        self,
-        labels: Sequence[str],
-        batch_size: Optional[int] = None,
-    ) -> torch.FloatTensor:
-        """Encode all labels (inference mode & batched).
-
-        :param labels:
-            a sequence of strings to encode
-        :param batch_size:
-            the batch size to use for encoding the labels. ``batch_size=1``
-            means that the labels are encoded one-by-one, while ``batch_size=len(labels)``
-            would correspond to encoding all at once.
-            Larger batch sizes increase memory requirements, but may be computationally
-            more efficient. `batch_size` can also be set to `None` to enable automatic batch
-            size maximization for the employed hardware.
-
-        :returns: shape: (len(labels), dim)
-            a tensor representing the encodings for all labels
-        """
-        return _encode_all_memory_utilization_optimized(
-            encoder=self, labels=labels, batch_size=batch_size or len(labels)
-        ).detach()
 
 
 def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Tensor]:
