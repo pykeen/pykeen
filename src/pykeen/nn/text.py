@@ -21,7 +21,7 @@ from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 __all__ = [
     "TextRepresentation",
     "TextEncoder",
-    "TransformerEncoder",
+    "TransformerTextEncoder",
 ]
 
 logger = logging.getLogger(__name__)
@@ -111,7 +111,7 @@ class TextEncoder(nn.Module):
         ).detach()
 
 
-class CharacterEmbeddingEncoder(TextEncoder):
+class CharacterEmbeddingTextEncoder(TextEncoder):
     """A simple character-based text encoder."""
 
     def __init__(
@@ -156,7 +156,7 @@ class CharacterEmbeddingEncoder(TextEncoder):
         return x
 
 
-class TransformerEncoder(TextEncoder):
+class TransformerTextEncoder(TextEncoder):
     """A combination of a tokenizer and a model."""
 
     def __init__(
@@ -209,7 +209,7 @@ class TransformerEncoder(TextEncoder):
 
 text_encoder_resolver: ClassResolver[TextEncoder] = ClassResolver.from_subclasses(
     base=TextEncoder,
-    default=TransformerEncoder,
+    default=TransformerTextEncoder,
 )
 
 
