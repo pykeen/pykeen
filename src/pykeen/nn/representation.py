@@ -1070,7 +1070,11 @@ class WikidataCache:
         """
 
         logger.debug("running query: %s", sparql)
-        res = requests.get(WikidataCache.WIKIDATA_ENDPOINT, params={"query": sparql, "format": "json"})
+        res = requests.get(
+            WikidataCache.WIKIDATA_ENDPOINT,
+            params={"query": sparql, "format": "json"},
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
         res.raise_for_status()
         res_json = res.json()
         result = {}
