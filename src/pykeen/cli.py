@@ -133,8 +133,8 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
             raise ValueError(f"Missing docdata from {model_reference}")
-        model_reference = _fmt_ref(model_reference, link_fmt)
-        interaction_reference = _fmt_ref(interaction_reference, link_fmt)
+        model_reference = _format_reference(model_reference, link_fmt)
+        interaction_reference = _format_reference(interaction_reference, link_fmt)
         name = docdata.get("name", model_cls.__name__)
         yield name, model_reference, interaction_reference, _citation(docdata)
 
@@ -145,7 +145,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         name = docdata.get("name")
         if name is None:
             raise ValueError(f"All unmodeled interactions must have a name: {unseen_interaction_cls}")
-        yield name, "", _fmt_ref(
+        yield name, "", _format_reference(
             f"pykeen.nn.{unseen_interaction_cls.__name__}",
             link_fmt,
             format_class(unseen_interaction_cls),
@@ -157,12 +157,24 @@ def _citation(dd):
     return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
 
 
-def _fmt_ref(model_reference: str, link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
-    if model_reference is None:
+def _format_reference(reference: str, link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
+    """
+    Format a reference.
+
+    :param reference:
+        the reference
+    :param link_fmt:
+        the link format
+    :param alt_reference:
+        the link target. Defaults to the reference.
+    :return:
+        a Markdown reference
+    """
+    if reference is None:
         return ""
     if link_fmt is None:
-        return f"`{model_reference}`"
-    return f"[`{model_reference}`]({link_fmt.format(alt_reference or model_reference)})"
+        return f"`{reference}`"
+    return f"[`{reference}`]({link_fmt.format(alt_reference or reference)})"
 
 
 @ls.command()
