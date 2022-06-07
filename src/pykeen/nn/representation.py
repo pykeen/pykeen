@@ -929,11 +929,11 @@ class LabelBasedTransformerRepresentation(Representation):
         :param labels:
             the labels
         :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
+            the name of the pretrained model, or a path, cf. :meth:`TransformerEncoder.__init__`
         :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to
+            the maximum number of tokens to pad/trim the labels to, cf. :meth:`TransformerEncoder.__init__`
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
         """
         encoder = TransformerEncoder(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
