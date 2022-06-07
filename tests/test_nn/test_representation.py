@@ -256,6 +256,15 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
         return kwargs
 
 
+@unittest.skipIf(torchvision is None, "Need to install `torchvision`")
+class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
+    """Tests for Wikidata visual representations."""
+
+    cls = pykeen.nn.vision.WikidataVisualRepresentation
+    kwargs = dict(encoder="resnet18", layer_name="avgpool", trainable=False, wikidata_ids=["Q100", "Q1000"])
+    # max_id = 7
+
+
 @unittest.skipIf(transformers is None, "Need to install `transformers`")
 class WikidataTextRepresentationTests(cases.RepresentationTestCase):
     """Tests for Wikidata text representations."""
