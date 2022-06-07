@@ -120,19 +120,8 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
             raise ValueError(f"Missing docdata from {model_reference}")
-        if link_fmt:
-            model_reference = _fmt_ref(model_reference, link_fmt)
-        else:
-            model_reference = f"`{model_reference}`"
-
-        if interaction_reference:
-            if link_fmt:
-                interaction_reference = _fmt_ref(interaction_reference, link_fmt)
-            else:
-                interaction_reference = f"`{interaction_reference}`"
-        else:
-            interaction_reference = ""
-
+        model_reference = _fmt_ref(model_reference, link_fmt)
+        interaction_reference = _fmt_ref(interaction_reference, link_fmt)
         name = docdata.get("name", model_cls.__name__)
         yield name, model_reference, interaction_reference, _citation(docdata)
 
