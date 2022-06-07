@@ -906,9 +906,7 @@ class LabelBasedTransformerRepresentation(Representation):
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
-        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
-            triples_factory=dataset.training,
-        )
+        entity_representations = LabelBasedTransformerRepresentation.from_dataset(dataset=dataset)
         model = ERModel(
             interaction="ermlp",
             entity_representations=entity_representations,
