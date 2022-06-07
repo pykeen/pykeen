@@ -1015,6 +1015,8 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
 
     Example usage::
 
+    .. code-block:: python
+
         from pykeen.datasets import get_dataset
         from pykeen.models import ERModel
         from pykeen.nn import WikidataTextRepresentation
