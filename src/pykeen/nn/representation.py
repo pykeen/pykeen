@@ -22,6 +22,7 @@ from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .utils import TransformerEncoder, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
+from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
@@ -947,13 +948,21 @@ class LabelBasedTransformerRepresentation(Representation):
     @classmethod
     def from_triples_factory(
         cls,
-        triples_factory: TriplesFactory,
+        *,
+        dataset: Optional[Dataset] = None,
+        triples_factory: Optional[TriplesFactory] = None,
         for_entities: bool = True,
         **kwargs,
     ) -> "LabelBasedTransformerRepresentation":
         """
         Prepare a label-based transformer representations with labels from a triples factory.
 
+        .. note ::
+            this method will prefer the training triples factory of the dataset over the explicitly provided triples
+            factory
+
+        :param dataset:
+            the dataset
         :param triples_factory:
             the triples factory
         :param for_entities:
@@ -967,6 +976,10 @@ class LabelBasedTransformerRepresentation(Representation):
         :raise ImportError:
             if the transformers library could not be imported
         """
+        if dataset is not None:
+            triples_factory = dataset.training
+        if not isinstance(triples_factory, TriplesFactory):
+            raise ValueError(f"{self.__class__.__name__} requires access to labels.")
         id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
         return cls(
             labels=[id_to_label[i] for i in range(len(id_to_label))],
@@ -996,19 +1009,25 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
 
     Example usage::
 
-        from pykeen.datasets import CoDExSmall
+        from pykeen.datasets import get_dataset
+        from pykeen.models import ERModel
         from pykeen.nn import WikidataTextRepresentation
         from pykeen.pipeline import pipeline
 
-        dataset = CoDExSmall()
-        text_rep = WikidataTextRepresentation.from_dataset(dataset)
-        model = ...
+        dataset = get_dataset(dataset="codexsmall")
+        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(dataset=dataset)
 
-        results = pipeline(
-            ...
+        result = pipeline(
+            dataset=dataset,
+            model=ERModel,
+            model_kwargs=dict(
+                interaction="distmult",
+                entity_representations=entity_representations,
+                relation_representation_kwargs=dict(
+                    shape=entity_representations.shape,
+                ),
+            ),
         )
-
-    .. todo:: @mberr
     """
 
     def __init__(self, labels: Sequence[str], **kwargs):
@@ -1029,9 +1048,3 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
-
-    @classmethod
-    def from_dataset(cls, dataset):
-        """Instantiate this representation based on a dataset."""
-        # TODO
-        raise NotImplementedError
