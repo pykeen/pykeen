@@ -273,6 +273,10 @@ class Labeling:
         """Return the maximum ID (excl.)."""
         return max(self.label_to_id.values()) + 1
 
+    def all_labels(self) -> np.ndarray:
+        """Get all labels, in order."""
+        return self.label(self.max_id)
+
 
 def restrict_triples(
     mapped_triples: MappedTriples,
