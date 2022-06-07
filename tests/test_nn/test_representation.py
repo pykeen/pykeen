@@ -15,11 +15,6 @@ import pykeen.nn.representation
 from pykeen.datasets import get_dataset
 from tests import cases, mocks
 
-try:
-    import transformers
-except ImportError:
-    transformers = None
-
 
 class EmbeddingTests(cases.RepresentationTestCase):
     """Tests for embeddings."""
@@ -171,11 +166,11 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-@unittest.skipIf(transformers is None, "Need to install `transformers`")
 class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
     """Test the label based Transformer representations."""
 
     cls = pykeen.nn.representation.LabelBasedTransformerRepresentation
+    kwargs = dict(encoder="character-embedding")
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
