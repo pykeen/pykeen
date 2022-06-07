@@ -157,7 +157,7 @@ def _citation(dd) -> str:
     return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
 
 
-def _format_reference(reference: str, link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
+def _format_reference(reference: Optional[str], link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
     """
     Format a reference.
 
