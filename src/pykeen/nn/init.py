@@ -12,12 +12,12 @@ import torch
 import torch.nn
 import torch.nn.init
 import torch_ppr.utils
-from class_resolver import FunctionResolver, Hint, OptionalKwargs
+from class_resolver import FunctionResolver, Hint, HintOrType, OptionalKwargs
 from more_itertools import last
 from torch.nn import functional
 
+from .text import TextEncoder, text_encoder_resolver
 from .utils import iter_matrix_power, safe_diagonal
-from .text import TransformerTextEncoder
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Initializer, MappedTriples
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman
@@ -252,30 +252,24 @@ class LabelBasedInitializer(PretrainedInitializer):
     def __init__(
         self,
         labels: Sequence[str],
-        pretrained_model_name_or_path: str = "bert-base-cased",
+        encoder: HintOrType[TextEncoder] = None,
+        encoder_kwargs: OptionalKwargs = None,
         batch_size: Optional[int] = None,
-        max_length: Optional[int] = None,
     ):
         """
         Initialize the initializer.
 
         :param labels:
             the labels
-        :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. :func:`transformers.AutoModel.from_pretrained`
+        :param encoder:
+            the text encoder to use, cf. `text_encoder_resolver`
+        :param encoder_kwargs:
+            additional keyword-based parameters passed to the encoder
         :param batch_size: >0
             the (maximum) batch size to use while encoding. If None, use `len(labels)`, i.e., only a single batch.
-        :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to
-
-        :raise ImportError:
-            if the transformers library could not be imported
         """
         super().__init__(
-            tensor=TransformerTextEncoder(
-                pretrained_model_name_or_path=pretrained_model_name_or_path,
-                max_length=max_length,
-            ).encode_all(
+            tensor=text_encoder_resolver.make(encoder, encoder_kwargs).encode_all(
                 labels=labels,
                 batch_size=batch_size,
             )
