@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import re
 from itertools import chain
-from typing import Any, Iterable, List, Mapping, Optional, Sequence, Union, cast
+from typing import Any, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
 
 import more_itertools
 import requests
@@ -377,8 +377,21 @@ class WikidataCache:
             name = f"{wikidata_id}.json"
             self.module.dump_json(name=name, obj=entry)
 
-    def _get(self, ids: Sequence[str], component: str) -> Sequence[str]:
-        """Get the requested component for the given IDs."""
+    def _get(self, ids: Sequence[str], component: Literal["label", "description"]) -> Sequence[str]:
+        """
+        Get the requested component for the given IDs.
+
+        .. note ::
+            this method uses file-based caching to avoid excessive requests to the Wikidata API.
+
+        :param ids:
+            the Wikidata IDs
+        :param component:
+            the selected component
+
+        :return:
+            the selected component for each Wikidata ID
+        """
         self.verify_ids(ids=ids)
         # try to load cached first
         result: List[Optional[str]] = [None] * len(ids)
@@ -400,9 +413,26 @@ class WikidataCache:
         return cast(Sequence[str], result)
 
     def get_labels(self, ids: Sequence[str]) -> Sequence[str]:
-        """Get entity labels for the given IDs."""
+        """
+        Get entity labels for the given IDs.
+
+        :param ids:
+            the Wikidata IDs
+
+        :return:
+            the label for each Wikidata entity
+        """
         return self._get(ids=ids, component="label")
 
     def get_descriptions(self, ids: Sequence[str]) -> Sequence[str]:
-        """Get entity descriptions for the given IDs."""
+        """
+        Get entity descriptions for the given IDs.
+
+
+        :param ids:
+            the Wikidata IDs
+
+        :return:
+            the description for each Wikidata entity
+        """
         return self._get(ids=ids, component="description")
