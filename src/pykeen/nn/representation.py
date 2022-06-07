@@ -28,6 +28,7 @@ from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
+from pykeen import triples
 
 __all__ = [
     "Representation",
@@ -949,21 +950,13 @@ class LabelBasedTransformerRepresentation(Representation):
     @classmethod
     def from_triples_factory(
         cls,
-        *,
-        dataset: Optional[Dataset] = None,
-        triples_factory: Optional[TriplesFactory] = None,
+        triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
     ) -> "LabelBasedTransformerRepresentation":
         """
         Prepare a label-based transformer representations with labels from a triples factory.
 
-        .. note ::
-            this method will prefer the training triples factory of the dataset over the explicitly provided triples
-            factory
-
-        :param dataset:
-            the dataset
         :param triples_factory:
             the triples factory
         :param for_entities:
@@ -973,20 +966,33 @@ class LabelBasedTransformerRepresentation(Representation):
 
         :returns:
             A label-based transformer from the triples factory
+        """
+        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+        return cls(labels=labeling.all_labels(), **kwargs)
+
+    @classmethod
+    def from_dataset(
+        cls,
+        dataset: Dataset,
+        **kwargs,
+    ) -> "LabelBasedTransformerRepresentation":
+        """Prepare label-based representations with labls from a dataset.
+
+        :param dataset:
+            the dataset
+        :param kwargs:
+            additional keyword-based parameters passed to
+            :meth:`LabelBasedTransformerRepresentation.from_triples_factory`
+
+        :return:
+            the representation
 
         :raises TypeError:
             if the triples factory does not provide labels
-        :raises ValueError:
-            if both of `triples_factory` nor `dataset` are `None`
         """
-        if dataset is not None:
-            if not isinstance(dataset.training, TriplesFactory):
-                raise TypeError(f"{cls.__name__} requires access to labels.")
-            triples_factory = dataset.training
-        if triples_factory is None:
-            raise ValueError("Must provide at least one of `dataset` or `triples_factory`")
-        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
-        return cls(labels=labeling.all_labels(), **kwargs)
+        if not isinstance(dataset.training, TriplesFactory):
+            raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
+        return cls.from_triples_factory(triples_factory=dataset.training, **kwargs)
 
     # docstr-coverage: inherited
     def _plain_forward(
