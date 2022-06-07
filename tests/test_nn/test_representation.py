@@ -226,6 +226,16 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
     )
 
 
+@unittest.skipIf(transformers is None, "Need to install `transformers`")
+class WikidataTextRepresentationTests(cases.RepresentationTestCase):
+    """Tests for Wikidata text representations."""
+
+    cls = pykeen.nn.representation.WikidataTextRepresentation
+    kwargs = dict(
+        labels=["Q100", "Q1000"],
+    )
+
+
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
 
