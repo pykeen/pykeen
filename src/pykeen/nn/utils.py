@@ -18,7 +18,7 @@ from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
 from ..constants import PYKEEN_MODULE
-from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
+from ..utils import get_preferred_device, nested_get, resolve_device, upgrade_to_sequence
 from ..version import get_version
 
 __all__ = [
@@ -297,24 +297,6 @@ class WikidataCache:
             if not pattern.match(one_id):
                 yield one_id
 
-    @staticmethod
-    def _safe_get(d: dict, *keys: str, default=None) -> Optional[Any]:
-        """
-        Get from a nested dictionary with default.
-
-        :param d:
-            the (nested) dictionary
-        :param keys:
-            the sequence of keys
-        :param default:
-            the default value if a key is not present at any level, defaults to None
-        :return: the value, or the default
-        """
-        # TODO: move to utils
-        for key in keys[:-1]:
-            d = d.get(key, {})
-        return d.get(keys[-1], default)
-
     @classmethod
     def query(
         cls, wikidata_ids: Sequence[str], language: str = "en", batch_size: int = 256
@@ -363,12 +345,12 @@ class WikidataCache:
         res_json = res.json()
         result = {}
         for entry in res_json["results"]["bindings"]:
-            wikidata_id = cls._safe_get(entry, "item", "value", default="")
+            wikidata_id = nested_get(entry, "item", "value", default="")
             assert isinstance(wikidata_id, str)  # for mypy
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
-            label = cls._safe_get(entry, "itemLabel", "value", default="")
+            label = nested_get(entry, "itemLabel", "value", default="")
             assert isinstance(label, str)  # for mypy
-            description = cls._safe_get(entry, "itemDescription", "value", default="")
+            description = nested_get(entry, "itemDescription", "value", default="")
             assert isinstance(description, str)  # for mypy
             result[wikidata_id] = dict(label=label, description=description)
         return result
