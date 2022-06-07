@@ -8,6 +8,7 @@ import logging
 import pathlib
 import re
 from itertools import chain
+from textwrap import dedent
 from typing import Collection, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
 
 import more_itertools
@@ -334,8 +335,7 @@ class WikidataCache:
                 )
             )
 
-        qualified = " ".join(f"wd:{i}" for i in wikidata_ids)
-        sparql = sparql.format(ids=qualified)
+        sparql = sparql.format(ids=" ".join(f"wd:{i}" for i in wikidata_ids))
         logger.debug("running query: %s", sparql)
         res = requests.get(
             cls.WIKIDATA_ENDPOINT,
@@ -363,14 +363,14 @@ class WikidataCache:
             a mapping from Wikidata Ids to dictionaries with the label and description of the entities
         """
         res_json = cls.query(
-            sparql=f"""
+            sparql=dedent(
+                f"""
                 SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
                     VALUES ?item {{ {{ids}} }}
                     SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
                 }}}}
-            """.format(
-                language=language
-            ),
+            """
+            ).format(language=language),
             wikidata_ids=wikidata_ids,
             batch_size=batch_size,
         )
@@ -461,7 +461,11 @@ class WikidataCache:
 
     def _discover_images(self, extensions: Collection[str]) -> Mapping[str, pathlib.Path]:
         image_dir = self.module.join("images")
-        return {path.stem: path for path in image_dir.glob(f"*.{{{','.join(extensions)}}}")}
+        return {
+            path.stem: path
+            for path in image_dir.iterdir()
+            if path.is_file() and path.suffix in {f".{e}" for e in extensions}
+        }
 
     def get_image_paths(
         self, ids: Sequence[str], extensions: Collection[str] = ("jpg", "png")
@@ -477,23 +481,28 @@ class WikidataCache:
         id_to_path = self._discover_images(extensions=extensions)
         missing = list(set(ids).difference(id_to_path.keys()))
         res_json = self.query(
-            sparql="""
-                SELECT  ?item ?image
-                WHERE {
-                    VALUES ?item {ids}.
-                    ?item wdt:P18 ?image .
-                }
-            """,
+            sparql=dedent(
+                """
+                    SELECT  ?item ?image
+                    WHERE {{
+                        VALUES ?item {{ {ids} }}.
+                        ?item wdt:P18 ?image .
+                    }}
+                """
+            ),
             wikidata_ids=missing,
         )
         for entry in res_json:
             wikidata_id = nested_get(entry, "item", "value", default="")
             assert isinstance(wikidata_id, str)  # for mypy
+            wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
             image_url = nested_get(entry, "image", "value", default=None)
             if image_url is not None:
                 ext = image_url.rsplit(".", maxsplit=1)[-1]
                 assert ext in extensions
                 self.module.ensure("images", url=image_url, name=f"{wikidata_id}.{ext}")
         id_to_path = self._discover_images(extensions=extensions)
-        assert set(id_to_path.keys()) == set(ids)
+        still_missing = set(id_to_path.keys()).difference(ids)
+        if still_missing:
+            raise NotImplementedError("Cannot deal with unobtainable images.")
         return [id_to_path[i] for i in ids]
