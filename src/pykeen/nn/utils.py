@@ -5,10 +5,10 @@
 from __future__ import annotations
 
 import logging
+import pathlib
 import re
 from itertools import chain
-from typing import Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
-import pathlib
+from typing import Collection, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
 
 import more_itertools
 import requests
@@ -283,9 +283,6 @@ class WikidataCache:
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
     WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
 
-    # image:
-    # https://www.wikidata.org/w/api.php?action=wbgetclaims&property=P18&entity=Qxxx
-
     def __init__(self) -> None:
         """Initialize the cache."""
         self.module = PYKEEN_MODULE.submodule("wikidata")
@@ -461,3 +458,42 @@ class WikidataCache:
             the description for each Wikidata entity
         """
         return self._get(ids=ids, component="description")
+
+    def _discover_images(self, extensions: Collection[str]) -> Mapping[str, pathlib.Path]:
+        image_dir = self.module.join("images")
+        return {path.stem: path for path in image_dir.glob(f"*.{{{','.join(extensions)}}}")}
+
+    def get_image_paths(
+        self, ids: Sequence[str], extensions: Collection[str] = ("jpg", "png")
+    ) -> Sequence[pathlib.Path]:
+        """Get paths to images for the given IDs.
+
+        :param ids:
+            the Wikidata IDs.
+
+        :return:
+            the paths to images for the given IDs.
+        """
+        id_to_path = self._discover_images(extensions=extensions)
+        missing = list(set(ids).difference(id_to_path.keys()))
+        res_json = self.query(
+            sparql="""
+                SELECT  ?item ?image
+                WHERE {
+                    VALUES ?item {ids}.
+                    ?item wdt:P18 ?image .
+                }
+            """,
+            wikidata_ids=missing,
+        )
+        for entry in res_json:
+            wikidata_id = nested_get(entry, "item", "value", default="")
+            assert isinstance(wikidata_id, str)  # for mypy
+            image_url = nested_get(entry, "image", "value", default=None)
+            if image_url is not None:
+                ext = image_url.rsplit(".", maxsplit=1)[-1]
+                assert ext in extensions
+                self.module.ensure("images", url=image_url, name=f"{wikidata_id}.{ext}")
+        id_to_path = self._discover_images(extensions=extensions)
+        assert set(id_to_path.keys()) == set(ids)
+        return [id_to_path[i] for i in ids]
