@@ -143,7 +143,6 @@ class TokenizationTests(cases.RepresentationTestCase):
     """Tests for tokenization representation."""
 
     cls = pykeen.nn.node_piece.TokenizationRepresentation
-    # max_id: int = 13
     vocabulary_size: int = 5
     num_tokens: int = 3
 
