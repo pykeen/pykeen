@@ -974,11 +974,11 @@ class LabelBasedTransformerRepresentation(Representation):
         :returns:
             A label-based transformer from the triples factory
 
-        :raise ImportError:
+        :raises ImportError:
             if the transformers library could not be imported
-        :raise TypeError:
+        :raises TypeError:
             if the triples factory does not provide labels
-        :raise ValueError:
+        :raises ValueError:
             if both of `triples_factory` nor `dataset` are `None`
         """
         if dataset is not None:
