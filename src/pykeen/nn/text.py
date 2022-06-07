@@ -81,7 +81,7 @@ class TextEncoder(nn.Module):
         """
         Encode a batch of text.
 
-        :param labels: length: b
+        :param texts: length: b
             the texts
 
         :return: shape: `(b, dim)`
