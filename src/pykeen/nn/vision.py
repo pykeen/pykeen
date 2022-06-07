@@ -13,6 +13,7 @@ import torch.utils.data
 from class_resolver import OptionalKwargs
 
 from .representation import Representation
+from .utils import WikidataCache
 
 try:
     from PIL import Image
@@ -64,7 +65,7 @@ class VisionDataset(torch.utils.data.Dataset):
 
         self.images = images
         if transforms is None:
-            transforms = [vision_transforms.ToTensor()]
+            transforms = [vision_transforms.RandomResizedCrop(size=224), vision_transforms.ToTensor()]
         transforms.append(vision_transforms.ConvertImageDtype(torch.get_default_dtype()))
         self.transforms = vision_transforms.Compose(transforms=transforms)
 
@@ -77,7 +78,7 @@ class VisionDataset(torch.utils.data.Dataset):
             if not path.is_absolute():
                 path = self.root.joinpath(path)
             image = Image.open(path)
-        assert torch.is_tensor(image)
+        assert isinstance(image, (torch.Tensor, Image.Image))
         return self.transforms(image)
 
     # docstr-coverage: inherited
@@ -177,3 +178,12 @@ class VisualRepresentation(Representation):
             return torch.cat(
                 [self._encode(images=images, encoder=self.encoder, pool=self.pool) for images in data_loader], dim=-1
             )
+
+
+class WikidataVisualRepresentation(VisualRepresentation):
+    """Visual representations obtained from Wikidata."""
+
+    def __init__(self, wikidata_ids: Sequence[str], **kwargs):
+        cache = WikidataCache()
+        images = cache.get_image_paths(wikidata_ids)
+        super().__init__(images=images, **kwargs)
