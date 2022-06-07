@@ -8,7 +8,7 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -174,6 +174,15 @@ class Representation(nn.Module, ABC):
 
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
+
+    def iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over components for :meth:`extra_repr`."""
+        yield f"max_id={self.max_id}"
+        yield f"shape={self.shape}"
+
+    # docstr-coverage: inherited
+    def extra_repr(self) -> str:  # noqa: D102
+        return ", ".join(self.iter_extra_repr())
 
     @property
     def embedding_dim(self) -> int:
