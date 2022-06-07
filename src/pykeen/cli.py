@@ -105,6 +105,19 @@ def _get_interaction_for_model_cls(cls: Type[Model]) -> Optional[Type[Interactio
         return None
 
 
+def format_class(cls: Type) -> str:
+    """
+    Generate the fully-qualified class name.
+
+    :param cls:
+        the class
+
+    :return:
+        the fully qualified class name
+    """
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
 def _get_model_lines(*, link_fmt: Optional[str] = None):
     seen_interactions: Set[Type[Interaction]] = set()
     for _, model_cls in sorted(model_resolver.lookup_dict.items()):
@@ -114,9 +127,9 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
             interaction_reference = None
         else:
             seen_interactions.add(interaction_cls)
-            interaction_reference = f"pykeen.nn.{interaction_cls.__name__}"
+            interaction_reference = format_class(interaction_cls)
 
-        model_reference = f"pykeen.models.{model_cls.__name__}"
+        model_reference = format_class(model_cls)
         docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
             raise ValueError(f"Missing docdata from {model_reference}")
@@ -135,7 +148,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         yield name, "", _fmt_ref(
             f"pykeen.nn.{unseen_interaction_cls.__name__}",
             link_fmt,
-            f"pykeen.nn.module.{unseen_interaction_cls.__name__}",
+            format_class(unseen_interaction_cls),
         ), _citation(docdata)
 
 
