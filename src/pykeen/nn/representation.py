@@ -905,6 +905,7 @@ class TextRepresentation(Representation):
         dataset = get_dataset(dataset="nations")
         entity_representations = TextRepresentation.from_triples_factory(
             triples_factory=dataset.training,
+            encoder="transformer",
         )
         model = ERModel(
             interaction="ermlp",
@@ -932,7 +933,7 @@ class TextRepresentation(Representation):
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
         """
-        text_encoder_resolver.make(encoder, encoder_kwargs)
+        encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
         # infer shape
         shape = encoder.encode_all(labels[0:1]).shape[1:]
         super().__init__(max_id=len(labels), shape=shape, **kwargs)

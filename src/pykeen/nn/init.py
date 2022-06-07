@@ -245,6 +245,7 @@ class LabelBasedInitializer(PretrainedInitializer):
             embedding_dim=768,  # for BERT base
             entity_initializer=LabelBasedInitializer.from_triples_factory(
                 triples_factory=dataset.training,
+                encoder="transformer",
             ),
         )
     """

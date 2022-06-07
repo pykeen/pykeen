@@ -207,5 +207,5 @@ class TransformerTextEncoder(TextEncoder):
 
 text_encoder_resolver: ClassResolver[TextEncoder] = ClassResolver.from_subclasses(
     base=TextEncoder,
-    default=TransformerTextEncoder,
+    default=CharacterEmbeddingTextEncoder,
 )
