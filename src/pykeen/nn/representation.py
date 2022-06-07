@@ -20,9 +20,10 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
+from .text import TextEncoder, text_encoder_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
-from ..triples import CoreTriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
 
@@ -34,6 +35,7 @@ __all__ = [
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
     "SubsetRepresentation",
+    "TextRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -883,3 +885,93 @@ class SingleCompGCNRepresentation(Representation):
         if indices is not None:
             x = x[indices.to(self.device)]
         return x
+
+
+class TextRepresentation(Representation):
+    """
+    Textual representations using a text encoder on labels.
+
+    Example Usage:
+
+    Entity representations are obtained by encoding the labels with a Transformer model. The transformer
+    model becomes part of the KGE model, and its parameters are trained jointly.
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
+        from pykeen.models import ERModel
+
+        dataset = get_dataset(dataset="nations")
+        entity_representations = TextRepresentation.from_triples_factory(
+            triples_factory=dataset.training,
+        )
+        model = ERModel(
+            interaction="ermlp",
+            entity_representations=entity_representations,
+            relation_representations=EmbeddingSpecification(shape=entity_representations.shape),
+        )
+    """
+
+    def __init__(
+        self,
+        labels: Sequence[str],
+        encoder: HintOrType[TextEncoder] = None,
+        encoder_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        :param labels:
+            the labels
+        :param encoder:
+            the text encoder, or a hint thereof
+        :param encoder_kwargs:
+            keyword-based parameters used to instantiate the text encoder
+        :param kwargs:
+            additional keyword-based parameters passed to super.__init__
+        """
+        text_encoder_resolver.make(encoder, encoder_kwargs)
+        # infer shape
+        shape = encoder.encode_all(labels[0:1]).shape[1:]
+        super().__init__(max_id=len(labels), shape=shape, **kwargs)
+        self.labels = labels
+        # assign after super, since they should be properly registered as submodules
+        self.encoder = encoder
+
+    @classmethod
+    def from_triples_factory(
+        cls,
+        triples_factory: TriplesFactory,
+        for_entities: bool = True,
+        **kwargs,
+    ) -> "TextRepresentation":
+        """
+        Prepare a label-based transformer representations with labels from a triples factory.
+
+        :param triples_factory:
+            the triples factory
+        :param for_entities:
+            whether to create the initializer for entities (or relations)
+        :param kwargs:
+            additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
+
+        :returns:
+            A label-based transformer from the triples factory
+
+        :raise ImportError:
+            if the transformers library could not be imported
+        """
+        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
+        return cls(
+            labels=[id_to_label[i] for i in range(len(id_to_label))],
+            **kwargs,
+        )
+
+    # docstr-coverage: inherited
+    def _plain_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.encoder(labels=[self.labels[i] for i in indices.tolist()])
