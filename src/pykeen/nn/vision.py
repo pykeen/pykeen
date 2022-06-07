@@ -14,6 +14,8 @@ from class_resolver import OptionalKwargs
 
 from .representation import Representation
 from .utils import WikidataCache
+from ..datasets import Dataset
+from ..triples import TriplesFactory
 
 try:
     from PIL import Image
@@ -220,3 +222,54 @@ class WikidataVisualRepresentation(VisualRepresentation):
             additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
         """
         super().__init__(images=WikidataCache().get_image_paths(wikidata_ids), **kwargs)
+
+    @classmethod
+    def from_triples_factory(
+        cls,
+        triples_factory: TriplesFactory,
+        for_entities: bool = True,
+        **kwargs,
+    ) -> "WikidataVisualRepresentation":
+        """
+        Prepare a visual representations for Wikidata entities from a triples factory.
+
+        :param triples_factory:
+            the triples factory
+        :param for_entities:
+            whether to create the initializer for entities (or relations)
+        :param kwargs:
+            additional keyword-based arguments passed to :meth:`WikidataVisualRepresentation.__init__`
+
+        :returns:
+            a visual representation from the triples factory
+        """
+        return cls(
+            wikidata_ids=(
+                triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+            ).all_labels(),
+            **kwargs,
+        )
+
+    @classmethod
+    def from_dataset(
+        cls,
+        dataset: Dataset,
+        **kwargs,
+    ) -> "WikidataVisualRepresentation":
+        """Prepare representations from a dataset.
+
+        :param dataset:
+            the dataset; needs to have Wikidata IDs as entity names
+        :param kwargs:
+            additional keyword-based parameters passed to
+            :meth:`WikidataVisualRepresentation.from_triples_factory`
+
+        :return:
+            the representation
+
+        :raises TypeError:
+            if the triples factory does not provide labels
+        """
+        if not isinstance(dataset.training, TriplesFactory):
+            raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
+        return cls.from_triples_factory(triples_factory=dataset.training, **kwargs)
