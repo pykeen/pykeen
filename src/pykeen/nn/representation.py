@@ -974,8 +974,6 @@ class LabelBasedTransformerRepresentation(Representation):
         :returns:
             A label-based transformer from the triples factory
 
-        :raises ImportError:
-            if the transformers library could not be imported
         :raises TypeError:
             if the triples factory does not provide labels
         :raises ValueError:
