@@ -1001,8 +1001,6 @@ class LabelBasedTransformerRepresentation(Representation):
 class CombinedRepresentation(Representation):
     """A combined representation."""
 
-    # TODO: upgrade: NodePiece; Literal
-
     #: the base representations
     base: Sequence[Representation]
 
