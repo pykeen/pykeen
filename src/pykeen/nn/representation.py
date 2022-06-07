@@ -25,6 +25,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
 
@@ -979,12 +980,9 @@ class LabelBasedTransformerRepresentation(Representation):
         if dataset is not None:
             triples_factory = dataset.training
         if not isinstance(triples_factory, TriplesFactory):
-            raise ValueError(f"{self.__class__.__name__} requires access to labels.")
-        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
-        return cls(
-            labels=[id_to_label[i] for i in range(len(id_to_label))],
-            **kwargs,
-        )
+            raise TypeError(f"{cls.__name__} requires access to labels.")
+        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+        return cls(labels=labeling.all_labels(), **kwargs)
 
     # docstr-coverage: inherited
     def _plain_forward(
@@ -1015,7 +1013,7 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         from pykeen.pipeline import pipeline
 
         dataset = get_dataset(dataset="codexsmall")
-        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(dataset=dataset)
+        entity_representations = WikidataTextRepresentation.from_triples_factory(dataset=dataset)
 
         result = pipeline(
             dataset=dataset,
