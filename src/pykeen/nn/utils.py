@@ -20,7 +20,7 @@ from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
 from ..constants import PYKEEN_MODULE
-from ..utils import get_preferred_device, nested_get, resolve_device, upgrade_to_sequence
+from ..utils import get_preferred_device, nested_get, rate_limited, resolve_device, upgrade_to_sequence
 from ..version import get_version
 
 __all__ = [
@@ -284,6 +284,16 @@ class WikidataCache:
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
     WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
 
+    HEADERS: Mapping[str, str] = {
+        # cf. https://meta.wikimedia.org/wiki/User-Agent_policy
+        "User-Agent": (
+            f"PyKEEN-Bot/{get_version()} (https://pykeen.github.io; pykeen2019@gmail.com) "
+            f"requests/{requests.__version__}"
+        ),
+        # cf. https://wikitech.wikimedia.org/wiki/Robot_policy
+        "Accept-Encoding": "gzip",
+    }
+
     def __init__(self) -> None:
         """Initialize the cache."""
         self.module = PYKEEN_MODULE.submodule("wikidata")
@@ -340,13 +350,7 @@ class WikidataCache:
         res = requests.get(
             cls.WIKIDATA_ENDPOINT,
             params={"query": sparql, "format": "json"},
-            # cf. https://meta.wikimedia.org/wiki/User-Agent_policy
-            headers={
-                "User-Agent": (
-                    f"PyKEEN-Bot/{get_version()} (https://pykeen.github.io; pykeen2019@gmail.com) "
-                    f"requests/{requests.__version__}"
-                )
-            },
+            headers=cls.HEADERS,
         )
         res.raise_for_status()
         return res.json()["results"]["bindings"]
@@ -474,18 +478,26 @@ class WikidataCache:
         }
 
     def get_image_paths(
-        self, ids: Sequence[str], extensions: Collection[str] = ("jpg", "png")
+        self,
+        ids: Sequence[str],
+        extensions: Collection[str] = ("jpeg", "jpg", "gif", "png", "svg", "tif"),
+        progress: bool = False,
     ) -> Sequence[pathlib.Path]:
         """Get paths to images for the given IDs.
 
         :param ids:
             the Wikidata IDs.
+        :param extensions:
+            the allowed file extensions
+        :param progress:
+            whether to display a progress bar
 
         :return:
             the paths to images for the given IDs.
         """
         id_to_path = self._discover_images(extensions=extensions)
-        missing = list(set(ids).difference(id_to_path.keys()))
+        missing = sorted(set(ids).difference(id_to_path.keys()))
+        logger.info(f"Downloading images for {len(missing):,} entities.")
         res_json = self.query(
             sparql=dedent(
                 """
@@ -499,16 +511,22 @@ class WikidataCache:
             ),
             wikidata_ids=missing,
         )
-        for entry in res_json:
+        for entry in tqdm(rate_limited(res_json), disable=not progress, unit="entity", total=len(ids)):
             wikidata_id = nested_get(entry, "item", "value", default="")
             assert isinstance(wikidata_id, str)  # for mypy
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
             image_url = nested_get(entry, "image", "value", default=None)
             if image_url is not None:
                 assert isinstance(image_url, str)  # for mypy
-                ext = image_url.rsplit(".", maxsplit=1)[-1]
-                assert ext in extensions
-                self.module.ensure("images", url=image_url, name=f"{wikidata_id}.{ext}")
+                ext = image_url.rsplit(".", maxsplit=1)[-1].lower()
+                if ext not in extensions:
+                    logger.warning(f"Unknown extension: {ext} for {image_url}")
+                self.module.ensure(
+                    "images",
+                    url=image_url,
+                    name=f"{wikidata_id}.{ext}",
+                    download_kwargs=dict(backend="requests", headers=self.HEADERS),
+                )
         id_to_path = self._discover_images(extensions=extensions)
         still_missing = set(id_to_path.keys()).difference(ids)
         if still_missing:

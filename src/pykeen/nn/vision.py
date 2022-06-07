@@ -212,16 +212,18 @@ class WikidataVisualRepresentation(VisualRepresentation):
         )
     """
 
-    def __init__(self, wikidata_ids: Sequence[str], **kwargs):
+    def __init__(self, wikidata_ids: Sequence[str], image_kwargs: OptionalKwargs, **kwargs):
         """
         Initialize the representation.
 
         :param wikidata_ids:
             the Wikidata IDs
+        :param image_kwargs:
+            keyword-based parameters passed to :meth:`WikidataCache.get_image_paths`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
         """
-        super().__init__(images=WikidataCache().get_image_paths(wikidata_ids), **kwargs)
+        super().__init__(images=WikidataCache().get_image_paths(wikidata_ids, **(image_kwargs or {})), **kwargs)
 
     @classmethod
     def from_triples_factory(
