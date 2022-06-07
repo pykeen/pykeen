@@ -2,7 +2,6 @@
 
 """Test embeddings."""
 
-import unittest
 from typing import Any, ClassVar, MutableMapping, Tuple
 
 import numpy
@@ -11,6 +10,7 @@ import unittest_templates
 
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.pyg
 import pykeen.nn.representation
 from pykeen.datasets import get_dataset
 from tests import cases, mocks
@@ -166,10 +166,10 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
-    """Test the label based Transformer representations."""
+class TextRepresentationTests(cases.RepresentationTestCase):
+    """Test the label based representations."""
 
-    cls = pykeen.nn.representation.LabelBasedTransformerRepresentation
+    cls = pykeen.nn.representation.TextRepresentation
     kwargs = dict(encoder="character-embedding")
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
