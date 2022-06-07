@@ -1911,8 +1911,40 @@ class TripleREInteraction(
         )
 
 
+@parse_docdata
 class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
-    """An implementation of the AutoSF interaction as described by [zhang2020]_."""
+    """
+    An implementation of the AutoSF interaction as described by [zhang2020]_.
+
+    This interaction function is a parametrized way to express bi-linear models
+    with block structure. It divides the entity and relation representations into blocks,
+    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
+    and $s \in {-1, 1}$ is the sign.
+
+    The interaction function is then given as
+
+    .. math::
+        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
+
+    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
+
+    This parametrization allows to express several well-known interaction functions, e.g.
+
+    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+    - :class:`pykeen.models.ComplEx`: two blocks,
+    $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+
+    ---
+    name: AutoSF
+    citation:
+        author: Zhang
+        year: 2020
+        arxiv: 1904.11682
+        link: https://arxiv.org/abs/1904.11682
+        github: AutoML-Research/AutoSF
+    """
 
     func = pkf.auto_sf_interaction
     coefficients: Tuple[Tuple[int, int, int, Sign], ...]
