@@ -296,19 +296,6 @@ class NodePieceRepresentation(CombinedRepresentation):
         aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
         return f"aggregation={aggregation_str}, "
 
-    # # docstr-coverage: inherited
-    # def _plain_forward(
-    #     self,
-    #     indices: Optional[torch.LongTensor] = None,
-    # ) -> torch.FloatTensor:  # noqa: D102
-    #     return self.aggregation(
-    #         torch.cat(
-    #             [tokenization(indices=indices) for tokenization in self.token_representations],
-    #             dim=self.aggregation_index,
-    #         ),
-    #         self.aggregation_index,
-    #     )
-
     def estimate_diversity(self) -> HashDiversityInfo:
         """
         Estimate the diversity of the tokens via their hashes.
