@@ -7,7 +7,7 @@ from abc import abstractmethod
 from typing import Callable, Optional, Sequence, Union
 
 import torch
-from class_resolver import Hint, HintOrType, ClassResolver, OptionalKwargs
+from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import aggregation_resolver
 from more_itertools import chunked
 from torch import nn
@@ -15,8 +15,8 @@ from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
 from .representation import Representation
+from ..triples import TriplesFactory
 from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
-
 
 __all__ = [
     "TextRepresentation",
