@@ -16,7 +16,8 @@ from class_resolver import FunctionResolver, Hint, OptionalKwargs
 from more_itertools import last
 from torch.nn import functional
 
-from .utils import TransformerEncoder, iter_matrix_power, safe_diagonal
+from .utils import iter_matrix_power, safe_diagonal
+from .text import TransformerTextEncoder
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Initializer, MappedTriples
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman
@@ -271,7 +272,7 @@ class LabelBasedInitializer(PretrainedInitializer):
             if the transformers library could not be imported
         """
         super().__init__(
-            tensor=TransformerEncoder(
+            tensor=TransformerTextEncoder(
                 pretrained_model_name_or_path=pretrained_model_name_or_path,
                 max_length=max_length,
             ).encode_all(
