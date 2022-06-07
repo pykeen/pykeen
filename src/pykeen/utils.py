@@ -1726,7 +1726,7 @@ def nested_get(d: Mapping[str, Any], *key: str, default=None) -> Any:
     return d
 
 
-def rate_limited(xs: Iterable[X], window: int = 5, min_avg_time: float = 1.0) -> Iterable[X]:
+def rate_limited(xs: Iterable[X], min_avg_time: float = 1.0) -> Iterable[X]:
     """Iterate over iterable with rate limit.
 
     :param xs:
@@ -1738,10 +1738,11 @@ def rate_limited(xs: Iterable[X], window: int = 5, min_avg_time: float = 1.0) ->
 
     :yields: elements of the iterable
     """
-    times = deque(maxlen=window)
-    for x in xs:
-        times.append(time.perf_counter())
-        under = max(0, (times[-1] - times[0]) - min_avg_time * window)
+    start = time.perf_counter()
+    for i, x in enumerate(xs):
+        duration = time.perf_counter() - start
+        under = min_avg_time * i - duration
+        under = max(0, under)
         if under:
             logger.debug(f"Applying rate limit; sleeping for {under} seconds")
             time.sleep(under)
