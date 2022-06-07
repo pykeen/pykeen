@@ -275,7 +275,7 @@ class Labeling:
 
     def all_labels(self) -> np.ndarray:
         """Get all labels, in order."""
-        return self.label(self.max_id)
+        return self.label(range(self.max_id))
 
 
 def restrict_triples(
