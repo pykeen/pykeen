@@ -1031,7 +1031,10 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         super().__init__(labels=labels, **kwargs)
 
     @classmethod
-    def from_dataset(cls, dataset):
+    def from_dataset(cls, dataset) -> "WikidataTextRepresentation":
         """Instantiate this representation based on a dataset."""
-        # TODO
-        raise NotImplementedError
+        training = dataset.training
+        try:
+            return cls(labels=training.entity_labeling.all_labels())
+        except AttributeError:
+            raise TypeError(f"must use labeled triples for wikidata")
