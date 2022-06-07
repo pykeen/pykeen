@@ -129,7 +129,7 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
 
         :param dim: the embedding dimension
         :param character_representation: the character representation or a hint thereof
-        :param vocabulary: the vocubarly, i.e., the allowed characters
+        :param vocabulary: the vocabulary, i.e., the allowed characters
         :param aggregation: the aggregation to use to pool the character embeddings
         """
         super().__init__()
