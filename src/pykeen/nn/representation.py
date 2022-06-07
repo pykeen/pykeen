@@ -29,6 +29,7 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
+from ..version import get_version
 
 __all__ = [
     "Representation",
@@ -1073,7 +1074,7 @@ class WikidataCache:
         res = requests.get(
             cls.WIKIDATA_ENDPOINT,
             params={"query": sparql, "format": "json"},
-            headers={"User-Agent": "Mozilla/5.0"},
+            headers={"User-Agent": f"pykeen/{get_version()} (https://pykeen.github.io)"},
         )
         res.raise_for_status()
         res_json = res.json()
