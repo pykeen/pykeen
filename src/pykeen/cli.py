@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import List, Mapping, Optional, Set, Tuple, Type
+from typing import Iterable, List, Mapping, Optional, Set, Tuple, Type
 
 import click
 from class_resolver.contrib.optuna import sampler_resolver
@@ -118,7 +118,7 @@ def format_class(cls: Type) -> str:
     return f"{cls.__module__}.{cls.__qualname__}"
 
 
-def _get_model_lines(*, link_fmt: Optional[str] = None):
+def _get_model_lines(*, link_fmt: Optional[str] = None) -> Iterable[Tuple[str, str, str, str]]:
     seen_interactions: Set[Type[Interaction]] = set()
     for _, model_cls in sorted(model_resolver.lookup_dict.items()):
         interaction_cls = _get_interaction_for_model_cls(model_cls)
