@@ -1000,6 +1000,10 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         from pykeen.nn import WikidataTextRepresentation
         from pykeen.pipeline import pipeline
 
+        dataset = CoDExSmall()
+        text_rep = WikidataTextRepresentation.from_dataset(dataset)
+        model = ...
+
         results = pipeline(
             ...
         )
@@ -1025,3 +1029,9 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
+
+    @classmethod
+    def from_dataset(cls, dataset):
+        """Instantiate this representation based on a dataset."""
+        # TODO
+        raise NotImplementedError
