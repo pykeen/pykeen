@@ -39,6 +39,7 @@ __all__ = [
     "SingleCompGCNRepresentation",
     "SubsetRepresentation",
     "TextRepresentation",
+    "WikidataTextRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -952,7 +953,7 @@ class TextRepresentation(Representation):
         **kwargs,
     ) -> "TextRepresentation":
         """
-        Prepare a label-based transformer representations with labels from a triples factory.
+        Prepare a text representations with labels from a triples factory.
 
         :param triples_factory:
             the triples factory
@@ -962,7 +963,7 @@ class TextRepresentation(Representation):
             additional keyword-based arguments passed to :meth:`TextRepresentation.__init__`
 
         :returns:
-            A label-based transformer from the triples factory
+            a text representation from the triples factory
         """
         labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
         return cls(labels=labeling.all_labels(), **kwargs)
@@ -973,7 +974,7 @@ class TextRepresentation(Representation):
         dataset: Dataset,
         **kwargs,
     ) -> "TextRepresentation":
-        """Prepare label-based representations with labls from a dataset.
+        """Prepare text representation with labels from a dataset.
 
         :param dataset:
             the dataset
@@ -982,10 +983,10 @@ class TextRepresentation(Representation):
             :meth:`TextRepresentation.from_triples_factory`
 
         :return:
-            the representation
+            a text representation from the dataset
 
         :raises TypeError:
-            if the triples factory does not provide labels
+            if the dataset's triples factory does not provide labels
         """
         if not isinstance(dataset.training, TriplesFactory):
             raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
@@ -1020,8 +1021,10 @@ class WikidataTextRepresentation(TextRepresentation):
         from pykeen.pipeline import pipeline
 
         dataset = get_dataset(dataset="codexsmall")
-        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset)
-
+        entity_representations = WikidataTextRepresentation.from_dataset(
+            dataset=dataset,
+            encoder="transformer",
+        )
         result = pipeline(
             dataset=dataset,
             model=ERModel,
