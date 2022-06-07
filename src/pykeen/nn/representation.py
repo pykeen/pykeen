@@ -21,10 +21,12 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .utils import TransformerEncoder
+from .utils import TransformerEncoder, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
+from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
 
@@ -900,17 +902,15 @@ class LabelBasedTransformerRepresentation(Representation):
     .. code-block:: python
 
         from pykeen.datasets import get_dataset
-        from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
+        from pykeen.nn.representation import LabelBasedTransformerRepresentation
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
-        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
-            triples_factory=dataset.training,
-        )
+        entity_representations = LabelBasedTransformerRepresentation.from_dataset(dataset=dataset)
         model = ERModel(
             interaction="ermlp",
             entity_representations=entity_representations,
-            relation_representations=EmbeddingSpecification(shape=entity_representations.shape),
+            relation_representations_kwargs=dict(shape=entity_representations.shape),
         )
     """
 
@@ -927,11 +927,11 @@ class LabelBasedTransformerRepresentation(Representation):
         :param labels:
             the labels
         :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
+            the name of the pretrained model, or a path, cf. :meth:`TransformerEncoder.__init__`
         :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to
+            the maximum number of tokens to pad/trim the labels to, cf. :meth:`TransformerEncoder.__init__`
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
         """
         encoder = TransformerEncoder(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -960,19 +960,37 @@ class LabelBasedTransformerRepresentation(Representation):
         :param for_entities:
             whether to create the initializer for entities (or relations)
         :param kwargs:
-            additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
+            additional keyword-based arguments passed to :meth:`LabelBasedTransformerRepresentation.__init__`
 
         :returns:
             A label-based transformer from the triples factory
-
-        :raise ImportError:
-            if the transformers library could not be imported
         """
-        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
-        return cls(
-            labels=[id_to_label[i] for i in range(len(id_to_label))],
-            **kwargs,
-        )
+        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+        return cls(labels=labeling.all_labels(), **kwargs)
+
+    @classmethod
+    def from_dataset(
+        cls,
+        dataset: Dataset,
+        **kwargs,
+    ) -> "LabelBasedTransformerRepresentation":
+        """Prepare label-based representations with labls from a dataset.
+
+        :param dataset:
+            the dataset
+        :param kwargs:
+            additional keyword-based parameters passed to
+            :meth:`LabelBasedTransformerRepresentation.from_triples_factory`
+
+        :return:
+            the representation
+
+        :raises TypeError:
+            if the triples factory does not provide labels
+        """
+        if not isinstance(dataset.training, TriplesFactory):
+            raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
+        return cls.from_triples_factory(triples_factory=dataset.training, **kwargs)
 
     # docstr-coverage: inherited
     def _plain_forward(
@@ -986,3 +1004,55 @@ class LabelBasedTransformerRepresentation(Representation):
             labels=[self.labels[i] for i in uniq.tolist()],
         )
         return x[inverse]
+
+
+class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
+    """
+    Textual representations for datasets grounded in Wikidata.
+
+    The label and description for each entity are obtained from Wikidata using
+    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`LabelBasedTransformerRepresentation`.
+
+    Example usage::
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.models import ERModel
+        from pykeen.nn import WikidataTextRepresentation
+        from pykeen.pipeline import pipeline
+
+        dataset = get_dataset(dataset="codexsmall")
+        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset)
+
+        result = pipeline(
+            dataset=dataset,
+            model=ERModel,
+            model_kwargs=dict(
+                interaction="distmult",
+                entity_representations=entity_representations,
+                relation_representation_kwargs=dict(
+                    shape=entity_representations.shape,
+                ),
+            ),
+        )
+    """
+
+    def __init__(self, labels: Sequence[str], **kwargs):
+        """
+        Initialize the representation.
+
+        :param labels:
+            the wikidata IDs.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`LabelBasedTransformerRepresentation.__init__`
+        """
+        # set up cache
+        cache = WikidataCache()
+        # get labels & descriptions
+        titles = cache.get_labels(ids=labels)
+        descriptions = cache.get_descriptions(ids=labels)
+        # compose labels
+        labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
+        # delegate to super class
+        super().__init__(labels=labels, **kwargs)

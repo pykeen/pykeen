@@ -11,6 +11,7 @@ import unittest_templates
 
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.pyg
 import pykeen.nn.representation
 import pykeen.nn.vision
 from pykeen.datasets import get_dataset
@@ -248,6 +249,16 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs)
         kwargs["images"] = list(torch.rand(self.max_id, 3, 28, 28))
         return kwargs
+
+
+@unittest.skipIf(transformers is None, "Need to install `transformers`")
+class WikidataTextRepresentationTests(cases.RepresentationTestCase):
+    """Tests for Wikidata text representations."""
+
+    cls = pykeen.nn.representation.WikidataTextRepresentation
+    kwargs = dict(
+        labels=["Q100", "Q1000"],
+    )
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
