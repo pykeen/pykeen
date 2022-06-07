@@ -138,17 +138,20 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
         self.aggregation = aggregation_resolver.make(aggregation, dim=-2)
         self.vocabulary = vocabulary
         self.token_to_id = {c: i for i, c in enumerate(vocabulary)}
+        num_real_tokens = len(self.vocabulary)
+        self.unknown_idx = num_real_tokens
+        self.padding_idx = num_real_tokens + 1
         self.character_embedding = representation_resolver.make(
-            character_representation, max_id=len(self.vocabulary) + 1, shape=dim
+            character_representation, max_id=num_real_tokens + 2, shape=dim
         )
 
     # docstr-coverage: inherited
     def forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:  # noqa: D102
         # tokenize
-        token_ids = [[self.token_to_id.get(c, -1) for c in text] for text in texts]
+        token_ids = [[self.token_to_id.get(c, self.unknown_idx) for c in text] for text in texts]
         # pad
         max_length = max(map(len, token_ids))
-        indices = torch.full(size=(len(texts), max_length), fill_value=-1)
+        indices = torch.full(size=(len(texts), max_length), fill_value=self.padding_idx)
         for i, ids in enumerate(token_ids):
             indices[i, : len(ids)] = torch.as_tensor(ids, dtype=torch.long)
         # get character embeddings
