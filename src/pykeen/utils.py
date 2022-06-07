@@ -119,6 +119,7 @@ __all__ = [
     "normalize_path",
     "get_edge_index",
     "prepare_filter_triples",
+    "nested_get",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1700,6 +1701,27 @@ def prepare_filter_triples(
             )
         )
     return mapped_triples
+
+
+def nested_get(d: Mapping[str, Any], *key: str, default=None) -> Any:
+    """
+    Get from a nested dictionary.
+
+    :param d:
+        the (nested) dictionary
+    :param key:
+        a sequence of keys
+    :param default:
+        the default value
+
+    :return:
+        the value or default
+    """
+    for k in key:
+        if k not in d:
+            return default
+        d = d[k]
+    return d
 
 
 if __name__ == "__main__":
