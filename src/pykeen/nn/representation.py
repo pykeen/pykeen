@@ -976,11 +976,13 @@ class LabelBasedTransformerRepresentation(Representation):
 
         :raise ImportError:
             if the transformers library could not be imported
+        :raise TypeError:
+            if the triples factory does not provide labels
         """
         if dataset is not None:
+            if not isinstance(dataset.training, TriplesFactory):
+                raise TypeError(f"{cls.__name__} requires access to labels.")
             triples_factory = dataset.training
-        if not isinstance(triples_factory, TriplesFactory):
-            raise TypeError(f"{cls.__name__} requires access to labels.")
         labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
         return cls(labels=labeling.all_labels(), **kwargs)
 
