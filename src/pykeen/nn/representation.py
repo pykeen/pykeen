@@ -20,10 +20,9 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
-from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
 
@@ -34,7 +33,6 @@ __all__ = [
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
-    "LabelBasedTransformerRepresentation",
     "SubsetRepresentation",
     # Utils
     "constrainer_resolver",
@@ -885,103 +883,3 @@ class SingleCompGCNRepresentation(Representation):
         if indices is not None:
             x = x[indices.to(self.device)]
         return x
-
-
-class LabelBasedTransformerRepresentation(Representation):
-    """
-    Label-based representations using a transformer encoder.
-
-    Example Usage:
-
-    Entity representations are obtained by encoding the labels with a Transformer model. The transformer
-    model becomes part of the KGE model, and its parameters are trained jointly.
-
-    .. code-block:: python
-
-        from pykeen.datasets import get_dataset
-        from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
-        from pykeen.models import ERModel
-
-        dataset = get_dataset(dataset="nations")
-        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
-            triples_factory=dataset.training,
-        )
-        model = ERModel(
-            interaction="ermlp",
-            entity_representations=entity_representations,
-            relation_representations=EmbeddingSpecification(shape=entity_representations.shape),
-        )
-    """
-
-    def __init__(
-        self,
-        labels: Sequence[str],
-        pretrained_model_name_or_path: str = "bert-base-cased",
-        max_length: int = 512,
-        **kwargs,
-    ):
-        """
-        Initialize the representation.
-
-        :param labels:
-            the labels
-        :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
-        :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to
-        :param kwargs:
-            additional keyword-based parameters passed to super.__init__
-        """
-        encoder = TransformerEncoder(
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
-            max_length=max_length,
-        )
-        # infer shape
-        shape = encoder.encode_all(labels[0:1]).shape[1:]
-        super().__init__(max_id=len(labels), shape=shape, **kwargs)
-
-        self.labels = labels
-        # assign after super, since they should be properly registered as submodules
-        self.encoder = encoder
-
-    @classmethod
-    def from_triples_factory(
-        cls,
-        triples_factory: TriplesFactory,
-        for_entities: bool = True,
-        **kwargs,
-    ) -> "LabelBasedTransformerRepresentation":
-        """
-        Prepare a label-based transformer representations with labels from a triples factory.
-
-        :param triples_factory:
-            the triples factory
-        :param for_entities:
-            whether to create the initializer for entities (or relations)
-        :param kwargs:
-            additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
-
-        :returns:
-            A label-based transformer from the triples factory
-
-        :raise ImportError:
-            if the transformers library could not be imported
-        """
-        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
-        return cls(
-            labels=[id_to_label[i] for i in range(len(id_to_label))],
-            **kwargs,
-        )
-
-    # docstr-coverage: inherited
-    def _plain_forward(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        if indices is None:
-            indices = torch.arange(self.max_id, device=self.device)
-        uniq, inverse = indices.to(device=self.device).unique(return_inverse=True)
-        x = self.encoder(
-            labels=[self.labels[i] for i in uniq.tolist()],
-        )
-        return x[inverse]
