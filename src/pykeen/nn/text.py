@@ -7,7 +7,7 @@ from abc import abstractmethod
 from typing import Callable, Optional, Sequence, Union
 
 import torch
-from class_resolver import Hint, HintOrType
+from class_resolver import Hint, HintOrType, ClassResolver, OptionalKwargs
 from class_resolver.contrib.torch import aggregation_resolver
 from more_itertools import chunked
 from torch import nn
@@ -19,7 +19,7 @@ from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 
 
 __all__ = [
-    "LabelBasedTransformerRepresentation",
+    "TextRepresentation",
     "TextEncoder",
     "TransformerEncoder",
 ]
@@ -161,8 +161,8 @@ class TransformerEncoder(TextEncoder):
 
     def __init__(
         self,
-        pretrained_model_name_or_path: str,
-        max_length: Optional[int] = None,
+        pretrained_model_name_or_path: str = "bert-base-cased",
+        max_length: int = 512,
     ):
         """
         Initialize the encoder using :class:`transformers.AutoModel`.
@@ -207,9 +207,15 @@ class TransformerEncoder(TextEncoder):
         ).pooler_output
 
 
-class LabelBasedTransformerRepresentation(Representation):
+text_encoder_resolver: ClassResolver[TextEncoder] = ClassResolver.from_subclasses(
+    base=TextEncoder,
+    default=TransformerEncoder,
+)
+
+
+class TextRepresentation(Representation):
     """
-    Label-based representations using a transformer encoder.
+    Textual representations using a text encoder on labels.
 
     Example Usage:
 
@@ -223,7 +229,7 @@ class LabelBasedTransformerRepresentation(Representation):
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
-        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
+        entity_representations = TextRepresentation.from_triples_factory(
             triples_factory=dataset.training,
         )
         model = ERModel(
@@ -236,8 +242,8 @@ class LabelBasedTransformerRepresentation(Representation):
     def __init__(
         self,
         labels: Sequence[str],
-        pretrained_model_name_or_path: str = "bert-base-cased",
-        max_length: int = 512,
+        encoder: HintOrType[TextEncoder] = None,
+        encoder_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """
@@ -245,21 +251,17 @@ class LabelBasedTransformerRepresentation(Representation):
 
         :param labels:
             the labels
-        :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
-        :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to
+        :param encoder:
+            the text encoder, or a hint thereof
+        :param encoder_kwargs:
+            keyword-based parameters used to instantiate the text encoder
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
         """
-        encoder = TransformerEncoder(
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
-            max_length=max_length,
-        )
+        text_encoder_resolver.make(encoder, encoder_kwargs)
         # infer shape
         shape = encoder.encode_all(labels[0:1]).shape[1:]
         super().__init__(max_id=len(labels), shape=shape, **kwargs)
-
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -270,7 +272,7 @@ class LabelBasedTransformerRepresentation(Representation):
         triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
-    ) -> "LabelBasedTransformerRepresentation":
+    ) -> "TextRepresentation":
         """
         Prepare a label-based transformer representations with labels from a triples factory.
 
