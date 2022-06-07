@@ -56,3 +56,25 @@ The `loss` parameter takes inputs of type `HintOrType[Loss]`. `HintOrType[Loss]`
 
 4. `None`. In this case, we use the `default` class set in the class-resolver, which happens to be
    :class:`MarginRankingLoss` for the `loss_resolver`. If no `default` is set, an exception will be raised.
+
+Determining Allowed Inputs
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+To keep PyKEEN easily extensible and maintainable, we often use `None` for the choice, e.g., `loss`, and
+the keyword-based parameters. This can sometimes make it hard to read what default values are used,
+what valid choices are available, and what parameters are allowed with these different choices.
+In the following, we describe a few ways how to find this information.
+
+First, you should take a look at the type annotation. `HintOrType[X] = None` tells you that you can pass any
+subclass of `X`. Moreover, you can always pass the string of the class name instead, which often is easier to
+setup for you result tracking, command line arguments, or hyperparameter search. All resolvers for classes used
+in PyKEEN are instantiated using the `ClassResolver.from_subclasses` factory function, which automatically
+registers all subclasses for a given base class as valid choices. Moreover, it will allow you to pass class names
+without the base class' name as suffix, e.g., `loss_resolver` accepts `MarginRanking` instead of `MarginRankingLoss`,
+since the base class' name `Loss` is removed as suffix during the normalization. To utilize this feature, we
+try to follow an appropriate naming scheme for all configurable parts, e.g.,
+:class:`pykeen.nn.representation.Representation`, or :class:`pykeen.nn.modules.Interaction`.
+
+The allowed parameters for `..._kwargs: OptionalKwargs` are a bit harder to determine, since they vary with
+your choice of the component! For instance, :class:`MarginRankingLoss` has a `margin` parameter, while
+:class:`pykeen.losses.BCEWithLogitsLoss` does not provide such. Hence, you should investigate the documentation
+of the individual classes to inform yourself about available parameters and allowed values.
