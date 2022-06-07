@@ -9,7 +9,7 @@ import pathlib
 import re
 from itertools import chain
 from textwrap import dedent
-from typing import Collection, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
+from typing import Any, Collection, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
 
 import more_itertools
 import requests
@@ -310,7 +310,7 @@ class WikidataCache:
         sparql: str,
         wikidata_ids: Sequence[str],
         batch_size: int = 256,
-    ) -> Mapping[str, Mapping[str, str]]:
+    ) -> Iterable[Mapping[str, Any]]:
         """
         Batched SPARQL query execution for the given IDS.
 
@@ -320,19 +320,19 @@ class WikidataCache:
             the Wikidata IDs
         :param batch_size:
             the batch size, i.e., maximum number of IDs per query
+
         :return:
-            a mapping from Wikidata ID to the result of the query
+            an iterable over JSON results, where the keys correspond to query variables,
+            and the values to the corresponding binding
         """
         if not wikidata_ids:
             return {}
 
         if len(wikidata_ids) > batch_size:
             # break into smaller requests
-            return dict(
-                chain.from_iterable(
-                    cls.query(sparql=sparql, wikidata_ids=id_batch, batch_size=batch_size).items()
-                    for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
-                )
+            return chain.from_iterable(
+                cls.query(sparql=sparql, wikidata_ids=id_batch, batch_size=batch_size)
+                for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
             )
 
         sparql = sparql.format(ids=" ".join(f"wd:{i}" for i in wikidata_ids))
@@ -498,6 +498,7 @@ class WikidataCache:
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
             image_url = nested_get(entry, "image", "value", default=None)
             if image_url is not None:
+                assert isinstance(image_url, str)  # for mypy
                 ext = image_url.rsplit(".", maxsplit=1)[-1]
                 assert ext in extensions
                 self.module.ensure("images", url=image_url, name=f"{wikidata_id}.{ext}")
