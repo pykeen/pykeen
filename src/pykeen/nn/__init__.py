@@ -47,7 +47,7 @@ from .pyg import (
     TypedMessagePassingRepresentation,
 )
 from .representation import Embedding, Representation, SubsetRepresentation
-from .vision import VisualRepresentation
+from .vision import VisualRepresentation, WikidataVisualRepresentation
 
 __all__ = [
     "Embedding",
@@ -60,6 +60,7 @@ __all__ = [
     "TypedMessagePassingRepresentation",
     "FeaturizedMessagePassingRepresentation",
     "VisualRepresentation",
+    "WikidataVisualRepresentation",
     "init",
     "Interaction",
     "interaction_resolver",

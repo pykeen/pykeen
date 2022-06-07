@@ -25,6 +25,7 @@ except ImportError:
 
 __all__ = [
     "VisualRepresentation",
+    "WikidataVisualRepresentation",
 ]
 
 
