@@ -6,12 +6,10 @@ from __future__ import annotations
 
 import itertools
 import logging
-import re
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
-import more_itertools
 import numpy as np
 import torch
 import torch.nn
@@ -22,14 +20,12 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .utils import TransformerEncoder
+from .utils import TransformerEncoder, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
-from ..constants import PYKEEN_MODULE
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
-from ..version import get_version
 
 __all__ = [
     "Representation",
@@ -989,156 +985,6 @@ class LabelBasedTransformerRepresentation(Representation):
             labels=[self.labels[i] for i in uniq.tolist()],
         )
         return x[inverse]
-
-
-class WikidataCache:
-    """A cache for requests againsts Wikidata's SPARQL endpoint."""
-
-    #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
-    WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
-    # image:
-    # https://www.wikidata.org/w/api.php?action=wbgetclaims&property=P18&entity=Qxxx
-
-    def __init__(self) -> None:
-        """Initialize the cache."""
-        self.module = PYKEEN_MODULE.submodule("wikidata")
-
-    @staticmethod
-    def iter_invalid_ids(ids: Sequence[str]) -> Iterable[str]:
-        """Iterate over invalid IDs."""
-        pattern = re.compile(r"Q(\d+)")
-        for one_id in ids:
-            if not pattern.match(one_id):
-                yield one_id
-
-    @staticmethod
-    def _safe_get(d: dict, *keys: str, default=None) -> Optional[Any]:
-        """
-        Get from a nested dictionary with default.
-
-        :param d:
-            the (nested) dictionary
-        :param keys:
-            the sequence of keys
-        :param default:
-            the default value if a key is not present at any level, defaults to None
-        :return: the value, or the default
-        """
-        # TODO: move to utils
-        for key in keys[:-1]:
-            d = d.get(key, {})
-        return d.get(keys[-1], default)
-
-    @classmethod
-    def query(
-        cls, wikidata_ids: Sequence[str], language: str = "en", batch_size: int = 256
-    ) -> Mapping[str, Mapping[str, str]]:
-        """
-        Query the SPARQL endpoints about information for the given IDs.
-
-        :param wikidata_ids:
-            the Wikidata IDs
-        :param language:
-            the label language
-        :param batch_size:
-            the batch size; if more ids are provided, break the big request into multiple smaller ones
-
-        :return:
-            a mapping from Wikidata Ids to dictionaries with the label and description of the entities
-        """
-        # cf. https://github.com/biopragmatics/bioregistry/blob/55584709e287d1d01d51375e0bd836f3c4d25b2e/src/bioregistry/utils.py#L53-L63  # noqa: E501
-        if not wikidata_ids:
-            return {}
-
-        if len(wikidata_ids) > batch_size:
-            # break into smaller requests
-            return dict(
-                itertools.chain.from_iterable(
-                    cls.query(wikidata_ids=id_batch, language=language, batch_size=batch_size).items()
-                    for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
-                )
-            )
-
-        # is this already part of the requirements?
-        import requests
-
-        qualified = " ".join(f"wd:{i}" for i in wikidata_ids)
-        sparql = f"""
-            SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
-                VALUES ?item {{ {qualified} }}
-                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
-            }}}}
-        """
-
-        logger.debug("running query: %s", sparql)
-        res = requests.get(
-            cls.WIKIDATA_ENDPOINT,
-            params={"query": sparql, "format": "json"},
-            headers={"User-Agent": f"pykeen/{get_version()} (https://pykeen.github.io)"},
-        )
-        res.raise_for_status()
-        res_json = res.json()
-        result = {}
-        for entry in res_json["results"]["bindings"]:
-            wikidata_id = cls._safe_get(entry, "item", "value", default="")
-            assert isinstance(wikidata_id, str)  # for mypy
-            wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
-            label = cls._safe_get(entry, "itemLabel", "value", default="")
-            assert isinstance(label, str)  # for mypy
-            description = cls._safe_get(entry, "itemDescription", "value", default="")
-            assert isinstance(description, str)  # for mypy
-            result[wikidata_id] = dict(label=label, description=description)
-        return result
-
-    def verify_ids(self, ids: Sequence[str]):
-        """Raise error if invalid IDs are encountered."""
-        invalid_ids = list(self.iter_invalid_ids(ids=ids))
-        if invalid_ids:
-            raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
-
-    def _load(self, wikidata_id: str, component: str) -> Optional[str]:
-        """Load information about a Wikidata ID from JSON file."""
-        name = f"{wikidata_id}.json"
-        if not self.module.join(name=name).is_file():
-            return None
-        return self.module.load_json(name=name)[component]
-
-    def _save(self, entries: Mapping[str, Mapping[str, str]]):
-        """Save entries as JSON."""
-        logger.info(f"Saving {len(entries)} entries to {self.module}")
-        for wikidata_id, entry in entries.items():
-            name = f"{wikidata_id}.json"
-            self.module.dump_json(name=name, obj=entry)
-
-    def _get(self, ids: Sequence[str], component: str) -> Sequence[str]:
-        """Get the requested component for the given IDs."""
-        self.verify_ids(ids=ids)
-        # try to load cached first
-        result: List[Optional[str]] = [None] * len(ids)
-        for i, wikidata_id in enumerate(ids):
-            result[i] = self._load(wikidata_id=wikidata_id, component=component)
-        # determine missing entries
-        missing = [wikidata_id for wikidata_id, desc in zip(ids, result) if not desc]
-        # retrieve information via SPARQL
-        entries = self.query(wikidata_ids=missing)
-        # save entries
-        self._save(entries=entries)
-        # fill missing descriptions
-        w_to_i = {wikidata_id: i for i, wikidata_id in enumerate(ids)}
-        for wikidata_id, entry in entries.items():
-            result[w_to_i[wikidata_id]] = entry[component]
-        # for mypy
-        for item in result:
-            assert isinstance(item, str)
-        return cast(Sequence[str], result)
-
-    def get_labels(self, ids: Sequence[str]) -> Sequence[str]:
-        """Get entity labels for the given IDs."""
-        return self._get(ids=ids, component="label")
-
-    def get_descriptions(self, ids: Sequence[str]) -> Sequence[str]:
-        """Get entity descriptions for the given IDs."""
-        return self._get(ids=ids, component="description")
 
 
 class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
