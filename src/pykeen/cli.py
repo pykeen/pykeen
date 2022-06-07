@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import List, Mapping, Optional, Tuple, Type
+from typing import List, Mapping, Optional, Set, Tuple, Type
 
 import click
 from class_resolver.contrib.optuna import sampler_resolver
@@ -106,7 +106,7 @@ def _get_interaction_for_model_cls(cls: Type[Model]) -> Optional[Type[Interactio
 
 
 def _get_model_lines(*, link_fmt: Optional[str] = None):
-    seen_interactions = set()
+    seen_interactions: Set[Type[Interaction]] = set()
     for _, model_cls in sorted(model_resolver.lookup_dict.items()):
         interaction_cls = _get_interaction_for_model_cls(model_cls)
         if interaction_cls is None:
@@ -136,15 +136,17 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         name = docdata.get("name", model_cls.__name__)
         yield name, model_reference, interaction_reference, _citation(docdata)
 
-    for interaction_cls in set(interaction_resolver) - seen_interactions:
-        docdata = getattr(interaction_cls, "__docdata__", None)
+    for unseen_interaction_cls in set(interaction_resolver) - seen_interactions:
+        docdata = getattr(unseen_interaction_cls, "__docdata__", None)
         if docdata is None:
-            raise ValueError(f"All unmodeled interactions must have docdata: {interaction_cls}")
+            raise ValueError(f"All unmodeled interactions must have docdata: {unseen_interaction_cls}")
         name = docdata.get("name")
         if name is None:
-            raise ValueError(f"All unmodeled interactions must have a name: {interaction_cls}")
+            raise ValueError(f"All unmodeled interactions must have a name: {unseen_interaction_cls}")
         yield name, "", _fmt_ref(
-            f"pykeen.nn.{interaction_cls.__name__}", link_fmt, f"pykeen.nn.module.{interaction_cls.__name__}"
+            f"pykeen.nn.{unseen_interaction_cls.__name__}",
+            link_fmt,
+            f"pykeen.nn.module.{unseen_interaction_cls.__name__}",
         ), _citation(docdata)
 
 
