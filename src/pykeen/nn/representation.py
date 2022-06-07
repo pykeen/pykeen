@@ -1028,9 +1028,9 @@ class WikidataCache:
             d = d.get(key, {})
         return d.get(keys[-1], default)
 
-    @staticmethod
+    @classmethod
     def query(
-        wikidata_ids: Sequence[str], language: str = "en", batch_size: int = 256
+        cls, wikidata_ids: Sequence[str], language: str = "en", batch_size: int = 256
     ) -> Mapping[str, Mapping[str, str]]:
         """
         Query the SPARQL endpoints about information for the given IDs.
@@ -1053,7 +1053,7 @@ class WikidataCache:
             # break into smaller requests
             return dict(
                 itertools.chain.from_iterable(
-                    WikidataCache.query(wikidata_ids=id_batch, language=language, batch_size=batch_size).items()
+                    cls.query(wikidata_ids=id_batch, language=language, batch_size=batch_size).items()
                     for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
                 )
             )
@@ -1071,7 +1071,7 @@ class WikidataCache:
 
         logger.debug("running query: %s", sparql)
         res = requests.get(
-            WikidataCache.WIKIDATA_ENDPOINT,
+            cls.WIKIDATA_ENDPOINT,
             params={"query": sparql, "format": "json"},
             headers={"User-Agent": "Mozilla/5.0"},
         )
@@ -1079,12 +1079,12 @@ class WikidataCache:
         res_json = res.json()
         result = {}
         for entry in res_json["results"]["bindings"]:
-            wikidata_id = WikidataCache._safe_get(entry, "item", "value", default="")
+            wikidata_id = cls._safe_get(entry, "item", "value", default="")
             assert isinstance(wikidata_id, str)  # for mypy
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
-            label = WikidataCache._safe_get(entry, "itemLabel", "value", default="")
+            label = cls._safe_get(entry, "itemLabel", "value", default="")
             assert isinstance(label, str)  # for mypy
-            description = WikidataCache._safe_get(entry, "itemDescription", "value", default="")
+            description = cls._safe_get(entry, "itemDescription", "value", default="")
             assert isinstance(description, str)  # for mypy
             result[wikidata_id] = dict(label=label, description=description)
         return result
