@@ -497,7 +497,11 @@ class WikidataCache:
         """
         id_to_path = self._discover_images(extensions=extensions)
         missing = sorted(set(ids).difference(id_to_path.keys()))
-        logger.info(f"Downloading images for {len(missing):,} entities.")
+        num_missing = len(missing)
+        logger.info(
+            f"Downloading images for {num_missing:,} entities. With the rate limit in place, "
+            f"this will take at least {num_missing/10:.2f} seconds.",
+        )
         res_json = self.query(
             sparql=dedent(
                 """
@@ -511,7 +515,9 @@ class WikidataCache:
             ),
             wikidata_ids=missing,
         )
-        for entry in tqdm(rate_limited(res_json), disable=not progress, unit="entity", total=len(ids)):
+        for entry in tqdm(
+            rate_limited(res_json, min_avg_time=0.1), disable=not progress, unit="entity", total=len(ids)
+        ):
             wikidata_id = nested_get(entry, "item", "value", default="")
             assert isinstance(wikidata_id, str)  # for mypy
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
