@@ -4,10 +4,10 @@
 import logging
 import string
 from abc import abstractmethod
-from typing import Callable, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Callable, Optional, Sequence, Union
 
 import torch
-from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
+from class_resolver import ClassResolver, Hint, HintOrType
 from class_resolver.contrib.torch import aggregation_resolver
 from more_itertools import chunked
 from torch import nn
@@ -16,9 +16,15 @@ from tqdm.auto import tqdm
 
 from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 
+if TYPE_CHECKING:
+    from .representation import Representation
+
 __all__ = [
-    "TextRepresentation",
+    # abstract
     "TextEncoder",
+    "text_encoder_resolver",
+    # concrete
+    "CharacterEmbeddingTextEncoder",
     "TransformerTextEncoder",
 ]
 
