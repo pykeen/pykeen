@@ -2,7 +2,7 @@
 
 """Base classes for multi-modal models."""
 
-from typing import Tuple
+from typing import ClassVar, Tuple, Type
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -27,6 +27,9 @@ class LiteralModel(
     autoreset=False,
 ):
     """Base class for models with entity literals that uses combinations from :class:`pykeen.nn.combinations`."""
+
+    #: the interaction class (for generating the overview table)
+    interaction_cls: ClassVar[Type[Interaction]]
 
     def __init__(
         self,

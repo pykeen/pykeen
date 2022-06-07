@@ -11,7 +11,7 @@ from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.combinations import ComplExLiteralCombination
-from ...nn.modules import ComplExInteraction
+from ...nn.modules import ComplExInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -41,6 +41,7 @@ class ComplExLiteral(LiteralModel):
     loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
+    interaction_cls: ClassVar[Type[Interaction]] = ComplExInteraction
 
     def __init__(
         self,
@@ -52,7 +53,7 @@ class ComplExLiteral(LiteralModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            interaction=ComplExInteraction,
+            interaction=self.interaction_cls,
             entity_representations_kwargs=[
                 dict(
                     shape=embedding_dim,

@@ -2,14 +2,14 @@
 
 """Implementation of the DistMultLiteralGated model."""
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Type
 
 import torch.nn as nn
 
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.combinations import GatedCombination
-from ...nn.modules import DistMultInteraction
+from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -40,6 +40,7 @@ class DistMultLiteralGated(LiteralModel):
     )
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(margin=0.0)
+    interaction_cls: ClassVar[Type[Interaction]] = DistMultInteraction
 
     def __init__(
         self,
@@ -62,7 +63,7 @@ class DistMultLiteralGated(LiteralModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction=DistMultInteraction,
+            interaction=self.interaction_cls,
             combination=GatedCombination,
             combination_kwargs=dict(
                 entity_embedding_dim=embedding_dim,
