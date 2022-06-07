@@ -24,6 +24,8 @@ from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
+from pykeen.models.base import Model
+
 from .datasets import dataset_resolver
 from .datasets.inductive import inductive_dataset_resolver
 from .evaluation import (
@@ -40,7 +42,7 @@ from .lr_schedulers import lr_scheduler_resolver
 from .metrics.utils import Metric
 from .models import model_resolver
 from .models.cli import build_cli_from_cls
-from .nn.modules import interaction_resolver
+from .nn.modules import Interaction, interaction_resolver
 from .nn.node_piece.cli import tokenize
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
@@ -95,12 +97,21 @@ def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
     )
 
 
+def _get_interaction_for_model_cls(cls: Type[Model]) -> Optional[Type[Interaction]]:
+    attr_name = "interaction_cls"
+    if hasattr(cls, attr_name):
+        return getattr(cls, attr_name)
+    try:
+        return interaction_resolver.lookup(model_resolver.normalize_cls(cls))
+    except KeyError:
+        return None
+
+
 def _get_model_lines(*, link_fmt: Optional[str] = None):
     seen_interactions = set()
     for _, model_cls in sorted(model_resolver.lookup_dict.items()):
-        try:
-            interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
-        except KeyError:
+        interaction_cls = _get_interaction_for_model_cls(model_cls)
+        if interaction_cls is None:
             click.echo(f"could not find corresponding interaction class for {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None
         else:
