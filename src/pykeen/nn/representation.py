@@ -991,8 +991,20 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
     """
     Textual representations for datasets grounded in Wikidata.
 
-    The textual description are obtained from Wikidata using :class:`WikidataCache`, and encoded with
-    :class:`LabelBasedTransformerRepresentation`.
+    The label and description for each entity are obtained from Wikidata using
+    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`LabelBasedTransformerRepresentation`.
+
+    Example usage::
+
+        from pykeen.datasets import CoDExSmall
+        from pykeen.nn import WikidataTextRepresentation
+        from pykeen.pipeline import pipeline
+
+        results = pipeline(
+            ...
+        )
+
+    .. todo:: @mberr
     """
 
     def __init__(self, labels: Sequence[str], **kwargs):
