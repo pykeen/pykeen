@@ -340,7 +340,13 @@ class WikidataCache:
         res = requests.get(
             cls.WIKIDATA_ENDPOINT,
             params={"query": sparql, "format": "json"},
-            headers={"User-Agent": f"pykeen/{get_version()} (https://pykeen.github.io)"},
+            # cf. https://meta.wikimedia.org/wiki/User-Agent_policy
+            headers={
+                "User-Agent": (
+                    f"PyKEEN-Bot/{get_version()} (https://pykeen.github.io; pykeen2019@gmail.com) "
+                    f"requests/{requests.__version__}"
+                )
+            },
         )
         res.raise_for_status()
         return res.json()["results"]["bindings"]
