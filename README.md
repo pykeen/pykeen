@@ -191,7 +191,7 @@ The following inductive datasets are built in to PyKEEN.
 
 | Name                                                                                                                              | Citation                                                                 |
 |-----------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
-| [`pykeen.nn.modules.AutoSFInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.AutoSFInteraction.html)     |                                                                          |
+| [`pykeen.nn.modules.AutoSFInteraction`](https://pykeen.readthedocs.io/en/latest/api/AutoSF.html)                                  | [Zhang *et al.*, 2020](https://arxiv.org/abs/1904.11682)                 |
 | [`pykeen.nn.modules.BoxEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.BoxEInteraction.html)         |                                                                          |
 | [`pykeen.nn.modules.CPInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.CPInteraction.html)             |                                                                          |
 | [`pykeen.nn.modules.ComplExInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.ComplExInteraction.html)   |                                                                          |
