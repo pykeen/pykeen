@@ -8,6 +8,7 @@ import logging
 import re
 from itertools import chain
 from typing import Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
+import pathlib
 
 import more_itertools
 import requests
@@ -307,6 +308,48 @@ class WikidataCache:
 
     @classmethod
     def query(
+        cls,
+        sparql: str,
+        wikidata_ids: Sequence[str],
+        batch_size: int = 256,
+    ) -> Mapping[str, Mapping[str, str]]:
+        """
+        Batched SPARQL query execution for the given IDS.
+
+        :param sparql:
+            the SPARQL query with a placeholder `ids`
+        :param wikidata_ids:
+            the Wikidata IDs
+        :param batch_size:
+            the batch size, i.e., maximum number of IDs per query
+        :return:
+            a mapping from Wikidata ID to the result of the query
+        """
+        if not wikidata_ids:
+            return {}
+
+        if len(wikidata_ids) > batch_size:
+            # break into smaller requests
+            return dict(
+                chain.from_iterable(
+                    cls.query(sparql=sparql, wikidata_ids=id_batch, batch_size=batch_size).items()
+                    for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
+                )
+            )
+
+        qualified = " ".join(f"wd:{i}" for i in wikidata_ids)
+        sparql = sparql.format(ids=qualified)
+        logger.debug("running query: %s", sparql)
+        res = requests.get(
+            cls.WIKIDATA_ENDPOINT,
+            params={"query": sparql, "format": "json"},
+            headers={"User-Agent": f"pykeen/{get_version()} (https://pykeen.github.io)"},
+        )
+        res.raise_for_status()
+        return res.json()["results"]["bindings"]
+
+    @classmethod
+    def query_text(
         cls, wikidata_ids: Sequence[str], language: str = "en", batch_size: int = 256
     ) -> Mapping[str, Mapping[str, str]]:
         """
@@ -322,37 +365,20 @@ class WikidataCache:
         :return:
             a mapping from Wikidata Ids to dictionaries with the label and description of the entities
         """
-        # cf. https://github.com/biopragmatics/bioregistry/blob/55584709e287d1d01d51375e0bd836f3c4d25b2e/src/bioregistry/utils.py#L53-L63  # noqa: E501
-        if not wikidata_ids:
-            return {}
-
-        if len(wikidata_ids) > batch_size:
-            # break into smaller requests
-            return dict(
-                chain.from_iterable(
-                    cls.query(wikidata_ids=id_batch, language=language, batch_size=batch_size).items()
-                    for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
-                )
-            )
-
-        qualified = " ".join(f"wd:{i}" for i in wikidata_ids)
-        sparql = f"""
-            SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
-                VALUES ?item {{ {qualified} }}
-                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
-            }}}}
-        """
-
-        logger.debug("running query: %s", sparql)
-        res = requests.get(
-            cls.WIKIDATA_ENDPOINT,
-            params={"query": sparql, "format": "json"},
-            headers={"User-Agent": f"pykeen/{get_version()} (https://pykeen.github.io)"},
+        res_json = cls.query(
+            sparql=f"""
+                SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
+                    VALUES ?item {{ {{ids}} }}
+                    SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
+                }}}}
+            """.format(
+                language=language
+            ),
+            wikidata_ids=wikidata_ids,
+            batch_size=batch_size,
         )
-        res.raise_for_status()
-        res_json = res.json()
         result = {}
-        for entry in res_json["results"]["bindings"]:
+        for entry in res_json:
             wikidata_id = nested_get(entry, "item", "value", default="")
             assert isinstance(wikidata_id, str)  # for mypy
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
@@ -400,7 +426,7 @@ class WikidataCache:
         # determine missing entries
         missing = [wikidata_id for wikidata_id, desc in zip(ids, result) if not desc]
         # retrieve information via SPARQL
-        entries = self.query(wikidata_ids=missing)
+        entries = self.query_text(wikidata_ids=missing)
         # save entries
         self._save(entries=entries)
         # fill missing descriptions
