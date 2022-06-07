@@ -28,7 +28,6 @@ from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
-from pykeen import triples
 
 __all__ = [
     "Representation",
