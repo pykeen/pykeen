@@ -962,7 +962,7 @@ class LabelBasedTransformerRepresentation(Representation):
         :param for_entities:
             whether to create the initializer for entities (or relations)
         :param kwargs:
-            additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
+            additional keyword-based arguments passed to :meth:`LabelBasedTransformerRepresentation.__init__`
 
         :returns:
             A label-based transformer from the triples factory
