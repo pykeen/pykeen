@@ -1,9 +1,10 @@
 """Test textual encoders."""
-from tests import cases
-import unittest_templates
 import unittest
 
+import unittest_templates
+
 import pykeen.nn.text
+from tests import cases
 
 try:
     import transformers
