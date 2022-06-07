@@ -975,4 +975,8 @@ class TextRepresentation(Representation):
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        return self.encoder(labels=[self.labels[i] for i in indices.tolist()])
+        if indices is None:
+            labels = self.labels
+        else:
+            labels = [self.labels[i] for i in indices.tolist()]
+        return self.encoder(labels=labels)
