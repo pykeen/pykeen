@@ -2,16 +2,20 @@
 
 """Utilities for neural network components."""
 
-from abc import abstractmethod
 import logging
-from typing import Iterable, Optional, Sequence, Union
+import string
+from abc import abstractmethod
+from typing import Callable, Iterable, Optional, Sequence, Union
 
 import torch
+from class_resolver import Hint, HintOrType
+from class_resolver.contrib.torch import aggregation_resolver
 from more_itertools import chunked
 from torch import nn
 from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
+from .representation import Representation
 from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 
 __all__ = [
@@ -68,10 +72,10 @@ class TextEncoder(nn.Module):
         """
         labels = upgrade_to_sequence(labels)
         labels = list(map(str, labels))
-        return self._forward_normalized(texts=labels)
+        return self.forward_normalized(texts=labels)
 
     @abstractmethod
-    def _forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:
+    def forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:
         """
         Encode a batch of text.
 
@@ -107,6 +111,51 @@ class TextEncoder(nn.Module):
         return _encode_all_memory_utilization_optimized(
             encoder=self, labels=labels, batch_size=batch_size or len(labels)
         ).detach()
+
+
+class CharacterEmbeddingEncoder(TextEncoder):
+    """A simple character-based text encoder."""
+
+    def __init__(
+        self,
+        dim: int = 32,
+        character_representation: HintOrType[Representation] = None,
+        vocabulary: str = string.printable,
+        aggregation: Hint[Callable[..., torch.FloatTensor]] = None,
+    ) -> None:
+        """Initialize the encoder.
+
+        :param dim: the embedding dimension
+        :param character_representation: the character representation or a hint thereof
+        :param vocabulary: the vocubarly, i.e., the allowed characters
+        :param aggregation: the aggregation to use to pool the character embeddings
+        """
+        super().__init__()
+        from . import representation_resolver
+
+        self.aggregation = aggregation_resolver.make(aggregation, dim=-2)
+        self.vocabulary = vocabulary
+        self.token_to_id = {c: i for i, c in enumerate(vocabulary)}
+        self.character_embedding = representation_resolver.make(
+            character_representation, max_id=len(self.vocabulary) + 1, shape=dim
+        )
+
+    # docstr-coverage: inherited
+    def forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:  # noqa: D102
+        # tokenize
+        token_ids = [[self.token_to_id.get(c, -1) for c in text] for text in texts]
+        # pad
+        max_length = max(map(len, token_ids))
+        indices = torch.full(size=(len(texts), max_length), fill_value=-1)
+        for i, ids in enumerate(token_ids):
+            indices[i, : len(ids)] = torch.as_tensor(ids, dtype=torch.long)
+        # get character embeddings
+        x = self.character_embedding(indices=indices)
+        # pool
+        x = self.aggregation(x, dim=-2)
+        if not torch.is_tensor(x):
+            x = x.values
+        return x
 
 
 class TransformerEncoder(TextEncoder):
@@ -148,10 +197,10 @@ class TransformerEncoder(TextEncoder):
         self.max_length = max_length or 512
 
     # docstr-coverage: inherited
-    def _forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:  # noqa: D102
+    def forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:  # noqa: D102
         return self.model(
             **self.tokenizer(
-                labels,
+                texts,
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
