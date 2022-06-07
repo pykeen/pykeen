@@ -21,6 +21,10 @@ try:
     import transformers
 except ImportError:
     transformers = None
+try:
+    import torchvision
+except ImportError:
+    torchvision = None
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -233,6 +237,7 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
     )
 
 
+@unittest.skipIf(torchvision is None, "Need to install `torchvision`")
 class VisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for VisualRepresentation."""
 
