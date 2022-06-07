@@ -1037,7 +1037,7 @@ class CombinedRepresentation(Representation):
             additional keyword-based parameters used to instantiate the combination
         :param kwargs:
             additional keyword-based parameters passed to `Representation.__init__`.
-            May not contain `max_id` or `shape`.
+            May not contain any of `{max_id, shape, unique}`.
 
         :raises ValueError:
             if the `max_id` of the base representations does not match
@@ -1059,7 +1059,7 @@ class CombinedRepresentation(Representation):
         # shape inference
         shape = combination.output_shape(input_shapes=[b.shape for b in base])
 
-        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
 
         # assign base representations *after* super init
         self.base = base
