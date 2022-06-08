@@ -32,7 +32,7 @@ The `loss` parameter takes inputs of type `HintOrType[Loss]`. `HintOrType[Loss]`
 
 2. a *subclass* of :class:`pykeen.losses.Loss`, e.g., :class:`pykeen.losses.MarginRankingLoss`
    In this case, the class is instantiated with the given `loss_kwargs` as (keyword-based) parameters. For instance,
-   
+
    .. code-block:: python
 
        loss = MarginRankingLoss
