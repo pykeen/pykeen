@@ -19,7 +19,6 @@ from ...nn import (
     representation_resolver,
 )
 from ...nn.node_piece import RelationTokenizer
-from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode, OneOrSequence
 
