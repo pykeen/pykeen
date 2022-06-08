@@ -1935,7 +1935,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
 
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
-    Interaction,  # type: ignore
+    Interaction,
     skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
-    suffix=Interaction.__name__,
+    default=TransEInteraction,
 )
