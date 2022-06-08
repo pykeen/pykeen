@@ -13,7 +13,6 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import NodePieceRepresentation, SubsetRepresentation, representation_resolver
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
-from ...nn.perceptron import ConcatMLP
 from ...regularizers import Regularizer
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import Constrainer, Initializer, Normalizer, OneOrSequence
