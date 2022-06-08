@@ -125,9 +125,7 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
 
     With :class:`pykeen.nn.representation.Embedding` character representation and :func:`torch.mean` aggregation,
     this encoder is similar to a bag-of-characters model with trainable character embeddings. Therefore, it is
-    invariant to the ordering of characters.
-
-    Example:
+    invariant to the ordering of characters:
 
     >>> from pykeen.nn.text import CharacterEmbeddingTextEncoder
     >>> encoder = CharacterEmbeddingTextEncoder()
