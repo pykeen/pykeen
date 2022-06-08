@@ -194,9 +194,6 @@ class NodePieceRepresentation(CombinedRepresentation):
 
     where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
     an aggregation function, which aggregates the individual token representations to a single entity representation.
-
-    .. note ::
-        This implementation currently only supports representation of entities by bag-of-relations.
     """
 
     #: the token representations
@@ -213,6 +210,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         max_id: Optional[int] = None,
+        # TODO: unused
         shape: Optional[Sequence[int]] = None,
         **kwargs,
     ):
