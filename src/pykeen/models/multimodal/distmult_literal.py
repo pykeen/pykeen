@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.combination import ConcatProjectionCombination
+from ...nn import ConcatProjectionCombination
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
 

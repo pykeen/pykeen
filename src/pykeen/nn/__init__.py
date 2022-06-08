@@ -5,6 +5,14 @@
 from class_resolver import ClassResolver
 
 from . import init
+from .combination import (
+    Combination,
+    ComplexSeparatedCombination,
+    ConcatAggregationCombination,
+    ConcatCombination,
+    ConcatProjectionCombination,
+    GatedCombination,
+)
 from .message_passing import RGCNRepresentation
 from .modules import (
     AutoSFInteraction,
@@ -96,8 +104,14 @@ __all__ = [
     "TripleREInteraction",
     "TuckerInteraction",
     "UMInteraction",
+    # combinations
+    "Combination",
+    "ComplexSeparatedCombination",
+    "ConcatAggregationCombination",
+    "ConcatCombination",
+    "ConcatProjectionCombination",
+    "GatedCombination",
 ]
-
 
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(
     base=Representation,
