@@ -184,9 +184,7 @@ class Representation(nn.Module, ABC):
         yield f"unique={self.unique}"
         if self.normalizer is not None:
             yield f"normalizer={self.normalizer}"
-        if self.regularizer is not None:
-            yield f"normalizer={self.regularizer}"
-        # dropout will appear automatically, since it is a nn.Module
+        # dropout & regularizer will appear automatically, since it is a nn.Module
 
     # docstr-coverage: inherited
     def extra_repr(self) -> str:  # noqa: D102
