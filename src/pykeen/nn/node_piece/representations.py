@@ -9,7 +9,7 @@ import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 
 from .tokenization import Tokenizer, tokenizer_resolver
-from ..combinations import ConcatAggregationCombination
+from ..combination import ConcatAggregationCombination
 from ..representation import CombinedRepresentation, Representation
 from ...triples import CoreTriplesFactory
 from ...typing import MappedTriples, OneOrSequence

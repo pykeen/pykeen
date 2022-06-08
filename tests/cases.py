@@ -46,7 +46,7 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
-import pykeen.nn.combinations
+import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
@@ -2582,7 +2582,7 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
             assert getattr(self.instance, key) == getattr(new_stopper, key)
 
 
-class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinations.Combination]):
+class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combination.Combination]):
     """Test for combinations."""
 
     def _iter_input_shapes(self) -> Iterable[Sequence[Tuple[int, ...]]]:

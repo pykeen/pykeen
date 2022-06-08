@@ -8,7 +8,7 @@ import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 
 from ..nbase import ERModel
-from ...nn.combinations import Combination
+from ...nn.combination import Combination
 from ...nn.init import PretrainedInitializer
 from ...nn.modules import Interaction
 from ...nn.representation import CombinedRepresentation, Embedding, Representation
