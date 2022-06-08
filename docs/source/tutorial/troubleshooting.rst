@@ -4,9 +4,9 @@
  Trobleshooting
 ################
 
-***********************************************************
- Loading a Model Trained with a Previous Version of PyKEEN
-***********************************************************
+***********************************************
+ Loading a Model from an Old Version of PyKEEN
+***********************************************
 
 If your model was trained on a different version of PyKEEN, you might
 have difficulty loading the model using
