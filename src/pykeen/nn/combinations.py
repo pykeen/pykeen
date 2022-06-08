@@ -88,7 +88,7 @@ class ConcatAggregationCombination(ConcatCombination):
         Initialize the combination.
 
         :param aggregation:
-            the aggregation, or a hint thereof, cf. `aggregation_resolver`
+            the aggregation, or a hint thereof, cf. :data:`class_resolver.contrib.torch.aggregation_resolver`
         :param dim:
             the concatenation and reduction dimension.
         """
@@ -128,7 +128,7 @@ class LinearDropout(nn.Sequential):
             super().__init__(linear, dropout)
 
 
-class DistMultCombination(Combination):
+class DistMultCombination(ConcatCombination):
     """The linear/dropout combination used in :class:`pykeen.models.DistMultLiteral`."""
 
     def __init__(
@@ -156,12 +156,7 @@ class DistMultCombination(Combination):
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
         """Combine the entity representation and literal, then score."""
         assert len(xs) == 2
-        x, literal = xs
-        return self.score(torch.cat([x, literal], dim=-1))
-
-    def score(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined entity representation and literals with the parameterized module."""
-        return self.module(x)
+        return self.module(super().forward(xs))
 
 
 class ComplExLiteralCombination(Combination):
@@ -179,11 +174,13 @@ class ComplExLiteralCombination(Combination):
         :param entity_embedding_dim: The dimension of the entity representations to which literals are concatenated
         :param literal_embedding_dim: The dimension of the literals that are concatenated
         :param input_dropout: The dropout probability of an element to be zeroed.
-        :param activation: The activation function, resolved by :data:`pykeen.utils.activation_resolver`.
+        :param activation:
+            The activation function, resolved by :data:`class_resolver.contrib.torch.activation_resolver`.
 
         This class uses a :class:`torch.nn.Tanh` by default for the activation to the :class:`LinearDropout` as
         described by [kristiadi2018]_.
         """
+        super().__init__()
         self.real_mod = LinearDropout(
             entity_embedding_dim=entity_embedding_dim,
             literal_embedding_dim=literal_embedding_dim,
@@ -210,6 +207,7 @@ class ComplExLiteralCombination(Combination):
     def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:  # noqa: D102
         # symbolic output to avoid dtype issue
         # we only need to consider real part here
+        # FIXME should score_real be real_mod?
         return self.score_real(torch.cat([torch.empty(shape) for shape in input_shapes], dim=-1)).shape
 
 
@@ -277,7 +275,7 @@ class GatedCombination(Combination):
         """Calculate a combined embedding given the entity and literal representations."""
         assert len(xs) == 2
         x, literal = xs
-        combination = torch.cat([x, literal], -1)
+        combination = torch.cat([x, literal], dim=-1)
         z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
         h = self.linlayer_activation(self.combination_linear_layer(combination))
         return self.dropout(z * h + (1 - z) * x)
