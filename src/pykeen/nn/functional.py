@@ -1314,13 +1314,8 @@ def triple_re_interaction(
 ) -> torch.FloatTensor:
     r"""Evaluate the TripleRE interaction function.
 
-    .. math ::
-        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
-
-    .. note ::
-
-        For equivalence to the paper version, `h` and `t` should be normalized to unit
-        Euclidean length, and `p` and `power_norm` be kept at their default values.
+    .. seealso ::
+        :class:`pykeen.nn.modules.TripleREInteraction` for the stateful interaction module
 
     :param h: shape: (`*batch_dims`, rank, dim)
         The head representations.

@@ -1857,6 +1857,14 @@ class TripleREInteraction(
 ):
     """A stateful module for the TripleRE interaction function from [yu2021]_.
 
+    .. math ::
+        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
+
+    .. note ::
+
+        For equivalence to the paper version, `h` and `t` should be normalized to unit
+        Euclidean length, and `p` and `power_norm` be kept at their default values.
+
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
 
     .. seealso:: https://github.com/LongYu-360/TripleRE-Add-NodePiece
@@ -1965,7 +1973,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         """
         return cls(
             coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
-                         + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
+            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
         )
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
