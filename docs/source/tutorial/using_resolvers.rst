@@ -1,6 +1,6 @@
 Using Resolvers
 ===============
-As PyKEEN is a heavily modular and extensible library, we make use of the `class-resolver` library
+As PyKEEN is a heavily modular and extensible library, we make use of the :mod:`class_resolver` library
 to allow simple configuration of components. In this part of the tutorial, we explain how to use
 these configuration options, and how to figure out what values you can pass here.
 
