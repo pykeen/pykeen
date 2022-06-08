@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
 
 import torch
-from class_resolver import ClassResolver, Hint, HintOrType
+from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
@@ -16,11 +16,10 @@ from ..utils import combine_complex, split_complex
 __all__ = [
     "Combination",
     # Concrete classes
+    "ComplexSeparatedCombination",
     "ConcatCombination",
     "ConcatAggregationCombination",
-    "LinearDropout",
-    "DistMultCombination",
-    "ComplExLiteralCombination",
+    "ConcatProjectionCombination",
     "GatedCombination",
 ]
 
@@ -78,11 +77,59 @@ class ConcatCombination(Combination):
         return torch.cat(xs, dim=self.dim)
 
 
+class ConcatProjectionCombination(ConcatCombination):
+    """Combine representations by concatenation follow by a linear projection and activation."""
+
+    def __init__(
+        self,
+        input_dims: Sequence[int],
+        output_dim: Optional[int] = None,
+        bias: bool = True,
+        dropout: float = 0.0,
+        activation: HintOrType[nn.Module] = nn.Identity,
+        activation_kwargs: OptionalKwargs = None,
+    ) -> None:
+        """
+        Initialize the combination.
+
+        :param input_dims:
+            the input dimensions
+        :param output_dim:
+            the output dimension. Defaults to the first input dimension
+        :param bias:
+            whether to add a bias term in between the linear projection and the activation
+        :param dropout:
+            dropout to use before the activation
+        :param activation:
+            the activation, or a hint thereof
+        :param activation_kwargs:
+            additional keyword-based parameters used to instantiate the activation
+
+        :raises ValueError:
+            if `input_dims` is empty
+        """
+        super().__init__()
+        if not input_dims:
+            raise ValueError("Cannot provide empty input dimensions")
+        output_dim = output_dim or input_dims[0]
+        self.projection = nn.Sequential(
+            nn.Linear(sum(input_dims), output_dim, bias=bias),
+            nn.Dropout(dropout),
+            activation_resolver.make(activation, activation_kwargs),
+        )
+
+    # docstr-coverage: inherited
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+        return self.projection(super().forward(xs))
+
+
 class ConcatAggregationCombination(ConcatCombination):
     """Combine representation by concatenation followed by an aggregation along the same axis."""
 
     def __init__(
-        self, aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None, dim: int = -1
+        self,
+        aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+        dim: int = -1,
     ) -> None:
         """
         Initialize the combination.
@@ -100,185 +147,156 @@ class ConcatAggregationCombination(ConcatCombination):
         return self.aggregation(super().forward(xs=xs))
 
 
-class LinearDropout(nn.Sequential):
-    """A sequential module that has a linear layer, dropout later, and optional activation layer."""
+class ComplexSeparatedCombination(Combination):
+    """A combination for mixed complex & real representations."""
 
     def __init__(
         self,
-        entity_embedding_dim: int,
-        literal_embedding_dim: int,
-        input_dropout: float = 0.0,
-        activation: HintOrType[nn.Module] = None,
-        activation_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> None:
-        """Instantiate the :class:`torch.nn.Sequential`.
-
-        :param entity_embedding_dim: The dimension of the entity representations to which literals are concatenated
-        :param literal_embedding_dim: The dimension of the literals that are concatenated
-        :param input_dropout: The dropout probability of an element to be zeroed.
-        :param activation: An optional, pre-instantiated activation module, like :class:`torch.nn.Tanh`.
-        :param activation_kwargs: Keyword arguments to pass during instantiation of the activation module
+        combination: HintOrType[Combination] = None,
+        combination_kwargs: OptionalKwargs = None,
+        imag_combination: HintOrType[Combination] = None,
+        imag_combination_kwargs: OptionalKwargs = None,
+    ):
         """
-        linear = nn.Linear(entity_embedding_dim + literal_embedding_dim, entity_embedding_dim)
-        dropout = nn.Dropout(input_dropout)
-        if activation:
-            activation_instance = activation_resolver.make(activation, activation_kwargs)
-            super().__init__(linear, dropout, activation_instance)
-        else:
-            super().__init__(linear, dropout)
+        Initialize the combination.
 
+        .. note ::
+            if non-instantiated combinations are passed, separate instances will be created for real and imaginary parts
 
-class DistMultCombination(ConcatCombination):
-    """The linear/dropout combination used in :class:`pykeen.models.DistMultLiteral`."""
-
-    def __init__(
-        self,
-        entity_embedding_dim: int,
-        literal_embedding_dim: int,
-        input_dropout: float = 0.0,
-    ) -> None:
-        """Instantiate the :class:`ParameterizedRealCombination` with a :class:`LinearDropout`.
-
-        :param entity_embedding_dim: The dimension of the entity representations to which literals are concatenated
-        :param literal_embedding_dim: The dimension of the literals that are concatenated
-        :param input_dropout: The dropout probability of an element to be zeroed.
-
-        This class does not use an activation in the :class:`LinearDropout` as
-        described by [kristiadi2018]_.
+        :param combination:
+            the real combination, or a hint thereof
+        :param combination_kwargs:
+            keyword-based parameters for the real combination
+        :param imag_combination:
+            the imaginary combination, or a hint thereof. If None, use combination for both.
+        :param imag_combination_kwargs:
+            keyword-based parameters for the imaginary combination; only used if imag_combination is not None
         """
         super().__init__()
-        self.module = LinearDropout(
-            entity_embedding_dim=entity_embedding_dim,
-            literal_embedding_dim=literal_embedding_dim,
-            input_dropout=input_dropout,
-        )
+        # input normalization
+        if imag_combination is None:
+            imag_combination, imag_combination_kwargs = combination, combination_kwargs
+        # instantiate separate combinations
+        self.real_combination = combination_resolver.make(combination, combination_kwargs)
+        self.imag_combination = combination_resolver.make(imag_combination, imag_combination_kwargs)
 
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Combine the entity representation and literal, then score."""
-        assert len(xs) == 2
-        return self.module(super().forward(xs))
-
-
-class ComplExLiteralCombination(Combination):
-    """The linear/dropout/tanh combination used in :class:`pykeen.models.ComplExLiteral`."""
-
-    def __init__(
-        self,
-        entity_embedding_dim: int,
-        literal_embedding_dim: int,
-        input_dropout: float = 0.0,
-        activation: HintOrType[nn.Module] = nn.Tanh,
-    ) -> None:
-        """Instantiate the :class:`ParameterizedComplexCombination` with a :class:`LinearDropout` for real and complex.
-
-        :param entity_embedding_dim: The dimension of the entity representations to which literals are concatenated
-        :param literal_embedding_dim: The dimension of the literals that are concatenated
-        :param input_dropout: The dropout probability of an element to be zeroed.
-        :param activation:
-            The activation function, resolved by :data:`class_resolver.contrib.torch.activation_resolver`.
-
-        This class uses a :class:`torch.nn.Tanh` by default for the activation to the :class:`LinearDropout` as
-        described by [kristiadi2018]_.
-        """
-        super().__init__()
-        self.real_mod = LinearDropout(
-            entity_embedding_dim=entity_embedding_dim,
-            literal_embedding_dim=literal_embedding_dim,
-            input_dropout=input_dropout,
-            activation=activation,
-        )
-        self.imag_mod = LinearDropout(
-            entity_embedding_dim=entity_embedding_dim,
-            literal_embedding_dim=literal_embedding_dim,
-            input_dropout=input_dropout,
-            activation=activation,
-        )
-
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Split the complex vector, combine the representation parts and literal, score, then recombine."""
-        assert len(xs) == 2
-        x, literal = xs
-        x_re, x_im = split_complex(x)
-        x_re = self.real_mod(torch.cat([x_re, literal], dim=-1))
-        x_im = self.imag_mod(torch.cat([x_im, literal], dim=-1))
+    # docstr-coverage: inherited
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+        if not any(x.is_complex() for x in xs):
+            raise ValueError(
+                f"{self.__class__} is a combination for complex representations, but none of the inputs was of "
+                f"complex data type."
+            )
+        # split complex; repeat real
+        xs_real, xs_imag = list(zip(*(split_complex(x) if x.is_complex() else (x, x) for x in xs)))
+        # separately combine real and imaginary parts
+        x_re = self.real_combination(xs_real)
+        x_im = self.imag_combination(xs_imag)
+        # combine
         return combine_complex(x_re=x_re, x_im=x_im)
 
     # docstr-coverage: inherited
     def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:  # noqa: D102
         # symbolic output to avoid dtype issue
         # we only need to consider real part here
-        # FIXME should score_real be real_mod?
-        return self.score_real(torch.cat([torch.empty(shape) for shape in input_shapes], dim=-1)).shape
+        return self.real_combination.output_shape(input_shapes=input_shapes)
 
 
 class GatedCombination(Combination):
-    """A module that implements a gated linear transformation for the combination of entities and literals.
+    r"""A module that implements a gated linear transformation for the combination of entities and literals.
 
     Compared to the other Combinations, this combination makes use of a gating mechanism commonly found in RNNs.
     The main goal of this gating mechanism is to learn which parts of the additional literal information is
     useful or not and act accordingly, by incorporating them into the new combined embedding or discarding them.
+
+    For given entity representation $\mathbf{x}_e \in \mathbb{R}^{d_e}$ and literal representation
+    $\mathbf{x}_l \in \mathbb{R}^{d_l}$, the module calculates
+
+    .. math ::
+
+        z = f_{gate}(\mathbf{W}_e x_e + \mathbf{W}_l x_l + \mathbf{b})
+        h = f_{hidden}(\mathbf{W} [x_e; x_l])
+        y = Dropout(z \odot h + (1 - z) \odot x)
+
+    where $\mathbf{W}_e \in \mathbb{R}^{d_e \times d_e}$,$\mathbf{W}_l \in \mathbb{R}^{d_l \times d_e}$,
+    $\mathbf{W} \in \mathbb{R}^{(d_e + d_l) \ times d_e}$, and $\mathbf{b} \in \mathbb{R}^{d_e}$ are trainable
+    parameters, $f_{gate}$ and $f_{hidden}$ are activation functions, defaulting to sigmoid and tanh, $\odot$ denotes
+    the element-wise multiplication, and $[x_e; x_l]$ the concatenation operation.
+
+    .. note ::
+
+        We can alternatively express the gate
+
+        .. math ::
+
+            z = f_{gate}(\mathbf{W}_e x_e + \mathbf{W}_l x_l + \mathbf{b})
+
+        as
+
+        .. math ::
+
+            z = f_{gate}(\mathbf{W}_{el} [x_e; x_l] + \mathbf{b})
+
+        with $\mathbf{W}_{el} \in \mathbb{R}^{(d_e + d_l) \times d_e}$.
 
     Implementation based on https://github.com/SmartDataAnalytics/LiteralE/blob/master/model.py Gate class.
     """
 
     def __init__(
         self,
-        entity_embedding_dim: int,
-        literal_embedding_dim: int,
+        entity_dim: int = 32,
+        literal_dim: Optional[int] = None,
         input_dropout: float = 0.0,
         gate_activation: HintOrType[nn.Module] = nn.Sigmoid,
         gate_activation_kwargs: Optional[Mapping[str, Any]] = None,
-        linlayer_activation: HintOrType[nn.Module] = nn.Tanh,
-        linlayer_activation_kwargs: Optional[Mapping[str, Any]] = None,
+        hidden_activation: HintOrType[nn.Module] = nn.Tanh,
+        hidden_activation_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
-        """Instantiate the :class:`torch.nn.Module`.
+        """Instantiate the module.
 
-        :param entity_embedding_dim: The dimension of the entity representations.
-        :param literal_embedding_dim: The dimension of the literals.
-        :param input_dropout: The dropout to use
-        :param gate_activation: An optional, pre-instantiated activation module,
-            like :class:`torch.nn.Sigmoid`, the class
-            for an activation to instantiate, or the name of an activation to
-            look up and instantiate to be used on the gate output
+        :param entity_dim:
+            the dimension of the entity representations.
+        :param literal_dim:
+            the dimension of the literals; defaults to entity_dim
+        :param input_dropout:
+            the dropout to use
+        :param gate_activation:
+            the activation to use on the gate, or a hint thereof
         :param gate_activation_kwargs:
-            The keyword arguments to be used to instantiate the gate_activation if
+            the keyword arguments to be used to instantiate the `gate_activation` if
             a class or name is given instead of a pre-instantiated activation module
-        :param linlayer_activation: An optional, pre-instantiated activation module,
-            like :class:`torch.nn.Tanh`, the class
-            for an activation to instantiate, or the name of an activation to
-            look up and instantiate to be used on the gate output
-        :param linlayer_activation_kwargs:
-            The keyword arguments to be used to instantiate the linlayer_activation if
+        :param hidden_activation:
+            the activation to use in the hidden layer, or a hint thereof
+        :param hidden_activation_kwargs:
+            the keyword arguments to be used to instantiate the hidden activation if
             a class or name is given instead of a pre-instantiated activation module
         """
         super().__init__()
-        self.gate_activation = activation_resolver.make(gate_activation, gate_activation_kwargs)
-        self.combination_linear_layer = nn.Linear(
-            entity_embedding_dim + literal_embedding_dim,
-            entity_embedding_dim,
-        )
-        self.gate_entity_layer = nn.Linear(
-            entity_embedding_dim,
-            entity_embedding_dim,
-            bias=False,
-        )
-        self.gate_literal_layer = nn.Linear(
-            literal_embedding_dim,
-            entity_embedding_dim,
-            bias=False,
-        )
-        self.bias = nn.Parameter(torch.zeros(entity_embedding_dim))
-        self.linlayer_activation = activation_resolver.make(linlayer_activation, linlayer_activation_kwargs)
+        literal_dim = literal_dim or entity_dim
         self.dropout = nn.Dropout(input_dropout)
+        # the gate
+        self.gate = ConcatProjectionCombination(
+            input_dims=[entity_dim, literal_dim],
+            output_dim=entity_dim,
+            bias=True,
+            activation=gate_activation,
+            activation_kwargs=gate_activation_kwargs,
+        )
+        # the combination
+        self.combination = ConcatProjectionCombination(
+            input_dims=[entity_dim, literal_dim],
+            output_dim=entity_dim,
+            bias=True,
+            activation=hidden_activation,
+            activation_kwargs=hidden_activation_kwargs,
+        )
 
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Calculate a combined embedding given the entity and literal representations."""
+    # docstr-coverage: inherited
+    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
         assert len(xs) == 2
-        x, literal = xs
-        combination = torch.cat([x, literal], dim=-1)
-        z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
-        h = self.linlayer_activation(self.combination_linear_layer(combination))
-        return self.dropout(z * h + (1 - z) * x)
+        z = self.gate(xs)
+        h = self.combination(xs)
+        return self.dropout(z * h + (1 - z) * xs[0])
 
 
 combination_resolver: ClassResolver[Combination] = ClassResolver.from_subclasses(

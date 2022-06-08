@@ -10,7 +10,7 @@ import torch.nn as nn
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
-from ...nn.combination import ComplExLiteralCombination
+from ...nn.combination import ComplexSeparatedCombination, ConcatProjectionCombination
 from ...nn.modules import ComplExInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
 
@@ -68,11 +68,18 @@ class ComplExLiteral(LiteralModel):
                     dtype=torch.complex64,
                 ),
             ],
-            combination=ComplExLiteralCombination,
+            combination=ComplexSeparatedCombination,
             combination_kwargs=dict(
-                entity_embedding_dim=embedding_dim,
-                literal_embedding_dim=triples_factory.numeric_literals.shape[-1],
-                input_dropout=input_dropout,
+                # the individual combination for real/complex parts
+                combination=ConcatProjectionCombination,
+                combination_kwargs=dict(
+                    input_dims=[embedding_dim, triples_factory.literal_shape[0]],
+                    output_dim=embedding_dim,
+                    bias=True,
+                    dropout=input_dropout,
+                    activation=nn.Tanh,
+                    activation_kwargs=None,
+                ),
             ),
             **kwargs,
         )
