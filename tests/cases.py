@@ -46,6 +46,7 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
+import pykeen.nn.combinations
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
@@ -2579,3 +2580,25 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         new_stopper._write_from_summary_dict(**summary)
         for key in summary.keys():
             assert getattr(self.instance, key) == getattr(new_stopper, key)
+
+
+class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinations.Combination]):
+    """Test for combinations."""
+
+    def _iter_input_shapes(self) -> Iterable[Sequence[Tuple[int, ...]]]:
+        """Iterate over test input shapes."""
+        for prefix_shape in [tuple(), (2,), (2, 3)]:
+            for suffix_shapes in [
+                [(5,), (7,)],
+                [(5,), (7,), (11,)],
+            ]:
+                yield [prefix_shape + suffix_shape for suffix_shape in suffix_shapes]
+
+    def test_forward(self):
+        """Test forward call."""
+        for input_shapes in self._iter_input_shapes():
+            x = self.instance(xs=[torch.empty(size=size) for size in input_shapes])
+            self.assertIsInstance(x, torch.Tensor)
+
+            output_shape = self.instance.output_shape(input_shapes)
+            self.assertTupleEqual(x.shape, output_shape)
