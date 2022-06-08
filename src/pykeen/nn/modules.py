@@ -1860,6 +1860,9 @@ class TripleREInteraction(
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
 
     .. seealso:: https://github.com/LongYu-360/TripleRE-Add-NodePiece
+
+    .. note ::
+        this interaction is equivalent to :class:`LineaREInteraction` except the `u` term
     ---
     name: TripleRE
     citation:
@@ -1962,7 +1965,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         """
         return cls(
             coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
-            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
+                         + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
         )
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
