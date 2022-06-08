@@ -121,13 +121,6 @@ class NodePiece(ERModel):
                 "representations inverse relation representations are required.",
             )
 
-        # Create an MLP for string aggregation
-        if aggregation == "mlp":
-            aggregation = ConcatMLP(
-                num_tokens=num_tokens if isinstance(num_tokens, int) else sum(num_tokens),
-                embedding_dim=embedding_dim,
-            )
-
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
             query=None,
