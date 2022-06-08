@@ -76,6 +76,10 @@ class ConcatCombination(Combination):
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
         return torch.cat(xs, dim=self.dim)
 
+    # docstr-coverage: inherited
+    def extra_repr(self) -> str:  # noqa: D102
+        return f"dim={self.dim}"
+
 
 class ConcatProjectionCombination(ConcatCombination):
     """Combine representations by concatenation follow by a linear projection and activation."""
