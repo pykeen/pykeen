@@ -2036,12 +2036,10 @@ class NodePieceTestCase(RepresentationTestCase):
     """General test case for node piece representations."""
 
     cls = pykeen.nn.node_piece.NodePieceRepresentation
-    num_entities: ClassVar[int]
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        self.num_entities = self.max_id
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
             num_entities=self.max_id,
