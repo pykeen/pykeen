@@ -2032,11 +2032,13 @@ class LinearREInteraction(NormBasedInteraction):
         this interaction is equivalent to :class:`TripleREInteraction` without the `u` term
 
     ---
+    name: LineaRE
     citation:
         author: Peng
         year: 2020
         arxiv: 2004.10037
         github: pengyanhui/LineaRE
+        link: https://arxiv.org/abs/2004.10037
     """
 
     # r_head, r_bias, r_tail

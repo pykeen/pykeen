@@ -47,7 +47,7 @@
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-36">Datasets</a> •
   <a href="#inductive-datasets">Inductive Datasets (5)</a> •
-  <a href="#models-43">Models</a> •
+  <a href="#models-44">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -170,7 +170,7 @@ The following inductive datasets are built in to PyKEEN.
 | NELL            | [`pykeen.datasets.InductiveNELL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveNELL.html)         | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 | WordNet-18 (RR) | [`pykeen.datasets.InductiveWN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveWN18RR.html)     | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 
-### Models (43)
+### Models (44)
 
 | Name                           | Model                                                                                                                                 | Interaction                                                                                                                                | Citation                                                                                                                |
 |--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -195,6 +195,7 @@ The following inductive datasets are built in to PyKEEN.
 | InductiveNodePiece             | [`pykeen.models.InductiveNodePiece`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.InductiveNodePiece.html)               |                                                                                                                                            | [Galkin *et al.*, 2021](https://arxiv.org/abs/2106.12144)                                                               |
 | InductiveNodePieceGNN          | [`pykeen.models.InductiveNodePieceGNN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.InductiveNodePieceGNN.html)         |                                                                                                                                            | [Galkin *et al.*, 2021](https://arxiv.org/abs/2106.12144)                                                               |
 | KG2E                           | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.KG2E.html)                                           | [`pykeen.nn.KG2EInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.KG2EInteraction.html)                                  | [He *et al.*, 2015](https://dl.acm.org/doi/10.1145/2806416.2806502)                                                     |
+| LineaRE                        |                                                                                                                                       | [`pykeen.nn.LinearREInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.module.LinearREInteraction.html)                   | [Peng *et al.*, 2020](https://arxiv.org/abs/2004.10037)                                                                 |
 | MuRE                           | [`pykeen.models.MuRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.MuRE.html)                                           | [`pykeen.nn.MuREInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.MuREInteraction.html)                                  | [Balažević *et al.*, 2019](https://arxiv.org/abs/1905.09791)                                                            |
 | MultiLinearTucker              |                                                                                                                                       | [`pykeen.nn.MultiLinearTuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.module.MultiLinearTuckerInteraction.html) | [Tucker *et al.*, 1966](https://dx.doi.org/10.1007/BF02289464)                                                          |
 | NTN                            | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NTN.html)                                             | [`pykeen.nn.NTNInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.NTNInteraction.html)                                    | [Socher *et al.*, 2013](https://dl.acm.org/doi/10.5555/2999611.2999715)                                                 |
