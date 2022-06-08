@@ -1,6 +1,9 @@
 name: Lint
 
-on: push
+on:
+  push:
+  pull_request:
+    types: [auto_merge_enabled]
 
 jobs:
   lint:
