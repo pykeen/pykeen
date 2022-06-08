@@ -150,7 +150,7 @@ class TokenizationRepresentation(Representation):
         return "\n".join(
             (
                 f"max_id={self.assignment.shape[0]},",
-                f"num_tokens={self.assignment.shape[1]},",
+                f"num_tokens={self.num_tokens},",
                 f"vocabulary_size={self.vocabulary_size},",
             )
         )
@@ -167,6 +167,11 @@ class TokenizationRepresentation(Representation):
 
         # lookup token representations, shape: (*, num_chosen_tokens, *shape)
         return self.vocabulary(token_ids)
+
+    @property
+    def num_tokens(self) -> int:
+        """Return the number of selected tokens for ID."""
+        return self.assignment.shape[1]
 
 
 class HashDiversityInfo(NamedTuple):
