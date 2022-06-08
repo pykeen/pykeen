@@ -2585,20 +2585,34 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
 class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combination.Combination]):
     """Test for combinations."""
 
+    input_dims: Sequence[Sequence[int]] = [[5, 7], [5, 7, 11]]
+
     def _iter_input_shapes(self) -> Iterable[Sequence[Tuple[int, ...]]]:
         """Iterate over test input shapes."""
         for prefix_shape in [tuple(), (2,), (2, 3)]:
-            for suffix_shapes in [
-                [(5,), (7,)],
-                [(5,), (7,), (11,)],
-            ]:
-                yield [prefix_shape + suffix_shape for suffix_shape in suffix_shapes]
+            for input_dims in self.input_dims:
+                yield [prefix_shape + (input_dim,) for input_dim in input_dims]
+
+    def _create_input(self, input_shapes: Sequence[Tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
+        return [torch.empty(size=size) for size in input_shapes]
+
+    def test_inputs(self):
+        """Test that the test uses at least one input shape."""
+        assert list(self._iter_input_shapes())
 
     def test_forward(self):
         """Test forward call."""
         for input_shapes in self._iter_input_shapes():
-            x = self.instance(xs=[torch.empty(size=size) for size in input_shapes])
+            xs = self._create_input(input_shapes=input_shapes)
+
+            # verify that the input is valid
+            assert len(xs) == len(input_shapes)
+            assert all(x.shape == shape for x, shape in zip(xs, input_shapes))
+
+            # combine
+            x = self.instance(xs=xs)
             self.assertIsInstance(x, torch.Tensor)
 
+            # verify shape
             output_shape = self.instance.output_shape(input_shapes)
             self.assertTupleEqual(x.shape, output_shape)
