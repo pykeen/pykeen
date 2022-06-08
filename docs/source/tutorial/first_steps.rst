@@ -22,95 +22,6 @@ that you can use :func:`torch.load` to load a model like:
 More information on PyTorch's model persistence can be found at:
 https://pytorch.org/tutorials/beginner/saving_loading_models.html.
 
-Loading models trained on other pykeen versions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-If your model was trained on a different version of PyKEEN,
-you might have difficulty loading the model using
-`torch.load('trained_model.pkl')`.
-
-This could be due to one or both of the following:
-
-1. The model class structure might have changed.
-2. The model weight names might have changed.
-
-Note that PyKEEN currently cannot support model migration.
-Please attempt the following steps to load the model.
-
-If the model class structure has changed
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You will likely see an exception like this one:
-`ModuleNotFoundError: No module named ...`
-
-In this case, try to instantiate the model class directly
-and only load the state dict from the model file.
-
-1. Save the model's `state_dict` using the version of PyKEEN
-used for training:
-
-.. code-block:: python
-
-    import torch
-    from pykeen.pipeline import pipeline
-
-    result = pipeline(dataset='Nations', model='RotatE')
-    torch.save(result.model.state_dict(), 'v1.7.0/model.state_dict.pt')
-
-2. Load the model using the version of PyKEEN you want to use.
-First instantiate the model, then load the state dict:
-
-.. code-block:: python
-
-    import torch
-    from pykeen.datasets import get_dataset
-    from pykeen.models import model_resolver
-
-    dataset = get_dataset(dataset='Nations')
-    model = model_resolver.make('RotatE', triples_factory=dataset.training)
-    state_dict = torch.load('v1.7.0/model.state_dict.pt')
-    model.load_state_dict(state_dict)
-
-
-If the model weight names have changed
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You will likely see an exception similar to this one:
-
-.. code-block:: python
-
-    RuntimeError: Error(s) in loading state_dict for RotatE:
-    Missing key(s) in state_dict: "entity_representations.0._embeddings.weight", "relation_representations.0._embeddings.weight".
-    Unexpected key(s) in state_dict: "regularizer.weight", "regularizer.regularization_term", "entity_embeddings._embeddings.weight", "relation_embeddings._embeddings.weight".
-
-In this case, you need to inspect the state-dict dictionaries in
-the different version, and try to match the keys.
-Then modify the state dict accordingly before loading it.
-For example:
-
-.. code-block:: python
-
-    import torch
-    from pykeen.datasets import get_dataset
-    from pykeen.models import model_resolver
-
-    dataset = get_dataset(dataset='Nations')
-    model = model_resolver.make('RotatE', triples_factory=dataset.training)
-    state_dict = torch.load('v1.7.0/model.state_dict.pt')
-    # these are some example changes in weight names for RotatE between two different pykeen versions
-    for old_name, new_name in [
-        ('entity_embeddings._embeddings.weight', 'entity_representations.0._embeddings.weight'),
-        ('relation_embeddings._embeddings.weight', 'relation_representations.0._embeddings.weight'),
-    ]:
-        state_dict[new_name] = state_dict.pop(old_name)
-    # in this example, the new model does not have a regularizer, so we need to delete corresponding data
-    for name in ['regularizer.weight', 'regularizer.regularization_term']:
-        state_dict.pop(name)
-    model.load_state_dict(state_dict)
-
-Warning: Even if the state dict can be loaded, there is still
-a risk that the the weights are used differently. This can lead to a
-difference in model behavior. To be sure that the model is still
-functioning the same way, you should also check some model predictions
-and inspect *how* the model definition has changed.
-
 Mapping Entity and Relation Identifiers to their Names
 ------------------------------------------------------
 While PyKEEN internally maps entities and relations to
@@ -353,3 +264,13 @@ tenth epoch
 
 For further information about different result trackers, take a look at the section
 on :ref:`trackers`.
+
+Next Steps
+----------
+The first steps tutorial taught you how to train and use a model for some of the
+most common tasks. There are several other topic-specific tutorials in the section
+of the documentation. You might also want to jump ahead to the :ref:`troubleshooting`
+section in case you're having trouble, or look through
+`questions <https://github.com/pykeen/pykeen/issues?q=is%3Aissue+is%3Aopen+label%3Aquestion>`_
+and `discussions <https://github.com/pykeen/pykeen/discussions>`_ that others have posted
+on GitHub.
