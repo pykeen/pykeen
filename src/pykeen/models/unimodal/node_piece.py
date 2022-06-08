@@ -3,7 +3,7 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, List, Mapping, Optional, Sequence
+from typing import Any, Callable, ClassVar, List, Mapping
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
@@ -53,7 +53,6 @@ class NodePiece(ERModel):
         embedding_dim: int = 64,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        shape: Optional[Sequence[int]] = None,
         entity_initializer: Hint[Initializer] = None,
         entity_normalizer: Hint[Normalizer] = None,
         entity_constrainer: Hint[Constrainer] = None,
@@ -94,9 +93,6 @@ class NodePiece(ERModel):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-            this will only be necessary if the aggregation is an *ad hoc* function.
         :param entity_initializer:
             a hint for initializing anchor embeddings
         :param entity_normalizer:
@@ -174,7 +170,6 @@ class NodePiece(ERModel):
                 tokenizers=tokenizers,
                 tokenizers_kwargs=tokenizers_kwargs,
                 aggregation=aggregation,
-                shape=shape,
                 num_tokens=num_tokens,
             ),
             relation_representations=SubsetRepresentation,
