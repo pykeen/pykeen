@@ -162,6 +162,8 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 """  # noqa: E501
 
 import logging
+import math
+from abc import abstractmethod
 from textwrap import dedent
 from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
@@ -181,11 +183,14 @@ __all__ = [
     "MarginPairwiseLoss",
     "PairwiseLoss",
     "SetwiseLoss",
+    "AdversarialLoss",
     # Concrete Classes
+    "AdversarialBCEWithLogitsLoss",
     "BCEAfterSigmoidLoss",
     "BCEWithLogitsLoss",
     "CrossEntropyLoss",
     "FocalLoss",
+    "InfoNCELoss",
     "MarginRankingLoss",
     "MSELoss",
     "NSSALoss",
@@ -335,7 +340,7 @@ class Loss(_Loss):
         :param label_smoothing:
             An optional label smoothing parameter.
         :param num_entities:
-            The number of entities.
+            The number of entities (required for label-smoothing).
 
         :return:
             A scalar loss value.
@@ -368,7 +373,7 @@ class SetwiseLoss(Loss):
 
 @parse_docdata
 class BCEWithLogitsLoss(PointwiseLoss):
-    r"""A module for the binary cross entropy loss.
+    r"""The binary cross entropy loss.
 
     For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
     function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
@@ -417,14 +422,14 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
 @parse_docdata
 class MSELoss(PointwiseLoss):
-    """A module for the mean square error loss.
+    """The mean squared error loss.
 
     .. note::
 
         The related :mod:`torch` module is :class:`torch.nn.MSELoss`, but it can not be used
         interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
-    name: Mean square error
+    name: Mean squared error
     """
 
     synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
@@ -440,7 +445,7 @@ class MSELoss(PointwiseLoss):
 
 
 class MarginPairwiseLoss(PairwiseLoss):
-    r"""Generalized margin ranking loss.
+    r"""The generalized margin ranking loss.
 
     .. math ::
         L(k, \bar{k}) = g(f(\bar{k}) - f(k) + \lambda)
@@ -554,7 +559,7 @@ class MarginPairwiseLoss(PairwiseLoss):
 
 @parse_docdata
 class MarginRankingLoss(MarginPairwiseLoss):
-    r"""A module for the pairwise hinge loss (i.e., margin ranking loss).
+    r"""The pairwise hinge loss (i.e., margin ranking loss).
 
     .. math ::
         L(k, \bar{k}) = \max(0, f(k) - f(\bar{k}) + \lambda)
@@ -598,7 +603,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
 
 @parse_docdata
 class SoftMarginRankingLoss(MarginPairwiseLoss):
-    r"""A module for the soft pairwise hinge loss (i.e., soft margin ranking loss).
+    r"""The soft pairwise hinge loss (i.e., soft margin ranking loss).
 
     .. math ::
         L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k}) + \lambda))
@@ -940,7 +945,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
 @parse_docdata
 class PointwiseHingeLoss(DeltaPointwiseLoss):
     r"""
-    A module for the pointwise hinge loss.
+    The pointwise hinge loss.
 
     .. math ::
         g(s,l) = \max(0, \lambda -\hat{l}*s)
@@ -968,7 +973,7 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
 
 @parse_docdata
 class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
-    r"""A module for the soft pointwise hinge loss .
+    r"""The soft pointwise hinge loss.
 
     This loss is appropriate for interaction functions which do not include a bias term,
     and have a limited value range, e.g., distance-based ones like TransE.
@@ -1000,7 +1005,7 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
 
 @parse_docdata
 class SoftplusLoss(SoftPointwiseHingeLoss):
-    r"""A module for the pointwise logistic loss (i.e., softplus loss).
+    r"""The pointwise logistic loss (i.e., softplus loss).
 
     .. math ::
         g(s, l) = \log(1 + \exp(-\hat{l} \cdot s))
@@ -1031,7 +1036,7 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
 
 @parse_docdata
 class BCEAfterSigmoidLoss(PointwiseLoss):
-    """A module for the numerically unstable version of explicit Sigmoid + BCE loss.
+    """The numerically unstable version of explicit Sigmoid + BCE loss.
 
     .. note::
 
@@ -1093,7 +1098,7 @@ def prepare_negative_scores_for_softmax(
 
 @parse_docdata
 class CrossEntropyLoss(SetwiseLoss):
-    """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
+    """The cross entropy loss that evaluates the cross entropy after softmax output.
 
     .. note::
 
@@ -1128,7 +1133,8 @@ class CrossEntropyLoss(SetwiseLoss):
             dim=-1,
         )
         # use sparse version of cross entropy
-        true_indices = positive_scores.new_zeros(size=(positive_scores.shape[0],), dtype=torch.long)
+        true_indices = positive_scores.new_zeros(size=positive_scores.shape[:-1], dtype=torch.long)
+        # calculate cross entropy loss
         return functional.cross_entropy(
             input=scores,
             target=true_indices,
@@ -1144,6 +1150,9 @@ class CrossEntropyLoss(SetwiseLoss):
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # make sure labels form a proper probability distribution
+        labels = functional.normalize(labels, p=1, dim=-1)
+        # calculate cross entropy loss
         return functional.cross_entropy(
             input=predictions,
             target=labels,
@@ -1153,8 +1162,226 @@ class CrossEntropyLoss(SetwiseLoss):
 
 
 @parse_docdata
-class NSSALoss(SetwiseLoss):
-    """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.
+class InfoNCELoss(CrossEntropyLoss):
+    r"""The InfoNCE loss with additive margin proposed by [wang2022]_.
+
+    This loss is equivalent to :class:`CrossEntropyLoss`, where the scores have been transformed:
+
+    - positive scores are subtracted by the margin `\gamma` and then divided by the temperature `\tau`
+
+        .. math::
+            f'(k) = \frac{f(k) - \gamma}{\tau}
+
+    - negative scores are only divided by the temperature `\tau`
+
+        .. math::
+            f'(k^-) = \frac{f(k^-)}{\tau}
+    ---
+    name: InfoNCE loss with additive margin
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=dict(type=float, low=0.01, high=0.10),
+        log_adversarial_temperature=dict(type=float, low=-3.0, high=3.0),
+    )
+    DEFAULT_LOG_ADVERSARIAL_TEMPERATURE: ClassVar[float] = math.log(0.05)
+
+    def __init__(
+        self,
+        margin: float = 0.02,
+        log_adversarial_temperature: float = DEFAULT_LOG_ADVERSARIAL_TEMPERATURE,
+        reduction: str = "mean",
+    ) -> None:
+        r"""Initialize the loss.
+
+        :param margin:
+            The loss's margin (also written as $\gamma$ in the reference paper)
+
+            .. note ::
+                In the official implementation, the margin parameter only seems to be used during *training*.
+                https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L92-L94
+
+        :param log_adversarial_temperature:
+            The logarithm of the negative sampling temperature (also written as $\tau$ in the reference paper).
+            We follow the suggested parametrization which ensures positive temperatures for all hyperparameter values.
+
+            .. note ::
+                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
+                Its name is only kept for consistency with the nomenclature of [wang2022]_.
+
+            .. note ::
+                In the official implementation, the temperature is a *trainable* parameter, cf.
+                https://github.com/intfloat/SimKGC/blob/4388ebc0c0011fe333bc5a98d0613ab0d1825ddc/models.py#L31
+
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+
+        :raises ValueError:
+            if the margin is negative
+        """
+        if margin < 0:
+            raise ValueError(f"Cannot have a negative margin: {margin}")
+        super().__init__(reduction=reduction)
+        self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
+        self.margin = margin
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # determine positive; do not check with == since the labels are floats
+        pos_mask = labels > 0.5
+        # subtract margin from positive scores
+        predictions = predictions - pos_mask.type_as(predictions) * self.margin
+        # divide by temperature
+        predictions = predictions / self.inverse_softmax_temperature
+        return super().process_lcwa_scores(
+            predictions=predictions,
+            labels=labels,
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
+        )
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # subtract margin from positive scores
+        positive_scores = positive_scores - self.margin
+        # normalize positive score shape
+        if positive_scores.ndim < negative_scores.ndim:
+            positive_scores = positive_scores.unsqueeze(dim=-1)
+        # divide by temperature
+        positive_scores = positive_scores / self.inverse_softmax_temperature
+        negative_scores = negative_scores / self.inverse_softmax_temperature
+        return super().process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+            label_smoothing=label_smoothing,
+            batch_filter=batch_filter,
+            num_entities=num_entities,
+        )
+
+
+class AdversarialLoss(SetwiseLoss):
+    """A loss with adversarial weighting of negative samples."""
+
+    def __init__(self, inverse_softmax_temperature: float = 1.0, reduction: str = "mean") -> None:
+        """Initialize the adversarial loss.
+
+        :param inverse_softmax_temperature:
+            the inverse of the softmax temperature
+        :param reduction:
+            the name of the reduction operation, cf. :meth:`Loss.__init__`
+        """
+        super().__init__(reduction=reduction)
+        self.inverse_softmax_temperature = inverse_softmax_temperature
+        self.factor = 0.5 if self._reduction_method is torch.mean else 1.0
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # determine positive; do not check with == since the labels are floats
+        pos_mask = labels > 0.5
+
+        # compute negative weights (without gradient tracking)
+        # clone is necessary since we modify in-place
+        weights = predictions.detach().clone()
+        weights[pos_mask] = float("-inf")
+        weights = weights.mul(self.inverse_softmax_temperature).softmax(dim=1)
+
+        # Split positive and negative scores
+        positive_scores = predictions[pos_mask]
+        negative_scores = predictions[~pos_mask]
+
+        return self.factor * self(
+            pos_scores=positive_scores,
+            neg_scores=negative_scores,
+            neg_weights=weights[~pos_mask],
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
+        )
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        negative_scores = prepare_negative_scores_for_softmax(
+            batch_filter=batch_filter,
+            negative_scores=negative_scores,
+            # we do not allow full -inf rows, since we compute the softmax over this tensor
+            no_inf_rows=True,
+        )
+
+        # compute weights (without gradient tracking)
+        assert negative_scores.ndimension() == 2
+        weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
+
+        return self.factor * self(
+            pos_scores=positive_scores,
+            neg_scores=negative_scores,
+            neg_weights=weights,
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
+        )
+
+    @abstractmethod
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+        neg_weights: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """Calculate the loss for the given scores.
+
+        :param pos_scores: shape: s_p
+            a tensor of positive scores
+        :param neg_scores: shape: s_n
+            a tensor of negative scores
+        :param neg_weights: shape: s_n
+            the adversarial weights of the negative scores
+        :param label_smoothing:
+            An optional label smoothing parameter.
+        :param num_entities:
+            The number of entities (required for label-smoothing).
+
+        :returns:
+            a scalar loss value
+        """
+        raise NotImplementedError
+
+
+@parse_docdata
+class NSSALoss(AdversarialLoss):
+    """The self-adversarial negative sampling loss function proposed by [sun2019]_.
+
+    .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
 
     ---
     name: Self-adversarial negative sampling
@@ -1182,88 +1409,21 @@ class NSSALoss(SetwiseLoss):
 
         .. note:: The default hyperparameters are based on the experiments for FB15k-237 in [sun2019]_.
         """
-        super().__init__(reduction=reduction)
-        self.inverse_softmax_temperature = adversarial_temperature
+        super().__init__(reduction=reduction, inverse_softmax_temperature=adversarial_temperature)
         self.margin = margin
 
     # docstr-coverage: inherited
-    def process_lcwa_scores(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # Sanity check
-        if label_smoothing:
-            raise UnsupportedLabelSmoothingError(self)
-
-        pos_mask = labels == 1
-
-        # compute negative weights (without gradient tracking)
-        # clone is necessary since we modify in-place
-        weights = predictions.detach().clone()
-        weights[pos_mask] = float("-inf")
-        weights = weights.mul(self.inverse_softmax_temperature).softmax(dim=1)
-
-        # Split positive and negative scores
-        positive_scores = predictions[pos_mask]
-        negative_scores = predictions[~pos_mask]
-
-        return self(
-            pos_scores=positive_scores,
-            neg_scores=negative_scores,
-            neg_weights=weights[~pos_mask],
-        )
-
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        batch_filter: Optional[torch.BoolTensor] = None,
-        num_entities: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # Sanity check
-        if label_smoothing:
-            raise UnsupportedLabelSmoothingError(self)
-
-        negative_scores = prepare_negative_scores_for_softmax(
-            batch_filter=batch_filter,
-            negative_scores=negative_scores,
-            # we do not allow full -inf rows, since we compute the softmax over this tensor
-            no_inf_rows=True,
-        )
-
-        # compute weights (without gradient tracking)
-        assert negative_scores.ndimension() == 2
-        weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
-
-        return self(
-            pos_scores=positive_scores,
-            neg_scores=negative_scores,
-            neg_weights=weights,
-        )
-
     def forward(
         self,
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
         neg_weights: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Calculate the loss for the given scores.
-
-        :param pos_scores: shape: s_p
-            Positive score tensor
-        :param neg_scores: shape: s_n
-            Negative score tensor
-        :param neg_weights: shape: s_n
-
-        :returns: A loss value
-
-        .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
-        """
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
         # -w * log sigma(-(m + n)) - log sigma (m + p)
         # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
         # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
@@ -1281,8 +1441,47 @@ class NSSALoss(SetwiseLoss):
 
 
 @parse_docdata
+class AdversarialBCEWithLogitsLoss(AdversarialLoss):
+    """
+    An adversarially weighted BCE loss.
+
+    .. seealso::
+        https://github.com/DeepGraphLearning/torchdrug/blob/20f84170544d594a177e237ef5f3a1cadb2c61e6/torchdrug/tasks/reasoning.py#L89-L100
+
+    ---
+    name: Adversarially weighted binary cross entropy (with logits)
+    """
+
+    # docstr-coverage: inherited
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+        neg_weights: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # neg scores might be -inf for masked values -> get rid of those
+        mask = torch.isfinite(neg_scores)
+        neg_weights, neg_scores = neg_weights[mask], neg_scores[mask]
+        # create targets
+        return self._reduction_method(
+            neg_weights
+            * functional.binary_cross_entropy_with_logits(
+                neg_scores,
+                apply_label_smoothing(torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities),
+                reduction="none",
+            )
+        ) + functional.binary_cross_entropy_with_logits(
+            pos_scores,
+            apply_label_smoothing(torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities),
+            reduction=self.reduction,
+        )
+
+
+@parse_docdata
 class FocalLoss(PointwiseLoss):
-    r"""A module for the focal loss proposed by [lin2018]_.
+    r"""The focal loss proposed by [lin2018]_.
 
     It is an adaptation of the (binary) cross entropy loss, which deals better with imbalanced data.
     The implementation is strongly inspired by the implementation in
@@ -1364,6 +1563,7 @@ loss_resolver: ClassResolver[Loss] = ClassResolver.from_subclasses(
         SetwiseLoss,
         DeltaPointwiseLoss,
         MarginPairwiseLoss,
+        AdversarialLoss,
     },
 )
 for _name, _cls in loss_resolver.lookup_dict.items():

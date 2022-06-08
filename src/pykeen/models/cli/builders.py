@@ -62,6 +62,12 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
     Allows users to specify all of the (hyper)parameters to the
     model via command line options using :class:`click.Option`.
+
+    :param model:
+        the model class
+
+    :return:
+        a click command for training a model of the given class
     """
     signature = inspect.signature(model.__init__)
 
@@ -117,7 +123,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
-    @click.option("-I", "--create-inverse-triples", is_flag=True, help="Model inverse triples")
+    @options.inverse_triples_option
     @click.option("--silent", is_flag=True)
     @click.option("--output-directory", type=pathlib.Path, default=None, help="Where to dump the results")
     def main(

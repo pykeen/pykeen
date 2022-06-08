@@ -192,7 +192,21 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union, cast
+from typing import (
+    Any,
+    ClassVar,
+    Collection,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import pandas as pd
 import scipy.stats
@@ -292,6 +306,12 @@ class PipelineResult(Result):
     #: The git hash of PyKEEN used to create these results
     git_hash: str = field(default_factory=get_git_hash)
 
+    # file names for storing results
+    RESULT_FILE_NAME: ClassVar[str] = "results.json"
+    METADATA_FILE_NAME: ClassVar[str] = "metadata.json"
+    MODEL_FILE_NAME: ClassVar[str] = "trained_model.pkl"
+    TRAINING_TRIPLES_FILE_NAME: ClassVar[str] = "training_triples"
+
     @property
     def title(self) -> Optional[str]:  # noqa:D401
         """The title of the experiment."""
@@ -380,21 +400,53 @@ class PipelineResult(Result):
         save_training: bool = True,
         **_kwargs,
     ) -> None:
-        """Save all artifacts in the given directory."""
+        """
+        Save all artifacts in the given directory.
+
+        The serialization format looks as follows
+
+        .. code-block::
+
+            directory/
+                results.json
+                metadata.json
+                trained_model.pkl
+                training_triples/
+
+        All but the first component are optional and can be disabled, e.g. to save disk space during hyperparameter
+        tuning. `trained_model.pkl` is the full model saved via :func:`torch.save`, and can thus be loaded via
+        :func:`torch.load`, cf. `torch's serialization documentation
+        <https://pytorch.org/docs/stable/notes/serialization.html>`_. `training_triples` contains the training triples
+        factory, including label-to-id mappings, if used. It has been saved via
+        :meth:`pykeen.triples.CoreTriplesFactory.to_path_binary`, and can re-loaded via
+        :meth:`pykeen.triples.CoreTriplesFactory.from_path_binary`.
+
+        :param directory:
+            the directory path. It will be created including all parent directories if necessary
+        :param save_metadata:
+            whether to save metadata, cf. :attr:`PipelineResult.metadata`
+        :param save_replicates:
+            # TODO: rename param?
+            whether to save the trained model, cf. :meth:`PipelineResult.save_model`
+        :param save_training:
+            whether to save the training triples factory
+        :param _kwargs:
+            additional keyword-based parameters, which are ignored
+        """
         directory = normalize_path(path=directory, mkdir=True)
 
         # always save results as json file
-        with directory.joinpath("results.json").open("w") as file:
+        with directory.joinpath(self.RESULT_FILE_NAME).open("w") as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
 
         # save other components only if requested (which they are, by default)
         if save_metadata:
-            with directory.joinpath("metadata.json").open("w") as file:
+            with directory.joinpath(self.METADATA_FILE_NAME).open("w") as file:
                 json.dump(self.metadata, file, indent=2, sort_keys=True)
         if save_replicates:
-            self.save_model(directory.joinpath("trained_model.pkl"))
+            self.save_model(directory.joinpath(self.MODEL_FILE_NAME))
         if save_training:
-            self.training.to_path_binary(directory.joinpath("training_triples"))
+            self.training.to_path_binary(directory.joinpath(self.TRAINING_TRIPLES_FILE_NAME))
 
         logger.info(f"Saved to directory: {directory.as_uri()}")
 

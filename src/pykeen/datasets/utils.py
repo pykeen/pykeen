@@ -182,9 +182,10 @@ def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = 
 
 
 def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: bool) -> Dataset:
-    dataset_instance.create_inverse_triples = create_inverse_triples
-    for factory in dataset_instance.factory_dict.values():
-        factory.create_inverse_triples = create_inverse_triples
+    # note: we only need to set the create_inverse_triples in the training factory.
+    dataset_instance.training.create_inverse_triples = create_inverse_triples
+    if create_inverse_triples:
+        dataset_instance.training.num_relations *= 2
     return dataset_instance
 
 

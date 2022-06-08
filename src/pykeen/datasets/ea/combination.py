@@ -318,8 +318,6 @@ class GraphPairCombinator(ABC):
                 mapped_triples=mapped_triples,
                 num_entities=max_ids[0::2].max().item(),
                 num_relations=max_ids[1].item(),
-                entity_ids=None,
-                relation_ids=None,
                 **kwargs,
             )
 

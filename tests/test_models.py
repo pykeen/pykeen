@@ -15,16 +15,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.nations import Nations
-from pykeen.models import (
-    EntityRelationEmbeddingModel,
-    ERModel,
-    EvaluationOnlyModel,
-    FixedModel,
-    Model,
-    _NewAbstractModel,
-    _OldAbstractModel,
-    model_resolver,
-)
+from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
@@ -32,18 +23,14 @@ from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
-from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
     Model,
-    _OldAbstractModel,
     _NewAbstractModel,
     # DummyModel,
     LiteralModel,
-    EntityRelationEmbeddingModel,
     ERModel,
     FixedModel,
-    SimpleInteractionModel,
     EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
@@ -209,7 +196,9 @@ class TestHolE(cases.ModelTestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
+        assert all_in_bounds(
+            self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON
+        )
 
 
 class TestKG2EWithKL(cases.BaseKG2ETest):
@@ -377,8 +366,6 @@ class TestRGCNBasis(cases.BaseRGCNTest):
             num_bases=3,
         ),
     }
-    #: one bias per layer
-    num_constant_init = 2
 
 
 class TestRGCNBlock(cases.BaseRGCNTest):
@@ -393,8 +380,6 @@ class TestRGCNBlock(cases.BaseRGCNTest):
         ),
         "edge_weighting": "symmetric",
     }
-    #: one bias per layer
-    num_constant_init = 2
 
 
 class TestRotatE(cases.ModelTestCase):
@@ -587,7 +572,7 @@ class TestTransE(cases.DistanceModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def test_get_all_prediction_df(self):
@@ -623,10 +608,10 @@ class TestTransH(cases.DistanceModelTestCase):
     def _check_constraints(self):
         """Check model constraints.
 
-        Entity embeddings have to have unit L2 norm.
+        Normal vectors of relation-specific hyperplanes have unit length.
         """
-        entity_norms = self.instance.normal_vector_embeddings(indices=None).norm(p=2, dim=-1)
-        assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+        norm = self.instance.relation_representations[1](indices=None).norm(p=2, dim=-1)
+        assert torch.allclose(norm, torch.ones_like(norm))
 
 
 class TestTransR(cases.DistanceModelTestCase):
@@ -801,13 +786,13 @@ class TestModelUtilities(unittest.TestCase):
     def test_extend_batch(self):
         """Test `_extend_batch()`."""
         batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
-        all_ids = [2 * i for i in range(5)]
+        max_id = 5
 
         batch_size = batch.shape[0]
-        num_choices = len(all_ids)
+        num_choices = max_id
 
         for dim in range(3):
-            h_ext_batch = extend_batch(batch=batch, all_ids=all_ids, dim=dim)
+            h_ext_batch = extend_batch(batch=batch, max_id=max_id, dim=dim)
 
             # check shape
             assert h_ext_batch.shape == (batch_size * num_choices, 3)
@@ -815,7 +800,7 @@ class TestModelUtilities(unittest.TestCase):
             # check content
             actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
             exp_content = set()
-            for i in all_ids:
+            for i in range(max_id):
                 for b in batch:
                     c = list(map(int, b))
                     c.insert(dim, i)
@@ -906,3 +891,9 @@ class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.m
         )
         scores = self.instance.predict_t(hr_batch=hr_batch)
         assert torch.allclose(scores, expected_scores)
+
+
+class CooccurrenceFilteredModelTests(cases.ModelTestCase):
+    """Tests for the filtered meta model."""
+
+    cls = pykeen.models.meta.filtered.CooccurrenceFilteredModel

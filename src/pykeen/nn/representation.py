@@ -20,12 +20,14 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .utils import TransformerEncoder
+from .utils import TransformerEncoder, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
+from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
-from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device, upgrade_to_sequence
+from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
 
 __all__ = [
     "Representation",
@@ -89,6 +91,7 @@ class Representation(nn.Module, ABC):
         regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
         dropout: Optional[float] = None,
+        unique: Optional[bool] = None,
     ):
         """Initialize the representation module.
 
@@ -106,6 +109,10 @@ class Representation(nn.Module, ABC):
             Additional keyword arguments passed to the regularizer
         :param dropout:
             The optional dropout probability
+        :param unique:
+            whether to optimize for calculating representations for same indices only once. This is only useful if the
+            calculation of representations is either significantly more expensive than an index-based lookup and
+            duplicate indices are expected, e.g., when using negative sampling and large batch sizes
         """
         super().__init__()
         self.max_id = max_id
@@ -113,6 +120,10 @@ class Representation(nn.Module, ABC):
         self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
         self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
+        if unique is None:
+            # heuristic
+            unique = not isinstance(self, Embedding)
+        self.unique = unique
 
     @abstractmethod
     def _plain_forward(
@@ -128,10 +139,11 @@ class Representation(nn.Module, ABC):
     ) -> torch.FloatTensor:
         """Get representations for indices.
 
-        .. note::
-
-            this method is implemented in subclasses. Prefer using `forward_unique` instead,
-            which optimizes for duplicate indices.
+        .. note ::
+            depending on :attr:`Representation.unique`, this implementation will use an optimization for duplicate
+            indices. It is generally only recommended if computing individual representation is expensive, e.g.,
+            since it involves message passing, or a large encoder networks, but discouraged for cheap lookups, e.g., a
+            plain embedding lookup.
 
         :param indices: shape: s
             The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
@@ -140,37 +152,17 @@ class Representation(nn.Module, ABC):
         :return: shape: (``*s``, ``*self.shape``)
             The representations.
         """
+        inverse = None
+        if indices is not None and self.unique:
+            indices, inverse = indices.unique(return_inverse=True)
         x = self._plain_forward(indices=indices)
-        if self.normalizer is not None:
-            x = self.normalizer(x)
-        if self.regularizer is not None:
-            self.regularizer.update(x)
-        if self.dropout is not None:
-            x = self.dropout(x)
-        return x
-
-    def forward_unique(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Get representations for indices.
-
-        :param indices: shape: s
-            The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
-            more efficiently).
-
-        :return: shape: (``*s``, ``*self.shape``)
-            The representations.
-        """
-        if indices is None:
-            return self(None)
-        unique, inverse = indices.unique(return_inverse=True)
-        x_unique = self._plain_forward(indices=unique)
         # normalize *before* repeating
         if self.normalizer is not None:
-            x_unique = self.normalizer(x_unique)
+            x = self.normalizer(x)
+        # repeat if necessary
+        if inverse is not None:
+            x = x[inverse]
         # regularize *after* repeating
-        x = x_unique[inverse]
         if self.regularizer is not None:
             self.regularizer.update(x)
         if self.dropout is not None:
@@ -367,13 +359,6 @@ class Embedding(Representation):
         self._embeddings.requires_grad_(trainable)
 
     @property
-    def num_embeddings(self) -> int:  # noqa: D401
-        """The total number of representations (i.e. the maximum ID)."""
-        # wrapper around max_id, for backward compatibility
-        warnings.warn(f"Directly use {self.__class__.__name__}.max_id instead of num_embeddings.")
-        return self.max_id
-
-    @property
     def embedding_dim(self) -> int:  # noqa: D401
         """The representation dimension."""
         warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
@@ -383,7 +368,7 @@ class Embedding(Representation):
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
-            self._embeddings.weight.data.view(self.num_embeddings, *self._shape),
+            self._embeddings.weight.data.view(self.max_id, *self._shape),
         ).view(*self._embeddings.weight.data.shape)
 
     # docstr-coverage: inherited
@@ -462,6 +447,11 @@ class LowRankRepresentation(Representation):
     def reset_parameters(self) -> None:  # noqa: D102
         self.bases.reset_parameters()
         self.weight.data = self.weight_initializer(self.weight)
+
+    @property
+    def num_bases(self) -> int:
+        """Return the number of bases."""
+        return self.bases.max_id
 
     # docstr-coverage: inherited
     def _plain_forward(
@@ -777,8 +767,14 @@ class CombinedCompGCNRepresentations(nn.Module):
             representation=relation_representations,
             representation_kwargs=relation_representations_kwargs,
         )
-        input_dim = self.entity_representations.embedding_dim
-        assert self.relation_representations.embedding_dim == input_dim
+        if len(self.entity_representations.shape) > 1:
+            raise ValueError(f"{self.__class__.__name__} requires vector base entity representations.")
+        input_dim = self.entity_representations.shape[0]
+        # TODO: might not be true for all compositions
+        if self.relation_representations.shape != self.entity_representations.shape:
+            raise ValueError(
+                f"{self.__class__.__name__} requires entity and relation representations of the same shape."
+            )
 
         # hidden dimension normalization
         if dims is None:
@@ -808,7 +804,7 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         # register buffers for adjacency matrix; we use the same format as PyTorch Geometric
         # TODO: This always uses all training triples for message passing
-        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="edge_index", tensor=get_edge_index(triples_factory=triples_factory))
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
         # initialize buffer of enriched representations
@@ -905,17 +901,15 @@ class LabelBasedTransformerRepresentation(Representation):
     .. code-block:: python
 
         from pykeen.datasets import get_dataset
-        from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
+        from pykeen.nn.representation import LabelBasedTransformerRepresentation
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
-        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
-            triples_factory=dataset.training,
-        )
+        entity_representations = LabelBasedTransformerRepresentation.from_dataset(dataset=dataset)
         model = ERModel(
             interaction="ermlp",
             entity_representations=entity_representations,
-            relation_representations=EmbeddingSpecification(shape=entity_representations.shape),
+            relation_representations_kwargs=dict(shape=entity_representations.shape),
         )
     """
 
@@ -932,11 +926,11 @@ class LabelBasedTransformerRepresentation(Representation):
         :param labels:
             the labels
         :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
+            the name of the pretrained model, or a path, cf. :meth:`TransformerEncoder.__init__`
         :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to
+            the maximum number of tokens to pad/trim the labels to, cf. :meth:`TransformerEncoder.__init__`
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
         """
         encoder = TransformerEncoder(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -965,19 +959,37 @@ class LabelBasedTransformerRepresentation(Representation):
         :param for_entities:
             whether to create the initializer for entities (or relations)
         :param kwargs:
-            additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
+            additional keyword-based arguments passed to :meth:`LabelBasedTransformerRepresentation.__init__`
 
         :returns:
             A label-based transformer from the triples factory
-
-        :raise ImportError:
-            if the transformers library could not be imported
         """
-        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
-        return cls(
-            labels=[id_to_label[i] for i in range(len(id_to_label))],
-            **kwargs,
-        )
+        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+        return cls(labels=labeling.all_labels(), **kwargs)
+
+    @classmethod
+    def from_dataset(
+        cls,
+        dataset: Dataset,
+        **kwargs,
+    ) -> "LabelBasedTransformerRepresentation":
+        """Prepare label-based representations with labls from a dataset.
+
+        :param dataset:
+            the dataset
+        :param kwargs:
+            additional keyword-based parameters passed to
+            :meth:`LabelBasedTransformerRepresentation.from_triples_factory`
+
+        :return:
+            the representation
+
+        :raises TypeError:
+            if the triples factory does not provide labels
+        """
+        if not isinstance(dataset.training, TriplesFactory):
+            raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
+        return cls.from_triples_factory(triples_factory=dataset.training, **kwargs)
 
     # docstr-coverage: inherited
     def _plain_forward(
@@ -991,3 +1003,55 @@ class LabelBasedTransformerRepresentation(Representation):
             labels=[self.labels[i] for i in uniq.tolist()],
         )
         return x[inverse]
+
+
+class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
+    """
+    Textual representations for datasets grounded in Wikidata.
+
+    The label and description for each entity are obtained from Wikidata using
+    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`LabelBasedTransformerRepresentation`.
+
+    Example usage::
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.models import ERModel
+        from pykeen.nn import WikidataTextRepresentation
+        from pykeen.pipeline import pipeline
+
+        dataset = get_dataset(dataset="codexsmall")
+        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset)
+
+        result = pipeline(
+            dataset=dataset,
+            model=ERModel,
+            model_kwargs=dict(
+                interaction="distmult",
+                entity_representations=entity_representations,
+                relation_representation_kwargs=dict(
+                    shape=entity_representations.shape,
+                ),
+            ),
+        )
+    """
+
+    def __init__(self, labels: Sequence[str], **kwargs):
+        """
+        Initialize the representation.
+
+        :param labels:
+            the wikidata IDs.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`LabelBasedTransformerRepresentation.__init__`
+        """
+        # set up cache
+        cache = WikidataCache()
+        # get labels & descriptions
+        titles = cache.get_labels(ids=labels)
+        descriptions = cache.get_descriptions(ids=labels)
+        # compose labels
+        labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
+        # delegate to super class
+        super().__init__(labels=labels, **kwargs)

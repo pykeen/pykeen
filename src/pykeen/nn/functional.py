@@ -17,7 +17,6 @@ from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
-from ..moves import irfft, rfft
 from ..typing import GaussianDistribution, Sign
 from ..utils import (
     boxe_kg_arity_position_score,
@@ -346,18 +345,20 @@ def ermlp_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # same shape
-    *prefix, dim = h.shape
+    # shortcut for same shape
     if h.shape == r.shape and h.shape == t.shape:
-        return final(activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * dim)))).view(prefix)
-
-    # split, shape: (embedding_dim, hidden_dim)
-    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
-    bias = hidden.bias.view(*make_ones_like(prefix), -1)
-    h = torch.einsum("...i,ij->...j", h, head_to_hidden)
-    r = torch.einsum("...i,ij->...j", r, rel_to_hidden)
-    t = torch.einsum("...i,ij->...j", t, tail_to_hidden)
-    return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
+        x = hidden(torch.cat([h, r, t], dim=-1))
+    else:
+        # split weight into head-/relation-/tail-specific sub-matrices
+        *prefix, dim = h.shape
+        x = tensor_sum(
+            hidden.bias.view(*make_ones_like(prefix), -1),
+            *(
+                torch.einsum("...i, ji -> ...j", xx, weight)
+                for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1))
+            ),
+        )
+    return final(activation(x)).squeeze(dim=-1)
 
 
 def ermlpe_interaction(
@@ -388,7 +389,7 @@ def ermlpe_interaction(
     x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
     # dot product
-    return (x * t).sum(dim=-1)
+    return torch.einsum("...d,...d->...", x, t)
 
 
 def hole_interaction(
@@ -434,14 +435,14 @@ def circular_correlation(
         The circular correlation between the vectors.
     """
     # Circular correlation of entity embeddings
-    a_fft = rfft(a, dim=-1)
-    b_fft = rfft(b, dim=-1)
+    a_fft = torch.fft.rfft(a, dim=-1)
+    b_fft = torch.fft.rfft(b, dim=-1)
     # complex conjugate
     a_fft = torch.conj(a_fft)
     # Hadamard product in frequency domain
     p_fft = a_fft * b_fft
     # inverse real FFT
-    return irfft(p_fft, n=a.shape[-1], dim=-1)
+    return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
 def kg2e_interaction(

@@ -1,49 +1,20 @@
-name: Tests
+name: Common
 
 on:
   push:
     branches:
-      - '**'
-      - '!master'
+      - master
+  workflow_dispatch:
+  pull_request:
+    types: [review_requested, ready_for_review, auto_merge_enabled]
 
 jobs:
-  lint:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
-    name: Lint
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ "3.7", "3.10" ]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: pip install tox
-
-      - name: Check manifest
-        run: tox -e manifest
-
-      - name: Check code quality with flake8
-        run: tox -e flake8
-
-      - name: Check code quality with flake8/darglint (limited)
-        run: tox -e darglint
-
-      - name: Check package metadata with Pyroma
-        run: tox -e pyroma
-
-      - name: Check static typing with MyPy
-        run: tox -e mypy
   docs:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.7", "3.10" ]
+        python-version: [ "3.8", "3.10" ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -67,12 +38,11 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs-test
   tests:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.7", "3.10" ]
+        python-version: [ "3.8", "3.10" ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -88,12 +58,11 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Windows
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ "3.7", "3.10" ]
+        python-version: [ "3.8", "3.10" ]
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -109,18 +78,3 @@ jobs:
         run: pytest --durations=20 tests -m "not slow"
       - name: Run slow tests
         run: pytest --durations=20 tests -m "slow"
-  tests_completed:
-    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Step 1
-        id: PR-check
-        run: echo ::set-output name=status::pending
-        continue-on-error: true
-      - name: Dump steps context
-        env:
-          STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "$STEPS_CONTEXT"
-      - name: Check on failures
-        if: steps.PR-check.outputs.status == 'pending'
-        run: exit 1

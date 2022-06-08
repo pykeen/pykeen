@@ -14,7 +14,7 @@ from .loader import TorchPrecomputedTokenizerLoader
 from ...constants import PYKEEN_MODULE
 from ...datasets import dataset_resolver
 from ...datasets.utils import _digest_kwargs
-from ...utils import flatten_dictionary, load_configuration
+from ...utils import flatten_dictionary, get_edge_index, load_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def tokenize(
     logger.info(f"Created anchor selection instance: {selection_instance}")
 
     # select anchors
-    edge_index = dataset_instance.training.mapped_triples[:, [0, 2]].numpy().T
+    edge_index = get_edge_index(triples_factory=dataset_instance.training).numpy()
     anchors = selection_instance(edge_index=edge_index)
     logger.info(f"Selected {len(anchors)} anchors")
 

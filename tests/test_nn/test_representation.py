@@ -11,6 +11,7 @@ import unittest_templates
 
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.pyg
 import pykeen.nn.representation
 from pykeen.datasets import get_dataset
 from tests import cases, mocks
@@ -32,7 +33,7 @@ class EmbeddingTests(cases.RepresentationTestCase):
 
     def test_backwards_compatibility(self):
         """Test shape and num_embeddings."""
-        assert self.instance.max_id == self.instance.num_embeddings
+        assert self.instance.max_id == self.instance_kwargs["num_embeddings"]
         embedding_dim = int(numpy.prod(self.instance.shape))
         assert self.instance.shape == (embedding_dim,)
 
@@ -228,6 +229,16 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
         relation_representation_kwargs=dict(
             shape=embedding_dim,
         ),
+    )
+
+
+@unittest.skipIf(transformers is None, "Need to install `transformers`")
+class WikidataTextRepresentationTests(cases.RepresentationTestCase):
+    """Tests for Wikidata text representations."""
+
+    cls = pykeen.nn.representation.WikidataTextRepresentation
+    kwargs = dict(
+        labels=["Q100", "Q1000"],
     )
 
 

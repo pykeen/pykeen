@@ -393,50 +393,25 @@ class TestLiterals(unittest.TestCase):
     def test_metadata(self):
         """Test metadata passing for triples factories."""
         t = Nations().training
-        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata["path"])
-        self.assertEqual(
-            (
-                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,"
-                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
-            ),
-            repr(t),
-        )
+        self.assertEqual(t.metadata, dict(path=NATIONS_TRAIN_PATH))
 
         entities = ["poland", "ussr"]
         x = t.new_with_restriction(entities=entities)
         entities_ids = t.entities_to_ids(entities=entities)
-        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata["path"])
-        self.assertEqual(
-            (
-                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=37,"
-                f' inverse_triples=False, entity_restriction={repr(entities_ids)}, path="{NATIONS_TRAIN_PATH}")'
-            ),
-            repr(x),
-        )
+        self.assertEqual(x.metadata, dict(path=NATIONS_TRAIN_PATH, entity_restriction=entities_ids))
 
         relations = ["negativebehavior"]
         v = t.new_with_restriction(relations=relations)
         relations_ids = t.relations_to_ids(relations=relations)
-        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata["path"])
-        self.assertEqual(
-            (
-                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=29,"
-                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations_ids)})'
-            ),
-            repr(v),
-        )
+        self.assertEqual(v.metadata, dict(path=NATIONS_TRAIN_PATH, relation_restriction=relations_ids))
 
         w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
-        self.assertNotIn("path", w.metadata)
-        self.assertEqual(
-            "TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)",
-            repr(w),
-        )
+        self.assertEqual(w.metadata, dict())
 
         y, z = t.split()
-        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata["path"])
-        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata["path"])
+        self.assertEqual(y.metadata, dict(path=NATIONS_TRAIN_PATH))
+        self.assertEqual(z.metadata, dict(path=NATIONS_TRAIN_PATH))
 
     def test_triples_numeric_literals_factory_split(self):
         """Test splitting a TriplesNumericLiteralsFactory object."""
@@ -527,9 +502,6 @@ class TestUtils(unittest.TestCase):
         """Check two triples factories have all of the same stuff."""
         # TODO: this could be (Core)TriplesFactory.__equal__
         self.assertEqual(type(tf1), type(tf2))
-        self.assertEqual(tf1.entity_ids, tf2.entity_ids)
-        self.assertEqual(tf1.relation_ids, tf2.relation_ids)
-        self.assertEqual(tf1.relation_ids, tf2.relation_ids)
         if isinstance(tf1, TriplesFactory):
             self.assertEqual(tf1.entity_labeling, tf2.entity_labeling)
             self.assertEqual(tf1.relation_labeling, tf2.relation_labeling)

@@ -11,16 +11,16 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import OptionalKwargs
-from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
 from torch import nn
 
 from .base import Model
 from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import Representation
-from ..regularizers import Regularizer
-from ..triples import CoreTriplesFactory
+from ..regularizers import Regularizer, regularizer_resolver
+from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes, get_batchnorm_modules
 
@@ -98,20 +98,36 @@ class _NewAbstractModel(Model, ABC):
             for i, p_id in enumerate(uninitialized_parameters, start=1):
                 logger.debug("[%3d] Parents to blame: %s", i, parents.get(p_id))
 
-    def _instantiate_default_regularizer(self, **kwargs) -> Optional[Regularizer]:
-        """Instantiate the regularizer from this class's default settings.
-
-        :param kwargs: Additional keyword arguments to be passed through to the ``__init__()`` function of the
-            default regularizer, if one is set.
-
-        :returns: If the default regularizer is None, None is returned.
+    def _instantiate_regularizer(
+        self,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
+    ) -> Optional[Regularizer]:
         """
-        if self.regularizer_default is None:
-            return None
+        Instantiate a regularizer using the default if None is provided.
 
-        _kwargs = dict(self.regularizer_default_kwargs or {})
-        _kwargs.update(kwargs)
-        return self.regularizer_default(**_kwargs)
+        The following precedence order is used:
+
+        1. If the passed regularizer is not None, use it
+        2. If the regularizer is None, use the default regularizer. In this case, the
+           default kwargs will be used in favor of provided ones.
+        3. If both, the regularizer and the default regularizer are None, return None.
+
+        :param regularizer:
+            the regularizer, or a hint thereof
+        :param regularizer_kwargs:
+            additional keyword-based parameters passed to the regularizer upon instantiation
+
+        :return:
+            the regularizer instance.
+        """
+        regularizer, regularizer_kwargs = normalize_with_default(
+            choice=regularizer,
+            kwargs=regularizer_kwargs,
+            default=self.regularizer_default,
+            default_kwargs=self.regularizer_default_kwargs,
+        )
+        return regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
@@ -263,7 +279,7 @@ class ERModel(
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: KGInfo,
         interaction: Union[
             str,
             Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
@@ -296,6 +312,10 @@ class ERModel(
         :param kwargs:
             Keyword arguments to pass to the base model
         """
+        # TODO: support "broadcasting" representation regularizers?
+        # e.g. re-use the same regularizer for everything; or
+        # pass a dictionary with keys "entity"/"relation";
+        # values are either a regularizer hint (=the same regularizer for all repr); or a sequence of appropriate length
         super().__init__(triples_factory=triples_factory, **kwargs)
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
@@ -323,18 +343,38 @@ class ERModel(
     def append_weight_regularizer(
         self,
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
-        regularizer: Regularizer,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
+        default_regularizer: HintOrType[Regularizer] = None,
+        default_regularizer_kwargs: OptionalKwargs = None,
     ) -> None:
-        """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
+        """
+        Add a model weight to a regularizer's weight list, and register the regularizer with the model.
 
         :param parameter:
             The parameter, either as name, or as nn.Parameter object. A list of available parameter names is shown by
              `sorted(dict(self.named_parameters()).keys())`.
         :param regularizer:
-            The regularizer instance which will regularize the weights.
+            the regularizer or a hint thereof
+        :param regularizer_kwargs:
+            additional keyword-based parameters for the regularizer's instantiation
+        :param default_regularizer:
+            the default regularizer; if None, use :attr:`regularizer_default`
+        :param default_regularizer_kwargs:
+            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
 
         :raises KeyError: If an invalid parameter name was given
         """
+        # instantiate regularizer
+        regularizer = regularizer_resolver.make(
+            *normalize_with_default(
+                choice=regularizer,
+                kwargs=regularizer_kwargs,
+                default=default_regularizer or self.regularizer_default,
+                default_kwargs=default_regularizer_kwargs or self.regularizer_default_kwargs,
+            )
+        )
+
         # normalize input
         if isinstance(parameter, (str, nn.Parameter)):
             parameter = [parameter]
@@ -493,12 +533,40 @@ class ERModel(
             num=self.num_relations,
         )
 
-    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
+    def _get_entity_representations_from_inductive_mode(
+        self, *, mode: Optional[InductiveMode]
+    ) -> Sequence[Representation]:
+        """
+        Return the entity representations for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises ValueError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the entity representations for the given inductive mode
+        """
         if mode is not None:
-            raise NotImplementedError
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105
+        """
+        Return the number of entities for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises NotImplementedError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the number of entities in the given inductive mode
+        """
         if mode is not None:
             raise NotImplementedError
         return self.num_entities
@@ -512,11 +580,11 @@ class ERModel(
         mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        head_representations = tail_representations = self._entity_representation_from_mode(mode=mode)
+        head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
         head_representations = [head_representations[i] for i in self.interaction.head_indices()]
         tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
         hr, rr, tr = [
-            [representation.forward_unique(indices=indices) for representation in representations]
+            [representation(indices=indices) for representation in representations]
             for indices, representations in (
                 (h, head_representations),
                 (r, self.relation_representations),

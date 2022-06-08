@@ -4,10 +4,15 @@
 
 import dataclasses
 import logging
+import pathlib
 from dataclasses import dataclass
 from typing import Any, Callable, List, Mapping, Optional, Union
+from uuid import uuid4
+
+import torch
 
 from .stopper import Stopper
+from ..constants import PYKEEN_CHECKPOINTS
 from ..evaluation import Evaluator
 from ..models import Model
 from ..trackers import ResultTracker
@@ -120,6 +125,11 @@ class EarlyStoppingLogic:
         # stop if the result did not improve more than delta for patience evaluations
         return self.remaining_patience <= 0
 
+    @property
+    def is_best(self) -> bool:
+        """Return whether the current result is the (new) best result."""
+        return self.remaining_patience == self.patience
+
 
 @fix_dataclass_init_docs
 @dataclass
@@ -161,6 +171,11 @@ class EarlyStopper(Stopper):
     stopped_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Did the stopper ever decide to stop?
     stopped: bool = False
+    #: the path to the weights of the best model
+    best_model_path: Optional[pathlib.Path] = None
+    #: whether to delete the file with the best model weights after termination
+    #: note: the weights will be re-loaded into the model before
+    clean_up_checkpoint: bool = True
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -174,6 +189,14 @@ class EarlyStopper(Stopper):
             relative_delta=self.relative_delta,
             larger_is_better=self.larger_is_better,
         )
+        if self.best_model_path is None:
+            self.best_model_path = PYKEEN_CHECKPOINTS.joinpath(f"best-model-weights-{uuid4()}.pt")
+            logger.info(f"Inferred checkpoint path for best model weights: {self.best_model_path}")
+        if self.best_model_path.is_file():
+            logger.warning(
+                f"Checkpoint path for best weights does already exist ({self.best_model_path})."
+                f"It will be overwritten."
+            )
 
     @property
     def remaining_patience(self) -> int:
@@ -201,6 +224,8 @@ class EarlyStopper(Stopper):
 
     def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
+        # for mypy
+        assert self.best_model_path is not None
         # Evaluate
         metric_results = self.evaluator.evaluate(
             model=self.model,
@@ -211,6 +236,7 @@ class EarlyStopper(Stopper):
             slice_size=self.evaluation_slice_size,
             # Only perform time consuming checks for the first call.
             do_time_consuming_checks=self.evaluation_batch_size is None,
+            mode=mode,
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size
@@ -238,7 +264,18 @@ class EarlyStopper(Stopper):
             )
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
+            logger.info(f"Re-loading weights from best epoch from {self.best_model_path}")
+            self.model.load_state_dict(torch.load(self.best_model_path))
+            if self.clean_up_checkpoint:
+                self.best_model_path.unlink()
+                logger.debug(f"Clean up checkpoint with best weights: {self.best_model_path}")
             return True
+
+        if self._stopper.is_best:
+            torch.save(self.model.state_dict(), self.best_model_path)
+            logger.info(
+                f"New best result at epoch {epoch}: {self.best_metric}. Saved model weights to {self.best_model_path}",
+            )
 
         for continue_callback in self.continue_callbacks:
             continue_callback(self, result, epoch)

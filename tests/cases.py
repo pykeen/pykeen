@@ -10,13 +10,14 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from collections import Counter
+from collections import ChainMap, Counter
 from typing import (
     Any,
     ClassVar,
     Collection,
     Dict,
     Iterable,
+    List,
     Mapping,
     MutableMapping,
     Optional,
@@ -27,7 +28,7 @@ from typing import (
     Union,
 )
 from unittest.case import SkipTest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy
 import numpy.random
@@ -43,6 +44,7 @@ from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
+import pykeen.evaluation.evaluation_loop
 import pykeen.models
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
@@ -63,14 +65,17 @@ from pykeen.metrics.ranking import (
     RankBasedMetric,
     generate_num_candidates_and_ranks,
 )
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.models.nbase import ERModel
+from pykeen.models.meta.filtered import CooccurrenceFilteredModel
+from pykeen.models.mocks import FixedModel
 from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.nn.representation import Representation
+from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
+from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingCallback, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
@@ -83,6 +88,8 @@ from pykeen.typing import (
     EA_SIDE_RIGHT,
     LABEL_HEAD,
     LABEL_TAIL,
+    RANK_REALISTIC,
+    SIDE_BOTH,
     TRAINING,
     HeadRepresentation,
     InductiveMode,
@@ -102,7 +109,7 @@ from pykeen.utils import (
     unpack_singletons,
 )
 from tests.constants import EPSILON
-from tests.mocks import CustomRepresentation
+from tests.mocks import MockEvaluator
 from tests.utils import rand
 
 try:
@@ -738,83 +745,93 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     """A test case for quickly defining common tests for regularizers."""
 
     #: The batch size
-    batch_size: int
-    #: The triples factory
-    triples_factory: TriplesFactory
-    #: Class of regularizer to test
-    cls: ClassVar[Type[Regularizer]]
-    #: The constructor parameters to pass to the regularizer
-    kwargs: ClassVar[Optional[Dict[str, Any]]] = None
-    #: The regularizer instance, initialized in setUp
-    instance: Regularizer
-    #: A positive batch
-    positive_batch: MappedTriples
+    batch_size: int = 16
     #: The device
     device: torch.device
 
-    def setUp(self) -> None:
-        """Set up the test case with a triples factory and model."""
+    def post_instantiation_hook(self) -> None:
+        """Move instance to device."""
         self.device = resolve_device()
-        self.triples_factory = Nations().training
-        self.batch_size = 16
-        self.positive_batch = self.triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
-        super().setUp()
         # move test instance to device
         self.instance = self.instance.to(self.device)
 
     def test_model(self) -> None:
         """Test whether the regularizer can be passed to a model."""
+        triples_factory = Nations().training
+        positive_batch = triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
+
         # Use RESCAL as it regularizes multiple tensors of different shape.
         model = RESCAL(
-            triples_factory=self.triples_factory,
+            triples_factory=triples_factory,
             regularizer=self.instance,
         ).to(self.device)
 
-        # Check if regularizer is stored correctly.
-        self.assertEqual(model.regularizer, self.instance)
+        # verify that the regularizer is stored for both, entity and relation representations
+        for r in (model.entity_representations, model.relation_representations):
+            assert len(r) == 1
+            self.assertEqual(r[0].regularizer, self.instance)
 
         # Forward pass (should update regularizer)
-        model.score_hrt(hrt_batch=self.positive_batch)
+        model.score_hrt(hrt_batch=positive_batch)
 
         # Call post_parameter_update (should reset regularizer)
         model.post_parameter_update()
 
         # Check if regularization term is reset
-        self.assertEqual(0.0, model.regularizer.term)
+        self.assertEqual(0.0, self.instance.term)
+
+    def _check_reset(self, instance: Optional[Regularizer] = None):
+        """Verify that the regularizer is in resetted state."""
+        if instance is None:
+            instance = self.instance
+        # regularization term should be zero
+        self.assertEqual(0.0, instance.regularization_term.item())
+        # updated should be set to false
+        self.assertFalse(instance.updated)
 
     def test_reset(self) -> None:
         """Test method `reset`."""
-        # Call method
+        # call method
         self.instance.reset()
+        self._check_reset()
 
-        self.assertEqual(0.0, self.instance.regularization_term)
+    def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:
+        """Generate input for update."""
+        # generate random tensors
+        return (
+            rand(self.batch_size, 10, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+            rand(self.batch_size, 20, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+        )
+
+    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        """Calculate the expected updated regularization term."""
+        exp_penalties = torch.stack([self._expected_penalty(x) for x in inputs])
+        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
+        assert expected_term.shape == (1,)
+        return expected_term
 
     def test_update(self) -> None:
         """Test method `update`."""
-        # Generate random tensors
-        a = rand(self.batch_size, 10, generator=self.generator, device=self.device)
-        b = rand(self.batch_size, 20, generator=self.generator, device=self.device)
+        # generate inputs
+        inputs = self._generate_update_input()
 
-        # Call update
-        self.instance.update(a, b)
+        # call update
+        self.instance.update(*inputs)
 
         # check shape
         self.assertEqual((1,), self.instance.term.shape)
 
-        # compute expected term
-        exp_penalties = torch.stack([self._expected_penalty(x) for x in (a, b)])
-        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
-        assert expected_term.shape == (1,)
-
-        self.assertAlmostEqual(self.instance.term.item(), expected_term.item())
+        # check result
+        expected_term = self._expected_updated_term(inputs=inputs)
+        self.assertAlmostEqual(self.instance.regularization_term.item(), expected_term.item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
-        # Generate random tensor
+        # generate single random tensor
         x = rand(self.batch_size, 10, generator=self.generator, device=self.device)
 
         # calculate penalty
-        penalty = self.instance.forward(x=x)
+        penalty = self.instance(x=x)
 
         # check shape
         assert penalty.numel() == 1
@@ -833,12 +850,36 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_pop_regularization_term(self):
         """Verify popping a regularization term."""
         # update term
-        x = torch.rand(self.batch_size, 10, generator=self.generator, device=self.device, requires_grad=True)
-        self.instance.update(x)
+        inputs = self._generate_update_input(requires_grad=True)
+        self.instance.update(*inputs)
 
         # check that the expected term is returned
-        exp = (self.instance.weight * self.instance.regularization_term).item()
+        exp = (self.instance.weight * self._expected_updated_term(inputs)).item()
         self.assertEqual(exp, self.instance.pop_regularization_term().item())
+
+        # check that the regularizer is now reset
+        self._check_reset()
+
+    def test_apply_only_once(self):
+        """Test apply-only-once support."""
+        # create another instance with apply_only_once enabled
+        instance = self.cls(**ChainMap(dict(apply_only_once=True), self.instance_kwargs)).to(self.device)
+
+        # test initial state
+        self._check_reset(instance=instance)
+
+        # after first update, should change the term
+        first_tensors = self._generate_update_input()
+        instance.update(*first_tensors)
+        self.assertTrue(instance.updated)
+        self.assertNotEqual(0.0, instance.regularization_term.item())
+        term = instance.regularization_term.clone()
+
+        # after second update, no change should happen
+        second_tensors = self._generate_update_input()
+        instance.update(*second_tensors)
+        self.assertTrue(instance.updated)
+        self.assertEqual(term, instance.regularization_term)
 
 
 class LpRegularizerTest(RegularizerTestCase):
@@ -1111,15 +1152,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, "test.pt")
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
     @property
     def _cli_extras(self):
@@ -1195,7 +1231,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if issubclass(self.cls, pykeen.models.RGCN) or self.cls is pykeen.models.ERModel:
+        if (
+            issubclass(self.cls, (pykeen.models.RGCN, pykeen.models.CooccurrenceFilteredModel))
+            or self.cls is pykeen.models.ERModel
+        ):
             self.skipTest(f"Cannot choose interaction via CLI for {self.cls}.")
         runner = CliRunner()
         cli = build_cli_from_cls(self.cls)
@@ -1267,77 +1306,40 @@ Traceback
     def _check_constraints(self):
         """Check model constraints."""
 
-    def test_score_h_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+    def _test_score_equality(self, columns: Union[slice, List[int]], name: str) -> None:
+        """Migration tests for non-ERModel models testing for consistent optimized score implementations."""
         if isinstance(self.instance, ERModel):
             raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
+        if isinstance(self.instance, CooccurrenceFilteredModel):
+            raise SkipTest("CooccurrenceFilteredModel fulfils this if its base model fulfils it.")
+        batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
         self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_relations).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores_h = self.instance.score_h(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_h(batch)
+            scores = getattr(self.instance, name)(batch)
+            scores_super = getattr(super(self.instance.__class__, self.instance), name)(batch)
         except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
+            self.fail(msg=f"{name} not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
 
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_h, scores_hrt, atol=1e-06)
+        self.assertIsNotNone(scores)
+        self.assertIsNotNone(scores_super)
+        assert torch.allclose(scores, scores_super, atol=1e-06)
+
+    def test_score_h_with_score_hrt_equality(self) -> None:
+        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+        self._test_score_equality(columns=slice(1, None), name="score_h")
 
     def test_score_r_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
-        if isinstance(self.instance, ERModel):
-            raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
-        self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
-        try:
-            scores_r = self.instance.score_r(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_r(batch)
-        except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_r, scores_hrt, atol=1e-06)
+        self._test_score_equality(columns=[0, 2], name="score_r")
 
     def test_score_t_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
-        if isinstance(self.instance, ERModel):
-            raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, :-1].to(self.instance.device)
-        self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_relations).all()
-        try:
-            scores_t = self.instance.score_t(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_t(batch)
-        except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_t, scores_hrt, atol=1e-06)
+        self._test_score_equality(columns=slice(2), name="score_t")
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
@@ -1347,23 +1349,6 @@ Traceback
             except TypeError as error:
                 assert error.args == ("'NoneType' object is not callable",)
             mock_method.assert_called_once()
-
-    def test_custom_representations(self):
-        """Tests whether we can provide custom representations."""
-        if isinstance(self.instance, EntityRelationEmbeddingModel):
-            old_embeddings = self.instance.relation_embeddings
-            self.instance.relation_embeddings = CustomRepresentation(
-                num_entities=self.factory.num_relations,
-                shape=old_embeddings.shape,
-            )
-            # call some functions
-            self.instance.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.instance.relation_embeddings = old_embeddings
-        else:
-            self.skipTest(f"Not testing custom representations for model: {self.instance.__class__.__name__}")
 
 
 class DistanceModelTestCase(ModelTestCase):
@@ -1484,7 +1469,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     def _test_forward(self, indices: Optional[torch.LongTensor]):
         """Test forward method."""
-        representations = self.instance.forward_unique(indices=indices)
+        representations = self.instance(indices=indices)
         prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
         self._check_result(x=representations, prefix_shape=prefix_shape)
 
@@ -1610,16 +1595,18 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
 class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
     """Tests for relation-specific weight decomposition message passing classes."""
 
-    #: The input dimension
-    input_dim: int = 3
+    #: the input dimension
+    input_dim: int = 8
+    #: the output dimension
+    output_dim: int = 4
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        self.output_dim = self.input_dim
         self.factory = Nations().training
         self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
-        self.x = torch.rand(self.factory.num_entities, self.input_dim)
+        self.x = torch.rand(self.factory.num_entities, self.input_dim, requires_grad=True)
         kwargs["input_dim"] = self.input_dim
+        kwargs["output_dim"] = self.output_dim
         kwargs["num_relations"] = self.factory.num_relations
         return kwargs
 
@@ -1635,11 +1622,42 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
             )
             assert y.shape == (self.x.shape[0], self.output_dim)
 
+    def prepare_adjacency(self, horizontal: bool) -> torch.Tensor:
+        """
+        Prepare adjacency matrix for the given stacking direction.
 
-class BasesDecompositionTestCase(DecompositionTestCase):
-    """Tests for bases Decomposition."""
+        :param horizontal:
+            whether to stack horizontally or vertically
 
-    cls = pykeen.nn.message_passing.BasesDecomposition
+        :return:
+            the adjacency matrix
+        """
+        return adjacency_tensor_to_stacked_matrix(
+            num_relations=self.factory.num_relations,
+            num_entities=self.factory.num_entities,
+            source=self.source,
+            target=self.target,
+            edge_type=self.edge_type,
+            horizontal=horizontal,
+        )
+
+    def check_output(self, x: torch.Tensor):
+        """Check the output tensor."""
+        assert torch.is_tensor(x)
+        assert x.shape == (self.factory.num_entities, self.output_dim)
+        assert x.requires_grad
+
+    def test_horizontal(self):
+        """Test processing of horizontally stacked matrix."""
+        adj = self.prepare_adjacency(horizontal=True)
+        x = self.instance.forward_horizontally_stacked(x=self.x, adj=adj)
+        self.check_output(x=x)
+
+    def test_vertical(self):
+        """Test processing of vertically stacked matrix."""
+        adj = self.prepare_adjacency(horizontal=False)
+        x = self.instance.forward_vertically_stacked(x=self.x, adj=adj)
+        self.check_output(x=x)
 
 
 class LiteralTestCase(InteractionTestCase):
@@ -2025,6 +2043,25 @@ class NodePieceTestCase(RepresentationTestCase):
             create_inverse_triples=False,
         )
         return kwargs
+
+
+class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.EvaluationLoop]):
+    """Tests for evaluation loops."""
+
+    batch_size: int = 2
+    factory: CoreTriplesFactory
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.factory = Nations().training
+        kwargs["model"] = FixedModel(triples_factory=self.factory)
+        return kwargs
+
+    @torch.inference_mode()
+    def test_process_batch(self):
+        """Test processing a single batch."""
+        batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
+        self.instance.process_batch(batch=batch)
 
 
 class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
@@ -2443,3 +2480,94 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
     @abstractmethod
     def _verify_manual(self, combined_tf: CoreTriplesFactory):
         """Verify the result of the combination of the manual example."""
+
+
+class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
+    """Base test for early stopper."""
+
+    cls = EarlyStopper
+
+    #: The window size used by the early stopper
+    patience: int = 2
+    #: The mock losses the mock evaluator will return
+    mock_losses: List[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
+    #: The (zeroed) index  - 1 at which stopping will occur
+    stop_constant: int = 4
+    #: The minimum improvement
+    delta: float = 0.0
+    #: The best results
+    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        nations = Nations()
+        kwargs.update(
+            dict(
+                evaluator=MockEvaluator(
+                    key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC),
+                    values=self.mock_losses,
+                    # Set automatic_memory_optimization to false for tests
+                    automatic_memory_optimization=False,
+                ),
+                model=FixedModel(triples_factory=nations.training),
+                training_triples_factory=nations.training,
+                evaluation_triples_factory=nations.validation,
+                patience=self.patience,
+                relative_delta=self.delta,
+                larger_is_better=False,
+                best_model_path=pathlib.Path(tempfile.gettempdir(), "test-best-model-weights.pt"),
+            )
+        )
+        return kwargs
+
+    def test_initialization(self):
+        """Test warm-up phase."""
+        for epoch in range(self.patience):
+            should_stop = self.instance.should_stop(epoch=epoch)
+            assert not should_stop
+
+    def test_result_processing(self):
+        """Test that the mock evaluation of the early stopper always gives the right loss."""
+        for epoch in range(len(self.mock_losses)):
+            # Step early stopper
+            should_stop = self.instance.should_stop(epoch=epoch)
+
+            if should_stop:
+                break
+            else:
+                # check storing of results
+                assert self.instance.results == self.mock_losses[: epoch + 1]
+                assert self.instance.best_metric == self.best_results[epoch]
+
+    def test_should_stop(self):
+        """Test that the stopper knows when to stop."""
+        for epoch in range(self.stop_constant):
+            self.assertFalse(self.instance.should_stop(epoch=epoch))
+        self.assertTrue(self.instance.should_stop(epoch=self.stop_constant))
+
+    def test_result_logging(self):
+        """Test whether result logger is called properly."""
+        self.instance.result_tracker = mock_tracker = Mock()
+        self.instance.should_stop(epoch=0)
+        log_metrics = mock_tracker.log_metrics
+        self.assertIsInstance(log_metrics, Mock)
+        log_metrics.assert_called_once()
+        _, call_args = log_metrics.call_args_list[0]
+        self.assertIn("step", call_args)
+        self.assertEqual(0, call_args["step"])
+        self.assertIn("prefix", call_args)
+        self.assertEqual("validation", call_args["prefix"])
+
+    def test_serialization(self):
+        """Test for serialization."""
+        summary = self.instance.get_summary_dict()
+        new_stopper = EarlyStopper(
+            # not needed for test
+            model=...,
+            evaluator=...,
+            training_triples_factory=...,
+            evaluation_triples_factory=...,
+        )
+        new_stopper._write_from_summary_dict(**summary)
+        for key in summary.keys():
+            assert getattr(self.instance, key) == getattr(new_stopper, key)

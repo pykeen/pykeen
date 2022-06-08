@@ -35,7 +35,7 @@ from torch.utils.data import Dataset
 
 from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
+from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..typing import (
     LABEL_HEAD,
     LABEL_RELATION,
@@ -46,9 +46,17 @@ from ..typing import (
     RelationMapping,
     TorchRandomHint,
 )
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping, normalize_path, triple_tensor_to_set
+from ..utils import (
+    compact_mapping,
+    format_relative_comparison,
+    get_edge_index,
+    invert_mapping,
+    normalize_path,
+    triple_tensor_to_set,
+)
 
 __all__ = [
+    "KGInfo",
     "CoreTriplesFactory",
     "TriplesFactory",
     "create_entity_mapping",
@@ -260,6 +268,15 @@ class Labeling:
         # label
         return self._vectorized_labeler(ids, (unknown_label,))
 
+    @property
+    def max_id(self) -> int:
+        """Return the maximum ID (excl.)."""
+        return max(self.label_to_id.values()) + 1
+
+    def all_labels(self) -> np.ndarray:
+        """Get all labels, in order."""
+        return self.label(range(self.max_id))
+
 
 def restrict_triples(
     mapped_triples: MappedTriples,
@@ -311,8 +328,59 @@ def restrict_triples(
     return mapped_triples[keep_mask]
 
 
-@dataclasses.dataclass
-class CoreTriplesFactory:
+class KGInfo:
+    """An object storing information about the number of entities and relations."""
+
+    #: the number of unique entities
+    num_entities: int
+
+    #: the number of relations (maybe including "artificial" inverse relations)
+    num_relations: int
+
+    #: whether to create inverse triples
+    create_inverse_triples: bool
+
+    #: the number of real relations, i.e., without artificial inverses
+    real_num_relations: int
+
+    def __init__(
+        self,
+        num_entities: int,
+        num_relations: int,
+        create_inverse_triples: bool,
+    ) -> None:
+        """
+        Initialize the information object.
+
+        :param num_entities:
+            the number of entities.
+        :param num_relations:
+            the number of relations, excluding artifical inverse relations.
+        :param create_inverse_triples:
+            whether to create inverse triples
+        """
+        self.num_entities = num_entities
+        self.real_num_relations = num_relations
+        if create_inverse_triples:
+            num_relations *= 2
+        self.num_relations = num_relations
+        self.create_inverse_triples = create_inverse_triples
+
+    def extra_repr(self) -> str:
+        """Extra representation string."""
+        return ", ".join(self._iter_extra_repr())
+
+    def __repr__(self):  # noqa: D105
+        return f"{self.__class__.__name__}({self.extra_repr()})"
+
+    def _iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over extra_repr components."""
+        yield f"num_entities={self.num_entities}"
+        yield f"num_relations={self.num_relations}"
+        yield f"create_inverse_triples={self.create_inverse_triples}"
+
+
+class CoreTriplesFactory(KGInfo):
     """Create instances from ID-based triples."""
 
     triples_file_name: ClassVar[str] = "numeric_triples.tsv.gz"
@@ -323,8 +391,6 @@ class CoreTriplesFactory:
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
-        entity_ids: Collection[int],
-        relation_ids: Collection[int],
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
     ):
@@ -342,13 +408,12 @@ class CoreTriplesFactory:
         :param metadata:
             Arbitrary metadata to go with the graph
         """
-        super().__init__()
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            create_inverse_triples=create_inverse_triples,
+        )
         self.mapped_triples = mapped_triples
-        self._num_entities = num_entities
-        self._num_relations = num_relations
-        self.entity_ids = entity_ids
-        self.relation_ids = relation_ids
-        self.create_inverse_triples = create_inverse_triples
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -359,8 +424,6 @@ class CoreTriplesFactory:
         mapped_triples: MappedTriples,
         num_entities: Optional[int] = None,
         num_relations: Optional[int] = None,
-        entity_ids: Collection[int] = None,
-        relation_ids: Collection[int] = None,
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> "CoreTriplesFactory":
@@ -385,16 +448,10 @@ class CoreTriplesFactory:
             num_entities = mapped_triples[:, [0, 2]].max().item() + 1
         if num_relations is None:
             num_relations = mapped_triples[:, 1].max().item() + 1
-        if entity_ids is None:
-            entity_ids = get_entities(mapped_triples)
-        if relation_ids is None:
-            relation_ids = get_relations(mapped_triples)
         return CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=num_entities,
             num_relations=num_relations,
-            entity_ids=entity_ids,
-            relation_ids=relation_ids,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
@@ -411,47 +468,18 @@ class CoreTriplesFactory:
         )
 
     @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of unique entities."""
-        return self._num_entities
-
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of unique relations."""
-        if self.create_inverse_triples:
-            return 2 * self.real_num_relations
-        return self.real_num_relations
-
-    @property
-    def real_num_relations(self) -> int:  # noqa: D401
-        """The number of relations without inverse relations."""
-        return self._num_relations
-
-    @property
     def num_triples(self) -> int:  # noqa: D401
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
     def _iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
-        d = [
-            ("num_entities", self.num_entities),
-            ("num_relations", self.num_relations),
-            ("num_triples", self.num_triples),
-            ("inverse_triples", self.create_inverse_triples),
-        ]
-        d.extend(sorted(self.metadata.items()))  # type: ignore
-        for k, v in d:
+        yield from super()._iter_extra_repr()
+        yield f"num_triples={self.num_triples}"
+        for k, v in sorted(self.metadata.items()):
             if isinstance(v, (str, pathlib.Path)):
                 v = f'"{v}"'
             yield f"{k}={v}"
-
-    def extra_repr(self) -> str:
-        """Extra representation string."""
-        return ", ".join(self._iter_extra_repr())
-
-    def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}({self.extra_repr()})"
 
     def with_labels(
         self,
@@ -568,8 +596,6 @@ class CoreTriplesFactory:
             mapped_triples=mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
-            entity_ids=self.entity_ids,
-            relation_ids=self.relation_ids,
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
@@ -815,8 +841,6 @@ class CoreTriplesFactory:
         return dict(
             num_entities=self.num_entities,
             num_relations=self.num_relations,
-            entity_ids=self.entity_ids,
-            relation_ids=self.relation_ids,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -850,17 +874,15 @@ class TriplesFactory(CoreTriplesFactory):
         :param metadata:
             Arbitrary metadata to go with the graph
         """
+        self.entity_labeling = Labeling(label_to_id=entity_to_id)
+        self.relation_labeling = Labeling(label_to_id=relation_to_id)
         super().__init__(
             mapped_triples=mapped_triples,
-            num_entities=len(entity_to_id),
-            num_relations=len(relation_to_id),
-            entity_ids=sorted(entity_to_id.values()),
-            relation_ids=sorted(relation_to_id.values()),
+            num_entities=self.entity_labeling.max_id,
+            num_relations=self.relation_labeling.max_id,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
-        self.entity_labeling = Labeling(label_to_id=entity_to_id)
-        self.relation_labeling = Labeling(label_to_id=relation_to_id)
 
     @classmethod
     def from_labeled_triples(
@@ -1010,8 +1032,6 @@ class TriplesFactory(CoreTriplesFactory):
             mapped_triples=self.mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.num_relations,
-            entity_ids=self.entity_ids,
-            relation_ids=self.relation_ids,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -1173,7 +1193,7 @@ class TriplesFactory(CoreTriplesFactory):
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
         return self._word_cloud(
-            ids=self.mapped_triples[:, [0, 2]],
+            ids=get_edge_index(mapped_triples=self.mapped_triples).t(),
             id_to_label=self.entity_labeling.id_to_label,
             top=top or 100,
         )
