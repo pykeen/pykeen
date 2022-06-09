@@ -670,8 +670,10 @@ class LineaRETests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.LineaREInteraction
 
-    def _exp_score(self, h, r_head, r_mid, r_tail, t, u, p, power_norm) -> torch.FloatTensor:
-        s = (h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(p=p)
+    def _exp_score(self, h, r_head, r_mid, r_tail, t, p, power_norm) -> torch.FloatTensor:
+        s = h * r_head - t * r_tail + r_mid
         if power_norm:
-            s = s.pow(p)
+            s = s.pow(p).sum(dim=-1)
+        else:
+            s = s.norm(p=p)
         return -s
