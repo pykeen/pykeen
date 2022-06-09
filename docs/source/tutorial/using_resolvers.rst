@@ -26,7 +26,7 @@ In the latter case of passing `None`, this is interpreted as an empty dictionary
 The `loss` parameter takes inputs of type `HintOrType[Loss]`. `HintOrType[Loss]` is a abbreviation of
 `Union[None, str, Type[Loss], Loss]`. Thus, we can either pass
 
-1. an *instance*  of the :class:`pykeen.losses.Loss`, e.g., :object:`pykeen.losses.MarginRankingLoss(margin=2.0)`.
+1. an *instance*  of the :class:`pykeen.losses.Loss`, e.g., ``pykeen.losses.MarginRankingLoss(margin=2.0)``.
    If an instance of :class:`pykeen.losses.Loss` is passed, it is used without modification. In this case,
    `loss_kwargs` will be ignored.
 
