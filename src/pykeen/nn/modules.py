@@ -67,13 +67,13 @@ __all__ = [
     "ConvKBInteraction",
     "CPInteraction",
     "CrossEInteraction",
-    "DistMultInteraction",
     "DistMAInteraction",
-    "ERMLPInteraction",
+    "DistMultInteraction",
     "ERMLPEInteraction",
+    "ERMLPInteraction",
     "HolEInteraction",
     "KG2EInteraction",
-    "LinearREInteraction",
+    "LineaREInteraction",
     "MultiLinearTuckerInteraction",
     "MuREInteraction",
     "NTNInteraction",
@@ -82,15 +82,15 @@ __all__ = [
     "QuatEInteraction",
     "RESCALInteraction",
     "RotatEInteraction",
-    "SimplEInteraction",
     "SEInteraction",
+    "SimplEInteraction",
     "TorusEInteraction",
     "TransDInteraction",
     "TransEInteraction",
     "TransFInteraction",
+    "TransformerInteraction",
     "TransHInteraction",
     "TransRInteraction",
-    "TransformerInteraction",
     "TripleREInteraction",
     "TuckerInteraction",
     "UMInteraction",
@@ -2014,7 +2014,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
 
 @parse_docdata
-class LinearREInteraction(NormBasedInteraction):
+class LineaREInteraction(NormBasedInteraction):
     r"""
     The LineaRE interaction described by [peng2020]_.
 
