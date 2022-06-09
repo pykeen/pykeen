@@ -21,6 +21,7 @@ PyKEEN
    tutorial/node_piece
    tutorial/inductive_lp
    contrib/lightning
+   tutorial/using_resolvers
    tutorial/troubleshooting
 
 .. toctree::

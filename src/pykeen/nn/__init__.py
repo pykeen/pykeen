@@ -46,7 +46,7 @@ from .pyg import (
     SimpleMessagePassingRepresentation,
     TypedMessagePassingRepresentation,
 )
-from .representation import Embedding, Representation, SubsetRepresentation
+from .representation import Embedding, Representation, SubsetRepresentation, TextRepresentation
 
 __all__ = [
     "Embedding",
@@ -58,6 +58,7 @@ __all__ = [
     "SimpleMessagePassingRepresentation",
     "TypedMessagePassingRepresentation",
     "FeaturizedMessagePassingRepresentation",
+    "TextRepresentation",
     "init",
     "Interaction",
     "interaction_resolver",
