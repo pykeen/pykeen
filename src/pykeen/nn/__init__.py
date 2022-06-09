@@ -12,6 +12,7 @@ from .modules import (
     ComplExInteraction,
     ConvEInteraction,
     ConvKBInteraction,
+    CPInteraction,
     CrossEInteraction,
     DistMAInteraction,
     DistMultInteraction,
@@ -20,11 +21,13 @@ from .modules import (
     HolEInteraction,
     Interaction,
     KG2EInteraction,
+    LinearREInteraction,
     MonotonicAffineTransformationInteraction,
     MuREInteraction,
     NTNInteraction,
     PairREInteraction,
     ProjEInteraction,
+    QuatEInteraction,
     RESCALInteraction,
     RotatEInteraction,
     SEInteraction,
@@ -33,6 +36,7 @@ from .modules import (
     TransDInteraction,
     TransEInteraction,
     TransFInteraction,
+    TransformerInteraction,
     TransHInteraction,
     TransRInteraction,
     TripleREInteraction,
@@ -78,6 +82,7 @@ __all__ = [
     "ERMLPEInteraction",
     "HolEInteraction",
     "KG2EInteraction",
+    "LinearREInteraction",
     "MuREInteraction",
     "NTNInteraction",
     "PairREInteraction",
@@ -96,7 +101,6 @@ __all__ = [
     "TuckerInteraction",
     "UMInteraction",
 ]
-
 
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(
     base=Representation,
