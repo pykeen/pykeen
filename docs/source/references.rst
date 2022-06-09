@@ -119,3 +119,7 @@ References
 
 .. [thanapalasingam2021] Thanapalasingam, T., *et al* (2021). `Relational Graph Convolutional Networks:
    A Closer Look <https://arxiv.org/abs/2107.10015>`_. *arXiv*, 2107.10015.
+
+.. [peng2020] Y. Peng and J. Zhang (2020) `LineaRE: Simple but Powerful Knowledge Graph Embedding for
+   Link Prediction <https://arxiv.org/abs/2004.10037>`_, *2020 IEEE International Conference on Data Mining (ICDM)*,
+   pp. 422-431, doi: 10.1109/ICDM50108.2020.00051.

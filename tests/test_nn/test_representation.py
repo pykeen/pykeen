@@ -2,8 +2,8 @@
 
 """Test embeddings."""
 
-import unittest
 from typing import Any, ClassVar, MutableMapping, Tuple
+import unittest
 
 import numpy
 import torch
@@ -17,10 +17,6 @@ import pykeen.nn.vision
 from pykeen.datasets import get_dataset
 from tests import cases, mocks
 
-try:
-    import transformers
-except ImportError:
-    transformers = None
 try:
     import torchvision
 except ImportError:
@@ -177,11 +173,11 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-@unittest.skipIf(transformers is None, "Need to install `transformers`")
-class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
-    """Test the label based Transformer representations."""
+class TextRepresentationTests(cases.RepresentationTestCase):
+    """Test the label based representations."""
 
-    cls = pykeen.nn.representation.LabelBasedTransformerRepresentation
+    cls = pykeen.nn.representation.TextRepresentation
+    kwargs = dict(encoder="character-embedding")
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -265,13 +261,13 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     # max_id = 7
 
 
-@unittest.skipIf(transformers is None, "Need to install `transformers`")
 class WikidataTextRepresentationTests(cases.RepresentationTestCase):
     """Tests for Wikidata text representations."""
 
     cls = pykeen.nn.representation.WikidataTextRepresentation
     kwargs = dict(
         labels=["Q100", "Q1000"],
+        encoder="character-embedding",
     )
 
 

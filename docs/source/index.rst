@@ -22,6 +22,8 @@ PyKEEN
    tutorial/inductive_lp
    tutorial/visual_representations
    contrib/lightning
+   tutorial/using_resolvers
+   tutorial/troubleshooting
 
 .. toctree::
    :caption: Bring Your Own
