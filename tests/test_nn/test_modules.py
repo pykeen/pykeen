@@ -663,3 +663,15 @@ class AutoSFTests(cases.InteractionTestCase):
     ) -> torch.FloatTensor:  # noqa: D102
         h, r, t = ensure_tuple(h, r, t)
         return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)
+
+
+class LineaRETests(cases.TranslationalInteractionTests):
+    """Test for LineaRE interaction."""
+
+    cls = pykeen.nn.modules.LineaREInteraction
+
+    def _exp_score(self, h, r_head, r_mid, r_tail, t, u, p, power_norm) -> torch.FloatTensor:
+        s = (h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(p=p)
+        if power_norm:
+            s = s.pow(p)
+        return -s
