@@ -53,7 +53,6 @@ from .pyg import (
 )
 from .representation import (
     Embedding,
-    LabelBasedTransformerRepresentation,
     LowRankRepresentation,
     Representation,
     SubsetRepresentation,
@@ -68,7 +67,6 @@ __all__ = [
     # concrete
     "Embedding",
     "FeaturizedMessagePassingRepresentation",
-    "LabelBasedTransformerRepresentation",
     "LowRankRepresentation",
     "NodePieceRepresentation",
     "RGCNRepresentation",
