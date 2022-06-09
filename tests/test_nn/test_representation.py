@@ -2,8 +2,8 @@
 
 """Test embeddings."""
 
-from typing import Any, ClassVar, MutableMapping, Tuple
 import unittest
+from typing import Any, ClassVar, MutableMapping, Tuple
 
 import numpy
 import torch

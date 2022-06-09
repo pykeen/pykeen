@@ -51,7 +51,6 @@ from .pyg import (
     SimpleMessagePassingRepresentation,
     TypedMessagePassingRepresentation,
 )
-from .vision import VisualRepresentation, WikidataVisualRepresentation
 from .representation import (
     Embedding,
     LowRankRepresentation,
@@ -60,6 +59,7 @@ from .representation import (
     TextRepresentation,
     WikidataTextRepresentation,
 )
+from .vision import VisualRepresentation, WikidataVisualRepresentation
 
 __all__ = [
     # REPRESENTATION

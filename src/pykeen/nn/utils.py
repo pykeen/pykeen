@@ -15,6 +15,7 @@ from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Map
 import more_itertools
 import requests
 import torch
+from tqdm.auto import tqdm
 
 from ..constants import PYKEEN_MODULE
 from ..utils import nested_get, rate_limited
