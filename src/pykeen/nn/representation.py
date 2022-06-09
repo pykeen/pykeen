@@ -1011,7 +1011,7 @@ class WikidataTextRepresentation(TextRepresentation):
     The label and description for each entity are obtained from Wikidata using
     :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`TextRepresentation`.
 
-    Example usage::
+    Example usage:
 
     .. code-block:: python
 
