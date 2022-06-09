@@ -447,6 +447,9 @@ class Model(nn.Module, ABC):
         :param kwargs:
             additional keyword-based parameters passed to the specific target prediction method.
 
+        :raises ValueError:
+            if the target is invalid
+
         :return: shape: (batch_size, num)
             the scores
         """
