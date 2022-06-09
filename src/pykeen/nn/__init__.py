@@ -51,23 +51,38 @@ from .pyg import (
     SimpleMessagePassingRepresentation,
     TypedMessagePassingRepresentation,
 )
-from .representation import Embedding, Representation, SubsetRepresentation
+from .representation import (
+    Embedding,
+    LabelBasedTransformerRepresentation,
+    LowRankRepresentation,
+    Representation,
+    SubsetRepresentation,
+    WikidataTextRepresentation,
+)
 
 __all__ = [
-    "Embedding",
-    "NodePieceRepresentation",
+    # REPRESENTATION
+    # base
     "Representation",
+    # concrete
+    "Embedding",
+    "FeaturizedMessagePassingRepresentation",
+    "LabelBasedTransformerRepresentation",
+    "LowRankRepresentation",
+    "NodePieceRepresentation",
     "RGCNRepresentation",
+    "SimpleMessagePassingRepresentation",
     "SubsetRepresentation",
     "TokenizationRepresentation",
-    "SimpleMessagePassingRepresentation",
     "TypedMessagePassingRepresentation",
-    "FeaturizedMessagePassingRepresentation",
-    "init",
-    "Interaction",
-    "interaction_resolver",
+    "WikidataTextRepresentation",
+    # resolver
     "tokenizer_resolver",
     "representation_resolver",
+    # INITIALIZER
+    "init",
+    # INTERACTIONS
+    "Interaction",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
@@ -105,6 +120,7 @@ __all__ = [
     "TripleREInteraction",
     "TuckerInteraction",
     "UMInteraction",
+    "interaction_resolver",
 ]
 
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(

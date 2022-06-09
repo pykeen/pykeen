@@ -38,6 +38,7 @@ __all__ = [
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
     "SubsetRepresentation",
+    "WikidataTextRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
