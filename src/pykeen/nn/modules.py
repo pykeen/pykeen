@@ -2049,6 +2049,16 @@ class LineaREInteraction(NormBasedInteraction):
 
     func = pkf.linea_re_interaction
 
+    # docstr-coverage: inherited
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: FloatTensor,
+        r: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        t: FloatTensor,
+    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+        r_head, r_mid, r_tail = r
+        return dict(h=h, r_head=r_head, r_mid=r_mid, r_tail=r_tail, t=t)
+
 
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
     Interaction,  # type: ignore
