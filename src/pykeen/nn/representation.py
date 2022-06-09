@@ -21,7 +21,8 @@ from torch.nn import functional
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .utils import TransformerEncoder, WikidataCache
+from .text import TextEncoder, text_encoder_resolver
+from .utils import WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -37,9 +38,10 @@ __all__ = [
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
-    "LabelBasedTransformerRepresentation",
     "SubsetRepresentation",
     "CombinedRepresentation",
+    "TextRepresentation",
+    "WikidataTextRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -904,9 +906,9 @@ class SingleCompGCNRepresentation(Representation):
         return x
 
 
-class LabelBasedTransformerRepresentation(Representation):
+class TextRepresentation(Representation):
     """
-    Label-based representations using a transformer encoder.
+    Textual representations using a text encoder on labels.
 
     Example Usage:
 
@@ -916,11 +918,14 @@ class LabelBasedTransformerRepresentation(Representation):
     .. code-block:: python
 
         from pykeen.datasets import get_dataset
-        from pykeen.nn.representation import LabelBasedTransformerRepresentation
+        from pykeen.nn.representation import TextRepresentation
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
-        entity_representations = LabelBasedTransformerRepresentation.from_dataset(dataset=dataset)
+        entity_representations = TextRepresentation.from_dataset(
+            triples_factory=dataset,
+            encoder="transformer",
+        )
         model = ERModel(
             interaction="ermlp",
             entity_representations=entity_representations,
@@ -931,8 +936,8 @@ class LabelBasedTransformerRepresentation(Representation):
     def __init__(
         self,
         labels: Sequence[str],
-        pretrained_model_name_or_path: str = "bert-base-cased",
-        max_length: int = 512,
+        encoder: HintOrType[TextEncoder] = None,
+        encoder_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """
@@ -940,21 +945,17 @@ class LabelBasedTransformerRepresentation(Representation):
 
         :param labels:
             the labels
-        :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. :meth:`TransformerEncoder.__init__`
-        :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to, cf. :meth:`TransformerEncoder.__init__`
+        :param encoder:
+            the text encoder, or a hint thereof
+        :param encoder_kwargs:
+            keyword-based parameters used to instantiate the text encoder
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
         """
-        encoder = TransformerEncoder(
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
-            max_length=max_length,
-        )
+        encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
         # infer shape
         shape = encoder.encode_all(labels[0:1]).shape[1:]
         super().__init__(max_id=len(labels), shape=shape, **kwargs)
-
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -965,19 +966,19 @@ class LabelBasedTransformerRepresentation(Representation):
         triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
-    ) -> "LabelBasedTransformerRepresentation":
+    ) -> "TextRepresentation":
         """
-        Prepare a label-based transformer representations with labels from a triples factory.
+        Prepare a text representations with labels from a triples factory.
 
         :param triples_factory:
             the triples factory
         :param for_entities:
             whether to create the initializer for entities (or relations)
         :param kwargs:
-            additional keyword-based arguments passed to :meth:`LabelBasedTransformerRepresentation.__init__`
+            additional keyword-based arguments passed to :meth:`TextRepresentation.__init__`
 
         :returns:
-            A label-based transformer from the triples factory
+            a text representation from the triples factory
         """
         labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
         return cls(labels=labeling.all_labels(), **kwargs)
@@ -987,20 +988,20 @@ class LabelBasedTransformerRepresentation(Representation):
         cls,
         dataset: Dataset,
         **kwargs,
-    ) -> "LabelBasedTransformerRepresentation":
-        """Prepare label-based representations with labls from a dataset.
+    ) -> "TextRepresentation":
+        """Prepare text representation with labels from a dataset.
 
         :param dataset:
             the dataset
         :param kwargs:
             additional keyword-based parameters passed to
-            :meth:`LabelBasedTransformerRepresentation.from_triples_factory`
+            :meth:`TextRepresentation.from_triples_factory`
 
         :return:
-            the representation
+            a text representation from the dataset
 
         :raises TypeError:
-            if the triples factory does not provide labels
+            if the dataset's triples factory does not provide labels
         """
         if not isinstance(dataset.training, TriplesFactory):
             raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
@@ -1012,12 +1013,10 @@ class LabelBasedTransformerRepresentation(Representation):
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id, device=self.device)
-        uniq, inverse = indices.to(device=self.device).unique(return_inverse=True)
-        x = self.encoder(
-            labels=[self.labels[i] for i in uniq.tolist()],
-        )
-        return x[inverse]
+            labels = self.labels
+        else:
+            labels = [self.labels[i] for i in indices.tolist()]
+        return self.encoder(labels=labels)
 
 
 class CombinedRepresentation(Representation):
@@ -1105,14 +1104,14 @@ class CombinedRepresentation(Representation):
         return self.combine(combination=self.combination, base=self.base, indices=indices)
 
 
-class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
+class WikidataTextRepresentation(TextRepresentation):
     """
     Textual representations for datasets grounded in Wikidata.
 
     The label and description for each entity are obtained from Wikidata using
-    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`LabelBasedTransformerRepresentation`.
+    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`TextRepresentation`.
 
-    Example usage::
+    Example usage:
 
     .. code-block:: python
 
@@ -1122,8 +1121,7 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         from pykeen.pipeline import pipeline
 
         dataset = get_dataset(dataset="codexsmall")
-        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset)
-
+        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset, encoder="transformer")
         result = pipeline(
             dataset=dataset,
             model=ERModel,
@@ -1144,7 +1142,7 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         :param labels:
             the wikidata IDs.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`LabelBasedTransformerRepresentation.__init__`
+            additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
         # set up cache
         cache = WikidataCache()

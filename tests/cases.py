@@ -50,6 +50,7 @@ import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
+import pykeen.nn.text
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
@@ -2614,3 +2615,14 @@ class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinati
             # verify shape
             output_shape = self.instance.output_shape(input_shapes)
             self.assertTupleEqual(x.shape, output_shape)
+
+
+class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.TextEncoder]):
+    """Base tests for text encoders."""
+
+    def test_encode(self):
+        """Test encoding of texts."""
+        labels = ["A first sentence", "some other label"]
+        x = self.instance.encode_all(labels=labels)
+        assert torch.is_tensor(x)
+        assert x.shape[0] == len(labels)
