@@ -47,7 +47,7 @@
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-36">Datasets</a> •
   <a href="#inductive-datasets">Inductive Datasets (5)</a> •
-  <a href="#models-43">Models</a> •
+  <a href="#models-44">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -170,7 +170,7 @@ The following inductive datasets are built in to PyKEEN.
 | NELL            | [`pykeen.datasets.InductiveNELL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveNELL.html)         | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 | WordNet-18 (RR) | [`pykeen.datasets.InductiveWN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveWN18RR.html)     | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 
-### Models (43)
+### Models (44)
 
 | Name                           | Model                                                                                                                                 | Interaction                                                                                                                                | Citation                                                                                                                |
 |--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -195,6 +195,7 @@ The following inductive datasets are built in to PyKEEN.
 | InductiveNodePiece             | [`pykeen.models.InductiveNodePiece`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.InductiveNodePiece.html)               |                                                                                                                                            | [Galkin *et al.*, 2021](https://arxiv.org/abs/2106.12144)                                                               |
 | InductiveNodePieceGNN          | [`pykeen.models.InductiveNodePieceGNN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.InductiveNodePieceGNN.html)         |                                                                                                                                            | [Galkin *et al.*, 2021](https://arxiv.org/abs/2106.12144)                                                               |
 | KG2E                           | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.KG2E.html)                                           | [`pykeen.nn.KG2EInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.KG2EInteraction.html)                                  | [He *et al.*, 2015](https://dl.acm.org/doi/10.1145/2806416.2806502)                                                     |
+| LineaRE                        |                                                                                                                                       | [`pykeen.nn.LineaREInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.module.LineaREInteraction.html)                     | [Peng *et al.*, 2020](https://arxiv.org/abs/2004.10037)                                                                 |
 | MuRE                           | [`pykeen.models.MuRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.MuRE.html)                                           | [`pykeen.nn.MuREInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.MuREInteraction.html)                                  | [Balažević *et al.*, 2019](https://arxiv.org/abs/1905.09791)                                                            |
 | MultiLinearTucker              |                                                                                                                                       | [`pykeen.nn.MultiLinearTuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.module.MultiLinearTuckerInteraction.html) | [Tucker *et al.*, 1966](https://dx.doi.org/10.1007/BF02289464)                                                          |
 | NTN                            | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NTN.html)                                             | [`pykeen.nn.NTNInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.NTNInteraction.html)                                    | [Socher *et al.*, 2013](https://dl.acm.org/doi/10.5555/2999611.2999715)                                                 |
@@ -238,15 +239,16 @@ The following inductive datasets are built in to PyKEEN.
 | Softplus                                                  | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)                                 | The pointwise logistic loss (i.e., softplus loss).                                                    |
 | Soft Pointwise Hinge                                      | [`pykeen.losses.SoftPointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftPointwiseHingeLoss.html)             | The soft pointwise hinge loss.                                                                        |
 
-### Regularizers (5)
+### Regularizers (6)
 
-| Name     | Reference                                                                                                                             | Description                                              |
-|----------|---------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------|
-| combined | [`pykeen.regularizers.CombinedRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.CombinedRegularizer.html) | A convex combination of regularizers.                    |
-| lp       | [`pykeen.regularizers.LpRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.LpRegularizer.html)             | A simple L_p norm based regularizer.                     |
-| no       | [`pykeen.regularizers.NoRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.NoRegularizer.html)             | A regularizer which does not perform any regularization. |
-| powersum | [`pykeen.regularizers.PowerSumRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.PowerSumRegularizer.html) | A simple x^p based regularizer.                          |
-| transh   | [`pykeen.regularizers.TransHRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.TransHRegularizer.html)     | A regularizer for the soft constraints in TransH.        |
+| Name          | Reference                                                                                                                                       | Description                                                            |
+|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| combined      | [`pykeen.regularizers.CombinedRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.CombinedRegularizer.html)           | A convex combination of regularizers.                                  |
+| lp            | [`pykeen.regularizers.LpRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.LpRegularizer.html)                       | A simple L_p norm based regularizer.                                   |
+| no            | [`pykeen.regularizers.NoRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.NoRegularizer.html)                       | A regularizer which does not perform any regularization.               |
+| normlimit     | [`pykeen.regularizers.NormLimitRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.NormLimitRegularizer.html)         | A regularizer which formulates a soft constraint on a maximum norm.    |
+| orthogonality | [`pykeen.regularizers.OrthogonalityRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.OrthogonalityRegularizer.html) | A regularizer for the soft orthogonality constraints from [wang2014]_. |
+| powersum      | [`pykeen.regularizers.PowerSumRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.PowerSumRegularizer.html)           | A simple x^p based regularizer.                                        |
 
 ### Training Loops (2)
 

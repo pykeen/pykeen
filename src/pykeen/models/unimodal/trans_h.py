@@ -2,17 +2,16 @@
 
 """An implementation of TransH."""
 
+import itertools
 from typing import Any, ClassVar, Mapping, Type
 
-import torch
-from torch import linalg
-from torch.nn import functional
-from torch.nn.init import uniform_
+from class_resolver import HintOrType, OptionalKwargs
+from torch.nn import functional, init
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import representation_resolver
-from ...regularizers import Regularizer, TransHRegularizer
+from ...nn import TransHInteraction
+from ...regularizers import NormLimitRegularizer, OrthogonalityRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -20,7 +19,7 @@ __all__ = [
 ]
 
 
-class TransH(EntityRelationEmbeddingModel):
+class TransH(ERModel):
     r"""An implementation of TransH [wang2014]_.
 
     This model extends :class:`pykeen.models.TransE` by applying the translation from head to tail entity in a
@@ -61,11 +60,18 @@ class TransH(EntityRelationEmbeddingModel):
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default: ClassVar[Type[Regularizer]] = TransHRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = NormLimitRegularizer
     #: The settings used by [wang2014]_ for TransH
+    # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
+    # Therefore, apply_only_once is always set to True.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.05,
-        epsilon=1e-5,
+        weight=0.05, apply_only_once=True, dim=-1, p=2, power_norm=True, max_norm=1.0
+    )
+    #: The custom regularizer used by [wang2014]_ for TransH
+    relation_regularizer_default: ClassVar[Type[Regularizer]] = OrthogonalityRegularizer
+    #: The settings used by [wang2014]_ for TransH
+    relation_regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
+        weight=0.05, apply_only_once=True, epsilon=1e-5
     )
 
     def __init__(
@@ -73,113 +79,80 @@ class TransH(EntityRelationEmbeddingModel):
         *,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
-        entity_initializer: Hint[Initializer] = uniform_,
-        relation_initializer: Hint[Initializer] = uniform_,
+        entity_initializer: Hint[Initializer] = init.xavier_normal_,
+        entity_regularizer: HintOrType[Regularizer] = None,
+        entity_regularizer_kwargs: OptionalKwargs = None,
+        relation_initializer: Hint[Initializer] = init.xavier_normal_,
+        relation_regularizer: HintOrType[Regularizer] = None,
+        relation_regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize TransH.
 
-        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
-        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param embedding_dim:
+            the entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param scoring_fct_norm:
+            the :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+
+        :param entity_initializer:
+            the entity initializer function
+        :param entity_regularizer:
+            the entity regularizer. Defaults to :attr:`pykeen.models.TransH.regularizer_default`
+        :param entity_regularizer_kwargs:
+            keyword-based parameters for the entity regularizer. If `entity_regularizer` is None,
+            the default from :attr:`pykeen.models.TransH.regularizer_default_kwargs` will be used instead
+
+        :param relation_initializer:
+            relation initializer function
+        :param relation_regularizer:
+            the relation regularizer. Defaults to :attr:`pykeen.models.TransH.relation_regularizer_default`
+        :param relation_regularizer_kwargs:
+            keyword-based parameters for the relation regularizer. If `relation_regularizer` is None,
+            the default from :attr:`pykeen.models.TransH.relation_regularizer_default_kwargs` will be used instead
+
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
         """
         super().__init__(
+            interaction=TransHInteraction,
+            interaction_kwargs=dict(p=scoring_fct_norm),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-            ),
+            relation_representations_kwargs=[
+                # translation vector in hyperplane
+                dict(
+                    shape=embedding_dim,
+                    initializer=relation_initializer,
+                ),
+                # normal vector of hyperplane
+                dict(
+                    shape=embedding_dim,
+                    initializer=relation_initializer,
+                    # normalise the normal vectors to unit l2 length
+                    constrainer=functional.normalize,
+                ),
+            ],
             **kwargs,
         )
 
-        self.scoring_fct_norm = scoring_fct_norm
-
-        # embeddings
-        self.normal_vector_embeddings = representation_resolver.make(
-            query=None,
-            max_id=self.num_relations,
-            shape=embedding_dim,
-            # Normalise the normal vectors by their l2 norms
-            constrainer=functional.normalize,
-        )
-
-    # docstr-coverage: inherited
-    def post_parameter_update(self) -> None:  # noqa: D102
-        super().post_parameter_update()
-        self.normal_vector_embeddings.post_parameter_update()
-
-    # docstr-coverage: inherited
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.normal_vector_embeddings.reset_parameters()
-        # TODO: Add initialization
-
-    def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
-        """Update the regularizer's term given some tensors, if regularization is requested."""
-        if tensors:
-            raise ValueError("no tensors should be passed to TransH.regularize_if_necessary")
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
-        super().regularize_if_necessary(
-            self.entity_embeddings(indices=None),
-            self.normal_vector_embeddings(indices=None),  # FIXME
-            self.relation_embeddings(indices=None),
+        # thus, we need to use a weight regularizer instead of having an Embedding regularizer,
+        # which only regularizes the weights used in a batch
+        self.append_weight_regularizer(
+            parameter=self.entity_representations[0].parameters(),
+            regularizer=entity_regularizer,
+            regularizer_kwargs=entity_regularizer_kwargs,
+            # note: the following is already the default
+            # default_regularizer=self.regularizer_default,
+            # default_regularizer_kwargs=self.regularizer_default_kwargs,
         )
-
-    # docstr-coverage: inherited
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        d_r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        w_r = self.normal_vector_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # Project to hyperplane
-        ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
-        pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
-
-        # Regularization term
-        self.regularize_if_necessary()
-
-        return -linalg.vector_norm(ph + d_r - pt, ord=2, dim=-1, keepdim=True)
-
-    # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        d_r = self.relation_embeddings(indices=hr_batch[:, 1])
-        w_r = self.normal_vector_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
-
-        # Project to hyperplane
-        ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
-        pt = t[None, :, :] - torch.sum(w_r[:, None, :] * t[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
-
-        # Regularization term
-        self.regularize_if_necessary()
-
-        return -linalg.vector_norm(ph[:, None, :] + d_r[:, None, :] - pt, ord=2, dim=-1)
-
-    # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        rel_id = rt_batch[:, 0]
-        d_r = self.relation_embeddings(indices=rel_id)
-        w_r = self.normal_vector_embeddings(indices=rel_id)
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-
-        # Project to hyperplane
-        ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
-        pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
-
-        # Regularization term
-        self.regularize_if_necessary()
-
-        return -linalg.vector_norm(ph + (d_r[:, None, :] - pt[:, None, :]), ord=2, dim=-1)
+        self.append_weight_regularizer(
+            parameter=itertools.chain.from_iterable(r.parameters() for r in self.relation_representations),
+            regularizer=relation_regularizer,
+            regularizer_kwargs=relation_regularizer_kwargs,
+            default_regularizer=self.relation_regularizer_default,
+            default_regularizer_kwargs=self.relation_regularizer_default_kwargs,
+        )

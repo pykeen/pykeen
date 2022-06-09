@@ -65,29 +65,32 @@ __all__ = [
     "ComplExInteraction",
     "ConvEInteraction",
     "ConvKBInteraction",
+    "CPInteraction",
     "CrossEInteraction",
-    "DistMultInteraction",
     "DistMAInteraction",
-    "ERMLPInteraction",
+    "DistMultInteraction",
     "ERMLPEInteraction",
+    "ERMLPInteraction",
     "HolEInteraction",
     "KG2EInteraction",
+    "LineaREInteraction",
     "MultiLinearTuckerInteraction",
     "MuREInteraction",
     "NTNInteraction",
     "PairREInteraction",
     "ProjEInteraction",
+    "QuatEInteraction",
     "RESCALInteraction",
     "RotatEInteraction",
-    "SimplEInteraction",
     "SEInteraction",
+    "SimplEInteraction",
     "TorusEInteraction",
     "TransDInteraction",
     "TransEInteraction",
     "TransFInteraction",
+    "TransformerInteraction",
     "TransHInteraction",
     "TransRInteraction",
-    "TransformerInteraction",
     "TripleREInteraction",
     "TuckerInteraction",
     "UMInteraction",
@@ -1857,9 +1860,20 @@ class TripleREInteraction(
 ):
     """A stateful module for the TripleRE interaction function from [yu2021]_.
 
+    .. math ::
+        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
+
+    .. note ::
+
+        For equivalence to the paper version, `h` and `t` should be normalized to unit
+        Euclidean length, and `p` and `power_norm` be kept at their default values.
+
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
 
     .. seealso:: https://github.com/LongYu-360/TripleRE-Add-NodePiece
+
+    .. note ::
+        this interaction is equivalent to :class:`LineaREInteraction` except the `u` term
     ---
     name: TripleRE
     citation:
@@ -1997,6 +2011,53 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
                 r"\end{tikzpicture}",
             ],
         )
+
+
+@parse_docdata
+class LineaREInteraction(NormBasedInteraction):
+    r"""
+    The LineaRE interaction described by [peng2020]_.
+
+    The interaction function is given as
+
+    .. math ::
+
+        \| \mathbf{w}_{r}^{h} \odot \mathbf{x}_{h} + \mathbf{b}_r - \mathbf{w}_{r}^{t} \odot \mathbf{x}_{t} \|
+
+    where $\mathbf{w}_{r}^{h}, \mathbf{b}_r, \mathbf{w}_{r}^{t} \in \mathbb{R}^d$ are relation-specific terms,
+    and $\mathbf{x}_{h}, \mathbf{x}_{t} \in \mathbb{R}$ the head and tail entity representation.
+
+    .. note ::
+        the original paper only describes the interaction for $L_1$ norm, but we extend it to the general $L_p$
+        norm as well as its powered variant.
+
+    .. note ::
+        this interaction is equivalent to :class:`TripleREInteraction` without the `u` term
+
+    ---
+    name: LineaRE
+    citation:
+        author: Peng
+        year: 2020
+        arxiv: 2004.10037
+        github: pengyanhui/LineaRE
+        link: https://arxiv.org/abs/2004.10037
+    """
+
+    # r_head, r_bias, r_tail
+    relation_shape = ("d", "d", "d")
+
+    func = pkf.linea_re_interaction
+
+    # docstr-coverage: inherited
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: FloatTensor,
+        r: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        t: FloatTensor,
+    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+        r_head, r_mid, r_tail = r
+        return dict(h=h, r_head=r_head, r_mid=r_mid, r_tail=r_tail, t=t)
 
 
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(

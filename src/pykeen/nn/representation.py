@@ -20,10 +20,13 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .utils import TransformerEncoder
+from .text import TextEncoder, text_encoder_resolver
+from .utils import WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
+from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
 
@@ -34,8 +37,9 @@ __all__ = [
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
-    "LabelBasedTransformerRepresentation",
     "SubsetRepresentation",
+    "TextRepresentation",
+    "WikidataTextRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -355,13 +359,6 @@ class Embedding(Representation):
         self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
         self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
-
-    @property
-    def num_embeddings(self) -> int:  # noqa: D401
-        """The total number of representations (i.e. the maximum ID)."""
-        # wrapper around max_id, for backward compatibility
-        warnings.warn(f"Directly use {self.__class__.__name__}.max_id instead of num_embeddings.")
-        return self.max_id
 
     @property
     def embedding_dim(self) -> int:  # noqa: D401
@@ -772,8 +769,14 @@ class CombinedCompGCNRepresentations(nn.Module):
             representation=relation_representations,
             representation_kwargs=relation_representations_kwargs,
         )
-        input_dim = self.entity_representations.embedding_dim
-        assert self.relation_representations.embedding_dim == input_dim
+        if len(self.entity_representations.shape) > 1:
+            raise ValueError(f"{self.__class__.__name__} requires vector base entity representations.")
+        input_dim = self.entity_representations.shape[0]
+        # TODO: might not be true for all compositions
+        if self.relation_representations.shape != self.entity_representations.shape:
+            raise ValueError(
+                f"{self.__class__.__name__} requires entity and relation representations of the same shape."
+            )
 
         # hidden dimension normalization
         if dims is None:
@@ -888,9 +891,9 @@ class SingleCompGCNRepresentation(Representation):
         return x
 
 
-class LabelBasedTransformerRepresentation(Representation):
+class TextRepresentation(Representation):
     """
-    Label-based representations using a transformer encoder.
+    Textual representations using a text encoder on labels.
 
     Example Usage:
 
@@ -900,25 +903,26 @@ class LabelBasedTransformerRepresentation(Representation):
     .. code-block:: python
 
         from pykeen.datasets import get_dataset
-        from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
+        from pykeen.nn.representation import TextRepresentation
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
-        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
-            triples_factory=dataset.training,
+        entity_representations = TextRepresentation.from_dataset(
+            triples_factory=dataset,
+            encoder="transformer",
         )
         model = ERModel(
             interaction="ermlp",
             entity_representations=entity_representations,
-            relation_representations=EmbeddingSpecification(shape=entity_representations.shape),
+            relation_representations_kwargs=dict(shape=entity_representations.shape),
         )
     """
 
     def __init__(
         self,
         labels: Sequence[str],
-        pretrained_model_name_or_path: str = "bert-base-cased",
-        max_length: int = 512,
+        encoder: HintOrType[TextEncoder] = None,
+        encoder_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """
@@ -926,21 +930,17 @@ class LabelBasedTransformerRepresentation(Representation):
 
         :param labels:
             the labels
-        :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
-        :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to
+        :param encoder:
+            the text encoder, or a hint thereof
+        :param encoder_kwargs:
+            keyword-based parameters used to instantiate the text encoder
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
         """
-        encoder = TransformerEncoder(
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
-            max_length=max_length,
-        )
+        encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
         # infer shape
         shape = encoder.encode_all(labels[0:1]).shape[1:]
         super().__init__(max_id=len(labels), shape=shape, **kwargs)
-
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -951,28 +951,46 @@ class LabelBasedTransformerRepresentation(Representation):
         triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
-    ) -> "LabelBasedTransformerRepresentation":
+    ) -> "TextRepresentation":
         """
-        Prepare a label-based transformer representations with labels from a triples factory.
+        Prepare a text representations with labels from a triples factory.
 
         :param triples_factory:
             the triples factory
         :param for_entities:
             whether to create the initializer for entities (or relations)
         :param kwargs:
-            additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
+            additional keyword-based arguments passed to :meth:`TextRepresentation.__init__`
 
         :returns:
-            A label-based transformer from the triples factory
-
-        :raise ImportError:
-            if the transformers library could not be imported
+            a text representation from the triples factory
         """
-        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
-        return cls(
-            labels=[id_to_label[i] for i in range(len(id_to_label))],
-            **kwargs,
-        )
+        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+        return cls(labels=labeling.all_labels(), **kwargs)
+
+    @classmethod
+    def from_dataset(
+        cls,
+        dataset: Dataset,
+        **kwargs,
+    ) -> "TextRepresentation":
+        """Prepare text representation with labels from a dataset.
+
+        :param dataset:
+            the dataset
+        :param kwargs:
+            additional keyword-based parameters passed to
+            :meth:`TextRepresentation.from_triples_factory`
+
+        :return:
+            a text representation from the dataset
+
+        :raises TypeError:
+            if the dataset's triples factory does not provide labels
+        """
+        if not isinstance(dataset.training, TriplesFactory):
+            raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
+        return cls.from_triples_factory(triples_factory=dataset.training, **kwargs)
 
     # docstr-coverage: inherited
     def _plain_forward(
@@ -980,9 +998,58 @@ class LabelBasedTransformerRepresentation(Representation):
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id, device=self.device)
-        uniq, inverse = indices.to(device=self.device).unique(return_inverse=True)
-        x = self.encoder(
-            labels=[self.labels[i] for i in uniq.tolist()],
+            labels = self.labels
+        else:
+            labels = [self.labels[i] for i in indices.tolist()]
+        return self.encoder(labels=labels)
+
+
+class WikidataTextRepresentation(TextRepresentation):
+    """
+    Textual representations for datasets grounded in Wikidata.
+
+    The label and description for each entity are obtained from Wikidata using
+    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`TextRepresentation`.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.models import ERModel
+        from pykeen.nn import WikidataTextRepresentation
+        from pykeen.pipeline import pipeline
+
+        dataset = get_dataset(dataset="codexsmall")
+        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset, encoder="transformer")
+        result = pipeline(
+            dataset=dataset,
+            model=ERModel,
+            model_kwargs=dict(
+                interaction="distmult",
+                entity_representations=entity_representations,
+                relation_representation_kwargs=dict(
+                    shape=entity_representations.shape,
+                ),
+            ),
         )
-        return x[inverse]
+    """
+
+    def __init__(self, labels: Sequence[str], **kwargs):
+        """
+        Initialize the representation.
+
+        :param labels:
+            the wikidata IDs.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
+        """
+        # set up cache
+        cache = WikidataCache()
+        # get labels & descriptions
+        titles = cache.get_labels(ids=labels)
+        descriptions = cache.get_descriptions(ids=labels)
+        # compose labels
+        labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
+        # delegate to super class
+        super().__init__(labels=labels, **kwargs)
