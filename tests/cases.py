@@ -49,6 +49,7 @@ import pykeen.models
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
+import pykeen.nn.text
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
@@ -2571,3 +2572,14 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         new_stopper._write_from_summary_dict(**summary)
         for key in summary.keys():
             assert getattr(self.instance, key) == getattr(new_stopper, key)
+
+
+class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.TextEncoder]):
+    """Base tests for text encoders."""
+
+    def test_encode(self):
+        """Test encoding of texts."""
+        labels = ["A first sentence", "some other label"]
+        x = self.instance.encode_all(labels=labels)
+        assert torch.is_tensor(x)
+        assert x.shape[0] == len(labels)

@@ -57,6 +57,7 @@ from .representation import (
     LowRankRepresentation,
     Representation,
     SubsetRepresentation,
+    TextRepresentation,
     WikidataTextRepresentation,
 )
 
@@ -75,8 +76,9 @@ __all__ = [
     "SubsetRepresentation",
     "TokenizationRepresentation",
     "TypedMessagePassingRepresentation",
+    "FeaturizedMessagePassingRepresentation",
+    "TextRepresentation",
     "WikidataTextRepresentation",
-    # resolver
     "tokenizer_resolver",
     "representation_resolver",
     # INITIALIZER
