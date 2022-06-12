@@ -146,9 +146,12 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
         device = "cuda"
     if isinstance(device, str):
         device = torch.device(device)
-    if not torch.cuda.is_available() and device.type == "cuda":
+    if not torch.cuda.is_available() and not torch.backends.mps.is_available() and device.type == "cuda":
         device = torch.device("cpu")
         logger.warning("No cuda devices were available. The model runs on CPU")
+    if not torch.cuda.is_available() and torch.backends.mps.is_available():
+        device = torch.device("mps")
+        logger.warning("Running using a MPS compatible device.")
     return device
 
 

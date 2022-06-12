@@ -186,9 +186,10 @@ class Evaluator(ABC):
 
         if batch_size is None and self.automatic_memory_optimization:
             # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
-            if model.device.type == "cpu":
+            if model.device.type == "cpu" or model.device.type == "mps":
                 logger.info(
-                    "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
+                    "Currently automatic memory optimization only supports CUDA-enabled GPUs."
+                    f"You are currently using {model.device.type}."
                     "Therefore, the batch_size will be set to the default value.",
                 )
             else:
