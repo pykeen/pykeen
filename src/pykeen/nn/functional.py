@@ -1506,6 +1506,7 @@ def linea_re_interaction(
         The p for the norm. cf. :func:`negative_norm_of_sum`.
     :param power_norm:
         Whether to return the powered norm. cf. :func:`negative_norm_of_sum`.
+
     :return: shape: batch_dims
         The scores.
     """
