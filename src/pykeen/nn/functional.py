@@ -251,7 +251,7 @@ def convkb_interaction(
     # => (num_filters, 1, 1, 3)
     x = tensor_sum(
         conv.bias,
-        *(torch.einsum("...d,f->...,df", x, w) for (x, w) in zip((h, r, t), conv.weight[:, 0, 0, :].unbind(dim=-1))),
+        *(torch.einsum("...d,f->...df", x, w) for (x, w) in zip((h, r, t), conv.weight[:, 0, 0, :].unbind(dim=-1))),
     )
     x = activation(x)
 
