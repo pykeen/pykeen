@@ -82,6 +82,7 @@ predictions for entities not seen during training.
         model_kwargs=dict(
             interaction="ermlpe",
             interaction_kwargs=dict(
+                # FIXME
                 embedding_dim=entity_representations.embedding_dim,
             ),
             entity_representations=entity_representations,

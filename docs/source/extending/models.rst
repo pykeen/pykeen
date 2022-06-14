@@ -9,6 +9,8 @@ e.g. this variant of :class:`pykeen.models.DistMult`
 
 where :math:`h,r,t \in \mathbb{R}^d`, and :math:`\sigma` denotes the logistic sigmoid.
 
+.. todo:: Remove this tutorial - :class:`pykeen.models.base.EntityRelationEmbeddingModel` no longer exists
+
 Picking a Base Class
 --------------------
 From the reference documentation on base models (:mod:`pykeen.models.base`), we can see that
