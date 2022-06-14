@@ -693,7 +693,7 @@ def se_interaction(
         The scores.
     """
     return negative_norm(
-        (r_h @ h.unsqueeze(dim=-1) - r_t @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
+        torch.einsum("...rd,...d->...r", r_h, h) - torch.einsum("...rd,...d->...r", r_t, t),
         p=p,
         power_norm=power_norm,
     )
