@@ -178,13 +178,6 @@ class Representation(nn.Module, ABC):
         """Apply constraints which should not be included in gradients."""
 
     @property
-    def embedding_dim(self) -> int:
-        """Return the "embedding dimension". Kept for backward compatibility."""
-        # TODO: Remove this property and update code to use shape instead
-        warnings.warn("The embedding_dim property is deprecated. Use .shape instead.", DeprecationWarning)
-        return int(np.prod(self.shape))
-
-    @property
     def device(self) -> torch.device:
         """Return the device."""
         return get_preferred_device(module=self, allow_ambiguity=True)
