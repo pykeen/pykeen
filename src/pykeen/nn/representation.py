@@ -87,7 +87,7 @@ class Representation(nn.Module, ABC):
     def __init__(
         self,
         max_id: int,
-        shape: OneOrSequence[int],
+        shape: OneOrSequence[int] = 64,
         normalizer: HintOrType[Normalizer] = None,
         normalizer_kwargs: OptionalKwargs = None,
         regularizer: HintOrType[Regularizer] = None,
