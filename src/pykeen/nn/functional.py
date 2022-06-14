@@ -1301,13 +1301,8 @@ def triple_re_interaction(
 ) -> torch.FloatTensor:
     r"""Evaluate the TripleRE interaction function.
 
-    .. math ::
-        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
-
-    .. note ::
-
-        For equivalence to the paper version, `h` and `t` should be normalized to unit
-        Euclidean length, and `p` and `power_norm` be kept at their default values.
+    .. seealso ::
+        :class:`pykeen.nn.modules.TripleREInteraction` for the stateful interaction module
 
     :param h: shape: (`*batch_dims`, rank, dim)
         The head representations.
@@ -1477,3 +1472,43 @@ def multilinear_tucker_interaction(
         The scores.
     """
     return torch.einsum("ijk,...i,...j,...k->...", core_tensor, h, r, t)
+
+
+def linea_re_interaction(
+    # head
+    h: torch.FloatTensor,
+    # relation
+    r_head: torch.FloatTensor,
+    r_mid: torch.FloatTensor,
+    r_tail: torch.FloatTensor,
+    # tail
+    t: torch.FloatTensor,
+    # extension: negative (power) norm
+    p: int = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate the LineaRE interaction function.
+
+    .. note ::
+        the interaction is equivalent to TripleRE interaction without the `u` term.
+
+    :param h: shape: (`*batch_dims`, rank, dim)
+        The head representations.
+    :param r_head: shape: (`*batch_dims`, rank, dim)
+        The relation-specific head multiplicator representations.
+    :param r_mid: shape: (`*batch_dims`, rank, dim)
+        The relation representations.
+    :param r_tail: shape: (`*batch_dims`, rank, dim)
+        The relation-specific tail multiplicator representations.
+    :param t: shape: (`*batch_dims`, rank, dim)
+        The tail representations.
+    :param p:
+        The p for the norm. cf. :func:`negative_norm_of_sum`.
+    :param power_norm:
+        Whether to return the powered norm. cf. :func:`negative_norm_of_sum`.
+    :return: shape: batch_dims
+        The scores.
+    """
+    return triple_re_interaction(
+        h=h, r_head=r_head, r_mid=r_mid, r_tail=r_tail, t=t, u=None, p=p, power_norm=power_norm
+    )
