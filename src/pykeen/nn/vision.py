@@ -74,7 +74,7 @@ class VisionDataset(torch.utils.data.Dataset):
         self.transforms = vision_transforms.Compose(transforms=transforms)
 
     # docstr-coverage: inherited
-    def __getitem__(self, item: int) -> torch.Tensor:  # noqa: D102
+    def __getitem__(self, item: int) -> torch.Tensor:  # noqa:D105
         _ensure_vision(self, Image)
         image = self.images[item]
         if isinstance(image, (str, pathlib.Path)):
@@ -86,7 +86,7 @@ class VisionDataset(torch.utils.data.Dataset):
         return self.transforms(image)
 
     # docstr-coverage: inherited
-    def __len__(self) -> int:  # noqa: D102
+    def __len__(self) -> int:  # noqa:D105
         return len(self.images)
 
 

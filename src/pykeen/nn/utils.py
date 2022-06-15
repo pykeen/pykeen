@@ -197,7 +197,7 @@ class WikidataCache:
 
     def __init__(self) -> None:
         """Initialize the cache."""
-        self.module = PYKEEN_MODULE.submodule("wikidata")
+        self.module = PYKEEN_MODULE.module("wikidata")
 
     @staticmethod
     def verify_ids(ids: Sequence[str]):
