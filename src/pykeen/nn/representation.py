@@ -1053,3 +1053,35 @@ class WikidataTextRepresentation(TextRepresentation):
         labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
+
+
+class PartitionRepresentation(Representation):
+    """A partition of the indices into different representation modules."""
+
+    assignment: torch.LongTensor
+
+    def __init__(
+        self,
+        base: OneOrSequence[HintOrType[Representation]] = None,
+        base_kwargs: OneOrSequence[OptionalKwargs] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        from . import representation_resolver
+
+        self.base = representation_resolver.make_many(base, base_kwargs)
+        # shape: (max_id, 2)
+        # repr_id, local_index
+        self.register_buffer(name="assignment", tensor=...)
+
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
+        if indices is None:
+            xs = [base(indices=None) for base in self.base]
+        else:
+            assignment = self.assignment[indices]
+            for i, base in enumerate(self.base):
+                mask = assignment[:, 0] == i
+                local_indices = assignment[:, 1][mask]
+                x = base(indices=local_indices)
+            # TODO: merge
+        return x
