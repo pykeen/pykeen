@@ -257,7 +257,12 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for Wikidata visual representations."""
 
     cls = pykeen.nn.vision.WikidataVisualRepresentation
-    kwargs = dict(encoder="resnet18", layer_name="avgpool", trainable=False, wikidata_ids=["Q100", "Q1000"])
+    kwargs = dict(
+        encoder="resnet18",
+        layer_name="avgpool",
+        trainable=False,
+        wikidata_ids=["Q1", "Q42"],
+    )
     # max_id = 7
 
 
