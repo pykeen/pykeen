@@ -24,8 +24,8 @@ try:
 except ImportError:
     models = vision_transforms = Image = None
 
-
 __all__ = [
+    "VisionDataset",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
 ]
