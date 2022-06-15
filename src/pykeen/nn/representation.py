@@ -13,7 +13,6 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 import torch
 import torch.nn
-import torch.utils.data
 from class_resolver import FunctionResolver, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
