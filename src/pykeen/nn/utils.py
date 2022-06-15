@@ -169,6 +169,16 @@ def adjacency_tensor_to_stacked_matrix(
     )
 
 
+WIKIDATA_IMAGE_RELATIONS = [
+    "P18",  # image
+    "P948",  # page banner
+    "P41",  # flag image
+    "P94",  # coat of arms image
+    "P154",  # logo image
+    "P242",  # locator map image
+]
+
+
 class WikidataCache:
     """A cache for requests against Wikidata's SPARQL endpoint."""
 
@@ -403,14 +413,6 @@ class WikidataCache:
             f"Downloading images for {num_missing:,} entities. With the rate limit in place, "
             f"this will take at least {num_missing/10:.2f} seconds.",
         )
-        image_relation_ids = [
-            "P18",  # image
-            "P948",  # page banner
-            "P41",  # flag image
-            "P94",  # coat of arms image
-            "P154",  # logo image
-            "P242",  # locator map image
-        ]
         res_json = self.query(
             sparql=functools.partial(
                 dedent(
@@ -418,12 +420,11 @@ class WikidataCache:
                     SELECT ?item ?relation ?image
                     WHERE {{
                         VALUES ?item {{ {ids} }} .
-                        VALUES ?relation {{ {rids} }}
-                        ?item ?relation ?image .
+                        ?item {relations} ?image .
                     }}
                 """
                 ).format,
-                rids=" ".join(f"wdt:{r}" for r in image_relation_ids),
+                relations="|".join(WIKIDATA_IMAGE_RELATIONS),
             ),
             wikidata_ids=missing,
         )
@@ -453,7 +454,7 @@ class WikidataCache:
         # select on image url per image in a reproducible way
         for wikidata_id, url_dict in tqdm(rate_limited(images.items(), min_avg_time=0.1), disable=not progress):
             # traverse relations in order of preference
-            for relation in image_relation_ids:
+            for relation in WIKIDATA_IMAGE_RELATIONS:
                 if not url_dict[relation]:
                     continue
                 # now there is an image available -> select reproducible by URL sorting
