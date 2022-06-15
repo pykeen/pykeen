@@ -213,7 +213,7 @@ class WikidataVisualRepresentation(VisualRepresentation):
         )
     """
 
-    def __init__(self, wikidata_ids: Sequence[str], image_kwargs: OptionalKwargs, **kwargs):
+    def __init__(self, wikidata_ids: Sequence[str], image_kwargs: OptionalKwargs = None, **kwargs):
         """
         Initialize the representation.
 
