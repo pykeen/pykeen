@@ -1078,22 +1078,26 @@ class PartitionRepresentation(Representation):
     >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
 
     Next, we create representations for the remaining ones
+
     >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=shape)
 
     To combine them into a single representation module we first need to define the assignment, i.e., where to look-up
     the global ids. For this, we create a tensor of shape `(num_entities, 2)`, with the index of the base
     representation, and the *local* index inside this representation
+
     >>> import torch
     >>> assignment = torch.as_tensor([(1, 0), (0, 0), (1, 1), (1, 2), (0, 1)])
     >>> from pykeen.nn import PartitionRepresentation
     >>> entity_repr = PartitionRepresentation(assignment=assignment, bases=[label_repr, non_label_repr])
 
     For brevity, we use here randomly generated triples factories instead of the actual data
+
     >>> from pykeen.triples.generation import generate_triples_factory
     >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
     >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
 
     The combined representation can now be used as any other representation, e.g., to train a DistMult model:
+
     >>> from pykeen.pipeline import pipeline
     >>> from pykeen.models import ERModel
     >>> pipeline(
