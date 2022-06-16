@@ -249,7 +249,7 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
         # create random assingment
         assignment = []
         for i, max_id in enumerate(self.max_ids):
-            assignment.append(torch.stack([torch.arange(max_id), torch.full(size=(max_id,), fill_value=i)], dim=-1))
+            assignment.append(torch.stack([torch.full(size=(max_id,), fill_value=i), torch.arange(max_id)], dim=-1))
         assignment = torch.cat(assignment)
         assignment = assignment[torch.randperm(assignment.shape[0])]
 
