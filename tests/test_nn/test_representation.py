@@ -268,7 +268,8 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
         assert isinstance(self.instance, pykeen.nn.representation.PartitionRepresentation)
         xs = self.instance(indices=None)
         for x, (repr_id, local_index) in zip(xs, self.instance.assignment):
-            assert (self.instance.bases[repr_id](indices=local_index) == x).all()
+            x_base = self.instance.bases[repr_id](indices=local_index)
+            assert (x_base == x).all()
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
