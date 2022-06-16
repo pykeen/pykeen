@@ -247,7 +247,7 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
 
-        # create random assingment
+        # create random assignment
         assignment = []
         for i, max_id in enumerate(self.max_ids):
             assignment.append(torch.stack([torch.full(size=(max_id,), fill_value=i), torch.arange(max_id)], dim=-1))
@@ -281,19 +281,19 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
         shapes = range(2, len(self.max_ids) + 2)
         base_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes)]
         with self.assertRaises(ValueError):
-            self.cls(ChainMap(dict(base_kwargs=base_kwargs), self.instance_kwargs))
+            self.cls(**ChainMap(dict(base_kwargs=base_kwargs), self.instance_kwargs))
 
         # invalid base id
         assignment = self.instance.assignment.clone()
         assignment[torch.randint(assignment.shape[0], size=tuple()), 0] = len(self.instance.bases)
         with self.assertRaises(ValueError):
-            self.cls(ChainMap(dict(assignment=assignment), self.instance_kwargs))
+            self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
 
         # invalid local index
         assignment = self.instance.assignment.clone()
         assignment[torch.randint(assignment.shape[0], size=tuple()), 1] = max(self.max_ids)
         with self.assertRaises(ValueError):
-            self.cls(ChainMap(dict(assignment=assignment), self.instance_kwargs))
+            self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
