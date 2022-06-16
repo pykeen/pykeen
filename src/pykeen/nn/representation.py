@@ -1060,7 +1060,9 @@ class PartitionRepresentation(Representation):
     """
     A partition of the indices into different representation modules.
 
-    Each index is assigned to an index in exactly one of the base representations.
+    Each index is assigned to an index in exactly one of the base representations. This representation is useful, e.g.,
+    when one of the base representations cannot provide vectors for each of the indices, and another representation is
+    used as back-up.
     """
 
     #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
