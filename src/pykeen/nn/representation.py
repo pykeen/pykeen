@@ -1065,7 +1065,8 @@ class PartitionRepresentation(Representation):
     used as back-up.
 
     Consider the following example: We only have textual information for two entities. We want to use textual features
-    computed from them, which should not be trained. For the remaining entities we want to use directly trainable embeddings.
+    computed from them, which should not be trained. For the remaining entities we want to use directly trainable
+    embeddings.
 
     We start by creating the representation for those entities where we have labels:
 
