@@ -1117,7 +1117,7 @@ class PartitionRepresentation(Representation):
             # update inverse indices
             end = offset + local_indices.numel()
             inverse[mask] = torch.arange(offset, end, device=inverse.device)
-            end = offset
+            offset = end
         x = torch.cat(xs, dim=0)[inverse]
         x = x.view(*prefix_shape, *x.shape[1:])
         return x
