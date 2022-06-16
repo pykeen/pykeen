@@ -52,6 +52,7 @@ from .pyg import (
     TypedMessagePassingRepresentation,
 )
 from .representation import (
+    BackfillRepresentation,
     Embedding,
     LowRankRepresentation,
     PartitionRepresentation,
@@ -71,6 +72,7 @@ __all__ = [
     "LowRankRepresentation",
     "NodePieceRepresentation",
     "PartitionRepresentation",
+    "BackfillRepresentation",
     "RGCNRepresentation",
     "SimpleMessagePassingRepresentation",
     "SubsetRepresentation",
