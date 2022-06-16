@@ -2,6 +2,7 @@
 
 """Test embeddings."""
 
+from collections import ChainMap
 from typing import Any, ClassVar, MutableMapping, Tuple
 
 import numpy
@@ -265,11 +266,34 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
 
     def test_coherence(self):
         """Test coherence with base representations."""
-        assert isinstance(self.instance, pykeen.nn.representation.PartitionRepresentation)
         xs = self.instance(indices=None)
         for x, (repr_id, local_index) in zip(xs, self.instance.assignment):
             x_base = self.instance.bases[repr_id](indices=local_index)
             assert (x_base == x).all()
+
+    def test_input_verification(self):
+        """Verify that the input is correctly verified."""
+        # empty bases
+        with self.assertRaises(ValueError):
+            self.cls(assignment=..., bases=[], bases_kwargs=[])
+
+        # inconsistent base shapes
+        shapes = range(2, len(self.max_ids) + 2)
+        base_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes)]
+        with self.assertRaises(ValueError):
+            self.cls(ChainMap(dict(base_kwargs=base_kwargs), self.instance_kwargs))
+
+        # invalid base id
+        assignment = self.instance.assignment.clone()
+        assignment[torch.randint(assignment.shape[0], size=tuple()), 0] = len(self.instance.bases)
+        with self.assertRaises(ValueError):
+            self.cls(ChainMap(dict(assignment=assignment), self.instance_kwargs))
+
+        # invalid local index
+        assignment = self.instance.assignment.clone()
+        assignment[torch.randint(assignment.shape[0], size=tuple()), 1] = max(self.max_ids)
+        with self.assertRaises(ValueError):
+            self.cls(ChainMap(dict(assignment=assignment), self.instance_kwargs))
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
