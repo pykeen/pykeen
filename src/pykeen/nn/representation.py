@@ -1091,26 +1091,35 @@ class PartitionRepresentation(Representation):
         :raises ValueError:
             if any of the inputs is invalid
         """
+        # import here to avoid cyclic import
         from . import representation_resolver
 
+        # instantiate base representations if necessary
         bases = representation_resolver.make_many(bases, bases_kwargs)
-        # verify input
+
+        # there needs to be at least one base
         if not bases:
             raise ValueError("Must provide at least one base representation")
-        shape = None
+        # while possible, this might be unintended
+        if len(bases) == 1:
+            logger.warning(f"Encountered only a single base representation: {bases[0]}")
+
+        # extract shape
+        shapes = [base.shape for base in bases]
+        if len(set(shapes)) != 1:
+            raise ValueError(f"Inconsistent base shapes: {shapes}")
+        shape = shapes[0]
+
+        # check for invalid base ids
+        unknown_base_ids = set(assignment[:, 0].tolist()).difference(range(len(bases)))
+        if unknown_base_ids:
+            raise ValueError(f"Invalid representation Ids in assignment: {unknown_base_ids}")
+
+        # check for invalid local indices
         for i, base in enumerate(bases):
-            if shape is None:
-                shape = base.shape
-            elif shape != base.shape:
-                raise ValueError(
-                    f"Base representations must have the same shape, "
-                    f"but encountered at least two different {{{shape}, {base.shape}}}",
-                )
             max_index = assignment[assignment[:, 0] == i, 1].max().item()
             if max_index >= base.max_id:
                 raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
-        if not set(assignment[:, 0].tolist()).issubset(range(len(bases))):
-            raise ValueError("Invalid representation Ids in assignment")
 
         super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
 
