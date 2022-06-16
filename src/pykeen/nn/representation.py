@@ -1057,7 +1057,11 @@ class WikidataTextRepresentation(TextRepresentation):
 
 
 class PartitionRepresentation(Representation):
-    """A partition of the indices into different representation modules."""
+    """
+    A partition of the indices into different representation modules.
+
+    Each index is assigned to an index in exactly one of the base representations.
+    """
 
     #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
     assignment: torch.LongTensor
@@ -1069,6 +1073,22 @@ class PartitionRepresentation(Representation):
         bases_kwargs: OneOrSequence[OptionalKwargs] = None,
         **kwargs,
     ):
+        """
+        Initialize the representation.
+
+        .. warning ::
+            the base representations have to have coherent shapes
+
+        :param assignment: shape: (max_id, 2)
+            the assignment, as tuples `(base_id, local_id)`, where `base_id` refers to the index of the base
+            representation and `local_id` is an index used to lookup in the base representation
+        :param bases:
+            the base representations, or hints thereof.
+        :param bases_kwargs:
+            keyword-based parameters to instantiate the base representations
+        :raises ValueError:
+            if any of the inputs is invalid
+        """
         from . import representation_resolver
 
         bases = representation_resolver.make_many(bases, bases_kwargs)
@@ -1096,12 +1116,12 @@ class PartitionRepresentation(Representation):
         self.bases = bases
         self.register_buffer(name="assignment", tensor=assignment)
 
-    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
-        if indices is None:
-            assignment = self.assignment
-        else:
-            assignment = self.assignment[indices]
-        # flatten
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        assignment = self.assignment
+        if indices is not None:
+            assignment = assignment[indices]
+        # flatten assignment to ease construction of inverse indices
         prefix_shape = assignment.shape[:-1]
         assignment = assignment.view(-1, 2)
         # we group indices by the representation which provides them
@@ -1119,5 +1139,7 @@ class PartitionRepresentation(Representation):
             inverse[mask] = torch.arange(offset, end, device=inverse.device)
             offset = end
         x = torch.cat(xs, dim=0)[inverse]
-        x = x.view(*prefix_shape, *x.shape[1:])
+        # invert flattening
+        if len(prefix_shape) != 1:
+            x = x.view(*prefix_shape, *x.shape[1:])
         return x
