@@ -1062,6 +1062,7 @@ class PartitionRepresentation(Representation):
 
     def __init__(
         self,
+        assignment: torch.LongTensor,
         base: OneOrSequence[HintOrType[Representation]] = None,
         base_kwargs: OneOrSequence[OptionalKwargs] = None,
         **kwargs,
@@ -1072,16 +1073,19 @@ class PartitionRepresentation(Representation):
         self.base = representation_resolver.make_many(base, base_kwargs)
         # shape: (max_id, 2)
         # repr_id, local_index
-        self.register_buffer(name="assignment", tensor=...)
+        self.register_buffer(name="assignment", tensor=assignment)
 
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         if indices is None:
-            xs = [base(indices=None) for base in self.base]
-        else:
-            assignment = self.assignment[indices]
-            for i, base in enumerate(self.base):
-                mask = assignment[:, 0] == i
-                local_indices = assignment[:, 1][mask]
-                x = base(indices=local_indices)
-            # TODO: merge
+            # TODO: make this efficient
+            indices = torch.arange(self.max_id, device=self.device)
+        # the assignment translates global indices to (1) the index of the representation module, (2) the local index
+        assignment = self.assignment[indices]
+        xs = []
+        for i, base in enumerate(self.base):
+            mask = assignment[:, 0] == i
+            local_indices = assignment[:, 1][mask]
+            xs.append(base(indices=local_indices))
+        # TODO: these are still in wrong order
+        x = torch.cat(xs, dim=0)
         return x
