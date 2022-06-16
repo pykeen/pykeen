@@ -36,6 +36,7 @@ __all__ = [
     "LowRankRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
+    "PartitionRepresentation",
     "SingleCompGCNRepresentation",
     "SubsetRepresentation",
     "TextRepresentation",
