@@ -1087,11 +1087,13 @@ class PartitionRepresentation(Representation):
             max_index = assignment[assignment[:, 0] == i, 1].max().item()
             if max_index >= base.max_id:
                 raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
+        if not set(assignment[:, 0].tolist()).issubset(range(len(bases))):
+            raise ValueError("Invalid representation Ids in assignment")
 
         super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
 
         # assign modules / buffers *after* super init
-        self.base = base
+        self.bases = bases
         self.register_buffer(name="assignment", tensor=assignment)
 
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
@@ -1107,7 +1109,7 @@ class PartitionRepresentation(Representation):
         inverse = torch.empty_like(assignment[:, 0])
         xs = []
         offset = 0
-        for i, base in enumerate(self.base):
+        for i, base in enumerate(self.bases):
             mask = assignment[:, 0] == i
             # get representations
             local_indices = assignment[:, 1][mask]
