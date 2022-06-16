@@ -1063,6 +1063,39 @@ class PartitionRepresentation(Representation):
     Each index is assigned to an index in exactly one of the base representations. This representation is useful, e.g.,
     when one of the base representations cannot provide vectors for each of the indices, and another representation is
     used as back-up.
+
+    Consider the following example: We only have textual information for two entities. We want to use textual features
+    computed from them, which should not be trained. For the remaining entities we want to use directly trainable embeddings.
+
+    We start by creating the representation for those entities where we have labels:
+
+    >>> from pykeen.nn import Embedding, LabelBasedInitializer
+    >>> num_entities = 5
+    >>> labels = {1: "a first description", 4: "a second description"}
+    >>> label_initializer = LabelBasedInitializer(labels=list(labels.values()))
+    >>> shape = label_initializer.tensor.shape
+    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
+
+    Next, we create representations for the remaining ones
+    >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=shape)
+
+    To combine them into a single representation module we first need to define the assignment, i.e., where to look-up
+    the global ids. For this, we create a tensor of shape `(num_entities, 2)`, with the index of the base
+    representation, and the *local* index inside this representation
+    >>> import torch
+    >>> assignment = torch.as_tensor([(1, 0), (0, 0), (1, 1), (1, 2), (0, 1)])
+    >>> entity_repr = PartitionRepresentation(assignment=assignment, bases=[label_repr, non_label_repr])
+
+    The combined representation can now be used as any other representation, e.g., to train a DistMult model
+    >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models import ERModel
+    >>> pipeline(
+    ...     model=ERModel,
+    ...     interaction="distmult",
+    ...     entity_representation=entity_repr,
+    ...     relation_representation_kwargs=dict(shape=shape),
+    ...     ...,
+    ... )
     """
 
     #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
@@ -1088,6 +1121,10 @@ class PartitionRepresentation(Representation):
             the base representations, or hints thereof.
         :param bases_kwargs:
             keyword-based parameters to instantiate the base representations
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
+            or `shape`, which are inferred from the base representations.
+
         :raises ValueError:
             if any of the inputs is invalid
         """
