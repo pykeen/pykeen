@@ -1069,11 +1069,11 @@ class PartitionRepresentation(Representation):
 
     We start by creating the representation for those entities where we have labels:
 
-    >>> from pykeen.nn import Embedding, LabelBasedInitializer
+    >>> from pykeen.nn import Embedding, init
     >>> num_entities = 5
     >>> labels = {1: "a first description", 4: "a second description"}
-    >>> label_initializer = LabelBasedInitializer(labels=list(labels.values()))
-    >>> shape = label_initializer.tensor.shape
+    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
+    >>> shape = label_initializer.tensor.shape[1:]
     >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
 
     Next, we create representations for the remaining ones
@@ -1084,17 +1084,26 @@ class PartitionRepresentation(Representation):
     representation, and the *local* index inside this representation
     >>> import torch
     >>> assignment = torch.as_tensor([(1, 0), (0, 0), (1, 1), (1, 2), (0, 1)])
+    >>> from pykeen.nn import PartitionRepresentation
     >>> entity_repr = PartitionRepresentation(assignment=assignment, bases=[label_repr, non_label_repr])
 
-    The combined representation can now be used as any other representation, e.g., to train a DistMult model
+    For brevity, we use here randomly generated triples factories instead of the actual data
+    >>> from pykeen.triples.generation import generate_triples_factory
+    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
+    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
+
+    The combined representation can now be used as any other representation, e.g., to train a DistMult model:
     >>> from pykeen.pipeline import pipeline
     >>> from pykeen.models import ERModel
     >>> pipeline(
     ...     model=ERModel,
     ...     interaction="distmult",
-    ...     entity_representation=entity_repr,
-    ...     relation_representation_kwargs=dict(shape=shape),
-    ...     ...,
+    ...     model_kwargs=dict(
+    ...         entity_representation=entity_repr,
+    ...         relation_representation_kwargs=dict(shape=shape),
+    ...     ),
+    ...     training=training,
+    ...     testing=testing,
     ... )
     """
 
