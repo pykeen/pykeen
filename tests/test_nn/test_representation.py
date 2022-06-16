@@ -263,6 +263,13 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
         )
         return kwargs
 
+    def test_coherence(self):
+        """Test coherence with base representations."""
+        assert isinstance(self.instance, pykeen.nn.representation.PartitionRepresentation)
+        xs = self.instance(indices=None)
+        for x, (repr_id, local_index) in zip(xs, self.instance.assignment):
+            assert (self.instance.bases[repr_id](indices=local_index) == x).all()
+
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
