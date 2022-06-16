@@ -8,7 +8,7 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -1058,6 +1058,7 @@ class WikidataTextRepresentation(TextRepresentation):
 class PartitionRepresentation(Representation):
     """A partition of the indices into different representation modules."""
 
+    #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
     assignment: torch.LongTensor
 
     def __init__(
@@ -1071,21 +1072,35 @@ class PartitionRepresentation(Representation):
         from . import representation_resolver
 
         self.base = representation_resolver.make_many(base, base_kwargs)
-        # shape: (max_id, 2)
-        # repr_id, local_index
         self.register_buffer(name="assignment", tensor=assignment)
+        # verify Ids
+        for i, base in enumerate(self.bases):
+            max_index = assignment[assignment[:, 0] == i, 1].max().item()
+            if max_index >= base.max_id:
+                raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
 
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         if indices is None:
-            # TODO: make this efficient
-            indices = torch.arange(self.max_id, device=self.device)
-        # the assignment translates global indices to (1) the index of the representation module, (2) the local index
-        assignment = self.assignment[indices]
+            assignment = self.assignment
+        else:
+            assignment = self.assignment[indices]
+        # flatten
+        prefix_shape = assignment.shape[:-1]
+        assignment = assignment.view(-1, 2)
+        # we group indices by the representation which provides them
+        # thus, we need an inverse to restore the correct order
+        inverse = torch.empty_like(assignment[:, 0])
         xs = []
+        offset = 0
         for i, base in enumerate(self.base):
             mask = assignment[:, 0] == i
+            # get representations
             local_indices = assignment[:, 1][mask]
             xs.append(base(indices=local_indices))
-        # TODO: these are still in wrong order
-        x = torch.cat(xs, dim=0)
+            # update inverse indices
+            end = offset + local_indices.numel()
+            inverse[mask] = torch.arange(offset, end, device=inverse.device)
+            end = offset
+        x = torch.cat(xs, dim=0)[inverse]
+        x = x.view(*prefix_shape, *x.shape[1:])
         return x
