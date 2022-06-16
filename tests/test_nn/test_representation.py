@@ -236,6 +236,34 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
     )
 
 
+class PartitionRepresentationTests(cases.RepresentationTestCase):
+    """Tests for partition representation."""
+
+    cls = pykeen.nn.representation.PartitionRepresentation
+    max_ids: ClassVar[Tuple[int, ...]] = (5, 7)
+    shape: Tuple[int, ...] = (3,)
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+
+        # create random assingment
+        assignment = []
+        for i, max_id in enumerate(self.max_ids):
+            assignment.append(torch.stack([torch.arange(max_id), torch.full(size=(max_id,), fill_value=i)], dim=-1))
+        assignment = torch.cat(assignment)
+        assignment = assignment[torch.randperm(assignment.shape[0])]
+
+        # update kwargs
+        kwargs.update(
+            dict(
+                assignment=assignment,
+                bases=[None] * len(self.max_ids),
+                bases_kwargs=[dict(max_id=max_id, shape=self.shape) for max_id in self.max_ids],
+            )
+        )
+        return kwargs
+
+
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
 
