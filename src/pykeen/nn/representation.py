@@ -8,7 +8,7 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -1065,20 +1065,34 @@ class PartitionRepresentation(Representation):
     def __init__(
         self,
         assignment: torch.LongTensor,
-        base: OneOrSequence[HintOrType[Representation]] = None,
-        base_kwargs: OneOrSequence[OptionalKwargs] = None,
+        bases: OneOrSequence[HintOrType[Representation]] = None,
+        bases_kwargs: OneOrSequence[OptionalKwargs] = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
         from . import representation_resolver
 
-        self.base = representation_resolver.make_many(base, base_kwargs)
-        self.register_buffer(name="assignment", tensor=assignment)
-        # verify Ids
-        for i, base in enumerate(self.bases):
+        bases = representation_resolver.make_many(bases, bases_kwargs)
+        # verify input
+        if not bases:
+            raise ValueError("Must provide at least one base representation")
+        shape = None
+        for i, base in enumerate(bases):
+            if shape is None:
+                shape = base.shape
+            elif shape != base.shape:
+                raise ValueError(
+                    f"Base representations must have the same shape, "
+                    f"but encountered at least two different {{{shape}, {base.shape}}}",
+                )
             max_index = assignment[assignment[:, 0] == i, 1].max().item()
             if max_index >= base.max_id:
                 raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
+
+        super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
+
+        # assign modules / buffers *after* super init
+        self.base = base
+        self.register_buffer(name="assignment", tensor=assignment)
 
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         if indices is None:
