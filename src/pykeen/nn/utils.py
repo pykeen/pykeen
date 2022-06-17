@@ -450,13 +450,13 @@ class WikidataCache:
         # check whether images are still missing
         missing = sorted(set(missing).difference(images.keys()))
         if missing:
-            raise ValueError(f"Could not retrieve an image URL for {len(missing)} entities: {missing}")
+            logger.warning(f"Could not retrieve an image URL for {len(missing)} entities: {missing}")
 
         # select on image url per image in a reproducible way
         for wikidata_id, url_dict in tqdm(rate_limited(images.items(), min_avg_time=0.1), disable=not progress):
             # traverse relations in order of preference
             for relation in WIKIDATA_IMAGE_RELATIONS:
-                if not url_dict[relation]:
+                if relation not in url_dict:
                     continue
                 # now there is an image available -> select reproducible by URL sorting
                 image_url = sorted(url_dict[relation])[0]
