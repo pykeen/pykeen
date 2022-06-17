@@ -20,7 +20,7 @@ from ...nn import (
 )
 from ...nn.node_piece import RelationTokenizer
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode, OneOrSequence
+from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
 
 __all__ = [
     "InductiveNodePiece",
