@@ -43,6 +43,7 @@ __all__ = [
     "SubsetRepresentation",
     "CombinedRepresentation",
     "TextRepresentation",
+    "TransformedRepresentation",
     "WikidataTextRepresentation",
     # Utils
     "constrainer_resolver",
@@ -1472,7 +1473,7 @@ class TransformedRepresentation(Representation):
         base: Representation, transformation: nn.Module, indices: Optional[torch.LongTensor]
     ) -> torch.FloatTensor:
         """
-        A small wrapper for obtaining base representations and applying the transformation.
+        Obtain base representations and apply the transformation.
 
         :param base:
             the base representation module
