@@ -272,6 +272,10 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
 
+        # max_id is inferred from assignment
+        kwargs.pop("max_id")
+        self.max_id = sum(self.max_ids)
+
         # create random assignment
         assignment = []
         for i, max_id in enumerate(self.max_ids):
@@ -304,9 +308,9 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
 
         # inconsistent base shapes
         shapes = range(2, len(self.max_ids) + 2)
-        base_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes)]
+        bases_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes)]
         with self.assertRaises(ValueError):
-            self.cls(**ChainMap(dict(base_kwargs=base_kwargs), self.instance_kwargs))
+            self.cls(**ChainMap(dict(bases_kwargs=bases_kwargs), self.instance_kwargs))
 
         # invalid base id
         assignment = self.instance.assignment.clone()
