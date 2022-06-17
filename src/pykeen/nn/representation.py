@@ -65,7 +65,7 @@ class ShapeError(ValueError):
         super().__init__(f"shape {shape} does not match expected shape {reference}")
 
     @classmethod
-    def raise_if_necessary(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> None:
+    def raise_if_necessary(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> Sequence[int]:
         """
         Raise an exception if the shape does not match the reference.
 
@@ -78,6 +78,9 @@ class ShapeError(ValueError):
 
         :raises ShapeError:
             if the two shapes do not match.
+
+        :return:
+            the normalized shape
         """
         if reference is None:
             return
@@ -85,6 +88,7 @@ class ShapeError(ValueError):
         shape = upgrade_to_sequence(shape)
         if reference != shape:
             raise cls(shape=shape, reference=reference)
+        return shape
 
 
 class Representation(nn.Module, ABC):
@@ -1270,6 +1274,7 @@ class PartitionRepresentation(Representation):
     def __init__(
         self,
         assignment: torch.LongTensor,
+        shape: Optional[OneOrSequence[int]] = None,
         bases: OneOrSequence[HintOrType[Representation]] = None,
         bases_kwargs: OneOrSequence[OptionalKwargs] = None,
         **kwargs,
@@ -1311,6 +1316,7 @@ class PartitionRepresentation(Representation):
         shapes = [base.shape for base in bases]
         if len(set(shapes)) != 1:
             raise ValueError(f"Inconsistent base shapes: {shapes}")
+        ShapeError.raise_if_necessary(shape=shapes[0], reference=shape)
         shape = shapes[0]
 
         # check for invalid base ids
