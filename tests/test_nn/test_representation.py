@@ -274,7 +274,12 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
             "Q676",
         ],
     )
-    # max_id = 7
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs.pop("max_id")
+        return kwargs
 
 
 class CombinedRepresentationTestCase(cases.RepresentationTestCase):
