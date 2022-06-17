@@ -400,9 +400,6 @@ class WikidataCache:
         :param progress:
             whether to display a progress bar
 
-        :raises ValueError:
-            if there are entities for which an image could not be obtained
-
         :return:
             the paths to images for the given IDs.
         """

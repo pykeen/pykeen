@@ -129,6 +129,9 @@ class VisualRepresentation(Representation):
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`.
             Should not include `max_id` or `shape`.
+
+        :raises ValueError:
+            if `max_id` is provided and does not match the number of images
         """
         _ensure_vision(self, models)
         self.images = VisionDataset(images=images, transforms=transforms)
