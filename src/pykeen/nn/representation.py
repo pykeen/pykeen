@@ -50,6 +50,41 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+class ShapeError(ValueError):
+    """An error for a mismatch in shapes."""
+
+    def __init__(self, shape: OneOrSequence[int], reference: OneOrSequence[int]) -> None:
+        """
+        Initialize the error.
+
+        :param shape: the mismatching shape
+        :param reference: the expected shape
+        """
+        super().__init__(f"shape {shape} does not match expected shape {reference}")
+
+    @classmethod
+    def raise_if_necessary(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> None:
+        """
+        Raise an exception if the shape does not match the reference.
+
+        Normalizes the shapes first.
+
+        :param shape:
+            the shape to check
+        :param reference:
+            the reference shape. If None, the shape always matches.
+
+        :raises ShapeError:
+            if the two shapes do not match.
+        """
+        if reference is None:
+            return
+        reference = upgrade_to_sequence(reference)
+        shape = upgrade_to_sequence(shape)
+        if reference != shape:
+            raise cls(shape=shape, reference=reference)
+
+
 class Representation(nn.Module, ABC):
     """
     A base class for obtaining representations for entities/relations.
@@ -211,8 +246,9 @@ class SubsetRepresentation(Representation):
     def __init__(
         self,
         max_id: int,
-        base: HintOrType[Representation],
+        base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ):
         """
@@ -224,6 +260,8 @@ class SubsetRepresentation(Representation):
             the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         :param base_kwargs:
             additional keyword arguments for the base representation
+        :param shape:
+            The shape of an individual representation.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
 
@@ -238,6 +276,7 @@ class SubsetRepresentation(Representation):
                 f"Base representations comprise only {base.max_id} representations, "
                 f"but at least {max_id} are required.",
             )
+        ShapeError.raise_if_necessary(shape=base.shape, reference=shape)
         super().__init__(max_id=max_id, shape=base.shape, **kwargs)
         self.base = base
 
@@ -869,6 +908,7 @@ class SingleCompGCNRepresentation(Representation):
         self,
         combined: CombinedCompGCNRepresentations,
         position: int = 0,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ):
         """
@@ -878,19 +918,22 @@ class SingleCompGCNRepresentation(Representation):
             The combined representations.
         :param position:
             The position, either 0 for entities, or 1 for relations.
+        :param shape:
+            The shape of an individual representation.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
         :raises ValueError: If an invalid value is given for the position
         """
         if position == 0:  # entity
             max_id = combined.entity_representations.max_id
-            shape = (combined.output_dim,)
+            shape_ = (combined.output_dim,)
         elif position == 1:  # relation
             max_id = combined.relation_representations.max_id
-            shape = (combined.output_dim,)
+            shape_ = (combined.output_dim,)
         else:
             raise ValueError
-        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        ShapeError.raise_if_necessary(shape=shape_, reference=shape)
+        super().__init__(max_id=max_id, shape=shape_, **kwargs)
         self.combined = combined
         self.position = position
         self.reset_parameters()
@@ -936,6 +979,7 @@ class TextRepresentation(Representation):
     def __init__(
         self,
         labels: Sequence[str],
+        shape: Optional[OneOrSequence[int]] = None,
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -945,6 +989,8 @@ class TextRepresentation(Representation):
 
         :param labels:
             the labels
+        :param shape:
+            The shape of an individual representation.
         :param encoder:
             the text encoder, or a hint thereof
         :param encoder_kwargs:
@@ -954,8 +1000,9 @@ class TextRepresentation(Representation):
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
         # infer shape
-        shape = encoder.encode_all(labels[0:1]).shape[1:]
-        super().__init__(max_id=len(labels), shape=shape, **kwargs)
+        shape_ = encoder.encode_all(labels[0:1]).shape[1:]
+        ShapeError.raise_if_necessary(shape=shape_, reference=shape)
+        super().__init__(max_id=len(labels), shape=shape_, **kwargs)
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -1031,6 +1078,7 @@ class CombinedRepresentation(Representation):
     def __init__(
         self,
         max_id: int,
+        shape: Optional[OneOrSequence[int]] = None,
         base: OneOrManyHintOrType[Representation] = None,
         base_kwargs: OneOrManyOptionalKwargs = None,
         combination: HintOrType[Combination] = None,
@@ -1042,6 +1090,8 @@ class CombinedRepresentation(Representation):
 
         :param max_id:
             the number of representations.
+        :param shape:
+            The shape of an individual representation.
         :param base:
             the base representations, or hints thereof
         :param base_kwargs:
@@ -1072,9 +1122,10 @@ class CombinedRepresentation(Representation):
         # input normalization
         combination = combination_resolver.make(combination, combination_kwargs)
         # shape inference
-        shape = combination.output_shape(input_shapes=[b.shape for b in base])
+        shape_ = combination.output_shape(input_shapes=[b.shape for b in base])
+        ShapeError.raise_if_necessary(shape=shape_, reference=shape)
 
-        super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
+        super().__init__(max_id=max_id, shape=shape_, unique=any(b.unique for b in base), **kwargs)
 
         # assign base representations *after* super init
         self.base = nn.ModuleList(base)
