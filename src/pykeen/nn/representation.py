@@ -1276,7 +1276,7 @@ class BackfillRepresentation(PartitionRepresentation):
 
         assignment = set(assignment)
         base = representation_resolver.make(base, base_kwargs, max_id=len(assignment))
-        embedding = Embedding(max_id=max_id - base.max_id, shape=base.shape[1:], **(embedding_kwargs or {}))
+        embedding = Embedding(max_id=max_id - base.max_id, shape=base.shape, **(embedding_kwargs or {}))
 
         _assignments = []
         base_idx, embedding_idx = 0, 0
