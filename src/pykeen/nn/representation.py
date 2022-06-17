@@ -1460,7 +1460,7 @@ class TransformedRepresentation(Representation):
     >>> from pykeen.nn import TransformedRepresentation
     >>> r = TransformedRepresentation(
     ...     transformation=mlp,
-    ...     base_kwargs=dict(max_id=dataset.num_entities, shape=(dim), initializer=initializer, trainable=False),
+    ...     base_kwargs=dict(max_id=dataset.num_entities, shape=(dim,), initializer=initializer, trainable=False),
     ... )
     """
 
