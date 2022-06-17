@@ -19,6 +19,7 @@ from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewA
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
+from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
@@ -231,23 +232,24 @@ class TestNodePiece(cases.BaseNodePieceTest):
 class TestNodePieceMLP(cases.BaseNodePieceTest):
     """Test the NodePiece model with MLP aggregation."""
 
-    kwargs = dict(
-        num_tokens=64,
-        aggregation="mlp",
-    )
+    kwargs = dict(aggregation="mlp")
 
     def test_aggregation(self):
         """Test that the MLP gets registered properly and is trainable."""
         self.assertIsInstance(self.instance, pykeen.models.NodePiece)
-        self.assertIsInstance(self.instance.entity_representations[0], NodePieceRepresentation)
-        self.assertIsInstance(self.instance.entity_representations[0].aggregation, ConcatMLP)
+        r = self.instance.entity_representations[0]
+        self.assertIsInstance(r, NodePieceRepresentation)
+        c = r.combination
+        self.assertIsInstance(c, ConcatAggregationCombination)
+        a = c.aggregation.func
+        self.assertIsInstance(a, ConcatMLP)
 
         # Test that the weight in the MLP is trainable (i.e. requires grad)
         keys = [
-            "entity_representations.0.aggregation.0.weight",
-            "entity_representations.0.aggregation.0.bias",
-            "entity_representations.0.aggregation.3.weight",
-            "entity_representations.0.aggregation.3.bias",
+            "entity_representations.0.combination.0.weight",
+            "entity_representations.0.combination.0.bias",
+            "entity_representations.0.combination.3.weight",
+            "entity_representations.0.combination.3.bias",
         ]
         for key in keys:
             params = dict(self.instance.named_parameters())
@@ -294,11 +296,11 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
 
     def test_vocabulary_size(self):
         """Test the expected vocabulary size of the individual tokenizations."""
-        assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
         node_piece = self.instance.entity_representations[0]
-        assert isinstance(node_piece.token_representations, torch.nn.ModuleList)
-        assert len(node_piece.token_representations) == 2
-        anchor, relation = node_piece.token_representations
+        assert isinstance(node_piece, NodePieceRepresentation)
+        assert isinstance(node_piece.base, torch.nn.ModuleList)
+        assert len(node_piece.base) == 2
+        anchor, relation = node_piece.base
         assert anchor.vocabulary.max_id == self.num_anchors + 1
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 

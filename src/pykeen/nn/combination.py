@@ -133,7 +133,6 @@ class ConcatAggregationCombination(ConcatCombination):
     def __init__(
         self,
         aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
-        aggregation_kwargs: OptionalKwargs = None,
         dim: int = -1,
     ) -> None:
         """
@@ -141,13 +140,11 @@ class ConcatAggregationCombination(ConcatCombination):
 
         :param aggregation:
             the aggregation, or a hint thereof, cf. :data:`class_resolver.contrib.torch.aggregation_resolver`
-        :param aggregation_kwargs:
-            keyword-based parameters passed to the aggregation. May not contain `dim`.
         :param dim:
             the concatenation and reduction dimension.
         """
         super().__init__(dim=dim)
-        self.aggregation = aggregation_resolver.make(aggregation, aggregation_kwargs, dim=dim)
+        self.aggregation = aggregation_resolver.make(aggregation, dim=dim)
 
     # docstr-coverage: inherited
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102

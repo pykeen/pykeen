@@ -2,7 +2,7 @@
 
 """Perceptron-like modules."""
 
-from typing import Union
+from typing import Optional, Union
 
 import torch
 from torch import nn
@@ -24,7 +24,7 @@ class ConcatMLP(nn.Sequential):
     def __init__(
         self,
         input_dim: int,
-        output_dim: int,
+        output_dim: Optional[int] = None,
         dropout: float = 0.1,
         ratio: Union[int, float] = 2,
         flatten_dims: int = 2,
@@ -34,7 +34,7 @@ class ConcatMLP(nn.Sequential):
         :param input_dim:
             the input dimension
         :param output_dim:
-            the output dimension
+            the output dimension. defaults to input dim
         :param dropout:
             the dropout value on the hidden layer
         :param ratio:
@@ -42,6 +42,7 @@ class ConcatMLP(nn.Sequential):
         :param flatten_dims:
             the number of trailing dimensions to flatten
         """
+        output_dim = output_dim or input_dim
         hidden_dim = int(ratio * output_dim)
         super().__init__(
             nn.Linear(input_dim, hidden_dim),

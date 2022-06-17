@@ -281,22 +281,18 @@ class NodePieceRepresentation(CombinedRepresentation):
 
         # Create an MLP for string aggregation
         if aggregation == "mlp":
-            aggregation = ConcatMLP
-            embedding_dim = token_representations[0].shape[0]
-            aggregation_kwargs = dict(
+            # note: the token representations' shape includes the number of tokens as leading dim
+            embedding_dim = token_representations[0].shape[1]
+            aggregation = ConcatMLP(
                 input_dim=embedding_dim * sum(num_tokens),
                 output_dim=embedding_dim,
             )
-        else:
-            aggregation_kwargs = None
 
         super().__init__(
             max_id=triples_factory.num_entities,
             base=token_representations,
             combination=ConcatAggregationCombination,
-            combination_kwargs=dict(
-                aggregation=aggregation, aggregation_kwargs=aggregation_kwargs, dim=-len(token_representations[0].shape)
-            ),
+            combination_kwargs=dict(aggregation=aggregation, dim=-len(token_representations[0].shape)),
             **kwargs,
         )
 
