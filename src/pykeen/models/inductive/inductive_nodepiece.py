@@ -58,7 +58,6 @@ class InductiveNodePiece(ERModel):
         relation_representations_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        shape: Optional[OneOrSequence[int]] = None,
         validation_factory: Optional[CoreTriplesFactory] = None,
         test_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,
@@ -97,9 +96,6 @@ class InductiveNodePiece(ERModel):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-            this will only be necessary if the aggregation is an *ad hoc* function.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
@@ -129,7 +125,6 @@ class InductiveNodePiece(ERModel):
                 tokenizers=RelationTokenizer,
                 token_representations=relation_representations,
                 aggregation=aggregation,
-                shape=shape,
                 num_tokens=num_tokens,
             ),
             relation_representations=SubsetRepresentation(  # hide padding relation
@@ -145,7 +140,6 @@ class InductiveNodePiece(ERModel):
                 tokenizers=RelationTokenizer,
                 token_representations=relation_representations,
                 aggregation=aggregation,
-                shape=shape,
                 num_tokens=num_tokens,
             ),
             max_id=inference_factory.num_entities,
