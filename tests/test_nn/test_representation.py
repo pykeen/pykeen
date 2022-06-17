@@ -175,7 +175,11 @@ class TextRepresentationTests(cases.RepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["labels"] = sorted(get_dataset(dataset="nations").entity_to_id.keys())
+        # the representation module infers the max_id from the provided labels
+        kwargs.pop("max_id")
+        dataset = get_dataset(dataset="nations")
+        kwargs["labels"] = sorted(dataset.entity_to_id.keys())
+        self.max_id = dataset.num_entities
         return kwargs
 
 
@@ -247,6 +251,14 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
         labels=["Q100", "Q1000"],
         encoder="character-embedding",
     )
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # the representation module infers the max_id from the provided labels
+        kwargs.pop("max_id")
+        self.max_id = len(kwargs["labels"])
+        return kwargs
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
