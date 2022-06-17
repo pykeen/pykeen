@@ -20,7 +20,6 @@ PyKEEN
    tutorial/representations
    tutorial/node_piece
    tutorial/inductive_lp
-   tutorial/visual_representations
    contrib/lightning
    tutorial/using_resolvers
    tutorial/troubleshooting
