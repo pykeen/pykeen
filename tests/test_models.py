@@ -239,19 +239,14 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
         self.assertIsInstance(self.instance, pykeen.models.NodePiece)
         r = self.instance.entity_representations[0]
         self.assertIsInstance(r, NodePieceRepresentation)
-        c = r.combination
-        self.assertIsInstance(c, ConcatAggregationCombination)
-        a = c.aggregation.func
-        self.assertIsInstance(a, ConcatMLP)
+        self.assertIsInstance(r.combination, ConcatAggregationCombination)
+        self.assertIsInstance(r.combination.aggregation, ConcatMLP)
 
         # Test that the weight in the MLP is trainable (i.e. requires grad)
-        keys = [
-            "entity_representations.0.combination.0.weight",
-            "entity_representations.0.combination.0.bias",
-            "entity_representations.0.combination.3.weight",
-            "entity_representations.0.combination.3.bias",
-        ]
-        for key in keys:
+        for key in [
+            f"entity_representations.0.combination.aggregation.{key}"
+            for key in ("0.weight", "0.bias", "3.weight", "3.bias")
+        ]:
             params = dict(self.instance.named_parameters())
             self.assertIn(key, set(params))
             tensor = params[key]

@@ -144,11 +144,12 @@ class ConcatAggregationCombination(ConcatCombination):
             the concatenation and reduction dimension.
         """
         super().__init__(dim=dim)
-        self.aggregation = aggregation_resolver.make(aggregation, dim=dim)
+        self.dim = dim
+        self.aggregation = aggregation_resolver.make(aggregation)
 
     # docstr-coverage: inherited
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
-        return self.aggregation(super().forward(xs=xs))
+        return self.aggregation(super().forward(xs=xs), dim=self.dim)
 
 
 class ComplexSeparatedCombination(Combination):
