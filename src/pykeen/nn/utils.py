@@ -359,7 +359,7 @@ class ShapeError(ValueError):
             the normalized shape
         """
         if reference is None:
-            return
+            return shape
         reference = upgrade_to_sequence(reference)
         shape = upgrade_to_sequence(shape)
         if reference != shape:
