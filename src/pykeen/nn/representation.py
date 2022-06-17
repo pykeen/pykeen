@@ -1348,7 +1348,7 @@ class BackfillRepresentation(PartitionRepresentation):
     ... )
     """
 
-    def __index__(
+    def __init__(
         self,
         max_id: int,
         base_ids: Iterable[int],
