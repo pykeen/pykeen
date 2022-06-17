@@ -2,6 +2,7 @@
 
 """Test embeddings."""
 
+from collections import ChainMap
 from typing import Any, ClassVar, MutableMapping, Tuple
 
 import numpy
@@ -259,6 +260,79 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
         kwargs.pop("max_id")
         self.max_id = len(kwargs["labels"])
         return kwargs
+
+
+class PartitionRepresentationTests(cases.RepresentationTestCase):
+    """Tests for partition representation."""
+
+    cls = pykeen.nn.representation.PartitionRepresentation
+    max_ids: ClassVar[Tuple[int, ...]] = (5, 7)
+    shape: Tuple[int, ...] = (3,)
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+
+        # max_id is inferred from assignment
+        kwargs.pop("max_id")
+        self.max_id = sum(self.max_ids)
+
+        # create random assignment
+        assignment = []
+        for i, max_id in enumerate(self.max_ids):
+            assignment.append(torch.stack([torch.full(size=(max_id,), fill_value=i), torch.arange(max_id)], dim=-1))
+        assignment = torch.cat(assignment)
+        assignment = assignment[torch.randperm(assignment.shape[0])]
+
+        # update kwargs
+        kwargs.update(
+            dict(
+                assignment=assignment,
+                bases=[None] * len(self.max_ids),
+                bases_kwargs=[dict(max_id=max_id, shape=self.shape) for max_id in self.max_ids],
+            )
+        )
+        return kwargs
+
+    def test_coherence(self):
+        """Test coherence with base representations."""
+        xs = self.instance(indices=None)
+        for x, (repr_id, local_index) in zip(xs, self.instance.assignment):
+            x_base = self.instance.bases[repr_id](indices=local_index)
+            assert (x_base == x).all()
+
+    def test_input_verification(self):
+        """Verify that the input is correctly verified."""
+        # empty bases
+        with self.assertRaises(ValueError):
+            self.cls(assignment=..., bases=[], bases_kwargs=[])
+
+        # inconsistent base shapes
+        shapes = range(2, len(self.max_ids) + 2)
+        bases_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes)]
+        with self.assertRaises(ValueError):
+            self.cls(**ChainMap(dict(bases_kwargs=bases_kwargs), self.instance_kwargs))
+
+        # invalid base id
+        assignment = self.instance.assignment.clone()
+        assignment[torch.randint(assignment.shape[0], size=tuple()), 0] = len(self.instance.bases)
+        with self.assertRaises(ValueError):
+            self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
+
+        # invalid local index
+        assignment = self.instance.assignment.clone()
+        assignment[torch.randint(assignment.shape[0], size=tuple()), 1] = max(self.max_ids)
+        with self.assertRaises(ValueError):
+            self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
+
+
+class BackfillRepresentationTests(cases.RepresentationTestCase):
+    """Tests for backfill representation, based on the partition representation."""
+
+    cls = pykeen.nn.representation.BackfillRepresentation
+    kwargs = dict(
+        base_kwargs=dict(shape=(3,)),
+        base_ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
+    )
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
