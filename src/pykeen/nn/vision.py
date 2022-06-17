@@ -149,7 +149,10 @@ class VisualRepresentation(Representation):
             shape = self._encode(images=self.images[0].unsqueeze(dim=0), encoder=encoder, pool=pool).shape[1:]
 
         if max_id is not None and len(images) != max_id:
-            raise ValueError(f"Inconsistent max_id={max_id} and len(images)={len(images)}")
+            raise ValueError(
+                f"Inconsistent max_id={max_id} and len(images)={len(images)}. In case there are not images for all "
+                f"IDs, you may consider using BackfillRepresentation.",
+            )
         super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         self.encoder = encoder
