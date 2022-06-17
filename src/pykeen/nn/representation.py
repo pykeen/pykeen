@@ -1077,7 +1077,7 @@ class CombinedRepresentation(Representation):
         super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
 
         # assign base representations *after* super init
-        self.base = base
+        self.base = nn.ModuleList(base)
         self.combination = combination
 
     @staticmethod
