@@ -16,6 +16,7 @@ from .representation import BackfillRepresentation, Representation
 from .utils import WikidataCache
 from ..datasets import Dataset
 from ..triples import TriplesFactory
+from ..typing import OneOrSequence
 
 try:
     from PIL import Image
@@ -99,6 +100,7 @@ class VisualRepresentation(Representation):
         encoder: Union[str, torch.nn.Module],
         layer_name: str,
         max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
         transforms: Optional[Sequence] = None,
         encoder_kwargs: OptionalKwargs = None,
         batch_size: int = 32,
@@ -128,7 +130,6 @@ class VisualRepresentation(Representation):
             whether the encoder should be trainable
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`.
-            Should not include `max_id` or `shape`.
 
         :raises ValueError:
             if `max_id` is provided and does not match the number of images
@@ -149,7 +150,10 @@ class VisualRepresentation(Representation):
         # infer shape
         with torch.inference_mode():
             encoder.eval()
-            shape = self._encode(images=self.images[0].unsqueeze(dim=0), encoder=encoder, pool=pool).shape[1:]
+            shape_ = self._encode(images=self.images[0].unsqueeze(dim=0), encoder=encoder, pool=pool).shape[1:]
+        # TODO: wait for https://github.com/pykeen/pykeen/pull/983
+        if shape is not None and shape_ != shape:
+            raise ValueError(f"Incompatible shapes: {shape} vs. {shape_}")
 
         if max_id is None:
             max_id = len(images)
