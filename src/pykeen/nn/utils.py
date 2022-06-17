@@ -331,7 +331,7 @@ class WikidataCache:
 class ShapeError(ValueError):
     """An error for a mismatch in shapes."""
 
-    def __init__(self, shape: OneOrSequence[int], reference: OneOrSequence[int]) -> None:
+    def __init__(self, shape: Sequence[int], reference: Sequence[int]) -> None:
         """
         Initialize the error.
 
