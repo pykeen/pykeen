@@ -1488,6 +1488,9 @@ class TransformedRepresentation(Representation):
             keyword-based parameters used to instantiate the base representation
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`.
+
+        :raises ValueError:
+            if the max_id or shape does not match
         """
         # import here to avoid cyclic import
         from . import representation_resolver
