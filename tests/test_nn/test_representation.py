@@ -325,12 +325,13 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
             self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
 
 
-class BackfillRepresentationTests(PartitionRepresentationTests):
+class BackfillRepresentationTests(cases.RepresentationTestCase):
     """Tests for backfill representation, based on the partition representation."""
 
-    cls = pykeen.nn.representation.PartitionRepresentation
-
-    # FIXME
+    cls = pykeen.nn.representation.BackfillRepresentation
+    kwargs = dict(
+        base_ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
+    )
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
