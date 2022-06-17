@@ -1467,6 +1467,8 @@ class TransformedRepresentation(Representation):
     def __init__(
         self,
         transformation: nn.Module,
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
         base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -1476,6 +1478,10 @@ class TransformedRepresentation(Representation):
 
         :param transformation:
             the transformation
+        :param max_id:
+            the number of representations. If provided, must match the base max id
+        :param shape:
+            the individual representations' shape. If provided, must match the output shape of the transformation
         :param base:
             the base representation, or a hint thereof, cf. `representation_resolver`
         :param base_kwargs:
@@ -1489,10 +1495,18 @@ class TransformedRepresentation(Representation):
         base = representation_resolver.make(base, base_kwargs)
 
         # infer shape
-        shape = self._help_forward(
-            base=base, transformation=transformation, indices=torch.zeros(1, dtype=torch.long, device=base.device)
-        ).shape[1:]
-        super().__init__(max_id=base.max_id, shape=shape, **kwargs)
+        shape = ShapeError.verify(
+            shape=self._help_forward(
+                base=base, transformation=transformation, indices=torch.zeros(1, dtype=torch.long, device=base.device)
+            ).shape[1:],
+            reference=shape,
+        )
+        # infer max_id
+        max_id = max_id or base.max_id
+        if max_id != base.max_id:
+            raise ValueError(f"Incompatible max_id={max_id} vs. base.max_id={base.max_id}")
+
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
         self.transformation = transformation
         self.base = base
 
