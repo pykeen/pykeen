@@ -202,9 +202,6 @@ class NodePieceRepresentation(CombinedRepresentation):
     an aggregation function, which aggregates the individual token representations to a single entity representation.
     """
 
-    #: the token representations
-    token_representations: Sequence[TokenizationRepresentation]
-
     def __init__(
         self,
         *,
