@@ -229,6 +229,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         max_id = len(wikidata_ids)
         images = WikidataCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
         base_ids = [i for i, path in enumerate(images) if path is not None]
+        images = [path for path in images if path is not None]
         super().__init__(
             max_id=max_id, base_ids=base_ids, base=VisualRepresentation, base_kwargs=dict(images=images, **kwargs)
         )
