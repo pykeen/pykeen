@@ -420,11 +420,12 @@ class WikidataCache:
                     SELECT ?item ?relation ?image
                     WHERE {{
                         VALUES ?item {{ {ids} }} .
-                        ?item {relations} ?image .
+                        ?item ?r ?image .
+                        VALUES ?r {{ {relations} }}
                     }}
                 """
                 ).format,
-                relations="|".join(WIKIDATA_IMAGE_RELATIONS),
+                relations=" ".join(f"wdt:{r}" for r in WIKIDATA_IMAGE_RELATIONS),
             ),
             wikidata_ids=missing,
         )
