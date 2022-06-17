@@ -18,7 +18,8 @@ import torch
 from tqdm.auto import tqdm
 
 from ..constants import PYKEEN_MODULE
-from ..utils import nested_get, rate_limited
+from ..typing import OneOrSequence
+from ..utils import nested_get, rate_limited, upgrade_to_sequence
 from ..version import get_version
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "adjacency_tensor_to_stacked_matrix",
     "use_horizontal_stacking",
     "WikidataCache",
+    "ShapeError",
 ]
 
 logger = logging.getLogger(__name__)
@@ -472,3 +474,44 @@ class WikidataCache:
 
         id_to_path = self._discover_images(extensions=extensions)
         return [id_to_path.get(i) for i in ids]
+
+
+class ShapeError(ValueError):
+    """An error for a mismatch in shapes."""
+
+    def __init__(self, shape: Sequence[int], reference: Sequence[int]) -> None:
+        """
+        Initialize the error.
+
+        :param shape: the mismatching shape
+        :param reference: the expected shape
+        """
+        super().__init__(f"shape {shape} does not match expected shape {reference}")
+
+    @classmethod
+    def verify(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> Sequence[int]:
+        """
+        Raise an exception if the shape does not match the reference.
+
+        This method normalizes the shapes first.
+
+        :param shape:
+            the shape to check
+        :param reference:
+            the reference shape. If None, the shape always matches.
+
+        :raises ShapeError:
+            if the two shapes do not match.
+
+        :return:
+            the normalized shape
+        """
+        shape = upgrade_to_sequence(shape)
+        if reference is None:
+            return shape
+        reference = upgrade_to_sequence(reference)
+        if reference != shape:
+            # darglint does not like
+            # raise cls(shape=shape, reference=reference)
+            raise ShapeError(shape=shape, reference=reference)
+        return shape
