@@ -1088,10 +1088,10 @@ class CombinedRepresentation(Representation):
         base = representation_resolver.make_many(base, kwargs=base_kwargs, max_id=max_id)
 
         # verify same ID range
-        max_ids = set(b.max_id for b in base)
+        max_ids = sorted(set(b.max_id for b in base))
         if len(max_ids) != 1:
             # note: we could also relax the requiremen, and set max_id = min(max_ids)
-            raise ValueError(f"Maximum number of Ids does not match! {sorted(max_ids)}")
+            raise ValueError(f"Maximum number of Ids does not match! {max_ids}")
         max_id = max_id or max_ids[0]
         if max_id != max_ids[0]:
             raise ValueError(f"max_id={max_id} does not match base max_id={max_ids[0]}")
