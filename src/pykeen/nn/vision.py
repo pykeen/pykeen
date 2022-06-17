@@ -188,6 +188,8 @@ class WikidataVisualRepresentation(BackfillRepresentation):
     """
     Visual representations obtained from Wikidata and encoded with a vision encoder.
 
+    If no image could be found for a certain Wikidata ID, a plain (trainable) embedding will be used instead.
+
     Example usage::
 
     .. code-block:: python
