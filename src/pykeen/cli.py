@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import List, Mapping, Optional, Tuple, Type
+from typing import Iterable, List, Mapping, Optional, Set, Tuple, Type
 
 import click
 from class_resolver.contrib.optuna import sampler_resolver
@@ -38,9 +38,9 @@ from .hpo.cli import optimize
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .metrics.utils import Metric
-from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
+from .models import Model, model_resolver
 from .models.cli import build_cli_from_cls
-from .nn.modules import LiteralInteraction, interaction_resolver
+from .nn.modules import Interaction, interaction_resolver
 from .nn.node_piece.cli import tokenize
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
@@ -95,71 +95,90 @@ def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
     )
 
 
-_MODEL_MAP = {
-    DistMultLiteralGated: LiteralInteraction,
-    DistMultLiteral: LiteralInteraction,
-    ComplExLiteral: LiteralInteraction,
-}
+def _get_interaction_for_model_cls(cls: Type[Model]) -> Optional[Type[Interaction]]:
+    attr_name = "interaction_cls"
+    if hasattr(cls, attr_name):
+        return getattr(cls, attr_name)
+    try:
+        return interaction_resolver.lookup(model_resolver.normalize_cls(cls))
+    except KeyError:
+        return None
 
 
-def _get_model_lines(*, link_fmt: Optional[str] = None):
-    seen_interactions = set()
+def format_class(cls: Type, module: Optional[str] = None) -> str:
+    """
+    Generate the fully-qualified class name.
+
+    :param cls:
+        the class
+    :param module:
+        the module name to use instead of `cls.__module__`
+
+    :return:
+        the fully qualified class name
+    """
+    if module is None:
+        module = cls.__module__
+    return f"{module}.{cls.__qualname__}"
+
+
+def _get_model_lines(*, link_fmt: Optional[str] = None) -> Iterable[Tuple[str, str, str, str]]:
+    seen_interactions: Set[Type[Interaction]] = set()
     for _, model_cls in sorted(model_resolver.lookup_dict.items()):
-        try:
-            if model_cls in _MODEL_MAP:
-                interaction_cls = _MODEL_MAP[model_cls]
-            else:
-                interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
-        except KeyError:
+        interaction_cls = _get_interaction_for_model_cls(model_cls)
+        if interaction_cls is None:
             click.echo(f"could not find corresponding interaction class for {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None
         else:
             seen_interactions.add(interaction_cls)
-            interaction_reference = f"pykeen.nn.{interaction_cls.__name__}"
+            interaction_reference = format_class(interaction_cls, module="pykeen.nn")
 
-        model_reference = f"pykeen.models.{model_cls.__name__}"
+        model_reference = format_class(model_cls, module="pykeen.models")
         docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
             raise ValueError(f"Missing docdata from {model_reference}")
-        if link_fmt:
-            model_reference = _fmt_ref(model_reference, link_fmt)
-        else:
-            model_reference = f"`{model_reference}`"
-
-        if interaction_reference:
-            if link_fmt:
-                interaction_reference = _fmt_ref(interaction_reference, link_fmt)
-            else:
-                interaction_reference = f"`{interaction_reference}`"
-        else:
-            interaction_reference = ""
-
+        model_reference = _format_reference(model_reference, link_fmt)
+        interaction_reference = _format_reference(interaction_reference, link_fmt)
         name = docdata.get("name", model_cls.__name__)
         yield name, model_reference, interaction_reference, _citation(docdata)
 
-    for interaction_cls in set(interaction_resolver) - seen_interactions:
-        docdata = getattr(interaction_cls, "__docdata__", None)
+    for unseen_interaction_cls in set(interaction_resolver) - seen_interactions:
+        docdata = getattr(unseen_interaction_cls, "__docdata__", None)
         if docdata is None:
-            raise ValueError(f"All unmodeled interactions must have docdata: {interaction_cls}")
+            raise ValueError(f"All unmodeled interactions must have docdata: {unseen_interaction_cls}")
         name = docdata.get("name")
         if name is None:
-            raise ValueError(f"All unmodeled interactions must have a name: {interaction_cls}")
-        yield name, "", _fmt_ref(
-            f"pykeen.nn.{interaction_cls.__name__}", link_fmt, f"pykeen.nn.module.{interaction_cls.__name__}"
+            raise ValueError(f"All unmodeled interactions must have a name: {unseen_interaction_cls}")
+        yield name, "", _format_reference(
+            f"pykeen.nn.{unseen_interaction_cls.__name__}",
+            link_fmt,
+            format_class(unseen_interaction_cls),
         ), _citation(docdata)
 
 
-def _citation(dd):
+def _citation(dd) -> str:
     citation = dd["citation"]
     return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
 
 
-def _fmt_ref(model_reference: str, link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
-    if model_reference is None:
+def _format_reference(reference: Optional[str], link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
+    """
+    Format a reference.
+
+    :param reference:
+        the reference
+    :param link_fmt:
+        the link format
+    :param alt_reference:
+        the link target. Defaults to the reference.
+    :return:
+        a Markdown reference
+    """
+    if reference is None:
         return ""
     if link_fmt is None:
-        return f"`{model_reference}`"
-    return f"[`{model_reference}`]({link_fmt.format(alt_reference or model_reference)})"
+        return f"`{reference}`"
+    return f"[`{reference}`]({link_fmt.format(alt_reference or reference)})"
 
 
 @ls.command()

@@ -3,6 +3,7 @@
 """Test embeddings."""
 
 import unittest
+from collections import ChainMap
 from typing import Any, ClassVar, MutableMapping, Tuple
 
 import numpy
@@ -44,7 +45,6 @@ class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.LowRankRepresentation
     kwargs = dict(
-        max_id=10,
         shape=(3, 7),
     )
 
@@ -54,7 +54,6 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.Embedding
     kwargs = dict(
-        num_embeddings=10,
         shape=(3, 7),
     )
 
@@ -67,7 +66,7 @@ class RGCNRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["entity_representations_kwargs"] = dict(embedding_dim=self.num_entities)
+        kwargs["entity_representations_kwargs"] = dict(shape=self.num_entities)
         return kwargs
 
 
@@ -86,6 +85,8 @@ class TestSingleCompGCNRepresentationTests(cases.TriplesFactoryRepresentationTes
             relation_representations_kwargs=dict(embedding_dim=self.dim),
             dims=self.dim,
         )
+        # inferred from triples factory
+        kwargs.pop("max_id")
         return kwargs
 
 
@@ -137,14 +138,13 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
 
     def test_token_representations(self):
         """Verify that the number of token representations is correct."""
-        assert len(self.instance.token_representations) == 2
+        assert len(self.instance.base) == 2
 
 
 class TokenizationTests(cases.RepresentationTestCase):
     """Tests for tokenization representation."""
 
     cls = pykeen.nn.node_piece.TokenizationRepresentation
-    max_id: int = 13
     vocabulary_size: int = 5
     num_tokens: int = 3
 
@@ -152,6 +152,8 @@ class TokenizationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["assignment"] = torch.randint(self.vocabulary_size, size=(self.max_id, self.num_tokens))
         kwargs["token_representation_kwargs"] = dict(shape=(self.vocabulary_size,))
+        # inferred from assignment
+        kwargs.pop("max_id")
         return kwargs
 
 
@@ -181,7 +183,11 @@ class TextRepresentationTests(cases.RepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["labels"] = sorted(get_dataset(dataset="nations").entity_to_id.keys())
+        # the representation module infers the max_id from the provided labels
+        kwargs.pop("max_id")
+        dataset = get_dataset(dataset="nations")
+        kwargs["labels"] = sorted(dataset.entity_to_id.keys())
+        self.max_id = dataset.num_entities
         return kwargs
 
 
@@ -266,6 +272,18 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     # max_id = 7
 
 
+class CombinedRepresentationTestCase(cases.RepresentationTestCase):
+    """Test for combined representations."""
+
+    cls = pykeen.nn.representation.CombinedRepresentation
+    kwargs = dict(
+        base_kwargs=[
+            dict(shape=(3,)),
+            dict(shape=(4,)),
+        ]
+    )
+
+
 class WikidataTextRepresentationTests(cases.RepresentationTestCase):
     """Tests for Wikidata text representations."""
 
@@ -273,6 +291,87 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
     kwargs = dict(
         labels=["Q100", "Q1000"],
         encoder="character-embedding",
+    )
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # the representation module infers the max_id from the provided labels
+        kwargs.pop("max_id")
+        self.max_id = len(kwargs["labels"])
+        return kwargs
+
+
+class PartitionRepresentationTests(cases.RepresentationTestCase):
+    """Tests for partition representation."""
+
+    cls = pykeen.nn.representation.PartitionRepresentation
+    max_ids: ClassVar[Tuple[int, ...]] = (5, 7)
+    shape: Tuple[int, ...] = (3,)
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+
+        # max_id is inferred from assignment
+        kwargs.pop("max_id")
+        self.max_id = sum(self.max_ids)
+
+        # create random assignment
+        assignment = []
+        for i, max_id in enumerate(self.max_ids):
+            assignment.append(torch.stack([torch.full(size=(max_id,), fill_value=i), torch.arange(max_id)], dim=-1))
+        assignment = torch.cat(assignment)
+        assignment = assignment[torch.randperm(assignment.shape[0])]
+
+        # update kwargs
+        kwargs.update(
+            dict(
+                assignment=assignment,
+                bases=[None] * len(self.max_ids),
+                bases_kwargs=[dict(max_id=max_id, shape=self.shape) for max_id in self.max_ids],
+            )
+        )
+        return kwargs
+
+    def test_coherence(self):
+        """Test coherence with base representations."""
+        xs = self.instance(indices=None)
+        for x, (repr_id, local_index) in zip(xs, self.instance.assignment):
+            x_base = self.instance.bases[repr_id](indices=local_index)
+            assert (x_base == x).all()
+
+    def test_input_verification(self):
+        """Verify that the input is correctly verified."""
+        # empty bases
+        with self.assertRaises(ValueError):
+            self.cls(assignment=..., bases=[], bases_kwargs=[])
+
+        # inconsistent base shapes
+        shapes = range(2, len(self.max_ids) + 2)
+        bases_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes)]
+        with self.assertRaises(ValueError):
+            self.cls(**ChainMap(dict(bases_kwargs=bases_kwargs), self.instance_kwargs))
+
+        # invalid base id
+        assignment = self.instance.assignment.clone()
+        assignment[torch.randint(assignment.shape[0], size=tuple()), 0] = len(self.instance.bases)
+        with self.assertRaises(ValueError):
+            self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
+
+        # invalid local index
+        assignment = self.instance.assignment.clone()
+        assignment[torch.randint(assignment.shape[0], size=tuple()), 1] = max(self.max_ids)
+        with self.assertRaises(ValueError):
+            self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
+
+
+class BackfillRepresentationTests(cases.RepresentationTestCase):
+    """Tests for backfill representation, based on the partition representation."""
+
+    cls = pykeen.nn.representation.BackfillRepresentation
+    kwargs = dict(
+        base_kwargs=dict(shape=(3,)),
+        base_ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
     )
 
 
