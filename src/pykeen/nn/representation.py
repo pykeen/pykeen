@@ -1461,7 +1461,7 @@ class TransformedRepresentation(Representation):
 
         # infer shape
         shape = self._help_forward(
-            transformation=transformation, indices=torch.zeros(1, dtype=torch.long, device=base.device)
+            base=base, transformation=transformation, indices=torch.zeros(1, dtype=torch.long, device=base.device)
         ).shape[1:]
         super().__init__(max_id=base.max_id, shape=shape, **kwargs)
         self.transformation = transformation
