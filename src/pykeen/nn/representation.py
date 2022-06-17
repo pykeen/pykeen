@@ -1387,11 +1387,14 @@ class BackfillRepresentation(PartitionRepresentation):
         )
 
         # create assignment
-        assignment = torch.stack(
-            [torch.full(size=(max_id,), fill_value=1, dtype=torch.long), torch.arange(backfill.max_id)], dim=-1
-        )
+        assignment = torch.full(size=(max_id, 2), fill_value=1, dtype=torch.long)
+        # base
         assignment[base_ids, 0] = 0
-        assignment[base_ids, 1] = torch.as_tensor(base_ids)
-        assignment[:, 0] = 1
+        assignment[base_ids, 1] = torch.arange(base.max_id)
+        # other
+        mask = torch.ones(assignment.shape[0], dtype=torch.bool)
+        mask[base_ids] = False
+        assignment[mask, 0] = 1
+        assignment[mask, 1] = torch.arange(backfill.max_id)
 
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
