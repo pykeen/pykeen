@@ -267,7 +267,12 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
         encoder="resnet18",
         layer_name="avgpool",
         trainable=False,
-        wikidata_ids=["Q1", "Q42"],
+        wikidata_ids=[
+            "Q1",
+            "Q42",
+            # the following entity does not have an image -> will have to use backfill
+            "Q676",
+        ],
     )
     # max_id = 7
 
