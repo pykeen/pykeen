@@ -330,6 +330,7 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.BackfillRepresentation
     kwargs = dict(
+        base_kwargs=dict(shape=(3,)),
         base_ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
     )
 
