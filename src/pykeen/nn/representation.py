@@ -13,11 +13,12 @@ from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, HintOrType, OptionalKwargs
+from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
 
+from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .text import TextEncoder, text_encoder_resolver
@@ -40,6 +41,7 @@ __all__ = [
     "BackfillRepresentation",
     "SingleCompGCNRepresentation",
     "SubsetRepresentation",
+    "CombinedRepresentation",
     "TextRepresentation",
     "WikidataTextRepresentation",
     # Utils
@@ -178,6 +180,19 @@ class Representation(nn.Module, ABC):
 
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
+
+    def iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over components for :meth:`extra_repr`."""
+        yield f"max_id={self.max_id}"
+        yield f"shape={self.shape}"
+        yield f"unique={self.unique}"
+        if self.normalizer is not None:
+            yield f"normalizer={self.normalizer}"
+        # dropout & regularizer will appear automatically, since it is a nn.Module
+
+    # docstr-coverage: inherited
+    def extra_repr(self) -> str:  # noqa: D102
+        return ", ".join(self.iter_extra_repr())
 
     @property
     def embedding_dim(self) -> int:
@@ -1004,6 +1019,91 @@ class TextRepresentation(Representation):
         else:
             labels = [self.labels[i] for i in indices.tolist()]
         return self.encoder(labels=labels)
+
+
+class CombinedRepresentation(Representation):
+    """A combined representation."""
+
+    #: the base representations
+    base: Sequence[Representation]
+
+    #: the combination module
+    combination: Combination
+
+    def __init__(
+        self,
+        max_id: int,
+        base: OneOrManyHintOrType[Representation] = None,
+        base_kwargs: OneOrManyOptionalKwargs = None,
+        combination: HintOrType[Combination] = None,
+        combination_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        :param max_id:
+            the number of representations.
+        :param base:
+            the base representations, or hints thereof
+        :param base_kwargs:
+            keyword-based parameters for the instantiation of base representations
+        :param combination:
+            the combination, or a hint thereof
+        :param combination_kwargs:
+            additional keyword-based parameters used to instantiate the combination
+        :param kwargs:
+            additional keyword-based parameters passed to `Representation.__init__`.
+            May not contain any of `{max_id, shape, unique}`.
+
+        :raises ValueError:
+            if the `max_id` of the base representations does not match
+        """
+        # has to be imported here to avoid cyclic import
+        from . import representation_resolver
+
+        # create base representations
+        base = representation_resolver.make_many(base, kwargs=base_kwargs, max_id=max_id)
+
+        # verify same ID range
+        max_ids = set(b.max_id for b in base)
+        if len(max_ids) != 1:
+            # note: we could also relax the requiremen, and set max_id = min(max_ids)
+            raise ValueError(f"Maximum number of Ids does not match! {sorted(max_ids)}")
+
+        # input normalization
+        combination = combination_resolver.make(combination, combination_kwargs)
+        # shape inference
+        shape = combination.output_shape(input_shapes=[b.shape for b in base])
+
+        super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
+
+        # assign base representations *after* super init
+        self.base = nn.ModuleList(base)
+        self.combination = combination
+
+    @staticmethod
+    def combine(
+        combination: nn.Module, base: Sequence[Representation], indices: Optional[torch.LongTensor] = None
+    ) -> torch.FloatTensor:
+        """
+        Combine base representations for the given indices.
+
+        :param combination: the combination
+        :param base: the base representations
+        :param indices: the indices, as given to :meth:`Representation._plain_forward`
+
+        :return:
+            the combined representations for the given indices
+        """
+        return combination([b._plain_forward(indices=indices) for b in base])
+
+    # docstr-coverage: inherited
+    def _plain_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.combine(combination=self.combination, base=self.base, indices=indices)
 
 
 class WikidataTextRepresentation(TextRepresentation):

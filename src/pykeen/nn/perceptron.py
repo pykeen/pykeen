@@ -2,7 +2,7 @@
 
 """Perceptron-like modules."""
 
-from typing import Union
+from typing import Optional, Union
 
 import torch
 from torch import nn
@@ -13,7 +13,7 @@ __all__ = [
 
 
 class ConcatMLP(nn.Sequential):
-    """A 2-layer MLP with ReLU activation and dropout applied to the concatenation of token representations.
+    """A 2-layer MLP with ReLU activation and dropout applied to the flattened token representations.
 
     This is for conveniently choosing a configuration similar to the paper. For more complex aggregation mechanisms,
     pass an arbitrary callable instead.
@@ -23,29 +23,34 @@ class ConcatMLP(nn.Sequential):
 
     def __init__(
         self,
-        num_tokens: int,
-        embedding_dim: int,
+        input_dim: int,
+        output_dim: Optional[int] = None,
         dropout: float = 0.1,
         ratio: Union[int, float] = 2,
+        flatten_dims: int = 2,
     ):
         """Initialize the module.
 
-        :param num_tokens:
-            the number of tokens
-        :param embedding_dim:
-            the embedding dimension for a single token
+        :param input_dim:
+            the input dimension
+        :param output_dim:
+            the output dimension. defaults to input dim
         :param dropout:
             the dropout value on the hidden layer
         :param ratio:
-            the ratio of the embedding dimension to the hidden layer size.
+            the ratio of the output dimension to the hidden layer size.
+        :param flatten_dims:
+            the number of trailing dimensions to flatten
         """
-        hidden_dim = int(ratio * embedding_dim)
+        output_dim = output_dim or input_dim
+        hidden_dim = int(ratio * output_dim)
         super().__init__(
-            nn.Linear(num_tokens * embedding_dim, hidden_dim),
+            nn.Linear(input_dim, hidden_dim),
             nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(hidden_dim, embedding_dim),
+            nn.Linear(hidden_dim, output_dim),
         )
+        self.flatten_dims = flatten_dims
 
     def forward(self, xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:
         """Forward the MLP on the given dimension.
@@ -56,4 +61,4 @@ class ConcatMLP(nn.Sequential):
         :returns: The tensor after applying this MLP
         """
         assert dim == -2
-        return super().forward(xs.view(*xs.shape[:-2], -1))
+        return super().forward(xs.view(*xs.shape[: -self.flatten_dims], -1))
