@@ -12,7 +12,7 @@ import torch.nn
 import torch.utils.data
 from class_resolver import OptionalKwargs
 
-from .representation import Representation
+from .representation import BackfillRepresentation, Representation
 from .utils import WikidataCache
 from ..datasets import Dataset
 from ..triples import TriplesFactory
@@ -184,7 +184,7 @@ class VisualRepresentation(Representation):
             )
 
 
-class WikidataVisualRepresentation(VisualRepresentation):
+class WikidataVisualRepresentation(BackfillRepresentation):
     """
     Visual representations obtained from Wikidata and encoded with a vision encoder.
 
@@ -224,7 +224,12 @@ class WikidataVisualRepresentation(VisualRepresentation):
         :param kwargs:
             additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
         """
-        super().__init__(images=WikidataCache().get_image_paths(wikidata_ids, **(image_kwargs or {})), **kwargs)
+        max_id = len(wikidata_ids)
+        images = WikidataCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
+        base_ids = [i for i, path in enumerate(images) if path is not None]
+        super().__init__(
+            max_id=max_id, base_ids=base_ids, base=VisualRepresentation, base_kwargs=dict(images=images, **kwargs)
+        )
 
     @classmethod
     def from_triples_factory(

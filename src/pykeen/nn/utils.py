@@ -390,7 +390,7 @@ class WikidataCache:
         ids: Sequence[str],
         extensions: Collection[str] = ("jpeg", "jpg", "gif", "png", "svg", "tif"),
         progress: bool = False,
-    ) -> Sequence[pathlib.Path]:
+    ) -> Sequence[Optional[pathlib.Path]]:
         """Get paths to images for the given IDs.
 
         :param ids:
@@ -470,7 +470,7 @@ class WikidataCache:
                 )
             else:
                 # did not break -> no image
-                raise ValueError(f"No image for {wikidata_id}")
+                logger.warning(f"No image for {wikidata_id}")
 
         id_to_path = self._discover_images(extensions=extensions)
-        return [id_to_path[i] for i in ids]
+        return [id_to_path.get(i) for i in ids]
