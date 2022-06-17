@@ -1,3 +1,0 @@
-Visual Representations
-======================
-.. todo:: @mberr
