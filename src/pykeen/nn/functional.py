@@ -245,10 +245,16 @@ def convkb_interaction(
     num_filters = conv.weight.shape[0]
     assert conv.weight.shape == (num_filters, 1, 1, 3)
 
-    # compute conv(stack(h, r, t))
-    # conv.weight.shape = (C_out, C_in, kernel_size[0], kernel_size[1])
-    # here, kernel_size = (1, 3), C_in = 1, C_out = num_filters
-    # => (num_filters, 1, 1, 3)
+    # while ConvKB uses a convolution operation to calculate scores, its use of convolution is unusual in the
+    # following aspects
+    # 1. the "height" of the "image" is the dimension of the embedding vectors
+    # 2. the "width" of the "image" is 3, i.e., the number of vectors; moreover, since the convolution kernel is of
+    #    shape (1, 3), there is no sliding across the input, but only a single column position where the kernel is
+    #    applied
+    # 3. we always have a single input channel
+    # we utilize these observations for the ConvKB specific convolution filter to simplify and accelerate the code
+    # here, conv.weight.shape = (num_filters, 1, 1, 3)
+    # thus, we have for the output of the convolution operation: x[..., f, d] = conv.weight[f, :] * x[..., d] + b[d]
     x = tensor_sum(
         conv.bias.unsqueeze(dim=-1),
         *(torch.einsum("...d,f->...fd", x, w) for (x, w) in zip((h, r, t), conv.weight[:, 0, 0, :].unbind(dim=-1))),
