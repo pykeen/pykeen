@@ -1227,7 +1227,7 @@ class BackfillRepresentation(PartitionRepresentation):
     automatically generated for the base class
 
     >>> from pykeen.nn import BackfillRepresentation
-    >>> entity_repr = BackfillRepresentation(assignment=set(labels), max_id=num_entities, base=label_repr)
+    >>> entity_repr = BackfillRepresentation(base_ids=set(labels), max_id=num_entities, base=label_repr)
 
     For brevity, we use here randomly generated triples factories instead of the actual data
     >>> from pykeen.triples.generation import generate_triples_factory
@@ -1251,22 +1251,27 @@ class BackfillRepresentation(PartitionRepresentation):
     def __index__(
         self,
         max_id: int,
-        assignment: Iterable[int],
-        base: Hint[Representation] = None,
+        base_ids: Iterable[int],
+        base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
-        embedding_kwargs: OptionalKwargs = None,
+        backfill: HintOrType[Representation] = None,
+        backfill_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """Initialize the representation.
 
         :param max_id:
             The total number of entities that need to be embedded
-        :param assignment:
-            An iterable of integer entity indexes that need to be
+        :param base_ids:
+            An iterable of integer entity indexes which are provided through the base representations
         :param base:
-            the base representation, or hints thereof.
+            the base representation, or a hint thereof.
         :param base_kwargs:
             keyword-based parameters to instantiate the base representation
+        :param backfill:
+            the backfill representation, or hints thereof.
+        :param backfill_kwargs:
+            keyword-based parameters to instantiate the backfill representation
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
             or `shape`, which are inferred from the base representations.
@@ -1274,22 +1279,19 @@ class BackfillRepresentation(PartitionRepresentation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        assignment = set(assignment)
-        base = representation_resolver.make(base, base_kwargs, max_id=len(assignment))
-        embedding = Embedding(max_id=max_id - base.max_id, shape=base.shape, **(embedding_kwargs or {}))
-
-        _assignments = []
-        base_idx, embedding_idx = 0, 0
-        for i in range(max_id):
-            if i in assignment:
-                _assignments.append((0, base_idx))
-                base_idx += 1
-            else:
-                _assignments.append((1, embedding_idx))
-                embedding_idx += 1
-
-        super().__init__(
-            assignment=torch.as_tensor(_assignments),
-            bases=[base, embedding],
-            **kwargs,
+        base_ids = list(base_ids)
+        base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
+        # comment: not all representations support passing a shape parameter
+        backfill = representation_resolver.make(
+            backfill, backfill_kwargs, max_id=max_id - base.max_id, shape=base.shape
         )
+
+        # create assignment
+        assignment = torch.stack(
+            [torch.full(size=(max_id,), fill_value=1, dtype=torch.long), torch.arange(backfill.max_id)], dim=-1
+        )
+        assignment[base_ids, 0] = 0
+        assignment[base_ids, 1] = torch.as_tensor(base_ids)
+        assignment[:, 0] = 1
+
+        super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
