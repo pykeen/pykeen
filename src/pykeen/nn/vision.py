@@ -119,6 +119,8 @@ class VisualRepresentation(Representation):
             :func:`torchvision.models.feature_extraction.create_feature_extractor`
         :param max_id:
             the number of representations. If given, it must match the number of images.
+        :param shape:
+            the shape of an individual representation. If provided, it must match the encoder output dimension
         :param transforms:
             transformations to apply to the images. Notice that stochastic transformations will result in
             stochastic representations, too.
@@ -237,10 +239,15 @@ class WikidataVisualRepresentation(BackfillRepresentation):
 
         :param wikidata_ids:
             the Wikidata IDs
+        :param max_id:
+            the total number of IDs. If provided, must match the length of `wikidata_ids`
         :param image_kwargs:
             keyword-based parameters passed to :meth:`WikidataCache.get_image_paths`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
+
+        :raises ValueError:
+            if the max_id does not match the number of Wikidata IDs
         """
         max_id = max_id or len(wikidata_ids)
         if len(wikidata_ids) != max_id:
