@@ -551,7 +551,6 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
         pykeen.nn.modules.Interaction,
         pykeen.nn.modules.FunctionalInteraction,
         pykeen.nn.modules.NormBasedInteraction,
-        pykeen.nn.modules.LiteralInteraction,
         # FIXME
         pykeen.nn.modules.BoxEInteraction,
     }

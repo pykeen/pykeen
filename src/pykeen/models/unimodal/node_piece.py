@@ -3,7 +3,7 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, List, Mapping, Optional, Sequence
+from typing import Any, Callable, ClassVar, List, Mapping
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
@@ -13,7 +13,6 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import NodePieceRepresentation, SubsetRepresentation, representation_resolver
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
-from ...nn.perceptron import ConcatMLP
 from ...regularizers import Regularizer
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import Constrainer, Initializer, Normalizer, OneOrSequence
@@ -53,7 +52,6 @@ class NodePiece(ERModel):
         embedding_dim: int = 64,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        shape: Optional[Sequence[int]] = None,
         entity_initializer: Hint[Initializer] = None,
         entity_normalizer: Hint[Normalizer] = None,
         entity_constrainer: Hint[Constrainer] = None,
@@ -94,9 +92,6 @@ class NodePiece(ERModel):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-            this will only be necessary if the aggregation is an *ad hoc* function.
         :param entity_initializer:
             a hint for initializing anchor embeddings
         :param entity_normalizer:
@@ -123,13 +118,6 @@ class NodePiece(ERModel):
             raise ValueError(
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
-            )
-
-        # Create an MLP for string aggregation
-        if aggregation == "mlp":
-            aggregation = ConcatMLP(
-                num_tokens=num_tokens if isinstance(num_tokens, int) else sum(num_tokens),
-                embedding_dim=embedding_dim,
             )
 
         # always create representations for normal and inverse relations and padding
@@ -174,7 +162,6 @@ class NodePiece(ERModel):
                 tokenizers=tokenizers,
                 tokenizers_kwargs=tokenizers_kwargs,
                 aggregation=aggregation,
-                shape=shape,
                 num_tokens=num_tokens,
             ),
             relation_representations=SubsetRepresentation,
