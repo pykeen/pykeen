@@ -22,7 +22,7 @@ from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .text import TextEncoder, text_encoder_resolver
-from .utils import WikidataCache
+from .utils import ShapeError, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -50,45 +50,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-class ShapeError(ValueError):
-    """An error for a mismatch in shapes."""
-
-    def __init__(self, shape: OneOrSequence[int], reference: OneOrSequence[int]) -> None:
-        """
-        Initialize the error.
-
-        :param shape: the mismatching shape
-        :param reference: the expected shape
-        """
-        super().__init__(f"shape {shape} does not match expected shape {reference}")
-
-    @classmethod
-    def verify(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> Sequence[int]:
-        """
-        Raise an exception if the shape does not match the reference.
-
-        Normalizes the shapes first.
-
-        :param shape:
-            the shape to check
-        :param reference:
-            the reference shape. If None, the shape always matches.
-
-        :raises ShapeError:
-            if the two shapes do not match.
-
-        :return:
-            the normalized shape
-        """
-        if reference is None:
-            return
-        reference = upgrade_to_sequence(reference)
-        shape = upgrade_to_sequence(shape)
-        if reference != shape:
-            raise cls(shape=shape, reference=reference)
-        return shape
 
 
 class Representation(nn.Module, ABC):
