@@ -944,6 +944,7 @@ class TextRepresentation(Representation):
     def __init__(
         self,
         labels: Sequence[str],
+        max_id: Optional[int] = None,
         shape: Optional[OneOrSequence[int]] = None,
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
@@ -954,6 +955,8 @@ class TextRepresentation(Representation):
 
         :param labels:
             the labels
+        :param max_id:
+            the number of representations. If provided, has to match the number of labels
         :param shape:
             The shape of an individual representation.
         :param encoder:
@@ -964,12 +967,13 @@ class TextRepresentation(Representation):
             additional keyword-based parameters passed to :meth:`Representation.__init__`
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
+        # check max_id
+        max_id = max_id or len(labels)
+        if max_id != len(labels):
+            raise ValueError(f"max_id={max_id} does not match len(labels)={len(labels)}")
         # infer shape
-        super().__init__(
-            max_id=len(labels),
-            shape=ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape),
-            **kwargs,
-        )
+        shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -1074,6 +1078,9 @@ class CombinedRepresentation(Representation):
         :raises ValueError:
             if the `max_id` of the base representations does not match
         """
+        # input normalization
+        combination = combination_resolver.make(combination, combination_kwargs)
+
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
 
@@ -1085,19 +1092,13 @@ class CombinedRepresentation(Representation):
         if len(max_ids) != 1:
             # note: we could also relax the requiremen, and set max_id = min(max_ids)
             raise ValueError(f"Maximum number of Ids does not match! {sorted(max_ids)}")
+        max_id = max_id or max_ids[0]
+        if max_id != max_ids[0]:
+            raise ValueError(f"max_id={max_id} does not match base max_id={max_ids[0]}")
 
-        # input normalization
-        combination = combination_resolver.make(combination, combination_kwargs)
         # shape inference
-
-        super().__init__(
-            max_id=max_id,
-            shape=ShapeError.verify(
-                shape=combination.output_shape(input_shapes=[b.shape for b in base]), reference=shape
-            ),
-            unique=any(b.unique for b in base),
-            **kwargs,
-        )
+        shape = ShapeError.verify(shape=combination.output_shape(input_shapes=[b.shape for b in base]), reference=shape)
+        super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
 
         # assign base representations *after* super init
         self.base = nn.ModuleList(base)
