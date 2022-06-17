@@ -592,21 +592,21 @@ class RGCNRepresentation(Representation):
         # has to be imported now to avoid cyclic imports
         from . import representation_resolver
 
-        base_embeddings = representation_resolver.make(
+        base = representation_resolver.make(
             entity_representations,
             max_id=triples_factory.num_entities,
             pos_kwargs=entity_representations_kwargs,
         )
-        if len(base_embeddings.shape) > 1:
+        if len(base.shape) > 1:
             raise ValueError(f"{self.__class__.__name__} requires vector base entity representations.")
-        super().__init__(
-            max_id=base_embeddings.max_id,
-            shape=ShapeError.verify(shape=base_embeddings.shape, reference=shape),
-            **kwargs,
-        )
+        max_id = max_id or triples_factory.num_entities
+        if max_id != base.max_id:
+            raise ValueError(f"Inconsistent max_id={max_id} vs. base.max_id={base.max_id}")
+        shape = ShapeError.verify(shape=base.shape, reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # has to be assigned after call to nn.Module init
-        self.entity_embeddings = base_embeddings
+        self.entity_embeddings = base
 
         # Resolve edge weighting
         self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
@@ -621,7 +621,7 @@ class RGCNRepresentation(Representation):
         self.register_buffer("targets", t)
         self.register_buffer("edge_types", r)
 
-        dim = base_embeddings.shape[0]
+        dim = base.shape[0]
         self.layers = nn.ModuleList(
             RGCNLayer(
                 input_dim=dim,
