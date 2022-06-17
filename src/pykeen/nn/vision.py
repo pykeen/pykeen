@@ -13,7 +13,7 @@ import torch.utils.data
 from class_resolver import OptionalKwargs
 
 from .representation import BackfillRepresentation, Representation
-from .utils import WikidataCache
+from .utils import ShapeError, WikidataCache
 from ..datasets import Dataset
 from ..triples import TriplesFactory
 from ..typing import OneOrSequence
@@ -151,10 +151,7 @@ class VisualRepresentation(Representation):
         with torch.inference_mode():
             encoder.eval()
             shape_ = self._encode(images=self.images[0].unsqueeze(dim=0), encoder=encoder, pool=pool).shape[1:]
-        # TODO: wait for https://github.com/pykeen/pykeen/pull/983
-        if shape is not None and shape_ != shape:
-            raise ValueError(f"Incompatible shapes: {shape} vs. {shape_}")
-
+        shape = ShapeError.verify(shape=shape_, reference=shape)
         if max_id is None:
             max_id = len(images)
         elif len(images) != max_id:
@@ -232,7 +229,9 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         )
     """
 
-    def __init__(self, wikidata_ids: Sequence[str], image_kwargs: OptionalKwargs = None, **kwargs):
+    def __init__(
+        self, wikidata_ids: Sequence[str], max_id: Optional[int] = None, image_kwargs: OptionalKwargs = None, **kwargs
+    ):
         """
         Initialize the representation.
 
@@ -243,7 +242,9 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param kwargs:
             additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
         """
-        max_id = len(wikidata_ids)
+        max_id = max_id or len(wikidata_ids)
+        if len(wikidata_ids) != max_id:
+            raise ValueError(f"Inconsistent max_id={max_id} vs. len(wikidata_ids)={len(wikidata_ids)}")
         images = WikidataCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
         base_ids = [i for i, path in enumerate(images) if path is not None]
         images = [path for path in images if path is not None]
