@@ -1379,7 +1379,7 @@ class BackfillRepresentation(PartitionRepresentation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        base_ids = list(base_ids)
+        base_ids = sorted(set(base_ids))
         base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
         # comment: not all representations support passing a shape parameter
         backfill = representation_resolver.make(
