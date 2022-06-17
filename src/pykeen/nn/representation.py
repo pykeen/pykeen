@@ -965,6 +965,9 @@ class TextRepresentation(Representation):
             keyword-based parameters used to instantiate the text encoder
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
+
+        :raises ValueError:
+            if the max_id does not match
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
         # check max_id
@@ -1255,6 +1258,8 @@ class PartitionRepresentation(Representation):
         :param assignment: shape: (max_id, 2)
             the assignment, as tuples `(base_id, local_id)`, where `base_id` refers to the index of the base
             representation and `local_id` is an index used to lookup in the base representation
+        :param shape:
+            the shape of an individual representation. If provided, must match the bases' shape
         :param bases:
             the base representations, or hints thereof.
         :param bases_kwargs:
