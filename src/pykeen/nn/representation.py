@@ -37,6 +37,8 @@ __all__ = [
     "LowRankRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
+    "PartitionRepresentation",
+    "BackfillRepresentation",
     "SingleCompGCNRepresentation",
     "SubsetRepresentation",
     "CombinedRepresentation",
@@ -1204,3 +1206,246 @@ class WikidataTextRepresentation(TextRepresentation):
         labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
+
+
+class PartitionRepresentation(Representation):
+    """
+    A partition of the indices into different representation modules.
+
+    Each index is assigned to an index in exactly one of the base representations. This representation is useful, e.g.,
+    when one of the base representations cannot provide vectors for each of the indices, and another representation is
+    used as back-up.
+
+    Consider the following example: We only have textual information for two entities. We want to use textual features
+    computed from them, which should not be trained. For the remaining entities we want to use directly trainable
+    embeddings.
+
+    We start by creating the representation for those entities where we have labels:
+
+    >>> from pykeen.nn import Embedding, init
+    >>> num_entities = 5
+    >>> labels = {1: "a first description", 4: "a second description"}
+    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
+    >>> shape = label_initializer.tensor.shape[1:]
+    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
+
+    Next, we create representations for the remaining ones
+
+    >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=shape)
+
+    To combine them into a single representation module we first need to define the assignment, i.e., where to look-up
+    the global ids. For this, we create a tensor of shape `(num_entities, 2)`, with the index of the base
+    representation, and the *local* index inside this representation
+
+    >>> import torch
+    >>> assignment = torch.as_tensor([(1, 0), (0, 0), (1, 1), (1, 2), (0, 1)])
+    >>> from pykeen.nn import PartitionRepresentation
+    >>> entity_repr = PartitionRepresentation(assignment=assignment, bases=[label_repr, non_label_repr])
+
+    For brevity, we use here randomly generated triples factories instead of the actual data
+
+    >>> from pykeen.triples.generation import generate_triples_factory
+    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
+    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
+
+    The combined representation can now be used as any other representation, e.g., to train a DistMult model:
+
+    >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models import ERModel
+    >>> pipeline(
+    ...     model=ERModel,
+    ...     interaction="distmult",
+    ...     model_kwargs=dict(
+    ...         entity_representation=entity_repr,
+    ...         relation_representation_kwargs=dict(shape=shape),
+    ...     ),
+    ...     training=training,
+    ...     testing=testing,
+    ... )
+    """
+
+    #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
+    assignment: torch.LongTensor
+
+    def __init__(
+        self,
+        assignment: torch.LongTensor,
+        bases: OneOrSequence[HintOrType[Representation]] = None,
+        bases_kwargs: OneOrSequence[OptionalKwargs] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        .. warning ::
+            the base representations have to have coherent shapes
+
+        :param assignment: shape: (max_id, 2)
+            the assignment, as tuples `(base_id, local_id)`, where `base_id` refers to the index of the base
+            representation and `local_id` is an index used to lookup in the base representation
+        :param bases:
+            the base representations, or hints thereof.
+        :param bases_kwargs:
+            keyword-based parameters to instantiate the base representations
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
+            or `shape`, which are inferred from the base representations.
+
+        :raises ValueError:
+            if any of the inputs is invalid
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        # instantiate base representations if necessary
+        bases = representation_resolver.make_many(bases, bases_kwargs)
+
+        # there needs to be at least one base
+        if not bases:
+            raise ValueError("Must provide at least one base representation")
+        # while possible, this might be unintended
+        if len(bases) == 1:
+            logger.warning(f"Encountered only a single base representation: {bases[0]}")
+
+        # extract shape
+        shapes = [base.shape for base in bases]
+        if len(set(shapes)) != 1:
+            raise ValueError(f"Inconsistent base shapes: {shapes}")
+        shape = shapes[0]
+
+        # check for invalid base ids
+        unknown_base_ids = set(assignment[:, 0].tolist()).difference(range(len(bases)))
+        if unknown_base_ids:
+            raise ValueError(f"Invalid representation Ids in assignment: {unknown_base_ids}")
+
+        # check for invalid local indices
+        for i, base in enumerate(bases):
+            max_index = assignment[assignment[:, 0] == i, 1].max().item()
+            if max_index >= base.max_id:
+                raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
+
+        super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
+
+        # assign modules / buffers *after* super init
+        self.bases = bases
+        self.register_buffer(name="assignment", tensor=assignment)
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        assignment = self.assignment
+        if indices is not None:
+            assignment = assignment[indices]
+        # flatten assignment to ease construction of inverse indices
+        prefix_shape = assignment.shape[:-1]
+        assignment = assignment.view(-1, 2)
+        # we group indices by the representation which provides them
+        # thus, we need an inverse to restore the correct order
+        inverse = torch.empty_like(assignment[:, 0])
+        xs = []
+        offset = 0
+        for i, base in enumerate(self.bases):
+            mask = assignment[:, 0] == i
+            # get representations
+            local_indices = assignment[:, 1][mask]
+            xs.append(base(indices=local_indices))
+            # update inverse indices
+            end = offset + local_indices.numel()
+            inverse[mask] = torch.arange(offset, end, device=inverse.device)
+            offset = end
+        x = torch.cat(xs, dim=0)[inverse]
+        # invert flattening
+        if len(prefix_shape) != 1:
+            x = x.view(*prefix_shape, *x.shape[1:])
+        return x
+
+
+class BackfillRepresentation(PartitionRepresentation):
+    """A variant of a partition representation that is easily applicable to a single base representation.
+
+    Similarly to the :mod:`PartitionRepresentation` representation example, we start by
+    creating the representation for those entities where we have labels:
+
+    >>> from pykeen.nn import Embedding, init
+    >>> num_entities = 5
+    >>> labels = {1: "a first description", 4: "a second description"}
+    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
+    >>> shape = label_initializer.tensor.shape[1:]
+    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
+
+    Next, we directly create representations for the remaining ones using the backfill representation.
+    To do this, we need to create an iterable (e.g., a set) of all of the entity IDs that are in the base
+    representation. Then, the assignments to the base representation and an auxillary representation are
+    automatically generated for the base class
+
+    >>> from pykeen.nn import BackfillRepresentation
+    >>> entity_repr = BackfillRepresentation(base_ids=set(labels), max_id=num_entities, base=label_repr)
+
+    For brevity, we use here randomly generated triples factories instead of the actual data
+    >>> from pykeen.triples.generation import generate_triples_factory
+    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
+    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
+    The combined representation can now be used as any other representation, e.g., to train a DistMult model:
+    >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models import ERModel
+    >>> pipeline(
+    ...     model=ERModel,
+    ...     interaction="distmult",
+    ...     model_kwargs=dict(
+    ...         entity_representation=entity_repr,
+    ...         relation_representation_kwargs=dict(shape=shape),
+    ...     ),
+    ...     training=training,
+    ...     testing=testing,
+    ... )
+    """
+
+    def __init__(
+        self,
+        max_id: int,
+        base_ids: Iterable[int],
+        base: HintOrType[Representation] = None,
+        base_kwargs: OptionalKwargs = None,
+        backfill: HintOrType[Representation] = None,
+        backfill_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """Initialize the representation.
+
+        :param max_id:
+            The total number of entities that need to be embedded
+        :param base_ids:
+            An iterable of integer entity indexes which are provided through the base representations
+        :param base:
+            the base representation, or a hint thereof.
+        :param base_kwargs:
+            keyword-based parameters to instantiate the base representation
+        :param backfill:
+            the backfill representation, or hints thereof.
+        :param backfill_kwargs:
+            keyword-based parameters to instantiate the backfill representation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
+            or `shape`, which are inferred from the base representations.
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        base_ids = sorted(set(base_ids))
+        base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
+        # comment: not all representations support passing a shape parameter
+        backfill = representation_resolver.make(
+            backfill, backfill_kwargs, max_id=max_id - base.max_id, shape=base.shape
+        )
+
+        # create assignment
+        assignment = torch.full(size=(max_id, 2), fill_value=1, dtype=torch.long)
+        # base
+        assignment[base_ids, 0] = 0
+        assignment[base_ids, 1] = torch.arange(base.max_id)
+        # other
+        mask = torch.ones(assignment.shape[0], dtype=torch.bool)
+        mask[base_ids] = False
+        assignment[mask, 0] = 1
+        assignment[mask, 1] = torch.arange(backfill.max_id)
+
+        super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
