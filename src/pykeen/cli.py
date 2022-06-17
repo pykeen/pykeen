@@ -105,17 +105,21 @@ def _get_interaction_for_model_cls(cls: Type[Model]) -> Optional[Type[Interactio
         return None
 
 
-def format_class(cls: Type) -> str:
+def format_class(cls: Type, module: Optional[str] = None) -> str:
     """
     Generate the fully-qualified class name.
 
     :param cls:
         the class
+    :param module:
+        the module name to use instead of `cls.__module__`
 
     :return:
         the fully qualified class name
     """
-    return f"{cls.__module__}.{cls.__qualname__}"
+    if module is None:
+        module = cls.__module__
+    return f"{module}.{cls.__qualname__}"
 
 
 def _get_model_lines(*, link_fmt: Optional[str] = None) -> Iterable[Tuple[str, str, str, str]]:
@@ -127,9 +131,9 @@ def _get_model_lines(*, link_fmt: Optional[str] = None) -> Iterable[Tuple[str, s
             interaction_reference = None
         else:
             seen_interactions.add(interaction_cls)
-            interaction_reference = format_class(interaction_cls)
+            interaction_reference = format_class(interaction_cls, module="pykeen.nn")
 
-        model_reference = format_class(model_cls)
+        model_reference = format_class(model_cls, module="pykeen.models")
         docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
             raise ValueError(f"Missing docdata from {model_reference}")
