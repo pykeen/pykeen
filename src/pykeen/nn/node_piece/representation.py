@@ -12,6 +12,7 @@ from .tokenization import Tokenizer, tokenizer_resolver
 from ..combination import ConcatAggregationCombination
 from ..perceptron import ConcatMLP
 from ..representation import CombinedRepresentation, Representation
+from ..utils import ShapeError
 from ...triples import CoreTriplesFactory
 from ...typing import MappedTriples, OneOrSequence
 from ...utils import broadcast_upgrade_to_sequences
@@ -42,6 +43,7 @@ class TokenizationRepresentation(Representation):
         assignment: torch.LongTensor,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ) -> None:
         """
@@ -53,8 +55,11 @@ class TokenizationRepresentation(Representation):
             the token representations
         :param token_representation_kwargs:
             additional keyword-based parameters
+        :param shape:
+            The shape of an individual representation. If provided, has to match.
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+
         :raises ValueError: if there's a mismatch between the representation size
             and the vocabulary size
         """
@@ -80,7 +85,8 @@ class TokenizationRepresentation(Representation):
             token_representation_kwargs,
             max_id=self.vocabulary_size,
         )
-        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape, **kwargs)
+        shape = ShapeError.verify(shape=(num_chosen_tokens,) + token_representation.shape, reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # input validation
         if token_representation.max_id < self.vocabulary_size:

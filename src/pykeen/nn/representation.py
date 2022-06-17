@@ -22,7 +22,7 @@ from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .text import TextEncoder, text_encoder_resolver
-from .utils import WikidataCache
+from .utils import ShapeError, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -213,8 +213,9 @@ class SubsetRepresentation(Representation):
     def __init__(
         self,
         max_id: int,
-        base: HintOrType[Representation],
+        base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ):
         """
@@ -226,6 +227,8 @@ class SubsetRepresentation(Representation):
             the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         :param base_kwargs:
             additional keyword arguments for the base representation
+        :param shape:
+            The shape of an individual representation.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
 
@@ -240,7 +243,7 @@ class SubsetRepresentation(Representation):
                 f"Base representations comprise only {base.max_id} representations, "
                 f"but at least {max_id} are required.",
             )
-        super().__init__(max_id=max_id, shape=base.shape, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(shape=base.shape, reference=shape), **kwargs)
         self.base = base
 
     # docstr-coverage: inherited
@@ -871,6 +874,7 @@ class SingleCompGCNRepresentation(Representation):
         self,
         combined: CombinedCompGCNRepresentations,
         position: int = 0,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ):
         """
@@ -880,19 +884,21 @@ class SingleCompGCNRepresentation(Representation):
             The combined representations.
         :param position:
             The position, either 0 for entities, or 1 for relations.
+        :param shape:
+            The shape of an individual representation.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
         :raises ValueError: If an invalid value is given for the position
         """
         if position == 0:  # entity
             max_id = combined.entity_representations.max_id
-            shape = (combined.output_dim,)
+            shape_ = (combined.output_dim,)
         elif position == 1:  # relation
             max_id = combined.relation_representations.max_id
-            shape = (combined.output_dim,)
+            shape_ = (combined.output_dim,)
         else:
             raise ValueError
-        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(shape=shape_, reference=shape), **kwargs)
         self.combined = combined
         self.position = position
         self.reset_parameters()
@@ -938,6 +944,8 @@ class TextRepresentation(Representation):
     def __init__(
         self,
         labels: Sequence[str],
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -947,17 +955,28 @@ class TextRepresentation(Representation):
 
         :param labels:
             the labels
+        :param max_id:
+            the number of representations. If provided, has to match the number of labels
+        :param shape:
+            The shape of an individual representation.
         :param encoder:
             the text encoder, or a hint thereof
         :param encoder_kwargs:
             keyword-based parameters used to instantiate the text encoder
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
+
+        :raises ValueError:
+            if the max_id does not match
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
+        # check max_id
+        max_id = max_id or len(labels)
+        if max_id != len(labels):
+            raise ValueError(f"max_id={max_id} does not match len(labels)={len(labels)}")
         # infer shape
-        shape = encoder.encode_all(labels[0:1]).shape[1:]
-        super().__init__(max_id=len(labels), shape=shape, **kwargs)
+        shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -1033,6 +1052,7 @@ class CombinedRepresentation(Representation):
     def __init__(
         self,
         max_id: int,
+        shape: Optional[OneOrSequence[int]] = None,
         base: OneOrManyHintOrType[Representation] = None,
         base_kwargs: OneOrManyOptionalKwargs = None,
         combination: HintOrType[Combination] = None,
@@ -1044,6 +1064,8 @@ class CombinedRepresentation(Representation):
 
         :param max_id:
             the number of representations.
+        :param shape:
+            The shape of an individual representation.
         :param base:
             the base representations, or hints thereof
         :param base_kwargs:
@@ -1059,6 +1081,9 @@ class CombinedRepresentation(Representation):
         :raises ValueError:
             if the `max_id` of the base representations does not match
         """
+        # input normalization
+        combination = combination_resolver.make(combination, combination_kwargs)
+
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
 
@@ -1066,16 +1091,16 @@ class CombinedRepresentation(Representation):
         base = representation_resolver.make_many(base, kwargs=base_kwargs, max_id=max_id)
 
         # verify same ID range
-        max_ids = set(b.max_id for b in base)
+        max_ids = sorted(set(b.max_id for b in base))
         if len(max_ids) != 1:
             # note: we could also relax the requiremen, and set max_id = min(max_ids)
-            raise ValueError(f"Maximum number of Ids does not match! {sorted(max_ids)}")
+            raise ValueError(f"Maximum number of Ids does not match! {max_ids}")
+        max_id = max_id or max_ids[0]
+        if max_id != max_ids[0]:
+            raise ValueError(f"max_id={max_id} does not match base max_id={max_ids[0]}")
 
-        # input normalization
-        combination = combination_resolver.make(combination, combination_kwargs)
         # shape inference
-        shape = combination.output_shape(input_shapes=[b.shape for b in base])
-
+        shape = ShapeError.verify(shape=combination.output_shape(input_shapes=[b.shape for b in base]), reference=shape)
         super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
 
         # assign base representations *after* super init
@@ -1219,6 +1244,7 @@ class PartitionRepresentation(Representation):
     def __init__(
         self,
         assignment: torch.LongTensor,
+        shape: Optional[OneOrSequence[int]] = None,
         bases: OneOrSequence[HintOrType[Representation]] = None,
         bases_kwargs: OneOrSequence[OptionalKwargs] = None,
         **kwargs,
@@ -1232,6 +1258,8 @@ class PartitionRepresentation(Representation):
         :param assignment: shape: (max_id, 2)
             the assignment, as tuples `(base_id, local_id)`, where `base_id` refers to the index of the base
             representation and `local_id` is an index used to lookup in the base representation
+        :param shape:
+            the shape of an individual representation. If provided, must match the bases' shape
         :param bases:
             the base representations, or hints thereof.
         :param bases_kwargs:
@@ -1260,7 +1288,7 @@ class PartitionRepresentation(Representation):
         shapes = [base.shape for base in bases]
         if len(set(shapes)) != 1:
             raise ValueError(f"Inconsistent base shapes: {shapes}")
-        shape = shapes[0]
+        shape = ShapeError.verify(shape=shapes[0], reference=shape)
 
         # check for invalid base ids
         unknown_base_ids = set(assignment[:, 0].tolist()).difference(range(len(bases)))
