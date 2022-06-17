@@ -98,6 +98,7 @@ class VisualRepresentation(Representation):
         images: Sequence,
         encoder: Union[str, torch.nn.Module],
         layer_name: str,
+        max_id: Optional[int] = None,
         transforms: Optional[Sequence] = None,
         encoder_kwargs: OptionalKwargs = None,
         batch_size: int = 32,
@@ -114,6 +115,8 @@ class VisualRepresentation(Representation):
         :param layer_name:
             the model's layer name to use for extracting the features, cf.
             :func:`torchvision.models.feature_extraction.create_feature_extractor`
+        :param max_id:
+            the number of representations. If given, it must match the number of images.
         :param transforms:
             transformations to apply to the images. Notice that stochastic transformations will result in
             stochastic representations, too.
@@ -145,7 +148,9 @@ class VisualRepresentation(Representation):
             encoder.eval()
             shape = self._encode(images=self.images[0].unsqueeze(dim=0), encoder=encoder, pool=pool).shape[1:]
 
-        super().__init__(max_id=len(images), shape=shape, **kwargs)
+        if max_id is not None and len(images) != max_id:
+            raise ValueError(f"Inconsistent max_id={max_id} and len(images)={len(images)}")
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         self.encoder = encoder
         self.pool = pool
