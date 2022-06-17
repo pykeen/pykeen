@@ -14,7 +14,7 @@ from torch import nn
 
 from .init import uniform_norm_p1_, xavier_normal_
 from .representation import LowRankRepresentation, Representation
-from .utils import adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
+from .utils import ShapeError, adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
 
@@ -599,7 +599,11 @@ class RGCNRepresentation(Representation):
         )
         if len(base_embeddings.shape) > 1:
             raise ValueError(f"{self.__class__.__name__} requires vector base entity representations.")
-        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
+        super().__init__(
+            max_id=base_embeddings.max_id,
+            shape=ShapeError.verify(shape=base_embeddings.shape, reference=shape),
+            **kwargs,
+        )
 
         # has to be assigned after call to nn.Module init
         self.entity_embeddings = base_embeddings

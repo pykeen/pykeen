@@ -64,6 +64,7 @@ from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
 from .representation import Representation
+from .utils import ShapeError
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import OneOrSequence
 from ..utils import get_edge_index, upgrade_to_sequence
@@ -200,7 +201,11 @@ class MessagePassingRepresentation(Representation, ABC):
         # the base representations, e.g., entity embeddings or features
         base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=triples_factory.num_entities)
 
-        super().__init__(max_id=kwargs.pop("max_id", base.max_id), shape=output_shape or base.shape, **kwargs)
+        super().__init__(
+            max_id=kwargs.pop("max_id", base.max_id),
+            shape=ShapeError.verify(shape=output_shape or base.shape, reference=output_shape),
+            **kwargs,
+        )
 
         # assign sub-module *after* super call
         self.base = base
