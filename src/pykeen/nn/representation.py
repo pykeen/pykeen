@@ -65,7 +65,7 @@ class ShapeError(ValueError):
         super().__init__(f"shape {shape} does not match expected shape {reference}")
 
     @classmethod
-    def raise_if_necessary(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> Sequence[int]:
+    def verify(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> Sequence[int]:
         """
         Raise an exception if the shape does not match the reference.
 
@@ -282,8 +282,7 @@ class SubsetRepresentation(Representation):
                 f"Base representations comprise only {base.max_id} representations, "
                 f"but at least {max_id} are required.",
             )
-        ShapeError.raise_if_necessary(shape=base.shape, reference=shape)
-        super().__init__(max_id=max_id, shape=base.shape, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(shape=base.shape, reference=shape), **kwargs)
         self.base = base
 
     # docstr-coverage: inherited
@@ -938,8 +937,7 @@ class SingleCompGCNRepresentation(Representation):
             shape_ = (combined.output_dim,)
         else:
             raise ValueError
-        ShapeError.raise_if_necessary(shape=shape_, reference=shape)
-        super().__init__(max_id=max_id, shape=shape_, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(shape=shape_, reference=shape), **kwargs)
         self.combined = combined
         self.position = position
         self.reset_parameters()
@@ -1006,9 +1004,11 @@ class TextRepresentation(Representation):
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
         # infer shape
-        shape_ = encoder.encode_all(labels[0:1]).shape[1:]
-        ShapeError.raise_if_necessary(shape=shape_, reference=shape)
-        super().__init__(max_id=len(labels), shape=shape_, **kwargs)
+        super().__init__(
+            max_id=len(labels),
+            shape=ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape),
+            **kwargs,
+        )
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -1128,10 +1128,15 @@ class CombinedRepresentation(Representation):
         # input normalization
         combination = combination_resolver.make(combination, combination_kwargs)
         # shape inference
-        shape_ = combination.output_shape(input_shapes=[b.shape for b in base])
-        ShapeError.raise_if_necessary(shape=shape_, reference=shape)
 
-        super().__init__(max_id=max_id, shape=shape_, unique=any(b.unique for b in base), **kwargs)
+        super().__init__(
+            max_id=max_id,
+            shape=ShapeError.verify(
+                shape=combination.output_shape(input_shapes=[b.shape for b in base]), reference=shape
+            ),
+            unique=any(b.unique for b in base),
+            **kwargs,
+        )
 
         # assign base representations *after* super init
         self.base = nn.ModuleList(base)
@@ -1316,8 +1321,7 @@ class PartitionRepresentation(Representation):
         shapes = [base.shape for base in bases]
         if len(set(shapes)) != 1:
             raise ValueError(f"Inconsistent base shapes: {shapes}")
-        ShapeError.raise_if_necessary(shape=shapes[0], reference=shape)
-        shape = shapes[0]
+        shape = ShapeError.verify(shape=shapes[0], reference=shape)
 
         # check for invalid base ids
         unknown_base_ids = set(assignment[:, 0].tolist()).difference(range(len(bases)))
