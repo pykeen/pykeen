@@ -149,7 +149,8 @@ class MessagePassingRepresentation(Representation, ABC):
         layers_kwargs: OneOrManyOptionalKwargs = None,
         base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
-        output_shape: OneOrSequence[int] = None,
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
         activations: OneOrManyHintOrType[nn.Module] = None,
         activations_kwargs: OneOrManyOptionalKwargs = None,
         restrict_k_hop: bool = False,
@@ -171,9 +172,11 @@ class MessagePassingRepresentation(Representation, ABC):
         :param base_kwargs:
             additional keyword-based parameters passed to the base representations upon instantiation
 
-        :param output_shape:
+        :param shape:
             the output shape. Defaults to the base representation shape. Has to match to output shape of the last
             message passing layer.
+        :param max_id:
+            the number of representations. If provided, has to match the base representation's max_id
 
         :param activations:
             the activation(s), or hints thereof
@@ -201,11 +204,14 @@ class MessagePassingRepresentation(Representation, ABC):
         # the base representations, e.g., entity embeddings or features
         base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=triples_factory.num_entities)
 
-        super().__init__(
-            max_id=kwargs.pop("max_id", base.max_id),
-            shape=ShapeError.verify(shape=output_shape or base.shape, reference=output_shape),
-            **kwargs,
-        )
+        # verify max_id
+        max_id = max_id or base.max_id
+        if max_id != base.max_id:
+            raise ValueError(f"Inconsistent max_id={max_id} vs. base.max_id={base.max_id}")
+
+        # verify shape
+        shape = ShapeError.verify(shape=shape or base.shape, reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # assign sub-module *after* super call
         self.base = base
