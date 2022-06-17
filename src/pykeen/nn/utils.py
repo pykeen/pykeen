@@ -358,10 +358,12 @@ class ShapeError(ValueError):
         :return:
             the normalized shape
         """
+        shape = upgrade_to_sequence(shape)
         if reference is None:
             return shape
         reference = upgrade_to_sequence(reference)
-        shape = upgrade_to_sequence(shape)
         if reference != shape:
-            raise cls(shape=shape, reference=reference)
+            # darglint does not like
+            # raise cls(shape=shape, reference=reference)
+            raise ShapeError(shape=shape, reference=reference)
         return shape
