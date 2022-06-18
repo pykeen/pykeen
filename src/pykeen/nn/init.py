@@ -31,9 +31,12 @@ __all__ = [
     "uniform_norm_p1_",
     "normal_norm_",
     "init_phases",
+    # Classes
     "PretrainedInitializer",
     "LabelBasedInitializer",
+    "WeisfeilerLehmanInitializer",
     "RandomWalkPositionalEncodingInitializer",
+    # Resolver
     "initializer_resolver",
 ]
 
@@ -48,9 +51,10 @@ def xavier_uniform_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     sampled from :math:`\mathcal{U}(-a, a)` where
 
     .. math::
-        a = \text{gain} \times \sqrt{\frac{6}{\text{fan\_out}}}
+        a = \text{gain} \times \sqrt{\frac{6}{\text{fan_out}}}
 
     Example:
+
     >>> w = torch.empty(3, 5)
     >>> pykeen.nn.init.xavier_uniform_(w, gain=torch.nn.init.calculate_gain("relu"))
 
@@ -80,9 +84,10 @@ def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     sampled from :math:`\mathcal{N}(0, \text{std}^2)` where
 
     .. math::
-        \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan\_out}}}
+        \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_out}}}
 
     Example:
+
     >>> w = torch.empty(3, 5)
     >>> pykeen.nn.init.xavier_normal_(w, gain=torch.nn.init.calculate_gain("relu"))
 
@@ -456,6 +461,7 @@ for func in [
     xavier_normal_,
     xavier_uniform_,
     init_phases,
+    init_quaternions,
     xavier_normal_norm_,
     xavier_uniform_norm_,
     normal_norm_,
