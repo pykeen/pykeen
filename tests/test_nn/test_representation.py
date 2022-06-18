@@ -16,7 +16,7 @@ import pykeen.nn.pyg
 import pykeen.nn.representation
 import pykeen.nn.vision
 from pykeen.datasets import get_dataset
-from tests import cases, mocks
+from tests import cases, constants, mocks
 
 try:
     import torchvision
@@ -239,6 +239,7 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
     )
 
 
+@constants.skip_if_windows
 @unittest.skipIf(torchvision is None, "Need to install `torchvision`")
 class VisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for VisualRepresentation."""
@@ -258,6 +259,7 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
         return kwargs
 
 
+@constants.skip_if_windows
 @unittest.skipIf(torchvision is None, "Need to install `torchvision`")
 class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for Wikidata visual representations."""
