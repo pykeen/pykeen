@@ -386,6 +386,22 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
     )
 
 
+class TransformedRepresentationTest(cases.RepresentationTestCase):
+    """Tests for transformed representations."""
+
+    cls = pykeen.nn.representation.TransformedRepresentation
+    kwargs = dict(
+        base_kwargs=dict(shape=(5,)),
+    )
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["transformation"] = torch.nn.Linear(5, 7)
+        kwargs["base_kwargs"]["max_id"] = kwargs.pop("max_id")
+        return kwargs
+
+
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
 

@@ -68,6 +68,7 @@ from .representation import (
     Representation,
     SubsetRepresentation,
     TextRepresentation,
+    TransformedRepresentation,
     WikidataTextRepresentation,
 )
 from .vision import VisualRepresentation, WikidataVisualRepresentation
@@ -91,6 +92,7 @@ __all__ = [
     "FeaturizedMessagePassingRepresentation",
     "CombinedRepresentation",
     "TextRepresentation",
+    "TransformedRepresentation",
     "WikidataTextRepresentation",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
