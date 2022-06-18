@@ -43,6 +43,7 @@ __all__ = [
     "SubsetRepresentation",
     "CombinedRepresentation",
     "TextRepresentation",
+    "TransformedRepresentation",
     "WikidataTextRepresentation",
     # Utils
     "constrainer_resolver",
@@ -1426,3 +1427,113 @@ class BackfillRepresentation(PartitionRepresentation):
         assignment[mask, 1] = torch.arange(backfill.max_id)
 
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
+
+
+class TransformedRepresentation(Representation):
+    """
+    A (learnable) transformation upon base representations.
+
+    In the following example, we create representations which are obtained from a trainable transformation of fixed
+    random walk encoding features. We first load the dataset, here Nations:
+
+    >>> from pykeen.datasets import get_dataset
+    >>> dataset = get_dataset(dataset="nations")
+
+    Next, we create a random-walk positional encoding of dimension 32:
+
+    >>> from pykeen.nn import init
+    >>> dim = 32
+    >>> initializer = init.RandomWalkPositionalEncoding(triples_factory=dataset.training, dim=dim+1)
+    We used dim+1 for the RWPE initializion as by default it doesn't return the first dimension of 0's
+    That is, in the default setup, dim = 33 would return a 32d vector
+
+    For the transformation, we use a simple 2-layer MLP
+
+    >>> from torch import nn
+    >>> hidden = 64
+    >>> mlp = nn.Sequential(
+    ...     nn.Linear(in_features=dim, out_features=hidden),
+    ...     nn.ReLU(),
+    ...     nn.Linear(in_features=hidden, out_features=dim),
+    ... )
+
+    Finally, the transformed representation is given as
+
+    >>> from pykeen.nn import TransformedRepresentation
+    >>> r = TransformedRepresentation(
+    ...     transformation=mlp,
+    ...     base_kwargs=dict(max_id=dataset.num_entities, shape=(dim,), initializer=initializer, trainable=False),
+    ... )
+    """
+
+    def __init__(
+        self,
+        transformation: nn.Module,
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
+        base: HintOrType[Representation] = None,
+        base_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        :param transformation:
+            the transformation
+        :param max_id:
+            the number of representations. If provided, must match the base max id
+        :param shape:
+            the individual representations' shape. If provided, must match the output shape of the transformation
+        :param base:
+            the base representation, or a hint thereof, cf. `representation_resolver`
+        :param base_kwargs:
+            keyword-based parameters used to instantiate the base representation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`.
+
+        :raises ValueError:
+            if the max_id or shape does not match
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        base = representation_resolver.make(base, base_kwargs)
+
+        # infer shape
+        shape = ShapeError.verify(
+            shape=self._help_forward(
+                base=base, transformation=transformation, indices=torch.zeros(1, dtype=torch.long, device=base.device)
+            ).shape[1:],
+            reference=shape,
+        )
+        # infer max_id
+        max_id = max_id or base.max_id
+        if max_id != base.max_id:
+            raise ValueError(f"Incompatible max_id={max_id} vs. base.max_id={base.max_id}")
+
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        self.transformation = transformation
+        self.base = base
+
+    @staticmethod
+    def _help_forward(
+        base: Representation, transformation: nn.Module, indices: Optional[torch.LongTensor]
+    ) -> torch.FloatTensor:
+        """
+        Obtain base representations and apply the transformation.
+
+        :param base:
+            the base representation module
+        :param transformation:
+            the transformation
+        :param indices:
+            the indices
+
+        :return:
+            the transformed base representations
+        """
+        return transformation(base(indices=indices))
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        return self._help_forward(base=self.base, transformation=self.transformation, indices=indices)
