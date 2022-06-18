@@ -2,6 +2,7 @@
 
 """Test embeddings."""
 
+import unittest
 from collections import ChainMap
 from typing import Any, ClassVar, MutableMapping, Tuple
 
@@ -13,8 +14,14 @@ import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.pyg
 import pykeen.nn.representation
+import pykeen.nn.vision
 from pykeen.datasets import get_dataset
-from tests import cases, mocks
+from tests import cases, constants, mocks
+
+try:
+    import torchvision
+except ImportError:
+    torchvision = None
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -230,6 +237,52 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
             shape=embedding_dim,
         ),
     )
+
+
+@constants.skip_if_windows
+@unittest.skipIf(torchvision is None, "Need to install `torchvision`")
+class VisualRepresentationTestCase(cases.RepresentationTestCase):
+    """Tests for VisualRepresentation."""
+
+    cls = pykeen.nn.vision.VisualRepresentation
+    kwargs = dict(
+        encoder="resnet18",
+        layer_name="avgpool",
+        transforms=[],
+        trainable=False,
+    )
+    max_id = 7
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["images"] = list(torch.rand(self.max_id, 3, 28, 28))
+        return kwargs
+
+
+@constants.skip_if_windows
+@unittest.skipIf(torchvision is None, "Need to install `torchvision`")
+class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
+    """Tests for Wikidata visual representations."""
+
+    cls = pykeen.nn.vision.WikidataVisualRepresentation
+    kwargs = dict(
+        encoder="resnet18",
+        layer_name="avgpool",
+        trainable=False,
+        wikidata_ids=[
+            "Q1",
+            "Q42",
+            # the following entity does not have an image -> will have to use backfill
+            "Q676",
+        ],
+    )
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs.pop("max_id")
+        self.max_id = len(kwargs["wikidata_ids"])
+        return kwargs
 
 
 class CombinedRepresentationTestCase(cases.RepresentationTestCase):
