@@ -5,7 +5,7 @@
 import functools
 import logging
 import math
-from typing import Optional, Sequence
+from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 import numpy as np
 import torch
@@ -236,6 +236,7 @@ class PretrainedInitializer:
     def as_embedding(self, **kwargs: Any) -> "Embedding":
         """Get a static embedding from this pre-trained initializer."""
         from .representation import Embedding
+
         max_id, *shape = self.tensor.shape
         return Embedding(max_id=max_id, shape=shape, initializer=self, trainable=False, **kwargs)
 
