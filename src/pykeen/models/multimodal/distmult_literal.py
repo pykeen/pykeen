@@ -2,14 +2,14 @@
 
 """Implementation of the DistMultLiteral model."""
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Type
 
 import torch.nn as nn
 
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.combinations import DistMultCombination
-from ...nn.modules import DistMultInteraction, LiteralInteraction
+from ...nn import ConcatProjectionCombination
+from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -35,6 +35,7 @@ class DistMultLiteral(LiteralModel):
     )
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(margin=0.0)
+    interaction_cls: ClassVar[Type[Interaction]] = DistMultInteraction
 
     def __init__(
         self,
@@ -57,13 +58,16 @@ class DistMultLiteral(LiteralModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction=LiteralInteraction(
-                base=DistMultInteraction(),
-                combination=DistMultCombination(
-                    entity_embedding_dim=embedding_dim,
-                    literal_embedding_dim=triples_factory.numeric_literals.shape[1],
-                    input_dropout=input_dropout,
-                ),
+            interaction=self.interaction_cls,
+            combination=ConcatProjectionCombination,
+            combination_kwargs=dict(
+                input_dims=[embedding_dim, triples_factory.literal_shape[0]],
+                output_dim=embedding_dim,
+                bias=True,
+                dropout=input_dropout,
+                # no activation
+                activation=nn.Identity,
+                activation_kwargs=None,
             ),
             entity_representations_kwargs=[
                 dict(

@@ -280,11 +280,7 @@ class ERModel(
         self,
         *,
         triples_factory: KGInfo,
-        interaction: Union[
-            str,
-            Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
-        ],
+        interaction: HintOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         interaction_kwargs: OptionalKwargs = None,
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
