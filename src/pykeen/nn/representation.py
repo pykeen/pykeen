@@ -1188,12 +1188,11 @@ class PartitionRepresentation(Representation):
     >>> num_entities = 5
     >>> labels = {1: "a first description", 4: "a second description"}
     >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
-    >>> shape = label_initializer.tensor.shape[1:]
-    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
+    >>> label_repr = label_initializer.as_embedding()
 
     Next, we create representations for the remaining ones
 
-    >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=shape)
+    >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=label_repr.shape)
 
     To combine them into a single representation module we first need to define the assignment, i.e., where to look-up
     the global ids. For this, we create a tensor of shape `(num_entities, 2)`, with the index of the base
