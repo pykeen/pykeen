@@ -53,8 +53,9 @@ def xavier_uniform_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     .. math::
         a = \text{gain} \times \sqrt{\frac{6}{\text{fan_out}}}
 
-    Example:
+    Example usage:
 
+    >>> import torch, pykeen.nn.init
     >>> w = torch.empty(3, 5)
     >>> pykeen.nn.init.xavier_uniform_(w, gain=torch.nn.init.calculate_gain("relu"))
 
@@ -86,8 +87,9 @@ def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     .. math::
         \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_out}}}
 
-    Example:
+    Example usage:
 
+    >>> import torch, pykeen.nn.init
     >>> w = torch.empty(3, 5)
     >>> pykeen.nn.init.xavier_normal_(w, gain=torch.nn.init.calculate_gain("relu"))
 
