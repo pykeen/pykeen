@@ -22,6 +22,9 @@ from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Initializer, MappedTriples
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman
 
+if TYPE_CHECKING:
+    from . import Embedding
+
 __all__ = [
     "xavier_uniform_",
     "xavier_uniform_norm_",
