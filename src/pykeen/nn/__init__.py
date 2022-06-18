@@ -71,6 +71,7 @@ from .representation import (
     TransformedRepresentation,
     WikidataTextRepresentation,
 )
+from .vision import VisualRepresentation, WikidataVisualRepresentation
 
 __all__ = [
     # REPRESENTATION
@@ -93,6 +94,8 @@ __all__ = [
     "TextRepresentation",
     "TransformedRepresentation",
     "WikidataTextRepresentation",
+    "VisualRepresentation",
+    "WikidataVisualRepresentation",
     "tokenizer_resolver",
     "representation_resolver",
     # INITIALIZER
