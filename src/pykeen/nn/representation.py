@@ -353,12 +353,6 @@ class Embedding(Representation):
         self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
 
-    @property
-    def embedding_dim(self) -> int:  # noqa: D401
-        """The representation dimension."""
-        warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
-        return self._embeddings.embedding_dim
-
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
