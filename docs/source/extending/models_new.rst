@@ -12,7 +12,6 @@ KGEM using the :class:`pykeen.models.ERModel` base class.
 .. code-block:: python
 
     from pykeen.models import ERModel
-    from pykeen.nn import EmbeddingSpecification
     from pykeen.nn.modules import DistMultInteraction  # effectively the same as the example above
 
     class DistMult(ERModel):
@@ -34,14 +33,14 @@ KGEM using the :class:`pykeen.models.ERModel` base class.
                 # Pass an instance of your interaction function. This is also a place where you can
                 # pass hyper-parameters, such as the L_p norm, from the KGEM to the interaction function
                 interaction=DistMultInteraction(),
-                # Define the entity representations using the EmbeddingSpecification. By default, each
+                # Define the entity representations using a dict. By default, each
                 # embedding is linear. You can use the ``shape`` kwarg to specify higher dimensional
                 # tensor shapes.
-                entity_representations=EmbeddingSpecification(
+                entity_representations_kwargs=dict(
                     embedding_dim=embedding_dim,
                 ),
                 # Define the relation representations the same as the entities
-                relation_representations=EmbeddingSpecification(
+                relation_representations_kwargs=dict(
                     embedding_dim=embedding_dim,
                 ),
                 # All other arguments are passed through, such as the ``triples_factory``, ``loss``,
@@ -60,15 +59,14 @@ Instead of creating a new class, you can also directly use the :class:`pykeen.mo
 .. code-block:: python
 
     from pykeen.models import ERModel
-    from pykeen.nn import EmbeddingSpecification
     from pykeen.losses import BCEWithLogitsLoss
 
     model = ERModel(
         triples_factory=...,
         loss=BCEWithLogitsLoss(),
         interaction="transformer",
-        entity_representations=EmbeddingSpecification(embedding_dim=64),
-        relation_representations=EmbeddingSpecification(embedding_dim=64),
+        entity_representations_kwargs=dict(embedding_dim=64),
+        relation_representations_kwargs=dict(embedding_dim=64),
     )
 
 
