@@ -12,7 +12,7 @@ KGEM using the :class:`pykeen.models.ERModel` base class.
 .. code-block:: python
 
     from pykeen.models import ERModel
-    from pykeen.nn.modules import DistMultInteraction  # effectively the same as the example above
+    from pykeen.nn import DistMultInteraction, Embedding
 
     class DistMult(ERModel):
         def __init__(
@@ -36,10 +36,12 @@ KGEM using the :class:`pykeen.models.ERModel` base class.
                 # Define the entity representations using a dict. By default, each
                 # embedding is linear. You can use the ``shape`` kwarg to specify higher dimensional
                 # tensor shapes.
+                entity_representations=Embedding,
                 entity_representations_kwargs=dict(
                     embedding_dim=embedding_dim,
                 ),
                 # Define the relation representations the same as the entities
+                relation_representations=Embedding,
                 relation_representations_kwargs=dict(
                     embedding_dim=embedding_dim,
                 ),
