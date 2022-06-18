@@ -8,20 +8,21 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, HintOrType, OptionalKwargs
+from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
 
+from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .text import TextEncoder, text_encoder_resolver
-from .utils import WikidataCache
+from .utils import ShapeError, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -36,9 +37,13 @@ __all__ = [
     "LowRankRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
+    "PartitionRepresentation",
+    "BackfillRepresentation",
     "SingleCompGCNRepresentation",
     "SubsetRepresentation",
+    "CombinedRepresentation",
     "TextRepresentation",
+    "TransformedRepresentation",
     "WikidataTextRepresentation",
     # Utils
     "constrainer_resolver",
@@ -177,6 +182,19 @@ class Representation(nn.Module, ABC):
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
 
+    def iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over components for :meth:`extra_repr`."""
+        yield f"max_id={self.max_id}"
+        yield f"shape={self.shape}"
+        yield f"unique={self.unique}"
+        if self.normalizer is not None:
+            yield f"normalizer={self.normalizer}"
+        # dropout & regularizer will appear automatically, since it is a nn.Module
+
+    # docstr-coverage: inherited
+    def extra_repr(self) -> str:  # noqa: D102
+        return ", ".join(self.iter_extra_repr())
+
     @property
     def device(self) -> torch.device:
         """Return the device."""
@@ -189,8 +207,9 @@ class SubsetRepresentation(Representation):
     def __init__(
         self,
         max_id: int,
-        base: HintOrType[Representation],
+        base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ):
         """
@@ -202,6 +221,8 @@ class SubsetRepresentation(Representation):
             the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         :param base_kwargs:
             additional keyword arguments for the base representation
+        :param shape:
+            The shape of an individual representation.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
 
@@ -216,7 +237,7 @@ class SubsetRepresentation(Representation):
                 f"Base representations comprise only {base.max_id} representations, "
                 f"but at least {max_id} are required.",
             )
-        super().__init__(max_id=max_id, shape=base.shape, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(shape=base.shape, reference=shape), **kwargs)
         self.base = base
 
     # docstr-coverage: inherited
@@ -841,6 +862,7 @@ class SingleCompGCNRepresentation(Representation):
         self,
         combined: CombinedCompGCNRepresentations,
         position: int = 0,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ):
         """
@@ -850,19 +872,21 @@ class SingleCompGCNRepresentation(Representation):
             The combined representations.
         :param position:
             The position, either 0 for entities, or 1 for relations.
+        :param shape:
+            The shape of an individual representation.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
         :raises ValueError: If an invalid value is given for the position
         """
         if position == 0:  # entity
             max_id = combined.entity_representations.max_id
-            shape = (combined.output_dim,)
+            shape_ = (combined.output_dim,)
         elif position == 1:  # relation
             max_id = combined.relation_representations.max_id
-            shape = (combined.output_dim,)
+            shape_ = (combined.output_dim,)
         else:
             raise ValueError
-        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(shape=shape_, reference=shape), **kwargs)
         self.combined = combined
         self.position = position
         self.reset_parameters()
@@ -908,6 +932,8 @@ class TextRepresentation(Representation):
     def __init__(
         self,
         labels: Sequence[str],
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -917,17 +943,28 @@ class TextRepresentation(Representation):
 
         :param labels:
             the labels
+        :param max_id:
+            the number of representations. If provided, has to match the number of labels
+        :param shape:
+            The shape of an individual representation.
         :param encoder:
             the text encoder, or a hint thereof
         :param encoder_kwargs:
             keyword-based parameters used to instantiate the text encoder
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
+
+        :raises ValueError:
+            if the max_id does not match
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
+        # check max_id
+        max_id = max_id or len(labels)
+        if max_id != len(labels):
+            raise ValueError(f"max_id={max_id} does not match len(labels)={len(labels)}")
         # infer shape
-        shape = encoder.encode_all(labels[0:1]).shape[1:]
-        super().__init__(max_id=len(labels), shape=shape, **kwargs)
+        shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -991,6 +1028,97 @@ class TextRepresentation(Representation):
         return self.encoder(labels=labels)
 
 
+class CombinedRepresentation(Representation):
+    """A combined representation."""
+
+    #: the base representations
+    base: Sequence[Representation]
+
+    #: the combination module
+    combination: Combination
+
+    def __init__(
+        self,
+        max_id: int,
+        shape: Optional[OneOrSequence[int]] = None,
+        base: OneOrManyHintOrType[Representation] = None,
+        base_kwargs: OneOrManyOptionalKwargs = None,
+        combination: HintOrType[Combination] = None,
+        combination_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        :param max_id:
+            the number of representations.
+        :param shape:
+            The shape of an individual representation.
+        :param base:
+            the base representations, or hints thereof
+        :param base_kwargs:
+            keyword-based parameters for the instantiation of base representations
+        :param combination:
+            the combination, or a hint thereof
+        :param combination_kwargs:
+            additional keyword-based parameters used to instantiate the combination
+        :param kwargs:
+            additional keyword-based parameters passed to `Representation.__init__`.
+            May not contain any of `{max_id, shape, unique}`.
+
+        :raises ValueError:
+            if the `max_id` of the base representations does not match
+        """
+        # input normalization
+        combination = combination_resolver.make(combination, combination_kwargs)
+
+        # has to be imported here to avoid cyclic import
+        from . import representation_resolver
+
+        # create base representations
+        base = representation_resolver.make_many(base, kwargs=base_kwargs, max_id=max_id)
+
+        # verify same ID range
+        max_ids = sorted(set(b.max_id for b in base))
+        if len(max_ids) != 1:
+            # note: we could also relax the requiremen, and set max_id = min(max_ids)
+            raise ValueError(f"Maximum number of Ids does not match! {max_ids}")
+        max_id = max_id or max_ids[0]
+        if max_id != max_ids[0]:
+            raise ValueError(f"max_id={max_id} does not match base max_id={max_ids[0]}")
+
+        # shape inference
+        shape = ShapeError.verify(shape=combination.output_shape(input_shapes=[b.shape for b in base]), reference=shape)
+        super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
+
+        # assign base representations *after* super init
+        self.base = nn.ModuleList(base)
+        self.combination = combination
+
+    @staticmethod
+    def combine(
+        combination: nn.Module, base: Sequence[Representation], indices: Optional[torch.LongTensor] = None
+    ) -> torch.FloatTensor:
+        """
+        Combine base representations for the given indices.
+
+        :param combination: the combination
+        :param base: the base representations
+        :param indices: the indices, as given to :meth:`Representation._plain_forward`
+
+        :return:
+            the combined representations for the given indices
+        """
+        return combination([b._plain_forward(indices=indices) for b in base])
+
+    # docstr-coverage: inherited
+    def _plain_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.combine(combination=self.combination, base=self.base, indices=indices)
+
+
 class WikidataTextRepresentation(TextRepresentation):
     """
     Textual representations for datasets grounded in Wikidata.
@@ -1040,3 +1168,359 @@ class WikidataTextRepresentation(TextRepresentation):
         labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
+
+
+class PartitionRepresentation(Representation):
+    """
+    A partition of the indices into different representation modules.
+
+    Each index is assigned to an index in exactly one of the base representations. This representation is useful, e.g.,
+    when one of the base representations cannot provide vectors for each of the indices, and another representation is
+    used as back-up.
+
+    Consider the following example: We only have textual information for two entities. We want to use textual features
+    computed from them, which should not be trained. For the remaining entities we want to use directly trainable
+    embeddings.
+
+    We start by creating the representation for those entities where we have labels:
+
+    >>> from pykeen.nn import Embedding, init
+    >>> num_entities = 5
+    >>> labels = {1: "a first description", 4: "a second description"}
+    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
+    >>> shape = label_initializer.tensor.shape[1:]
+    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
+
+    Next, we create representations for the remaining ones
+
+    >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=shape)
+
+    To combine them into a single representation module we first need to define the assignment, i.e., where to look-up
+    the global ids. For this, we create a tensor of shape `(num_entities, 2)`, with the index of the base
+    representation, and the *local* index inside this representation
+
+    >>> import torch
+    >>> assignment = torch.as_tensor([(1, 0), (0, 0), (1, 1), (1, 2), (0, 1)])
+    >>> from pykeen.nn import PartitionRepresentation
+    >>> entity_repr = PartitionRepresentation(assignment=assignment, bases=[label_repr, non_label_repr])
+
+    For brevity, we use here randomly generated triples factories instead of the actual data
+
+    >>> from pykeen.triples.generation import generate_triples_factory
+    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
+    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
+
+    The combined representation can now be used as any other representation, e.g., to train a DistMult model:
+
+    >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models import ERModel
+    >>> pipeline(
+    ...     model=ERModel,
+    ...     interaction="distmult",
+    ...     model_kwargs=dict(
+    ...         entity_representation=entity_repr,
+    ...         relation_representation_kwargs=dict(shape=shape),
+    ...     ),
+    ...     training=training,
+    ...     testing=testing,
+    ... )
+    """
+
+    #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
+    assignment: torch.LongTensor
+
+    def __init__(
+        self,
+        assignment: torch.LongTensor,
+        shape: Optional[OneOrSequence[int]] = None,
+        bases: OneOrSequence[HintOrType[Representation]] = None,
+        bases_kwargs: OneOrSequence[OptionalKwargs] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        .. warning ::
+            the base representations have to have coherent shapes
+
+        :param assignment: shape: (max_id, 2)
+            the assignment, as tuples `(base_id, local_id)`, where `base_id` refers to the index of the base
+            representation and `local_id` is an index used to lookup in the base representation
+        :param shape:
+            the shape of an individual representation. If provided, must match the bases' shape
+        :param bases:
+            the base representations, or hints thereof.
+        :param bases_kwargs:
+            keyword-based parameters to instantiate the base representations
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
+            or `shape`, which are inferred from the base representations.
+
+        :raises ValueError:
+            if any of the inputs is invalid
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        # instantiate base representations if necessary
+        bases = representation_resolver.make_many(bases, bases_kwargs)
+
+        # there needs to be at least one base
+        if not bases:
+            raise ValueError("Must provide at least one base representation")
+        # while possible, this might be unintended
+        if len(bases) == 1:
+            logger.warning(f"Encountered only a single base representation: {bases[0]}")
+
+        # extract shape
+        shapes = [base.shape for base in bases]
+        if len(set(shapes)) != 1:
+            raise ValueError(f"Inconsistent base shapes: {shapes}")
+        shape = ShapeError.verify(shape=shapes[0], reference=shape)
+
+        # check for invalid base ids
+        unknown_base_ids = set(assignment[:, 0].tolist()).difference(range(len(bases)))
+        if unknown_base_ids:
+            raise ValueError(f"Invalid representation Ids in assignment: {unknown_base_ids}")
+
+        # check for invalid local indices
+        for i, base in enumerate(bases):
+            max_index = assignment[assignment[:, 0] == i, 1].max().item()
+            if max_index >= base.max_id:
+                raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
+
+        super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
+
+        # assign modules / buffers *after* super init
+        self.bases = bases
+        self.register_buffer(name="assignment", tensor=assignment)
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        assignment = self.assignment
+        if indices is not None:
+            assignment = assignment[indices]
+        # flatten assignment to ease construction of inverse indices
+        prefix_shape = assignment.shape[:-1]
+        assignment = assignment.view(-1, 2)
+        # we group indices by the representation which provides them
+        # thus, we need an inverse to restore the correct order
+        inverse = torch.empty_like(assignment[:, 0])
+        xs = []
+        offset = 0
+        for i, base in enumerate(self.bases):
+            mask = assignment[:, 0] == i
+            # get representations
+            local_indices = assignment[:, 1][mask]
+            xs.append(base(indices=local_indices))
+            # update inverse indices
+            end = offset + local_indices.numel()
+            inverse[mask] = torch.arange(offset, end, device=inverse.device)
+            offset = end
+        x = torch.cat(xs, dim=0)[inverse]
+        # invert flattening
+        if len(prefix_shape) != 1:
+            x = x.view(*prefix_shape, *x.shape[1:])
+        return x
+
+
+class BackfillRepresentation(PartitionRepresentation):
+    """A variant of a partition representation that is easily applicable to a single base representation.
+
+    Similarly to the :mod:`PartitionRepresentation` representation example, we start by
+    creating the representation for those entities where we have labels:
+
+    >>> from pykeen.nn import Embedding, init
+    >>> num_entities = 5
+    >>> labels = {1: "a first description", 4: "a second description"}
+    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
+    >>> shape = label_initializer.tensor.shape[1:]
+    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
+
+    Next, we directly create representations for the remaining ones using the backfill representation.
+    To do this, we need to create an iterable (e.g., a set) of all of the entity IDs that are in the base
+    representation. Then, the assignments to the base representation and an auxillary representation are
+    automatically generated for the base class
+
+    >>> from pykeen.nn import BackfillRepresentation
+    >>> entity_repr = BackfillRepresentation(base_ids=set(labels), max_id=num_entities, base=label_repr)
+
+    For brevity, we use here randomly generated triples factories instead of the actual data
+    >>> from pykeen.triples.generation import generate_triples_factory
+    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
+    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
+    The combined representation can now be used as any other representation, e.g., to train a DistMult model:
+    >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models import ERModel
+    >>> pipeline(
+    ...     model=ERModel,
+    ...     interaction="distmult",
+    ...     model_kwargs=dict(
+    ...         entity_representation=entity_repr,
+    ...         relation_representation_kwargs=dict(shape=shape),
+    ...     ),
+    ...     training=training,
+    ...     testing=testing,
+    ... )
+    """
+
+    def __init__(
+        self,
+        max_id: int,
+        base_ids: Iterable[int],
+        base: HintOrType[Representation] = None,
+        base_kwargs: OptionalKwargs = None,
+        backfill: HintOrType[Representation] = None,
+        backfill_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """Initialize the representation.
+
+        :param max_id:
+            The total number of entities that need to be embedded
+        :param base_ids:
+            An iterable of integer entity indexes which are provided through the base representations
+        :param base:
+            the base representation, or a hint thereof.
+        :param base_kwargs:
+            keyword-based parameters to instantiate the base representation
+        :param backfill:
+            the backfill representation, or hints thereof.
+        :param backfill_kwargs:
+            keyword-based parameters to instantiate the backfill representation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
+            or `shape`, which are inferred from the base representations.
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        base_ids = sorted(set(base_ids))
+        base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
+        # comment: not all representations support passing a shape parameter
+        backfill = representation_resolver.make(
+            backfill, backfill_kwargs, max_id=max_id - base.max_id, shape=base.shape
+        )
+
+        # create assignment
+        assignment = torch.full(size=(max_id, 2), fill_value=1, dtype=torch.long)
+        # base
+        assignment[base_ids, 0] = 0
+        assignment[base_ids, 1] = torch.arange(base.max_id)
+        # other
+        mask = torch.ones(assignment.shape[0], dtype=torch.bool)
+        mask[base_ids] = False
+        assignment[mask, 0] = 1
+        assignment[mask, 1] = torch.arange(backfill.max_id)
+
+        super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
+
+
+class TransformedRepresentation(Representation):
+    """
+    A (learnable) transformation upon base representations.
+
+    In the following example, we create representations which are obtained from a trainable transformation of fixed
+    random walk encoding features. We first load the dataset, here Nations:
+
+    >>> from pykeen.datasets import get_dataset
+    >>> dataset = get_dataset(dataset="nations")
+
+    Next, we create a random-walk positional encoding of dimension 32:
+
+    >>> from pykeen.nn import init
+    >>> dim = 32
+    >>> initializer = init.RandomWalkPositionalEncoding(triples_factory=dataset.training, dim=dim+1)
+    We used dim+1 for the RWPE initializion as by default it doesn't return the first dimension of 0's
+    That is, in the default setup, dim = 33 would return a 32d vector
+
+    For the transformation, we use a simple 2-layer MLP
+
+    >>> from torch import nn
+    >>> hidden = 64
+    >>> mlp = nn.Sequential(
+    ...     nn.Linear(in_features=dim, out_features=hidden),
+    ...     nn.ReLU(),
+    ...     nn.Linear(in_features=hidden, out_features=dim),
+    ... )
+
+    Finally, the transformed representation is given as
+
+    >>> from pykeen.nn import TransformedRepresentation
+    >>> r = TransformedRepresentation(
+    ...     transformation=mlp,
+    ...     base_kwargs=dict(max_id=dataset.num_entities, shape=(dim,), initializer=initializer, trainable=False),
+    ... )
+    """
+
+    def __init__(
+        self,
+        transformation: nn.Module,
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
+        base: HintOrType[Representation] = None,
+        base_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        :param transformation:
+            the transformation
+        :param max_id:
+            the number of representations. If provided, must match the base max id
+        :param shape:
+            the individual representations' shape. If provided, must match the output shape of the transformation
+        :param base:
+            the base representation, or a hint thereof, cf. `representation_resolver`
+        :param base_kwargs:
+            keyword-based parameters used to instantiate the base representation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`.
+
+        :raises ValueError:
+            if the max_id or shape does not match
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        base = representation_resolver.make(base, base_kwargs)
+
+        # infer shape
+        shape = ShapeError.verify(
+            shape=self._help_forward(
+                base=base, transformation=transformation, indices=torch.zeros(1, dtype=torch.long, device=base.device)
+            ).shape[1:],
+            reference=shape,
+        )
+        # infer max_id
+        max_id = max_id or base.max_id
+        if max_id != base.max_id:
+            raise ValueError(f"Incompatible max_id={max_id} vs. base.max_id={base.max_id}")
+
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        self.transformation = transformation
+        self.base = base
+
+    @staticmethod
+    def _help_forward(
+        base: Representation, transformation: nn.Module, indices: Optional[torch.LongTensor]
+    ) -> torch.FloatTensor:
+        """
+        Obtain base representations and apply the transformation.
+
+        :param base:
+            the base representation module
+        :param transformation:
+            the transformation
+        :param indices:
+            the indices
+
+        :return:
+            the transformed base representations
+        """
+        return transformation(base(indices=indices))
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        return self._help_forward(base=self.base, transformation=self.transformation, indices=indices)

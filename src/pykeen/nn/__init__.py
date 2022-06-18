@@ -5,6 +5,14 @@
 from class_resolver import ClassResolver
 
 from . import init
+from .combination import (
+    Combination,
+    ComplexSeparatedCombination,
+    ConcatAggregationCombination,
+    ConcatCombination,
+    ConcatProjectionCombination,
+    GatedCombination,
+)
 from .message_passing import RGCNRepresentation
 from .modules import (
     AutoSFInteraction,
@@ -52,11 +60,15 @@ from .pyg import (
     TypedMessagePassingRepresentation,
 )
 from .representation import (
+    BackfillRepresentation,
+    CombinedRepresentation,
     Embedding,
     LowRankRepresentation,
+    PartitionRepresentation,
     Representation,
     SubsetRepresentation,
     TextRepresentation,
+    TransformedRepresentation,
     WikidataTextRepresentation,
 )
 
@@ -69,13 +81,17 @@ __all__ = [
     "FeaturizedMessagePassingRepresentation",
     "LowRankRepresentation",
     "NodePieceRepresentation",
+    "PartitionRepresentation",
+    "BackfillRepresentation",
     "RGCNRepresentation",
     "SimpleMessagePassingRepresentation",
     "SubsetRepresentation",
     "TokenizationRepresentation",
     "TypedMessagePassingRepresentation",
     "FeaturizedMessagePassingRepresentation",
+    "CombinedRepresentation",
     "TextRepresentation",
+    "TransformedRepresentation",
     "WikidataTextRepresentation",
     "tokenizer_resolver",
     "representation_resolver",
@@ -121,6 +137,13 @@ __all__ = [
     "TuckerInteraction",
     "UMInteraction",
     "interaction_resolver",
+    # combinations
+    "Combination",
+    "ComplexSeparatedCombination",
+    "ConcatAggregationCombination",
+    "ConcatCombination",
+    "ConcatProjectionCombination",
+    "GatedCombination",
 ]
 
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(

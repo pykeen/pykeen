@@ -52,7 +52,7 @@ from .loader import (
     TorchPrecomputedTokenizerLoader,
     precomputed_tokenizer_loader_resolver,
 )
-from .representations import HashDiversityInfo, NodePieceRepresentation, TokenizationRepresentation
+from .representation import HashDiversityInfo, NodePieceRepresentation, TokenizationRepresentation
 from .tokenization import AnchorTokenizer, PrecomputedPoolTokenizer, RelationTokenizer, Tokenizer, tokenizer_resolver
 
 __all__ = [
