@@ -765,7 +765,7 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             the number of filters (=output channels) of the convolution
         """
         super().__init__()
-        self.embedding_dim = embedding_dim  # FIXME rename
+        self.embedding_dim = embedding_dim
         self.num_filters = num_filters
 
         # The interaction model
