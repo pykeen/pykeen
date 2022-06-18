@@ -230,15 +230,11 @@ class PretrainedInitializer:
             raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
         return self.tensor.to(device=x.device, dtype=x.dtype)
 
-    def as_embedding(self):
+    def as_embedding(self, **kwargs: Any) -> "Embedding":
         """Get a static embedding from this pre-trained initializer."""
         from .representation import Embedding
-        return Embedding(
-            max_id=...,  # TODO implement
-            shape=self.tensor.shape[1:],
-            initializer=self,
-            trainable=False,
-        )
+        max_id, *shape = self.tensor.shape
+        return Embedding(max_id=max_id, shape=shape, initializer=self, trainable=False, **kwargs)
 
 
 class LabelBasedInitializer(PretrainedInitializer):
