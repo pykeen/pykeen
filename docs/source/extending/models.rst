@@ -1,5 +1,10 @@
-Extending the Interaction Models (Old-Style)
-============================================
+Obsolete Tutorial: Extending the Interaction Models (Old-Style)
+===============================================================
+.. warning::
+
+    This tutorial is no longer valid since we removed the ``EntityRelationEmbeddingModel`` class.
+    in PyKEEN 1.8.2. Use the ``ERModel`` class for custom models now.
+
 Let's assume you have invented a new interaction model,
 e.g. this variant of :class:`pykeen.models.DistMult`
 
@@ -8,8 +13,6 @@ e.g. this variant of :class:`pykeen.models.DistMult`
     f(h, r, t) = <h, \sigma(r), t>
 
 where :math:`h,r,t \in \mathbb{R}^d`, and :math:`\sigma` denotes the logistic sigmoid.
-
-.. todo:: Remove this tutorial - :class:`pykeen.models.base.EntityRelationEmbeddingModel` no longer exists
 
 Picking a Base Class
 --------------------
