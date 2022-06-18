@@ -69,25 +69,31 @@ predictions for entities not seen during training.
 
     from pykeen.pipeline import pipeline
     from pykeen.datasets import get_dataset
-    from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
+    from pykeen.nn.init import LabelBasedInitializer
+    from pykeen.nn import Embedding
     from pykeen.models import ERModel
 
     dataset = get_dataset(dataset="nations")
-    entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
-        triples_factory=dataset.training,
+
+    label_initializer = LabelBasedInitializer.from_triples_factory(dataset.training)
+    entity_representations = Embedding(
+        max_id=dataset.num_entities,
+        shape=label_initializer.tensor.shape[1:],
+        initializer=label_initializer,
+        trainable=False,
     )
+
     result = pipeline(
         dataset=dataset,
         model=ERModel,
         model_kwargs=dict(
             interaction="ermlpe",
             interaction_kwargs=dict(
-                # FIXME
-                embedding_dim=entity_representations.embedding_dim,
+                embedding_dim=dataset.num_entities,
             ),
             entity_representations=entity_representations,
-            relation_representations=EmbeddingSpecification(
-                shape=entity_representations.shape,
+            relation_representations_kwargs=dict(
+                embedding_dim=dataset.num_entities,
             ),
         ),
         training_kwargs=dict(
