@@ -1443,7 +1443,9 @@ class TransformedRepresentation(Representation):
 
     >>> from pykeen.nn import init
     >>> dim = 32
-    >>> initializer = RandomWalkPositionalEncoding(triples_factory=dataset.training)
+    >>> initializer = init.RandomWalkPositionalEncoding(triples_factory=dataset.training, dim=dim+1)
+    We used dim+1 for the RWPE initializion as by default it doesn't return the first dimension of 0's
+    That is, in the default setup, dim = 33 would return a 32d vector
 
     For the transformation, we use a simple 2-layer MLP
 
