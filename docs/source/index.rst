@@ -9,6 +9,7 @@ PyKEEN
 
    installation
    tutorial/first_steps
+   tutorial/models
    tutorial/trackers/index
    tutorial/checkpoints
    tutorial/translational_toy_example
