@@ -67,9 +67,7 @@ The following examples are for entity representations, but can be equivalently u
     Internally, the :module:`class_resolver` library is used to support various alternative parametrization, e.g.,
     the string name of a representation class, the `class` object, or instances of the
     :class:`pykeen.nn.Representation` class. You can also register your own classes to the resolver. Detailed
-    information can be found in the documentation of the package, or `using_resolvers`
-
-    .. todo:: use a proper link to the tutorial
+    information can be found in the documentation of the package, or :ref:`using_resolvers`
 
 
 Interaction Function
@@ -86,8 +84,7 @@ representations and calculates the corresponding triple scores.
 
 As with the representations, interactions passed to :class:`pykeen.models.ERModel` are resolved, this time using
 :meth:`pykeen.nn.interaction_resolver.make`. Hence, we can provide, e.g., strings corresponding to the interaction
-function instead of an instantiated class. Further information can be found at :link:`using_resolvers`
-.. todo:: proper link
+function instead of an instantiated class. Further information can be found at :ref:`using_resolvers`.
 
 .. note ::
     
