@@ -39,7 +39,6 @@ PyKEEN
    :maxdepth: 2
 
    extending/datasets
-   extending/models_new
    extending/models
 
 .. toctree::
