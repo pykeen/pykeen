@@ -386,6 +386,8 @@ class WeisfeilerLehmanInitializer:
         x[:] = color_representation[self.colors]
         return x
 
+    # TODO as_embedding function
+
 
 class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
     r"""

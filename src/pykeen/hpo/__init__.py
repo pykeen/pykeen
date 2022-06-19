@@ -61,8 +61,6 @@ in each componenent:
 5. If no explicit value was passed, no HPO strategy was passed, and there is no default HPO strategy, and
    there is no default hyper-parameter value, raise an :class:`TypeError`
 
-.. todo::  fix references to embedding_dim
-
 For example, the TransE model's default HPO strategy for its ``embedding_dim`` argument is to search between
 $[16, 256]$ with a step size of 16. The $l_p$ norm is set to search as either 1 or 2. This will be overridden
 with 50 in the following code:
