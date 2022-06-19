@@ -1,5 +1,5 @@
-Knowledge Graph Embedding Model
-===============================
+Knowledge Graph Embedding Models
+================================
 In PyKEEN, the base class for Knowledge Graph Embedding Models is :class:`pykeen.models.ERModel`.
 
 It combines entity and relation representations with an interaction function.
