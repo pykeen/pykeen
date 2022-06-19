@@ -5,14 +5,14 @@ In PyKEEN, the base class for Knowledge Graph Embedding Models is :class:`pykeen
 It combines entity and relation representations with an interaction function.
 On a very-high level, triple scores are obtained by first extracting the representations
 corresponding to the head and tail entity and relation (given as integer indices), and then
-uses the interaction interaction function to calculcate a scalar score from them.
+uses the interaction interaction function to calculate a scalar score from them.
 
 This tutorial gives a high-level overview of these components, and explains how to extend
 and modify them.
 
 Representation
 --------------
-A :class:`pykeen.nn.Represenation` module provides a method to obtain *representations*, e.g.,
+A :class:`pykeen.nn.representation.Representation` module provides a method to obtain *representations*, e.g.,
 vectors, for given integer indices. These indices may correspond to entity or relation indices.
 The representations are chosen by providing appropriate inputs to the parameters
 
@@ -30,32 +30,32 @@ The following examples are for entity representations, but can be equivalently u
 * a single :class:`pykeen.nn.Embedding` with dimensionality 64, suitable, e.g., for interactions such as
   :class:`pykeen.nn.TransEInteraction`, or :class:`pykeen.nn.DistMultInteraction`.
 
-.. code-block:: python
+    .. code-block:: python
 
-    model = ERModel(
-        # the default:
-        # entity_representations=None,
-        # equivalent to
-        # entity_representations=[None],
-        # equivalent to
-        # entity_representations=[pykeen.nn.Embedding],
-        entity_representations_kwargs=dict(shape=64),
-        ...,
-    )
+        model = ERModel(
+            # the default:
+            # entity_representations=None,
+            # equivalent to
+            # entity_representations=[None],
+            # equivalent to
+            # entity_representations=[pykeen.nn.Embedding],
+            entity_representations_kwargs=dict(shape=64),
+            ...,
+        )
 
 *  two :class:`pykeen.nn.Embedding` with same dimensionality 64, suitable, e.g., for interactions such as
    :class:`pykeen.nn.BoxEInteraction`
 
-.. code-block:: python
+    .. code-block:: python
 
-    model = ERModel(
-        entity_representations=[None, None],
-        # note: ClassResolver.make_many supports "broad-casting" kwargs
-        entity_representations_kwargs=dict(shape=64),
-        # equivalent:
-        # entity_representations_kwargs=[dict(shape=64), dict(shape=64)],
-        ...,
-    )
+        model = ERModel(
+            entity_representations=[None, None],
+            # note: ClassResolver.make_many supports "broad-casting" kwargs
+            entity_representations_kwargs=dict(shape=64),
+            # equivalent:
+            # entity_representations_kwargs=[dict(shape=64), dict(shape=64)],
+            ...,
+        )
 
 .. note ::
     
@@ -72,7 +72,6 @@ The following examples are for entity representations, but can be equivalently u
 
 Interaction Function
 --------------------
-
 An interaction function calculates scalar scores from head, relation and tail representations.
 These scores can be interpreted as the plausibility of a triple, i.e., the higher the score, the more plausible
 the triple is. Good models thus should output high scores for true triples, and low scores for false triples.
