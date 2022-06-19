@@ -2,6 +2,9 @@
 
 """Embedding weight initialization routines."""
 
+# for forward references in Python < 3.10
+from __future__ import annotations
+
 import functools
 import logging
 import math
