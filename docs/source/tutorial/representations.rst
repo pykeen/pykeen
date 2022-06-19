@@ -73,7 +73,9 @@ predictions for entities not seen during training.
     from pykeen.models import ERModel
 
     dataset = get_dataset(dataset="nations")
-    entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(dataset.training)
+    entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
+        triples_factory=dataset.training,
+    )
     result = pipeline(
         dataset=dataset,
         model=ERModel,
