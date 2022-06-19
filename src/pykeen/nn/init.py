@@ -328,7 +328,7 @@ class LabelBasedInitializer(PretrainedInitializer):
         )
 
 
-class WeisfeilerLehmanInitializer:
+class WeisfeilerLehmanInitializer(PretrainedInitializer):
     """An initializer based on an encoding of categorical colors from the Weisfeiler-Lehman algorithm."""
 
     def __init__(
@@ -370,26 +370,25 @@ class WeisfeilerLehmanInitializer:
         )
 
         # get coloring
-        self.colors = last(iter_weisfeiler_lehman(edge_index=edge_index, num_nodes=num_entities, **kwargs))
+        colors = last(iter_weisfeiler_lehman(edge_index=edge_index, num_nodes=num_entities, **kwargs))
+        super().__init__(colors)
         # make color initializer
         self.color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
 
     @property
     def num_colors(self) -> int:
         """Return the number of colors."""
-        return self.colors.max().item() + 1
+        return self.tensor.max().item() + 1
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         """Initialize the tensor."""
-        if x.shape[0] != self.colors.shape[0]:
-            raise ValueError(f"shape does not match: expected shape[0]={self.colors.shape[0]} but got {x.shape}")
+        if x.shape[0] != self.tensor.shape[0]:
+            raise ValueError(f"shape does not match: expected shape[0]={self.tensor.shape[0]} but got {x.shape}")
         # initialize color representations
         color_representation = self.color_initializer(x.new_empty(self.num_colors, *x.shape[1:]))
         # init entity representations according to the color
-        x[:] = color_representation[self.colors]
+        x[:] = color_representation[self.tensor]
         return x
-
-    # TODO as_embedding function
 
 
 class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
