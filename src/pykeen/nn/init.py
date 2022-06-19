@@ -205,7 +205,7 @@ class PretrainedInitializer:
 
         import torch
         from pykeen.pipeline import pipeline
-        from pykeen.nn.init import create_init_from_pretrained
+        from pykeen.nn.init import PretrainedInitializer
 
         # this is usually loaded from somewhere else
         # the shape must match, as well as the entity-to-id mapping
