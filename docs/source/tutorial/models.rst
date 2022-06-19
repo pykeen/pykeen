@@ -20,7 +20,7 @@ The representations are chosen by providing appropriate inputs to the parameters
 * `relation_representations` / `relation_representations_kwargs` for relation representations.
 
 These inputs are then used to instantiate the representations using
-:methd:`pykeen.nn.representation_resolver.make_many`. Notice that the model class,
+:meth:`pykeen.nn.representation_resolver.make_many`. Notice that the model class,
 :class:`pykeen.models.ERModel`, takes care of filling in the `max_id` parameter into the `..._kwargs`.
 The default is to use a single :class:`pykeen.nn.Embedding` for entities and relations, as
 encountered in many publications.
@@ -28,7 +28,7 @@ encountered in many publications.
 The following examples are for entity representations, but can be equivalently used for relation representations.
 
 * a single :class:`pykeen.nn.Embedding` with dimensionality 64, suitable, e.g., for interactions such as
-:class:`pykeen.nn.TransEInteraction`, or :class:`pykeen.nn.DistMultInteraction`.
+  :class:`pykeen.nn.TransEInteraction`, or :class:`pykeen.nn.DistMultInteraction`.
 
 .. code-block:: python
 
@@ -44,7 +44,7 @@ The following examples are for entity representations, but can be equivalently u
     )
 
 *  two :class:`pykeen.nn.Embedding` with same dimensionality 64, suitable, e.g., for interactions such as
-:class:`pykeen.nn.BoxEInteraction`
+   :class:`pykeen.nn.BoxEInteraction`
 
 .. code-block:: python
 
@@ -64,14 +64,11 @@ The following examples are for entity representations, but can be equivalently u
 
 .. note ::
     
-    Internally, the :module:`class_resolver` library is used to support various alternative parametrization, e.g.,
+    Internally, the :mod:`class_resolver` library is used to support various alternative parametrization, e.g.,
     the string name of a representation class, the `class` object, or instances of the
     :class:`pykeen.nn.Representation` class. You can also register your own classes to the resolver. Detailed
-    information can be found in the documentation of the package, or :ref:`using_resolvers`
+    information can be found in the documentation of the package or :ref:`using_resolvers`
 
-.. seealso ::
-
-    :ref:`representations`
 
 Interaction Function
 --------------------

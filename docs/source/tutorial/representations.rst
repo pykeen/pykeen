@@ -1,3 +1,5 @@
+.. _representations:
+
 Representations
 ===============
 In PyKEEN, a :class:`pykeen.nn.representation.Representation` is used to map
