@@ -120,7 +120,10 @@ class LitModule(pytorch_lightning.LightningModule):
 
     def forward(self, x):
         """
-        Perform the prediction or inference step.
+        Perform the prediction or inference step by wrapping :meth:`pykeen.models.ERModel.predict_t`.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
 
         .. note::
             in lightning, forward defines the prediction/inference actions
