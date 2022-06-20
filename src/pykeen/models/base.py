@@ -436,6 +436,7 @@ class Model(nn.Module, ABC):
         hrt_batch: MappedTriples,
         target: Target,
         full_batch: bool = True,
+        ids: Optional[torch.LongTensor] = None,
         **kwargs,
     ) -> torch.FloatTensor:
         """
@@ -447,6 +448,8 @@ class Model(nn.Module, ABC):
             the target to predict
         :param full_batch:
             whether `hrt_batch` is the full batch, or only the "input" part of the target prediction method
+        :param ids:
+            restrict prediction to only those ids
         :param kwargs:
             additional keyword-based parameters passed to the specific target prediction method.
 
@@ -459,17 +462,17 @@ class Model(nn.Module, ABC):
         if target == LABEL_TAIL:
             if full_batch:
                 hrt_batch = hrt_batch[:, 0:2]
-            return self.predict_t(hrt_batch, **kwargs)
+            return self.predict_t(hrt_batch, **kwargs, tails=ids)
 
         if target == LABEL_RELATION:
             if full_batch:
                 hrt_batch = hrt_batch[:, 0::2]
-            return self.predict_r(hrt_batch, **kwargs)
+            return self.predict_r(hrt_batch, **kwargs, relations=ids)
 
         if target == LABEL_HEAD:
             if full_batch:
                 hrt_batch = hrt_batch[:, 1:3]
-            return self.predict_h(hrt_batch, **kwargs)
+            return self.predict_h(hrt_batch, **kwargs, heads=ids)
 
         raise ValueError(f"Unknown target={target}")
 
