@@ -172,7 +172,7 @@ Instead of creating a new class, you can also directly use the :class:`pykeen.mo
 
     model = ERModel(
         triples_factory=...,
-        loss=BCEWithLogitsLoss(),
+        loss="BCEWithLogits",
         interaction="transformer",
         entity_representations_kwargs=dict(embedding_dim=64),
         relation_representations_kwargs=dict(embedding_dim=64),
