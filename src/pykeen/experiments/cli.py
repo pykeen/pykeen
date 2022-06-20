@@ -98,6 +98,9 @@ def reproduce(
     """Reproduce a pre-defined experiment included in PyKEEN.
 
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
+
+    # noqa:DAR101
+    # noqa:DAR401
     """
     file_name = f"{reference}_{model}_{dataset}"
     path = HERE.joinpath(model, file_name)
@@ -168,6 +171,7 @@ def _help_reproduce(
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param file_name: Name of JSON/YAML file (optional)
+    :param extra_config: Extra configuration path
     :param keep_seed:
         whether to keep a random seed if given as part of the configuration
     """
@@ -235,6 +239,8 @@ def ablation(
     """Generate a set of HPO configurations.
 
     A sample file can be run with ``pykeen experiments ablation tests/resources/hpo_complex_nations.json``.
+
+    # noqa:DAR101
     """
     from ..ablation.ablation import _run_ablation_experiments, prepare_ablation_from_path
 

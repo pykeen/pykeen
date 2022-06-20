@@ -531,6 +531,11 @@ def relation_pattern_types(
     where $X_i$ is of the form $r_i(h_i, t_i)$, and some of the $h_i / t_i$ might re-occur in other atoms.
     The *support* of a pattern is the number of distinct instantiations of all variables for the left hand side.
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
+
+    :param mapped_triples:
+        A collection of ID-based triples.
+    :returns:
+        A dataframe of relation categorization
     """
     # determine patterns from triples
     base = iter_patterns(mapped_triples=mapped_triples)
@@ -561,7 +566,7 @@ def relation_injectivity(
     :param add_labels:
         Whether to add labels.
     :param label_to_id:
-        The label to Id mapping.
+        The label to index mapping.
 
     :return:
         A dataframe with one row per relation, its number of occurrences and head / tail injectivity scores.
@@ -599,6 +604,8 @@ def relation_cardinality_types(
         The ID-based triples.
     :param add_labels:
         Whether to add relation labels (if available).
+    :param label_to_id:
+        The label to index mapping.
 
     :return:
         A dataframe with columns ( relation_id | relation_type )
@@ -668,6 +675,10 @@ def get_relation_functionality(
 
     :param mapped_triples:
         The ID-based triples.
+    :param add_labels:
+        Should the labels be added to the dataframe?
+    :param label_to_id:
+        The label to index mapping.
 
     :return:
         A dataframe with columns ( functionality | inverse_functionality )
