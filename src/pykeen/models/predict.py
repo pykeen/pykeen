@@ -179,7 +179,7 @@ def get_tail_prediction_df(
     scores = model.predict_t(batch, mode=mode, tails=tails)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
-        [(entity_id, entity_label, score) for (entity_id, entity_label), score in zip(id_labels, scores)],
+        [pair + (score,) for pair, score in zip(id_labels, scores)],
         columns=["tail_id", "tail_label", "score"],
     ).sort_values("score", ascending=False)
 
