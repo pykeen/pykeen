@@ -368,27 +368,16 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         edge_index = get_edge_index(
             triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
         )
-
         # get coloring
         colors = last(iter_weisfeiler_lehman(edge_index=edge_index, num_nodes=num_entities, **kwargs))
-        super().__init__(colors)
         # make color initializer
-        self.color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
-
-    @property
-    def num_colors(self) -> int:
-        """Return the number of colors."""
-        return self.tensor.max().item() + 1
-
-    def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Initialize the tensor."""
-        if x.shape[0] != self.tensor.shape[0]:
-            raise ValueError(f"shape does not match: expected shape[0]={self.tensor.shape[0]} but got {x.shape}")
+        color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
         # initialize color representations
-        color_representation = self.color_initializer(x.new_empty(self.num_colors, *x.shape[1:]))
+        num_colors = colors.max().item() + 1
+        # note: this could be a representation?
+        color_representation = color_initializer(colors.new_empty(num_colors, *colors.shape[1:]))
         # init entity representations according to the color
-        x[:] = color_representation[self.tensor]
-        return x
+        super().__init__(tensor=color_representation[colors])
 
 
 class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
