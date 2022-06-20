@@ -124,7 +124,9 @@ class WeisfeilerLehmanInitializerTestCase(cases.InitializerTestCase):
     def setUp(self) -> None:
         """Prepare for test."""
         dataset = Nations()
-        self.initializer = pykeen.nn.init.WeisfeilerLehmanInitializer(triples_factory=dataset.training)
+        self.initializer = pykeen.nn.init.WeisfeilerLehmanInitializer(
+            triples_factory=dataset.training, shape=self.shape
+        )
         self.num_entities = dataset.num_entities
 
 
