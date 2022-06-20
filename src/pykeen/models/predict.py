@@ -153,7 +153,7 @@ def get_prediction_df(
         testing=testing,
         query_ids_key=f"{target}_id",
         col=TARGET_TO_INDEX[target],
-        other_col_ids=batch_ids,
+        other_col_ids=batch_ids,  # FIXME @mberr types are wrong
     )
 
 
