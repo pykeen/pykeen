@@ -39,6 +39,9 @@ def _split_triples(
 
     :return:
         The splitted triples.
+
+    :raises ValueError:
+        If the given sizes are different from the number of triples in mapped triples
     """
     num_triples = mapped_triples.shape[0]
     if sum(sizes) != num_triples:

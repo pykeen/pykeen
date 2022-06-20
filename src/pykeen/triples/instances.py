@@ -54,9 +54,8 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         """Get a collator."""
         return None
 
-    # docstr-coverage: ignore
     @classmethod
-    def from_triples(
+    def from_triples(  # noqa:DAR202,DAR401
         cls,
         mapped_triples: MappedTriples,
         *,
@@ -360,6 +359,8 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
             The number of relations.
         :param target:
             The column to predict
+        :param kwargs:
+            Keyword arguments (thrown out)
 
         :return:
             The instances.
