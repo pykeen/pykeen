@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Iterable, List, Mapping, Optional, Set, Tuple, Type
+from typing import Iterable, List, Mapping, Optional, Set, Tuple, Type, TypeVar
 
 import click
 from class_resolver import ClassResolver
@@ -44,6 +44,7 @@ from .models.cli import build_cli_from_cls
 from .nn import representation_resolver
 from .nn.modules import Interaction, interaction_resolver
 from .nn.node_piece.cli import tokenize
+from .nn.pyg import MessagePassingRepresentation
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver
@@ -55,6 +56,7 @@ from .utils import get_until_first_blank, getattr_or_docdata
 from .version import env_table
 
 HERE = Path(__file__).resolve().parent
+X = TypeVar("X")
 
 
 @click.group()
@@ -159,7 +161,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None) -> Iterable[Tuple[str, s
 
 
 def _citation(dd):
-    citation = dd.get("citation")
+    citation = (dd or {}).get("citation")
     if citation is None:
         return None
     return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
@@ -186,20 +188,28 @@ def _format_reference(reference: Optional[str], link_fmt: Optional[str], alt_ref
 
 
 def _get_resolver_lines2(
-    resolver: ClassResolver, link_fmt: Optional[str] = None
+    resolver: ClassResolver[X], link_fmt: Optional[str] = None, skip: Optional[Set[Type[X]]] = None
 ) -> Iterable[Tuple[str, Optional[str]]]:
     for _, clsx in sorted(resolver.lookup_dict.items()):
+        if skip and clsx in skip:
+            continue
         reference = f"{clsx.__module__}.{clsx.__qualname__}"
-        name = resolver.docdata(clsx, "name")
+        docdata = resolver.docdata(clsx) or {}
+        name = docdata.get("name")
         if not name:
             click.secho(message=f"Missing docdata name from {reference}", err=True)
-        reference = _format_reference(reference, link_fmt, alt_reference=name)
-        yield reference, _citation(resolver.docdata(clsx, "citation"))
+        reference = _format_reference(reference, link_fmt)
+        yield name, reference, _citation(docdata)
 
 
 def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
-    lines = sorted(_get_resolver_lines2(resolver=interaction_resolver, link_fmt=link_fmt))
-    headers = ["Name", "Citation"]
+    lines = list(
+        _get_resolver_lines2(
+            resolver=interaction_resolver,
+            link_fmt=link_fmt,
+        )
+    )
+    headers = ["Name", "Reference", "Citation"]
     return (
         tabulate(
             lines,
@@ -211,8 +221,14 @@ def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = No
 
 
 def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
-    lines = sorted(_get_resolver_lines2(resolver=representation_resolver, link_fmt=link_fmt))
-    headers = ["Name", "Citation"]
+    lines = list(
+        _get_resolver_lines2(
+            resolver=representation_resolver,
+            link_fmt=link_fmt,
+            skip={MessagePassingRepresentation},
+        )
+    )
+    headers = ["Name", "Reference", "Citation"]
     return (
         tabulate(
             lines,

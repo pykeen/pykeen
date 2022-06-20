@@ -7,6 +7,7 @@ from typing import Callable, List, NamedTuple, Optional, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from docdata import parse_docdata
 
 from .tokenization import Tokenizer, tokenizer_resolver
 from ..combination import ConcatAggregationCombination
@@ -26,8 +27,13 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+@parse_docdata
 class TokenizationRepresentation(Representation):
-    """A module holding the result of tokenization."""
+    """A module holding the result of tokenization.
+
+    ---
+    name: Tokenization Representation
+    """
 
     #: the token ID of the padding token
     vocabulary_size: int

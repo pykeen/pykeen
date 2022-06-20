@@ -453,28 +453,37 @@ class NormBasedInteraction(
         return dict(p=self.p, power_norm=self.power_norm)
 
 
+@parse_docdata
 class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the TransE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transe_interaction`
+    ---
+    name: TransE
     """
 
     func = pkf.transe_interaction
 
 
+@parse_docdata
 class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateless module for the TransF interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
+    ---
+    name: TransF
     """
 
     func = pkf.transf_interaction
 
 
+@parse_docdata
 class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless ComplEx interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.complex_interaction`
+    ---
+    name: ComplEx
     """
 
     func = pkf.complex_interaction
@@ -536,12 +545,15 @@ def _calculate_missing_shape_information(
     return input_channels, width, height  # type: ignore
 
 
+@parse_docdata
 class ConvEInteraction(
     FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]],
 ):
     """A stateful module for the ConvE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.conve_interaction`
+    ---
+    name: ConvE
     """
 
     # vector & scalar offset
@@ -675,6 +687,7 @@ class ConvEInteraction(
         )
 
 
+@parse_docdata
 class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ConvKB interaction function.
 
@@ -731,6 +744,7 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         )
 
 
+@parse_docdata
 class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless DistMult interaction function.
 
@@ -740,6 +754,7 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     func = pkf.distmult_interaction
 
 
+@parse_docdata
 class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless DistMA interaction function.
 
@@ -749,6 +764,7 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.dist_ma_interaction
 
 
+@parse_docdata
 class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ER-MLP interaction.
 
@@ -800,6 +816,7 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         )
 
 
+@parse_docdata
 class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     r"""A stateful module for the ER-MLP (E) interaction function.
 
@@ -863,6 +880,7 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         return dict(mlp=self.mlp)
 
 
+@parse_docdata
 class TransRInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
@@ -899,6 +917,7 @@ class TransRInteraction(
         return dict(h=h, r=r[0], t=t, m_r=r[1])
 
 
+@parse_docdata
 class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless RotatE interaction function.
 
@@ -908,6 +927,7 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.rotate_interaction
 
 
+@parse_docdata
 class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless HolE interaction function.
 
@@ -917,6 +937,7 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
     func = pkf.hole_interaction
 
 
+@parse_docdata
 class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ProjE interaction function.
 
@@ -968,6 +989,7 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         return dict(d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity)
 
 
+@parse_docdata
 class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless RESCAL interaction function.
 
@@ -978,6 +1000,7 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.rescal_interaction
 
 
+@parse_docdata
 class SEInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
@@ -1003,6 +1026,7 @@ class SEInteraction(
         return dict(h=h, t=t, r_h=r[0], r_t=r[1])
 
 
+@parse_docdata
 class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the stateless Tucker interaction function.
 
@@ -1098,6 +1122,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         )
 
 
+@parse_docdata
 class UMInteraction(
     NormBasedInteraction[torch.FloatTensor, None, torch.FloatTensor],
 ):
@@ -1132,6 +1157,7 @@ class UMInteraction(
         return dict(h=h, t=t)
 
 
+@parse_docdata
 class TorusEInteraction(NormBasedInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """A stateful module for the TorusE interaction function.
 
@@ -1152,6 +1178,7 @@ class TorusEInteraction(NormBasedInteraction[torch.FloatTensor, torch.FloatTenso
         super().__init__(p=p, power_norm=power_norm)
 
 
+@parse_docdata
 class TransDInteraction(
     NormBasedInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1192,6 +1219,7 @@ class TransDInteraction(
         return dict(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p)
 
 
+@parse_docdata
 class NTNInteraction(
     FunctionalInteraction[
         torch.FloatTensor,
@@ -1240,6 +1268,7 @@ class NTNInteraction(
         return dict(activation=self.non_linearity)
 
 
+@parse_docdata
 class KG2EInteraction(
     FunctionalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1299,6 +1328,7 @@ class KG2EInteraction(
         )
 
 
+@parse_docdata
 class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the TransH interaction function.
 
@@ -1318,6 +1348,7 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
         return dict(h=h, w_r=r[0], d_r=r[1], t=t)
 
 
+@parse_docdata
 class MuREInteraction(
     NormBasedInteraction[
         Tuple[FloatTensor, FloatTensor, FloatTensor],
@@ -1348,6 +1379,7 @@ class MuREInteraction(
         return dict(h=h, b_h=b_h, r_vec=r_vec, r_mat=r_mat, t=t, b_t=b_t)
 
 
+@parse_docdata
 class SimplEInteraction(
     FunctionalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1390,6 +1422,7 @@ class SimplEInteraction(
         return dict(h=h[0], h_inv=h[1], r=r[0], r_inv=r[1], t=t[0], t_inv=t[1])
 
 
+@parse_docdata
 class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the PairRE interaction function.
 
@@ -1409,6 +1442,7 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
 
 
+@parse_docdata
 class QuatEInteraction(
     FunctionalInteraction[
         torch.FloatTensor,
@@ -1512,6 +1546,7 @@ class MonotonicAffineTransformationInteraction(
         return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
 
 
+@parse_docdata
 class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A module wrapper for the CrossE interaction function.
 
@@ -1568,6 +1603,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         return dict(h=h, r=r, c_r=c_r, t=t)
 
 
+@parse_docdata
 class BoxEInteraction(
     NormBasedInteraction[
         Tuple[FloatTensor, FloatTensor],
@@ -1630,6 +1666,7 @@ class BoxEInteraction(
         return state
 
 
+@parse_docdata
 class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """
     An implementation of the CP interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).

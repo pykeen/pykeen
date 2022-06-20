@@ -15,6 +15,7 @@ import torch
 import torch.nn
 from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
+from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -201,8 +202,13 @@ class Representation(nn.Module, ABC):
         return get_preferred_device(module=self, allow_ambiguity=True)
 
 
+@parse_docdata
 class SubsetRepresentation(Representation):
-    """A representation module, which only exposes a subset of representations of its base."""
+    """A representation module, which only exposes a subset of representations of its base.
+
+    ---
+    name: Subset Representation
+    """
 
     def __init__(
         self,
@@ -250,6 +256,7 @@ class SubsetRepresentation(Representation):
         return self.base._plain_forward(indices=indices)
 
 
+@parse_docdata
 class Embedding(Representation):
     """Trainable embeddings.
 
@@ -279,6 +286,9 @@ class Embedding(Representation):
     >>> import torch
     >>> batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
     >>> scores = model.score_hrt(batch)
+
+    ---
+    name: Embedding
     """
 
     normalizer: Optional[Normalizer]
@@ -412,6 +422,7 @@ class Embedding(Representation):
         return x
 
 
+@parse_docdata
 class LowRankRepresentation(Representation):
     r"""
     Low-rank embedding factorization.
@@ -421,6 +432,9 @@ class LowRankRepresentation(Representation):
 
     .. math ::
         E[i] = \sum_k B[i, k] * W[k]
+
+    ---
+    name: Low Rank Embedding
     """
 
     def __init__(
@@ -855,8 +869,13 @@ class CombinedCompGCNRepresentations(nn.Module):
         )
 
 
+@parse_docdata
 class SingleCompGCNRepresentation(Representation):
-    """A wrapper around the combined representation module."""
+    """A wrapper around the combined representation module.
+
+    ---
+    name: Single CompGCN Representation
+    """
 
     def __init__(
         self,
@@ -902,6 +921,7 @@ class SingleCompGCNRepresentation(Representation):
         return x
 
 
+@parse_docdata
 class TextRepresentation(Representation):
     """
     Textual representations using a text encoder on labels.
@@ -927,6 +947,9 @@ class TextRepresentation(Representation):
             entity_representations=entity_representations,
             relation_representations_kwargs=dict(shape=entity_representations.shape),
         )
+
+    ---
+    name: Text Representation
     """
 
     def __init__(
@@ -1028,8 +1051,13 @@ class TextRepresentation(Representation):
         return self.encoder(labels=labels)
 
 
+@parse_docdata
 class CombinedRepresentation(Representation):
-    """A combined representation."""
+    """A combined representation.
+
+    ---
+    name: Combine Representation
+    """
 
     #: the base representations
     base: Sequence[Representation]
@@ -1119,6 +1147,7 @@ class CombinedRepresentation(Representation):
         return self.combine(combination=self.combination, base=self.base, indices=indices)
 
 
+@parse_docdata
 class WikidataTextRepresentation(TextRepresentation):
     """
     Textual representations for datasets grounded in Wikidata.
@@ -1148,6 +1177,9 @@ class WikidataTextRepresentation(TextRepresentation):
                 ),
             ),
         )
+
+    ---
+    name: Wikidata Text Representation
     """
 
     def __init__(self, labels: Sequence[str], **kwargs):
@@ -1170,6 +1202,7 @@ class WikidataTextRepresentation(TextRepresentation):
         super().__init__(labels=labels, **kwargs)
 
 
+@parse_docdata
 class PartitionRepresentation(Representation):
     """
     A partition of the indices into different representation modules.
@@ -1223,6 +1256,9 @@ class PartitionRepresentation(Representation):
     ...     training=training,
     ...     testing=testing,
     ... )
+
+    ---
+    name: Partition Representation
     """
 
     #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
@@ -1323,6 +1359,7 @@ class PartitionRepresentation(Representation):
         return x
 
 
+@parse_docdata
 class BackfillRepresentation(PartitionRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
 
@@ -1361,6 +1398,9 @@ class BackfillRepresentation(PartitionRepresentation):
     ...     training=training,
     ...     testing=testing,
     ... )
+
+    ---
+    name: Backfill Representation
     """
 
     def __init__(
@@ -1415,6 +1455,7 @@ class BackfillRepresentation(PartitionRepresentation):
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
 
 
+@parse_docdata
 class TransformedRepresentation(Representation):
     """
     A (learnable) transformation upon base representations.
@@ -1450,6 +1491,9 @@ class TransformedRepresentation(Representation):
     ...     transformation=mlp,
     ...     base_kwargs=dict(max_id=dataset.num_entities, shape=(dim,), initializer=initializer, trainable=False),
     ... )
+
+    ---
+    name: Transformed Representation
     """
 
     def __init__(
