@@ -15,18 +15,10 @@ import torch
 from tqdm.auto import tqdm
 
 from .base import Model
+from ..constants import TARGET_TO_INDEX
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.utils import tensor_to_df
-from ..typing import (
-    InductiveMode,
-    LabeledTriples,
-    MappedTriples,
-    ScorePack,
-    LABEL_HEAD,
-    LABEL_RELATION,
-    LABEL_TAIL,
-)
-from ..constants import TARGET_TO_INDEX
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, LabeledTriples, MappedTriples, ScorePack
 from ..utils import is_cuda_oom_error, triple_tensor_to_set
 
 __all__ = [
