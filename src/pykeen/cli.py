@@ -42,7 +42,7 @@ from .metrics.utils import Metric
 from .models import Model, model_resolver
 from .models.cli import build_cli_from_cls
 from .nn import representation_resolver
-from .nn.modules import Interaction, LiteralInteraction, interaction_resolver
+from .nn.modules import Interaction, interaction_resolver
 from .nn.node_piece.cli import tokenize
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
@@ -185,17 +185,19 @@ def _format_reference(reference: Optional[str], link_fmt: Optional[str], alt_ref
     return f"[`{reference}`]({link_fmt.format(alt_reference or reference)})"
 
 
-def _get_resolver_lines2(resolver: ClassResolver, link_fmt: str) -> Iterable[Tuple[str, Optional[str]]]:
-    for _, cls in sorted(resolver.lookup_dict.items()):
-        reference = f"{cls.__module__}.{cls.__qualname__}"
-        docdata = getattr(cls, "__docdata__", {})
-        if not docdata:
-            click.secho(message=f"Missing docdata from {reference}", err=True)
-        reference = _format_reference(reference, link_fmt, alt_reference=docdata.get("name", None))
-        yield reference, _citation(docdata)
+def _get_resolver_lines2(
+    resolver: ClassResolver, link_fmt: Optional[str] = None
+) -> Iterable[Tuple[str, Optional[str]]]:
+    for _, clsx in sorted(resolver.lookup_dict.items()):
+        reference = f"{clsx.__module__}.{clsx.__qualname__}"
+        name = resolver.docdata(clsx, "name")
+        if not name:
+            click.secho(message=f"Missing docdata name from {reference}", err=True)
+        reference = _format_reference(reference, link_fmt, alt_reference=name)
+        yield reference, _citation(resolver.docdata(clsx, "citation"))
 
 
-def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
+def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
     lines = sorted(_get_resolver_lines2(resolver=interaction_resolver, link_fmt=link_fmt))
     headers = ["Name", "Citation"]
     return (
@@ -208,7 +210,7 @@ def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = No
     )
 
 
-def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
+def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
     lines = sorted(_get_resolver_lines2(resolver=representation_resolver, link_fmt=link_fmt))
     headers = ["Name", "Citation"]
     return (
