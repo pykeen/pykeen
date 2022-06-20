@@ -6,7 +6,7 @@ import itertools as itt
 import logging
 from abc import abstractmethod
 from operator import itemgetter
-from typing import Collection, List, Optional, Sequence, Tuple, Union
+from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
 
 import numpy
 import numpy as np
@@ -128,7 +128,8 @@ def get_prediction_df(
         batch_ids.append(triples_factory.entity_to_id[tail_label])
     else:
         target = LABEL_TAIL
-    batch = torch.as_tensor([batch_ids], dtype=torch.long, device=model.device)
+    assert target is not None
+    batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long, device=model.device))
 
     # get targets
     label_ids, targets = _get_targets(
@@ -136,8 +137,7 @@ def get_prediction_df(
     )
 
     # get scores
-    # FIXME where is target=... in predict()
-    scores = model.predict(batch, mode=mode, ids=targets).squeeze(dim=0).tolist()
+    scores = model.predict(batch, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
 
     # create raw dataframe
     rv = pd.DataFrame(
