@@ -368,6 +368,8 @@ class CombinedRegularizer(Regularizer):
             the total regularization weight distributed to the base regularizers according to their individual weights
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Regularizer.__init__`
+        :raises TypeError:
+            if any of the regularizers are a no-op regularizer
         """
         super().__init__(weight=total_weight, **kwargs)
         self.regularizers = nn.ModuleList(regularizers)

@@ -10,8 +10,8 @@ import torch.nn as nn
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
-from ...nn.combinations import ComplExLiteralCombination
-from ...nn.modules import ComplExInteraction, LiteralInteraction
+from ...nn import ComplexSeparatedCombination, ConcatProjectionCombination
+from ...nn.modules import ComplExInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -41,6 +41,7 @@ class ComplExLiteral(LiteralModel):
     loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
+    interaction_cls: ClassVar[Type[Interaction]] = ComplExInteraction
 
     def __init__(
         self,
@@ -52,14 +53,7 @@ class ComplExLiteral(LiteralModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            interaction=LiteralInteraction(
-                base=ComplExInteraction(),
-                combination=ComplExLiteralCombination(
-                    entity_embedding_dim=embedding_dim,
-                    literal_embedding_dim=triples_factory.numeric_literals.shape[-1],
-                    input_dropout=input_dropout,
-                ),
-            ),
+            interaction=self.interaction_cls,
             entity_representations_kwargs=[
                 dict(
                     shape=embedding_dim,
@@ -74,5 +68,18 @@ class ComplExLiteral(LiteralModel):
                     dtype=torch.complex64,
                 ),
             ],
+            combination=ComplexSeparatedCombination,
+            combination_kwargs=dict(
+                # the individual combination for real/complex parts
+                combination=ConcatProjectionCombination,
+                combination_kwargs=dict(
+                    input_dims=[embedding_dim, triples_factory.literal_shape[0]],
+                    output_dim=embedding_dim,
+                    bias=True,
+                    dropout=input_dropout,
+                    activation=nn.Tanh,
+                    activation_kwargs=None,
+                ),
+            ),
             **kwargs,
         )

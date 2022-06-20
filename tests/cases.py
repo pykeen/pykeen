@@ -46,9 +46,11 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
+import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
+import pykeen.nn.text
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
@@ -69,7 +71,7 @@ from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 from pykeen.models.mocks import FixedModel
-from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction
 from pykeen.nn.representation import Representation
 from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
@@ -1456,6 +1458,12 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     batch_size: ClassVar[int] = 2
     num_negatives: ClassVar[int] = 3
+    max_id: ClassVar[int] = 7
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs.update(dict(max_id=self.max_id))
+        return kwargs
 
     def _check_result(self, x: torch.FloatTensor, prefix_shape: Tuple[int, ...]):
         """Check the result."""
@@ -1476,6 +1484,10 @@ class RepresentationTestCase(GenericTestCase[Representation]):
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
+
+    def test_max_id(self):
+        """Test maximum id."""
+        self.assertEqual(self.max_id, self.instance.max_id)
 
     def test_no_indices(self):
         """Test without indices."""
@@ -1507,19 +1519,25 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         a = torch.stack([dropout_instance(indices) for _ in range(20)])
         assert not (a[0:1] == a).all()
 
+    def test_str(self):
+        """Test generating the string representation."""
+        # this implicitly tests extra_repr / iter_extra_repr
+        assert isinstance(str(self), str)
+
 
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     """Tests for representations requiring triples factories."""
 
-    num_entities: ClassVar[int] = 8
+    num_entities: ClassVar[int]
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
     create_inverse_triples: bool = False
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.num_entities = self.max_id
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
-            num_entities=self.num_entities,
+            num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
             create_inverse_triples=self.create_inverse_triples,
@@ -1658,17 +1676,6 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
         adj = self.prepare_adjacency(horizontal=False)
         x = self.instance.forward_vertically_stacked(x=self.x, adj=adj)
         self.check_output(x=x)
-
-
-class LiteralTestCase(InteractionTestCase):
-    """Tests for literal ineractions."""
-
-    cls = LiteralInteraction
-
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h_proj = self.instance.combination(*h)
-        t_proj = self.instance.combination(*t)
-        return self.instance.base(h_proj, r, t_proj)
 
 
 class InitializerTestCase(unittest.TestCase):
@@ -2030,18 +2037,19 @@ class NodePieceTestCase(RepresentationTestCase):
     """General test case for node piece representations."""
 
     cls = pykeen.nn.node_piece.NodePieceRepresentation
-    num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
-            num_entities=self.num_entities,
+            num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
             create_inverse_triples=False,
         )
+        # inferred from triples factory
+        kwargs.pop("max_id")
         return kwargs
 
 
@@ -2571,3 +2579,50 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         new_stopper._write_from_summary_dict(**summary)
         for key in summary.keys():
             assert getattr(self.instance, key) == getattr(new_stopper, key)
+
+
+class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combination.Combination]):
+    """Test for combinations."""
+
+    input_dims: Sequence[Sequence[int]] = [[5, 7], [5, 7, 11]]
+
+    def _iter_input_shapes(self) -> Iterable[Sequence[Tuple[int, ...]]]:
+        """Iterate over test input shapes."""
+        for prefix_shape in [tuple(), (2,), (2, 3)]:
+            for input_dims in self.input_dims:
+                yield [prefix_shape + (input_dim,) for input_dim in input_dims]
+
+    def _create_input(self, input_shapes: Sequence[Tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
+        return [torch.empty(size=size) for size in input_shapes]
+
+    def test_inputs(self):
+        """Test that the test uses at least one input shape."""
+        assert list(self._iter_input_shapes())
+
+    def test_forward(self):
+        """Test forward call."""
+        for input_shapes in self._iter_input_shapes():
+            xs = self._create_input(input_shapes=input_shapes)
+
+            # verify that the input is valid
+            assert len(xs) == len(input_shapes)
+            assert all(x.shape == shape for x, shape in zip(xs, input_shapes))
+
+            # combine
+            x = self.instance(xs=xs)
+            self.assertIsInstance(x, torch.Tensor)
+
+            # verify shape
+            output_shape = self.instance.output_shape(input_shapes)
+            self.assertTupleEqual(x.shape, output_shape)
+
+
+class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.TextEncoder]):
+    """Base tests for text encoders."""
+
+    def test_encode(self):
+        """Test encoding of texts."""
+        labels = ["A first sentence", "some other label"]
+        x = self.instance.encode_all(labels=labels)
+        assert torch.is_tensor(x)
+        assert x.shape[0] == len(labels)

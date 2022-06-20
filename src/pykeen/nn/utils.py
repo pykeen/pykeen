@@ -2,131 +2,35 @@
 
 """Utilities for neural network components."""
 
-import logging
-from typing import Iterable, Optional, Sequence, Union
+from __future__ import annotations
 
+import functools
+import logging
+import pathlib
+import re
+from itertools import chain
+from textwrap import dedent
+from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
+
+import more_itertools
+import requests
 import torch
-from more_itertools import chunked
-from torch import nn
-from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
-from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
+from ..constants import PYKEEN_MODULE
+from ..typing import OneOrSequence
+from ..utils import nested_get, rate_limited, upgrade_to_sequence
+from ..version import get_version
 
 __all__ = [
-    "TransformerEncoder",
     "safe_diagonal",
     "adjacency_tensor_to_stacked_matrix",
     "use_horizontal_stacking",
+    "WikidataCache",
+    "ShapeError",
 ]
 
 logger = logging.getLogger(__name__)
-memory_utilization_maximizer = MemoryUtilizationMaximizer()
-
-
-@memory_utilization_maximizer
-def _encode_all_memory_utilization_optimized(
-    encoder: "TransformerEncoder",
-    labels: Sequence[str],
-    batch_size: int,
-) -> torch.Tensor:
-    """
-    Encode all labels with the given batch-size.
-
-    Wrapped by memory utilization maximizer to automatically reduce the batch size if needed.
-
-    :param encoder:
-        the encoder
-    :param labels:
-        the labels to encode
-    :param batch_size:
-        the batch size to use. Will automatically be reduced if necessary.
-
-    :return: shape: `(len(labels), dim)`
-        the encoded labels
-    """
-    return torch.cat(
-        [encoder(batch) for batch in chunked(tqdm(map(str, labels), leave=False), batch_size)],
-        dim=0,
-    )
-
-
-class TransformerEncoder(nn.Module):
-    """A combination of a tokenizer and a model."""
-
-    def __init__(
-        self,
-        pretrained_model_name_or_path: str,
-        max_length: Optional[int] = None,
-    ):
-        """
-        Initialize the encoder using :class:`transformers.AutoModel`.
-
-        :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. :meth:`transformers.AutoModel.from_pretrained`
-        :param max_length: >0, default: 512
-            the maximum number of tokens to pad/trim the labels to
-
-        :raises ImportError:
-            if the :mod:`transformers` library could not be imported
-        """
-        super().__init__()
-        try:
-            from transformers import AutoModel, AutoTokenizer, PreTrainedTokenizer
-        except ImportError as error:
-            raise ImportError(
-                "Please install the `transformers` library, use the _transformers_ extra"
-                " for PyKEEN with `pip install pykeen[transformers] when installing, or "
-                " see the PyKEEN installation docs at https://pykeen.readthedocs.io/en/stable/installation.html"
-                " for more information."
-            ) from error
-
-        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
-            pretrained_model_name_or_path=pretrained_model_name_or_path
-        )
-        self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path).to(
-            resolve_device()
-        )
-        self.max_length = max_length or 512
-
-    def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
-        """Encode labels via the provided model and tokenizer."""
-        labels = upgrade_to_sequence(labels)
-        labels = list(map(str, labels))
-        return self.model(
-            **self.tokenizer(
-                labels,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=self.max_length,
-            ).to(get_preferred_device(self.model))
-        ).pooler_output
-
-    @torch.inference_mode()
-    def encode_all(
-        self,
-        labels: Sequence[str],
-        batch_size: Optional[int] = None,
-    ) -> torch.FloatTensor:
-        """Encode all labels (inference mode & batched).
-
-        :param labels:
-            a sequence of strings to encode
-        :param batch_size:
-            the batch size to use for encoding the labels. ``batch_size=1``
-            means that the labels are encoded one-by-one, while ``batch_size=len(labels)``
-            would correspond to encoding all at once.
-            Larger batch sizes increase memory requirements, but may be computationally
-            more efficient. `batch_size` can also be set to `None` to enable automatic batch
-            size maximization for the employed hardware.
-
-        :returns: shape: (len(labels), dim)
-            a tensor representing the encodings for all labels
-        """
-        return _encode_all_memory_utilization_optimized(
-            encoder=self, labels=labels, batch_size=batch_size or len(labels)
-        ).detach()
 
 
 def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Tensor]:
@@ -265,3 +169,349 @@ def adjacency_tensor_to_stacked_matrix(
         values=edge_weights,
         size=size,
     )
+
+
+WIKIDATA_IMAGE_RELATIONS = [
+    "P18",  # image
+    "P948",  # page banner
+    "P41",  # flag image
+    "P94",  # coat of arms image
+    "P154",  # logo image
+    "P242",  # locator map image
+]
+
+
+class WikidataCache:
+    """A cache for requests against Wikidata's SPARQL endpoint."""
+
+    #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
+    WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
+
+    HEADERS: Dict[str, str] = {
+        # cf. https://meta.wikimedia.org/wiki/User-Agent_policy
+        "User-Agent": (
+            f"PyKEEN-Bot/{get_version()} (https://pykeen.github.io; pykeen2019@gmail.com) "
+            f"requests/{requests.__version__}"
+        ),
+        # cf. https://wikitech.wikimedia.org/wiki/Robot_policy
+        "Accept-Encoding": "gzip",
+    }
+
+    def __init__(self) -> None:
+        """Initialize the cache."""
+        self.module = PYKEEN_MODULE.module("wikidata")
+
+    @staticmethod
+    def verify_ids(ids: Sequence[str]):
+        """
+        Raise error if invalid IDs are encountered.
+
+        :param ids:
+            the ids to verify
+
+        :raises ValueError:
+            if any invalid ID is encountered
+        """
+        pattern = re.compile(r"Q(\d+)")
+        invalid_ids = [one_id for one_id in ids if not pattern.match(one_id)]
+        if invalid_ids:
+            raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
+
+    @classmethod
+    def query(
+        cls,
+        sparql: Union[str, Callable[..., str]],
+        wikidata_ids: Sequence[str],
+        batch_size: int = 256,
+    ) -> Iterable[Mapping[str, Any]]:
+        """
+        Batched SPARQL query execution for the given IDS.
+
+        :param sparql:
+            the SPARQL query with a placeholder `ids`
+        :param wikidata_ids:
+            the Wikidata IDs
+        :param batch_size:
+            the batch size, i.e., maximum number of IDs per query
+
+        :return:
+            an iterable over JSON results, where the keys correspond to query variables,
+            and the values to the corresponding binding
+        """
+        if not wikidata_ids:
+            return {}
+
+        if len(wikidata_ids) > batch_size:
+            # break into smaller requests
+            return chain.from_iterable(
+                cls.query(sparql=sparql, wikidata_ids=id_batch, batch_size=batch_size)
+                for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
+            )
+
+        if isinstance(sparql, str):
+            sparql = sparql.format
+        sparql = sparql(ids=" ".join(f"wd:{i}" for i in wikidata_ids))
+        logger.debug("running query: %s", sparql)
+        res = requests.get(
+            cls.WIKIDATA_ENDPOINT,
+            params={"query": sparql, "format": "json"},
+            headers=cls.HEADERS,
+        )
+        res.raise_for_status()
+        bindings = res.json()["results"]["bindings"]
+        logger.debug(f"Retrieved {len(bindings)} bindings")
+        return bindings
+
+    @classmethod
+    def query_text(
+        cls, wikidata_ids: Sequence[str], language: str = "en", batch_size: int = 256
+    ) -> Mapping[str, Mapping[str, str]]:
+        """
+        Query the SPARQL endpoints about information for the given IDs.
+
+        :param wikidata_ids:
+            the Wikidata IDs
+        :param language:
+            the label language
+        :param batch_size:
+            the batch size; if more ids are provided, break the big request into multiple smaller ones
+
+        :return:
+            a mapping from Wikidata Ids to dictionaries with the label and description of the entities
+        """
+        res_json = cls.query(
+            sparql=functools.partial(
+                dedent(
+                    """
+                        SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
+                            VALUES ?item {{ {ids} }}
+                            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
+                        }}}}
+                    """
+                ).format,
+                language=language,
+            ),
+            wikidata_ids=wikidata_ids,
+            batch_size=batch_size,
+        )
+        result = {}
+        for entry in res_json:
+            wikidata_id = nested_get(entry, "item", "value", default="")
+            assert isinstance(wikidata_id, str)  # for mypy
+            wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
+            label = nested_get(entry, "itemLabel", "value", default="")
+            assert isinstance(label, str)  # for mypy
+            description = nested_get(entry, "itemDescription", "value", default="")
+            assert isinstance(description, str)  # for mypy
+            result[wikidata_id] = dict(label=label, description=description)
+        return result
+
+    def _load(self, wikidata_id: str, component: str) -> Optional[str]:
+        """Load information about a Wikidata ID from JSON file."""
+        name = f"{wikidata_id}.json"
+        if not self.module.join(name=name).is_file():
+            return None
+        return self.module.load_json(name=name)[component]
+
+    def _save(self, entries: Mapping[str, Mapping[str, str]]):
+        """Save entries as JSON."""
+        logger.info(f"Saving {len(entries)} entries to {self.module}")
+        for wikidata_id, entry in entries.items():
+            name = f"{wikidata_id}.json"
+            self.module.dump_json(name=name, obj=entry)
+
+    def _get(self, ids: Sequence[str], component: Literal["label", "description"]) -> Sequence[str]:
+        """
+        Get the requested component for the given IDs.
+
+        .. note ::
+            this method uses file-based caching to avoid excessive requests to the Wikidata API.
+
+        :param ids:
+            the Wikidata IDs
+        :param component:
+            the selected component
+
+        :return:
+            the selected component for each Wikidata ID
+        """
+        self.verify_ids(ids=ids)
+        # try to load cached first
+        result: List[Optional[str]] = [None] * len(ids)
+        for i, wikidata_id in enumerate(ids):
+            result[i] = self._load(wikidata_id=wikidata_id, component=component)
+        # determine missing entries
+        missing = [wikidata_id for wikidata_id, desc in zip(ids, result) if not desc]
+        # retrieve information via SPARQL
+        entries = self.query_text(wikidata_ids=missing)
+        # save entries
+        self._save(entries=entries)
+        # fill missing descriptions
+        w_to_i = {wikidata_id: i for i, wikidata_id in enumerate(ids)}
+        for wikidata_id, entry in entries.items():
+            result[w_to_i[wikidata_id]] = entry[component]
+        # for mypy
+        for item in result:
+            assert isinstance(item, str)
+        return cast(Sequence[str], result)
+
+    def get_labels(self, ids: Sequence[str]) -> Sequence[str]:
+        """
+        Get entity labels for the given IDs.
+
+        :param ids:
+            the Wikidata IDs
+
+        :return:
+            the label for each Wikidata entity
+        """
+        return self._get(ids=ids, component="label")
+
+    def get_descriptions(self, ids: Sequence[str]) -> Sequence[str]:
+        """
+        Get entity descriptions for the given IDs.
+
+        :param ids:
+            the Wikidata IDs
+
+        :return:
+            the description for each Wikidata entity
+        """
+        return self._get(ids=ids, component="description")
+
+    def _discover_images(self, extensions: Collection[str]) -> Mapping[str, pathlib.Path]:
+        image_dir = self.module.join("images")
+        return {
+            path.stem: path
+            for path in image_dir.iterdir()
+            if path.is_file() and path.suffix in {f".{e}" for e in extensions}
+        }
+
+    def get_image_paths(
+        self,
+        ids: Sequence[str],
+        extensions: Collection[str] = ("jpeg", "jpg", "gif", "png", "svg", "tif"),
+        progress: bool = False,
+    ) -> Sequence[Optional[pathlib.Path]]:
+        """Get paths to images for the given IDs.
+
+        :param ids:
+            the Wikidata IDs.
+        :param extensions:
+            the allowed file extensions
+        :param progress:
+            whether to display a progress bar
+
+        :return:
+            the paths to images for the given IDs.
+        """
+        id_to_path = self._discover_images(extensions=extensions)
+        missing = sorted(set(ids).difference(id_to_path.keys()))
+        num_missing = len(missing)
+        logger.info(
+            f"Downloading images for {num_missing:,} entities. With the rate limit in place, "
+            f"this will take at least {num_missing/10:.2f} seconds.",
+        )
+        res_json = self.query(
+            sparql=functools.partial(
+                dedent(
+                    """
+                    SELECT ?item ?relation ?image
+                    WHERE {{
+                        VALUES ?item {{ {ids} }} .
+                        ?item ?r ?image .
+                        VALUES ?r {{ {relations} }}
+                    }}
+                """
+                ).format,
+                relations=" ".join(f"wdt:{r}" for r in WIKIDATA_IMAGE_RELATIONS),
+            ),
+            wikidata_ids=missing,
+        )
+        # we can have multiple images per entity -> collect image URLs per image
+        images: Dict[str, Dict[str, List[str]]] = {}
+        for entry in res_json:
+            # entity ID
+            wikidata_id = nested_get(entry, "item", "value", default="")
+            assert isinstance(wikidata_id, str)  # for mypy
+            wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
+
+            # relation ID
+            relation_id = nested_get(entry, "relation", "value", default="")
+            assert isinstance(relation_id, str)  # for mypy
+            relation_id = relation_id.rsplit("/", maxsplit=1)[-1]
+
+            # image URL
+            image_url = nested_get(entry, "image", "value", default=None)
+            assert image_url is not None
+            images.setdefault(wikidata_id, dict()).setdefault(relation_id, []).append(image_url)
+
+        # check whether images are still missing
+        missing = sorted(set(missing).difference(images.keys()))
+        if missing:
+            logger.warning(f"Could not retrieve an image URL for {len(missing)} entities: {missing}")
+
+        # select on image url per image in a reproducible way
+        for wikidata_id, url_dict in tqdm(rate_limited(images.items(), min_avg_time=0.1), disable=not progress):
+            # traverse relations in order of preference
+            for relation in WIKIDATA_IMAGE_RELATIONS:
+                if relation not in url_dict:
+                    continue
+                # now there is an image available -> select reproducible by URL sorting
+                image_url = sorted(url_dict[relation])[0]
+                ext = image_url.rsplit(".", maxsplit=1)[-1].lower()
+                if ext not in extensions:
+                    logger.warning(f"Unknown extension: {ext} for {image_url}")
+                self.module.ensure(
+                    "images",
+                    url=image_url,
+                    name=f"{wikidata_id}.{ext}",
+                    download_kwargs=dict(backend="requests", headers=self.HEADERS),
+                )
+            else:
+                # did not break -> no image
+                logger.warning(f"No image for {wikidata_id}")
+
+        id_to_path = self._discover_images(extensions=extensions)
+        return [id_to_path.get(i) for i in ids]
+
+
+class ShapeError(ValueError):
+    """An error for a mismatch in shapes."""
+
+    def __init__(self, shape: Sequence[int], reference: Sequence[int]) -> None:
+        """
+        Initialize the error.
+
+        :param shape: the mismatching shape
+        :param reference: the expected shape
+        """
+        super().__init__(f"shape {shape} does not match expected shape {reference}")
+
+    @classmethod
+    def verify(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> Sequence[int]:
+        """
+        Raise an exception if the shape does not match the reference.
+
+        This method normalizes the shapes first.
+
+        :param shape:
+            the shape to check
+        :param reference:
+            the reference shape. If None, the shape always matches.
+
+        :raises ShapeError:
+            if the two shapes do not match.
+
+        :return:
+            the normalized shape
+        """
+        shape = upgrade_to_sequence(shape)
+        if reference is None:
+            return shape
+        reference = upgrade_to_sequence(reference)
+        if reference != shape:
+            # darglint does not like
+            # raise cls(shape=shape, reference=reference)
+            raise ShapeError(shape=shape, reference=reference)
+        return shape

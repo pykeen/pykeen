@@ -76,6 +76,9 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
 
         :return:
             The instances.
+
+        # noqa:DAR202
+        # noqa:DAR401
         """
         raise NotImplementedError
 
@@ -359,6 +362,8 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
             The number of relations.
         :param target:
             The column to predict
+        :param kwargs:
+            Keyword arguments (thrown out)
 
         :return:
             The instances.
