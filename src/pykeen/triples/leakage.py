@@ -197,8 +197,8 @@ class Sealant:
 
         :param triples_factory: The triples factory to index.
         :param minimum_frequency: The minimum overlap between two relations' triples to consider them as inverses. The
-         default value, 0.97, is taken from `Toutanova and Chen (2015) <https://www.aclweb.org/anthology/W15-4007/>`_,
-         who originally described the generation of FB15k-237.
+            default value, 0.97, is taken from `Toutanova and Chen (2015)
+            <https://www.aclweb.org/anthology/W15-4007/>`_, who originally described the generation of FB15k-237.
         """
         self.triples_factory = triples_factory
         if minimum_frequency is None:
@@ -246,9 +246,8 @@ def unleak(
     :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
      to keep. If left none, frequent relations are not removed.
     :param minimum_frequency: The minimum overlap between two relations' triples to consider them as inverses or
-     duplicates. The default value, 0.97, is taken from
-     `Toutanova and Chen (2015) <https://www.aclweb.org/anthology/W15-4007/>`_, who originally described the generation
-     of FB15k-237.
+        duplicates. The default value, 0.97, is taken from `Toutanova and Chen (2015)
+        <https://www.aclweb.org/anthology/W15-4007/>`_, who originally described the generation of FB15k-237.
     """
     if n is not None:
         frequent_relations = train.get_most_frequent_relations(n=n)

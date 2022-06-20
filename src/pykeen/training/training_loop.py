@@ -239,9 +239,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         """Train the KGE model.
 
         .. note ::
+
             Gradient clipping is a technique to avoid the exploding gradient problem. Clip by norm and clip by value
             are two alternative implementations.
-
 
         :param triples_factory:
             The training triples.
