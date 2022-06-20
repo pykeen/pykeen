@@ -55,7 +55,7 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         return None
 
     @classmethod
-    def from_triples(  # noqa:DAR202,DAR401
+    def from_triples(
         cls,
         mapped_triples: MappedTriples,
         *,
@@ -76,6 +76,9 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
 
         :return:
             The instances.
+
+        # noqa:DAR202
+        # noqa:DAR401
         """
         raise NotImplementedError
 

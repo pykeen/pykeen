@@ -98,6 +98,9 @@ def reproduce(
     """Reproduce a pre-defined experiment included in PyKEEN.
 
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
+
+    # noqa:DAR101
+    # noqa:DAR401
     """
     file_name = f"{reference}_{model}_{dataset}"
     path = HERE.joinpath(model, file_name)
