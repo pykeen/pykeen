@@ -584,7 +584,7 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: torch.LongTensor,
         *,
-        mode: Optional[InductiveMode],
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:
         r"""
         Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
@@ -605,14 +605,14 @@ class Model(nn.Module, ABC):
         return self.score_hrt(hrt_batch=t_r_inv_h, mode=mode)
 
     def score_t_inverse(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
         return self.score_h(rt_batch=r_inv_h, slice_size=slice_size, mode=mode)
 
     def score_h_inverse(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
