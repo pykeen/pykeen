@@ -54,6 +54,7 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         """Get a collator."""
         return None
 
+    # docstr-coverage: ignore
     @classmethod
     def from_triples(
         cls,

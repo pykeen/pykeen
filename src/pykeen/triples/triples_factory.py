@@ -1185,6 +1185,7 @@ class TriplesFactory(CoreTriplesFactory):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
+        :returns: A world cloud object for a Jupyter notebook
 
         .. warning::
 
@@ -1202,6 +1203,7 @@ class TriplesFactory(CoreTriplesFactory):
         """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
 
         :param top: The number of top relations to show. Defaults to 100.
+        :returns: A world cloud object for a Jupyter notebook
 
         .. warning::
 
@@ -1314,7 +1316,10 @@ def cat_triples(*triples_factories: CoreTriplesFactory) -> MappedTriples:
 def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> int:
     """Compute the number of moves to go from the first sequence of triples factories to the second.
 
+    :param a: A sequence of triples factories
+    :param b: A sequence of triples factories
     :return: The number of triples present in the training sets in both
+    :raises ValueError: If the sequences of triples factories are a different length
     """
     if len(a) != len(b):
         raise ValueError("Must have same number of triples factories")
@@ -1331,6 +1336,8 @@ def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory
 def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> float:
     """Compute the similarity between two datasets' splits.
 
+    :param a: A sequence of triples factories
+    :param b: A sequence of triples factories
     :return: The number of triples present in the training sets in both
     """
     steps = splits_steps(a, b)
