@@ -375,7 +375,9 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         # initialize color representations
         num_colors = colors.max().item() + 1
         # note: this could be a representation?
-        color_representation = color_initializer(colors.new_empty(num_colors, *colors.shape[1:]))
+        color_representation = color_initializer(
+            colors.new_empty(num_colors, *colors.shape[1:], dtype=torch.get_default_dtype())
+        )
         # init entity representations according to the color
         super().__init__(tensor=color_representation[colors])
 
