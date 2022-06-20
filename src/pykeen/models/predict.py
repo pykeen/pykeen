@@ -32,11 +32,33 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+def _get_targets(
+    ids: Union[None, torch.Tensor, Collection[str]],
+    triples_factory: TriplesFactory,
+    device: torch.device,
+    entity: bool = True,
+) -> Tuple[List[Tuple[str, int]], Optional[torch.Tensor]]:
+    label_to_id = triples_factory.entity_to_id if entity else triples_factory.relation_to_id
+    if ids is None:
+        return sorted(label_to_id.items(), key=itemgetter(1)), None
+    id_tensor = None
+    if isinstance(ids, torch.Tensor):
+        id_tensor = ids
+        ids = ids.tolist()
+    ids = triples_factory.entities_to_ids(entities=ids) if entity else triples_factory.relations_to_ids(relations=ids)
+    ids = sorted(set(ids))
+    if id_tensor is None:
+        id_tensor = torch.as_tensor(ids, torch.long, device=device)
+    id_to_label = triples_factory.entity_id_to_label if entity else triples_factory.relation_id_to_label
+    return [(id_to_label[i], i) for i in ids], id_tensor
+
+
 def get_head_prediction_df(
     model: Model,
     relation_label: str,
     tail_label: str,
     *,
+    heads: Optional[Sequence[str]] = None,
     triples_factory: TriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
@@ -49,6 +71,8 @@ def get_head_prediction_df(
     :param relation_label: The string label for the relation
     :param tail_label: The string label for the tail entity
     :param triples_factory: Training triples factory
+    :param heads:
+        restrict head prediction to the given entities
     :param add_novelties: Should the dataframe include a column denoting if the ranked head entities correspond
         to novel triples?
     :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
@@ -77,14 +101,12 @@ def get_head_prediction_df(
     """
     tail_id = triples_factory.entity_to_id[tail_label]
     relation_id = triples_factory.relation_to_id[relation_label]
-    rt_batch = torch.as_tensor([[relation_id, tail_id]], dtype=torch.long, device=model.device)
-    scores = model.predict_h(rt_batch, mode=mode)
+    batch = torch.as_tensor([[relation_id, tail_id]], dtype=torch.long, device=model.device)
+    label_ids, heads = _get_targets(ids=heads, triples_factory=triples_factory, device=model.device)
+    scores = model.predict_h(batch, mode=mode, heads=heads)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
-        [
-            (entity_id, entity_label, scores[entity_id])
-            for entity_label, entity_id in triples_factory.entity_to_id.items()
-        ],
+        [(entity_id, entity_label, score) for (entity_label, entity_id), score in zip(label_ids, scores)],
         columns=["head_id", "head_label", "score"],
     ).sort_values("score", ascending=False)
 
@@ -98,23 +120,6 @@ def get_head_prediction_df(
         col=0,
         other_col_ids=(relation_id, tail_id),
     )
-
-
-def _get_entities(
-    ids: Union[None, torch.Tensor, Collection[str]],
-    triples_factory: TriplesFactory,
-    device: torch.device,
-) -> Tuple[List[Tuple[str, int]], Optional[torch.Tensor]]:
-    if ids is None:
-        return sorted(triples_factory.entity_to_id.items(), key=itemgetter(1)), None
-    id_tensor = None
-    if isinstance(ids, torch.Tensor):
-        id_tensor = ids
-        ids = ids.tolist()
-    ids = sorted(set(triples_factory.entities_to_ids(entities=ids)))
-    if id_tensor is None:
-        id_tensor = torch.as_tensor(ids, torch.long, device=device)
-    return [(triples_factory.entity_id_to_label[i], i) for i in ids], id_tensor
 
 
 def get_tail_prediction_df(
@@ -175,11 +180,11 @@ def get_tail_prediction_df(
     head_id = triples_factory.entity_to_id[head_label]
     relation_id = triples_factory.relation_to_id[relation_label]
     batch = torch.as_tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
-    id_labels, tails = _get_entities(ids=tails, triples_factory=triples_factory, device=model.device)
+    label_ids, tails = _get_targets(ids=tails, triples_factory=triples_factory, device=model.device)
     scores = model.predict_t(batch, mode=mode, tails=tails)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
-        [(entity_id, entity_label, score) for (entity_id, entity_label), score in zip(id_labels, scores)],
+        [(entity_id, entity_label, score) for (entity_label, entity_id), score in zip(label_ids, scores)],
         columns=["tail_id", "tail_label", "score"],
     ).sort_values("score", ascending=False)
 
@@ -200,6 +205,7 @@ def get_relation_prediction_df(
     head_label: str,
     tail_label: str,
     *,
+    relations: Optional[Sequence[str]] = None,
     triples_factory: TriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
@@ -211,6 +217,8 @@ def get_relation_prediction_df(
     :param model: A PyKEEN model
     :param head_label: The string label for the head entity
     :param tail_label: The string label for the tail entity
+    :param relations:
+        restrict relation prediction to the given relations
     :param triples_factory: Training triples factory
     :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
         to novel triples?
@@ -241,13 +249,13 @@ def get_relation_prediction_df(
     head_id = triples_factory.entity_to_id[head_label]
     tail_id = triples_factory.entity_to_id[tail_label]
     batch = torch.as_tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
+    label_ids, relations = _get_targets(
+        ids=relations, triples_factory=triples_factory, device=model.device, entity=False
+    )
     scores = model.predict_r(batch, mode=mode)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
-        [
-            (relation_id, relation_label, scores[relation_id])
-            for relation_label, relation_id in triples_factory.relation_to_id.items()
-        ],
+        [(relation_id, relation_label, score) for (relation_label, relation_id), score in zip(label_ids, scores)],
         columns=["relation_id", "relation_label", "score"],
     ).sort_values("score", ascending=False)
 
