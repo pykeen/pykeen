@@ -58,12 +58,12 @@ The following examples are for entity representations, but can be equivalently u
         )
 
 .. note ::
-    
+
     If you are unsure about which choices you have for chosing entity representations, take a look at the subclasses of
     :class:`pykeen.nn.Representation`.
 
 .. note ::
-    
+
     Internally, the :mod:`class_resolver` library is used to support various alternative parametrization, e.g.,
     the string name of a representation class, the `class` object, or instances of the
     :class:`pykeen.nn.Representation` class. You can also register your own classes to the resolver. Detailed
@@ -86,7 +86,7 @@ As with the representations, interactions passed to :class:`pykeen.models.ERMode
 function instead of an instantiated class. Further information can be found at :ref:`using_resolvers`.
 
 .. note ::
-    
+
     Interaction functions can require different numbers or shapes of entity and relation representations.
     A symbolic description of the expected number of representations and their shape can be accessed by
     :attr:`pykeen.nn.Interaction.entity_shape` and :attr:`pykeen.nn.Interaction.relation_shape`.
