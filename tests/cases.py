@@ -1063,7 +1063,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def test_score_t_multi(self) -> None:
         """Test the model's ``score_t()`` function with custom tail candidates."""
         self._test_score_multi(
-            name="ts", max_id=self.factory.num_entities, score=self.instance.score_t, columns=slice(0, 2)
+            name="tails", max_id=self.factory.num_entities, score=self.instance.score_t, columns=slice(0, 2)
         )
 
     def test_score_r(self) -> None:
@@ -1077,7 +1077,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def test_score_r_multi(self) -> None:
         """Test the model's ``score_r()`` function with custom relation candidates."""
         self._test_score_multi(
-            name="rs", max_id=self.factory.num_relations, score=self.instance.score_r, columns=[0, 2]
+            name="relations", max_id=self.factory.num_relations, score=self.instance.score_r, columns=[0, 2]
         )
 
     def test_score_h(self) -> None:
@@ -1089,7 +1089,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def test_score_h_multi(self) -> None:
         """Test the model's ``score_h()`` function with custom head candidates."""
         self._test_score_multi(
-            name="hs", max_id=self.factory.num_entities, score=self.instance.score_h, columns=slice(1, None)
+            name="heads", max_id=self.factory.num_entities, score=self.instance.score_h, columns=slice(1, None)
         )
 
     @pytest.mark.slow
