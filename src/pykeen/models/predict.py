@@ -69,7 +69,7 @@ def get_prediction_df(
     testing: Optional[torch.LongTensor] = None,
     mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
-    """_summary_
+    """Get predictions for the head, relation, and/or tail combination.
 
     :param model:
         A PyKEEN model
@@ -136,11 +136,12 @@ def get_prediction_df(
     )
 
     # get scores
+    # FIXME where is target=... in predict()
     scores = model.predict(batch, mode=mode, ids=targets).squeeze(dim=0).tolist()
 
     # create raw dataframe
     rv = pd.DataFrame(
-        [(id, label, score) for (label, id), score in zip(label_ids, scores)],
+        [(target_id, target_label, score) for (target_label, target_id), score in zip(label_ids, scores)],
         columns=[f"{target}_id", f"{target}_label", "score"],
     ).sort_values("score", ascending=False)
 
@@ -157,12 +158,20 @@ def get_prediction_df(
 
 
 def get_head_prediction_df(
+    model: Model,
+    triples_factory: TriplesFactory,
     relation_label: str,
     tail_label: str,
+    *,
     heads: Optional[Sequence[str]] = None,
     **kwargs,
 ) -> pd.DataFrame:
     """Predict heads for the given relation and tail (given by label).
+
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
 
     :param relation_label:
         the string label for the relation
@@ -172,9 +181,12 @@ def get_head_prediction_df(
         restrict head prediction to the given entities
     :param kwargs:
         additional keyword-based parameters passed to :func:`get_prediction_df`.
+    :return: shape: (k, 3)
+        A dataframe for head predictions. Contains either the k highest scoring triples,
+        or all possible triples if k is None
 
     The following example shows that after you train a model on the Nations dataset,
-    you can score all entities w.r.t a given relation and tail entity.
+    you can score all entities w.r.t. a given relation and tail entity.
 
     >>> from pykeen.pipeline import pipeline
     >>> from pykeen.models.predict import get_head_prediction_df
@@ -184,16 +196,31 @@ def get_head_prediction_df(
     ... )
     >>> df = get_head_prediction_df(result.model, 'accusation', 'brazil', triples_factory=result.training)
     """
-    return get_prediction_df(relation_label=relation_label, tail_label=tail_label, targets=heads, **kwargs)
+    return get_prediction_df(
+        model=model,
+        triples_factory=triples_factory,
+        relation_label=relation_label,
+        tail_label=tail_label,
+        targets=heads,
+        **kwargs,
+    )
 
 
 def get_tail_prediction_df(
+    model: Model,
+    triples_factory: TriplesFactory,
     head_label: str,
     relation_label: str,
+    *,
     tails: Optional[Sequence[str]] = None,
     **kwargs,
 ) -> pd.DataFrame:
     """Predict tails for the given head and relation (given by label).
+
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
 
     :param head_label:
         the string label for the head entity
@@ -203,9 +230,12 @@ def get_tail_prediction_df(
         restrict tail prediction to the given entities
     :param kwargs:
         additional keyword-based parameters passed to :func:`get_prediction_df`.
+    :return: shape: (k, 3)
+        A dataframe for tail predictions. Contains either the k highest scoring triples,
+        or all possible triples if k is None
 
     The following example shows that after you train a model on the Nations dataset,
-    you can score all entities w.r.t a given head entity and relation.
+    you can score all entities w.r.t. a given head entity and relation.
 
     >>> from pykeen.pipeline import pipeline
     >>> from pykeen.models.predict import get_tail_prediction_df
@@ -224,16 +254,31 @@ def get_tail_prediction_df(
     ...     tails=["burma", "china", "india", "indonesia"],
     ... )
     """
-    return get_prediction_df(head_label=head_label, relation_label=relation_label, targets=tails, **kwargs)
+    return get_prediction_df(
+        model=model,
+        triples_factory=triples_factory,
+        head_label=head_label,
+        relation_label=relation_label,
+        targets=tails,
+        **kwargs,
+    )
 
 
 def get_relation_prediction_df(
+    model: Model,
+    triples_factory: TriplesFactory,
     head_label: str,
     tail_label: str,
+    *,
     relations: Optional[Sequence[str]] = None,
     **kwargs,
 ) -> pd.DataFrame:
     """Predict relations for the given head and tail (given by label).
+
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
 
     :param head_label:
         the string label for the head entity
@@ -243,9 +288,12 @@ def get_relation_prediction_df(
         restrict relation prediction to the given relations
     :param kwargs:
         additional keyword-based parameters passed to :func:`get_prediction_df`.
+    :return: shape: (k, 3)
+        A dataframe for relation predictions. Contains either the k highest scoring triples,
+        or all possible triples if k is None
 
     The following example shows that after you train a model on the Nations dataset,
-    you can score all relations w.r.t a given head entity and tail entity.
+    you can score all relations w.r.t. a given head entity and tail entity.
 
     >>> from pykeen.pipeline import pipeline
     >>> from pykeen.models.predict import get_relation_prediction_df
@@ -255,7 +303,14 @@ def get_relation_prediction_df(
     ... )
     >>> df = get_relation_prediction_df(result.model, 'brazil', 'uk', triples_factory=result.training)
     """
-    return get_prediction_df(head_label=head_label, tail_label=tail_label, targets=relations, **kwargs)
+    return get_prediction_df(
+        model=model,
+        triples_factory=triples_factory,
+        head_label=head_label,
+        tail_label=tail_label,
+        targets=relations,
+        **kwargs,
+    )
 
 
 def get_all_prediction_df(
