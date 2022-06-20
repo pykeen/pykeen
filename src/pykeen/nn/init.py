@@ -19,8 +19,8 @@ from torch.nn import functional
 from .text import TextEncoder, text_encoder_resolver
 from .utils import iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Initializer, MappedTriples
-from ..utils import compose, get_edge_index, iter_weisfeiler_lehman
+from ..typing import Initializer, MappedTriples, OneOrSequence
+from ..utils import compose, get_edge_index, iter_weisfeiler_lehman, upgrade_to_sequence
 
 __all__ = [
     "xavier_uniform_",
@@ -336,6 +336,7 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         # the color initializer
         color_initializer: Hint[Initializer] = None,
         color_initializer_kwargs: OptionalKwargs = None,
+        shape: OneOrSequence[int] = 32,
         # variants for the edge index
         edge_index: Optional[torch.LongTensor] = None,
         num_entities: Optional[int] = None,
@@ -351,6 +352,8 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
             the initializer for initialization color representations, or a hint thereof
         :param color_initializer_kwargs:
             additional keyword-based parameters for the color initializer
+        :param shape:
+            the shape to use for the color representations
 
         :param edge_index: shape: (2, m)
             the edge index
@@ -364,19 +367,24 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         :param kwargs:
             additional keyword-based parameters passed to :func:`pykeen.utils.iter_weisfeiler_lehman`
         """
-        edge_index = get_edge_index(
-            triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
-        )
+        # normalize shape
+        shape = upgrade_to_sequence(shape)
         # get coloring
-        colors = last(iter_weisfeiler_lehman(edge_index=edge_index, num_nodes=num_entities, **kwargs))
+        colors = last(
+            iter_weisfeiler_lehman(
+                edge_index=get_edge_index(
+                    triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
+                ),
+                num_nodes=num_entities,
+                **kwargs,
+            )
+        )
         # make color initializer
         color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
         # initialize color representations
         num_colors = colors.max().item() + 1
         # note: this could be a representation?
-        color_representation = color_initializer(
-            colors.new_empty(num_colors, *colors.shape[1:], dtype=torch.get_default_dtype())
-        )
+        color_representation = color_initializer(colors.new_empty(num_colors, *shape, dtype=torch.get_default_dtype()))
         # init entity representations according to the color
         super().__init__(tensor=color_representation[colors])
 
