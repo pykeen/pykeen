@@ -1681,7 +1681,6 @@ def get_edge_index(
     return edge_index
 
 
-
 def prepare_filter_triples(
     mapped_triples: MappedTriples,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
