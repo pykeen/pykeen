@@ -92,7 +92,7 @@ class Representation(nn.Module, ABC):
     def __init__(
         self,
         max_id: int,
-        shape: OneOrSequence[int],
+        shape: OneOrSequence[int] = 64,
         normalizer: HintOrType[Normalizer] = None,
         normalizer_kwargs: OptionalKwargs = None,
         regularizer: HintOrType[Regularizer] = None,
@@ -194,13 +194,6 @@ class Representation(nn.Module, ABC):
     # docstr-coverage: inherited
     def extra_repr(self) -> str:  # noqa: D102
         return ", ".join(self.iter_extra_repr())
-
-    @property
-    def embedding_dim(self) -> int:
-        """Return the "embedding dimension". Kept for backward compatibility."""
-        # TODO: Remove this property and update code to use shape instead
-        warnings.warn("The embedding_dim property is deprecated. Use .shape instead.", DeprecationWarning)
-        return int(np.prod(self.shape))
 
     @property
     def device(self) -> torch.device:
@@ -380,12 +373,6 @@ class Embedding(Representation):
         self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
         self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
-
-    @property
-    def embedding_dim(self) -> int:  # noqa: D401
-        """The representation dimension."""
-        warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
-        return self._embeddings.embedding_dim
 
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
@@ -1201,12 +1188,11 @@ class PartitionRepresentation(Representation):
     >>> num_entities = 5
     >>> labels = {1: "a first description", 4: "a second description"}
     >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
-    >>> shape = label_initializer.tensor.shape[1:]
-    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
+    >>> label_repr = label_initializer.as_embedding()
 
     Next, we create representations for the remaining ones
 
-    >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=shape)
+    >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=label_repr.shape)
 
     To combine them into a single representation module we first need to define the assignment, i.e., where to look-up
     the global ids. For this, we create a tensor of shape `(num_entities, 2)`, with the index of the base

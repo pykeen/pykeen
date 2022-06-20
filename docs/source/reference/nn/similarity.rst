@@ -1,4 +1,3 @@
 Similarity
 ==========
-.. automodule:: pykeen.nn.sim
-    :members:
+.. automodapi:: pykeen.nn.sim

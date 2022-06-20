@@ -124,7 +124,7 @@ class TokenizationRepresentation(Representation):
         :param num_tokens:
             the number of tokens to select for each entity.
         :param token_representation:
-            the pre-instantiated token representations, or an EmbeddingSpecification to create them
+            the pre-instantiated token representations, class, or name of a class
         :param token_representation_kwargs:
             additional keyword-based parameters
         :param mapped_triples:
