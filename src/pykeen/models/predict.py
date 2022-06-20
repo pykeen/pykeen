@@ -17,7 +17,16 @@ from tqdm.auto import tqdm
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.utils import tensor_to_df
-from ..typing import InductiveMode, LabeledTriples, MappedTriples, ScorePack
+from ..typing import (
+    InductiveMode,
+    LabeledTriples,
+    MappedTriples,
+    ScorePack,
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+)
+from ..constants import TARGET_TO_INDEX
 from ..utils import is_cuda_oom_error, triple_tensor_to_set
 
 __all__ = [
@@ -53,40 +62,124 @@ def _get_targets(
     return [(id_to_label[i], i) for i in ids], id_tensor
 
 
-def get_head_prediction_df(
+def get_prediction_df(
     model: Model,
-    relation_label: str,
-    tail_label: str,
-    *,
-    heads: Optional[Sequence[str]] = None,
     triples_factory: TriplesFactory,
+    *,
+    # exactly one of them is None
+    head_label: Optional[str] = None,
+    relation_label: Optional[str] = None,
+    tail_label: Optional[str] = None,
+    #
+    targets: Optional[Sequence[str]] = None,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
     mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
-    """Predict heads for the given relation and tail (given by label).
+    """_summary_
 
-    :param model: A PyKEEN model
-    :param relation_label: The string label for the relation
-    :param tail_label: The string label for the tail entity
-    :param triples_factory: Training triples factory
-    :param heads:
-        restrict head prediction to the given entities
-    :param add_novelties: Should the dataframe include a column denoting if the ranked head entities correspond
-        to novel triples?
-    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
+
+    :param head_label:
+        the head entity label. If None, predict heads
+    :param relation_label:
+        the relation label. If None, predict relations
+    :param tail_label:
+        the tail entity label. If None, predict tails
+    :param targets:
+        restrict prediction to these targets
+
+    :param add_novelties:
+        should the dataframe include a column denoting if the ranked head entities correspond to novel triples?
+    :param remove_known:
+        should non-novel triples (those appearing in the training set) be shown with the results?
         On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
         non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param testing:
+        the mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
+
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-        or all possible triples if k is None.
+        or all possible triples if k is None
+
+    :raises ValueError:
+        if not exactly one of {head_label, relation_label, tail_label} is None
+    """
+    # validate input
+    if sum(int(x is None) for x in (head_label, relation_label, tail_label)) != 1:
+        raise ValueError(
+            f"Exactly one of {{head,relation,tail}}_label must be None, but got "
+            f"{head_label}, {relation_label}, {tail_label}",
+        )
+
+    # create input batch
+    batch_ids = []
+    target = None
+    if head_label:
+        batch_ids.append(triples_factory.entity_to_id[head_label])
+    else:
+        target = LABEL_HEAD
+    if relation_label:
+        batch_ids.append(triples_factory.relation_to_id[relation_label])
+    else:
+        target = LABEL_RELATION
+    if tail_label:
+        batch_ids.append(triples_factory.entity_to_id[tail_label])
+    else:
+        target = LABEL_TAIL
+    batch = torch.as_tensor([batch_ids], dtype=torch.long, device=model.device)
+
+    # get targets
+    label_ids, targets = _get_targets(
+        ids=targets, triples_factory=triples_factory, device=model.device, entity=relation_label is not None
+    )
+
+    # get scores
+    scores = model.predict(batch, mode=mode, ids=targets).squeeze(dim=0).tolist()
+
+    # create raw dataframe
+    rv = pd.DataFrame(
+        [(id, label, score) for (label, id), score in zip(label_ids, scores)],
+        columns=[f"{target}_id", f"{target}_label", "score"],
+    ).sort_values("score", ascending=False)
+
+    return _postprocess_prediction_df(
+        df=rv,
+        add_novelties=add_novelties,
+        remove_known=remove_known,
+        training=triples_factory.mapped_triples,
+        testing=testing,
+        query_ids_key=f"{target}_id",
+        col=TARGET_TO_INDEX[target],
+        other_col_ids=batch_ids,
+    )
+
+
+def get_head_prediction_df(
+    relation_label: str,
+    tail_label: str,
+    heads: Optional[Sequence[str]] = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """Predict heads for the given relation and tail (given by label).
+
+    :param relation_label:
+        the string label for the relation
+    :param tail_label:
+        the string label for the tail entity
+    :param heads:
+        restrict head prediction to the given entities
+    :param kwargs:
+        additional keyword-based parameters passed to :func:`get_prediction_df`.
 
     The following example shows that after you train a model on the Nations dataset,
     you can score all entities w.r.t a given relation and tail entity.
@@ -99,63 +192,25 @@ def get_head_prediction_df(
     ... )
     >>> df = get_head_prediction_df(result.model, 'accusation', 'brazil', triples_factory=result.training)
     """
-    tail_id = triples_factory.entity_to_id[tail_label]
-    relation_id = triples_factory.relation_to_id[relation_label]
-    batch = torch.as_tensor([[relation_id, tail_id]], dtype=torch.long, device=model.device)
-    label_ids, heads = _get_targets(ids=heads, triples_factory=triples_factory, device=model.device)
-    scores = model.predict_h(batch, mode=mode, heads=heads)
-    scores = scores[0, :].tolist()
-    rv = pd.DataFrame(
-        [(entity_id, entity_label, score) for (entity_label, entity_id), score in zip(label_ids, scores)],
-        columns=["head_id", "head_label", "score"],
-    ).sort_values("score", ascending=False)
-
-    return _postprocess_prediction_df(
-        df=rv,
-        add_novelties=add_novelties,
-        remove_known=remove_known,
-        training=triples_factory.mapped_triples,
-        testing=testing,
-        query_ids_key="head_id",
-        col=0,
-        other_col_ids=(relation_id, tail_id),
-    )
+    return get_prediction_df(relation_label=relation_label, tail_label=tail_label, targets=heads, **kwargs)
 
 
 def get_tail_prediction_df(
-    model: Model,
     head_label: str,
     relation_label: str,
-    *,
     tails: Optional[Sequence[str]] = None,
-    triples_factory: TriplesFactory,
-    add_novelties: bool = True,
-    remove_known: bool = False,
-    testing: Optional[torch.LongTensor] = None,
-    mode: Optional[InductiveMode] = None,
+    **kwargs,
 ) -> pd.DataFrame:
     """Predict tails for the given head and relation (given by label).
 
-    :param model: A PyKEEN model
-    :param head_label: The string label for the head entity
-    :param relation_label: The string label for the relation
+    :param head_label:
+        the string label for the head entity
+    :param relation_label:
+        the string label for the relation
     :param tails:
         restrict tail prediction to the given entities
-    :param triples_factory: Training triples factory
-    :param add_novelties: Should the dataframe include a column denoting if the ranked tail entities correspond
-        to novel triples?
-    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-    :return: shape: (k, 3)
-        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-        or all possible triples if k is None.
+    :param kwargs:
+        additional keyword-based parameters passed to :func:`get_prediction_df`.
 
     The following example shows that after you train a model on the Nations dataset,
     you can score all entities w.r.t a given head entity and relation.
@@ -177,63 +232,25 @@ def get_tail_prediction_df(
     ...     tails=["burma", "china", "india", "indonesia"],
     ... )
     """
-    head_id = triples_factory.entity_to_id[head_label]
-    relation_id = triples_factory.relation_to_id[relation_label]
-    batch = torch.as_tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
-    label_ids, tails = _get_targets(ids=tails, triples_factory=triples_factory, device=model.device)
-    scores = model.predict_t(batch, mode=mode, tails=tails)
-    scores = scores[0, :].tolist()
-    rv = pd.DataFrame(
-        [(entity_id, entity_label, score) for (entity_label, entity_id), score in zip(label_ids, scores)],
-        columns=["tail_id", "tail_label", "score"],
-    ).sort_values("score", ascending=False)
-
-    return _postprocess_prediction_df(
-        rv,
-        add_novelties=add_novelties,
-        remove_known=remove_known,
-        testing=testing,
-        training=triples_factory.mapped_triples,
-        query_ids_key="tail_id",
-        col=2,
-        other_col_ids=(head_id, relation_id),
-    )
+    return get_prediction_df(head_label=head_label, relation_label=relation_label, targets=tails, **kwargs)
 
 
 def get_relation_prediction_df(
-    model: Model,
     head_label: str,
     tail_label: str,
-    *,
     relations: Optional[Sequence[str]] = None,
-    triples_factory: TriplesFactory,
-    add_novelties: bool = True,
-    remove_known: bool = False,
-    testing: Optional[torch.LongTensor] = None,
-    mode: Optional[InductiveMode] = None,
+    **kwargs,
 ) -> pd.DataFrame:
     """Predict relations for the given head and tail (given by label).
 
-    :param model: A PyKEEN model
-    :param head_label: The string label for the head entity
-    :param tail_label: The string label for the tail entity
+    :param head_label:
+        the string label for the head entity
+    :param tail_label:
+        the string label for the tail entity
     :param relations:
         restrict relation prediction to the given relations
-    :param triples_factory: Training triples factory
-    :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
-        to novel triples?
-    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-    :return: shape: (k, 3)
-        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-        or all possible triples if k is None.
+    :param kwargs:
+        additional keyword-based parameters passed to :func:`get_prediction_df`.
 
     The following example shows that after you train a model on the Nations dataset,
     you can score all relations w.r.t a given head entity and tail entity.
@@ -246,29 +263,7 @@ def get_relation_prediction_df(
     ... )
     >>> df = get_relation_prediction_df(result.model, 'brazil', 'uk', triples_factory=result.training)
     """
-    head_id = triples_factory.entity_to_id[head_label]
-    tail_id = triples_factory.entity_to_id[tail_label]
-    batch = torch.as_tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
-    label_ids, relations = _get_targets(
-        ids=relations, triples_factory=triples_factory, device=model.device, entity=False
-    )
-    scores = model.predict_r(batch, mode=mode)
-    scores = scores[0, :].tolist()
-    rv = pd.DataFrame(
-        [(relation_id, relation_label, score) for (relation_label, relation_id), score in zip(label_ids, scores)],
-        columns=["relation_id", "relation_label", "score"],
-    ).sort_values("score", ascending=False)
-
-    return _postprocess_prediction_df(
-        rv,
-        add_novelties=add_novelties,
-        remove_known=remove_known,
-        testing=testing,
-        training=triples_factory.mapped_triples,
-        query_ids_key="relation_id",
-        col=1,
-        other_col_ids=(head_id, tail_id),
-    )
+    return get_prediction_df(head_label=head_label, tail_label=tail_label, targets=relations, **kwargs)
 
 
 def get_all_prediction_df(
