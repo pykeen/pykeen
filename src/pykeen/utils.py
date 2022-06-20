@@ -13,6 +13,7 @@ import os
 import pathlib
 import random
 import re
+import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
@@ -120,6 +121,7 @@ __all__ = [
     "get_edge_index",
     "prepare_filter_triples",
     "nested_get",
+    "rate_limited",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1747,6 +1749,27 @@ def nested_get(d: Mapping[str, Any], *key: str, default=None) -> Any:
             return default
         d = d[k]
     return d
+
+
+def rate_limited(xs: Iterable[X], min_avg_time: float = 1.0) -> Iterable[X]:
+    """Iterate over iterable with rate limit.
+
+    :param xs:
+        the iterable
+    :param min_avg_time:
+        the minimum average time per element
+
+    :yields: elements of the iterable
+    """
+    start = time.perf_counter()
+    for i, x in enumerate(xs):
+        duration = time.perf_counter() - start
+        under = min_avg_time * i - duration
+        under = max(0, under)
+        if under:
+            logger.debug(f"Applying rate limit; sleeping for {under} seconds")
+            time.sleep(under)
+        yield x
 
 
 if __name__ == "__main__":

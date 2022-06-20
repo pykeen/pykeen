@@ -4,18 +4,22 @@
 
 from __future__ import annotations
 
+import functools
 import logging
+import pathlib
 import re
 from itertools import chain
-from typing import Iterable, List, Literal, Mapping, Optional, Sequence, cast
+from textwrap import dedent
+from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
 
 import more_itertools
 import requests
 import torch
+from tqdm.auto import tqdm
 
 from ..constants import PYKEEN_MODULE
 from ..typing import OneOrSequence
-from ..utils import nested_get, upgrade_to_sequence
+from ..utils import nested_get, rate_limited, upgrade_to_sequence
 from ..version import get_version
 
 __all__ = [
@@ -167,18 +171,35 @@ def adjacency_tensor_to_stacked_matrix(
     )
 
 
+WIKIDATA_IMAGE_RELATIONS = [
+    "P18",  # image
+    "P948",  # page banner
+    "P41",  # flag image
+    "P94",  # coat of arms image
+    "P154",  # logo image
+    "P242",  # locator map image
+]
+
+
 class WikidataCache:
     """A cache for requests against Wikidata's SPARQL endpoint."""
 
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
     WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
 
-    # image:
-    # https://www.wikidata.org/w/api.php?action=wbgetclaims&property=P18&entity=Qxxx
+    HEADERS: Dict[str, str] = {
+        # cf. https://meta.wikimedia.org/wiki/User-Agent_policy
+        "User-Agent": (
+            f"PyKEEN-Bot/{get_version()} (https://pykeen.github.io; pykeen2019@gmail.com) "
+            f"requests/{requests.__version__}"
+        ),
+        # cf. https://wikitech.wikimedia.org/wiki/Robot_policy
+        "Accept-Encoding": "gzip",
+    }
 
     def __init__(self) -> None:
         """Initialize the cache."""
-        self.module = PYKEEN_MODULE.submodule("wikidata")
+        self.module = PYKEEN_MODULE.module("wikidata")
 
     @staticmethod
     def verify_ids(ids: Sequence[str]):
@@ -198,6 +219,51 @@ class WikidataCache:
 
     @classmethod
     def query(
+        cls,
+        sparql: Union[str, Callable[..., str]],
+        wikidata_ids: Sequence[str],
+        batch_size: int = 256,
+    ) -> Iterable[Mapping[str, Any]]:
+        """
+        Batched SPARQL query execution for the given IDS.
+
+        :param sparql:
+            the SPARQL query with a placeholder `ids`
+        :param wikidata_ids:
+            the Wikidata IDs
+        :param batch_size:
+            the batch size, i.e., maximum number of IDs per query
+
+        :return:
+            an iterable over JSON results, where the keys correspond to query variables,
+            and the values to the corresponding binding
+        """
+        if not wikidata_ids:
+            return {}
+
+        if len(wikidata_ids) > batch_size:
+            # break into smaller requests
+            return chain.from_iterable(
+                cls.query(sparql=sparql, wikidata_ids=id_batch, batch_size=batch_size)
+                for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
+            )
+
+        if isinstance(sparql, str):
+            sparql = sparql.format
+        sparql = sparql(ids=" ".join(f"wd:{i}" for i in wikidata_ids))
+        logger.debug("running query: %s", sparql)
+        res = requests.get(
+            cls.WIKIDATA_ENDPOINT,
+            params={"query": sparql, "format": "json"},
+            headers=cls.HEADERS,
+        )
+        res.raise_for_status()
+        bindings = res.json()["results"]["bindings"]
+        logger.debug(f"Retrieved {len(bindings)} bindings")
+        return bindings
+
+    @classmethod
+    def query_text(
         cls, wikidata_ids: Sequence[str], language: str = "en", batch_size: int = 256
     ) -> Mapping[str, Mapping[str, str]]:
         """
@@ -213,37 +279,23 @@ class WikidataCache:
         :return:
             a mapping from Wikidata Ids to dictionaries with the label and description of the entities
         """
-        # cf. https://github.com/biopragmatics/bioregistry/blob/55584709e287d1d01d51375e0bd836f3c4d25b2e/src/bioregistry/utils.py#L53-L63  # noqa: E501
-        if not wikidata_ids:
-            return {}
-
-        if len(wikidata_ids) > batch_size:
-            # break into smaller requests
-            return dict(
-                chain.from_iterable(
-                    cls.query(wikidata_ids=id_batch, language=language, batch_size=batch_size).items()
-                    for id_batch in more_itertools.chunked(wikidata_ids, batch_size)
-                )
-            )
-
-        qualified = " ".join(f"wd:{i}" for i in wikidata_ids)
-        sparql = f"""
-            SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
-                VALUES ?item {{ {qualified} }}
-                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
-            }}}}
-        """
-
-        logger.debug("running query: %s", sparql)
-        res = requests.get(
-            cls.WIKIDATA_ENDPOINT,
-            params={"query": sparql, "format": "json"},
-            headers={"User-Agent": f"pykeen/{get_version()} (https://pykeen.github.io)"},
+        res_json = cls.query(
+            sparql=functools.partial(
+                dedent(
+                    """
+                        SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
+                            VALUES ?item {{ {ids} }}
+                            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
+                        }}}}
+                    """
+                ).format,
+                language=language,
+            ),
+            wikidata_ids=wikidata_ids,
+            batch_size=batch_size,
         )
-        res.raise_for_status()
-        res_json = res.json()
         result = {}
-        for entry in res_json["results"]["bindings"]:
+        for entry in res_json:
             wikidata_id = nested_get(entry, "item", "value", default="")
             assert isinstance(wikidata_id, str)  # for mypy
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
@@ -291,7 +343,7 @@ class WikidataCache:
         # determine missing entries
         missing = [wikidata_id for wikidata_id, desc in zip(ids, result) if not desc]
         # retrieve information via SPARQL
-        entries = self.query(wikidata_ids=missing)
+        entries = self.query_text(wikidata_ids=missing)
         # save entries
         self._save(entries=entries)
         # fill missing descriptions
@@ -326,6 +378,102 @@ class WikidataCache:
             the description for each Wikidata entity
         """
         return self._get(ids=ids, component="description")
+
+    def _discover_images(self, extensions: Collection[str]) -> Mapping[str, pathlib.Path]:
+        image_dir = self.module.join("images")
+        return {
+            path.stem: path
+            for path in image_dir.iterdir()
+            if path.is_file() and path.suffix in {f".{e}" for e in extensions}
+        }
+
+    def get_image_paths(
+        self,
+        ids: Sequence[str],
+        extensions: Collection[str] = ("jpeg", "jpg", "gif", "png", "svg", "tif"),
+        progress: bool = False,
+    ) -> Sequence[Optional[pathlib.Path]]:
+        """Get paths to images for the given IDs.
+
+        :param ids:
+            the Wikidata IDs.
+        :param extensions:
+            the allowed file extensions
+        :param progress:
+            whether to display a progress bar
+
+        :return:
+            the paths to images for the given IDs.
+        """
+        id_to_path = self._discover_images(extensions=extensions)
+        missing = sorted(set(ids).difference(id_to_path.keys()))
+        num_missing = len(missing)
+        logger.info(
+            f"Downloading images for {num_missing:,} entities. With the rate limit in place, "
+            f"this will take at least {num_missing/10:.2f} seconds.",
+        )
+        res_json = self.query(
+            sparql=functools.partial(
+                dedent(
+                    """
+                    SELECT ?item ?relation ?image
+                    WHERE {{
+                        VALUES ?item {{ {ids} }} .
+                        ?item ?r ?image .
+                        VALUES ?r {{ {relations} }}
+                    }}
+                """
+                ).format,
+                relations=" ".join(f"wdt:{r}" for r in WIKIDATA_IMAGE_RELATIONS),
+            ),
+            wikidata_ids=missing,
+        )
+        # we can have multiple images per entity -> collect image URLs per image
+        images: Dict[str, Dict[str, List[str]]] = {}
+        for entry in res_json:
+            # entity ID
+            wikidata_id = nested_get(entry, "item", "value", default="")
+            assert isinstance(wikidata_id, str)  # for mypy
+            wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
+
+            # relation ID
+            relation_id = nested_get(entry, "relation", "value", default="")
+            assert isinstance(relation_id, str)  # for mypy
+            relation_id = relation_id.rsplit("/", maxsplit=1)[-1]
+
+            # image URL
+            image_url = nested_get(entry, "image", "value", default=None)
+            assert image_url is not None
+            images.setdefault(wikidata_id, dict()).setdefault(relation_id, []).append(image_url)
+
+        # check whether images are still missing
+        missing = sorted(set(missing).difference(images.keys()))
+        if missing:
+            logger.warning(f"Could not retrieve an image URL for {len(missing)} entities: {missing}")
+
+        # select on image url per image in a reproducible way
+        for wikidata_id, url_dict in tqdm(rate_limited(images.items(), min_avg_time=0.1), disable=not progress):
+            # traverse relations in order of preference
+            for relation in WIKIDATA_IMAGE_RELATIONS:
+                if relation not in url_dict:
+                    continue
+                # now there is an image available -> select reproducible by URL sorting
+                image_url = sorted(url_dict[relation])[0]
+                ext = image_url.rsplit(".", maxsplit=1)[-1].lower()
+                if ext not in extensions:
+                    logger.warning(f"Unknown extension: {ext} for {image_url}")
+                self.module.ensure(
+                    "images",
+                    url=image_url,
+                    name=f"{wikidata_id}.{ext}",
+                    download_kwargs=dict(backend="requests", headers=self.HEADERS),
+                )
+            else:
+                # did not break -> no image
+                logger.warning(f"No image for {wikidata_id}")
+
+        id_to_path = self._discover_images(extensions=extensions)
+        return [id_to_path.get(i) for i in ids]
 
 
 class ShapeError(ValueError):
