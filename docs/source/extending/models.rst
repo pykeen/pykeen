@@ -39,7 +39,8 @@ KGEM using the :class:`pykeen.models.ERModel` base class.
             super().__init__(
                 # Pass an instance of your interaction function. This is also a place where you can
                 # pass hyper-parameters, such as the L_p norm, from the KGEM to the interaction function
-                interaction=DistMultInteraction(),
+                interaction=DistMultInteraction,
+                # interaction_kwargs=dict(...),
                 # Define the entity representations using a dict. By default, each
                 # embedding is a vector. You can use the ``shape`` kwarg to specify higher dimensional
                 # tensor shapes.
