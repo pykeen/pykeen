@@ -162,6 +162,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
+        :param mode: The inductive training mode. None if transductive.
         :param result_tracker:
             the result tracker
         :param result_tracker_kwargs:
@@ -879,6 +880,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :return:
             Tuple containing the maximum possible batch size as well as an indicator if the evaluation with that size
             was successful.
+
+        :raises RuntimeError:
+            If a runtime error is raised during training
         """
         if batch_size is None:
             batch_size = 8192
@@ -967,6 +971,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         and sub_batch size on the hardware at hand. If even the slice size 1 is too high, it will raise an error.
         Otherwise it will return the determined slice size.
 
+        :param triples_factory:
+            A triples factory
         :param batch_size:
             The batch size to use.
         :param sub_batch_size:
@@ -997,10 +1003,17 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         :param batch_size:
             The initial batch size to start with.
+        :param sampler:
+            The sampler (None or schlichtkrull)
+        :param triples_factory:
+            A triples factory
 
         :return:
             Tuple containing the sub-batch size to use and indicating if the search was finished, i.e. successfully
             without hardware errors, as well as if sub-batching is possible
+
+        :raises RuntimeError:
+            If a runtime error is raised during training
         """
         sub_batch_size = batch_size
         finished_search = False
@@ -1090,6 +1103,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             The file path for the checkpoint of the best epoch model when using early stopping.
         :param triples_factory:
             The triples factory being used in the current training loop.
+        :raises ValueError: if the internal optimizer is not set
         """
         if self.optimizer is None:
             raise ValueError
@@ -1165,6 +1179,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :return:
             Temporary file path of the best epoch model and the best epoch when using early stoppers, None otherwise.
 
+        :raises ValueError:
+            If the internal optimizer is none
         :raises CheckpointMismatchError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
         """

@@ -28,7 +28,7 @@ def _split_triples(
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
     """
-    Randomly split triples into groups of given sizes.
+    Randomly split triples nto groups of given sizes.
 
     :param mapped_triples: shape: (n, 3)
         The triples.
@@ -143,6 +143,9 @@ def normalize_ratios(
 
     :return:
         A sequence of ratios of at least two elements which sums to one.
+
+    :raises ValueError:
+        if the ratio sum is bigger than 1.0
     """
     # Prepare split index
     if isinstance(ratios, float):
@@ -234,6 +237,8 @@ def _prepare_cleanup(
         The training triples.
     :param testing: shape: (m, 3)
         The testing triples.
+    :param max_ids:
+        The maximum identifier in each column. Calculates it automatically if not given.
 
     :return: shape: (m,)
         The move mask.

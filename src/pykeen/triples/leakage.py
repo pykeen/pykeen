@@ -199,6 +199,7 @@ class Sealant:
         :param minimum_frequency: The minimum overlap between two relations' triples to consider them as inverses. The
             default value, 0.97, is taken from `Toutanova and Chen (2015)
             <https://www.aclweb.org/anthology/W15-4007/>`_, who originally described the generation of FB15k-237.
+        :param symmetric: If the similarities are computed as symmetric
         :raises NotImplementedError:
             If symmetric is False
         """

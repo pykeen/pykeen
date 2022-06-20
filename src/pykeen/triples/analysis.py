@@ -668,6 +668,10 @@ def get_relation_functionality(
 
     :param mapped_triples:
         The ID-based triples.
+    :param add_labels:
+        Should the labels be added to the dataframe?
+    :param label_to_id:
+        The label to ID mapping
 
     :return:
         A dataframe with columns ( functionality | inverse_functionality )

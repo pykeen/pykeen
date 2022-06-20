@@ -78,6 +78,8 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
     :param triples: shape: (n, 3), dtype: str
+    :returns:
+        A mapping of entity labels to indices
     """
     # Split triples
     heads, tails = triples[:, 0], triples[:, 2]
@@ -87,10 +89,12 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     return {str(label): i for (i, label) in enumerate(entity_labels)}
 
 
-def create_relation_mapping(relations: set) -> RelationMapping:
+def create_relation_mapping(relations: Set) -> RelationMapping:
     """Create mapping from relation labels to IDs.
 
-    :param relations: set
+    :param relations: A set of relation labels
+    :returns:
+        A mapping of relation labels to indices
     """
     # Sorting ensures consistent results when the triples are permuted
     relation_labels = sorted(
@@ -552,6 +556,10 @@ class CoreTriplesFactory(KGInfo):
 
         :param n:
             Either the (integer) number of top relations to keep or the (float) percentage of top relationships to keep.
+        :returns:
+            A set of IDs for the n most frequent relations
+        :raises TypeError:
+            If the n is the wrong type
         """
         logger.info(f"applying cutoff of {n} to {self}")
         if isinstance(n, float):
@@ -822,6 +830,8 @@ class CoreTriplesFactory(KGInfo):
 
         :param path:
             The path to store the triples factory to.
+        :returns:
+            The path to the file that got dumped
         """
         path = normalize_path(path, mkdir=True)
 
