@@ -2,13 +2,10 @@
 
 """Embedding weight initialization routines."""
 
-# for forward references in Python < 3.10
-from __future__ import annotations
-
 import functools
 import logging
 import math
-from typing import TYPE_CHECKING, Any, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 import numpy as np
 import torch
@@ -24,9 +21,6 @@ from .utils import iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Initializer, MappedTriples
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman
-
-if TYPE_CHECKING:
-    from . import Embedding
 
 __all__ = [
     "xavier_uniform_",
@@ -236,8 +230,12 @@ class PretrainedInitializer:
             raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
         return self.tensor.to(device=x.device, dtype=x.dtype)
 
-    def as_embedding(self, **kwargs: Any) -> "Embedding":
-        """Get a static embedding from this pre-trained initializer."""
+    def as_embedding(self, **kwargs: Any):
+        """Get a static embedding from this pre-trained initializer.
+
+        :param kwargs: Keyword arguments to pass to :class:`pykeen.nn.representation.Embedding`
+        :rtype: pykeen.nn.representation.Embedding
+        """
         from .representation import Embedding
 
         max_id, *shape = self.tensor.shape
