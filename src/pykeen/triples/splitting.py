@@ -28,7 +28,7 @@ def _split_triples(
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
     """
-    Randomly split triples nto groups of given sizes.
+    Randomly split triples into groups of given sizes.
 
     :param mapped_triples: shape: (n, 3)
         The triples.

@@ -89,7 +89,7 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     return {str(label): i for (i, label) in enumerate(entity_labels)}
 
 
-def create_relation_mapping(relations: Set) -> RelationMapping:
+def create_relation_mapping(relations: Iterable[str]) -> RelationMapping:
     """Create mapping from relation labels to IDs.
 
     :param relations: A set of relation labels
