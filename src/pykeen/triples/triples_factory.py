@@ -78,6 +78,8 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
     :param triples: shape: (n, 3), dtype: str
+    :returns:
+        A mapping of entity labels to indices
     """
     # Split triples
     heads, tails = triples[:, 0], triples[:, 2]
@@ -87,10 +89,12 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     return {str(label): i for (i, label) in enumerate(entity_labels)}
 
 
-def create_relation_mapping(relations: set) -> RelationMapping:
+def create_relation_mapping(relations: Iterable[str]) -> RelationMapping:
     """Create mapping from relation labels to IDs.
 
-    :param relations: set
+    :param relations: A set of relation labels
+    :returns:
+        A mapping of relation labels to indices
     """
     # Sorting ensures consistent results when the triples are permuted
     relation_labels = sorted(
@@ -552,6 +556,10 @@ class CoreTriplesFactory(KGInfo):
 
         :param n:
             Either the (integer) number of top relations to keep or the (float) percentage of top relationships to keep.
+        :returns:
+            A set of IDs for the n most frequent relations
+        :raises TypeError:
+            If the n is the wrong type
         """
         logger.info(f"applying cutoff of {n} to {self}")
         if isinstance(n, float):
@@ -822,6 +830,8 @@ class CoreTriplesFactory(KGInfo):
 
         :param path:
             The path to store the triples factory to.
+        :returns:
+            The path to the file that got dumped
         """
         path = normalize_path(path, mkdir=True)
 
@@ -1185,6 +1195,7 @@ class TriplesFactory(CoreTriplesFactory):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
+        :returns: A world cloud object for a Jupyter notebook
 
         .. warning::
 
@@ -1202,6 +1213,7 @@ class TriplesFactory(CoreTriplesFactory):
         """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
 
         :param top: The number of top relations to show. Defaults to 100.
+        :returns: A world cloud object for a Jupyter notebook
 
         .. warning::
 
@@ -1314,7 +1326,10 @@ def cat_triples(*triples_factories: CoreTriplesFactory) -> MappedTriples:
 def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> int:
     """Compute the number of moves to go from the first sequence of triples factories to the second.
 
+    :param a: A sequence of triples factories
+    :param b: A sequence of triples factories
     :return: The number of triples present in the training sets in both
+    :raises ValueError: If the sequences of triples factories are a different length
     """
     if len(a) != len(b):
         raise ValueError("Must have same number of triples factories")
@@ -1331,6 +1346,8 @@ def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory
 def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> float:
     """Compute the similarity between two datasets' splits.
 
+    :param a: A sequence of triples factories
+    :param b: A sequence of triples factories
     :return: The number of triples present in the training sets in both
     """
     steps = splits_steps(a, b)
