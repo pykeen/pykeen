@@ -41,7 +41,7 @@ KGEM using the :class:`pykeen.models.ERModel` base class.
                 # pass hyper-parameters, such as the L_p norm, from the KGEM to the interaction function
                 interaction=DistMultInteraction(),
                 # Define the entity representations using a dict. By default, each
-                # embedding is linear. You can use the ``shape`` kwarg to specify higher dimensional
+                # embedding is a vector. You can use the ``shape`` kwarg to specify higher dimensional
                 # tensor shapes.
                 entity_representations=Embedding,
                 entity_representations_kwargs=dict(
