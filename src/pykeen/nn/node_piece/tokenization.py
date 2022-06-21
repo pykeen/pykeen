@@ -204,6 +204,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         re_ordered_adjacency, bound, perm = torch_sparse.partition(
             src=torch_sparse.SparseTensor(row=row, col=col, sparse_sizes=(num_entities, num_entities)),
             num_parts=self.num_partitions,
+            recursive=True,
         )
 
         # select independently per partition
