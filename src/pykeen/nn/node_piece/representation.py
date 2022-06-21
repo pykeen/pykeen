@@ -267,7 +267,7 @@ class TensorTrainRepresentation(Representation):
             term = alphabet[i : i + ndim]
             trail = term[1:]
             inter += term[1:-1]
-            i += ndim
+            i = i + ndim - 1
             eq.append(f"...{term}")
         assert trail is not None
         return ",".join(eq) + f"->...{inter}{trail}"
