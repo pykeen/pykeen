@@ -206,14 +206,18 @@ class MetisAnchorTokenizer(AnchorTokenizer):
             num_parts=self.num_partitions,
             recursive=True,
         )
+        sizes = bound.diff()
+        logger.info(f"Partition sizes: min: {sizes.min().item()}, max:{sizes.max().item()}")
 
         # select independently per partition
         vocabulary_size = 0
         assignment = []
+        edge_count = 0
         for low, high in more_itertools.pairwise(bound.tolist()):
             # select adjacency part;
             # note: the indices will automatically be in [0, ..., high - low), since they are *local* indices
             edge_index = re_ordered_adjacency[low:high, low:high].to_torch_sparse_coo_tensor().coalesce().indices()
+            edge_count += edge_index.shape[1]
             num_entities = high - low
             this_vocabulary_size, this_assignment = super(self.__class__, self)._call(
                 edge_index=edge_index, num_tokens=num_tokens, num_entities=num_entities
@@ -224,6 +228,11 @@ class MetisAnchorTokenizer(AnchorTokenizer):
             # note: permutation will be later on reverted
             vocabulary_size += this_vocabulary_size
             assignment.append(this_assignment)
+        total_edges = mapped_triples.shape[0]
+        logger.info(
+            f"Partitioned anchor tokenization lead to ignoring "
+            f"{format_relative_comparison(part=total_edges - edge_count, total=total_edges)} connections.",
+        )
         # TODO: check if perm is used correctly
         return vocabulary_size, torch.cat(assignment, dim=0)[perm]
 
