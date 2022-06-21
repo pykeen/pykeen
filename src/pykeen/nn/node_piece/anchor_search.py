@@ -110,6 +110,8 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
         :param edge_index: shape: (2, m)
             the edge index
+        :param num_entities:
+            the number of entities. Can be inferred from `edge_index`
 
         :return: shape: (n, n)
             a square sparse adjacency matrix
