@@ -87,7 +87,6 @@ def _get_input_batch(
     :return:
         a 3-tuple (target, batch, batch_tuple) of the prediction target, the input batch, and the input batch as tuple.
     """
-
     # create input batch
     batch_ids = []
     target = None
