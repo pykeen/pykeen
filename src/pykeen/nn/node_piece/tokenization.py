@@ -170,7 +170,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
     """An anchor tokenizer, which first partitions the graph using Metis."""
 
     def __init__(self, num_partitions: int = 2, **kwargs):
-        """Initializer the tokenizer.
+        """Initialize the tokenizer.
 
         :param num_partitions:
             the number of partitions obtained through Metis.
@@ -192,7 +192,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         try:
             import torch_sparse
         except ImportError as err:
-            raise ImportError(f"{self.__class__.__name__} requires `torch_sparse` to be installed.")
+            raise ImportError(f"{self.__class__.__name__} requires `torch_sparse` to be installed.") from err
 
         row, col = get_edge_index(mapped_triples=mapped_triples)
         re_ordered_adjacency, bound, perm = torch_sparse.partition(
