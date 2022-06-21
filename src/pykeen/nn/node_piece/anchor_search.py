@@ -4,7 +4,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterable, Tuple
+from typing import Iterable
 
 import numpy
 import scipy.sparse
