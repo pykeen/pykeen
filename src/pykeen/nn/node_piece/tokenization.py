@@ -210,7 +210,8 @@ class MetisAnchorTokenizer(AnchorTokenizer):
             ),
             num_parts=self.num_partitions,
             recursive=True,
-        ).cpu()
+        )
+        re_ordered_adjacency = re_ordered_adjacency.cpu()
         sizes = bound.diff()
         logger.info(f"Partition sizes: min: {sizes.min().item()}, max: {sizes.max().item()}")
 
