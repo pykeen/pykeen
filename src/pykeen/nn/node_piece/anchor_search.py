@@ -231,13 +231,13 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         edge_index: numpy.ndarray,
     ) -> torch.tensor:
         """
-        Create a sparse adjacency matrix from a given edge index.
+        Create a sparse adjacency matrix (in the form of the edge list) from a given edge index.
 
         :param edge_index: shape: (2, m)
             the edge index
 
-        :return: shape: (n, n)
-            a square sparse adjacency matrix
+        :return: shape: (2, 2m + n)
+            edge list with inverse edges and self-loops
         """
 
         # infer shape
@@ -251,8 +251,6 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
             edge_index.flip(0),
             torch.arange(num_entities).unsqueeze(0).repeat(2, 1)
         ], dim=-1)
-
-        #values = torch.ones_like(edge_list[0]).bool()
 
         return edge_list
 
