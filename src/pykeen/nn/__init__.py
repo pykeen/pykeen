@@ -53,7 +53,12 @@ from .modules import (
     UMInteraction,
     interaction_resolver,
 )
-from .node_piece import NodePieceRepresentation, TokenizationRepresentation, tokenizer_resolver
+from .node_piece import (
+    NodePieceRepresentation,
+    TensorTrainRepresentation,
+    TokenizationRepresentation,
+    tokenizer_resolver,
+)
 from .pyg import (
     FeaturizedMessagePassingRepresentation,
     SimpleMessagePassingRepresentation,
@@ -91,6 +96,7 @@ __all__ = [
     "TypedMessagePassingRepresentation",
     "FeaturizedMessagePassingRepresentation",
     "CombinedRepresentation",
+    "TensorTrainRepresentation",
     "TextRepresentation",
     "TransformedRepresentation",
     "WikidataTextRepresentation",

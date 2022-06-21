@@ -19,6 +19,7 @@ from ...typing import MappedTriples, OneOrSequence
 from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
+    "TensorTrainRepresentation",
     "TokenizationRepresentation",
     "HashDiversityInfo",
     "NodePieceRepresentation",
