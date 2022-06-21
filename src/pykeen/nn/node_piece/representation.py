@@ -205,6 +205,10 @@ class TensorTrainRepresentation(Representation):
 
         :param assignment:
             the assignment on each level
+        :param max_id:
+            The maximum ID (exclusively). If given, will be checked. Otherwise, will be inferred.
+        :param shape:
+            The shape of an individual representation. If given, will be checked. Otherwise, will be inferred.
         :param bases:
             the base representations for each level, or hints thereof.
         :param bases_kwargs:
