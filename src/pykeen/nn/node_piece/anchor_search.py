@@ -4,7 +4,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterable
+from typing import Iterable, Optional
 
 import numpy
 import scipy.sparse
@@ -33,7 +33,9 @@ class AnchorSearcher(ABC):
     """A method for finding the closest anchors."""
 
     @abstractmethod
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:
         """
         Find the $k$ closest anchor nodes for each entity.
 
@@ -43,6 +45,8 @@ class AnchorSearcher(ABC):
             the selected anchor entity Ids
         :param k:
             the number of closest anchors to return
+        :param num_entities:
+            the number of entities
 
         :return: shape: (n, k), -1 <= res < a
             the Ids of the closest anchors
@@ -61,9 +65,11 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     """Find closest anchors using :class:`scipy.sparse.csgraph`."""
 
     # docstr-coverage: inherited
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
-        adjacency = edge_index_to_sparse_matrix(edge_index=edge_index).tocsr()
+        adjacency = edge_index_to_sparse_matrix(edge_index=edge_index, num_entities=num_entities).tocsr()
         # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
         distances = scipy.sparse.csgraph.shortest_path(
             csgraph=adjacency,
@@ -72,9 +78,10 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             unweighted=True,
             indices=anchors,
         )
+        # TODO: padding for unreachable?
         # select anchor IDs with smallest distance
         return torch.as_tensor(
-            numpy.argpartition(distances, kth=min(k, distances.shape[0]), axis=0)[:k, :].T,
+            numpy.argpartition(distances, kth=min(k, distances.shape[0] - 1), axis=0)[:k, :].T,
             dtype=torch.long,
         )
 
@@ -97,9 +104,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         yield f"max_iter={self.max_iter}"
 
     @staticmethod
-    def create_adjacency(
-        edge_index: numpy.ndarray,
-    ) -> scipy.sparse.spmatrix:
+    def create_adjacency(edge_index: numpy.ndarray, num_entities: Optional[int] = None) -> scipy.sparse.spmatrix:
         """
         Create a sparse adjacency matrix from a given edge index.
 
@@ -110,7 +115,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
             a square sparse adjacency matrix
         """
         # infer shape
-        num_entities = edge_index.max().item() + 1
+        num_entities = num_entities or edge_index.max().item() + 1
         # create adjacency matrix
         adjacency = scipy.sparse.coo_matrix(
             (
@@ -216,8 +221,10 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         return tokens
 
     # docstr-coverage: inherited
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        adjacency = self.create_adjacency(edge_index=edge_index)
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:  # noqa: D102
+        adjacency = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
         return self.select(pool=pool, k=k)
 
@@ -274,8 +281,10 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         )[:, ::-1]
 
     # docstr-coverage: inherited
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        n = edge_index.max().item() + 1
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:  # noqa: D102
+        n = num_entities or edge_index.max().item() + 1
         result = numpy.full(shape=(n, k), fill_value=-1)
         i = 0
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
