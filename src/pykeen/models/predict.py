@@ -18,7 +18,16 @@ from .base import Model
 from ..constants import TARGET_TO_INDEX
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.utils import tensor_to_df
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, LabeledTriples, MappedTriples, ScorePack
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    InductiveMode,
+    LabeledTriples,
+    MappedTriples,
+    ScorePack,
+    Target,
+)
 from ..utils import is_cuda_oom_error, triple_tensor_to_set
 
 __all__ = [
@@ -52,6 +61,56 @@ def _get_targets(
         id_tensor = torch.as_tensor(ids, torch.long, device=device)
     id_to_label = triples_factory.entity_id_to_label if entity else triples_factory.relation_id_to_label
     return [(id_to_label[i], i) for i in ids], id_tensor
+
+
+def _get_input_batch(
+    triples_factory: TriplesFactory,
+    # exactly one of them is None
+    head_label: Optional[str] = None,
+    relation_label: Optional[str] = None,
+    tail_label: Optional[str] = None,
+) -> Tuple[Target, torch.LongTensor, Tuple[int, int]]:
+    """Prepare input batch for prediction.
+
+    :param triples_factory:
+        the triples factory used to translate labels to ids.
+    :param head_label:
+        the head entity label
+    :param relation_label:
+        the relation label
+    :param tail_label:
+        the tail entity label
+
+    :raises ValueError:
+        if not exactly one of {head_label, relation_label, tail_label} is None
+
+    :return:
+        a 3-tuple (target, batch, batch_tuple) of the prediction target, the input batch, and the input batch as tuple.
+    """
+
+    # create input batch
+    batch_ids = []
+    target = None
+    if head_label:
+        batch_ids.append(triples_factory.entity_to_id[head_label])
+    else:
+        target = LABEL_HEAD
+    if relation_label:
+        batch_ids.append(triples_factory.relation_to_id[relation_label])
+    else:
+        target = LABEL_RELATION
+    if tail_label:
+        batch_ids.append(triples_factory.entity_to_id[tail_label])
+    else:
+        target = LABEL_TAIL
+    if target is None or len(batch_ids) != 2:
+        raise ValueError(
+            f"Exactly one of {{head,relation,tail}}_label must be None, but got "
+            f"{head_label}, {relation_label}, {tail_label}",
+        )
+
+    batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long))
+    return target, batch, (batch_ids[0], batch_ids[1])
 
 
 def get_prediction_df(
@@ -106,37 +165,13 @@ def get_prediction_df(
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None
-
-    :raises ValueError:
-        if not exactly one of {head_label, relation_label, tail_label} is None
     """
-    # validate input
-    if sum(int(x is None) for x in (head_label, relation_label, tail_label)) != 1:
-        raise ValueError(
-            f"Exactly one of {{head,relation,tail}}_label must be None, but got "
-            f"{head_label}, {relation_label}, {tail_label}",
-        )
+    # get input & target
+    target, batch, other_col_ids = _get_input_batch(
+        triples_factory, head_label=head_label, relation_label=relation_label, tail_label=tail_label
+    )
 
-    # create input batch
-    batch_ids = []
-    target = None
-    if head_label:
-        batch_ids.append(triples_factory.entity_to_id[head_label])
-    else:
-        target = LABEL_HEAD
-    if relation_label:
-        batch_ids.append(triples_factory.relation_to_id[relation_label])
-    else:
-        target = LABEL_RELATION
-    if tail_label:
-        batch_ids.append(triples_factory.entity_to_id[tail_label])
-    else:
-        target = LABEL_TAIL
-    assert target is not None
-    assert len(batch_ids) == 2
-    batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long, device=model.device))
-
-    # get targets
+    # get label-to-id mapping and prediction targets
     label_ids, targets = _get_targets(
         ids=targets, triples_factory=triples_factory, device=model.device, entity=relation_label is not None
     )
@@ -158,7 +193,7 @@ def get_prediction_df(
         testing=testing,
         query_ids_key=f"{target}_id",
         col=TARGET_TO_INDEX[target],
-        other_col_ids=(batch_ids[0], batch_ids[1]),
+        other_col_ids=other_col_ids,
     )
 
 
