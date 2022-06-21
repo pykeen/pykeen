@@ -125,15 +125,13 @@ class AnchorTokenizer(Tokenizer):
         self.anchor_selection = anchor_selection_resolver.make(selection, pos_kwargs=selection_kwargs)
         self.searcher = anchor_searcher_resolver.make(searcher, pos_kwargs=searcher_kwargs)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def _call(
         self,
-        mapped_triples: MappedTriples,
+        edge_index: torch.LongTensor,
         num_tokens: int,
         num_entities: int,
-        num_relations: int,
-    ) -> torch.LongTensor:  # noqa: D102
-        edge_index = get_edge_index(mapped_triples=mapped_triples).numpy()
+    ) -> torch.LongTensor:
+        edge_index = edge_index.numpy()
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
         anchors = self.anchor_selection(edge_index=edge_index)
@@ -149,6 +147,72 @@ class AnchorTokenizer(Tokenizer):
             )
         # convert to torch
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
+
+    # docstr-coverage: inherited
+    def __call__(
+        self,
+        mapped_triples: MappedTriples,
+        num_tokens: int,
+        num_entities: int,
+        num_relations: int,
+    ) -> torch.LongTensor:  # noqa: D102
+        return self._call(
+            edge_index=get_edge_index(mapped_triples=mapped_triples),
+            num_tokens=num_tokens,
+            num_entities=num_entities,
+        )
+
+
+class MetisAnchorTokenizer(AnchorTokenizer):
+    """An anchor tokenizer, which first partitions the graph using Metis."""
+
+    def __init__(self, num_partitions: int, **kwargs):
+        """Initializer the tokenizer.
+
+        :param num_partitions:
+            the number of partitions obtained through Metis.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`AnchorTokenizer.__init__`
+        """
+        super().__init__(**kwargs)
+        self.num_partitions = num_partitions
+
+    # docstr-coverage: inherited
+    def __call__(
+        self,
+        mapped_triples: MappedTriples,
+        num_tokens: int,
+        num_entities: int,
+        num_relations: int,
+    ) -> torch.LongTensor:  # noqa: D102
+        try:
+            import torch_sparse
+        except ImportError as err:
+            raise ImportError(f"{self.__class__.__name__} requires `torch_sparse` to be installed.")
+        row, col = get_edge_index(mapped_triples=mapped_triples)
+        re_ordered_adjacency, bound, perm = torch_sparse.partition(
+            src=torch_sparse.SparseTensor(row=row, col=col), num_parts=self.num_partitions
+        )
+        # evenly select tokens
+        if num_tokens < self.num_partitions:
+            raise ValueError
+        num_tokens, remainder = divmod(num_tokens, self.num_partitions)
+        num_tokens_per_partition = [num_tokens + 1] * remainder + [num_tokens] * (self.num_partitions - remainder)
+        return perm[
+            torch.cat(
+                [
+                    super()._call(
+                        edge_index=re_ordered_adjacency[low:high, low:high]
+                        .to_torch_sparse_coo_tensor()
+                        .coalesce()
+                        .indices(),
+                        num_tokens=num_tokens,
+                        num_entities=high - low,
+                    )
+                    for low, high, num_tokens in zip(bound, bound[1:], num_tokens_per_partition)
+                ]
+            )
+        ]
 
 
 class PrecomputedPoolTokenizer(Tokenizer):
