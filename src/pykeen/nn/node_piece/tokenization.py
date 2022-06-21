@@ -8,6 +8,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import Collection, Mapping, Optional, Tuple
 
+import more_itertools
 import numpy
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
@@ -106,6 +107,7 @@ class AnchorTokenizer(Tokenizer):
 
     def __init__(
         self,
+        # TODO: expose num_anchors?
         selection: HintOrType[AnchorSelection] = None,
         selection_kwargs: OptionalKwargs = None,
         searcher: HintOrType[AnchorSearcher] = None,
@@ -131,7 +133,7 @@ class AnchorTokenizer(Tokenizer):
         edge_index: torch.LongTensor,
         num_tokens: int,
         num_entities: int,
-    ) -> torch.LongTensor:
+    ) -> Tuple[int, torch.LongTensor]:
         edge_index = edge_index.numpy()
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
@@ -156,7 +158,7 @@ class AnchorTokenizer(Tokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> torch.LongTensor:  # noqa: D102
+    ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
         return self._call(
             edge_index=get_edge_index(mapped_triples=mapped_triples),
             num_tokens=num_tokens,
@@ -167,13 +169,14 @@ class AnchorTokenizer(Tokenizer):
 class MetisAnchorTokenizer(AnchorTokenizer):
     """An anchor tokenizer, which first partitions the graph using Metis."""
 
-    def __init__(self, num_partitions: int, **kwargs):
+    def __init__(self, num_partitions: int = 2, **kwargs):
         """Initializer the tokenizer.
 
         :param num_partitions:
             the number of partitions obtained through Metis.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`AnchorTokenizer.__init__`
+            additional keyword-based parameters passed to :meth:`AnchorTokenizer.__init__`. note that there will be one
+            anchor tokenizer per partition, i.e., the vocabulary size will grow respectively.
         """
         super().__init__(**kwargs)
         self.num_partitions = num_partitions
@@ -185,35 +188,33 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> torch.LongTensor:  # noqa: D102
+    ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
         try:
             import torch_sparse
         except ImportError as err:
             raise ImportError(f"{self.__class__.__name__} requires `torch_sparse` to be installed.")
+
         row, col = get_edge_index(mapped_triples=mapped_triples)
         re_ordered_adjacency, bound, perm = torch_sparse.partition(
             src=torch_sparse.SparseTensor(row=row, col=col), num_parts=self.num_partitions
         )
-        # evenly select tokens
-        if num_tokens < self.num_partitions:
-            raise ValueError
-        num_tokens, remainder = divmod(num_tokens, self.num_partitions)
-        num_tokens_per_partition = [num_tokens + 1] * remainder + [num_tokens] * (self.num_partitions - remainder)
-        return perm[
-            torch.cat(
-                [
-                    super()._call(
-                        edge_index=re_ordered_adjacency[low:high, low:high]
-                        .to_torch_sparse_coo_tensor()
-                        .coalesce()
-                        .indices(),
-                        num_tokens=num_tokens,
-                        num_entities=high - low,
-                    )
-                    for low, high, num_tokens in zip(bound, bound[1:], num_tokens_per_partition)
-                ]
+        # select independently per partition
+        vocabulary_size = 0
+        assignment = []
+        for low, high in more_itertools.pairwise(bound.tolist()):
+            # select adjacency part;
+            # note: the indices we automatically be in [0, ..., high - low), since they are *local* indices
+            edge_index = re_ordered_adjacency[low:high, low:high].to_torch_sparse_coo_tensor().coalesce().indices()
+            this_vocabulary_size, this_assignment = super(self.__class__, self)._call(
+                edge_index=edge_index, num_tokens=num_tokens, num_entities=high - low
             )
-        ]
+            # offset
+            this_assignment = this_assignment + vocabulary_size
+            # note: permutation will be later on reverted
+            vocabulary_size += this_vocabulary_size
+            assignment.append(this_assignment)
+        # TODO: check if perm is used correctly
+        return vocabulary_size, torch.cat(assignment, dim=0)[perm]
 
 
 class PrecomputedPoolTokenizer(Tokenizer):
