@@ -28,6 +28,7 @@ __all__ = [
     # Concrete classes
     "RelationTokenizer",
     "AnchorTokenizer",
+    "MetisAnchorTokenizer",
     "PrecomputedPoolTokenizer",
 ]
 
