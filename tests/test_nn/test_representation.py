@@ -421,8 +421,13 @@ class TensorTrainRepresentationTest(cases.RepresentationTestCase):
 
     def test_prepare_einsum_equation(self):
         assert self.cls is pykeen.nn.node_piece.TensorTrainRepresentation
-        equation = self.cls.prepare_einsum_equation(shapes=[(5,), (5, 8)])
-        assert equation == "...a,...ab->...b"
+        for shapes, expected in [
+            ([(5,), (5, 8)], "...a,...ab->...b"),
+            ([(5,), (5, 8), (8, 3)], "...a,...ab,...bc->...c"),
+            ([(5,), (5, 7, 8), (8, 3)], "...a,...abc,...cd->...bd"),
+        ]:
+            equation = self.cls.prepare_einsum_equation(shapes=shapes)
+            assert equation == expected
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
