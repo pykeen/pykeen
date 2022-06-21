@@ -223,14 +223,18 @@ class MetisAnchorTokenizer(AnchorTokenizer):
                 edge_index=edge_index, num_tokens=num_tokens, num_entities=num_entities
             )
             assert this_assignment.shape[0] == num_entities
+
             # offset
             mask = this_assignment < 0
             this_assignment = this_assignment + vocabulary_size
             this_assignment[mask] = -1
-            # note: permutation will be later on reverted
+
             # the -1 comes from the shared padding token
             vocabulary_size += this_vocabulary_size - 1
+
+            # note: permutation will be later on reverted
             assignment.append(this_assignment)
+
         # add back 1 for the shared padding token
         vocabulary_size += 1
         total_edges = mapped_triples.shape[0]
