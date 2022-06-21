@@ -189,8 +189,8 @@ class TensorTrainRepresentation(Representation):
     """
     A tensor factorization of representations.
 
-    Each index is assigned to a number of base representations. These base representations are multiplied using the tensor train product.
-    A specific instantiation was discussed in
+    Each index is assigned to a number of base representations. These base representations are multiplied using the tensor
+    train product. A specific instantiation was discussed in
     https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
     where the assignment is based on hierarchical topological clustering.
     """
