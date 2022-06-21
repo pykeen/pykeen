@@ -14,6 +14,7 @@ from tqdm.auto import tqdm
 
 from .utils import edge_index_to_sparse_matrix, page_rank, prepare_page_rank_adjacency
 from ...utils import format_relative_comparison, resolve_device
+from ...typing import DeviceHint
 
 __all__ = [
     # Resolver
@@ -225,6 +226,15 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 class SparseBFSSearcher(ScipySparseAnchorSearcher):
     """Find closest anchors using :mod:`torch_sparse` on a GPU."""
 
+    def __init__(self,  max_iter: int = 5, device: DeviceHint = None):
+        """Initialize the tokenizer.
+        :param max_iter:
+            the number of partitions obtained through Metis.
+        :param device:
+            the device to use for tokenization
+        """
+        super().__init__(max_iter=max_iter)
+        self.device = resolve_device(device)
 
     @staticmethod
     def create_adjacency(
@@ -242,7 +252,7 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
 
         # infer shape
         num_entities = edge_index.max().item() + 1
-        edge_index = torch.tensor(edge_index, dtype=torch.long)
+        edge_index = torch.as_tensor(edge_index, dtype=torch.long)
 
         # symmetric + self-loops
         # TODO what if the edge index already has inverse edges?
@@ -260,6 +270,7 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         edge_list: torch.tensor,
         max_iter: int,
         k: int,
+        device: torch.device,
     ) -> numpy.ndarray:
         """
         Determine the candidate pool using breadth-first search.
@@ -287,7 +298,6 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         # for each entity, determine anchor pool by BFS
         num_anchors = len(anchors)
 
-        device = resolve_device()
         anchors = torch.tensor(anchors, dtype=torch.long, device=device)
 
         # an array storing whether node i is reachable by anchor j
@@ -367,7 +377,7 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
     # docstr-coverage: inherited
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         edge_list = self.create_adjacency(edge_index=edge_index)
-        pool = self.bfs(anchors=anchors, edge_list=edge_list, max_iter=self.max_iter, k=k)
+        pool = self.bfs(anchors=anchors, edge_list=edge_list, max_iter=self.max_iter, k=k, device=self.device)
         return self.select(pool=pool, k=k)
 
 
