@@ -18,7 +18,7 @@ from .anchor_selection import AnchorSelection, anchor_selection_resolver
 from .loader import PrecomputedTokenizerLoader, precomputed_tokenizer_loader_resolver
 from .utils import random_sample_no_replacement
 from ...constants import PYKEEN_MODULE
-from ...typing import MappedTriples, DeviceHint
+from ...typing import DeviceHint, MappedTriples
 from ...utils import format_relative_comparison, get_edge_index, resolve_device
 
 __all__ = [
