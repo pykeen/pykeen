@@ -183,6 +183,8 @@ class TokenizationRepresentation(Representation):
         return self.assignment.shape[1]
 
 
+# TODO: move to another module
+# TODO: can be a combined representations, with appropriate tensor-train combination
 class TensorTrainRepresentation(Representation):
     """
     A tensor factorization of representations.
