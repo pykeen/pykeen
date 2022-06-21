@@ -3,7 +3,8 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, List, NamedTuple, Optional, Union
+import string
+from typing import Callable, List, NamedTuple, Optional, Sequence, Tuple, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -179,6 +180,86 @@ class TokenizationRepresentation(Representation):
     def num_tokens(self) -> int:
         """Return the number of selected tokens for ID."""
         return self.assignment.shape[1]
+
+
+class TensorTrainRepresentation(Representation):
+    """cf. https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf"""
+
+    #: shape: (max_id, train_length)
+    assignment: torch.LongTensor
+
+    #: the bases, length: train_length, with compatible shapes
+    bases: Sequence[Representation]
+
+    def __init__(
+        self,
+        assignment: torch.LongTensor,
+        bases: OneOrManyHintOrType = None,
+        bases_kwargs: OneOrManyOptionalKwargs = None,
+        **kwargs,
+    ) -> None:
+        """Initialize the representation.
+
+        :param assignment:
+            the assignment on each level
+        :param bases:
+            the base representations for each level, or hints thereof.
+        :param bases_kwargs:
+            keyword-based parameters for the bases
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+
+        :raises ValueError:
+            if any of the base representations except the first have fewer than 2 dimensions
+        """
+        # import here to avoid cyclic import
+        from .. import representation_resolver
+
+        # create bases
+        num_bases = assignment.max(dim=0).tolist()
+        bases, bases_kwargs = broadcast_upgrade_to_sequences(bases, bases_kwargs)
+        bases = [
+            representation_resolver.make(base, base_kwargs, max_id=max_id)
+            for max_id, base, base_kwargs in zip(num_bases, bases, bases_kwargs)
+        ]
+        super().__init__(max_id=assignment.shape[0], shape=bases[0].shape[:-1] + bases[-1].shape[1:], **kwargs)
+
+        # assign *after* super to properly register submodules
+        self.bases = bases
+        self.eq = self.prepare_einsum_equation(shapes=[base.shape for base in bases])
+
+    @staticmethod
+    def prepare_einsum_equation(shapes: Sequence[Tuple[int, ...]]) -> str:
+        """Prepare the equation for einsum.
+
+        :param shapes:
+            the base representations' shapes
+
+        :return:
+            a valid einsum string.
+        """
+        # prepare einsum equation
+        eq = ["...a"]
+        i = 0
+        alphabet = string.ascii_lower_case
+        trail = None
+        for base in bases[1:]:
+            ndim = len(base.shape)
+            if ndim < 2:
+                raise ValueError(f"Invalid shape: {base.shape}")
+            term = alphabet[i : i + ndim]
+            trail = term[1:]
+            i += ndim
+            eq.append(f"...{term}")
+        assert trail is not None
+        return ",".join(eq) + f"->...a{trail}"
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        assignment = self.assignment
+        if indices is not None:
+            assignment = assignment[indices]
+        return torch.einsum(self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases)))
 
 
 class HashDiversityInfo(NamedTuple):
