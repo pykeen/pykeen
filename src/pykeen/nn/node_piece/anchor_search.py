@@ -358,7 +358,7 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         # values with distance 127 (max for char type) are padding tokens
         indices[values == 127] = -1
         # since the output is sorted, no need for random sampling, we just take top-k nearest
-        tokens = indices[:, :k].detach().numpy()
+        tokens = indices[:, :k].detach().cpu().numpy()
         return tokens
 
     # docstr-coverage: inherited
