@@ -167,7 +167,12 @@ class AnchorTokenizer(Tokenizer):
 
 
 class MetisAnchorTokenizer(AnchorTokenizer):
-    """An anchor tokenizer, which first partitions the graph using Metis."""
+    """
+    An anchor tokenizer, which first partitions the graph using Metis.
+
+    We use the binding by `torch-sparse`. The Metis graph partitioning algorithm is described here:
+    http://glaros.dtc.umn.edu/gkhome/metis/metis/overview
+    """
 
     def __init__(self, num_partitions: int = 2, **kwargs):
         """Initialize the tokenizer.
