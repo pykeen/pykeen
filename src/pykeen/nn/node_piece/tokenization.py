@@ -18,8 +18,8 @@ from .anchor_selection import AnchorSelection, anchor_selection_resolver
 from .loader import PrecomputedTokenizerLoader, precomputed_tokenizer_loader_resolver
 from .utils import random_sample_no_replacement
 from ...constants import PYKEEN_MODULE
-from ...typing import MappedTriples
-from ...utils import format_relative_comparison, get_edge_index
+from ...typing import MappedTriples, DeviceHint
+from ...utils import format_relative_comparison, get_edge_index, resolve_device
 
 __all__ = [
     # Resolver
@@ -174,17 +174,20 @@ class MetisAnchorTokenizer(AnchorTokenizer):
     http://glaros.dtc.umn.edu/gkhome/metis/metis/overview
     """
 
-    def __init__(self, num_partitions: int = 2, **kwargs):
+    def __init__(self, num_partitions: int = 2, device: DeviceHint = None, **kwargs):
         """Initialize the tokenizer.
 
         :param num_partitions:
             the number of partitions obtained through Metis.
+        :param device:
+            the device to use for tokenization
         :param kwargs:
             additional keyword-based parameters passed to :meth:`AnchorTokenizer.__init__`. note that there will be one
             anchor tokenizer per partition, i.e., the vocabulary size will grow respectively.
         """
         super().__init__(**kwargs)
         self.num_partitions = num_partitions
+        self.device = resolve_device(device)
 
     # docstr-coverage: inherited
     def __call__(
@@ -202,7 +205,9 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         logger.info(f"Partitioning the graph into {self.num_partitions} partitions.")
         row, col = get_edge_index(mapped_triples=mapped_triples)
         re_ordered_adjacency, bound, perm = torch_sparse.partition(
-            src=torch_sparse.SparseTensor(row=row, col=col, sparse_sizes=(num_entities, num_entities)),
+            src=torch_sparse.SparseTensor(row=row, col=col, sparse_sizes=(num_entities, num_entities)).to(
+                device=self.device
+            ),
             num_parts=self.num_partitions,
             recursive=True,
         )
