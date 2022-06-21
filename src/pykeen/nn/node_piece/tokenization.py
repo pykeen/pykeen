@@ -142,7 +142,7 @@ class AnchorTokenizer(Tokenizer):
             logger.warning(f"Only {len(numpy.unique(anchors))} out of {len(anchors)} anchors are unique")
         # find closest anchors
         logger.info(f"Searching closest anchors with {self.searcher}")
-        tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens)
+        tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens, num_entities=num_entities)
         num_empty = (tokens < 0).all(axis=1).sum()
         if num_empty > 0:
             logger.warning(
@@ -199,10 +199,13 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         except ImportError as err:
             raise ImportError(f"{self.__class__.__name__} requires `torch_sparse` to be installed.") from err
 
+        logger.info(f"Partitioning the graph into {self.num_partitions} partitions.")
         row, col = get_edge_index(mapped_triples=mapped_triples)
         re_ordered_adjacency, bound, perm = torch_sparse.partition(
-            src=torch_sparse.SparseTensor(row=row, col=col), num_parts=self.num_partitions
+            src=torch_sparse.SparseTensor(row=row, col=col, sparse_sizes=(num_entities, num_entities)),
+            num_parts=self.num_partitions,
         )
+
         # select independently per partition
         vocabulary_size = 0
         assignment = []
@@ -210,9 +213,11 @@ class MetisAnchorTokenizer(AnchorTokenizer):
             # select adjacency part;
             # note: the indices will automatically be in [0, ..., high - low), since they are *local* indices
             edge_index = re_ordered_adjacency[low:high, low:high].to_torch_sparse_coo_tensor().coalesce().indices()
+            num_entities = high - low
             this_vocabulary_size, this_assignment = super(self.__class__, self)._call(
-                edge_index=edge_index, num_tokens=num_tokens, num_entities=high - low
+                edge_index=edge_index, num_tokens=num_tokens, num_entities=num_entities
             )
+            assert this_assignment.shape[0] == num_entities
             # offset
             this_assignment = this_assignment + vocabulary_size
             # note: permutation will be later on reverted
