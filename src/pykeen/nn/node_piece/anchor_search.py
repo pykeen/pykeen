@@ -4,7 +4,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import numpy
 import scipy.sparse
@@ -13,7 +13,7 @@ from class_resolver import ClassResolver, OptionalKwargs
 from tqdm.auto import tqdm
 
 from .utils import edge_index_to_sparse_matrix, page_rank, prepare_page_rank_adjacency
-from ...utils import format_relative_comparison
+from ...utils import format_relative_comparison, resolve_device
 
 __all__ = [
     # Resolver
@@ -219,6 +219,154 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         adjacency = self.create_adjacency(edge_index=edge_index)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
+        return self.select(pool=pool, k=k)
+
+
+class SparseBFSSearcher(ScipySparseAnchorSearcher):
+    """Find closest anchors using :mod:`torch_sparse` on a GPU."""
+
+
+    @staticmethod
+    def create_adjacency(
+        edge_index: numpy.ndarray,
+    ) -> torch.tensor:
+        """
+        Create a sparse adjacency matrix from a given edge index.
+
+        :param edge_index: shape: (2, m)
+            the edge index
+
+        :return: shape: (n, n)
+            a square sparse adjacency matrix
+        """
+
+        # infer shape
+        num_entities = edge_index.max().item() + 1
+        edge_index = torch.tensor(edge_index, dtype=torch.long)
+
+        # symmetric + self-loops
+        # TODO what if the edge index already has inverse edges?
+        edge_list = torch.cat([
+            edge_index,
+            edge_index.flip(0),
+            torch.arange(num_entities).unsqueeze(0).repeat(2, 1)
+        ], dim=-1)
+
+        #values = torch.ones_like(edge_list[0]).bool()
+
+        return edge_list
+
+    @staticmethod
+    def bfs(
+        anchors: numpy.ndarray,
+        edge_list: torch.tensor,
+        max_iter: int,
+        k: int,
+    ) -> numpy.ndarray:
+        """
+        Determine the candidate pool using breadth-first search.
+
+        :param anchors: shape: (a,)
+            the anchor node IDs
+        :param edge_list: shape: (2, n)
+            the edge list with symmetric edges and self-loops
+        :param max_iter:
+            the maximum number of hops to consider
+        :param k:
+            the minimum number of anchor nodes to reach
+
+        :return: shape: (n, a)
+            a boolean array indicating whether anchor $j$ is in the set of $k$ closest anchors for node $i$
+        """
+
+        try:
+            import torch_sparse
+            from torch_sparse import spmm
+        except ImportError as err:
+            raise ImportError(f"Requires `torch_sparse` to be installed.") from err
+
+        num_entities = edge_list.max().item() + 1
+        # for each entity, determine anchor pool by BFS
+        num_anchors = len(anchors)
+
+        device = resolve_device()
+        anchors = torch.tensor(anchors, dtype=torch.long, device=device)
+
+        # an array storing whether node i is reachable by anchor j
+        reachable = torch.zeros((num_entities, num_anchors), dtype=torch.bool, device=device)
+        reachable[anchors] = torch.eye(num_anchors, dtype=torch.bool, device=device)
+
+        # an array indicating whether a node is closed, i.e., has found at least $k$ anchors
+        final = torch.zeros((num_entities,), dtype=torch.bool, device=device)
+
+        # the output that track the distance to each found anchor
+        # dtype is 8 bit, so we initialize the maximum distance to 127
+        # TODO int8 takes 8x more space than just a binary matrix, decide if we want to keep it
+        pool = torch.zeros((num_entities, num_anchors), dtype=torch.int8, device=device).fill_(127)
+        # initial anchors are 0-hop away from themselves
+        pool[anchors, torch.arange(len(anchors), dtype=torch.long, device=device)] = 0
+
+        edge_list = edge_list.to(device)
+        values = torch.ones_like(edge_list[0], dtype=torch.bool, device=device)
+
+        # TODO: take all (q-1) hop neighbors before selecting from q-hop
+        old_reachable = reachable
+        for i in range(max_iter):
+            # propagate one hop
+            reachable = spmm(index=edge_list, value=values, m=num_entities, n=num_entities, matrix=reachable)
+            # convergence check
+            if (reachable == old_reachable).all():
+                logger.warning(f"Search converged after iteration {i} without all nodes being reachable.")
+                break
+            # newly reached is a mask that points to newly discovered anchors at this particular step
+            # implemented as element-wise XOR (will only give True in 0 XOR 1 or 1 XOR 0)
+            # in our case we enrich the set of found anchors, so we can only have values turning 0 to 1, eg 0 XOR 1
+            newly_reached = reachable ^ old_reachable
+            old_reachable = reachable
+            # copy pool if we have seen enough anchors and have not yet stopped
+            num_reachable = reachable.sum(axis=1)
+            enough = num_reachable >= k
+            mask = enough & ~final
+            logger.debug(
+                f"Iteration {i}: {format_relative_comparison(enough.sum(), total=num_entities)} closed nodes.",
+            )
+            # update the value in the pool by the current hop value (we start from 0, so +1 be default)
+            pool[newly_reached] = i + 1
+            # stop once we have enough
+            final |= enough
+            if final.all():
+                break
+
+        return pool
+
+    @staticmethod
+    def select(
+        pool: torch.tensor,
+        k: int,
+    ) -> numpy.ndarray:
+        """
+        Select $k$ anchors from the given pools.
+
+        :param pool: shape: (n, a)
+            the anchor candidates for each node with distances
+        :param k:
+            the number of candidates to select
+
+        :return: shape: (n, k)
+            the selected anchors. May contain -1 if there is an insufficient number of  candidates
+        """
+        # sort the pool by nearest to farthest anchors
+        values, indices = torch.sort(pool, dim=-1)
+        # values with distance 127 (max for char type) are padding tokens
+        indices[values == 127] = -1
+        # since the output is sorted, no need for random sampling, we just take top-k nearest
+        tokens = indices[:, :k].detach().numpy()
+        return tokens
+
+    # docstr-coverage: inherited
+    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
+        edge_list = self.create_adjacency(edge_index=edge_index)
+        pool = self.bfs(anchors=anchors, edge_list=edge_list, max_iter=self.max_iter, k=k)
         return self.select(pool=pool, k=k)
 
 
