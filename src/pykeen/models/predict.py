@@ -133,6 +133,7 @@ def get_prediction_df(
     else:
         target = LABEL_TAIL
     assert target is not None
+    assert len(batch_ids) == 2
     batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long, device=model.device))
 
     # get targets
@@ -157,7 +158,7 @@ def get_prediction_df(
         testing=testing,
         query_ids_key=f"{target}_id",
         col=TARGET_TO_INDEX[target],
-        other_col_ids=batch_ids,  # FIXME @mberr types are wrong
+        other_col_ids=(batch_ids[0], batch_ids[1]),
     )
 
 
