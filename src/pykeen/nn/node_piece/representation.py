@@ -262,6 +262,9 @@ class TensorTrainRepresentation(Representation):
 
         :return:
             a valid einsum string.
+
+        :raises ValueError:
+            if any but the first shape has less than two components
         """
         # prepare einsum equation
         eq = ["...a"]
