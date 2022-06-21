@@ -172,6 +172,8 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
         # the output
         pool = numpy.zeros(shape=(num_entities, num_anchors), dtype=bool)
+        # anchor nodes have themselves as a starting found anchor
+        pool[anchors] = numpy.eye(num_anchors, dtype=bool)
 
         # TODO: take all (q-1) hop neighbors before selecting from q-hop
         old_reachable = reachable
