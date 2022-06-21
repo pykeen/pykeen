@@ -16,7 +16,7 @@ from ..representation import CombinedRepresentation, Representation
 from ..utils import ShapeError
 from ...triples import CoreTriplesFactory
 from ...typing import MappedTriples, OneOrSequence
-from ...utils import broadcast_upgrade_to_sequences
+from ...utils import broadcast_upgrade_to_sequences, upgrade_to_sequence
 
 __all__ = [
     "TensorTrainRepresentation",
@@ -195,6 +195,8 @@ class TensorTrainRepresentation(Representation):
     def __init__(
         self,
         assignment: torch.LongTensor,
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
         bases: OneOrManyHintOrType = None,
         bases_kwargs: OneOrManyOptionalKwargs = None,
         **kwargs,
@@ -216,16 +218,25 @@ class TensorTrainRepresentation(Representation):
         # import here to avoid cyclic import
         from .. import representation_resolver
 
+        max_id = max_id or assignment.shape[0]
+        if max_id != assignment.shape[0]:
+            raise ValueError(f"Inconsistent max_id={max_id} vs. assignment.shape={assignment.shape}")
+
         # create bases
-        num_bases = assignment.max(dim=0).tolist()
+        num_bases = (assignment.max(dim=0).values + 1).tolist()
         bases, bases_kwargs = broadcast_upgrade_to_sequences(bases, bases_kwargs)
         bases = [
             representation_resolver.make(base, base_kwargs, max_id=max_id)
             for max_id, base, base_kwargs in zip(num_bases, bases, bases_kwargs)
         ]
-        super().__init__(max_id=assignment.shape[0], shape=bases[0].shape[:-1] + bases[-1].shape[1:], **kwargs)
+        calc_shape = bases[0].shape[:-1] + bases[-1].shape[1:]
+        shape = calc_shape if shape is None else upgrade_to_sequence(shape)
+        if shape != calc_shape:
+            raise ValueError(f"Inconsistent shape={shape} vs. inferred shape={calc_shape}")
+        super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
 
         # assign *after* super to properly register submodules
+        self.register_buffer(name="assignment", tensor=assignment)
         self.bases = bases
         self.eq = self.prepare_einsum_equation(shapes=[base.shape for base in bases])
 
@@ -242,18 +253,18 @@ class TensorTrainRepresentation(Representation):
         # prepare einsum equation
         eq = ["...a"]
         i = 0
-        alphabet = string.ascii_lower_case
+        alphabet = string.ascii_lowercase
         trail = None
-        for base in bases[1:]:
-            ndim = len(base.shape)
+        for shape in shapes[1:]:
+            ndim = len(shape)
             if ndim < 2:
-                raise ValueError(f"Invalid shape: {base.shape}")
+                raise ValueError(f"Invalid shape: {shape}")
             term = alphabet[i : i + ndim]
             trail = term[1:]
             i += ndim
             eq.append(f"...{term}")
         assert trail is not None
-        return ",".join(eq) + f"->...a{trail}"
+        return ",".join(eq) + f"->...{trail}"
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
