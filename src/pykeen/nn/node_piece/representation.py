@@ -259,16 +259,18 @@ class TensorTrainRepresentation(Representation):
         i = 0
         alphabet = string.ascii_lowercase
         trail = None
+        inter = ""
         for shape in shapes[1:]:
             ndim = len(shape)
             if ndim < 2:
                 raise ValueError(f"Invalid shape: {shape}")
             term = alphabet[i : i + ndim]
             trail = term[1:]
+            inter += term[1:-1]
             i += ndim
             eq.append(f"...{term}")
         assert trail is not None
-        return ",".join(eq) + f"->...{trail}"
+        return ",".join(eq) + f"->...{inter}{trail}"
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
