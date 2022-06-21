@@ -207,7 +207,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
             recursive=True,
         )
         sizes = bound.diff()
-        logger.info(f"Partition sizes: min: {sizes.min().item()}, max:{sizes.max().item()}")
+        logger.info(f"Partition sizes: min: {sizes.min().item()}, max: {sizes.max().item()}")
 
         # select independently per partition
         vocabulary_size = 0
