@@ -404,6 +404,27 @@ class TransformedRepresentationTest(cases.RepresentationTestCase):
         return kwargs
 
 
+class TensorTrainRepresentationTest(cases.RepresentationTestCase):
+    """Tests for tensor train representations."""
+
+    cls = pykeen.nn.node_piece.TensorTrainRepresentation
+    kwargs = dict(
+        bases_kwargs=[dict(shape=(5,)), dict(shape=(5, 8))],
+    )
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        num_bases = [3, 7]
+        kwargs["assignment"] = torch.stack([torch.randint(nb, size=(self.max_id,)) for nb in num_bases], dim=-1)
+        return kwargs
+
+    def test_prepare_einsum_equation(self):
+        assert self.cls is pykeen.nn.node_piece.TensorTrainRepresentation
+        equation = self.cls.prepare_einsum_equation(shapes=[(5,), (5, 8)])
+        assert equation == "...a,...ab->...b"
+
+
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
 
