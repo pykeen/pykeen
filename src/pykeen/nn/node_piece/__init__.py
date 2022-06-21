@@ -55,8 +55,8 @@ from .loader import (
 from .representation import (
     HashDiversityInfo,
     NodePieceRepresentation,
-    TokenizationRepresentation,
     TensorTrainRepresentation,
+    TokenizationRepresentation,
 )
 from .tokenization import AnchorTokenizer, PrecomputedPoolTokenizer, RelationTokenizer, Tokenizer, tokenizer_resolver
 
