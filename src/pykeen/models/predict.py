@@ -71,6 +71,10 @@ def get_prediction_df(
 ) -> pd.DataFrame:
     """Get predictions for the head, relation, and/or tail combination.
 
+    .. note ::
+        Exactly one of `head_label`, `relation_label` and `tail_label` should be None. This is the position
+        which will be predicted.
+
     :param model:
         A PyKEEN model
     :param triples_factory:
