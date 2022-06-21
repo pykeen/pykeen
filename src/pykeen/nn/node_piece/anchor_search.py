@@ -298,9 +298,12 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         final = torch.zeros((num_entities,), dtype=torch.bool, device=device)
 
         # the output that track the distance to each found anchor
-        # dtype is 8 bit, so we initialize the maximum distance to 127
+        # dtype is unsigned int 8 bit, so we initialize the maximum distance to 255 (or max default)
         # TODO int8 takes 8x more space than just a binary matrix, decide if we want to keep it
-        pool = torch.zeros((num_entities, num_anchors), dtype=torch.int8, device=device).fill_(127)
+        dtype = torch.uint8
+        pool = torch.zeros((num_entities, num_anchors), dtype=dtype, device=device).fill_(
+            torch.iinfo(dtype).max
+        )
         # initial anchors are 0-hop away from themselves
         pool[anchors, torch.arange(len(anchors), dtype=torch.long, device=device)] = 0
 
@@ -355,8 +358,8 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         """
         # sort the pool by nearest to farthest anchors
         values, indices = torch.sort(pool, dim=-1)
-        # values with distance 127 (max for char type) are padding tokens
-        indices[values == 127] = -1
+        # values with distance 255 (or max for unsigned int8 type) are padding tokens
+        indices[values == torch.iinfo(values.dtype).max] = -1
         # since the output is sorted, no need for random sampling, we just take top-k nearest
         tokens = indices[:, :k].detach().cpu().numpy()
         return tokens
