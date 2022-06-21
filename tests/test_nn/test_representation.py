@@ -420,6 +420,7 @@ class TensorTrainRepresentationTest(cases.RepresentationTestCase):
         return kwargs
 
     def test_prepare_einsum_equation(self):
+        """Test prepare einsum equation helper."""
         assert self.cls is pykeen.nn.node_piece.TensorTrainRepresentation
         for shapes, expected in [
             ([(5,), (5, 8)], "...a,...ab->...b"),
