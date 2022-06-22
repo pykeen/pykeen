@@ -345,7 +345,6 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
             # copy pool if we have seen enough anchors and have not yet stopped
             num_reachable = reachable.sum(axis=1)
             enough = num_reachable >= k
-            mask = enough & ~final
             logger.debug(
                 f"Iteration {i}: {format_relative_comparison(enough.sum(), total=num_entities)} closed nodes.",
             )
