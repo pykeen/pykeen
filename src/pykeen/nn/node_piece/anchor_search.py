@@ -317,7 +317,6 @@ class SparseBFSSearcher(AnchorSearcher):
 
         # the output that track the distance to each found anchor
         # dtype is unsigned int 8 bit, so we initialize the maximum distance to 255 (or max default)
-        # TODO int8 takes 8x more space than just a binary matrix, decide if we want to keep it
         dtype = torch.uint8
         pool = torch.zeros((num_entities, num_anchors), dtype=dtype, device=device).fill_(torch.iinfo(dtype).max)
         # initial anchors are 0-hop away from themselves
@@ -326,7 +325,6 @@ class SparseBFSSearcher(AnchorSearcher):
         edge_list = edge_list.to(device)
         values = torch.ones_like(edge_list[0], dtype=torch.bool, device=device)
 
-        # TODO: take all (q-1) hop neighbors before selecting from q-hop
         old_reachable = reachable
         for i in range(max_iter):
             # propagate one hop
