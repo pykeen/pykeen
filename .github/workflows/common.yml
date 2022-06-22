@@ -73,7 +73,7 @@ jobs:
         run: |
           conda install pip setuptools wheel sqlite
           conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
-          conda install pytorch-sparse -c pyg
+          conda install torch-sparse -c pyg
           pip install -e .[mlflow,wandb,tests]
       - name: Run fast tests
         run: pytest --durations=20 tests -m "not slow"
