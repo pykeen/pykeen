@@ -264,6 +264,8 @@ class SparseBFSSearcher(AnchorSearcher):
 
         :param edge_index: shape: (2, m)
             the edge index
+        :param num_entities:
+            The number of entities. If not given, inferred from the edge index
 
         :return: shape: (2, 2m + n)
             edge list with inverse edges and self-loops
