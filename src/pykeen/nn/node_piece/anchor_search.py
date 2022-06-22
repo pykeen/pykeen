@@ -229,6 +229,7 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
 
     def __init__(self, max_iter: int = 5, device: DeviceHint = None):
         """Initialize the tokenizer.
+
         :param max_iter:
             the number of partitions obtained through Metis.
         :param device:
@@ -250,7 +251,6 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         :return: shape: (2, 2m + n)
             edge list with inverse edges and self-loops
         """
-
         # infer shape
         num_entities = edge_index.max().item() + 1
         edge_index = torch.as_tensor(edge_index, dtype=torch.long)
@@ -284,16 +284,19 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
             the maximum number of hops to consider
         :param k:
             the minimum number of anchor nodes to reach
+        :param device:
+            the device on which the calculations are done
 
         :return: shape: (n, a)
             a boolean array indicating whether anchor $j$ is in the set of $k$ closest anchors for node $i$
-        """
 
+        :raises ImportError:
+            If :mod:`torch_sparse` is not installed
+        """
         try:
             import torch_sparse
-            from torch_sparse import spmm
         except ImportError as err:
-            raise ImportError(f"Requires `torch_sparse` to be installed.") from err
+            raise ImportError("Requires `torch_sparse` to be installed.") from err
 
         num_entities = edge_list.max().item() + 1
         # for each entity, determine anchor pool by BFS
@@ -326,7 +329,9 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
             # TODO the float() trick for GPU result stability until the torch_sparse issue is resolved
             # https://github.com/rusty1s/pytorch_sparse/issues/243
             reachable = (
-                spmm(index=edge_list, value=values.float(), m=num_entities, n=num_entities, matrix=reachable.float())
+                torch_sparse.spmm(
+                    index=edge_list, value=values.float(), m=num_entities, n=num_entities, matrix=reachable.float()
+                )
                 > 0.0
             )
             # convergence check
