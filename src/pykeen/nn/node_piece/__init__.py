@@ -35,6 +35,7 @@ from .anchor_search import (
     CSGraphAnchorSearcher,
     PersonalizedPageRankAnchorSearcher,
     ScipySparseAnchorSearcher,
+    SparseBFSSearcher,
     anchor_searcher_resolver,
 )
 from .anchor_selection import (
@@ -67,6 +68,7 @@ __all__ = [
     "anchor_searcher_resolver",
     "AnchorSearcher",
     "ScipySparseAnchorSearcher",
+    "SparseBFSSearcher",
     "CSGraphAnchorSearcher",
     "PersonalizedPageRankAnchorSearcher",
     # Anchor Selection
