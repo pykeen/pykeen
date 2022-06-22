@@ -24,6 +24,7 @@ __all__ = [
     # Concrete classes
     "ScipySparseAnchorSearcher",
     "CSGraphAnchorSearcher",
+    "SparseBFSSearcher",
     "PersonalizedPageRankAnchorSearcher",
 ]
 
