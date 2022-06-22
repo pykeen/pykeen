@@ -91,6 +91,12 @@ class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
         numpy.testing.assert_array_equal(pool, exp_pool)
 
 
+class SparseBFSSearcherTests(cases.AnchorSearcherTestCase):
+    """Tests for anchor search with scipy.sparse."""
+
+    cls = pykeen.nn.node_piece.SparseBFSSearcher
+
+
 class PersonalizedPageRankAnchorSearcherTests(cases.AnchorSearcherTestCase):
     """Tests for anchor search via PPR."""
 
