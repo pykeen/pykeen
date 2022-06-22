@@ -13,8 +13,8 @@ from class_resolver import ClassResolver, OptionalKwargs
 from tqdm.auto import tqdm
 
 from .utils import edge_index_to_sparse_matrix, page_rank, prepare_page_rank_adjacency
-from ...utils import format_relative_comparison, resolve_device
 from ...typing import DeviceHint
+from ...utils import format_relative_comparison, resolve_device
 
 __all__ = [
     # Resolver
@@ -227,7 +227,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 class SparseBFSSearcher(ScipySparseAnchorSearcher):
     """Find closest anchors using :mod:`torch_sparse` on a GPU."""
 
-    def __init__(self,  max_iter: int = 5, device: DeviceHint = None):
+    def __init__(self, max_iter: int = 5, device: DeviceHint = None):
         """Initialize the tokenizer.
         :param max_iter:
             the number of partitions obtained through Metis.
@@ -257,11 +257,11 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
 
         # symmetric + self-loops
         # TODO what if the edge index already has inverse edges?
-        edge_list = torch.cat([
-            edge_index,
-            edge_index.flip(0),
-            torch.arange(num_entities).unsqueeze(0).repeat(2, 1)
-        ], dim=-1).unique(dim=1)  # unique for deduplicating repeated edges
+        edge_list = torch.cat(
+            [edge_index, edge_index.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
+        ).unique(
+            dim=1
+        )  # unique for deduplicating repeated edges
 
         return edge_list
 
@@ -312,9 +312,7 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         # dtype is unsigned int 8 bit, so we initialize the maximum distance to 255 (or max default)
         # TODO int8 takes 8x more space than just a binary matrix, decide if we want to keep it
         dtype = torch.uint8
-        pool = torch.zeros((num_entities, num_anchors), dtype=dtype, device=device).fill_(
-            torch.iinfo(dtype).max
-        )
+        pool = torch.zeros((num_entities, num_anchors), dtype=dtype, device=device).fill_(torch.iinfo(dtype).max)
         # initial anchors are 0-hop away from themselves
         pool[anchors, torch.arange(len(anchors), dtype=torch.long, device=device)] = 0
 
@@ -327,13 +325,10 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
             # propagate one hop
             # TODO the float() trick for GPU result stability until the torch_sparse issue is resolved
             # https://github.com/rusty1s/pytorch_sparse/issues/243
-            reachable = spmm(
-                index=edge_list,
-                value=values.float(),
-                m=num_entities,
-                n=num_entities,
-                matrix=reachable.float()
-            ) > 0.0
+            reachable = (
+                spmm(index=edge_list, value=values.float(), m=num_entities, n=num_entities, matrix=reachable.float())
+                > 0.0
+            )
             # convergence check
             if (reachable == old_reachable).all():
                 logger.warning(f"Search converged after iteration {i} without all nodes being reachable.")
