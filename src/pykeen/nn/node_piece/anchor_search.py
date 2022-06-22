@@ -256,7 +256,6 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         edge_index = torch.as_tensor(edge_index, dtype=torch.long)
 
         # symmetric + self-loops
-        # TODO what if the edge index already has inverse edges?
         edge_list = torch.cat(
             [edge_index, edge_index.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
         ).unique(
