@@ -224,7 +224,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         return self.select(pool=pool, k=k)
 
 
-class SparseBFSSearcher(ScipySparseAnchorSearcher):
+class SparseBFSSearcher(AnchorSearcher):
     """Find closest anchors using :mod:`torch_sparse` on a GPU."""
 
     def __init__(self, max_iter: int = 5, device: DeviceHint = None):
@@ -235,8 +235,13 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         :param device:
             the device to use for tokenization
         """
-        super().__init__(max_iter=max_iter)
+        self.max_iter = max_iter
         self.device = resolve_device(device)
+
+    # docstr-coverage: inherited
+    def extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().extra_repr()
+        yield f"max_iter={self.max_iter}"
 
     @staticmethod
     def create_adjacency(
