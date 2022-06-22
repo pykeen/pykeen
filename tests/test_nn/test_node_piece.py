@@ -131,6 +131,7 @@ class AnchorTokenizerTests(cases.TokenizerTestCase):
     cls = pykeen.nn.node_piece.AnchorTokenizer
 
 
+@require_torch_sparse
 class MetisAnchorTokenizerTests(cases.TokenizerTestCase):
     """Tests for tokenization with anchor entities and metis."""
 
