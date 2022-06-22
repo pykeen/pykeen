@@ -260,7 +260,7 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
             edge_index,
             edge_index.flip(0),
             torch.arange(num_entities).unsqueeze(0).repeat(2, 1)
-        ], dim=-1)
+        ], dim=-1).unique(dim=1)  # unique for deduplicating repeated edges
 
         return edge_list
 
@@ -324,7 +324,15 @@ class SparseBFSSearcher(ScipySparseAnchorSearcher):
         old_reachable = reachable
         for i in range(max_iter):
             # propagate one hop
-            reachable = spmm(index=edge_list, value=values, m=num_entities, n=num_entities, matrix=reachable)
+            # TODO the float() trick for GPU result stability until the torch_sparse issue is resolved
+            # https://github.com/rusty1s/pytorch_sparse/issues/243
+            reachable = spmm(
+                index=edge_list,
+                value=values.float(),
+                m=num_entities,
+                n=num_entities,
+                matrix=reachable.float()
+            ) > 0.0
             # convergence check
             if (reachable == old_reachable).all():
                 logger.warning(f"Search converged after iteration {i} without all nodes being reachable.")
