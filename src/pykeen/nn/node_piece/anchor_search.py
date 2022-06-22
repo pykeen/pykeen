@@ -257,6 +257,7 @@ class SparseBFSSearcher(AnchorSearcher):
     @staticmethod
     def create_adjacency(
         edge_index: numpy.ndarray,
+        num_entities: Optional[int] = None,
     ) -> torch.tensor:
         """
         Create a sparse adjacency matrix (in the form of the edge list) from a given edge index.
@@ -268,7 +269,7 @@ class SparseBFSSearcher(AnchorSearcher):
             edge list with inverse edges and self-loops
         """
         # infer shape
-        num_entities = edge_index.max().item() + 1
+        num_entities = num_entities or edge_index.max().item() + 1
         edge_index = torch.as_tensor(edge_index, dtype=torch.long)
 
         # symmetric + self-loops
@@ -396,8 +397,10 @@ class SparseBFSSearcher(AnchorSearcher):
         return tokens
 
     # docstr-coverage: inherited
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        edge_list = self.create_adjacency(edge_index=edge_index)
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:  # noqa: D102
+        edge_list = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, edge_list=edge_list, max_iter=self.max_iter, k=k, device=self.device)
         return self.select(pool=pool, k=k)
 
