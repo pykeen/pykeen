@@ -6,11 +6,14 @@ from __future__ import annotations
 
 import itertools
 import logging
+import math
 import string
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
+import more_itertools
+import numpy
 import numpy as np
 import torch
 import torch.nn
@@ -30,7 +33,15 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
-from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
+from ..utils import (
+    Bias,
+    broadcast_upgrade_to_sequences,
+    clamp_norm,
+    complex_normalize,
+    get_edge_index,
+    get_preferred_device,
+    upgrade_to_sequence,
+)
 
 __all__ = [
     "Representation",
@@ -1532,44 +1543,47 @@ class TensorTrainRepresentation(Representation):
     r"""
     A tensor factorization of representations.
 
-    Let \mathbf{A} be a $d$-dimensional tensor of shape $N_1 \times ... \times N_k$. Then the tensor train (TT)
-    decomposition is given as
+    In the simple case without provided assignment this corresponds to `TT-emb` described in
+    https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
+
+    where
 
     .. math ::
 
-        \mathbf{A}[i_1, ..., i_k] = \mathbf{G}_1[:, i_1, :] \mathbf{G}_2[:, i_2, :] \ldots \mathbf{G}_k[:, i_k, :]
+        \mathbf{A}[i_1 \cdot \ldots \cdot i_k, j_1 \cdot \ldots \cdot j_k]
+            = \sum_{r_i, \ldots, r_k} \mathbf{G}_1[0, i_1, j_1, r_1]
+                \cdot \mathbf{G}_2[r_1, i_2, j_2, r_2]
+                \cdot \ldots
+                \cdot \mathbf{G}_k[r_k, i_k, j_k, 0]
 
     with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times N_i \times R_i$ and $R_0 = R_d = 1$.
 
-    Each index is assigned to a number of base representations. These base representations are multiplied using the tensor
-    train product. A specific instantiation was discussed in
-    https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
-    where the assignment is based on hierarchical topological clustering.
+    Another variant in the paper used an assignment based on hierarchical topological clustering.
     """
 
-    #: shape: (max_id, train_length)
+    #: shape: (max_id, num_cores)
     assignment: torch.LongTensor
 
-    #: the bases, length: train_length, with compatible shapes
+    #: the bases, length: num_cores, with compatible shapes
     bases: Sequence[Representation]
 
     def __init__(
         self,
-        assignment: torch.LongTensor,
-        max_id: Optional[int] = None,
-        shape: Optional[OneOrSequence[int]] = None,
+        assignment: Optional[torch.LongTensor] = None,
+        num_cores: int = 3,
+        ranks: OneOrSequence[int] = 2,
         bases: OneOrManyHintOrType = None,
         bases_kwargs: OneOrManyOptionalKwargs = None,
         **kwargs,
     ) -> None:
         """Initialize the representation.
 
-        :param assignment:
+        :param assignment: shape: (max_id, num_cores)
             the assignment on each level
-        :param max_id:
-            The maximum ID (exclusively). If given, will be checked. Otherwise, will be inferred.
-        :param shape:
-            The shape of an individual representation. If given, will be checked. Otherwise, will be inferred.
+        :param num_cores:
+            the number of cores to use
+        :param ranks: length: num_cores - 1
+            the individual ranks. Note that $R_0 = R_d = 1$ should not be included
         :param bases:
             the base representations for each level, or hints thereof.
         :param bases_kwargs:
@@ -1578,67 +1592,86 @@ class TensorTrainRepresentation(Representation):
             additional keyword-based parameters passed to :meth:`Representation.__init__`
 
         :raises ValueError:
-            if any of the base representations except the first have fewer than 2 dimensions
+            if the input validation on ranks or assignment failed
         """
         # import here to avoid cyclic import
-        from .. import representation_resolver
+        from . import representation_resolver
 
-        max_id = max_id or assignment.shape[0]
-        if max_id != assignment.shape[0]:
-            raise ValueError(f"Inconsistent max_id={max_id} vs. assignment.shape={assignment.shape}")
+        super().__init__(**kwargs)
 
-        # create bases
-        num_bases = (assignment.max(dim=0).values + 1).tolist()
-        bases, bases_kwargs = broadcast_upgrade_to_sequences(bases, bases_kwargs)
-        bases = [
-            representation_resolver.make(base, base_kwargs, max_id=max_id)
-            for max_id, base, base_kwargs in zip(num_bases, bases, bases_kwargs)
-        ]
-        calc_shape = bases[0].shape[:-1] + bases[-1].shape[1:]
-        shape = calc_shape if shape is None else upgrade_to_sequence(shape)
-        if shape != calc_shape:
-            raise ValueError(f"Inconsistent shape={shape} vs. inferred shape={calc_shape}")
-        super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
+        # normalize ranks
+        ranks = list(upgrade_to_sequence(ranks))
+        if len(ranks) == 1:
+            ranks = ranks * (num_cores - 1)
+        if len(ranks) != num_cores - 1:
+            raise ValueError(f"Inconsistent number of ranks {len(ranks)} for num_cores={num_cores}")
 
-        # assign *after* super to properly register submodules
+        # determine M_k, N_k
+        m_k = int(math.ceil(self.max_id ** (1 / num_cores)))
+        n_k = int(math.ceil(numpy.prod(self.shape) ** (1 / num_cores)))
+
+        # normalize assignment
+        if assignment is None:
+            assignment = torch.empty(self.max_id, num_cores, dtype=torch.long)
+            ids = torch.arange(self.max_id)
+            for i in range(num_cores):
+                assignment[:, i] = ids % m_k
+                ids //= m_k
+
+        # verify assignment
+        if assignment.shape != (self.max_id, num_cores):
+            raise ValueError(
+                f"Invalid assignment. Expected shape (self.max_id, num_cores)={(self.max_id, num_cores)}, "
+                f"but got assignment.shape={assignment.shape}",
+            )
+
+        min_value = assignment.min().item()
+        max_value = assignment.max().item()
+        if max_value >= m_k or min_value < 0:
+            raise ValueError(
+                f"Invalid values encountered in assignment. Have to be between [0, m_k)=[0, {m_k}), "
+                f"but found assignment.min()={min_value}, assignment.max()={max_value}",
+            )
+
+        # register buffer
         self.register_buffer(name="assignment", tensor=assignment)
-        self.bases = bases
-        self.eq = self.prepare_einsum_equation(shapes=[base.shape for base in bases])
 
-    @staticmethod
-    def prepare_einsum_equation(shapes: Sequence[Tuple[int, ...]]) -> str:
-        """Prepare the equation for einsum.
-
-        :param shapes:
-            the base representations' shapes
-
-        :return:
-            a valid einsum string.
-
-        :raises ValueError:
-            if any but the first shape has less than two components
-        """
-        # prepare einsum equation
-        eq = ["...a"]
+        # determine shapes and einsum equation
+        shapes: List[List[int]] = []
+        terms: List[List[str]] = []
+        out_term: List[str] = ["..."]
         i = 0
-        alphabet = string.ascii_lowercase
-        trail = None
-        inter = ""
-        for shape in shapes[1:]:
-            ndim = len(shape)
-            if ndim < 2:
-                raise ValueError(f"Invalid shape: {shape}")
-            term = alphabet[i : i + ndim]
-            trail = term[1:]
-            inter += term[1:-1]
-            i = i + ndim - 1
-            eq.append(f"...{term}")
-        assert trail is not None
-        return ",".join(eq) + f"->...{inter}{trail}"
+        for rank_in, rank_out in more_itertools.pairwise([None, *ranks, None]):
+            shape = []
+            term = ["..."]
+            if rank_in is not None:
+                shape.append(rank_in)
+                term.append(string.ascii_lowercase[i])
+                i += 1
+            shape.append(n_k)
+            term.append(string.ascii_lowercase[i])
+            out_term.append(string.ascii_lowercase[i])
+            i += 1
+            if rank_out is not None:
+                shape.append(rank_out)
+                term.append(string.ascii_lowercase[i])
+                # do not increase
+            terms.append(term)
+            shapes.append(shape)
+        self.eq = " ".join((", ".join("".join(term) for term in terms), "->", "".join(out_term)))
+
+        # create base representations
+        bases, bases_kwargs, shapes = broadcast_upgrade_to_sequences(bases, bases_kwargs, shapes)
+        self.bases = [
+            representation_resolver.make(base, base_kwargs, max_id=m_k, shape=shape)
+            for base, base_kwargs, shape in zip(bases, bases_kwargs, shapes)
+        ]
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
         assignment = self.assignment
         if indices is not None:
             assignment = assignment[indices]
-        return torch.einsum(self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases)))
+        return torch.einsum(
+            self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases))
+        ).view(*assignment.shape[:-1], *self.shape)
