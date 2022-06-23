@@ -105,6 +105,9 @@ class AnchorTokenizer(Tokenizer):
     The entities are chosen by shortest path distance.
     """
 
+    anchor_selection: AnchorSelection
+    searcher: AnchorSearcher
+
     def __init__(
         self,
         # TODO: expose num_anchors?
@@ -168,9 +171,9 @@ class AnchorTokenizer(Tokenizer):
 
 class MetisAnchorTokenizer(AnchorTokenizer):
     """
-    An anchor tokenizer, which first partitions the graph using Metis.
+    An anchor tokenizer, which first partitions the graph using METIS.
 
-    We use the binding by `torch-sparse`. The Metis graph partitioning algorithm is described here:
+    We use the binding by :mod:`torch_sparse`. The METIS graph partitioning algorithm is described here:
     http://glaros.dtc.umn.edu/gkhome/metis/metis/overview
     """
 

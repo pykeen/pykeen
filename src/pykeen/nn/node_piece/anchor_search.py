@@ -12,9 +12,9 @@ import torch
 from class_resolver import ClassResolver, OptionalKwargs
 from tqdm.auto import tqdm
 
-from .utils import edge_index_to_sparse_matrix, page_rank, prepare_page_rank_adjacency
+from .utils import edge_index_to_sparse_matrix, ensure_num_entities, page_rank, prepare_page_rank_adjacency
 from ...typing import DeviceHint
-from ...utils import ensure_num_entities, format_relative_comparison, resolve_device
+from ...utils import format_relative_comparison, resolve_device
 
 __all__ = [
     # Resolver
@@ -481,6 +481,8 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             the edge index.
         :param anchors: shape: `(num_anchors,)`
             the anchor IDs.
+        :param num_entities:
+            The number of entities. Will be calculated on-the-fly if not given
 
         :yields: shape: (batch_size, num_anchors)
             batches of anchor PPRs.

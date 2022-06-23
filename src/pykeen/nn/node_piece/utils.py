@@ -95,6 +95,8 @@ def prepare_page_rank_adjacency(
 
     :param edge_index: shape: (2, n)
         the edge index
+    :param num_entities:
+        The number of entities. Will be calculated on-the-fly if not given
 
     :return:
         the symmetric, normalized, and sparse adjacency matrix
