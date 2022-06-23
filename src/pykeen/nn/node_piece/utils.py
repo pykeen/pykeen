@@ -13,6 +13,7 @@ __all__ = [
     "prepare_page_rank_adjacency",
     "edge_index_to_sparse_matrix",
     "random_sample_no_replacement",
+    "ensure_num_entities",
 ]
 
 logger = logging.getLogger(__name__)
@@ -86,7 +87,9 @@ def page_rank(
     return x
 
 
-def prepare_page_rank_adjacency(edge_index: numpy.ndarray) -> scipy.sparse.csr_matrix:
+def prepare_page_rank_adjacency(
+    edge_index: numpy.ndarray, num_entities: Optional[int] = None
+) -> scipy.sparse.csr_matrix:
     """
     Prepare the page-rank adjacency matrix.
 
@@ -97,7 +100,7 @@ def prepare_page_rank_adjacency(edge_index: numpy.ndarray) -> scipy.sparse.csr_m
         the symmetric, normalized, and sparse adjacency matrix
     """
     # convert to sparse matrix, shape: (n, n)
-    adj = edge_index_to_sparse_matrix(edge_index=edge_index)
+    adj = edge_index_to_sparse_matrix(edge_index=edge_index, num_entities=num_entities)
     # symmetrize
     adj = adj + adj.transpose()
     # TODO: should we add self-links
@@ -115,8 +118,7 @@ def edge_index_to_sparse_matrix(
     num_entities: Optional[int] = None,
 ) -> scipy.sparse.spmatrix:
     """Convert an edge index to a sparse matrix."""
-    if num_entities is None:
-        num_entities = edge_index.max().item() + 1
+    num_entities = ensure_num_entities(edge_index, num_entities)
     return scipy.sparse.coo_matrix(
         (
             numpy.ones_like(edge_index[0], dtype=bool),
@@ -142,3 +144,10 @@ def random_sample_no_replacement(
         this_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
         assignment[idx, : len(this_pool_t)] = this_pool
     return assignment
+
+
+def ensure_num_entities(edge_index: numpy.ndarray, num_entities: Optional[int] = None) -> int:
+    """Calculate the number of entities from the edge index if not given."""
+    if num_entities is not None:
+        return num_entities
+    return edge_index.max().item() + 1

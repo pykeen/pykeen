@@ -14,7 +14,7 @@ from tqdm.auto import tqdm
 
 from .utils import edge_index_to_sparse_matrix, page_rank, prepare_page_rank_adjacency
 from ...typing import DeviceHint
-from ...utils import format_relative_comparison, resolve_device
+from ...utils import ensure_num_entities, format_relative_comparison, resolve_device
 
 __all__ = [
     # Resolver
@@ -119,7 +119,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
             a square sparse adjacency matrix
         """
         # infer shape
-        num_entities = num_entities or edge_index.max().item() + 1
+        num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
         # create adjacency matrix
         adjacency = scipy.sparse.coo_matrix(
             (
@@ -270,8 +270,7 @@ class SparseBFSSearcher(AnchorSearcher):
         :return: shape: (2, 2m + n)
             edge list with inverse edges and self-loops
         """
-        # infer shape
-        num_entities = num_entities or edge_index.max().item() + 1
+        num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
         edge_index = torch.as_tensor(edge_index, dtype=torch.long)
 
         # symmetric + self-loops
@@ -462,17 +461,19 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
     def __call__(
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
     ) -> numpy.ndarray:  # noqa: D102
-        n = num_entities or edge_index.max().item() + 1
-        result = numpy.full(shape=(n, k), fill_value=-1)
+        num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
+        result = numpy.full(shape=(num_entities, k), fill_value=-1)
         i = 0
-        for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
+        for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities):
             batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, k)
             result[i : i + batch_size, :] = numpy.argpartition(-batch_ppr, kth=k, axis=-1)[:, :k]
             i += batch_size
         return result
 
-    def _iter_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> Iterable[numpy.ndarray]:
+    def _iter_ppr(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, num_entities: Optional[int] = None
+    ) -> Iterable[numpy.ndarray]:
         """
         Yield batches of PPR values for each anchor from each entities' perspective.
 
@@ -485,7 +486,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             batches of anchor PPRs.
         """
         # prepare adjacency matrix only once
-        adj = prepare_page_rank_adjacency(edge_index=edge_index)
+        adj = prepare_page_rank_adjacency(edge_index=edge_index, num_entities=num_entities)
         # prepare result
         n = adj.shape[0]
         # progress bar?
