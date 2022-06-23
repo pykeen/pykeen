@@ -52,12 +52,7 @@ from .loader import (
     TorchPrecomputedTokenizerLoader,
     precomputed_tokenizer_loader_resolver,
 )
-from .representation import (
-    HashDiversityInfo,
-    NodePieceRepresentation,
-    TensorTrainRepresentation,
-    TokenizationRepresentation,
-)
+from .representation import HashDiversityInfo, NodePieceRepresentation, TokenizationRepresentation
 from .tokenization import AnchorTokenizer, PrecomputedPoolTokenizer, RelationTokenizer, Tokenizer, tokenizer_resolver
 
 __all__ = [
@@ -87,7 +82,6 @@ __all__ = [
     "GalkinPrecomputedTokenizerLoader",
     "TorchPrecomputedTokenizerLoader",
     # Representations
-    "TensorTrainRepresentation",
     "TokenizationRepresentation",
     "NodePieceRepresentation",
     # Data containers

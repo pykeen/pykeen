@@ -407,7 +407,7 @@ class TransformedRepresentationTest(cases.RepresentationTestCase):
 class TensorTrainRepresentationTest(cases.RepresentationTestCase):
     """Tests for tensor train representations."""
 
-    cls = pykeen.nn.node_piece.TensorTrainRepresentation
+    cls = pykeen.nn.representation.TensorTrainRepresentation
     kwargs = dict(
         bases_kwargs=[dict(shape=(5,)), dict(shape=(5, 8))],
     )
@@ -421,7 +421,7 @@ class TensorTrainRepresentationTest(cases.RepresentationTestCase):
 
     def test_prepare_einsum_equation(self):
         """Test prepare einsum equation helper."""
-        assert self.cls is pykeen.nn.node_piece.TensorTrainRepresentation
+        assert self.cls is pykeen.nn.representation.TensorTrainRepresentation
         for shapes, expected in [
             ([(5,), (5, 8)], "...a,...ab->...b"),
             ([(5,), (5, 8), (8, 3)], "...a,...ab,...bc->...c"),

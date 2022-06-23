@@ -3,8 +3,7 @@
 """Representation modules for NodePiece."""
 
 import logging
-import string
-from typing import Callable, List, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import Callable, List, NamedTuple, Optional, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -19,7 +18,6 @@ from ...typing import MappedTriples, OneOrSequence
 from ...utils import broadcast_upgrade_to_sequences, upgrade_to_sequence
 
 __all__ = [
-    "TensorTrainRepresentation",
     "TokenizationRepresentation",
     "HashDiversityInfo",
     "NodePieceRepresentation",
@@ -181,115 +179,6 @@ class TokenizationRepresentation(Representation):
     def num_tokens(self) -> int:
         """Return the number of selected tokens for ID."""
         return self.assignment.shape[1]
-
-
-# TODO: move to another module
-# TODO: can be a combined representations, with appropriate tensor-train combination
-class TensorTrainRepresentation(Representation):
-    """
-    A tensor factorization of representations.
-
-    Each index is assigned to a number of base representations. These base representations are multiplied using the tensor
-    train product. A specific instantiation was discussed in
-    https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
-    where the assignment is based on hierarchical topological clustering.
-    """
-
-    #: shape: (max_id, train_length)
-    assignment: torch.LongTensor
-
-    #: the bases, length: train_length, with compatible shapes
-    bases: Sequence[Representation]
-
-    def __init__(
-        self,
-        assignment: torch.LongTensor,
-        max_id: Optional[int] = None,
-        shape: Optional[OneOrSequence[int]] = None,
-        bases: OneOrManyHintOrType = None,
-        bases_kwargs: OneOrManyOptionalKwargs = None,
-        **kwargs,
-    ) -> None:
-        """Initialize the representation.
-
-        :param assignment:
-            the assignment on each level
-        :param max_id:
-            The maximum ID (exclusively). If given, will be checked. Otherwise, will be inferred.
-        :param shape:
-            The shape of an individual representation. If given, will be checked. Otherwise, will be inferred.
-        :param bases:
-            the base representations for each level, or hints thereof.
-        :param bases_kwargs:
-            keyword-based parameters for the bases
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`Representation.__init__`
-
-        :raises ValueError:
-            if any of the base representations except the first have fewer than 2 dimensions
-        """
-        # import here to avoid cyclic import
-        from .. import representation_resolver
-
-        max_id = max_id or assignment.shape[0]
-        if max_id != assignment.shape[0]:
-            raise ValueError(f"Inconsistent max_id={max_id} vs. assignment.shape={assignment.shape}")
-
-        # create bases
-        num_bases = (assignment.max(dim=0).values + 1).tolist()
-        bases, bases_kwargs = broadcast_upgrade_to_sequences(bases, bases_kwargs)
-        bases = [
-            representation_resolver.make(base, base_kwargs, max_id=max_id)
-            for max_id, base, base_kwargs in zip(num_bases, bases, bases_kwargs)
-        ]
-        calc_shape = bases[0].shape[:-1] + bases[-1].shape[1:]
-        shape = calc_shape if shape is None else upgrade_to_sequence(shape)
-        if shape != calc_shape:
-            raise ValueError(f"Inconsistent shape={shape} vs. inferred shape={calc_shape}")
-        super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
-
-        # assign *after* super to properly register submodules
-        self.register_buffer(name="assignment", tensor=assignment)
-        self.bases = bases
-        self.eq = self.prepare_einsum_equation(shapes=[base.shape for base in bases])
-
-    @staticmethod
-    def prepare_einsum_equation(shapes: Sequence[Tuple[int, ...]]) -> str:
-        """Prepare the equation for einsum.
-
-        :param shapes:
-            the base representations' shapes
-
-        :return:
-            a valid einsum string.
-
-        :raises ValueError:
-            if any but the first shape has less than two components
-        """
-        # prepare einsum equation
-        eq = ["...a"]
-        i = 0
-        alphabet = string.ascii_lowercase
-        trail = None
-        inter = ""
-        for shape in shapes[1:]:
-            ndim = len(shape)
-            if ndim < 2:
-                raise ValueError(f"Invalid shape: {shape}")
-            term = alphabet[i : i + ndim]
-            trail = term[1:]
-            inter += term[1:-1]
-            i = i + ndim - 1
-            eq.append(f"...{term}")
-        assert trail is not None
-        return ",".join(eq) + f"->...{inter}{trail}"
-
-    # docstr-coverage: inherited
-    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
-        assignment = self.assignment
-        if indices is not None:
-            assignment = assignment[indices]
-        return torch.einsum(self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases)))
 
 
 class HashDiversityInfo(NamedTuple):
