@@ -1567,6 +1567,30 @@ class TensorTrainRepresentation(Representation):
     #: the bases, length: num_cores, with compatible shapes
     bases: Sequence[Representation]
 
+    @classmethod
+    def factor_sizes(cls, max_id: int, shape: Sequence[int], num_cores: int) -> Tuple[Sequence[int], Sequence[int]]:
+        r"""Factor the representation shape into smaller shapes for the cores.
+
+        :param max_id:
+            the number of representations, "row count", $M$
+        :param shape:
+            the shape of an individual representation, "column count", $N$
+        :param num_cores:
+            the number of cores, $k$
+
+        :return:
+            a tuple (ms, ns) of positive integer sequences of length $k$ fulfilling
+
+            .. math ::
+
+                \prod \limits_{m_i \in ms} m_i \geq M
+
+                \prod \limits_{n_i \in ns} n_i \geq N
+        """
+        m_k = int(math.ceil(max_id ** (1 / num_cores)))
+        n_k = int(math.ceil(numpy.prod(shape) ** (1 / num_cores)))
+        return [m_k] * num_cores, [n_k] * num_cores
+
     def __init__(
         self,
         assignment: Optional[torch.LongTensor] = None,
@@ -1607,16 +1631,16 @@ class TensorTrainRepresentation(Representation):
             raise ValueError(f"Inconsistent number of ranks {len(ranks)} for num_cores={num_cores}")
 
         # determine M_k, N_k
-        m_k = int(math.ceil(self.max_id ** (1 / num_cores)))
-        n_k = int(math.ceil(numpy.prod(self.shape) ** (1 / num_cores)))
+        ms, ns = self.factor_sizes(max_id=self.max_id, shape=self.shape, num_cores=num_cores)
+        # TODO: check ms, ns; allow to override them
 
         # normalize assignment
         if assignment is None:
             assignment = torch.empty(self.max_id, num_cores, dtype=torch.long)
             ids = torch.arange(self.max_id)
-            for i in range(num_cores):
-                assignment[:, i] = ids % m_k
-                ids //= m_k
+            for i, m_i in enumerate(ms):
+                assignment[:, i] = ids % m_i
+                ids //= m_i
 
         # verify assignment
         if assignment.shape != (self.max_id, num_cores):
@@ -1625,13 +1649,13 @@ class TensorTrainRepresentation(Representation):
                 f"but got assignment.shape={assignment.shape}",
             )
 
-        min_value = assignment.min().item()
-        max_value = assignment.max().item()
-        if max_value >= m_k or min_value < 0:
-            raise ValueError(
-                f"Invalid values encountered in assignment. Have to be between [0, m_k)=[0, {m_k}), "
-                f"but found assignment.min()={min_value}, assignment.max()={max_value}",
-            )
+        # TODO: better messages
+        max_m = assignment.max(dim=0).tolist()
+        for i, (m_i, max_m_i) in enumerate(zip(ms, max_m)):
+            if max_m_i >= m_i:
+                raise ValueError("Too large mi")
+        if assignment.min().item() < 0:
+            raise ValueError("Invalid mi")
 
         # register buffer
         self.register_buffer(name="assignment", tensor=assignment)
@@ -1641,14 +1665,14 @@ class TensorTrainRepresentation(Representation):
         terms: List[List[str]] = []
         out_term: List[str] = ["..."]
         i = 0
-        for rank_in, rank_out in more_itertools.pairwise([None, *ranks, None]):
+        for n_i, (rank_in, rank_out) in zip(ns, more_itertools.pairwise([None, *ranks, None])):
             shape = []
             term = ["..."]
             if rank_in is not None:
                 shape.append(rank_in)
                 term.append(string.ascii_lowercase[i])
                 i += 1
-            shape.append(n_k)
+            shape.append(n_i)
             term.append(string.ascii_lowercase[i])
             out_term.append(string.ascii_lowercase[i])
             i += 1
@@ -1663,8 +1687,8 @@ class TensorTrainRepresentation(Representation):
         # create base representations
         bases, bases_kwargs, shapes = broadcast_upgrade_to_sequences(bases, bases_kwargs, shapes)
         self.bases = [
-            representation_resolver.make(base, base_kwargs, max_id=m_k, shape=shape)
-            for base, base_kwargs, shape in zip(bases, bases_kwargs, shapes)
+            representation_resolver.make(base, base_kwargs, max_id=m_i, shape=shape)
+            for base, base_kwargs, m_i, shape in zip(bases, bases_kwargs, ms, shapes)
         ]
 
     # docstr-coverage: inherited
