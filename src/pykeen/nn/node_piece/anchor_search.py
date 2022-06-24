@@ -14,7 +14,6 @@ from torch_ppr import page_rank
 from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjacency, prepare_x0
 from tqdm.auto import tqdm
 
-from .utils import ensure_num_entities
 from ...typing import DeviceHint
 from ...utils import format_relative_comparison, resolve_device
 
@@ -67,9 +66,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     # docstr-coverage: inherited
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
-        adjacency = edge_index_to_sparse_matrix(
-            edge_index=torch.as_tensor(edge_index), num_nodes=num_entities
-        ).coalesce()
+        adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index)).coalesce()
         # convert to scipy sparse csr
         adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape).tocsr()
         # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
@@ -474,7 +471,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         """
         # TODO: use personalized_page_rank from torch_ppr?
         # prepare adjacency matrix only once
-        adj = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index), num_nodes=num_entities)
+        adj = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index))
         # prepare result
         n = adj.shape[0]
         # progress bar?
