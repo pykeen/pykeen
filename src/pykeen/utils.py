@@ -1768,7 +1768,7 @@ class ExtraReprMixin:
         """
         return []
 
-    def iter_extra_repr(self) -> str:
+    def extra_repr(self) -> str:
         """
         Generate the extra repr, cf. :meth`torch.nn.Module.extra_repr`.
 
