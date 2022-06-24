@@ -11,7 +11,7 @@ import scipy.sparse
 import torch
 from class_resolver import ClassResolver, OptionalKwargs
 from torch_ppr import page_rank
-from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjacency, prepare_x0
+from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjacency
 from tqdm.auto import tqdm
 
 from .utils import ensure_num_entities
@@ -73,11 +73,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
     ) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
-        adjacency = edge_index_to_sparse_matrix(
-            edge_index=torch.as_tensor(edge_index), num_nodes=num_entities
-        ).coalesce()
-        # convert to scipy sparse csr
-        adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape).tocsr()
+        adjacency = edge_index_to_sparse_matrix(edge_index=edge_index, num_entities=num_entities).tocsr()
         # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
         distances = scipy.sparse.csgraph.shortest_path(
             csgraph=adjacency,
@@ -495,7 +491,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         """
         # TODO: use personalized_page_rank from torch_ppr?
         # prepare adjacency matrix only once
-        adj = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index), num_nodes=num_entities)
+        adj = prepare_page_rank_adjacency(edge_index=edge_index, num_entities=num_entities)
         # prepare result
         n = adj.shape[0]
         # progress bar?
@@ -504,11 +500,15 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             progress = tqdm(progress, unit="batch", unit_scale=True)
         # batch-wise computation of PPR
         for start in progress:
+            # create a batch of starting vectors, shape: (n, batch_size)
+            stop = min(start + self.batch_size, n)
+            batch_size = stop - start
+            x0 = numpy.zeros(shape=(n, batch_size))
+            x0[numpy.arange(start, stop), numpy.arange(batch_size)] = 1.0
             # run page-rank calculation, shape: (batch_size, n)
-            # select PPR values for the anchors, shape: (batch_size, num_anchors)
-            yield page_rank(
-                adj=adj, x0=prepare_x0(indices=range(start, start + self.batch_size), n=n), **self.page_rank_kwargs
-            )[:, anchors]
+            ppr = page_rank(adj=adj, x0=x0, **self.page_rank_kwargs)
+            # select PPR values for the anchors, shape: (num_anchors, batch_size)
+            yield ppr[anchors].T
 
 
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
