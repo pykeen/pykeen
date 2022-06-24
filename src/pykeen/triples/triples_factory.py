@@ -53,6 +53,7 @@ from ..utils import (
     invert_mapping,
     normalize_path,
     triple_tensor_to_set,
+    ExtraReprMixin,
 )
 
 __all__ = [
@@ -332,7 +333,7 @@ def restrict_triples(
     return mapped_triples[keep_mask]
 
 
-class KGInfo:
+class KGInfo(ExtraReprMixin):
     """An object storing information about the number of entities and relations."""
 
     #: the number of unique entities
@@ -370,15 +371,12 @@ class KGInfo:
         self.num_relations = num_relations
         self.create_inverse_triples = create_inverse_triples
 
-    def extra_repr(self) -> str:
-        """Extra representation string."""
-        return ", ".join(self._iter_extra_repr())
-
     def __repr__(self):  # noqa: D105
         return f"{self.__class__.__name__}({self.extra_repr()})"
 
-    def _iter_extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
+        yield from super().iter_extra_repr()
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
         yield f"create_inverse_triples={self.create_inverse_triples}"
@@ -476,9 +474,9 @@ class CoreTriplesFactory(KGInfo):
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
-    def _iter_extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
-        yield from super()._iter_extra_repr()
+        yield from super().iter_extra_repr()
         yield f"num_triples={self.num_triples}"
         for k, v in sorted(self.metadata.items()):
             if isinstance(v, (str, pathlib.Path)):

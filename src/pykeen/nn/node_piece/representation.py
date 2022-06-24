@@ -153,14 +153,11 @@ class TokenizationRepresentation(Representation):
         )
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        return "\n".join(
-            (
-                f"max_id={self.assignment.shape[0]},",
-                f"num_tokens={self.num_tokens},",
-                f"vocabulary_size={self.vocabulary_size},",
-            )
-        )
+    def iter_extra_repr(self) -> Itereable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"max_id={self.assignment.shape[0]}"
+        yield f"num_tokens={self.num_tokens}"
+        yield f"vocabulary_size={self.vocabulary_size}"
 
     # docstr-coverage: inherited
     def _plain_forward(

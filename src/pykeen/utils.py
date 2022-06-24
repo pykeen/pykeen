@@ -1748,7 +1748,7 @@ def rate_limited(xs: Iterable[X], min_avg_time: float = 1.0) -> Iterable[X]:
         yield x
 
 
-class ExtraReprMixin(nn.Module):
+class ExtraReprMixin:
     """A mixin for modules with hierarchical `extra_repr`."""
 
     def iter_extra_repr(self) -> Iterable[str]:
@@ -1768,8 +1768,13 @@ class ExtraReprMixin(nn.Module):
         """
         return []
 
-    # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
+    def iter_extra_repr(self) -> str:
+        """
+        Generate the extra repr, cf. :meth`torch.nn.Module.extra_repr`.
+
+        :return:
+            the extra part of the :func:`repr`
+        """
         return ", ".join(self.iter_extra_repr())
 
 

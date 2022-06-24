@@ -99,7 +99,7 @@ class EADataset(EagerDataset):
         """Load the entity alignment."""
         raise NotImplementedError
 
-    def _extra_repr(self) -> Iterable[str]:
-        yield from super()._extra_repr()
+    def iter_extra_repr(self) -> Iterable[str]:
+        yield from super().iter_extra_repr()
         yield f"self.side={self.side}"
         yield f"self.combination={self.combination}"

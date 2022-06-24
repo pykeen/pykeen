@@ -29,7 +29,15 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
-from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
+from ..utils import (
+    Bias,
+    ExtraReprMixin,
+    clamp_norm,
+    complex_normalize,
+    get_edge_index,
+    get_preferred_device,
+    upgrade_to_sequence,
+)
 
 __all__ = [
     "Representation",
@@ -53,7 +61,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Representation(nn.Module, ABC):
+class Representation(nn.Module, ExtraReprMixin, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -190,10 +198,6 @@ class Representation(nn.Module, ABC):
         if self.normalizer is not None:
             yield f"normalizer={self.normalizer}"
         # dropout & regularizer will appear automatically, since it is a nn.Module
-
-    # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        return ", ".join(self.iter_extra_repr())
 
     @property
     def device(self) -> torch.device:

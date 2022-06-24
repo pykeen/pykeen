@@ -18,6 +18,7 @@ from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from .utils import page_rank
 from ...triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ...typing import OneOrSequence
+from ...utils import ExtraReprMixin
 
 __all__ = [
     # Resolver
@@ -35,7 +36,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class AnchorSelection(ABC):
+class AnchorSelection(ExtraReprMixin, ABC):
     """Anchor entity selection strategy."""
 
     def __init__(self, num_anchors: int = 32) -> None:
@@ -72,12 +73,12 @@ class AnchorSelection(ABC):
         """
         raise NotImplementedError
 
-    def extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Extra components for __repr__."""
         yield f"num_anchors={self.num_anchors}"
 
     def __repr__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
+        return f"{self.__class__.__name__}({self.extra_repr()})"
 
     def filter_unique(
         self,
@@ -183,8 +184,8 @@ class PageRankAnchorSelection(SingleSelection):
         self.kwargs = kwargs
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().extra_repr()
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
         for key, value in self.kwargs.items():
             yield f"{key}={value}"
 
@@ -263,8 +264,8 @@ class MixtureAnchorSelection(AnchorSelection):
                 selection.num_anchors = num
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().extra_repr()
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
         yield f"selections={self.selections}"
 
     # docstr-coverage: inherited

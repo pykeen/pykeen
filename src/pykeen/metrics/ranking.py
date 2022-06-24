@@ -1522,7 +1522,8 @@ class HitsAtK(RankBasedMetric):
         self.k = k
 
     # docstr-coverage: inherited
-    def _extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
+        yield from super().iter_extra_repr()
         yield f"k={self.k}"
 
     # docstr-coverage: inherited
