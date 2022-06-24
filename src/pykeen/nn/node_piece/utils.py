@@ -14,6 +14,7 @@ __all__ = [
     "edge_index_to_sparse_matrix",
     "random_sample_no_replacement",
     "ensure_num_entities",
+    "prepare_edges_for_metis"
 ]
 
 logger = logging.getLogger(__name__)
@@ -163,4 +164,3 @@ def prepare_edges_for_metis(edge_index: torch.Tensor) -> torch.LongTensor:
 
     # add inverse edges and remove duplicates
     return torch.cat([edge_index, edge_index.flip(0)], dim=-1).unique(dim=1)
-
