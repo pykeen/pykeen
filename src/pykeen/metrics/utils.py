@@ -140,9 +140,6 @@ class Metric(ExtraReprMixin):
         right = docdata.get("tight_upper", cls.value_range._coerce(cls.value_range.upper, low=False))
         return f"{left_bracket}{left}, {right}{right_bracket}".replace("inf", "∞")
 
-    def __repr__(self) -> str:  # noqa:D105
-        return f"{self.__class__.__name__}({self.iter_extra_repr()})"
-
 
 def weighted_mean_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
     r"""

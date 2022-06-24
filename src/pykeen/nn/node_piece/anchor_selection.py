@@ -77,9 +77,6 @@ class AnchorSelection(ExtraReprMixin, ABC):
         """Extra components for __repr__."""
         yield f"num_anchors={self.num_anchors}"
 
-    def __repr__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}({self.extra_repr()})"
-
     def filter_unique(
         self,
         anchor_ranking: numpy.ndarray,

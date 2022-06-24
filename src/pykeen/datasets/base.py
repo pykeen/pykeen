@@ -186,9 +186,6 @@ class Dataset(ExtraReprMixin):
         yield f"num_relations={self.num_relations}"
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
-    def __str__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}({self.iter_extra_repr()})"
-
     @classmethod
     def from_path(cls, path: Union[str, pathlib.Path], ratios: Optional[List[float]] = None) -> "Dataset":
         """Create a dataset from a single triples factory by splitting it in 3."""

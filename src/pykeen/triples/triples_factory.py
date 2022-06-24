@@ -371,9 +371,6 @@ class KGInfo(ExtraReprMixin):
         self.num_relations = num_relations
         self.create_inverse_triples = create_inverse_triples
 
-    def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}({self.extra_repr()})"
-
     def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
         yield from super().iter_extra_repr()

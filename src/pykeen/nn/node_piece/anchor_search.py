@@ -51,9 +51,6 @@ class AnchorSearcher(ExtraReprMixin, ABC):
         """
         raise NotImplementedError
 
-    def __repr__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}({self.iter_extra_repr()})"
-
 
 class CSGraphAnchorSearcher(AnchorSearcher):
     """Find closest anchors using :class:`scipy.sparse.csgraph`."""
