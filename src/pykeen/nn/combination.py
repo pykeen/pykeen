@@ -4,7 +4,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, Tuple
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
@@ -77,7 +77,7 @@ class ConcatCombination(Combination):
         return torch.cat(xs, dim=self.dim)
 
     # docstr-coverage: inherited
-    def iter_extra_repr(self) -> str:  # noqa: D102
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"dim={self.dim}"
 

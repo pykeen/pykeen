@@ -3,7 +3,7 @@
 """Utilities for metrics."""
 
 from dataclasses import dataclass
-from typing import ClassVar, Collection, Iterable, Optional
+from typing import ClassVar, Collection, Optional
 
 import numpy as np
 from docdata import get_docdata

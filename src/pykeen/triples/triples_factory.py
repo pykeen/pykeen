@@ -47,13 +47,13 @@ from ..typing import (
     TorchRandomHint,
 )
 from ..utils import (
+    ExtraReprMixin,
     compact_mapping,
     format_relative_comparison,
     get_edge_index,
     invert_mapping,
     normalize_path,
     triple_tensor_to_set,
-    ExtraReprMixin,
 )
 
 __all__ = [

@@ -3,7 +3,7 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, List, NamedTuple, Optional, Union
+from typing import Callable, Iterable, List, NamedTuple, Optional, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -153,7 +153,7 @@ class TokenizationRepresentation(Representation):
         )
 
     # docstr-coverage: inherited
-    def iter_extra_repr(self) -> Itereable[str]:  # noqa: D102
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"max_id={self.assignment.shape[0]}"
         yield f"num_tokens={self.num_tokens}"

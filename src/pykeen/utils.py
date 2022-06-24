@@ -1756,7 +1756,7 @@ class ExtraReprMixin:
     composable way to generate the components of :meth:`extra_repr` via :meth:`iter_extra_repr`.
 
     If combined with `torch.nn.Module`, make sure to put :class:`ExtraReprMixin` *behind*
-    :class:`torch.nn.Module` to prefer the latter's :meth:`__repr__` implementation.
+    :class:`torch.nn.Module` to prefer the latter's :func:`__repr__` implementation.
     """
 
     def iter_extra_repr(self) -> Iterable[str]:
@@ -1772,7 +1772,8 @@ class ExtraReprMixin:
                 yield "<key1>=<value1>"
                 yield "<key2>=<value2>"
 
-        :yield: individual components of the :meth:`extra_repr`.
+        :return:
+            an iterable over individual components of the :meth:`extra_repr`
         """
         return []
 
