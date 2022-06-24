@@ -122,6 +122,7 @@ __all__ = [
     "prepare_filter_triples",
     "nested_get",
     "rate_limited",
+    "ExtraReprMixin",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1745,6 +1746,31 @@ def rate_limited(xs: Iterable[X], min_avg_time: float = 1.0) -> Iterable[X]:
             logger.debug(f"Applying rate limit; sleeping for {under} seconds")
             time.sleep(under)
         yield x
+
+
+class ExtraReprMixin(nn.Module):
+    """A mixin for modules with hierarchical `extra_repr`."""
+
+    def iter_extra_repr(self) -> Iterable[str]:
+        """
+        Iterate over the components of the :meth:`extra_repr`.
+
+        This method is typically overridden. A common pattern would be
+
+        .. code-block:: python
+
+            def iter_extra_repr(self) -> Iterable[str]:
+                yield from super().iter_extra_repr()
+                yield "<key1>=<value1>"
+                yield "<key2>=<value2>"
+
+        :yield: individual components of the :meth:`extra_repr`.
+        """
+        return []
+
+    # docstr-coverage: inherited
+    def extra_repr(self) -> str:  # noqa: D102
+        return ", ".join(self.iter_extra_repr())
 
 
 if __name__ == "__main__":
