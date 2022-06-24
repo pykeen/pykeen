@@ -14,8 +14,8 @@ from typing import Iterable, Optional, Sequence, Union
 
 import numpy
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
-from torch_ppr import page_rank
 
+from .utils import page_rank
 from ...triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ...typing import OneOrSequence
 
