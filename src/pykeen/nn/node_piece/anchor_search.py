@@ -10,9 +10,11 @@ import numpy
 import scipy.sparse
 import torch
 from class_resolver import ClassResolver, OptionalKwargs
+from torch_ppr import page_rank
+from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjacency
 from tqdm.auto import tqdm
 
-from .utils import edge_index_to_sparse_matrix, page_rank, prepare_page_rank_adjacency
+from .utils import ensure_num_entities
 from ...typing import DeviceHint
 from ...utils import format_relative_comparison, resolve_device
 
@@ -466,6 +468,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         :yields: shape: (batch_size, num_anchors)
             batches of anchor PPRs.
         """
+        # TODO: use personalized_page_rank from torch_ppr?
         # prepare adjacency matrix only once
         adj = prepare_page_rank_adjacency(edge_index=edge_index)
         # prepare result
