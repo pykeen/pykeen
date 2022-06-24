@@ -153,3 +153,14 @@ def ensure_num_entities(edge_index: numpy.ndarray, num_entities: Optional[int] =
     if num_entities is not None:
         return num_entities
     return edge_index.max().item() + 1
+
+
+def prepare_edges_for_metis(edge_index: torch.Tensor) -> torch.LongTensor:
+
+    # remove self-loops
+    mask = edge_index[0] != edge_index[1]
+    edge_index = edge_index[:, mask]
+
+    # add inverse edges and remove duplicates
+    return torch.cat([edge_index, edge_index.flip(0)], dim=-1).unique(dim=1)
+

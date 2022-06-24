@@ -16,7 +16,7 @@ from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from .anchor_search import AnchorSearcher, anchor_searcher_resolver
 from .anchor_selection import AnchorSelection, anchor_selection_resolver
 from .loader import PrecomputedTokenizerLoader, precomputed_tokenizer_loader_resolver
-from .utils import random_sample_no_replacement
+from .utils import random_sample_no_replacement, prepare_edges_for_metis
 from ...constants import PYKEEN_MODULE
 from ...typing import DeviceHint, MappedTriples
 from ...utils import format_relative_comparison, get_edge_index, resolve_device
@@ -206,7 +206,11 @@ class MetisAnchorTokenizer(AnchorTokenizer):
             raise ImportError(f"{self.__class__.__name__} requires `torch_sparse` to be installed.") from err
 
         logger.info(f"Partitioning the graph into {self.num_partitions} partitions.")
-        row, col = get_edge_index(mapped_triples=mapped_triples)
+        edge_index = get_edge_index(mapped_triples=mapped_triples)
+        # To prevent possible segfaults in the METIS C code, METIS expects a graph
+        # (1) without self-loops; (2) with inverse edges added; (3) with unique edges only
+        # https://github.com/KarypisLab/METIS/blob/94c03a6e2d1860128c2d0675cbbb86ad4f261256/libmetis/checkgraph.c#L18
+        row, col = prepare_edges_for_metis(edge_index=edge_index)
         re_ordered_adjacency, bound, perm = torch_sparse.partition(
             src=torch_sparse.SparseTensor(row=row, col=col, sparse_sizes=(num_entities, num_entities)).to(
                 device=self.device
