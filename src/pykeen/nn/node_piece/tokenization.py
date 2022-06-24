@@ -16,7 +16,7 @@ from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from .anchor_search import AnchorSearcher, anchor_searcher_resolver
 from .anchor_selection import AnchorSelection, anchor_selection_resolver
 from .loader import PrecomputedTokenizerLoader, precomputed_tokenizer_loader_resolver
-from .utils import random_sample_no_replacement, prepare_edges_for_metis
+from .utils import prepare_edges_for_metis, random_sample_no_replacement
 from ...constants import PYKEEN_MODULE
 from ...typing import DeviceHint, MappedTriples
 from ...utils import format_relative_comparison, get_edge_index, resolve_device

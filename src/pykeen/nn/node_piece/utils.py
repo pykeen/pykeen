@@ -14,7 +14,7 @@ __all__ = [
     "edge_index_to_sparse_matrix",
     "random_sample_no_replacement",
     "ensure_num_entities",
-    "prepare_edges_for_metis"
+    "prepare_edges_for_metis",
 ]
 
 logger = logging.getLogger(__name__)
@@ -157,6 +157,7 @@ def ensure_num_entities(edge_index: numpy.ndarray, num_entities: Optional[int] =
 
 
 def prepare_edges_for_metis(edge_index: torch.Tensor) -> torch.LongTensor:
+    """Prepare the edge index for METIS partitioning to prevent segfaults"""
 
     # remove self-loops
     mask = edge_index[0] != edge_index[1]
