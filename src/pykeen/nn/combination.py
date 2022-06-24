@@ -153,8 +153,7 @@ class ConcatAggregationCombination(ConcatCombination):
 
     # docstr-coverage: inherited
     def extra_repr(self) -> str:  # noqa: D102
-        pre = ",".join(super().extra_repr())
-        return f"{pre}, aggregation={self.aggregation}"
+        return f"{super().extra_repr()}, aggregation={self.aggregation}"
 
 
 class ComplexSeparatedCombination(Combination):
