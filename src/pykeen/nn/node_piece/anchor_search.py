@@ -428,15 +428,20 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         :return: shape: `(num_entities, num_anchors)`
             the PPR values for each anchor
         """
-        return numpy.concatenate(
-            [
-                numpy.argsort(ppr_batch, axis=-1)
-                for ppr_batch in self._iter_ppr(
-                    edge_index=edge_index,
-                    anchors=anchors,
-                )
-            ]
-        )[:, ::-1]
+        return (
+            torch.cat(
+                [
+                    ppr_batch.argsort(dim=-1)
+                    for ppr_batch in self._iter_ppr(
+                        edge_index=edge_index,
+                        anchors=anchors,
+                    )
+                ]
+            )
+            .flip(-1)
+            .cpu()
+            .numpy()
+        )
 
     # docstr-coverage: inherited
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
@@ -446,11 +451,11 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
             batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, k)
-            result[i : i + batch_size, :] = numpy.argpartition(-batch_ppr, kth=k, axis=-1)[:, :k]
+            result[i : i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).values.cpu().numpy()
             i += batch_size
         return result
 
-    def _iter_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> Iterable[numpy.ndarray]:
+    def _iter_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> Iterable[torch.Tensor]:
         """
         Yield batches of PPR values for each anchor from each entities' perspective.
 
@@ -472,12 +477,14 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         if self.use_tqdm:
             progress = tqdm(progress, unit="batch", unit_scale=True)
         # batch-wise computation of PPR
+        anchors = torch.as_tensor(anchors)
         for start in progress:
             # run page-rank calculation, shape: (batch_size, n)
-            # select PPR values for the anchors, shape: (batch_size, num_anchors)
-            yield page_rank(
+            ppr = page_rank(
                 adj=adj, x0=prepare_x0(indices=range(start, start + self.batch_size), n=n), **self.page_rank_kwargs
-            )[:, anchors]
+            )
+            # select PPR values for the anchors, shape: (batch_size, num_anchors)
+            yield ppr[:, anchors.to(ppr.device)]
 
 
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
