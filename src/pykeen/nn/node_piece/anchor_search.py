@@ -117,7 +117,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         adjacency = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index))
         adjacency = adjacency.to_sparse_csr().cpu()
         adjacency = scipy.sparse.csr_matrix(
-            (adjacency.values.numpy(), adjacency.col_indices.numpy(), adjacency.crow_indices.numpy()),
+            (adjacency.values().numpy(), adjacency.col_indices().numpy(), adjacency.crow_indices().numpy()),
             dtype=bool,
             shape=adjacency.shape,
         )
@@ -451,7 +451,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
             batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, k)
-            result[i : i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).values.cpu().numpy()
+            result[i : i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).indices.cpu().numpy()
             i += batch_size
         return result
 
