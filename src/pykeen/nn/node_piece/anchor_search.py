@@ -10,9 +10,10 @@ import numpy
 import scipy.sparse
 import torch
 from class_resolver import ClassResolver, OptionalKwargs
+from torch_ppr import page_rank
+from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjacency, prepare_x0
 from tqdm.auto import tqdm
 
-from .utils import edge_index_to_sparse_matrix, ensure_num_entities, page_rank, prepare_page_rank_adjacency
 from ...typing import DeviceHint
 from ...utils import format_relative_comparison, resolve_device
 
@@ -71,7 +72,9 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
     ) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
-        adjacency = edge_index_to_sparse_matrix(edge_index=edge_index, num_entities=num_entities).tocsr()
+        adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index, dtype=torch.long)).coalesce()
+        # convert to scipy sparse csr
+        adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape).tocsr()
         # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
         distances = scipy.sparse.csgraph.shortest_path(
             csgraph=adjacency,
@@ -127,7 +130,6 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
                 tuple(edge_index),
             ),
             shape=(num_entities, num_entities),
-            dtype=bool,
         )
         # symmetric + self-loops
         adjacency = adjacency + adjacency.transpose() + scipy.sparse.eye(num_entities, dtype=bool, format="coo")
@@ -447,15 +449,20 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         :return: shape: `(num_entities, num_anchors)`
             the PPR values for each anchor
         """
-        return numpy.concatenate(
-            [
-                numpy.argsort(ppr_batch, axis=-1)
-                for ppr_batch in self._iter_ppr(
-                    edge_index=edge_index,
-                    anchors=anchors,
-                )
-            ]
-        )[:, ::-1]
+        return (
+            torch.cat(
+                [
+                    ppr_batch.argsort(dim=-1)
+                    for ppr_batch in self._iter_ppr(
+                        edge_index=edge_index,
+                        anchors=anchors,
+                    )
+                ]
+            )
+            .flip(-1)
+            .cpu()
+            .numpy()
+        )
 
     # docstr-coverage: inherited
     def __call__(
@@ -467,13 +474,14 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities):
             batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, k)
-            result[i : i + batch_size, :] = numpy.argpartition(-batch_ppr, kth=k, axis=-1)[:, :k]
+            result[i : i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).indices.cpu().numpy()
             i += batch_size
         return result
 
+    @torch.inference_mode()
     def _iter_ppr(
-        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, num_entities: Optional[int] = None
-    ) -> Iterable[numpy.ndarray]:
+      self, edge_index: numpy.ndarray, anchors: numpy.ndarray, num_entities: Optional[int] = None
+    ) -> Iterable[torch.Tensor]:
         """
         Yield batches of PPR values for each anchor from each entities' perspective.
 
@@ -487,8 +495,9 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         :yields: shape: (batch_size, num_anchors)
             batches of anchor PPRs.
         """
+        # TODO: use personalized_page_rank from torch_ppr?
         # prepare adjacency matrix only once
-        adj = prepare_page_rank_adjacency(edge_index=edge_index, num_entities=num_entities)
+        adj = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index, dtype=torch.long), num_nodes=num_entities)
         # prepare result
         n = adj.shape[0]
         # progress bar?
@@ -496,16 +505,14 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         if self.use_tqdm:
             progress = tqdm(progress, unit="batch", unit_scale=True)
         # batch-wise computation of PPR
+        anchors = torch.as_tensor(anchors, dtype=torch.long)
         for start in progress:
-            # create a batch of starting vectors, shape: (n, batch_size)
-            stop = min(start + self.batch_size, n)
-            batch_size = stop - start
-            x0 = numpy.zeros(shape=(n, batch_size))
-            x0[numpy.arange(start, stop), numpy.arange(batch_size)] = 1.0
             # run page-rank calculation, shape: (batch_size, n)
-            ppr = page_rank(adj=adj, x0=x0, **self.page_rank_kwargs)
-            # select PPR values for the anchors, shape: (num_anchors, batch_size)
-            yield ppr[anchors].T
+            ppr = page_rank(
+                adj=adj, x0=prepare_x0(indices=range(start, start + self.batch_size), n=n), **self.page_rank_kwargs
+            )
+            # select PPR values for the anchors, shape: (batch_size, num_anchors)
+            yield ppr[:, anchors.to(ppr.device)]
 
 
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
