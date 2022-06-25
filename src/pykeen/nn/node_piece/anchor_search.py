@@ -349,7 +349,8 @@ class SparseBFSSearcher(AnchorSearcher):
             reachable = (
                 torch_sparse.spmm(
                     index=edge_list, value=values.float(), m=num_entities, n=num_entities, matrix=reachable.float()
-                ) > 0.0
+                )
+                > 0.0
             )
             # convergence check
             if (reachable == old_reachable).all():
