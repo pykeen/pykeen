@@ -455,6 +455,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             i += batch_size
         return result
 
+    @torch.inference_mode()
     def _iter_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> Iterable[torch.Tensor]:
         """
         Yield batches of PPR values for each anchor from each entities' perspective.
