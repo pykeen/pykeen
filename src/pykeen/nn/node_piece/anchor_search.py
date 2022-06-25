@@ -66,7 +66,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     # docstr-coverage: inherited
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
-        adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index)).coalesce()
+        adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index, dtype=torch.long)).coalesce()
         # convert to scipy sparse csr
         adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape).tocsr()
         # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
@@ -476,7 +476,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         """
         # TODO: use personalized_page_rank from torch_ppr?
         # prepare adjacency matrix only once
-        adj = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index))
+        adj = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index, dtype=torch.long))
         # prepare result
         n = adj.shape[0]
         # progress bar?
@@ -484,7 +484,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         if self.use_tqdm:
             progress = tqdm(progress, unit="batch", unit_scale=True)
         # batch-wise computation of PPR
-        anchors = torch.as_tensor(anchors)
+        anchors = torch.as_tensor(anchors, dtype=torch.long)
         for start in progress:
             # run page-rank calculation, shape: (batch_size, n)
             ppr = page_rank(
