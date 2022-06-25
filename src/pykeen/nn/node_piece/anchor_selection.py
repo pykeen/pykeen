@@ -190,9 +190,10 @@ class PageRankAnchorSelection(SingleSelection):
             yield f"{key}={value}"
 
     # docstr-coverage: inherited
+    @torch.inference_mode()
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # sort by decreasing page rank
-        return numpy.argsort(page_rank(edge_index=torch.as_tensor(edge_index), **self.kwargs).numpy())[::-1]
+        return numpy.argsort(page_rank(edge_index=torch.as_tensor(edge_index), **self.kwargs).cpu().numpy())[::-1]
 
 
 class RandomAnchorSelection(SingleSelection):
