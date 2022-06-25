@@ -1,7 +1,7 @@
 """Utilities for NodePiece."""
-
+import numpy
 import logging
-from typing import Collection, Mapping
+from typing import Collection, Mapping, Optional
 
 import torch
 from tqdm.auto import tqdm

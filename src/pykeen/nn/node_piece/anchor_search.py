@@ -14,6 +14,7 @@ from torch_ppr import page_rank
 from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjacency, prepare_x0
 from tqdm.auto import tqdm
 
+from .utils import ensure_num_entities
 from ...typing import DeviceHint
 from ...utils import format_relative_comparison, resolve_device
 
@@ -348,8 +349,7 @@ class SparseBFSSearcher(AnchorSearcher):
             reachable = (
                 torch_sparse.spmm(
                     index=edge_list, value=values.float(), m=num_entities, n=num_entities, matrix=reachable.float()
-                )
-                > 0.0
+                ) > 0.0
             )
             # convergence check
             if (reachable == old_reachable).all():
@@ -474,13 +474,13 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities):
             batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, k)
-            result[i : i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).indices.cpu().numpy()
+            result[i: i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).indices.cpu().numpy()
             i += batch_size
         return result
 
     @torch.inference_mode()
     def _iter_ppr(
-      self, edge_index: numpy.ndarray, anchors: numpy.ndarray, num_entities: Optional[int] = None
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, num_entities: Optional[int] = None
     ) -> Iterable[torch.Tensor]:
         """
         Yield batches of PPR values for each anchor from each entities' perspective.
@@ -495,9 +495,10 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         :yields: shape: (batch_size, num_anchors)
             batches of anchor PPRs.
         """
-        # TODO: use personalized_page_rank from torch_ppr?
         # prepare adjacency matrix only once
-        adj = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index, dtype=torch.long), num_nodes=num_entities)
+        adj = prepare_page_rank_adjacency(
+            edge_index=torch.as_tensor(edge_index, dtype=torch.long), num_nodes=num_entities
+        )
         # prepare result
         n = adj.shape[0]
         # progress bar?
