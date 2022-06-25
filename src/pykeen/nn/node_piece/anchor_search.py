@@ -114,13 +114,19 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         :return: shape: (n, n)
             a square sparse adjacency matrix
         """
-        adjacency = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index))
-        adjacency = adjacency.to_sparse_csr().cpu()
-        adjacency = scipy.sparse.csr_matrix(
-            (adjacency.values().numpy(), adjacency.col_indices().numpy(), adjacency.crow_indices().numpy()),
-            dtype=bool,
-            shape=adjacency.shape,
+        # infer shape
+        num_entities = edge_index.max().item() + 1
+        # create adjacency matrix
+        adjacency = scipy.sparse.coo_matrix(
+            (
+                numpy.ones_like(edge_index[0], dtype=bool),
+                tuple(edge_index),
+            ),
+            shape=(num_entities, num_entities),
         )
+        # symmetric + self-loops
+        adjacency = adjacency + adjacency.transpose() + scipy.sparse.eye(num_entities, dtype=bool, format="coo")
+        adjacency = adjacency.tocsr()
         logger.debug(
             f"Created sparse adjacency matrix of shape {adjacency.shape} where "
             f"{format_relative_comparison(part=adjacency.nnz, total=numpy.prod(adjacency.shape))} "
