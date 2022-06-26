@@ -232,7 +232,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
             edge_index = re_ordered_adjacency[low:high, low:high].to_torch_sparse_coo_tensor().coalesce().indices()
             edge_count += edge_index.shape[1]
             num_entities = high - low
-            this_vocabulary_size, this_assignment = super(self.__class__, self)._call(
+            this_vocabulary_size, this_assignment = super()._call(
                 edge_index=edge_index, num_tokens=num_tokens, num_entities=num_entities
             )
             assert this_assignment.shape[0] == num_entities
