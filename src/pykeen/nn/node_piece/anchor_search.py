@@ -475,7 +475,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities):
             batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, k)
-            result[i: i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).indices.cpu().numpy()
+            result[i : i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).indices.cpu().numpy()
             i += batch_size
         return result
 
