@@ -15,7 +15,7 @@ from ..representation import CombinedRepresentation, Representation
 from ..utils import ShapeError
 from ...triples import CoreTriplesFactory
 from ...typing import MappedTriples, OneOrSequence
-from ...utils import broadcast_upgrade_to_sequences, upgrade_to_sequence
+from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
     "TokenizationRepresentation",

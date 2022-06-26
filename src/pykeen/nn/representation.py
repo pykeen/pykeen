@@ -1685,10 +1685,10 @@ class TensorTrainRepresentation(Representation):
         self.eq = " ".join((", ".join("".join(term) for term in terms), "->", "".join(out_term)))
 
         # create base representations
-        bases, bases_kwargs, shapes = broadcast_upgrade_to_sequences(bases, bases_kwargs, shapes)
+        bases, bases_kwargs, shapes_ = broadcast_upgrade_to_sequences(bases, bases_kwargs, shapes)
         self.bases = [
             representation_resolver.make(base, base_kwargs, max_id=m_i, shape=shape)
-            for base, base_kwargs, m_i, shape in zip(bases, bases_kwargs, ms, shapes)
+            for base, base_kwargs, m_i, shape in zip(bases, bases_kwargs, ms, shapes_)
         ]
 
     # docstr-coverage: inherited
