@@ -176,7 +176,7 @@ def get_prediction_df(
     )
 
     # get scores
-    scores = model.predict(batch, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
+    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
 
     # create raw dataframe
     rv = pd.DataFrame(
