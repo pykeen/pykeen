@@ -15,8 +15,8 @@ However, for most models, these scores do not have obvious statistical interpret
 After training a model, there are four high-level interfaces for making predictions:
 
 1. :func:`pykeen.models.predict.get_prediction_df` for a head / relation / tail scoring, given the other two
-4. :func:`pykeen.models.predict.get_all_prediction_df` for prioritizing links, i.e., calculating scores for all triples
-5. :func:`pykeen.models.predict.predict_triples_df` for computing scores for explicitly provided triples
+2. :func:`pykeen.models.predict.get_all_prediction_df` for prioritizing links, i.e., calculating scores for all triples
+3. :func:`pykeen.models.predict.predict_triples_df` for computing scores for explicitly provided triples
 
 Scientifically, :func:`pykeen.models.predict.get_all_prediction_df` is the most interesting in a scenario where
 predictions could be tested and validated experimentally.
