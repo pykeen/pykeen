@@ -404,6 +404,12 @@ class TransformedRepresentationTest(cases.RepresentationTestCase):
         return kwargs
 
 
+class TensorTrainRepresentationTest(cases.RepresentationTestCase):
+    """Tests for tensor train representations."""
+
+    cls = pykeen.nn.representation.TensorTrainRepresentation
+
+
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
 
