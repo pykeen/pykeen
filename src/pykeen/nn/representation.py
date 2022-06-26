@@ -1686,6 +1686,43 @@ class TensorTrainRepresentation(Representation):
             ids //= m_i
         return assignment
 
+    @staticmethod
+    def check_factors(ms: Sequence[int], ns: Sequence[int], max_id: int, shape: Tuple[int, ...], num_cores: int):
+        """
+        Check whether the factors match the other parts.
+
+        Verifies that
+
+        .. math ::
+            \prod \limits_{m_i \in ms} m_i \geq M
+            \prod \limits_{n_i \in ns} n_i \geq N
+
+        :param ms: length: num_cores
+            the $M$ factors $m_i$
+        :param ns: length: num_cores
+            the $N$ factors $n_i$
+        :param max_id:
+            the maximum id, $M$
+        :param shape:
+            the shape, $N=prod(shape)$
+        :param num_cores:
+            the number of cores
+
+        :raise ValueError:
+            if any of the conditions is violated
+        """
+        if len(ms) != num_cores or len(ns) != num_cores:
+            raise ValueError(f"Invalid length: len(ms)={len(ms)}, len(ns)={len(ns)} vs. num_cores={num_cores}")
+
+        m_prod = numpy.prod(ms).item()
+        if m_prod < max_id:
+            raise ValueError(f"prod(ms)={m_prod} < max_id={max_id}")
+
+        n_prod = numpy.prod(ns).item()
+        s_prod = numpy.prod(shape).item()
+        if n_prod < s_prod:
+            raise ValueError(f"prod(ns)={n_prod} < prod(shape)={s_prod}")
+
     def __init__(
         self,
         assignment: Optional[torch.LongTensor] = None,
@@ -1726,8 +1763,9 @@ class TensorTrainRepresentation(Representation):
             raise ValueError(f"Inconsistent number of ranks {len(ranks)} for num_cores={num_cores}")
 
         # determine M_k, N_k
+        # TODO: allow to pass them from outside?
         ms, ns = self.factor_sizes(max_id=self.max_id, shape=self.shape, num_cores=num_cores)
-        # TODO: check ms, ns; allow to override them
+        self.check_factors(ms, ns, max_id=self.max_id, shape=self.shape, num_cores=num_cores)
 
         # normalize assignment
         if assignment is None:
