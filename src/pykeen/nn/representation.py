@@ -1622,6 +1622,70 @@ class TensorTrainRepresentation(Representation):
                 f"and assignment.max(dim=0)={high}",
             )
 
+    @staticmethod
+    def get_shapes_and_einsum_eq(ranks: Sequence[int], ns: Sequence[int]) -> Tuple[str, Sequence[Tuple[int, ...]]]:
+        """
+        Determine core shapes and einsum equation.
+
+        :param ranks:
+            the core ranks
+        :param ns:
+            the sizes $n_i$
+        :return:
+            a pair (eq, shapes), where `eq` is a valid einsum equation and `shapes` a sequence of representation
+            shapes. Notice that the shapes do not include the "`max_id` dimension" of the resulting embedding.
+        """
+        shapes: List[List[int]] = []
+        terms: List[List[str]] = []
+        out_term: List[str] = ["..."]
+        i = 0
+        for n_i, (rank_in, rank_out) in zip(ns, more_itertools.pairwise([None, *ranks, None])):
+            shape = []
+            term = ["..."]
+
+            if rank_in is not None:
+                shape.append(rank_in)
+                term.append(string.ascii_lowercase[i])
+                i += 1
+
+            shape.append(n_i)
+            term.append(string.ascii_lowercase[i])
+            out_term.append(string.ascii_lowercase[i])
+            i += 1
+
+            if rank_out is not None:
+                shape.append(rank_out)
+                term.append(string.ascii_lowercase[i])
+                # do not increase counter i, since the dimension is shared with the following term
+                # i += 1
+
+            terms.append(term)
+            shapes.append(shape)
+        eq = " ".join((", ".join("".join(term) for term in terms), "->", "".join(out_term)))
+        return eq, [tuple(shape) for shape in shapes]
+
+    @staticmethod
+    def create_default_assignment(max_id: int, num_cores: int, ms: Sequence[int]) -> torch.LongTensor:
+        """
+        Create an assignment without using structural information.
+
+        :param max_id:
+            the number of representations
+        :param num_cores:
+            the number of tensor cores
+        :param ms:
+            the sizes $m_i$
+
+        :return: shape: (max_id, num_cores)
+            the assignment
+        """
+        assignment = torch.empty(max_id, num_cores, dtype=torch.long)
+        ids = torch.arange(max_id)
+        for i, m_i in enumerate(ms):
+            assignment[:, i] = ids % m_i
+            ids //= m_i
+        return assignment
+
     def __init__(
         self,
         assignment: Optional[torch.LongTensor] = None,
@@ -1667,46 +1731,17 @@ class TensorTrainRepresentation(Representation):
 
         # normalize assignment
         if assignment is None:
-            assignment = torch.empty(self.max_id, num_cores, dtype=torch.long)
-            ids = torch.arange(self.max_id)
-            for i, m_i in enumerate(ms):
-                assignment[:, i] = ids % m_i
-                ids //= m_i
-
+            assignment = self.create_default_assignment(num_cores, ms)
         self.check_assignment(assignment=assignment, max_id=self.max_id, num_cores=num_cores, ms=ms)
-
-        # register buffer
         self.register_buffer(name="assignment", tensor=assignment)
 
         # determine shapes and einsum equation
-        shapes: List[List[int]] = []
-        terms: List[List[str]] = []
-        out_term: List[str] = ["..."]
-        i = 0
-        for n_i, (rank_in, rank_out) in zip(ns, more_itertools.pairwise([None, *ranks, None])):
-            shape = []
-            term = ["..."]
-            if rank_in is not None:
-                shape.append(rank_in)
-                term.append(string.ascii_lowercase[i])
-                i += 1
-            shape.append(n_i)
-            term.append(string.ascii_lowercase[i])
-            out_term.append(string.ascii_lowercase[i])
-            i += 1
-            if rank_out is not None:
-                shape.append(rank_out)
-                term.append(string.ascii_lowercase[i])
-                # do not increase
-            terms.append(term)
-            shapes.append(shape)
-        self.eq = " ".join((", ".join("".join(term) for term in terms), "->", "".join(out_term)))
+        self.eq, shapes = self.get_shapes_and_einsum_eq(ranks=ranks, ns=ns)
 
         # create base representations
-        bases, bases_kwargs, shapes_ = broadcast_upgrade_to_sequences(bases, bases_kwargs, shapes)
         self.bases = [
             representation_resolver.make(base, base_kwargs, max_id=m_i, shape=shape)
-            for base, base_kwargs, m_i, shape in zip(bases, bases_kwargs, ms, shapes_)
+            for base, base_kwargs, m_i, shape in zip(*broadcast_upgrade_to_sequences(bases, bases_kwargs, ms, shapes))
         ]
 
     # docstr-coverage: inherited
