@@ -3,13 +3,13 @@
 """Utilities for metrics."""
 
 from dataclasses import dataclass
-from typing import ClassVar, Collection, Iterable, Optional
+from typing import ClassVar, Collection, Optional
 
 import numpy as np
 from docdata import get_docdata
 from scipy import stats
 
-from ..utils import camel_to_snake
+from ..utils import ExtraReprMixin, camel_to_snake
 
 __all__ = [
     "Metric",
@@ -78,7 +78,7 @@ class ValueRange:
         return str(n)
 
 
-class Metric:
+class Metric(ExtraReprMixin):
     """A base class for metrics."""
 
     #: The name of the metric
@@ -139,12 +139,6 @@ class Metric:
         right_bracket = ")" if cls.value_range.upper is None or not cls.value_range.upper_inclusive else "]"
         right = docdata.get("tight_upper", cls.value_range._coerce(cls.value_range.upper, low=False))
         return f"{left_bracket}{left}, {right}{right_bracket}".replace("inf", "∞")
-
-    def _extra_repr(self) -> Iterable[str]:
-        return []
-
-    def __repr__(self) -> str:  # noqa:D105
-        return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
 
 
 def weighted_mean_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
