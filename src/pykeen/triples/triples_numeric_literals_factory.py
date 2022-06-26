@@ -118,8 +118,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         return self.numeric_literals.shape[1:]
 
     # docstr-coverage: inherited
-    def _iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super()._iter_extra_repr()
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
         yield f"num_literals={len(self.literals_to_id)}"
 
     # docstr-coverage: inherited
