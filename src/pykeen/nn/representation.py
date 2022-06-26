@@ -35,8 +35,8 @@ from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
 from ..utils import (
     Bias,
-    broadcast_upgrade_to_sequences,
     ExtraReprMixin,
+    broadcast_upgrade_to_sequences,
     clamp_norm,
     complex_normalize,
     get_edge_index,
@@ -198,6 +198,7 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
 
     def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over components for :meth:`extra_repr`."""
+        yield from super().iter_extra_repr()
         yield f"max_id={self.max_id}"
         yield f"shape={self.shape}"
         yield f"unique={self.unique}"
@@ -1779,6 +1780,12 @@ class TensorTrainRepresentation(Representation):
             representation_resolver.make(base, base_kwargs, max_id=m_i, shape=shape)
             for base, base_kwargs, m_i, shape in zip(*broadcast_upgrade_to_sequences(bases, bases_kwargs, ms, shapes))
         )
+
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_cores={len(self.bases)}"
+        yield f"eq='{self.eq}'"
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
