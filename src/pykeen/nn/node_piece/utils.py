@@ -1,4 +1,5 @@
 """Utilities for NodePiece."""
+
 import logging
 from typing import Collection, Mapping, Optional
 

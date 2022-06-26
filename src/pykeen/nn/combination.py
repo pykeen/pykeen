@@ -153,8 +153,9 @@ class ConcatAggregationCombination(ConcatCombination):
         return self.aggregation(super().forward(xs=xs), dim=self.dim)
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        return f"{super().extra_repr()}, aggregation={self.aggregation}"
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"aggregation={self.aggregation}"
 
 
 class ComplexSeparatedCombination(Combination):
