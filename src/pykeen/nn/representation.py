@@ -1731,7 +1731,7 @@ class TensorTrainRepresentation(Representation):
 
         # normalize assignment
         if assignment is None:
-            assignment = self.create_default_assignment(num_cores, ms)
+            assignment = self.create_default_assignment(max_id=self.max_id, num_cores=num_cores, ms=ms)
         self.check_assignment(assignment=assignment, max_id=self.max_id, num_cores=num_cores, ms=ms)
         self.register_buffer(name="assignment", tensor=assignment)
 
