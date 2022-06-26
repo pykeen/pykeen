@@ -36,15 +36,15 @@ model:
 >>> model = result.model
 >>> # Predict tails
 >>> predicted_tails_df = predict.get_prediction_df(
-...     model=model, head="brazil", relation="intergovorgs", triples_factory=result.training,
+...     model=model, head_label="brazil", relation_label="intergovorgs", triples_factory=result.training,
 ... )
 >>> # Predict relations
 >>> predicted_relations_df = predict.get_prediction_df(
-...     model=model, head="brazil", tail="uk", triples_factory=result.training,
+...     model=model, head_label="brazil", tail_label="uk", triples_factory=result.training,
 ... )
 >>> # Predict heads
 >>> predicted_heads_df = predict.get_prediction_df(
-...     model=model, relation="conferences", tail="brazil", triples_factory=result.training
+...     model=model, relation_label="conferences", tail_label="brazil", triples_factory=result.training
 ... )
 >>> # Score all triples (memory intensive)
 >>> predictions_df = predict.get_all_prediction_df(model, triples_factory=result.training)
@@ -69,7 +69,9 @@ previous example.
 >>> model = torch.load("doctests/nations_rotate/trained_model.pkl")
 >>> training = get_dataset(dataset="nations").training
 >>> # Predict tails
->>> predicted_tails_df = model.get_prediction_df(head="brazil", relation="intergovorgs", triples_factory=training)
+>>> predicted_tails_df = model.get_prediction_df(
+...     head_label="brazil", relation_label="intergovorgs", triples_factory=training
+... )
 >>> # everything else is the same as above
 
 There's an example model available at
