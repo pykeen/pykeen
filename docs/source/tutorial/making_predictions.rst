@@ -30,21 +30,21 @@ model:
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.models import predict
 >>> # Run the pipeline
->>> result = pipeline(dataset='Nations', model='RotatE')
+>>> result = pipeline(dataset="Nations", model="RotatE")
 >>> # save the model
->>> result.save_to_directory('doctests/nations_rotate')
+>>> result.save_to_directory("doctests/nations_rotate")
 >>> model = result.model
 >>> # Predict tails
 >>> predicted_tails_df = predict.get_prediction_df(
-...     model=model, head='brazil', relation='intergovorgs', triples_factory=result.training,
+...     model=model, head="brazil", relation="intergovorgs", triples_factory=result.training,
 ... )
 >>> # Predict relations
 >>> predicted_relations_df = predict.get_prediction_df(
-...     model=model, head='brazil', tail='uk', triples_factory=result.training,
+...     model=model, head="brazil", tail="uk", triples_factory=result.training,
 ... )
 >>> # Predict heads
 >>> predicted_heads_df = predict.get_prediction_df(
-...     model=model, relation='conferences', tail='brazil', triples_factory=result.training
+...     model=model, relation="conferences", tail="brazil", triples_factory=result.training
 ... )
 >>> # Score all triples (memory intensive)
 >>> predictions_df = predict.get_all_prediction_df(model, triples_factory=result.training)
@@ -53,7 +53,7 @@ model:
 >>> # Score a given list of triples
 >>> score_df = predict.predict_triples_df(
 ...     model=model,
-...     triples=[('brazil', 'conferences', 'uk'), ('brazil', 'intergovorgs', 'uk')],
+...     triples=[("brazil", "conferences", "uk"), ("brazil", "intergovorgs", "uk")],
 ...     triples_factory=result.training,
 ... )
 
@@ -66,10 +66,10 @@ previous example.
 
 >>> import torch
 >>> from pykeen.datasets import get_dataset
->>> model = torch.load('doctests/nations_rotate/trained_model.pkl')
+>>> model = torch.load("doctests/nations_rotate/trained_model.pkl")
 >>> training = get_dataset(dataset="nations").training
 >>> # Predict tails
->>> predicted_tails_df = model.get_prediction_df(head='brazil', relation='intergovorgs', triples_factory=training)
+>>> predicted_tails_df = model.get_prediction_df(head="brazil", relation="intergovorgs", triples_factory=training)
 >>> # everything else is the same as above
 
 There's an example model available at
