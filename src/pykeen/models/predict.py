@@ -7,6 +7,7 @@ import logging
 from abc import abstractmethod
 from operator import itemgetter
 from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
+import warnings
 
 import numpy
 import numpy as np
@@ -34,6 +35,8 @@ __all__ = [
     "predict",
     "predict_triples_df",
     "get_all_prediction_df",
+    "get_prediction_df",
+    # deprecated
     "get_head_prediction_df",
     "get_relation_prediction_df",
     "get_tail_prediction_df",
@@ -235,6 +238,7 @@ def get_head_prediction_df(
     ... )
     >>> df = get_head_prediction_df(result.model, 'accusation', 'brazil', triples_factory=result.training)
     """
+    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
     return get_prediction_df(
         model=model,
         triples_factory=triples_factory,
@@ -293,6 +297,7 @@ def get_tail_prediction_df(
     ...     tails=["burma", "china", "india", "indonesia"],
     ... )
     """
+    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
     return get_prediction_df(
         model=model,
         triples_factory=triples_factory,
@@ -342,6 +347,7 @@ def get_relation_prediction_df(
     ... )
     >>> df = get_relation_prediction_df(result.model, 'brazil', 'uk', triples_factory=result.training)
     """
+    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
     return get_prediction_df(
         model=model,
         triples_factory=triples_factory,
