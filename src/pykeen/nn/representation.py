@@ -1778,10 +1778,10 @@ class TensorTrainRepresentation(Representation):
         self.eq, shapes = self.get_shapes_and_einsum_eq(ranks=ranks, ns=ns)
 
         # create base representations
-        self.bases = [
+        self.bases = nn.ModuleList(
             representation_resolver.make(base, base_kwargs, max_id=m_i, shape=shape)
             for base, base_kwargs, m_i, shape in zip(*broadcast_upgrade_to_sequences(bases, bases_kwargs, ms, shapes))
-        ]
+        )
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
