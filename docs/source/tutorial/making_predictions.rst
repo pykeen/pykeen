@@ -14,10 +14,8 @@ However, for most models, these scores do not have obvious statistical interpret
 
 After training a model, there are four high-level interfaces for making predictions:
 
-1. :func:`pykeen.models.predict.get_tail_prediction_df` for a given head/relation pair
-2. :func:`pykeen.models.predict.get_relation_prediction_df` for a given head/tail pair
-3. :func:`pykeen.models.predict.get_head_prediction_df` for a given relation/tail pair
-4. :func:`pykeen.models.predict.get_all_prediction_df` for prioritizing links
+1. :func:`pykeen.models.predict.get_prediction_df` for a head / relation / tail scoring, given the other two
+4. :func:`pykeen.models.predict.get_all_prediction_df` for prioritizing links, i.e., calculating scores for all triples
 5. :func:`pykeen.models.predict.predict_triples_df` for computing scores for explicitly provided triples
 
 Scientifically, :func:`pykeen.models.predict.get_all_prediction_df` is the most interesting in a scenario where
@@ -37,18 +35,20 @@ model:
 >>> result.save_to_directory('doctests/nations_rotate')
 >>> model = result.model
 >>> # Predict tails
->>> predicted_tails_df = predict.get_tail_prediction_df(
-...     model, 'brazil', 'intergovorgs', triples_factory=result.training,
+>>> predicted_tails_df = predict.get_prediction_df(
+...     model=model, head='brazil', relation='intergovorgs', triples_factory=result.training,
 ... )
 >>> # Predict relations
->>> predicted_relations_df = predict.get_relation_prediction_df(
-...     model, 'brazil', 'uk', triples_factory=result.training,
+>>> predicted_relations_df = predict.get_prediction_df(
+...     model=model, head='brazil', tail='uk', triples_factory=result.training,
 ... )
 >>> # Predict heads
->>> predicted_heads_df = predict.get_head_prediction_df(model, 'conferences', 'brazil', triples_factory=result.training)
+>>> predicted_heads_df = predict.get_prediction_df(
+...     model=model, relation='conferences', tail='brazil', triples_factory=result.training
+... )
 >>> # Score all triples (memory intensive)
 >>> predictions_df = predict.get_all_prediction_df(model, triples_factory=result.training)
->>> # Score top K triples
+>>> # Score top K triples (computationally expensive)
 >>> top_k_predictions_df = predict.get_all_prediction_df(model, k=150, triples_factory=result.training)
 >>> # Score a given list of triples
 >>> score_df = predict.predict_triples_df(
@@ -69,7 +69,7 @@ previous example.
 >>> model = torch.load('doctests/nations_rotate/trained_model.pkl')
 >>> training = get_dataset(dataset="nations").training
 >>> # Predict tails
->>> predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs', triples_factory=training)
+>>> predicted_tails_df = model.get_prediction_df(head='brazil', relation='intergovorgs', triples_factory=training)
 >>> # everything else is the same as above
 
 There's an example model available at
