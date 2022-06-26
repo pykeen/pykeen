@@ -501,6 +501,24 @@ class Model(nn.Module, ABC):
         warnings.warn("Use pykeen.models.predict.get_all_prediction_df", DeprecationWarning)
         return get_all_prediction_df(model=self, k=k, batch_size=batch_size, **kwargs)
 
+    def get_prediction_df(
+        self,
+        *args,
+        **kwargs,
+    ) -> Union[ScorePack, pd.DataFrame]:
+        """Get predictions for the head, relation, and/or tail combination.
+
+        :param args: Positional arguments to pass to :func:`pykeen.models.predict.get_prediction_df`.
+        :param kwargs: Keyword arguments to pass to :func:`pykeen.models.predict.get_prediction_df`.
+        :return: shape: (k, 3)
+            A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
+            or all possible triples if k is None
+        """
+        from .predict import get_prediction_df
+
+        warnings.warn("Use pykeen.models.predict.get_prediction_df", DeprecationWarning)
+        return get_prediction_df(self, *args, **kwargs)
+
     def get_head_prediction_df(
         self,
         relation_label: str,
