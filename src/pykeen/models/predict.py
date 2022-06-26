@@ -4,10 +4,10 @@
 
 import itertools as itt
 import logging
+import warnings
 from abc import abstractmethod
 from operator import itemgetter
 from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
-import warnings
 
 import numpy
 import numpy as np
