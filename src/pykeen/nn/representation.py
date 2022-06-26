@@ -1683,7 +1683,8 @@ class TensorTrainRepresentation(Representation):
         ids = torch.arange(max_id)
         for i, m_i in enumerate(ms):
             assignment[:, i] = ids % m_i
-            ids //= m_i
+            # ids //= m_i
+            ids = torch.div(ids, m_i, rounding_mode="floor")
         return assignment
 
     @staticmethod
