@@ -3,6 +3,7 @@
 """Representation modules for NodePiece."""
 
 import logging
+import pathlib
 from typing import Callable, Iterable, List, NamedTuple, Optional, Union
 
 import torch
@@ -176,6 +177,16 @@ class TokenizationRepresentation(Representation):
     def num_tokens(self) -> int:
         """Return the number of selected tokens for ID."""
         return self.assignment.shape[1]
+
+    def save_assignment(self, output_path: pathlib.Path):
+        """Save the assignment to a file.
+
+        :param output_path:
+            the output file path. Its parent directories will be created if necessary.
+        """
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self.assignment, output_path)
+        logger.info(f"Saved assignment of shape {self.assignment.shape} to {output_path}")
 
 
 class HashDiversityInfo(NamedTuple):
