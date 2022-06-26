@@ -17,6 +17,7 @@ from .representation import LowRankRepresentation, Representation
 from .utils import ShapeError, adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
+from ..utils import ExtraReprMixin
 
 __all__ = [
     "RGCNRepresentation",
@@ -29,7 +30,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Decomposition(nn.Module, ABC):
+class Decomposition(nn.Module, ExtraReprMixin, ABC):
     r"""Base module for relation-specific message passing.
 
     A decomposition module implementation offers a way to reduce the number of parameters needed by learning
@@ -75,12 +76,9 @@ class Decomposition(nn.Module, ABC):
         self.num_relations = num_relations
         self.output_dim = output_dim
 
-    def extra_repr(self) -> str:
-        """Return additional components for the output of `repr`."""
-        return ", ".join(self.iter_extra_repr())
-
     def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over components for `extra_repr`."""
+        yield from super().iter_extra_repr()
         yield f"input_dim={self.input_dim}"
         yield f"output_dim={self.output_dim}"
         yield f"num_relations={self.num_relations}"

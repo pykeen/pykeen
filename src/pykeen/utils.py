@@ -122,6 +122,7 @@ __all__ = [
     "prepare_filter_triples",
     "nested_get",
     "rate_limited",
+    "ExtraReprMixin",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1745,6 +1746,48 @@ def rate_limited(xs: Iterable[X], min_avg_time: float = 1.0) -> Iterable[X]:
             logger.debug(f"Applying rate limit; sleeping for {under} seconds")
             time.sleep(under)
         yield x
+
+
+class ExtraReprMixin:
+    """
+    A mixin for modules with hierarchical `extra_repr`.
+
+    It takes up the :meth:`torch.nn.Module.extra_repr` idea, and additionally provides a simple
+    composable way to generate the components of :meth:`extra_repr` via :meth:`iter_extra_repr`.
+
+    If combined with `torch.nn.Module`, make sure to put :class:`ExtraReprMixin` *behind*
+    :class:`torch.nn.Module` to prefer the latter's :func:`__repr__` implementation.
+    """
+
+    def iter_extra_repr(self) -> Iterable[str]:
+        """
+        Iterate over the components of the :meth:`extra_repr`.
+
+        This method is typically overridden. A common pattern would be
+
+        .. code-block:: python
+
+            def iter_extra_repr(self) -> Iterable[str]:
+                yield from super().iter_extra_repr()
+                yield "<key1>=<value1>"
+                yield "<key2>=<value2>"
+
+        :return:
+            an iterable over individual components of the :meth:`extra_repr`
+        """
+        return []
+
+    def extra_repr(self) -> str:
+        """
+        Generate the extra repr, cf. :meth`torch.nn.Module.extra_repr`.
+
+        :return:
+            the extra part of the :func:`repr`
+        """
+        return ", ".join(self.iter_extra_repr())
+
+    def __repr__(self) -> str:  # noqa: D105
+        return f"{self.__class__.__name__}({self.extra_repr()})"
 
 
 if __name__ == "__main__":

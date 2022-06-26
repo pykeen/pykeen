@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 
 from .utils import ensure_num_entities
 from ...typing import DeviceHint
-from ...utils import format_relative_comparison, resolve_device
+from ...utils import ExtraReprMixin, format_relative_comparison, resolve_device
 
 __all__ = [
     # Resolver
@@ -33,7 +33,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class AnchorSearcher(ABC):
+class AnchorSearcher(ExtraReprMixin, ABC):
     """A method for finding the closest anchors."""
 
     @abstractmethod
@@ -56,13 +56,6 @@ class AnchorSearcher(ABC):
             the Ids of the closest anchors
         """
         raise NotImplementedError
-
-    def extra_repr(self) -> Iterable[str]:
-        """Extra components for __repr__."""
-        return []
-
-    def __repr__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
 
 class CSGraphAnchorSearcher(AnchorSearcher):
@@ -105,8 +98,8 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         self.max_iter = max_iter
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().extra_repr()
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
         yield f"max_iter={self.max_iter}"
 
     @staticmethod
@@ -253,8 +246,8 @@ class SparseBFSSearcher(AnchorSearcher):
         self.device = resolve_device(device)
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().extra_repr()
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
         yield f"max_iter={self.max_iter}"
 
     @staticmethod
@@ -433,7 +426,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         self.use_tqdm = use_tqdm
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> Iterable[str]:  # noqa: D102
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield f"batch_size={self.batch_size}"
         yield f"use_tqdm={self.use_tqdm}"
         yield f"page_rank_kwargs={self.page_rank_kwargs}"
