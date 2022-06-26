@@ -1556,7 +1556,7 @@ class TensorTrainRepresentation(Representation):
                 \cdot \ldots
                 \cdot \mathbf{G}_k[r_k, i_k, j_k, 0]
 
-    with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times N_i \times R_i$ and $R_0 = R_d = 1$.
+    with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times m_i \times n_i \times R_i$ and $R_0 = R_d = 1$.
 
     Another variant in the paper used an assignment based on hierarchical topological clustering.
     """
@@ -1590,6 +1590,37 @@ class TensorTrainRepresentation(Representation):
         m_k = int(math.ceil(max_id ** (1 / num_cores)))
         n_k = int(math.ceil(numpy.prod(shape) ** (1 / num_cores)))
         return [m_k] * num_cores, [n_k] * num_cores
+
+    @staticmethod
+    def check_assignment(assignment: torch.Tensor, max_id: int, num_cores: int, ms: Sequence[int]):
+        """
+        Check that the assignment matches the other properties.
+
+        :param assignment: shape: (max_id, num_cores)
+            the assignment
+        :param max_id:
+            the number of representations
+        :param num_cores:
+            the number of tensor-train cores
+        :param ms:
+            the individual sizes $m_i$
+
+        :raises ValueError:
+            if the assignment is invalid
+        """
+        # check shape
+        if assignment.shape != (max_id, num_cores):
+            raise ValueError(
+                f"Invalid assignment. Expected shape (max_id, num_cores)={(max_id, num_cores)}, "
+                f"but got assignment.shape={assignment.shape}",
+            )
+        # check value range
+        low, high = assignment.min(dim=0).values, assignment.max(dim=0).values
+        if (low < 0).any() or (high >= torch.as_tensor(ms, dtype=torch.long)).any():
+            raise ValueError(
+                f"Invalid values inside assignment: ms={ms} vs. assignment.min(dim=0)={low} "
+                f"and assignment.max(dim=0)={high}",
+            )
 
     def __init__(
         self,
@@ -1642,20 +1673,7 @@ class TensorTrainRepresentation(Representation):
                 assignment[:, i] = ids % m_i
                 ids //= m_i
 
-        # verify assignment
-        if assignment.shape != (self.max_id, num_cores):
-            raise ValueError(
-                f"Invalid assignment. Expected shape (self.max_id, num_cores)={(self.max_id, num_cores)}, "
-                f"but got assignment.shape={assignment.shape}",
-            )
-
-        # TODO: better messages
-        max_m = assignment.max(dim=0).tolist()
-        for i, (m_i, max_m_i) in enumerate(zip(ms, max_m)):
-            if max_m_i >= m_i:
-                raise ValueError("Too large mi")
-        if assignment.min().item() < 0:
-            raise ValueError("Invalid mi")
+        self.check_assignment(assignment=assignment, max_id=self.max_id, num_cores=num_cores, ms=ms)
 
         # register buffer
         self.register_buffer(name="assignment", tensor=assignment)
