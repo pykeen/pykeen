@@ -13,9 +13,10 @@ from abc import ABC, abstractmethod
 from typing import Iterable, Optional, Sequence, Union
 
 import numpy
+import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from torch_ppr import page_rank
 
-from .utils import page_rank
 from ...triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ...typing import OneOrSequence
 from ...utils import ExtraReprMixin
@@ -187,9 +188,10 @@ class PageRankAnchorSelection(SingleSelection):
             yield f"{key}={value}"
 
     # docstr-coverage: inherited
+    @torch.inference_mode()
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # sort by decreasing page rank
-        return numpy.argsort(page_rank(edge_index=edge_index, **self.kwargs))[::-1]
+        return numpy.argsort(page_rank(edge_index=torch.as_tensor(edge_index), **self.kwargs).cpu().numpy())[::-1]
 
 
 class RandomAnchorSelection(SingleSelection):
