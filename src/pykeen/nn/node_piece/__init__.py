@@ -54,7 +54,14 @@ from .loader import (
     precomputed_tokenizer_loader_resolver,
 )
 from .representation import HashDiversityInfo, NodePieceRepresentation, TokenizationRepresentation
-from .tokenization import AnchorTokenizer, PrecomputedPoolTokenizer, RelationTokenizer, Tokenizer, tokenizer_resolver
+from .tokenization import (
+    AnchorTokenizer,
+    MetisAnchorTokenizer,
+    PrecomputedPoolTokenizer,
+    RelationTokenizer,
+    Tokenizer,
+    tokenizer_resolver,
+)
 
 __all__ = [
     # Anchor Searchers
@@ -77,6 +84,7 @@ __all__ = [
     "Tokenizer",
     "RelationTokenizer",
     "AnchorTokenizer",
+    "MetisAnchorTokenizer",
     "PrecomputedPoolTokenizer",
     # Token Loaders
     "precomputed_tokenizer_loader_resolver",

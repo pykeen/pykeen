@@ -152,6 +152,11 @@ class ConcatAggregationCombination(ConcatCombination):
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
         return self.aggregation(super().forward(xs=xs), dim=self.dim)
 
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"aggregation={self.aggregation}"
+
 
 class ComplexSeparatedCombination(Combination):
     """A combination for mixed complex & real representations."""

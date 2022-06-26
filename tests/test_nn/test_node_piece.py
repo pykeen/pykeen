@@ -130,6 +130,13 @@ class AnchorTokenizerTests(cases.TokenizerTestCase):
     cls = pykeen.nn.node_piece.AnchorTokenizer
 
 
+@require_torch_sparse
+class MetisAnchorTokenizerTests(cases.TokenizerTestCase):
+    """Tests for tokenization with anchor entities and metis."""
+
+    cls = pykeen.nn.node_piece.MetisAnchorTokenizer
+
+
 class PrecomputedPoolTokenizerTests(cases.TokenizerTestCase):
     """Tests for tokenization with precomputed token pools."""
 

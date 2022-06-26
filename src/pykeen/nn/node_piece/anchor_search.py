@@ -4,7 +4,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterable
+from typing import Iterable, Optional
 
 import numpy
 import scipy.sparse
@@ -14,6 +14,7 @@ from torch_ppr import page_rank
 from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjacency, prepare_x0
 from tqdm.auto import tqdm
 
+from .utils import ensure_num_entities
 from ...typing import DeviceHint
 from ...utils import ExtraReprMixin, format_relative_comparison, resolve_device
 
@@ -36,7 +37,9 @@ class AnchorSearcher(ExtraReprMixin, ABC):
     """A method for finding the closest anchors."""
 
     @abstractmethod
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:
         """
         Find the $k$ closest anchor nodes for each entity.
 
@@ -46,6 +49,8 @@ class AnchorSearcher(ExtraReprMixin, ABC):
             the selected anchor entity Ids
         :param k:
             the number of closest anchors to return
+        :param num_entities:
+            the number of entities
 
         :return: shape: (n, k), -1 <= res < a
             the Ids of the closest anchors
@@ -57,7 +62,9 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     """Find closest anchors using :class:`scipy.sparse.csgraph`."""
 
     # docstr-coverage: inherited
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
         adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index, dtype=torch.long)).coalesce()
         # convert to scipy sparse csr
@@ -70,9 +77,10 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             unweighted=True,
             indices=anchors,
         )
+        # TODO: padding for unreachable?
         # select anchor IDs with smallest distance
         return torch.as_tensor(
-            numpy.argpartition(distances, kth=min(k, distances.shape[0]), axis=0)[:k, :].T,
+            numpy.argpartition(distances, kth=min(k, distances.shape[0] - 1), axis=0)[:k, :].T,
             dtype=torch.long,
         )
 
@@ -95,20 +103,20 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         yield f"max_iter={self.max_iter}"
 
     @staticmethod
-    def create_adjacency(
-        edge_index: numpy.ndarray,
-    ) -> scipy.sparse.spmatrix:
+    def create_adjacency(edge_index: numpy.ndarray, num_entities: Optional[int] = None) -> scipy.sparse.spmatrix:
         """
         Create a sparse adjacency matrix from a given edge index.
 
         :param edge_index: shape: (2, m)
             the edge index
+        :param num_entities:
+            the number of entities. Can be inferred from `edge_index`
 
         :return: shape: (n, n)
             a square sparse adjacency matrix
         """
         # infer shape
-        num_entities = edge_index.max().item() + 1
+        num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
         # create adjacency matrix
         adjacency = scipy.sparse.coo_matrix(
             (
@@ -162,6 +170,8 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
         # the output
         pool = numpy.zeros(shape=(num_entities, num_anchors), dtype=bool)
+        # anchor nodes have themselves as a starting found anchor
+        pool[anchors] = numpy.eye(num_anchors, dtype=bool)
 
         # TODO: take all (q-1) hop neighbors before selecting from q-hop
         old_reachable = reachable
@@ -213,8 +223,10 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         return tokens
 
     # docstr-coverage: inherited
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        adjacency = self.create_adjacency(edge_index=edge_index)
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:  # noqa: D102
+        adjacency = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
         return self.select(pool=pool, k=k)
 
@@ -241,18 +253,20 @@ class SparseBFSSearcher(AnchorSearcher):
     @staticmethod
     def create_adjacency(
         edge_index: numpy.ndarray,
+        num_entities: Optional[int] = None,
     ) -> torch.tensor:
         """
         Create a sparse adjacency matrix (in the form of the edge list) from a given edge index.
 
         :param edge_index: shape: (2, m)
             the edge index
+        :param num_entities:
+            The number of entities. If not given, inferred from the edge index
 
         :return: shape: (2, 2m + n)
             edge list with inverse edges and self-loops
         """
-        # infer shape
-        num_entities = edge_index.max().item() + 1
+        num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
         edge_index = torch.as_tensor(edge_index, dtype=torch.long)
 
         # symmetric + self-loops
@@ -380,8 +394,10 @@ class SparseBFSSearcher(AnchorSearcher):
         return tokens
 
     # docstr-coverage: inherited
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        edge_list = self.create_adjacency(edge_index=edge_index)
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:  # noqa: D102
+        edge_list = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, edge_list=edge_list, max_iter=self.max_iter, k=k, device=self.device)
         return self.select(pool=pool, k=k)
 
@@ -443,11 +459,13 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         )
 
     # docstr-coverage: inherited
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        n = edge_index.max().item() + 1
-        result = numpy.full(shape=(n, k), fill_value=-1)
+    def __call__(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+    ) -> numpy.ndarray:  # noqa: D102
+        num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
+        result = numpy.full(shape=(num_entities, k), fill_value=-1)
         i = 0
-        for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors):
+        for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities):
             batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, k)
             result[i : i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).indices.cpu().numpy()
@@ -455,7 +473,9 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         return result
 
     @torch.inference_mode()
-    def _iter_ppr(self, edge_index: numpy.ndarray, anchors: numpy.ndarray) -> Iterable[torch.Tensor]:
+    def _iter_ppr(
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, num_entities: Optional[int] = None
+    ) -> Iterable[torch.Tensor]:
         """
         Yield batches of PPR values for each anchor from each entities' perspective.
 
@@ -463,13 +483,16 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             the edge index.
         :param anchors: shape: `(num_anchors,)`
             the anchor IDs.
+        :param num_entities:
+            The number of entities. Will be calculated on-the-fly if not given
 
         :yields: shape: (batch_size, num_anchors)
             batches of anchor PPRs.
         """
-        # TODO: use personalized_page_rank from torch_ppr?
         # prepare adjacency matrix only once
-        adj = prepare_page_rank_adjacency(edge_index=torch.as_tensor(edge_index, dtype=torch.long))
+        adj = prepare_page_rank_adjacency(
+            edge_index=torch.as_tensor(edge_index, dtype=torch.long), num_nodes=num_entities
+        )
         # prepare result
         n = adj.shape[0]
         # progress bar?
