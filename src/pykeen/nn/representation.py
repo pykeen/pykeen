@@ -36,6 +36,7 @@ from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOr
 from ..utils import (
     Bias,
     broadcast_upgrade_to_sequences,
+    ExtraReprMixin,
     clamp_norm,
     complex_normalize,
     get_edge_index,
@@ -66,7 +67,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Representation(nn.Module, ABC):
+class Representation(nn.Module, ExtraReprMixin, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -203,10 +204,6 @@ class Representation(nn.Module, ABC):
         if self.normalizer is not None:
             yield f"normalizer={self.normalizer}"
         # dropout & regularizer will appear automatically, since it is a nn.Module
-
-    # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        return ", ".join(self.iter_extra_repr())
 
     @property
     def device(self) -> torch.device:
