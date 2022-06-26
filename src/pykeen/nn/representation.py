@@ -1709,7 +1709,7 @@ class TensorTrainRepresentation(Representation):
         :param num_cores:
             the number of cores
 
-        :raise ValueError:
+        :raises ValueError:
             if any of the conditions is violated
         """
         if len(ms) != num_cores or len(ns) != num_cores:
