@@ -1688,7 +1688,7 @@ class TensorTrainRepresentation(Representation):
 
     @staticmethod
     def check_factors(ms: Sequence[int], ns: Sequence[int], max_id: int, shape: Tuple[int, ...], num_cores: int):
-        """
+        r"""
         Check whether the factors match the other parts.
 
         Verifies that
