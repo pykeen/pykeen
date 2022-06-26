@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from collections import ChainMap, Counter
 from typing import (
     Any,
+    Callable,
     ClassVar,
     Collection,
     Dict,
@@ -1014,78 +1015,82 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         with tempfile.TemporaryDirectory() as temp_directory:
             torch.save(self.instance, os.path.join(temp_directory, "model.pickle"))
 
-    def test_score_hrt(self) -> None:
-        """Test the model's ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
+    def _test_score(
+        self, score: Callable, columns: Union[Sequence[int], slice], shape: Tuple[int, ...], **kwargs
+    ) -> None:
+        """Test score functions."""
+        batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
         try:
-            scores = self.instance.score_hrt(batch, mode=self.mode)
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        self.assertEqual(scores.shape, (self.batch_size, 1))
-        self._check_scores(batch, scores)
-
-    def test_score_t(self) -> None:
-        """Test the model's ``score_t()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, :2].to(self.instance.device)
-        # assert batch comprises (head, relation) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_relations).all()
-        try:
-            scores = self.instance.score_t(batch, mode=self.mode)
+            scores = score(batch, mode=self.mode, **kwargs)
+        except ValueError as error:
+            raise SkipTest() from error
         except NotImplementedError:
-            self.fail(msg="score_t not yet implemented")
+            self.fail(msg=f"{score} not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
-        assert scores.shape == (self.batch_size, self.instance.num_entities)
-        self._check_scores(batch, scores)
-
-    def test_score_r(self) -> None:
-        """Test the model's ``score_r()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
-        # assert batch comprises (head, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch < self.factory.num_entities).all()
-        try:
-            scores = self.instance.score_r(batch, mode=self.mode)
-        except NotImplementedError:
-            self.fail(msg="score_r not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        if self.create_inverse_triples:
+        if score is self.instance.score_r and self.create_inverse_triples:
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
-            assert scores.shape == (self.batch_size, self.instance.num_relations)
+            self.assertTupleEqual(tuple(scores.shape), shape)
         self._check_scores(batch, scores)
+        # clear buffers for message passing models
+        self.instance.post_parameter_update()
+
+    def _test_score_multi(self, name: str, max_id: int, **kwargs):
+        """Test score functions with multi scoring."""
+        k = max_id // 2
+        for ids in (
+            torch.randperm(max_id)[:k],
+            torch.randint(max_id, size=(self.batch_size, k)),
+        ):
+            with self.subTest(shape=ids.shape):
+                self._test_score(shape=(self.batch_size, k), **kwargs, **{name: ids.to(device=self.instance.device)})
+
+    def test_score_hrt(self) -> None:
+        """Test the model's ``score_hrt()`` function."""
+        self._test_score(score=self.instance.score_hrt, columns=slice(None), shape=(self.batch_size, 1))
+
+    def test_score_t(self) -> None:
+        """Test the model's ``score_t()`` function."""
+        self._test_score(
+            score=self.instance.score_t, columns=slice(0, 2), shape=(self.batch_size, self.instance.num_entities)
+        )
+
+    def test_score_t_multi(self) -> None:
+        """Test the model's ``score_t()`` function with custom tail candidates."""
+        self._test_score_multi(
+            name="tails", max_id=self.factory.num_entities, score=self.instance.score_t, columns=slice(0, 2)
+        )
+
+    def test_score_r(self) -> None:
+        """Test the model's ``score_r()`` function."""
+        self._test_score(
+            score=self.instance.score_r,
+            columns=[0, 2],
+            shape=(self.batch_size, self.instance.num_relations),
+        )
+
+    def test_score_r_multi(self) -> None:
+        """Test the model's ``score_r()`` function with custom relation candidates."""
+        self._test_score_multi(
+            name="relations", max_id=self.factory.num_relations, score=self.instance.score_r, columns=[0, 2]
+        )
 
     def test_score_h(self) -> None:
         """Test the model's ``score_h()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_relations).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
-        try:
-            scores = self.instance.score_h(batch, mode=self.mode)
-        except NotImplementedError:
-            self.fail(msg="score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        assert scores.shape == (self.batch_size, self.instance.num_entities)
-        self._check_scores(batch, scores)
+        self._test_score(
+            score=self.instance.score_h, columns=slice(1, None), shape=(self.batch_size, self.instance.num_entities)
+        )
+
+    def test_score_h_multi(self) -> None:
+        """Test the model's ``score_h()`` function with custom head candidates."""
+        self._test_score_multi(
+            name="heads", max_id=self.factory.num_entities, score=self.instance.score_h, columns=slice(1, None)
+        )
 
     @pytest.mark.slow
     def test_train_slcwa(self) -> None:
