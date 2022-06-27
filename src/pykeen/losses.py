@@ -1467,30 +1467,26 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         # neg scores might be -inf for masked values -> get rid of those
         # mask = torch.isfinite(neg_scores)
         # neg_weights, neg_scores = neg_weights[mask], neg_scores[mask]
-        # create targets
-        return self._reduction_method(
-            torch.cat(
-                [
-                    neg_weights
-                    * functional.binary_cross_entropy_with_logits(
-                        neg_scores,
-                        apply_label_smoothing(
-                            torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities
-                        ),
-                        reduction="none",
-                    ),
-                    functional.binary_cross_entropy_with_logits(
-                        pos_scores,
-                        apply_label_smoothing(
-                            torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities
-                        ),
-                        reduction="none",
-                    ),
-                ],
-                dim=-1,
-            ).sum(dim=-1)
-            / neg_weights.sum(dim=-1)
+        # TODO: neg_scores may contain -inf from being filled from masking; is this a problem
+        neg_loss = functional.binary_cross_entropy_with_logits(
+            neg_scores,
+            apply_label_smoothing(torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities),
+            reduction="none",
         )
+        # note: this is a reduction along the softmax dim; since the weights are already normalized
+        #       to sum to one, we want a sum reduction here
+        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
+        neg_loss = self._reduction_method(neg_loss)
+        pos_loss = functional.binary_cross_entropy_with_logits(
+            pos_scores,
+            apply_label_smoothing(torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities),
+            reduction=self.reduction,
+        )
+        loss = pos_loss + neg_loss
+
+        if self._reduction_method is torch.mean:
+            loss = loss / 2.0
+        return loss
 
 
 @parse_docdata
