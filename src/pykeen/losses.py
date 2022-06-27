@@ -1427,8 +1427,11 @@ class NSSALoss(AdversarialLoss):
         # -w * log sigma(-(m + n)) - log sigma (m + p)
         # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
         # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
+        # TODO: neg_scores may contain -inf from being filled from masking; is this a problem
         neg_loss = functional.logsigmoid(-neg_scores - self.margin)
-        neg_loss = neg_weights * neg_loss
+        # note: this is a reduction along the softmax dim; since the weights are already normalized
+        #       to sum to one, we want a sum reduction here
+        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
         neg_loss = self._reduction_method(neg_loss)
         pos_loss = functional.logsigmoid(self.margin + pos_scores)
         pos_loss = self._reduction_method(pos_loss)
