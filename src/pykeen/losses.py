@@ -1462,20 +1462,31 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # neg scores might be -inf for masked values -> get rid of those
-        mask = torch.isfinite(neg_scores)
-        neg_weights, neg_scores = neg_weights[mask], neg_scores[mask]
+        # mask = torch.isfinite(neg_scores)
+        # neg_weights, neg_scores = neg_weights[mask], neg_scores[mask]
         # create targets
         return self._reduction_method(
-            neg_weights
-            * functional.binary_cross_entropy_with_logits(
-                neg_scores,
-                apply_label_smoothing(torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities),
-                reduction="none",
-            )
-        ) + functional.binary_cross_entropy_with_logits(
-            pos_scores,
-            apply_label_smoothing(torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities),
-            reduction=self.reduction,
+            torch.cat(
+                [
+                    neg_weights
+                    * functional.binary_cross_entropy_with_logits(
+                        neg_scores,
+                        apply_label_smoothing(
+                            torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities
+                        ),
+                        reduction="none",
+                    ),
+                    functional.binary_cross_entropy_with_logits(
+                        pos_scores,
+                        apply_label_smoothing(
+                            torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities
+                        ),
+                        reduction="none",
+                    ),
+                ],
+                dim=-1,
+            ).sum(dim=-1)
+            / neg_weights.sum(dim=-1)
         )
 
 
