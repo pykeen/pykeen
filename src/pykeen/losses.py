@@ -1436,10 +1436,6 @@ class NSSALoss(AdversarialLoss):
         pos_loss = functional.logsigmoid(self.margin + pos_scores)
         pos_loss = self._reduction_method(pos_loss)
         loss = -pos_loss - neg_loss
-
-        if self._reduction_method is torch.mean:
-            loss = loss / 2.0
-
         return loss
 
 
@@ -1483,9 +1479,6 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
             reduction=self.reduction,
         )
         loss = pos_loss + neg_loss
-
-        if self._reduction_method is torch.mean:
-            loss = loss / 2.0
         return loss
 
 
