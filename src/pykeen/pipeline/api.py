@@ -1377,6 +1377,7 @@ def pipeline(  # noqa: C901
     _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
         step=step,
+        prefix="testing" if use_testing_data else "validation",
     )
     _result_tracker.end_run()
 
