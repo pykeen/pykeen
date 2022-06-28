@@ -1309,7 +1309,7 @@ class AdversarialLoss(SetwiseLoss):
         positive_scores = predictions[pos_mask]
         negative_scores = predictions[~pos_mask]
 
-        return self.factor * self(
+        return self(
             pos_scores=positive_scores,
             neg_scores=negative_scores,
             neg_weights=weights[~pos_mask],
@@ -1341,7 +1341,7 @@ class AdversarialLoss(SetwiseLoss):
         assert negative_scores.ndimension() == 2
         weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
-        return self.factor * self(
+        return self(
             pos_scores=positive_scores,
             neg_scores=negative_scores,
             neg_weights=weights,
@@ -1429,7 +1429,7 @@ class AdversarialLoss(SetwiseLoss):
         neg_loss = -self._reduction_method(neg_loss)
 
         # combine
-        return (
+        return self.factor * (
             self.positive_loss_term(pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities)
             + neg_loss
         )
