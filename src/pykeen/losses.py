@@ -1375,6 +1375,7 @@ class AdversarialLoss(SetwiseLoss):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def negative_loss_term_unreduced(
         self,
         neg_scores: torch.FloatTensor,
