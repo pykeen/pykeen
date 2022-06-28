@@ -1307,12 +1307,13 @@ class AdversarialLoss(SetwiseLoss):
 
         # Split positive and negative scores
         positive_scores = predictions[pos_mask]
-        negative_scores = predictions[~pos_mask]
+        # we pass *all* scores as negatives, but set the weight of positives to zero
+        # this allows keeping a dense shape
 
         return self(
             pos_scores=positive_scores,
-            neg_scores=negative_scores,
-            neg_weights=weights[~pos_mask],
+            neg_scores=predictions,
+            neg_weights=weights,
             label_smoothing=label_smoothing,
             num_entities=num_entities,
         )
@@ -1340,6 +1341,10 @@ class AdversarialLoss(SetwiseLoss):
         # compute weights (without gradient tracking)
         assert negative_scores.ndimension() == 2
         weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
+
+        # fill negative scores with some finite value, e.g., 0 (they will get masked out anyway)
+        mask = torch.isfinite(negative_scores)
+        negative_scores[mask] = 0.0
 
         return self(
             pos_scores=positive_scores,
@@ -1416,10 +1421,6 @@ class AdversarialLoss(SetwiseLoss):
         :returns:
             a scalar loss value
         """
-        # Sanity check
-        if label_smoothing:
-            raise UnsupportedLabelSmoothingError(self)
-        # TODO: neg_scores may contain -inf from being filled from masking; is this a problem
         neg_loss = self.negative_loss_term_unreduced(
             neg_scores=neg_scores, label_smoothing=label_smoothing, num_entities=num_entities
         )
@@ -1496,7 +1497,6 @@ class NSSALoss(AdversarialLoss):
         # -w * log sigma(-(m + n)) - log sigma (m + p)
         # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
         # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
-        # TODO: neg_scores may contain -inf from being filled from masking; is this a problem
         return functional.logsigmoid(-neg_scores - self.margin)
 
 
@@ -1533,10 +1533,6 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # negative loss part
-        # neg scores might be -inf for masked values -> get rid of those
-        # mask = torch.isfinite(neg_scores)
-        # neg_weights, neg_scores = neg_weights[mask], neg_scores[mask]
         return functional.binary_cross_entropy_with_logits(
             neg_scores,
             # TODO: maybe we can make this more efficient?
