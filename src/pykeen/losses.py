@@ -1424,6 +1424,7 @@ class NSSALoss(AdversarialLoss):
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
+        # negative loss part
         # -w * log sigma(-(m + n)) - log sigma (m + p)
         # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
         # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
@@ -1432,11 +1433,14 @@ class NSSALoss(AdversarialLoss):
         # note: this is a reduction along the softmax dim; since the weights are already normalized
         #       to sum to one, we want a sum reduction here
         neg_loss = (neg_weights * neg_loss).sum(dim=-1)
-        neg_loss = self._reduction_method(neg_loss)
+        neg_loss = -self._reduction_method(neg_loss)
+
+        # positive loss part
         pos_loss = functional.logsigmoid(self.margin + pos_scores)
-        pos_loss = self._reduction_method(pos_loss)
-        loss = -pos_loss - neg_loss
-        return loss
+        pos_loss = -self._reduction_method(pos_loss)
+
+        # combine
+        return pos_loss + neg_loss
 
 
 @parse_docdata
@@ -1460,6 +1464,7 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # negative loss part
         # neg scores might be -inf for masked values -> get rid of those
         # mask = torch.isfinite(neg_scores)
         # neg_weights, neg_scores = neg_weights[mask], neg_scores[mask]
@@ -1473,13 +1478,16 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         #       to sum to one, we want a sum reduction here
         neg_loss = (neg_weights * neg_loss).sum(dim=-1)
         neg_loss = self._reduction_method(neg_loss)
+
+        # positive loss part
         pos_loss = functional.binary_cross_entropy_with_logits(
             pos_scores,
             apply_label_smoothing(torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities),
             reduction=self.reduction,
         )
-        loss = pos_loss + neg_loss
-        return loss
+
+        # combine
+        return pos_loss + neg_loss
 
 
 @parse_docdata
