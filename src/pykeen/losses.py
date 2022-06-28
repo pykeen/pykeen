@@ -1425,15 +1425,15 @@ class AdversarialLoss(SetwiseLoss):
             neg_scores=neg_scores, label_smoothing=label_smoothing, num_entities=num_entities
         )
         # note: this is a reduction along the softmax dim; since the weights are already normalized
-        #       to sum to one, we want a sum reduction here
+        #       to sum to one, we want a sum reduction here, instead of using the self._reduction
         neg_loss = (neg_weights * neg_loss).sum(dim=-1)
         neg_loss = -self._reduction_method(neg_loss)
 
-        # combine
-        return self.factor * (
-            self.positive_loss_term(pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities)
-            + neg_loss
+        pos_loss = self.positive_loss_term(
+            pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities
         )
+
+        return self.factor * (pos_loss + neg_loss)
 
 
 @parse_docdata
