@@ -1392,7 +1392,6 @@ class AdversarialLoss(SetwiseLoss):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def forward(
         self,
         pos_scores: torch.FloatTensor,
@@ -1417,7 +1416,23 @@ class AdversarialLoss(SetwiseLoss):
         :returns:
             a scalar loss value
         """
-        raise NotImplementedError
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+        # TODO: neg_scores may contain -inf from being filled from masking; is this a problem
+        neg_loss = self.negative_loss_term_unreduced(
+            neg_scores=neg_scores, label_smoothing=label_smoothing, num_entities=num_entities
+        )
+        # note: this is a reduction along the softmax dim; since the weights are already normalized
+        #       to sum to one, we want a sum reduction here
+        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
+        neg_loss = -self._reduction_method(neg_loss)
+
+        # combine
+        return (
+            self.positive_loss_term(pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities)
+            + neg_loss
+        )
 
 
 @parse_docdata
@@ -1484,33 +1499,6 @@ class NSSALoss(AdversarialLoss):
         # TODO: neg_scores may contain -inf from being filled from masking; is this a problem
         return functional.logsigmoid(-neg_scores - self.margin)
 
-    # docstr-coverage: inherited
-    def forward(
-        self,
-        pos_scores: torch.FloatTensor,
-        neg_scores: torch.FloatTensor,
-        neg_weights: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # Sanity check
-        if label_smoothing:
-            raise UnsupportedLabelSmoothingError(self)
-        # TODO: neg_scores may contain -inf from being filled from masking; is this a problem
-        neg_loss = self.negative_loss_term_unreduced(
-            neg_scores=neg_scores, label_smoothing=label_smoothing, num_entities=num_entities
-        )
-        # note: this is a reduction along the softmax dim; since the weights are already normalized
-        #       to sum to one, we want a sum reduction here
-        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
-        neg_loss = -self._reduction_method(neg_loss)
-
-        # combine
-        return (
-            self.positive_loss_term(pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities)
-            + neg_loss
-        )
-
 
 @parse_docdata
 class AdversarialBCEWithLogitsLoss(AdversarialLoss):
@@ -1554,30 +1542,6 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
             # TODO: maybe we can make this more efficient?
             apply_label_smoothing(torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities),
             reduction="none",
-        )
-
-    # docstr-coverage: inherited
-    def forward(
-        self,
-        pos_scores: torch.FloatTensor,
-        neg_scores: torch.FloatTensor,
-        neg_weights: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # TODO: neg_scores may contain -inf from being filled from masking; is this a problem
-        neg_loss = self.negative_loss_term_unreduced(
-            neg_scores=neg_scores, label_smoothing=label_smoothing, num_entities=num_entities
-        )
-        # note: this is a reduction along the softmax dim; since the weights are already normalized
-        #       to sum to one, we want a sum reduction here
-        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
-        neg_loss = self._reduction_method(neg_loss)
-
-        # combine
-        return (
-            self.positive_loss_term(pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities)
-            + neg_loss
         )
 
 
