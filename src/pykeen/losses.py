@@ -1427,7 +1427,7 @@ class AdversarialLoss(SetwiseLoss):
         # note: this is a reduction along the softmax dim; since the weights are already normalized
         #       to sum to one, we want a sum reduction here, instead of using the self._reduction
         neg_loss = (neg_weights * neg_loss).sum(dim=-1)
-        neg_loss = -self._reduction_method(neg_loss)
+        neg_loss = self._reduction_method(neg_loss)
 
         pos_loss = self.positive_loss_term(
             pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities
@@ -1497,7 +1497,7 @@ class NSSALoss(AdversarialLoss):
         # -w * log sigma(-(m + n)) - log sigma (m + p)
         # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
         # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
-        return functional.logsigmoid(-neg_scores - self.margin)
+        return -functional.logsigmoid(-neg_scores - self.margin)
 
 
 @parse_docdata
