@@ -1343,8 +1343,7 @@ class AdversarialLoss(SetwiseLoss):
         weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
         # fill negative scores with some finite value, e.g., 0 (they will get masked out anyway)
-        mask = torch.isfinite(negative_scores)
-        negative_scores[mask] = 0.0
+        negative_scores = torch.masked_fill(negative_scores, mask=~torch.isfinite(negative_scores), value=0.0)
 
         return self(
             pos_scores=positive_scores,
