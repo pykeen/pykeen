@@ -33,3 +33,15 @@ body:
       description: Add any other information about the problem here.
     validations:
       required: false
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Issue Template Checks
+      description: By submitting this issue, you declare that you checked the following things
+      options:
+        - label: This is not a feature request (use a different issue template if it is)
+          required: true
+        - label: This is not a question (use the [discussions](https://github.com/pykeen/pykeen/discussions/new) forum instead)
+          required: true
+        - label: I've read the text explaining why including environment information is important and understand if I omit this information that my issue will be dismissed
+          required: true
