@@ -685,11 +685,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     self.lr_scheduler.step(epoch=epoch)
 
                 # Track epoch loss
-                if self.model.loss.reduction == "mean":
-                    epoch_loss = current_epoch_loss / num_training_instances
-                else:
-                    epoch_loss = current_epoch_loss / len(train_data_loader)
-                self.losses_per_epochs.append(epoch_loss)
+                # note: this epoch loss can be slightly biased towards the last batch, if this is smaller than the rest
+                #        in practice, this should have a minor effect, since typically batch_size << num_instances
+                self.losses_per_epochs.append(current_epoch_loss / len(train_data_loader))
 
                 # Print loss information to console
                 if _use_outer_tqdm:
