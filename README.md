@@ -386,6 +386,9 @@ at https://github.com/pykeen/benchmarking.
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated.
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
 
+If you have questions, please use the GitHub discussions feature at
+https://github.com/pykeen/pykeen/discussions/new.
+
 ## Acknowledgements
 
 ### Supporters
