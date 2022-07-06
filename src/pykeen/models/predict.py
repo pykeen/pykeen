@@ -115,6 +115,7 @@ def _get_input_batch(
     return target, batch, (batch_ids[0], batch_ids[1])
 
 
+@torch.inference_mode()
 def get_prediction_df(
     model: Model,
     triples_factory: TriplesFactory,
@@ -179,8 +180,7 @@ def get_prediction_df(
     )
 
     # get scores
-    with torch.no_grad():
-        scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
+    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
 
     # create raw dataframe
     rv = pd.DataFrame(
