@@ -115,6 +115,7 @@ def _get_input_batch(
     return target, batch, (batch_ids[0], batch_ids[1])
 
 
+@torch.inference_mode()
 def get_prediction_df(
     model: Model,
     triples_factory: TriplesFactory,
