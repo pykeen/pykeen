@@ -387,7 +387,7 @@ class CoreTriplesFactory(KGInfo):
 
     def __init__(
         self,
-        mapped_triples: MappedTriples,
+        mapped_triples: Union[MappedTriples, np.ndarray],
         num_entities: int,
         num_relations: int,
         create_inverse_triples: bool = False,
@@ -412,7 +412,7 @@ class CoreTriplesFactory(KGInfo):
             num_relations=num_relations,
             create_inverse_triples=create_inverse_triples,
         )
-        self.mapped_triples = mapped_triples
+        self.mapped_triples = torch.as_tensor(mapped_triples, dtype=torch.long)
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
