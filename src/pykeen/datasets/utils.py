@@ -197,6 +197,9 @@ def _cached_get_dataset(
     """Get dataset by name, potentially using file-based cache."""
     from . import dataset_resolver
 
+    # enable passing force option via dataset_kwargs
+    force = force or dataset_kwargs.pop("force", False)
+
     # hash kwargs
     dataset_kwargs = dataset_kwargs or {}
     digest = _digest_kwargs(dataset_kwargs, ignore={"create_inverse_triples"})
