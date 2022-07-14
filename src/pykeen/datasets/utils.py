@@ -8,6 +8,7 @@ import logging
 import pathlib
 import re
 from typing import Any, Collection, Iterable, Mapping, Optional, Pattern, Tuple, Type, Union
+import warnings
 
 import click
 from tqdm import tqdm
@@ -186,6 +187,11 @@ def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: boo
     if create_inverse_triples and not dataset_instance.training.create_inverse_triples:
         dataset_instance.training.num_relations *= 2
     elif not create_inverse_triples and dataset_instance.create_inverse_triples:
+        warnings.warn(
+            "Triples factory has been serialized with create_inverse_triples=True. This is deprecated behaviour, and "
+            "might result is errors in the future. Please discard the cached file and let PyKEEN regenerate it.",
+            DeprecationWarning,
+        )
         assert dataset_instance.training.num_relations % 2 == 0
         dataset_instance.training.num_relations //= 2
     dataset_instance.training.create_inverse_triples = create_inverse_triples

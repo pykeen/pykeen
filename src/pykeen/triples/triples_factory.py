@@ -846,7 +846,7 @@ class CoreTriplesFactory(KGInfo):
         return dict(
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=False,
             metadata=self.metadata,
         )
 
