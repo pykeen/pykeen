@@ -184,16 +184,11 @@ def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = 
 
 def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: bool) -> Dataset:
     # note: we only need to set the create_inverse_triples in the training factory.
-    if create_inverse_triples and not dataset_instance.training.create_inverse_triples:
-        dataset_instance.training.num_relations *= 2
-    elif not create_inverse_triples and dataset_instance.create_inverse_triples:
-        warnings.warn(
-            "Triples factory has been serialized with create_inverse_triples=True. This is deprecated behaviour, and "
-            "might result is errors in the future. Please discard the cached file and let PyKEEN regenerate it.",
-            DeprecationWarning,
-        )
+    if dataset_instance.create_inverse_triples and not create_inverse_triples:
         assert dataset_instance.training.num_relations % 2 == 0
         dataset_instance.training.num_relations //= 2
+    elif create_inverse_triples and not dataset_instance.training.create_inverse_triples:
+        dataset_instance.training.num_relations *= 2
     dataset_instance.training.create_inverse_triples = create_inverse_triples
     return dataset_instance
 
