@@ -8,7 +8,6 @@ import logging
 import pathlib
 import re
 from typing import Any, Collection, Iterable, Mapping, Optional, Pattern, Tuple, Type, Union
-import warnings
 
 import click
 from tqdm import tqdm
