@@ -6,22 +6,22 @@ import itertools as itt
 import os
 import tempfile
 import unittest
-from pathlib import Path
-from typing import Collection, Optional, Tuple, Type
 from contextlib import nullcontext as does_not_raise
+from pathlib import Path
+from typing import Collection, Optional, Tuple
 from unittest.mock import patch
-import pytest
 
 import numpy as np
+import pytest
 import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
+from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
-from pykeen.triples.generation import generate_triples
 from tests.constants import RESOURCES
 
 triples = np.array(
