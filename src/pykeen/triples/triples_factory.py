@@ -418,7 +418,7 @@ class CoreTriplesFactory(KGInfo):
         if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
             raise ValueError(f"Invalid shape for mapped_triples: {mapped_triples.shape}; must be (n, 3)")
         if mapped_triples.is_complex() or mapped_triples.is_floating_point():
-            raise ValueError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
+            raise TypeError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
         # always store as torch.long, i.e., torch's default integer dtype
         self.mapped_triples = mapped_triples.to(dtype=torch.long)
         if metadata is None:
