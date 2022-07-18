@@ -406,6 +406,11 @@ class CoreTriplesFactory(KGInfo):
             Whether to create inverse triples.
         :param metadata:
             Arbitrary metadata to go with the graph
+
+        :raises TypeError:
+            if the mapped_triples are of non-integer dtype
+        :raises ValueError:
+            if the mapped_triples are of invalid shape
         """
         super().__init__(
             num_entities=num_entities,
