@@ -18,7 +18,6 @@ import torch
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
