@@ -535,3 +535,99 @@ shows even better results in inductive LP tasks. We have that
 implemented with :class:`pykeen.models.InductiveNodePieceGNN` that uses
 a 2-layer `CompGCN <https://arxiv.org/abs/1911.03082>`_ encoder - please
 check the Inductive Link Prediction tutorial.
+
+***********************************
+ Tokenizing Large Graphs with METIS
+***********************************
+
+Mining anchors and running tokenization on whole graphs larger than 1M nodes
+might be computationally expensive. Due to the inherent locality of
+NodePiece, i.e., tokenization via nearest anchors and incident relations,
+we recommend using graph partitioning to reduce time and memory costs of
+tokenization. With graph partitioning, anchor search and tokenization can
+be performed independently within each partition with a final merging of
+all results into a single vocabulary.
+
+We designed the partitioning tokenization strategy using
+`METIS <https://en.wikipedia.org/wiki/METIS>`_, a min-cut graph partitioning algorithm
+with an efficient implementation available in `torch-sparse <https://github.com/rusty1s/pytorch_sparse>`_.
+Along with METIS, we leverage `torch-sparse` to offer a new, faster BFS
+procedure that can run on a GPU.
+
+The main tokenizer class is :class:`pykeen.nn.node_piece.MetisAnchorTokenizer`.
+You can place it instead of the vanilla ``AnchorTokenizer``.
+With the Metis-based tokenizer, we first partition the input training graph
+into `k` separate partitions and then run anchor selection and anchor search
+sequentially and independently **for each partition**.
+
+You can use any existing anchor selection and anchor search strategy described above
+although for larger graphs we recommend using a new :class:`pykeen.nn.node_piece.SparseBFSSearcher`
+as anchor searcher -- it implements faster sparse matrix multiplication kernels and can be run on a GPU.
+The only difference from the vanilla tokenizer is that now the ``num_anchors``
+argument defines how many anchors will be mined **for each partition**.
+
+The new tokenizer has two special arguments:
+
+-   ``num_partitions`` - number of partitions the graph will be divided into.
+    You can expect METIS to produce partitions of about the same size, e.g.,
+    ``num_partitions=10`` for a graph of 1M nodes would produce 10 partitions
+    with about 100K nodes in each. The total number of mined anchors will
+    be ``num_partitions * num_anchors``
+
+-   ``device`` - the device to run METIS on. It can be different from the device
+    on which an ``AnchorSearcher`` will run. We found ``device="cpu"`` works
+    faster on larger graphs and does not require limited GPU memory,
+    although you can keep the device to be resolved automatically or put
+    ``device="cuda"`` to try running it on a GPU.
+
+It is still advisable to run large graph tokenization using :class:`pykeen.nn.node_piece.SparseBFSSearcher`
+on a GPU thanks to more efficient sparse CUDA kernels. If a GPU is available, it will
+be used automatically by default.
+
+Let's use the new tokenizer for the Wikidata5M graph of 5M nodes and 20M edges.
+
+.. code:: python
+
+    from pykeen.datasets import Wikidata5M
+
+    dataset = Wikidata5M(create_inverse_triples=True)
+
+    model = NodePiece(
+        triples_factory=dataset.training,
+        tokenizers=["MetisAnchorTokenizer", "RelationTokenizer"],
+        num_tokens=[20, 12],  # 20 anchors per node in for the Metis strategy
+        embedding_dim=64,
+        interaction="rotate",
+        tokenizers_kwargs=[
+            dict(
+                num_partitions=20,  # each partition will be of about 5M / 20 = 250K nodes
+                device="cpu",  # METIS on cpu tends to be faster
+                selection="MixtureAnchorSelection",  # we can use any anchor selection strategy here
+                selection_kwargs=dict(
+                    selections=['degree', 'random'],
+                    ratios=[0.5, 0.5],
+                    num_anchors=1000,  # overall, we will have 20 * 1000 = 20000 anchors
+                ),
+                searcher="SparseBFSSearcher",  # a new efficient anchor searcher
+                searcher_kwargs=dict(
+                    max_iter=5  # each node will be tokenized with anchors in the 5-hop neighborhood
+                )
+            ),
+            dict()
+        ],
+        aggregation="mlp"
+    )
+
+    # we can save the vocabulary of tokenized nodes
+    from pathlib import Path
+    model.entity_representations[0].base[0].save_assignment(Path("./anchors_assignment.pt"))
+
+On a machine with 32 GB RAM and 32 GB GPU, processing of Wikidata5M takes about 10 minutes:
+
+*   ~ 3 min for partitioning into 20 clusters on a cpu;
+*   ~ 7 min overall for anchor selection and search in each partition
+
+**How many partitions do I need for my graph?**
+
+It largely depends on the hardware and memory at hand, but
+as a rule of thumb we would recommend having partitions of size < 500K nodes each
