@@ -604,8 +604,8 @@ Let's use the new tokenizer for the Wikidata5M graph of 5M nodes and 20M edges.
                 device="cpu",  # METIS on cpu tends to be faster
                 selection="MixtureAnchorSelection",  # we can use any anchor selection strategy here
                 selection_kwargs=dict(
-                    selections=['degree', 'pagerank', 'random'],
-                    ratios=[0.4, 0.4, 0.2],
+                    selections=['degree', 'random'],
+                    ratios=[0.5, 0.5],
                     num_anchors=1000,  # overall, we will have 20 * 1000 = 20000 anchors
                 ),
                 searcher="SparseBFSSearcher",  # a new efficient anchor searcher
