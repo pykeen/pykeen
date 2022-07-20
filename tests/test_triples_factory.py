@@ -407,7 +407,7 @@ class TestLiterals(unittest.TestCase):
         relations_ids = t.relations_to_ids(relations=relations)
         self.assertEqual(v.metadata, dict(path=NATIONS_TRAIN_PATH, relation_restriction=relations_ids))
 
-        w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
+        w = t.clone_and_exchange_triples(t.mapped_triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
         self.assertEqual(w.metadata, dict())
 
