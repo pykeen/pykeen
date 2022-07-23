@@ -6,11 +6,13 @@ import itertools as itt
 import os
 import tempfile
 import unittest
+from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Collection, Optional
+from typing import Collection, Optional, Tuple
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
@@ -405,7 +407,7 @@ class TestLiterals(unittest.TestCase):
         relations_ids = t.relations_to_ids(relations=relations)
         self.assertEqual(v.metadata, dict(path=NATIONS_TRAIN_PATH, relation_restriction=relations_ids))
 
-        w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
+        w = t.clone_and_exchange_triples(t.mapped_triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
         self.assertEqual(w.metadata, dict())
 
@@ -517,4 +519,31 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(
             tf1.mapped_triples.detach().cpu().numpy().tolist(),
             tf2.mapped_triples.detach().cpu().numpy().tolist(),
+        )
+
+
+# cf. https://docs.pytest.org/en/7.1.x/example/parametrize.html#parametrizing-conditional-raising
+@pytest.mark.parametrize(
+    ["dtype", "size", "expectation"],
+    [
+        # wrong ndim
+        (torch.long, (3,), pytest.raises(ValueError)),
+        # wrong last dim
+        (torch.long, (3, 11), pytest.raises(ValueError)),
+        # wrong dtype: float
+        (torch.float, (11, 3), pytest.raises(TypeError)),
+        # wrong dtype: complex
+        (torch.cfloat, (11, 3), pytest.raises(TypeError)),
+        # correct
+        (torch.long, (11, 3), does_not_raise()),
+        (torch.long, (0, 3), does_not_raise()),
+        (torch.uint8, (11, 3), does_not_raise()),
+        (torch.bool, (11, 3), does_not_raise()),
+    ],
+)
+def test_core_triples_factory_error_handling(dtype: torch.dtype, size: Tuple[int, ...], expectation):
+    """Test error handling in init method of CoreTriplesFactory."""
+    with expectation:
+        CoreTriplesFactory(
+            mapped_triples=torch.randint(33, size=size).to(dtype=dtype), num_entities=..., num_relations=...
         )

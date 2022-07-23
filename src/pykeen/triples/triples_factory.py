@@ -387,7 +387,7 @@ class CoreTriplesFactory(KGInfo):
 
     def __init__(
         self,
-        mapped_triples: MappedTriples,
+        mapped_triples: Union[MappedTriples, np.ndarray],
         num_entities: int,
         num_relations: int,
         create_inverse_triples: bool = False,
@@ -406,13 +406,26 @@ class CoreTriplesFactory(KGInfo):
             Whether to create inverse triples.
         :param metadata:
             Arbitrary metadata to go with the graph
+
+        :raises TypeError:
+            if the mapped_triples are of non-integer dtype
+        :raises ValueError:
+            if the mapped_triples are of invalid shape
         """
         super().__init__(
             num_entities=num_entities,
             num_relations=num_relations,
             create_inverse_triples=create_inverse_triples,
         )
-        self.mapped_triples = mapped_triples
+        # ensure torch.Tensor
+        mapped_triples = torch.as_tensor(mapped_triples)
+        # input validation
+        if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
+            raise ValueError(f"Invalid shape for mapped_triples: {mapped_triples.shape}; must be (n, 3)")
+        if mapped_triples.is_complex() or mapped_triples.is_floating_point():
+            raise TypeError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
+        # always store as torch.long, i.e., torch's default integer dtype
+        self.mapped_triples = mapped_triples.to(dtype=torch.long)
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
