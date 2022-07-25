@@ -1456,7 +1456,7 @@ def _safe_evaluate(
                     "Will revert to using the CPU for evaluation, which will increase the evaluation time "
                     "significantly.",
                 )
-                model.to_cpu_()
+                model.cpu()
         else:
             break  # evaluation was successful, don't continue the ``while True`` loop
 
