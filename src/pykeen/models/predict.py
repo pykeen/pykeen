@@ -196,7 +196,7 @@ class SinglePredictionPostProcessor(PredictionPostProcessor):
 
         :param target:
             the prediction target
-        :param other_column_fixed_ids:
+        :param other_columns_fixed_ids:
             the fixed IDs for the other columns
 
         :param kwargs:
@@ -227,10 +227,15 @@ class AllPredictionPostProcessor(PredictionPostProcessor):
     """Post-processor for all-triples predictions."""
 
     # docstr-coverage: inherited
-    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples) -> numpy.ndarray:  # noqa: D102
+    def _contains(
+        self, df: pd.DataFrame, mapped_triples: MappedTriples, inverse: bool = False
+    ) -> numpy.ndarray:  # noqa: D102
         known = triple_tensor_to_set(mapped_triples)
-        query = df[[f"{target}_id" for target, _ in sorted(TARGET_TO_INDEX, key=itemgetter(1))]].values
-        return numpy.asarray([tuple(triple) not in known for triple in query], dtype=bool)
+        query = df[[f"{target}_id" for target, _ in sorted(TARGET_TO_INDEX.items(), key=itemgetter(1))]].values
+        r = numpy.asarray([tuple(triple) not in known for triple in query], dtype=bool)
+        if not inverse:
+            return r
+        return ~r
 
 
 @torch.inference_mode()
