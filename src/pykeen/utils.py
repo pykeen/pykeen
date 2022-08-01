@@ -180,6 +180,10 @@ def get_preferred_device(module: nn.Module, allow_ambiguity: bool = True) -> tor
     """Return the preferred device."""
     devices = get_devices(module=module)
     if len(devices) == 0:
+        if allow_ambiguity:
+            device = resolve_device(device=None)
+            logger.warning(f"Neither parameters nor buffers available; Guessed device={device}")
+            return device
         raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
     if len(devices) == 1:
         return next(iter(devices))
