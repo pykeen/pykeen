@@ -17,7 +17,7 @@ import pykeen.models
 from pykeen.datasets.nations import Nations
 from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
+from pykeen.models.predict import get_all_prediction_df, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
@@ -761,24 +761,6 @@ def _remove_non_models(elements: Iterable[Union[str, Type[Model]]]) -> Set[Type[
 
 class TestModelUtilities(unittest.TestCase):
     """Extra tests for utility functions."""
-
-    def test_get_novelty_mask(self):
-        """Test `get_novelty_mask()`."""
-        num_triples = 7
-        base = torch.arange(num_triples)
-        mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
-        query_ids = torch.randperm(num_triples).numpy()[: num_triples // 2]
-        exp_novel = query_ids != 0
-        col = 2
-        other_col_ids = numpy.asarray([0, 0])
-        mask = get_novelty_mask(
-            mapped_triples=mapped_triples,
-            query_ids=query_ids,
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-        assert mask.shape == query_ids.shape
-        assert (mask == exp_novel).all()
 
     def test_extend_batch(self):
         """Test `_extend_batch()`."""
