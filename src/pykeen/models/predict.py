@@ -188,16 +188,23 @@ def get_prediction_df(
         columns=[f"{target}_id", f"{target}_label", "score"],
     ).sort_values("score", ascending=False)
 
-    return _postprocess_prediction_df(
-        df=rv,
-        add_novelties=add_novelties,
-        remove_known=remove_known,
-        training=triples_factory.mapped_triples,
-        testing=testing,
-        query_ids_key=f"{target}_id",
-        col=TARGET_TO_INDEX[target],
-        other_col_ids=other_col_ids,
-    )
+    # postprocess prediction df
+    if add_novelties or remove_known:
+        rv["in_training"] = ~get_novelty_mask(
+            mapped_triples=triples_factory.mapped_triples,
+            query_ids=rv[f"{target}_id"],
+            col=TARGET_TO_INDEX[target],
+            other_col_ids=other_col_ids,
+        )
+
+    if add_novelties and testing is not None:
+        rv["in_testing"] = ~get_novelty_mask(
+            mapped_triples=testing,
+            query_ids=rv[f"{target}_id"],
+            col=TARGET_TO_INDEX[target],
+            other_col_ids=other_col_ids,
+        )
+    return _process_remove_known(rv, remove_known, testing)
 
 
 def get_head_prediction_df(
@@ -418,13 +425,21 @@ def get_all_prediction_df(
         return score_pack
 
     df = triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores)
-    return _postprocess_prediction_all_df(
-        df=df,
-        add_novelties=add_novelties,
-        remove_known=remove_known,
-        training=triples_factory.mapped_triples,
-        testing=testing,
-    )
+
+    # post-process
+    if add_novelties or remove_known:
+        assert triples_factory.mapped_triples is not None
+        df["in_training"] = ~get_novelty_all_mask(
+            mapped_triples=triples_factory.mapped_triples,
+            query=df[["head_id", "relation_id", "tail_id"]].values,
+        )
+    if add_novelties and testing is not None:
+        assert testing is not None
+        df["in_testing"] = ~get_novelty_all_mask(
+            mapped_triples=testing,
+            query=df[["head_id", "relation_id", "tail_id"]].values,
+        )
+    return _process_remove_known(df, remove_known, testing)
 
 
 def predict(
@@ -666,57 +681,6 @@ def _build_pack(result: torch.LongTensor, scores: torch.FloatTensor, flatten: bo
     scores, indices = torch.sort(scores.flatten() if flatten else scores, descending=True)
     result = result[indices]
     return ScorePack(result=result, scores=scores)
-
-
-def _postprocess_prediction_df(
-    df: pd.DataFrame,
-    *,
-    col: int,
-    add_novelties: bool,
-    remove_known: bool,
-    training: Optional[torch.LongTensor],
-    testing: Optional[torch.LongTensor],
-    query_ids_key: str,
-    other_col_ids: Tuple[int, int],
-) -> pd.DataFrame:
-    if add_novelties or remove_known:
-        df["in_training"] = ~get_novelty_mask(
-            mapped_triples=training,
-            query_ids=df[query_ids_key],
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-    if add_novelties and testing is not None:
-        df["in_testing"] = ~get_novelty_mask(
-            mapped_triples=testing,
-            query_ids=df[query_ids_key],
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-    return _process_remove_known(df, remove_known, testing)
-
-
-def _postprocess_prediction_all_df(
-    df: pd.DataFrame,
-    *,
-    add_novelties: bool,
-    remove_known: bool,
-    training: Optional[torch.LongTensor],
-    testing: Optional[torch.LongTensor],
-) -> pd.DataFrame:
-    if add_novelties or remove_known:
-        assert training is not None
-        df["in_training"] = ~get_novelty_all_mask(
-            mapped_triples=training,
-            query=df[["head_id", "relation_id", "tail_id"]].values,
-        )
-    if add_novelties and testing is not None:
-        assert testing is not None
-        df["in_testing"] = ~get_novelty_all_mask(
-            mapped_triples=testing,
-            query=df[["head_id", "relation_id", "tail_id"]].values,
-        )
-    return _process_remove_known(df, remove_known, testing)
 
 
 def get_novelty_mask(
