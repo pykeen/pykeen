@@ -313,6 +313,13 @@ class Embedding(Representation):
     ):
         """Instantiate an embedding with extended functionality.
 
+        .. note ::
+            the difference between a *normalizer* (cf. :class:`Representation`) and a *constrainer* is that the
+            normalizer is applied to the retrieved representations, and part of the forward call. Thus, it is part
+            of the computational graph, and may contribute towards the gradients received by the weight. A
+            *constrainer* on the other hand, is applied *after* a parameter update (using the
+            :meth:`post_parameter_update` hook), and hence *not* part of the computational graph.
+
         :param max_id: >0
             The number of embeddings.
         :param num_embeddings: >0
