@@ -135,7 +135,7 @@ class PredictionPostProcessor:
         }
 
     @abstractmethod
-    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, inverse: bool = False) -> numpy.ndarray:
+    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
         """
         Return which of the rows of the given data frame are contained in the ID-based triples.
 
@@ -143,7 +143,7 @@ class PredictionPostProcessor:
             the predictions
         :param mapped_triples: shape: (m, 3)
             the ID-based triples
-        :param inverse:
+        :param invert:
             whether to invert the result
 
         :return: shape: (n,), dtype: bool
@@ -162,7 +162,7 @@ class PredictionPostProcessor:
             the filtered dataframe
         """
         for mapped_triples in self.filter_triples.values():
-            df = df[self._contains(df=df, mapped_triples=mapped_triples, inverse=True)]
+            df = df[self._contains(df=df, mapped_triples=mapped_triples, invert=True)]
         return df
 
     def contains(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -181,11 +181,11 @@ class PredictionPostProcessor:
 
     def process(self, df: pd.DataFrame, remove_known: bool, add_novelties: bool) -> pd.DataFrame:
         """Post-process a prediction dataframe."""
-        if add_novelties:
-            df = self.contains(df=df)
-        if not remove_known:
-            return df
-        return self.filter(df=df)
+        if add_novelties and not remove_known:
+            return self.contains(df=df)
+        elif remove_known:
+            return self.filter(df=df)
+        return df
 
 
 class SinglePredictionPostProcessor(PredictionPostProcessor):
@@ -208,19 +208,24 @@ class SinglePredictionPostProcessor(PredictionPostProcessor):
 
     # docstr-coverage: inherited
     def _contains(
-        self, df: pd.DataFrame, mapped_triples: MappedTriples, inverse: bool = False
+        self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False
     ) -> numpy.ndarray:  # noqa: D102
         col = TARGET_TO_INDEX[self.target]
         other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
-        other_col_ids = torch.as_tensor(
-            data=self.other_columns_fixed_ids, dtype=torch.long, device=mapped_triples.device
-        )
+        device = mapped_triples.device
+        other_col_ids = torch.as_tensor(data=self.other_columns_fixed_ids, dtype=torch.long, device=device)
         filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
         known_ids = mapped_triples[filter_mask, col].unique()
-        query_ids = df[f"{self.target}_id"]
-        return (
-            torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, inverse=inverse).cpu().numpy()
-        )
+        query_ids = torch.as_tensor(df[f"{self.target}_id"].to_numpy(), device=mapped_triples.device)
+        return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, invert=invert).cpu().numpy()
+
+
+def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> torch.BoolTensor:
+    """Return whether elements are contained in test elements."""
+    inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
+        return_counts=True, return_inverse=True, dim=dim
+    )[1:]
+    return counts[inverse[: elements.shape[dim]]] > 1
 
 
 class AllPredictionPostProcessor(PredictionPostProcessor):
@@ -228,14 +233,22 @@ class AllPredictionPostProcessor(PredictionPostProcessor):
 
     # docstr-coverage: inherited
     def _contains(
-        self, df: pd.DataFrame, mapped_triples: MappedTriples, inverse: bool = False
+        self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False
     ) -> numpy.ndarray:  # noqa: D102
-        known = triple_tensor_to_set(mapped_triples)
-        query = df[[f"{target}_id" for target, _ in sorted(TARGET_TO_INDEX.items(), key=itemgetter(1))]].values
-        r = numpy.asarray([tuple(triple) not in known for triple in query], dtype=bool)
-        if not inverse:
-            return r
-        return ~r
+        contained = (
+            isin_many_dim(
+                elements=torch.as_tensor(
+                    df[[f"{target}_id" for target, _ in sorted(TARGET_TO_INDEX.items(), key=itemgetter(1))]].values,
+                    device=mapped_triples.device,
+                ),
+                test_elements=mapped_triples,
+            )
+            .cpu()
+            .numpy()
+        )
+        if invert:
+            return ~contained
+        return contained
 
 
 @torch.inference_mode()
