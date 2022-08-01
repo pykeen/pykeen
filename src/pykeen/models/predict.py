@@ -710,12 +710,11 @@ def get_novelty_mask(
     :return: shape: (num_queries,), dtype: bool
         A boolean mask indicating whether the ID does not correspond to a known triple.
     """
-    # TODO: torch now supports isin, too
     other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
     other_col_ids = torch.as_tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
     filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)  # type: ignore
-    known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
-    return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
+    known_ids = mapped_triples[filter_mask, col].unique()
+    return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, inverse=True).cpu().numpy()
 
 
 def get_novelty_all_mask(
