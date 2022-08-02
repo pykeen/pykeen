@@ -187,6 +187,9 @@ class PredictionPostProcessor:
         """
         Post-process a prediction dataframe.
 
+        .. warning ::
+            if both, `remove_known` and `add_novelties` are enabled, only the first will be applied.
+
         :param df:
             the dataframe of predictions
         :param remove_known:
@@ -196,12 +199,10 @@ class PredictionPostProcessor:
 
         :return:
             the filtered, modified or original predictions dataframe
-
-        :raises ValueError:
-            if both, `remove_known` and `add_novelties`, are True.
         """
         if add_novelties and remove_known:
-            raise ValueError("Can only provide one of `remove_known` and `add_novelties`")
+            logger.warning("Since remove_known is enabled, will not add novelty column")
+            add_novelties = False
         if add_novelties:
             return self.add_membership_columns(df=df)
         if remove_known:
