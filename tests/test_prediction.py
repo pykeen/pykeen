@@ -1,6 +1,6 @@
 """Tests for prediction tools."""
-import itertools
 import functools
+import itertools
 from typing import Any, MutableMapping, Tuple
 
 import pandas
