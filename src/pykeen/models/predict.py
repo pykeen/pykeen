@@ -128,7 +128,8 @@ class PredictionPostProcessor:
         """Instantiate the processor.
 
         :param filter_triples:
-            the filter triples
+            a mapping from keys to triples to be used for filtering. `None` entries will be ignored. The keys are
+            used to derive column names.
         """
         self.filter_triples = {
             key: _get_mapped_triples(value) for key, value in filter_triples.items() if value is not None
@@ -155,6 +156,9 @@ class PredictionPostProcessor:
         """
         Filter out known triples.
 
+        .. note ::
+            this operation does *not* work in-place.
+
         :param df:
             the predictions
 
@@ -165,9 +169,9 @@ class PredictionPostProcessor:
             df = df[self._contains(df=df, mapped_triples=mapped_triples, invert=True)]
         return df
 
-    def contains(self, df: pd.DataFrame) -> pd.DataFrame:
+    def add_membership_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Add column indicating whether the triples are known.
+        Add columns indicating whether the triples are known.
 
         :param df:
             the predictions
@@ -180,10 +184,27 @@ class PredictionPostProcessor:
         return df
 
     def process(self, df: pd.DataFrame, remove_known: bool, add_novelties: bool) -> pd.DataFrame:
-        """Post-process a prediction dataframe."""
-        if add_novelties and not remove_known:
-            return self.contains(df=df)
-        elif remove_known:
+        """
+        Post-process a prediction dataframe.
+
+        :param df:
+            the dataframe of predictions
+        :param remove_known:
+            whether to remove rows corresponding to known triples
+        :param add_novelties:
+            whether to add extra columns denoting whether triples are novel given the filter triples
+
+        :return:
+            the filtered, modified or original predictions dataframe
+
+        :raises ValueError:
+            if both, `remove_known` and `add_novelties`, are True.
+        """
+        if add_novelties and remove_known:
+            raise ValueError("Can only provide one of `remove_known` and `add_novelties`")
+        if add_novelties:
+            return self.add_membership_columns(df=df)
+        if remove_known:
             return self.filter(df=df)
         return df
 

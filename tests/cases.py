@@ -2650,7 +2650,7 @@ class PredictionPostProcessorTestCase(
 
     def test_contains(self):
         """Test contains method."""
-        df2 = self.instance.contains(df=self.df)
+        df2 = self.instance.add_membership_columns(df=self.df)
         assert set(df2.columns).issubset(self.df.columns)
         for col in self.df.columns:
             assert (df2[col] == self.df[col]).all()
