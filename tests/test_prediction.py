@@ -1,4 +1,6 @@
 """Tests for prediction tools."""
+import itertools
+import functools
 from typing import Any, MutableMapping, Tuple
 
 import pandas
@@ -46,5 +48,24 @@ class AllPredictionPostProcessorTest(cases.PredictionPostProcessorTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
-        self.df = ...
+        # mock prediction data frame
+        data = list(
+            map(
+                functools.partial(sum, start=tuple()),
+                itertools.product(
+                    self.dataset.entity_to_id.items(),
+                    self.dataset.relation_to_id.items(),
+                    self.dataset.entity_to_id.items(),
+                ),
+            )
+        )
+        columns = sum(
+            [
+                [f"{col}_label", f"{col}_id"]
+                for col in [pykeen.typing.LABEL_HEAD, pykeen.typing.LABEL_RELATION, pykeen.typing.LABEL_TAIL]
+            ],
+            [],
+        )
+        self.df = pandas.DataFrame(data=data, columns=columns)
+        self.df["score"] = torch.rand(size=(len(self.df),), generator=torch.manual_seed(seed=42)).numpy()
         return kwargs
