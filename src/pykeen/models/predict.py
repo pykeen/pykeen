@@ -237,7 +237,7 @@ class SinglePredictionPostProcessor(PredictionPostProcessor):
         other_col_ids = torch.as_tensor(data=self.other_columns_fixed_ids, dtype=torch.long, device=device)
         filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
         known_ids = mapped_triples[filter_mask, col].unique()
-        query_ids = torch.as_tensor(df[f"{self.target}_id"].to_numpy(), device=mapped_triples.device)
+        query_ids = torch.as_tensor(df[f"{self.target}_id"].to_numpy(), device=device)
         return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, invert=invert).cpu().numpy()
 
 
