@@ -47,6 +47,7 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
+import pykeen.models.predict
 import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
@@ -93,7 +94,9 @@ from pykeen.typing import (
     LABEL_TAIL,
     RANK_REALISTIC,
     SIDE_BOTH,
+    TESTING,
     TRAINING,
+    VALIDATION,
     HeadRepresentation,
     InductiveMode,
     Initializer,
@@ -2631,3 +2634,34 @@ class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.Text
         x = self.instance.encode_all(labels=labels)
         assert torch.is_tensor(x)
         assert x.shape[0] == len(labels)
+
+
+class PredictionPostProcessorTestCase(
+    unittest_templates.GenericTestCase[pykeen.models.predict.PredictionPostProcessor]
+):
+    """Tests for prediction post-processing."""
+
+    # to be initialize in subclass
+    df: pandas.DataFrame
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        self.dataset = Nations()
+        kwargs.update(self.dataset.factory_dict)
+        return kwargs
+
+    def test_contains(self):
+        """Test contains method."""
+        df2 = self.instance.contains(df=self.df)
+        assert set(df2.columns).issubset(self.df.columns)
+        for col in self.df.columns:
+            assert (df2[col] == self.df[col]).all()
+        for new_col in set(df2.columns).difference(self.df.columns):
+            assert df2[new_col].dtype == bool
+
+    def test_filter(self):
+        """Test filter method."""
+        df2 = self.instance.filter(df=self.df)
+        assert set(df2.columns) == set(self.df.columns)
+        assert len(df2) <= len(self.df)
+        # TODO: check subset
