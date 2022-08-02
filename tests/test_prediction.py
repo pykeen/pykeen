@@ -59,12 +59,11 @@ class AllPredictionPostProcessorTest(cases.PredictionPostProcessorTestCase):
                 ),
             )
         )
-        columns = sum(
-            [
-                [f"{col}_label", f"{col}_id"]
-                for col in [pykeen.typing.LABEL_HEAD, pykeen.typing.LABEL_RELATION, pykeen.typing.LABEL_TAIL]
-            ],
-            [],
+        columns = list(
+            itertools.chain.from_iterable(
+                (f"{col}_label", f"{col}_id")
+                for col in (pykeen.typing.LABEL_HEAD, pykeen.typing.LABEL_RELATION, pykeen.typing.LABEL_TAIL)
+            )
         )
         self.df = pandas.DataFrame(data=data, columns=columns)
         self.df["score"] = torch.rand(size=(len(self.df),), generator=torch.manual_seed(seed=42)).numpy()
