@@ -1,10 +1,13 @@
 """Tests for prediction tools."""
-from typing import Tuple
+from typing import Any, MutableMapping, Tuple
 
+import pandas
 import pytest
 import torch
 
 import pykeen.models.predict
+import pykeen.typing
+from tests import cases
 
 
 @pytest.mark.parametrize("size", [(10,), (10, 3)])
@@ -17,3 +20,31 @@ def test_isin_many_dim(size: Tuple[int, ...]):
     assert mask.shape == (elements.shape[0],)
     assert mask.dtype == torch.bool
     assert mask[:3].all()
+
+
+class SinglePredictionPostProcessorTest(cases.PredictionPostProcessorTestCase):
+    """Tests for SinglePredictionPostProcessor."""
+
+    cls = pykeen.models.predict.SinglePredictionPostProcessor
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # mock prediction data frame
+        kwargs["target"] = target = pykeen.typing.LABEL_TAIL
+        labels, ids = list(zip(*self.dataset.entity_to_id.items()))
+        score = torch.rand(len(ids), generator=torch.manual_seed(seed=42))
+        self.df = pandas.DataFrame({f"{target}_id": ids, f"{target}_label": labels, "score": score})
+        # set other parameters
+        kwargs["other_columns_fixed_ids"] = tuple(self.dataset.training.mapped_triples[0, :2])
+        return kwargs
+
+
+class AllPredictionPostProcessorTest(cases.PredictionPostProcessorTestCase):
+    """Tests for AllPredictionPostProcessor."""
+
+    cls = pykeen.models.predict.AllPredictionPostProcessor
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        self.df = ...
+        return kwargs
