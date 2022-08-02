@@ -28,7 +28,7 @@ from ..typing import (
     ScorePack,
     Target,
 )
-from ..utils import is_cuda_oom_error, triple_tensor_to_set
+from ..utils import is_cuda_oom_error
 
 __all__ = [
     "predict",
