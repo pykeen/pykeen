@@ -6,6 +6,7 @@ from typing import Any, MutableMapping, Tuple
 import pandas
 import pytest
 import torch
+import unittest_templates
 
 import pykeen.models.predict
 import pykeen.typing
@@ -68,3 +69,12 @@ class AllPredictionPostProcessorTest(cases.PredictionPostProcessorTestCase):
         self.df = pandas.DataFrame(data=data, columns=columns)
         self.df["score"] = torch.rand(size=(len(self.df),), generator=torch.manual_seed(seed=42)).numpy()
         return kwargs
+
+
+class PredictionPostProcessorMetaTestCase(
+    unittest_templates.MetaTestCase[pykeen.models.predict.PredictionPostProcessor]
+):
+    """Test for tests for prediction post processing."""
+
+    base_cls = pykeen.models.predict.PredictionPostProcessor
+    base_test = cases.PredictionPostProcessorTestCase
