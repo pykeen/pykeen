@@ -1147,7 +1147,8 @@ class CachedTextRepresentation(TextRepresentation):
         Initialize the representation.
 
         :param labels:
-            the wikidata IDs.
+            the IDs to be resolved by the class, e.g., wikidata IDs. for :class:`WikidataTextRepresentation`,
+            compact URIs (CURIEs) for :class:`CURIETextRepresentation`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
@@ -1208,7 +1209,13 @@ class CURIETextRepresentation(CachedTextRepresentation):
         from pykeen.pipeline import pipeline
         import bioontologies
 
-        dataset = get_dataset(dataset="codexsmall")
+        # Generate graph dataset from the Monarch Disease Ontology (MONDO)
+        graph = bioontologies.get_obograph_by_prefix("mondo").squeeze(standardize=True)
+        triples = (edge.as_tuple() for edge in graph.edges)
+        triples = [t for t in triples if all(t)]
+        triples = TriplesFactory.from_labeled_triples(np.array(triples))
+        dataset = Dataset.from_tf(triples)
+
         entity_representations = CURIETextRepresentation.from_dataset(dataset=dataset, encoder="transformer")
         result = pipeline(
             dataset=dataset,

@@ -188,7 +188,8 @@ class TextCache(ABC):
 
     @abstractmethod
     def get_text(self, ids: Sequence[str]) -> Sequence[str]:
-        """"""
+        """Get text for the given identifiers for the cache."""
+        raise NotImplementedError
 
 
 class WikidataCache(TextCache):
@@ -366,6 +367,7 @@ class WikidataCache(TextCache):
         return cast(Sequence[str], result)
 
     def get_text(self, ids: Sequence[str]) -> Sequence[str]:
+        """Get a concatenation of the title and description for each Wikidata identifier."""
         # get labels & descriptions
         titles = self.get_labels(ids=ids)
         descriptions = self.get_descriptions(ids=ids)
@@ -509,6 +511,7 @@ class PyOBOCache(TextCache):
         super().__init__(*args, **kwargs)
 
     def get_text(self, ids: Sequence[str]) -> Sequence[str]:
+        """Get text for the given CURIEs."""
         res = []
         for curie in ids:
             prefix, identifier = curie.split(":")
