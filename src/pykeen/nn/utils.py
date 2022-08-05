@@ -8,6 +8,8 @@ import functools
 import logging
 import pathlib
 import re
+import subprocess
+from abc import ABC, abstractmethod
 from itertools import chain
 from textwrap import dedent
 from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
@@ -181,7 +183,15 @@ WIKIDATA_IMAGE_RELATIONS = [
 ]
 
 
-class WikidataCache:
+class TextCache(ABC):
+    """"""
+
+    @abstractmethod
+    def get_text(self, ids: Sequence[str]) -> Sequence[str]:
+        """"""
+
+
+class WikidataCache(TextCache):
     """A cache for requests against Wikidata's SPARQL endpoint."""
 
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
@@ -355,6 +365,13 @@ class WikidataCache:
             assert isinstance(item, str)
         return cast(Sequence[str], result)
 
+    def get_text(self, ids: Sequence[str]) -> Sequence[str]:
+        # get labels & descriptions
+        titles = self.get_labels(ids=ids)
+        descriptions = self.get_descriptions(ids=ids)
+        # compose labels
+        return [f"{title}: {description}" for title, description in zip(titles, descriptions)]
+
     def get_labels(self, ids: Sequence[str]) -> Sequence[str]:
         """
         Get entity labels for the given IDs.
@@ -410,7 +427,7 @@ class WikidataCache:
         num_missing = len(missing)
         logger.info(
             f"Downloading images for {num_missing:,} entities. With the rate limit in place, "
-            f"this will take at least {num_missing/10:.2f} seconds.",
+            f"this will take at least {num_missing / 10:.2f} seconds.",
         )
         res_json = self.query(
             sparql=functools.partial(
@@ -474,6 +491,36 @@ class WikidataCache:
 
         id_to_path = self._discover_images(extensions=extensions)
         return [id_to_path.get(i) for i in ids]
+
+
+
+PYOBO_PREFIXES_WARNED = set()
+class PyOBOCache(TextCache):
+    """A cache that looks up labels of biomedical entities based on their CURIEs."""
+
+    def __init__(self, *args, **kwargs):
+        try:
+            import pyobo
+        except ImportError:
+            raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.")
+        else:
+            self._get_name = pyobo.get_name
+        super().__init__(*args, **kwargs)
+
+    def get_text(self, ids: Sequence[str]) -> Sequence[str]:
+        res = []
+        for curie in ids:
+            prefix, identifier = curie.split(":")
+            try:
+                name=self._get_name(prefix, identifier)
+            except subprocess.CalledProcessError:
+                if prefix not in PYOBO_PREFIXES_WARNED:
+                    logger.warning("could not get names from %s", prefix)
+                    PYOBO_PREFIXES_WARNED.add(prefix)
+                continue
+            else:
+                res.append(name)
+        return res
 
 
 class ShapeError(ValueError):

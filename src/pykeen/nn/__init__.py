@@ -71,6 +71,7 @@ from .representation import (
     TextRepresentation,
     TransformedRepresentation,
     WikidataTextRepresentation,
+CURIETextRepresentation,
 )
 from .vision import VisualRepresentation, WikidataVisualRepresentation
 
@@ -96,6 +97,7 @@ __all__ = [
     "TextRepresentation",
     "TransformedRepresentation",
     "WikidataTextRepresentation",
+    "CURIETextRepresentation",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
     "tokenizer_resolver",
