@@ -184,7 +184,7 @@ WIKIDATA_IMAGE_RELATIONS = [
 
 
 class TextCache(ABC):
-    """"""
+    """An interface for looking up text for various flavors of entity identifiers."""
 
     @abstractmethod
     def get_text(self, ids: Sequence[str]) -> Sequence[str]:
