@@ -56,9 +56,11 @@ __all__ = [
     "SubsetRepresentation",
     "CombinedRepresentation",
     "TensorTrainRepresentation",
-    "TextRepresentation",
     "TransformedRepresentation",
+    "TextRepresentation",
+    "CachedTextRepresentation",
     "WikidataTextRepresentation",
+    "CURIETextRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -1138,7 +1140,7 @@ class CombinedRepresentation(Representation):
 
 
 class CachedTextRepresentation(TextRepresentation):
-    """"""
+    """Textual representations for datasets with identifiers that can be looked up with a :class:`TextCache`."""
 
     cache_cls: Type[TextCache]
 

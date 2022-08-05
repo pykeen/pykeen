@@ -61,6 +61,7 @@ from .pyg import (
 )
 from .representation import (
     BackfillRepresentation,
+    CachedTextRepresentation,
     CombinedRepresentation,
     CURIETextRepresentation,
     Embedding,
@@ -156,4 +157,7 @@ __all__ = [
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(
     base=Representation,
     default=Embedding,
+    skip={
+        CachedTextRepresentation,
+    },
 )
