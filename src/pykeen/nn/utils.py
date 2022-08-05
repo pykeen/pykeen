@@ -493,8 +493,9 @@ class WikidataCache(TextCache):
         return [id_to_path.get(i) for i in ids]
 
 
-
 PYOBO_PREFIXES_WARNED = set()
+
+
 class PyOBOCache(TextCache):
     """A cache that looks up labels of biomedical entities based on their CURIEs."""
 
@@ -512,7 +513,7 @@ class PyOBOCache(TextCache):
         for curie in ids:
             prefix, identifier = curie.split(":")
             try:
-                name=self._get_name(prefix, identifier)
+                name = self._get_name(prefix, identifier)
             except subprocess.CalledProcessError:
                 if prefix not in PYOBO_PREFIXES_WARNED:
                     logger.warning("could not get names from %s", prefix)

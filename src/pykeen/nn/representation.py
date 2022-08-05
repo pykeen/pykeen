@@ -10,7 +10,7 @@ import math
 import string
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, Type
+from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import more_itertools
 import numpy
@@ -26,7 +26,7 @@ from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .text import TextEncoder, text_encoder_resolver
-from .utils import ShapeError, WikidataCache, TextCache, PyOBOCache
+from .utils import PyOBOCache, ShapeError, TextCache, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -702,11 +702,10 @@ class CompGCNLayer(nn.Module):
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
-                  self.composition(x_e, self.self_loop) @ self.w_loop
-                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1,
-                                 weight=self.w_bwd)
-              ) / 3
+            self.composition(x_e, self.self_loop) @ self.w_loop
+            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+        ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
@@ -1223,6 +1222,7 @@ class CURIETextRepresentation(CachedTextRepresentation):
             ),
         )
     """
+
     cache_cls = PyOBOCache
 
 

@@ -62,6 +62,7 @@ from .pyg import (
 from .representation import (
     BackfillRepresentation,
     CombinedRepresentation,
+    CURIETextRepresentation,
     Embedding,
     LowRankRepresentation,
     PartitionRepresentation,
@@ -71,7 +72,6 @@ from .representation import (
     TextRepresentation,
     TransformedRepresentation,
     WikidataTextRepresentation,
-CURIETextRepresentation,
 )
 from .vision import VisualRepresentation, WikidataVisualRepresentation
 
