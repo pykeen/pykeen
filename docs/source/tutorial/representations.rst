@@ -53,7 +53,7 @@ Label-based
 -----------
 Label-based representations use the entities' (or relations') labels to
 derive representations. To this end,
-:class:`pykeen.nn.representation.LabelBasedTransformerRepresentation` uses a
+:class:`pykeen.nn.representation.TextRepresentation` uses a
 (pre-trained) transformer model from the :mod:`transformers` library to encode
 the labels. Since the transformer models have been trained on huge corpora
 of text, their text encodings often contain semantic information, i.e.,
@@ -61,7 +61,7 @@ labels with similar semantic meaning get similar representations. While we
 can also benefit from these strong features by just initializing an
 :class:`pykeen.nn.representation.Embedding` with the vectors, e.g., using
 :class:`pykeen.nn.init.LabelBasedInitializer`, the
-:class:`pykeen.nn.representation.LabelBasedTransformerRepresentation` include the
+:class:`pykeen.nn.representation.TextRepresentation` include the
 transformer model as part of the KGE model, and thus allow fine-tuning
 the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
@@ -71,11 +71,11 @@ predictions for entities not seen during training.
 
     from pykeen.pipeline import pipeline
     from pykeen.datasets import get_dataset
-    from pykeen.nn import LabelBasedTransformerRepresentation
+    from pykeen.nn import TextRepresentation
     from pykeen.models import ERModel
 
     dataset = get_dataset(dataset="nations")
-    entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
+    entity_representations = TextRepresentation.from_triples_factory(
         triples_factory=dataset.training,
     )
     result = pipeline(
