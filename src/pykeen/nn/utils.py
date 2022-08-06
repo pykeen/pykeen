@@ -187,7 +187,7 @@ class TextCache(ABC):
     """An interface for looking up text for various flavors of entity identifiers."""
 
     @abstractmethod
-    def get_text(self, ids: Sequence[str]) -> Sequence[str]:
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
         """Get text for the given identifiers for the cache."""
         raise NotImplementedError
 
@@ -366,37 +366,44 @@ class WikidataCache(TextCache):
             assert isinstance(item, str)
         return cast(Sequence[str], result)
 
-    def get_text(self, ids: Sequence[str]) -> Sequence[str]:
-        """Get a concatenation of the title and description for each Wikidata identifier."""
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
+        """Get a concatenation of the title and description for each Wikidata identifier.
+
+        :param identifiers:
+            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
+
+        :return:
+            the label and description for each Wikidata entity concatenated
+        """
         # get labels & descriptions
-        titles = self.get_labels(ids=ids)
-        descriptions = self.get_descriptions(ids=ids)
+        titles = self.get_labels(wikidata_identifiers=identifiers)
+        descriptions = self.get_descriptions(wikidata_identifiers=identifiers)
         # compose labels
         return [f"{title}: {description}" for title, description in zip(titles, descriptions)]
 
-    def get_labels(self, ids: Sequence[str]) -> Sequence[str]:
+    def get_labels(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
         """
         Get entity labels for the given IDs.
 
-        :param ids:
-            the Wikidata IDs
+        :param wikidata_identifiers:
+            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
 
         :return:
             the label for each Wikidata entity
         """
-        return self._get(ids=ids, component="label")
+        return self._get(ids=wikidata_identifiers, component="label")
 
-    def get_descriptions(self, ids: Sequence[str]) -> Sequence[str]:
+    def get_descriptions(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
         """
         Get entity descriptions for the given IDs.
 
-        :param ids:
-            the Wikidata IDs
+        :param wikidata_identifiers:
+            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
 
         :return:
             the description for each Wikidata entity
         """
-        return self._get(ids=ids, component="description")
+        return self._get(ids=wikidata_identifiers, component="description")
 
     def _discover_images(self, extensions: Collection[str]) -> Mapping[str, pathlib.Path]:
         image_dir = self.module.join("images")
@@ -510,10 +517,17 @@ class PyOBOCache(TextCache):
             self._get_name = pyobo.get_name
         super().__init__(*args, **kwargs)
 
-    def get_text(self, ids: Sequence[str]) -> Sequence[str]:
-        """Get text for the given CURIEs."""
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
+        """Get text for the given CURIEs.
+
+        :param identifiers:
+            The compact URIs for each entity (e.g., ``['doid:1234', ...]``)
+
+        :return:
+            the label for each entity, looked up via :func:`pyobo.get_name`.
+        """
         res = []
-        for curie in ids:
+        for curie in identifiers:
             prefix, identifier = curie.split(":")
             try:
                 name = self._get_name(prefix, identifier)

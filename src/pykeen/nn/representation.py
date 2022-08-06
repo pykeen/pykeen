@@ -939,7 +939,7 @@ class TextRepresentation(Representation):
 
         dataset = get_dataset(dataset="nations")
         entity_representations = TextRepresentation.from_dataset(
-            triples_factory=dataset,
+            dataset=dataset,
             encoder="transformer",
         )
         model = ERModel(
@@ -1144,20 +1144,20 @@ class CachedTextRepresentation(TextRepresentation):
 
     cache_cls: Type[TextCache]
 
-    def __init__(self, labels: Sequence[str], **kwargs):
+    def __init__(self, identifiers: Sequence[str], **kwargs):
         """
         Initialize the representation.
 
-        :param labels:
+        :param identifiers:
             the IDs to be resolved by the class, e.g., wikidata IDs. for :class:`WikidataTextRepresentation`,
             compact URIs (CURIEs) for :class:`CURIETextRepresentation`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
         cache = self.cache_cls()
-        labels = cache.get_text(ids=labels)
+        labels = cache.get_texts(identifiers=identifiers)
         # delegate to super class
-        super().__init__(labels=labels, **kwargs)
+        super().__init__(labels=identifiers, **kwargs)
 
 
 class WikidataTextRepresentation(CachedTextRepresentation):
