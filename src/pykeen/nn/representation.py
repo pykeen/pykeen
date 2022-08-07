@@ -1157,7 +1157,7 @@ class CachedTextRepresentation(TextRepresentation):
         cache = self.cache_cls()
         labels = cache.get_texts(identifiers=identifiers)
         # delegate to super class
-        super().__init__(labels=identifiers, **kwargs)
+        super().__init__(labels=labels, **kwargs)
 
 
 class WikidataTextRepresentation(CachedTextRepresentation):
