@@ -542,17 +542,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 continue
             metrics.append(metric)
 
-        # > ==== Expected input format of Evaluator for ogbl-wikikg2
-        # > {'y_pred_pos': y_pred_pos, 'y_pred_neg': y_pred_neg}
-        # > - y_pred_pos: numpy ndarray or torch tensor of shape (num_edge, ). Torch tensor on GPU is recommended for
-        # > ... efficiency.
-        # > - y_pred_neg: numpy ndarray or torch tensor of shape (num_edge, num_nodes_neg). Torch tensor on GPU is
-        # > ... recommended for efficiency.
-        # > y_pred_pos is the predicted scores for positive edges.
-        # > y_pred_neg is the predicted scores for negative edges. It needs to be a 2d matrix.
-        # > y_pred_pos[i] is ranked among y_pred_neg[i].
-        # > Note: As the evaluation metric is ranking-based, the predicted scores need to be different for different
-        # > ... edges.
+        # prepare input format, cf. `evaluator.expected_input``
+        # y_pred_pos: shape: (num_edge,)
+        # y_pred_neg: shape: (num_edge, num_nodes_neg)
         y_pred_pos: Dict[Target, torch.Tensor] = {}
         y_pred_neg: Dict[Target, torch.Tensor] = {}
 
@@ -561,6 +553,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # iterate over prediction targets
         for target, negatives in self.negative_samples.items():
             # pre-allocate
+            # TODO: maybe we want to collect scores on CPU / add an option?
             y_pred_pos[target] = y_pred_pos_side = torch.empty(size=(num_triples,), device=device)
             num_negatives = negatives.shape[1]
             y_pred_neg[target] = y_pred_neg_side = torch.empty(size=(num_triples, num_negatives), device=device)
