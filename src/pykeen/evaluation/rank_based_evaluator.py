@@ -534,11 +534,12 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # > Note: As the evaluation metric is ranking-based, the predicted scores need to be different for different edges.
 
         # pre-allocate
-        num_targets = len(self.negatives)
+        num_targets = len(self.negative_samples)
         num_triples = mapped_triples.shape[0]
         num_negatives = set(t.shape[1] for t in self.negative_samples.values())
-        assert len(num_negatives) == 1
-        num_negatives = num_negatives[0]
+        if len(num_negatives) != 1:
+            raise ValueError(f"Inconsistent number of negative samples for different sides: {num_negatives}")
+        num_negatives = list(num_negatives)[0]
         device = mapped_triples.device
         y_pred_pos = torch.empty(size=(num_triples * num_targets,), device=device)
         y_pred_neg = torch.empty(size=(num_triples * num_targets, num_negatives), device=device)
@@ -559,16 +560,17 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 y_pred_neg[offset:stop] = scores[:, 1:]
                 offset = stop
         # combine to input dictionary
-        input_dict = dict(y_pred_pos=torch.cat(y_pred_pos, dim=0), y_pred_neg=torch.cat(y_pred_neg, dim=0))
+        input_dict = dict(y_pred_pos=y_pred_pos, y_pred_neg=y_pred_neg)
         # calculate metrics
         result = {}
         for metric in self.metrics:
             if isinstance(metric, InverseHarmonicMeanRank):
                 evaluator.eval_metric = "mrr"
                 evaluator.K = None
-            elif isinstance(metric, HitsAtK):
-                evaluator.eval_metric = "hits@"
-                evaluator.K = metric.k
+            # TODO: Hits@k requires a different input format.
+            # elif isinstance(metric, HitsAtK):
+            #     evaluator.eval_metric = "hits@"
+            #     evaluator.K = metric.k
             else:
                 logger.warning(f"OGB's evaluator does not implement {metric}")
                 continue
