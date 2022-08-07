@@ -6,28 +6,43 @@ from __future__ import annotations
 
 import itertools
 import logging
+import math
+import string
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
+import more_itertools
+import numpy
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, HintOrType, OptionalKwargs
+from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
 
+from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .utils import TransformerEncoder, WikidataCache
+from .text import TextEncoder, text_encoder_resolver
+from .utils import ShapeError, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
-from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
+from ..utils import (
+    Bias,
+    ExtraReprMixin,
+    broadcast_upgrade_to_sequences,
+    clamp_norm,
+    complex_normalize,
+    get_edge_index,
+    get_preferred_device,
+    upgrade_to_sequence,
+)
 
 __all__ = [
     "Representation",
@@ -35,9 +50,15 @@ __all__ = [
     "LowRankRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
+    "PartitionRepresentation",
+    "BackfillRepresentation",
     "SingleCompGCNRepresentation",
-    "LabelBasedTransformerRepresentation",
     "SubsetRepresentation",
+    "CombinedRepresentation",
+    "TensorTrainRepresentation",
+    "TextRepresentation",
+    "TransformedRepresentation",
+    "WikidataTextRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -46,7 +67,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Representation(nn.Module, ABC):
+class Representation(nn.Module, ExtraReprMixin, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -85,7 +106,7 @@ class Representation(nn.Module, ABC):
     def __init__(
         self,
         max_id: int,
-        shape: OneOrSequence[int],
+        shape: OneOrSequence[int] = 64,
         normalizer: HintOrType[Normalizer] = None,
         normalizer_kwargs: OptionalKwargs = None,
         regularizer: HintOrType[Regularizer] = None,
@@ -175,12 +196,15 @@ class Representation(nn.Module, ABC):
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
 
-    @property
-    def embedding_dim(self) -> int:
-        """Return the "embedding dimension". Kept for backward compatibility."""
-        # TODO: Remove this property and update code to use shape instead
-        warnings.warn("The embedding_dim property is deprecated. Use .shape instead.", DeprecationWarning)
-        return int(np.prod(self.shape))
+    def iter_extra_repr(self) -> Iterable[str]:
+        """Iterate over components for :meth:`extra_repr`."""
+        yield from super().iter_extra_repr()
+        yield f"max_id={self.max_id}"
+        yield f"shape={self.shape}"
+        yield f"unique={self.unique}"
+        if self.normalizer is not None:
+            yield f"normalizer={self.normalizer}"
+        # dropout & regularizer will appear automatically, since it is a nn.Module
 
     @property
     def device(self) -> torch.device:
@@ -194,8 +218,9 @@ class SubsetRepresentation(Representation):
     def __init__(
         self,
         max_id: int,
-        base: HintOrType[Representation],
+        base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ):
         """
@@ -207,6 +232,8 @@ class SubsetRepresentation(Representation):
             the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         :param base_kwargs:
             additional keyword arguments for the base representation
+        :param shape:
+            The shape of an individual representation.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
 
@@ -221,7 +248,7 @@ class SubsetRepresentation(Representation):
                 f"Base representations comprise only {base.max_id} representations, "
                 f"but at least {max_id} are required.",
             )
-        super().__init__(max_id=max_id, shape=base.shape, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(shape=base.shape, reference=shape), **kwargs)
         self.base = base
 
     # docstr-coverage: inherited
@@ -285,6 +312,13 @@ class Embedding(Representation):
         **kwargs,
     ):
         """Instantiate an embedding with extended functionality.
+
+        .. note ::
+            the difference between a *normalizer* (cf. :class:`Representation`) and a *constrainer* is that the
+            normalizer is applied to the retrieved representations, and part of the forward call. Thus, it is part
+            of the computational graph, and may contribute towards the gradients received by the weight. A
+            *constrainer* on the other hand, is applied *after* a parameter update (using the
+            :meth:`post_parameter_update` hook), and hence *not* part of the computational graph.
 
         :param max_id: >0
             The number of embeddings.
@@ -357,12 +391,6 @@ class Embedding(Representation):
         self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
         self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
-
-    @property
-    def embedding_dim(self) -> int:  # noqa: D401
-        """The representation dimension."""
-        warnings.warn(f"Directly use {self.__class__.__name__}.shape instead of num_embeddings.")
-        return self._embeddings.embedding_dim
 
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
@@ -852,6 +880,7 @@ class SingleCompGCNRepresentation(Representation):
         self,
         combined: CombinedCompGCNRepresentations,
         position: int = 0,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ):
         """
@@ -861,19 +890,21 @@ class SingleCompGCNRepresentation(Representation):
             The combined representations.
         :param position:
             The position, either 0 for entities, or 1 for relations.
+        :param shape:
+            The shape of an individual representation.
         :param kwargs:
             additional keyword-based parameters passed to super.__init__
         :raises ValueError: If an invalid value is given for the position
         """
         if position == 0:  # entity
             max_id = combined.entity_representations.max_id
-            shape = (combined.output_dim,)
+            shape_ = (combined.output_dim,)
         elif position == 1:  # relation
             max_id = combined.relation_representations.max_id
-            shape = (combined.output_dim,)
+            shape_ = (combined.output_dim,)
         else:
             raise ValueError
-        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(shape=shape_, reference=shape), **kwargs)
         self.combined = combined
         self.position = position
         self.reset_parameters()
@@ -889,9 +920,9 @@ class SingleCompGCNRepresentation(Representation):
         return x
 
 
-class LabelBasedTransformerRepresentation(Representation):
+class TextRepresentation(Representation):
     """
-    Label-based representations using a transformer encoder.
+    Textual representations using a text encoder on labels.
 
     Example Usage:
 
@@ -901,11 +932,14 @@ class LabelBasedTransformerRepresentation(Representation):
     .. code-block:: python
 
         from pykeen.datasets import get_dataset
-        from pykeen.nn.representation import LabelBasedTransformerRepresentation
+        from pykeen.nn.representation import TextRepresentation
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
-        entity_representations = LabelBasedTransformerRepresentation.from_dataset(dataset=dataset)
+        entity_representations = TextRepresentation.from_dataset(
+            triples_factory=dataset,
+            encoder="transformer",
+        )
         model = ERModel(
             interaction="ermlp",
             entity_representations=entity_representations,
@@ -916,8 +950,10 @@ class LabelBasedTransformerRepresentation(Representation):
     def __init__(
         self,
         labels: Sequence[str],
-        pretrained_model_name_or_path: str = "bert-base-cased",
-        max_length: int = 512,
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
+        encoder: HintOrType[TextEncoder] = None,
+        encoder_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """
@@ -925,21 +961,28 @@ class LabelBasedTransformerRepresentation(Representation):
 
         :param labels:
             the labels
-        :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. :meth:`TransformerEncoder.__init__`
-        :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to, cf. :meth:`TransformerEncoder.__init__`
+        :param max_id:
+            the number of representations. If provided, has to match the number of labels
+        :param shape:
+            The shape of an individual representation.
+        :param encoder:
+            the text encoder, or a hint thereof
+        :param encoder_kwargs:
+            keyword-based parameters used to instantiate the text encoder
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
-        """
-        encoder = TransformerEncoder(
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
-            max_length=max_length,
-        )
-        # infer shape
-        shape = encoder.encode_all(labels[0:1]).shape[1:]
-        super().__init__(max_id=len(labels), shape=shape, **kwargs)
 
+        :raises ValueError:
+            if the max_id does not match
+        """
+        encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
+        # check max_id
+        max_id = max_id or len(labels)
+        if max_id != len(labels):
+            raise ValueError(f"max_id={max_id} does not match len(labels)={len(labels)}")
+        # infer shape
+        shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
@@ -950,19 +993,19 @@ class LabelBasedTransformerRepresentation(Representation):
         triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
-    ) -> "LabelBasedTransformerRepresentation":
+    ) -> "TextRepresentation":
         """
-        Prepare a label-based transformer representations with labels from a triples factory.
+        Prepare a text representations with labels from a triples factory.
 
         :param triples_factory:
             the triples factory
         :param for_entities:
             whether to create the initializer for entities (or relations)
         :param kwargs:
-            additional keyword-based arguments passed to :meth:`LabelBasedTransformerRepresentation.__init__`
+            additional keyword-based arguments passed to :meth:`TextRepresentation.__init__`
 
         :returns:
-            A label-based transformer from the triples factory
+            a text representation from the triples factory
         """
         labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
         return cls(labels=labeling.all_labels(), **kwargs)
@@ -972,20 +1015,20 @@ class LabelBasedTransformerRepresentation(Representation):
         cls,
         dataset: Dataset,
         **kwargs,
-    ) -> "LabelBasedTransformerRepresentation":
-        """Prepare label-based representations with labls from a dataset.
+    ) -> "TextRepresentation":
+        """Prepare text representation with labels from a dataset.
 
         :param dataset:
             the dataset
         :param kwargs:
             additional keyword-based parameters passed to
-            :meth:`LabelBasedTransformerRepresentation.from_triples_factory`
+            :meth:`TextRepresentation.from_triples_factory`
 
         :return:
-            the representation
+            a text representation from the dataset
 
         :raises TypeError:
-            if the triples factory does not provide labels
+            if the dataset's triples factory does not provide labels
         """
         if not isinstance(dataset.training, TriplesFactory):
             raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
@@ -997,22 +1040,111 @@ class LabelBasedTransformerRepresentation(Representation):
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id, device=self.device)
-        uniq, inverse = indices.to(device=self.device).unique(return_inverse=True)
-        x = self.encoder(
-            labels=[self.labels[i] for i in uniq.tolist()],
-        )
-        return x[inverse]
+            labels = self.labels
+        else:
+            labels = [self.labels[i] for i in indices.tolist()]
+        return self.encoder(labels=labels)
 
 
-class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
+class CombinedRepresentation(Representation):
+    """A combined representation."""
+
+    #: the base representations
+    base: Sequence[Representation]
+
+    #: the combination module
+    combination: Combination
+
+    def __init__(
+        self,
+        max_id: int,
+        shape: Optional[OneOrSequence[int]] = None,
+        base: OneOrManyHintOrType[Representation] = None,
+        base_kwargs: OneOrManyOptionalKwargs = None,
+        combination: HintOrType[Combination] = None,
+        combination_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        :param max_id:
+            the number of representations.
+        :param shape:
+            The shape of an individual representation.
+        :param base:
+            the base representations, or hints thereof
+        :param base_kwargs:
+            keyword-based parameters for the instantiation of base representations
+        :param combination:
+            the combination, or a hint thereof
+        :param combination_kwargs:
+            additional keyword-based parameters used to instantiate the combination
+        :param kwargs:
+            additional keyword-based parameters passed to `Representation.__init__`.
+            May not contain any of `{max_id, shape, unique}`.
+
+        :raises ValueError:
+            if the `max_id` of the base representations does not match
+        """
+        # input normalization
+        combination = combination_resolver.make(combination, combination_kwargs)
+
+        # has to be imported here to avoid cyclic import
+        from . import representation_resolver
+
+        # create base representations
+        base = representation_resolver.make_many(base, kwargs=base_kwargs, max_id=max_id)
+
+        # verify same ID range
+        max_ids = sorted(set(b.max_id for b in base))
+        if len(max_ids) != 1:
+            # note: we could also relax the requiremen, and set max_id = min(max_ids)
+            raise ValueError(f"Maximum number of Ids does not match! {max_ids}")
+        max_id = max_id or max_ids[0]
+        if max_id != max_ids[0]:
+            raise ValueError(f"max_id={max_id} does not match base max_id={max_ids[0]}")
+
+        # shape inference
+        shape = ShapeError.verify(shape=combination.output_shape(input_shapes=[b.shape for b in base]), reference=shape)
+        super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
+
+        # assign base representations *after* super init
+        self.base = nn.ModuleList(base)
+        self.combination = combination
+
+    @staticmethod
+    def combine(
+        combination: nn.Module, base: Sequence[Representation], indices: Optional[torch.LongTensor] = None
+    ) -> torch.FloatTensor:
+        """
+        Combine base representations for the given indices.
+
+        :param combination: the combination
+        :param base: the base representations
+        :param indices: the indices, as given to :meth:`Representation._plain_forward`
+
+        :return:
+            the combined representations for the given indices
+        """
+        return combination([b._plain_forward(indices=indices) for b in base])
+
+    # docstr-coverage: inherited
+    def _plain_forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.combine(combination=self.combination, base=self.base, indices=indices)
+
+
+class WikidataTextRepresentation(TextRepresentation):
     """
     Textual representations for datasets grounded in Wikidata.
 
     The label and description for each entity are obtained from Wikidata using
-    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`LabelBasedTransformerRepresentation`.
+    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`TextRepresentation`.
 
-    Example usage::
+    Example usage:
 
     .. code-block:: python
 
@@ -1022,8 +1154,7 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         from pykeen.pipeline import pipeline
 
         dataset = get_dataset(dataset="codexsmall")
-        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset)
-
+        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset, encoder="transformer")
         result = pipeline(
             dataset=dataset,
             model=ERModel,
@@ -1044,7 +1175,7 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         :param labels:
             the wikidata IDs.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`LabelBasedTransformerRepresentation.__init__`
+            additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
         # set up cache
         cache = WikidataCache()
@@ -1055,3 +1186,619 @@ class WikidataTextRepresentation(LabelBasedTransformerRepresentation):
         labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
+
+
+class PartitionRepresentation(Representation):
+    """
+    A partition of the indices into different representation modules.
+
+    Each index is assigned to an index in exactly one of the base representations. This representation is useful, e.g.,
+    when one of the base representations cannot provide vectors for each of the indices, and another representation is
+    used as back-up.
+
+    Consider the following example: We only have textual information for two entities. We want to use textual features
+    computed from them, which should not be trained. For the remaining entities we want to use directly trainable
+    embeddings.
+
+    We start by creating the representation for those entities where we have labels:
+
+    >>> from pykeen.nn import Embedding, init
+    >>> num_entities = 5
+    >>> labels = {1: "a first description", 4: "a second description"}
+    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
+    >>> label_repr = label_initializer.as_embedding()
+
+    Next, we create representations for the remaining ones
+
+    >>> non_label_repr = Embedding(max_id=num_entities - len(labels), shape=label_repr.shape)
+
+    To combine them into a single representation module we first need to define the assignment, i.e., where to look-up
+    the global ids. For this, we create a tensor of shape `(num_entities, 2)`, with the index of the base
+    representation, and the *local* index inside this representation
+
+    >>> import torch
+    >>> assignment = torch.as_tensor([(1, 0), (0, 0), (1, 1), (1, 2), (0, 1)])
+    >>> from pykeen.nn import PartitionRepresentation
+    >>> entity_repr = PartitionRepresentation(assignment=assignment, bases=[label_repr, non_label_repr])
+
+    For brevity, we use here randomly generated triples factories instead of the actual data
+
+    >>> from pykeen.triples.generation import generate_triples_factory
+    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
+    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
+
+    The combined representation can now be used as any other representation, e.g., to train a DistMult model:
+
+    >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models import ERModel
+    >>> pipeline(
+    ...     model=ERModel,
+    ...     interaction="distmult",
+    ...     model_kwargs=dict(
+    ...         entity_representation=entity_repr,
+    ...         relation_representation_kwargs=dict(shape=shape),
+    ...     ),
+    ...     training=training,
+    ...     testing=testing,
+    ... )
+    """
+
+    #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
+    assignment: torch.LongTensor
+
+    def __init__(
+        self,
+        assignment: torch.LongTensor,
+        shape: Optional[OneOrSequence[int]] = None,
+        bases: OneOrSequence[HintOrType[Representation]] = None,
+        bases_kwargs: OneOrSequence[OptionalKwargs] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        .. warning ::
+            the base representations have to have coherent shapes
+
+        :param assignment: shape: (max_id, 2)
+            the assignment, as tuples `(base_id, local_id)`, where `base_id` refers to the index of the base
+            representation and `local_id` is an index used to lookup in the base representation
+        :param shape:
+            the shape of an individual representation. If provided, must match the bases' shape
+        :param bases:
+            the base representations, or hints thereof.
+        :param bases_kwargs:
+            keyword-based parameters to instantiate the base representations
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
+            or `shape`, which are inferred from the base representations.
+
+        :raises ValueError:
+            if any of the inputs is invalid
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        # instantiate base representations if necessary
+        bases = representation_resolver.make_many(bases, bases_kwargs)
+
+        # there needs to be at least one base
+        if not bases:
+            raise ValueError("Must provide at least one base representation")
+        # while possible, this might be unintended
+        if len(bases) == 1:
+            logger.warning(f"Encountered only a single base representation: {bases[0]}")
+
+        # extract shape
+        shapes = [base.shape for base in bases]
+        if len(set(shapes)) != 1:
+            raise ValueError(f"Inconsistent base shapes: {shapes}")
+        shape = ShapeError.verify(shape=shapes[0], reference=shape)
+
+        # check for invalid base ids
+        unknown_base_ids = set(assignment[:, 0].tolist()).difference(range(len(bases)))
+        if unknown_base_ids:
+            raise ValueError(f"Invalid representation Ids in assignment: {unknown_base_ids}")
+
+        # check for invalid local indices
+        for i, base in enumerate(bases):
+            max_index = assignment[assignment[:, 0] == i, 1].max().item()
+            if max_index >= base.max_id:
+                raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
+
+        super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
+
+        # assign modules / buffers *after* super init
+        self.bases = bases
+        self.register_buffer(name="assignment", tensor=assignment)
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        assignment = self.assignment
+        if indices is not None:
+            assignment = assignment[indices]
+        # flatten assignment to ease construction of inverse indices
+        prefix_shape = assignment.shape[:-1]
+        assignment = assignment.view(-1, 2)
+        # we group indices by the representation which provides them
+        # thus, we need an inverse to restore the correct order
+        inverse = torch.empty_like(assignment[:, 0])
+        xs = []
+        offset = 0
+        for i, base in enumerate(self.bases):
+            mask = assignment[:, 0] == i
+            # get representations
+            local_indices = assignment[:, 1][mask]
+            xs.append(base(indices=local_indices))
+            # update inverse indices
+            end = offset + local_indices.numel()
+            inverse[mask] = torch.arange(offset, end, device=inverse.device)
+            offset = end
+        x = torch.cat(xs, dim=0)[inverse]
+        # invert flattening
+        if len(prefix_shape) != 1:
+            x = x.view(*prefix_shape, *x.shape[1:])
+        return x
+
+
+class BackfillRepresentation(PartitionRepresentation):
+    """A variant of a partition representation that is easily applicable to a single base representation.
+
+    Similarly to the :mod:`PartitionRepresentation` representation example, we start by
+    creating the representation for those entities where we have labels:
+
+    >>> from pykeen.nn import Embedding, init
+    >>> num_entities = 5
+    >>> labels = {1: "a first description", 4: "a second description"}
+    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
+    >>> shape = label_initializer.tensor.shape[1:]
+    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
+
+    Next, we directly create representations for the remaining ones using the backfill representation.
+    To do this, we need to create an iterable (e.g., a set) of all of the entity IDs that are in the base
+    representation. Then, the assignments to the base representation and an auxillary representation are
+    automatically generated for the base class
+
+    >>> from pykeen.nn import BackfillRepresentation
+    >>> entity_repr = BackfillRepresentation(base_ids=set(labels), max_id=num_entities, base=label_repr)
+
+    For brevity, we use here randomly generated triples factories instead of the actual data
+    >>> from pykeen.triples.generation import generate_triples_factory
+    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
+    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
+    The combined representation can now be used as any other representation, e.g., to train a DistMult model:
+    >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models import ERModel
+    >>> pipeline(
+    ...     model=ERModel,
+    ...     interaction="distmult",
+    ...     model_kwargs=dict(
+    ...         entity_representation=entity_repr,
+    ...         relation_representation_kwargs=dict(shape=shape),
+    ...     ),
+    ...     training=training,
+    ...     testing=testing,
+    ... )
+    """
+
+    def __init__(
+        self,
+        max_id: int,
+        base_ids: Iterable[int],
+        base: HintOrType[Representation] = None,
+        base_kwargs: OptionalKwargs = None,
+        backfill: HintOrType[Representation] = None,
+        backfill_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """Initialize the representation.
+
+        :param max_id:
+            The total number of entities that need to be embedded
+        :param base_ids:
+            An iterable of integer entity indexes which are provided through the base representations
+        :param base:
+            the base representation, or a hint thereof.
+        :param base_kwargs:
+            keyword-based parameters to instantiate the base representation
+        :param backfill:
+            the backfill representation, or hints thereof.
+        :param backfill_kwargs:
+            keyword-based parameters to instantiate the backfill representation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
+            or `shape`, which are inferred from the base representations.
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        base_ids = sorted(set(base_ids))
+        base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
+        # comment: not all representations support passing a shape parameter
+        backfill = representation_resolver.make(
+            backfill, backfill_kwargs, max_id=max_id - base.max_id, shape=base.shape
+        )
+
+        # create assignment
+        assignment = torch.full(size=(max_id, 2), fill_value=1, dtype=torch.long)
+        # base
+        assignment[base_ids, 0] = 0
+        assignment[base_ids, 1] = torch.arange(base.max_id)
+        # other
+        mask = torch.ones(assignment.shape[0], dtype=torch.bool)
+        mask[base_ids] = False
+        assignment[mask, 0] = 1
+        assignment[mask, 1] = torch.arange(backfill.max_id)
+
+        super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
+
+
+class TransformedRepresentation(Representation):
+    """
+    A (learnable) transformation upon base representations.
+
+    In the following example, we create representations which are obtained from a trainable transformation of fixed
+    random walk encoding features. We first load the dataset, here Nations:
+
+    >>> from pykeen.datasets import get_dataset
+    >>> dataset = get_dataset(dataset="nations")
+
+    Next, we create a random-walk positional encoding of dimension 32:
+
+    >>> from pykeen.nn import init
+    >>> dim = 32
+    >>> initializer = init.RandomWalkPositionalEncoding(triples_factory=dataset.training, dim=dim+1)
+    We used dim+1 for the RWPE initializion as by default it doesn't return the first dimension of 0's
+    That is, in the default setup, dim = 33 would return a 32d vector
+
+    For the transformation, we use a simple 2-layer MLP
+
+    >>> from torch import nn
+    >>> hidden = 64
+    >>> mlp = nn.Sequential(
+    ...     nn.Linear(in_features=dim, out_features=hidden),
+    ...     nn.ReLU(),
+    ...     nn.Linear(in_features=hidden, out_features=dim),
+    ... )
+
+    Finally, the transformed representation is given as
+
+    >>> from pykeen.nn import TransformedRepresentation
+    >>> r = TransformedRepresentation(
+    ...     transformation=mlp,
+    ...     base_kwargs=dict(max_id=dataset.num_entities, shape=(dim,), initializer=initializer, trainable=False),
+    ... )
+    """
+
+    def __init__(
+        self,
+        transformation: nn.Module,
+        max_id: Optional[int] = None,
+        shape: Optional[OneOrSequence[int]] = None,
+        base: HintOrType[Representation] = None,
+        base_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        """
+        Initialize the representation.
+
+        :param transformation:
+            the transformation
+        :param max_id:
+            the number of representations. If provided, must match the base max id
+        :param shape:
+            the individual representations' shape. If provided, must match the output shape of the transformation
+        :param base:
+            the base representation, or a hint thereof, cf. `representation_resolver`
+        :param base_kwargs:
+            keyword-based parameters used to instantiate the base representation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`.
+
+        :raises ValueError:
+            if the max_id or shape does not match
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        base = representation_resolver.make(base, base_kwargs)
+
+        # infer shape
+        shape = ShapeError.verify(
+            shape=self._help_forward(
+                base=base, transformation=transformation, indices=torch.zeros(1, dtype=torch.long, device=base.device)
+            ).shape[1:],
+            reference=shape,
+        )
+        # infer max_id
+        max_id = max_id or base.max_id
+        if max_id != base.max_id:
+            raise ValueError(f"Incompatible max_id={max_id} vs. base.max_id={base.max_id}")
+
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        self.transformation = transformation
+        self.base = base
+
+    @staticmethod
+    def _help_forward(
+        base: Representation, transformation: nn.Module, indices: Optional[torch.LongTensor]
+    ) -> torch.FloatTensor:
+        """
+        Obtain base representations and apply the transformation.
+
+        :param base:
+            the base representation module
+        :param transformation:
+            the transformation
+        :param indices:
+            the indices
+
+        :return:
+            the transformed base representations
+        """
+        return transformation(base(indices=indices))
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        return self._help_forward(base=self.base, transformation=self.transformation, indices=indices)
+
+
+# TODO: can be a combined representations, with appropriate tensor-train combination
+class TensorTrainRepresentation(Representation):
+    r"""
+    A tensor factorization of representations.
+
+    In the simple case without provided assignment this corresponds to `TT-emb` described in
+    https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
+
+    where
+
+    .. math ::
+
+        \mathbf{A}[i_1 \cdot \ldots \cdot i_k, j_1 \cdot \ldots \cdot j_k]
+            = \sum_{r_i, \ldots, r_k} \mathbf{G}_1[0, i_1, j_1, r_1]
+                \cdot \mathbf{G}_2[r_1, i_2, j_2, r_2]
+                \cdot \ldots
+                \cdot \mathbf{G}_k[r_k, i_k, j_k, 0]
+
+    with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times m_i \times n_i \times R_i$ and $R_0 = R_d = 1$.
+
+    Another variant in the paper used an assignment based on hierarchical topological clustering.
+    """
+
+    #: shape: (max_id, num_cores)
+    assignment: torch.LongTensor
+
+    #: the bases, length: num_cores, with compatible shapes
+    bases: Sequence[Representation]
+
+    @classmethod
+    def factor_sizes(cls, max_id: int, shape: Sequence[int], num_cores: int) -> Tuple[Sequence[int], Sequence[int]]:
+        r"""Factor the representation shape into smaller shapes for the cores.
+
+        :param max_id:
+            the number of representations, "row count", $M$
+        :param shape:
+            the shape of an individual representation, "column count", $N$
+        :param num_cores:
+            the number of cores, $k$
+
+        :return:
+            a tuple (ms, ns) of positive integer sequences of length $k$ fulfilling
+
+            .. math ::
+
+                \prod \limits_{m_i \in ms} m_i \geq M
+
+                \prod \limits_{n_i \in ns} n_i \geq N
+        """
+        m_k = int(math.ceil(max_id ** (1 / num_cores)))
+        n_k = int(math.ceil(numpy.prod(shape) ** (1 / num_cores)))
+        return [m_k] * num_cores, [n_k] * num_cores
+
+    @staticmethod
+    def check_assignment(assignment: torch.Tensor, max_id: int, num_cores: int, ms: Sequence[int]):
+        """
+        Check that the assignment matches the other properties.
+
+        :param assignment: shape: (max_id, num_cores)
+            the assignment
+        :param max_id:
+            the number of representations
+        :param num_cores:
+            the number of tensor-train cores
+        :param ms:
+            the individual sizes $m_i$
+
+        :raises ValueError:
+            if the assignment is invalid
+        """
+        # check shape
+        if assignment.shape != (max_id, num_cores):
+            raise ValueError(
+                f"Invalid assignment. Expected shape (max_id, num_cores)={(max_id, num_cores)}, "
+                f"but got assignment.shape={assignment.shape}",
+            )
+        # check value range
+        low, high = assignment.min(dim=0).values, assignment.max(dim=0).values
+        if (low < 0).any() or (high >= torch.as_tensor(ms, dtype=torch.long)).any():
+            raise ValueError(
+                f"Invalid values inside assignment: ms={ms} vs. assignment.min(dim=0)={low} "
+                f"and assignment.max(dim=0)={high}",
+            )
+
+    @staticmethod
+    def get_shapes_and_einsum_eq(ranks: Sequence[int], ns: Sequence[int]) -> Tuple[str, Sequence[Tuple[int, ...]]]:
+        """
+        Determine core shapes and einsum equation.
+
+        :param ranks:
+            the core ranks
+        :param ns:
+            the sizes $n_i$
+        :return:
+            a pair (eq, shapes), where `eq` is a valid einsum equation and `shapes` a sequence of representation
+            shapes. Notice that the shapes do not include the "`max_id` dimension" of the resulting embedding.
+        """
+        shapes: List[List[int]] = []
+        terms: List[List[str]] = []
+        out_term: List[str] = ["..."]
+        i = 0
+        for n_i, (rank_in, rank_out) in zip(ns, more_itertools.pairwise([None, *ranks, None])):
+            shape = []
+            term = ["..."]
+
+            if rank_in is not None:
+                shape.append(rank_in)
+                term.append(string.ascii_lowercase[i])
+                i += 1
+
+            shape.append(n_i)
+            term.append(string.ascii_lowercase[i])
+            out_term.append(string.ascii_lowercase[i])
+            i += 1
+
+            if rank_out is not None:
+                shape.append(rank_out)
+                term.append(string.ascii_lowercase[i])
+                # do not increase counter i, since the dimension is shared with the following term
+                # i += 1
+
+            terms.append(term)
+            shapes.append(shape)
+        eq = " ".join((", ".join("".join(term) for term in terms), "->", "".join(out_term)))
+        return eq, [tuple(shape) for shape in shapes]
+
+    @staticmethod
+    def create_default_assignment(max_id: int, num_cores: int, ms: Sequence[int]) -> torch.LongTensor:
+        """
+        Create an assignment without using structural information.
+
+        :param max_id:
+            the number of representations
+        :param num_cores:
+            the number of tensor cores
+        :param ms:
+            the sizes $m_i$
+
+        :return: shape: (max_id, num_cores)
+            the assignment
+        """
+        assignment = torch.empty(max_id, num_cores, dtype=torch.long)
+        ids = torch.arange(max_id)
+        for i, m_i in enumerate(ms):
+            assignment[:, i] = ids % m_i
+            # ids //= m_i
+            ids = torch.div(ids, m_i, rounding_mode="floor")
+        return assignment
+
+    @staticmethod
+    def check_factors(ms: Sequence[int], ns: Sequence[int], max_id: int, shape: Tuple[int, ...], num_cores: int):
+        r"""
+        Check whether the factors match the other parts.
+
+        Verifies that
+
+        .. math ::
+            \prod \limits_{m_i \in ms} m_i \geq M
+            \prod \limits_{n_i \in ns} n_i \geq N
+
+        :param ms: length: num_cores
+            the $M$ factors $m_i$
+        :param ns: length: num_cores
+            the $N$ factors $n_i$
+        :param max_id:
+            the maximum id, $M$
+        :param shape:
+            the shape, $N=prod(shape)$
+        :param num_cores:
+            the number of cores
+
+        :raises ValueError:
+            if any of the conditions is violated
+        """
+        if len(ms) != num_cores or len(ns) != num_cores:
+            raise ValueError(f"Invalid length: len(ms)={len(ms)}, len(ns)={len(ns)} vs. num_cores={num_cores}")
+
+        m_prod = numpy.prod(ms).item()
+        if m_prod < max_id:
+            raise ValueError(f"prod(ms)={m_prod} < max_id={max_id}")
+
+        n_prod = numpy.prod(ns).item()
+        s_prod = numpy.prod(shape).item()
+        if n_prod < s_prod:
+            raise ValueError(f"prod(ns)={n_prod} < prod(shape)={s_prod}")
+
+    def __init__(
+        self,
+        assignment: Optional[torch.LongTensor] = None,
+        num_cores: int = 3,
+        ranks: OneOrSequence[int] = 2,
+        bases: OneOrManyHintOrType = None,
+        bases_kwargs: OneOrManyOptionalKwargs = None,
+        **kwargs,
+    ) -> None:
+        """Initialize the representation.
+
+        :param assignment: shape: (max_id, num_cores)
+            the assignment on each level
+        :param num_cores:
+            the number of cores to use
+        :param ranks: length: num_cores - 1
+            the individual ranks. Note that $R_0 = R_d = 1$ should not be included
+        :param bases:
+            the base representations for each level, or hints thereof.
+        :param bases_kwargs:
+            keyword-based parameters for the bases
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+
+        :raises ValueError:
+            if the input validation on ranks or assignment failed
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        super().__init__(**kwargs)
+
+        # normalize ranks
+        ranks = list(upgrade_to_sequence(ranks))
+        if len(ranks) == 1:
+            ranks = ranks * (num_cores - 1)
+        if len(ranks) != num_cores - 1:
+            raise ValueError(f"Inconsistent number of ranks {len(ranks)} for num_cores={num_cores}")
+
+        # determine M_k, N_k
+        # TODO: allow to pass them from outside?
+        ms, ns = self.factor_sizes(max_id=self.max_id, shape=self.shape, num_cores=num_cores)
+        self.check_factors(ms, ns, max_id=self.max_id, shape=self.shape, num_cores=num_cores)
+
+        # normalize assignment
+        if assignment is None:
+            assignment = self.create_default_assignment(max_id=self.max_id, num_cores=num_cores, ms=ms)
+        self.check_assignment(assignment=assignment, max_id=self.max_id, num_cores=num_cores, ms=ms)
+        self.register_buffer(name="assignment", tensor=assignment)
+
+        # determine shapes and einsum equation
+        self.eq, shapes = self.get_shapes_and_einsum_eq(ranks=ranks, ns=ns)
+
+        # create base representations
+        self.bases = nn.ModuleList(
+            representation_resolver.make(base, base_kwargs, max_id=m_i, shape=shape)
+            for base, base_kwargs, m_i, shape in zip(*broadcast_upgrade_to_sequences(bases, bases_kwargs, ms, shapes))
+        )
+
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_cores={len(self.bases)}"
+        yield f"eq='{self.eq}'"
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        assignment = self.assignment
+        if indices is not None:
+            assignment = assignment[indices]
+        return torch.einsum(
+            self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases))
+        ).view(*assignment.shape[:-1], *self.shape)

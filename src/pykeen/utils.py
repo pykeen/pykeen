@@ -13,6 +13,7 @@ import os
 import pathlib
 import random
 import re
+import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
@@ -120,6 +121,8 @@ __all__ = [
     "get_edge_index",
     "prepare_filter_triples",
     "nested_get",
+    "rate_limited",
+    "ExtraReprMixin",
 ]
 
 logger = logging.getLogger(__name__)
@@ -886,6 +889,7 @@ def extend_batch(
     batch: MappedTriples,
     max_id: int,
     dim: int,
+    ids: Optional[torch.LongTensor] = None,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
@@ -893,27 +897,33 @@ def extend_batch(
         The batch.
     :param max_id:
         The maximum IDs to enumerate.
+    :param ids: shape: (num_ids,) | (batch_size, num_ids)
+        explicit IDs
     :param dim: in {0,1,2}
         The column along which to insert the enumerated IDs.
 
     :return: shape: (batch_size * num_choices, 3)
         A large batch, where every pair from the original batch is combined with every ID.
     """
-    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=max_id, dim=0)
+    # normalize ids: -> ids.shape: (batch_size, num_ids)
+    if ids is None:
+        ids = torch.arange(max_id, device=batch.device)
+    if ids.ndimension() < 2:
+        ids = ids.unsqueeze(dim=0)
+    assert ids.ndimension() == 2
 
-    # Create a tensor of all IDs
-    ids = torch.arange(max_id, device=batch.device)
+    # normalize batch -> batch.shape: (batch_size, 1, 3)
+    batch = batch.unsqueeze(dim=1)
 
-    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
-    extended_ids = ids.repeat(batch.shape[0])
+    # allocate memory
+    hrt_batch = batch.new_empty(size=(batch.shape[0], ids.shape[-1], 3))
 
-    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
-    columns = [extended_batch[:, i] for i in (0, 1)]
-    columns.insert(dim, extended_ids)
-    hrt_batch = torch.stack(columns, dim=-1)
+    # copy ids
+    hrt_batch[..., dim] = ids
+    hrt_batch[..., [i for i in range(3) if i != dim]] = batch
 
-    return hrt_batch
+    # reshape
+    return hrt_batch.view(-1, 3)
 
 
 def check_shapes(
@@ -1722,6 +1732,69 @@ def nested_get(d: Mapping[str, Any], *key: str, default=None) -> Any:
             return default
         d = d[k]
     return d
+
+
+def rate_limited(xs: Iterable[X], min_avg_time: float = 1.0) -> Iterable[X]:
+    """Iterate over iterable with rate limit.
+
+    :param xs:
+        the iterable
+    :param min_avg_time:
+        the minimum average time per element
+
+    :yields: elements of the iterable
+    """
+    start = time.perf_counter()
+    for i, x in enumerate(xs):
+        duration = time.perf_counter() - start
+        under = min_avg_time * i - duration
+        under = max(0, under)
+        if under:
+            logger.debug(f"Applying rate limit; sleeping for {under} seconds")
+            time.sleep(under)
+        yield x
+
+
+class ExtraReprMixin:
+    """
+    A mixin for modules with hierarchical `extra_repr`.
+
+    It takes up the :meth:`torch.nn.Module.extra_repr` idea, and additionally provides a simple
+    composable way to generate the components of :meth:`extra_repr` via :meth:`iter_extra_repr`.
+
+    If combined with `torch.nn.Module`, make sure to put :class:`ExtraReprMixin` *behind*
+    :class:`torch.nn.Module` to prefer the latter's :func:`__repr__` implementation.
+    """
+
+    def iter_extra_repr(self) -> Iterable[str]:
+        """
+        Iterate over the components of the :meth:`extra_repr`.
+
+        This method is typically overridden. A common pattern would be
+
+        .. code-block:: python
+
+            def iter_extra_repr(self) -> Iterable[str]:
+                yield from super().iter_extra_repr()
+                yield "<key1>=<value1>"
+                yield "<key2>=<value2>"
+
+        :return:
+            an iterable over individual components of the :meth:`extra_repr`
+        """
+        return []
+
+    def extra_repr(self) -> str:
+        """
+        Generate the extra repr, cf. :meth`torch.nn.Module.extra_repr`.
+
+        :return:
+            the extra part of the :func:`repr`
+        """
+        return ", ".join(self.iter_extra_repr())
+
+    def __repr__(self) -> str:  # noqa: D105
+        return f"{self.__class__.__name__}({self.extra_repr()})"
 
 
 if __name__ == "__main__":

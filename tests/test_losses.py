@@ -90,7 +90,8 @@ class TestCustomLossFunctions(unittest.TestCase):
         # sigmoids ≈ [0.27, 0.27, 0.5, 0.5]
         log_sigmoids = torch.tensor([-1.31, -1.31, -0.69, -0.69])
         intermediate = weights * log_sigmoids
-        neg_loss = torch.mean(intermediate, dim=-1)
+        # sum over the softmax dim as weights sum up to 1
+        neg_loss = torch.sum(intermediate, dim=-1)
 
         # pos_distances = [0., 0., 0.5, 0.5]
         # margin - pos_distances = [1. 1., 0.5, 0.5]
@@ -104,7 +105,7 @@ class TestCustomLossFunctions(unittest.TestCase):
 
         loss = loss_fct(pos_scores, neg_scores, weights).item()
 
-        self.assertAlmostEqual(expected_loss, 0.34, delta=0.02)
+        self.assertAlmostEqual(expected_loss, 0.77, delta=0.02)
         self.assertAlmostEqual(expected_loss, loss, delta=0.02)
 
     def test_pipeline(self):

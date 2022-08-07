@@ -497,9 +497,9 @@ def prepare_ablation(  # noqa:C901
         def _set_arguments(config: Optional[Mapping3D], key: str, value: str) -> None:
             """Set argument and its values."""
             d = {}
-            d[key] = {} if config is None else config.get(model, {}).get(value, {})
+            d[key] = {} if config is None else config.get(model, {}).get(value, {})  # noqa:B023
             if d[key]:
-                hpo_config.update(d)
+                hpo_config.update(d)  # noqa:B023
 
         # Add dataset to current_pipeline
         if isinstance(dataset, str):

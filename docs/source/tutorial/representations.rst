@@ -1,3 +1,5 @@
+.. _representations:
+
 Representations
 ===============
 In PyKEEN, a :class:`pykeen.nn.representation.Representation` is used to map
@@ -69,7 +71,7 @@ predictions for entities not seen during training.
 
     from pykeen.pipeline import pipeline
     from pykeen.datasets import get_dataset
-    from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
+    from pykeen.nn import LabelBasedTransformerRepresentation
     from pykeen.models import ERModel
 
     dataset = get_dataset(dataset="nations")
@@ -82,10 +84,10 @@ predictions for entities not seen during training.
         model_kwargs=dict(
             interaction="ermlpe",
             interaction_kwargs=dict(
-                embedding_dim=entity_representations.embedding_dim,
+                embedding_dim=entity_representations.shape[0],
             ),
             entity_representations=entity_representations,
-            relation_representations=EmbeddingSpecification(
+            relation_representations_kwargs=dict(
                 shape=entity_representations.shape,
             ),
         ),
