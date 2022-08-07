@@ -380,7 +380,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     cf. https://arxiv.org/abs/2106.06935.
     """
 
-    negatives: Mapping[Target, torch.LongTensor]
+    negative_samples: Mapping[Target, torch.LongTensor]
 
     def __init__(
         self,
@@ -485,7 +485,6 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         model: Model,
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
         **kwargs,
     ) -> MetricResults:
         """
@@ -501,10 +500,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 
         :param batch_size:
             the batch size
-        :param slice_size:
-            the slice size
         :param kwargs:
-            additional ignored keyword-based parameters
+            additional keyword-based parameters passed to :meth:`pykeen.nn.Model.predict`
 
         :return:
             the evaluation results
@@ -535,19 +532,35 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # > y_pred_neg is the predicted scores for negative edges. It needs to be a 2d matrix.
         # > y_pred_pos[i] is ranked among y_pred_neg[i].
         # > Note: As the evaluation metric is ranking-based, the predicted scores need to be different for different edges.
-        y_pred_pos = []
-        y_pred_neg = []
-        for target, negatives in self.negatives.items():
+
+        # pre-allocate
+        num_targets = len(self.negatives)
+        num_triples = mapped_triples.shape[0]
+        num_negatives = set(t.shape[1] for t in self.negative_samples.values())
+        assert len(num_negatives) == 1
+        num_negatives = num_negatives[0]
+        device = mapped_triples.device
+        y_pred_pos = torch.empty(size=(num_triples * num_targets,), device=device)
+        y_pred_neg = torch.empty(size=(num_triples * num_targets, num_negatives), device=device)
+        # iterate over batches
+        offset = 0
+        for target, negatives in self.negative_samples.items():
             for hrt_batch, negatives_batch in zip(
                 mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size)
             ):
-                # TODO: there is a more efficient way with new-style models
-                scores = model.predict(hrt_batch=hrt_batch, target=target, slice_size=slice_size, mode=self.mode)
-                batch_idx = torch.arange(len(hrt_batch), device=scores.device)
-                # TODO: can we use gather here?
-                y_pred_pos.append(scores[batch_idx, hrt_batch[:, 2]])
-                y_pred_neg.append(scores[batch_idx, negatives_batch])
+                # combine ids, shape: (batch_size, num_negatives + 1)
+                ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)
+                # get scores, shape: (batch_size, num_negatives + 1)
+                scores = model.predict(hrt_batch=hrt_batch, target=target, ids=ids, mode=self.mode, **kwargs)
+                # store positive and negative scores
+                this_batch_size = scores.shape[0]
+                stop = offset + this_batch_size
+                y_pred_pos[offset:stop] = scores[:, 0]
+                y_pred_neg[offset:stop] = scores[:, 1:]
+                offset = stop
+        # combine to input dictionary
         input_dict = dict(y_pred_pos=torch.cat(y_pred_pos, dim=0), y_pred_neg=torch.cat(y_pred_neg, dim=0))
+        # calculate metrics
         result = {}
         for metric in self.metrics:
             if isinstance(metric, InverseHarmonicMeanRank):
