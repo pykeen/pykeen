@@ -20,7 +20,13 @@ from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
 from ..constants import TARGET_TO_INDEX
-from ..metrics.ranking import HITS_METRICS, InverseHarmonicMeanRank, RankBasedMetric, rank_based_metric_resolver
+from ..metrics.ranking import (
+    HITS_METRICS,
+    HitsAtK,
+    InverseHarmonicMeanRank,
+    RankBasedMetric,
+    rank_based_metric_resolver,
+)
 from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import CoreTriplesFactory
@@ -522,6 +528,19 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 # metric. we do want to support user-selected metrics on arbitrary datasets instead
 
         evaluator = _OGBEvaluatorBridge()
+        # this setting is equivalent to the WikiKG2 setting, and will calculate MRR *and* H@k for k in {1, 3, 10}
+        evaluator.eval_metric = "mrr"
+        evaluator.K = None
+
+        # filter supported metrics
+        metrics: List[RankBasedMetric] = []
+        for metric in self.metrics:
+            if not isinstance(metric, (HitsAtK, InverseHarmonicMeanRank)) or (
+                isinstance(metric, HitsAtK) and metric.k not in {1, 3, 10}
+            ):
+                logger.warning(f"{metric} is not supported by OGB evaluator")
+                continue
+            metrics.append(metric)
 
         # > ==== Expected input format of Evaluator for ogbl-wikikg2
         # > {'y_pred_pos': y_pred_pos, 'y_pred_neg': y_pred_neg}
@@ -573,23 +592,20 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         result: Dict[Tuple[str, ExtendedTarget, RankType], float] = {}
         # TODO: ogb's rank-type is non-deterministic...
         # https://github.com/snap-stanford/ogb/blob/ac253eb360f0fcfed1d253db628aa52f38dca21e/ogb/linkproppred/evaluate.py#L246
+        # this may change in the future, cf. https://github.com/snap-stanford/ogb/pull/357
         rank_type = RANK_REALISTIC
         for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
             # combine to input dictionary
             input_dict = dict(y_pred_pos=y_pred_pos_side, y_pred_neg=y_pred_neg_side)
-            # calculate metrics
-            for metric in self.metrics:
-                if isinstance(metric, InverseHarmonicMeanRank):
-                    evaluator.eval_metric = "mrr"
-                    evaluator.K = None
-                # TODO: Hits@k requires a different input format.
-                # elif isinstance(metric, HitsAtK):
-                #     evaluator.eval_metric = "hits@"
-                #     evaluator.K = metric.k
-                else:
-                    logger.warning(f"OGB's evaluator does not implement {metric}")
-                    continue
-                result[metric.key, ext_target, rank_type] = evaluator.eval(input_dict=input_dict)
+            # delegate to OGB evaluator
+            ogb_result = evaluator.eval(input_dict=input_dict)
+            # post-processing
+            for key, value in ogb_result.items():
+                # normalize name
+                key = MetricKey.lookup(key.replace("_list", "")).metric
+                # OGB does not aggregate values across triples
+                value = value.mean().item()
+                result[key, ext_target, rank_type] = value
         return RankBasedMetricResults(data=result)
 
 
