@@ -7,7 +7,7 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import numpy.random
@@ -20,13 +20,7 @@ from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
 from ..constants import TARGET_TO_INDEX
-from ..metrics.ranking import (
-    HITS_METRICS,
-    HitsAtK,
-    InverseHarmonicMeanRank,
-    RankBasedMetric,
-    rank_based_metric_resolver,
-)
+from ..metrics.ranking import HITS_METRICS, InverseHarmonicMeanRank, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import CoreTriplesFactory
@@ -505,11 +499,16 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 
         :return:
             the evaluation results
+
+        :raises ImportError:
+            if ogb is not installed
+        :raises NotImplementedError:
+            if `batch_size` is None, i.e., automatic batch size selection is selected
         """
         try:
             from ogb.linkproppred import Evaluator as _OGBEvaluator
         except ImportError as error:
-            raise ImportError(f"OGB evaluation requires `ogb` to be installed.") from error
+            raise ImportError("OGB evaluation requires `ogb` to be installed.") from error
 
         if batch_size is None:
             raise NotImplementedError("Automatic batch size selection not available for OGB evaluation.")
@@ -519,33 +518,35 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 
             def __init__(self):
                 """Initialize the evaluator."""
-                # note: OGB's evaluator needs a dataset name as input, and uses it to lookup the standard evaluation metric.
-                # we do want to support user-selected metrics on arbitrary datasets instead
+                # note: OGB's evaluator needs a dataset name as input, and uses it to lookup the standard evaluation
+                # metric. we do want to support user-selected metrics on arbitrary datasets instead
 
         evaluator = _OGBEvaluatorBridge()
 
         # > ==== Expected input format of Evaluator for ogbl-wikikg2
         # > {'y_pred_pos': y_pred_pos, 'y_pred_neg': y_pred_neg}
-        # > - y_pred_pos: numpy ndarray or torch tensor of shape (num_edge, ). Torch tensor on GPU is recommended for efficiency.
-        # > - y_pred_neg: numpy ndarray or torch tensor of shape (num_edge, num_nodes_neg). Torch tensor on GPU is recommended for efficiency.
+        # > - y_pred_pos: numpy ndarray or torch tensor of shape (num_edge, ). Torch tensor on GPU is recommended for
+        # > ... efficiency.
+        # > - y_pred_neg: numpy ndarray or torch tensor of shape (num_edge, num_nodes_neg). Torch tensor on GPU is
+        # > ... recommended for efficiency.
         # > y_pred_pos is the predicted scores for positive edges.
         # > y_pred_neg is the predicted scores for negative edges. It needs to be a 2d matrix.
         # > y_pred_pos[i] is ranked among y_pred_neg[i].
-        # > Note: As the evaluation metric is ranking-based, the predicted scores need to be different for different edges.
+        # > Note: As the evaluation metric is ranking-based, the predicted scores need to be different for different
+        # > ... edges.
+        y_pred_pos: Dict[Target, torch.Tensor] = {}
+        y_pred_neg: Dict[Target, torch.Tensor] = {}
 
-        # pre-allocate
-        num_targets = len(self.negative_samples)
         num_triples = mapped_triples.shape[0]
-        num_negatives = set(t.shape[1] for t in self.negative_samples.values())
-        if len(num_negatives) != 1:
-            raise ValueError(f"Inconsistent number of negative samples for different sides: {num_negatives}")
-        num_negatives = list(num_negatives)[0]
         device = mapped_triples.device
-        y_pred_pos = torch.empty(size=(num_triples * num_targets,), device=device)
-        y_pred_neg = torch.empty(size=(num_triples * num_targets, num_negatives), device=device)
-        # iterate over batches
-        offset = 0
+        # iterate over prediction targets
         for target, negatives in self.negative_samples.items():
+            # pre-allocate
+            y_pred_pos[target] = y_pred_pos_side = torch.empty(size=(num_triples,), device=device)
+            num_negatives = negatives.shape[1]
+            y_pred_neg[target] = y_pred_neg_side = torch.empty(size=(num_triples, num_negatives), device=device)
+            # iterate over batches
+            offset = 0
             for hrt_batch, negatives_batch in zip(
                 mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size)
             ):
@@ -556,26 +557,40 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 # store positive and negative scores
                 this_batch_size = scores.shape[0]
                 stop = offset + this_batch_size
-                y_pred_pos[offset:stop] = scores[:, 0]
-                y_pred_neg[offset:stop] = scores[:, 1:]
+                y_pred_pos_side[offset:stop] = scores[:, 0]
+                y_pred_neg_side[offset:stop] = scores[:, 1:]
                 offset = stop
-        # combine to input dictionary
-        input_dict = dict(y_pred_pos=y_pred_pos, y_pred_neg=y_pred_neg)
-        # calculate metrics
-        result = {}
-        for metric in self.metrics:
-            if isinstance(metric, InverseHarmonicMeanRank):
-                evaluator.eval_metric = "mrr"
-                evaluator.K = None
-            # TODO: Hits@k requires a different input format.
-            # elif isinstance(metric, HitsAtK):
-            #     evaluator.eval_metric = "hits@"
-            #     evaluator.K = metric.k
-            else:
-                logger.warning(f"OGB's evaluator does not implement {metric}")
-                continue
-            result[metric] = evaluator.eval(input_dict=input_dict)
-        return MetricResults(data=result)
+
+        def iter_preds() -> Iterable[Tuple[ExtendedTarget, torch.Tensor, torch.Tensor]]:
+            """Iterate over predicted scores for extended prediction targets."""
+            targets = sorted(y_pred_pos.keys())
+            for target in targets:
+                yield target, y_pred_pos[target], y_pred_neg[target]
+            yield SIDE_BOTH, torch.cat([y_pred_pos[t] for t in targets], dim=0), torch.cat(
+                [y_pred_neg[t] for t in targets], dim=0
+            )
+
+        result: Dict[Tuple[str, ExtendedTarget, RankType], float] = {}
+        # TODO: ogb's rank-type is non-deterministic...
+        # https://github.com/snap-stanford/ogb/blob/ac253eb360f0fcfed1d253db628aa52f38dca21e/ogb/linkproppred/evaluate.py#L246
+        rank_type = RANK_REALISTIC
+        for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
+            # combine to input dictionary
+            input_dict = dict(y_pred_pos=y_pred_pos_side, y_pred_neg=y_pred_neg_side)
+            # calculate metrics
+            for metric in self.metrics:
+                if isinstance(metric, InverseHarmonicMeanRank):
+                    evaluator.eval_metric = "mrr"
+                    evaluator.K = None
+                # TODO: Hits@k requires a different input format.
+                # elif isinstance(metric, HitsAtK):
+                #     evaluator.eval_metric = "hits@"
+                #     evaluator.K = metric.k
+                else:
+                    logger.warning(f"OGB's evaluator does not implement {metric}")
+                    continue
+                result[metric.key, ext_target, rank_type] = evaluator.eval(input_dict=input_dict)
+        return RankBasedMetricResults(data=result)
 
 
 class MacroRankBasedEvaluator(RankBasedEvaluator):
