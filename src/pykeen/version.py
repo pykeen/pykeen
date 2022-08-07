@@ -16,13 +16,14 @@ __all__ = [
     "env",
 ]
 
-VERSION = "1.8.3-dev"
+VERSION = "1.9.1-dev"
 
 
 @lru_cache(maxsize=2)
 def get_git_hash(terse: bool = True) -> str:
     """Get the PyKEEN git hash.
 
+    :param terse: Should the hash be clipped to 8 characters?
     :return:
         The git hash, equals 'UNHASHED' if encountered CalledProcessError, signifying that the
         code is not installed in development mode.
@@ -104,7 +105,7 @@ def env_html():
 def env(file=None):
     """Print the env or output as HTML if in Jupyter.
 
-    :param: The file to print to if not in a Jupyter setting. Defaults to sys.stdout
+    :param file: The file to print to if not in a Jupyter setting. Defaults to sys.stdout
     :returns: A :class:`IPython.display.HTML` if in a Jupyter notebook setting, otherwise none.
     """
     if _in_jupyter():

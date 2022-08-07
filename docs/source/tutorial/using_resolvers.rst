@@ -1,3 +1,5 @@
+.. _using_resolvers:
+
 Using Resolvers
 ===============
 As PyKEEN is a heavily modular and extensible library, we make use of the :mod:`class_resolver` library

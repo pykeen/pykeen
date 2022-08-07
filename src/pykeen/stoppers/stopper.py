@@ -28,7 +28,7 @@ class Stopper(ABC):
 
         :param args:
             ignored positional parameters
-        :param args:
+        :param kwargs:
             ignored keyword-based parameters
         """
         # To make MyPy happy

@@ -5,6 +5,14 @@
 from class_resolver import ClassResolver
 
 from . import init
+from .combination import (
+    Combination,
+    ComplexSeparatedCombination,
+    ConcatAggregationCombination,
+    ConcatCombination,
+    ConcatProjectionCombination,
+    GatedCombination,
+)
 from .message_passing import RGCNRepresentation
 from .modules import (
     AutoSFInteraction,
@@ -52,13 +60,19 @@ from .pyg import (
     TypedMessagePassingRepresentation,
 )
 from .representation import (
+    BackfillRepresentation,
+    CombinedRepresentation,
     Embedding,
     LowRankRepresentation,
+    PartitionRepresentation,
     Representation,
     SubsetRepresentation,
+    TensorTrainRepresentation,
     TextRepresentation,
+    TransformedRepresentation,
     WikidataTextRepresentation,
 )
+from .vision import VisualRepresentation, WikidataVisualRepresentation
 
 __all__ = [
     # REPRESENTATION
@@ -69,14 +83,21 @@ __all__ = [
     "FeaturizedMessagePassingRepresentation",
     "LowRankRepresentation",
     "NodePieceRepresentation",
+    "PartitionRepresentation",
+    "BackfillRepresentation",
     "RGCNRepresentation",
     "SimpleMessagePassingRepresentation",
     "SubsetRepresentation",
     "TokenizationRepresentation",
     "TypedMessagePassingRepresentation",
     "FeaturizedMessagePassingRepresentation",
+    "CombinedRepresentation",
+    "TensorTrainRepresentation",
     "TextRepresentation",
+    "TransformedRepresentation",
     "WikidataTextRepresentation",
+    "VisualRepresentation",
+    "WikidataVisualRepresentation",
     "tokenizer_resolver",
     "representation_resolver",
     # INITIALIZER
@@ -121,6 +142,13 @@ __all__ = [
     "TuckerInteraction",
     "UMInteraction",
     "interaction_resolver",
+    # combinations
+    "Combination",
+    "ComplexSeparatedCombination",
+    "ConcatAggregationCombination",
+    "ConcatCombination",
+    "ConcatProjectionCombination",
+    "GatedCombination",
 ]
 
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(

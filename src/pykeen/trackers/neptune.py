@@ -54,6 +54,8 @@ class NeptuneResultTracker(ResultTracker):
             The name of the experiment. If no ``experiment_id`` is given, one will be created based
             on the name.
         :param tags: A collection of tags to add to the experiment
+        :raises ValueError:
+            If neither an experiment name nor experiment ID is given
         """
         import neptune
 

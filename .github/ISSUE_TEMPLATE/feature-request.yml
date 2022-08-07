@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest an idea for this project
+labels: [ "enhancement" ]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to fill out a bug report. With your help, PyKEEN continues to improve!
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe clearly and concisely. Ex. I'm always frustrated when [...]
+    validations:
+      required: true
+  - type: textarea
+    id: wishes
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe alternatives you've considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+    validations:
+      required: true
+  - type: textarea
+    id: extras
+    attributes:
+      label: Additional information
+      description: Add any other information about the problem here.
+    validations:
+      required: false
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Issue Template Checks
+      description: By submitting this issue, you declare that you checked the following things
+      options:
+        - label: This is not a bug report (use a different issue template if it is)
+          required: true
+        - label: This is not a question (use the [discussions](https://github.com/pykeen/pykeen/discussions/new) forum instead)
+          required: true

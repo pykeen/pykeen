@@ -53,6 +53,8 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             The target column. From {0, 1, 2} for head/relation/tail prediction. Defaults to 2, i.e., tail prediction.
         :param kwargs:
             Additional keyword-based parameters passed to TrainingLoop.__init__
+        :raises ValueError:
+            If an invalid target column is given
         """
         super().__init__(**kwargs)
 

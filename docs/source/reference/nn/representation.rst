@@ -1,4 +1,4 @@
 Representation
 ==============
-.. automodule:: pykeen.nn.representation
-    :members:
+.. automodapi:: pykeen.nn.representation
+    :no-heading:
