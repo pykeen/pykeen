@@ -19,7 +19,7 @@ def rand(*size: int, generator: torch.Generator, device: torch.device) -> torch.
 
 
 def needs_package(name: str):
-    """A decorator for tests requiring a package to be installed."""
+    """Decorate a test such that it only runs if the rqeuired package is available."""
     try:
         mod = importlib.import_module(name=name)
     except ImportError:
