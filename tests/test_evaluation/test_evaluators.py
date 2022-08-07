@@ -94,6 +94,13 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
 
+    def test_ogb_evaluate(self):
+        """Test OGB evaluation."""
+        self.instance: SampledRankBasedEvaluator
+        model = FixedModel(triples_factory=self.factory)
+        result = self.instance.evaluate_ogb(model=model, mapped_triples=self.factory.mapped_triples, batch_size=1)
+        assert isinstance(result, MetricResults)
+
 
 class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the MacroRankBasedEvaluator."""
