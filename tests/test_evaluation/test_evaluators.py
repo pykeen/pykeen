@@ -55,11 +55,7 @@ from pykeen.typing import (
     Target,
 )
 from tests import cases
-
-try:
-    import ogb
-except ImportError:
-    ogb = None
+from tests.utils import needs_package
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +95,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
 
-    @unittest.skipIf(ogb is None, reason="Needs `ogb` to be installed")
+    @needs_package("ogb")
     def test_ogb_evaluate(self):
         """Test OGB evaluation."""
         self.instance: SampledRankBasedEvaluator
