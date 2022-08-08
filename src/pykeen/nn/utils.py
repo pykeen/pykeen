@@ -187,7 +187,7 @@ class TextCache(ABC):
     """An interface for looking up text for various flavors of entity identifiers."""
 
     @abstractmethod
-    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:
         """Get text for the given identifiers for the cache."""
         raise NotImplementedError
 
@@ -517,7 +517,7 @@ class PyOBOCache(TextCache):
             self._get_name = pyobo.get_name
         super().__init__(*args, **kwargs)
 
-    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:
         """Get text for the given CURIEs.
 
         :param identifiers:
@@ -525,6 +525,7 @@ class PyOBOCache(TextCache):
 
         :return:
             the label for each entity, looked up via :func:`pyobo.get_name`.
+            Might be none if no label is available.
         """
         res = []
         for curie in identifiers:
@@ -535,7 +536,7 @@ class PyOBOCache(TextCache):
                 if prefix not in PYOBO_PREFIXES_WARNED:
                     logger.warning("could not get names from %s", prefix)
                     PYOBO_PREFIXES_WARNED.add(prefix)
-                continue
+                res.append(None)
             else:
                 res.append(name)
         return res
