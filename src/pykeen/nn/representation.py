@@ -39,10 +39,10 @@ from ..utils import (
     broadcast_upgrade_to_sequences,
     clamp_norm,
     complex_normalize,
+    einsum,
     get_edge_index,
     get_preferred_device,
     upgrade_to_sequence,
-    einsum,
 )
 
 __all__ = [

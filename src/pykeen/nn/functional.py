@@ -22,6 +22,7 @@ from ..utils import (
     boxe_kg_arity_position_score,
     clamp_norm,
     compute_box,
+    einsum,
     ensure_complex,
     estimate_cost_of_sequence,
     is_cudnn_error,
@@ -31,7 +32,6 @@ from ..utils import (
     project_entity,
     tensor_product,
     tensor_sum,
-    einsum,
 )
 
 __all__ = [
