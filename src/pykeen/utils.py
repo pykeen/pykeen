@@ -123,6 +123,7 @@ __all__ = [
     "nested_get",
     "rate_limited",
     "ExtraReprMixin",
+    "einsum",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1796,6 +1797,13 @@ class ExtraReprMixin:
     def __repr__(self) -> str:  # noqa: D105
         return f"{self.__class__.__name__}({self.extra_repr()})"
 
+
+try:
+    from opt_einsum import contract
+
+    einsum = functools.partial(contract, backend="torch")
+except ImportError:
+    einsum = torch.einsum
 
 if __name__ == "__main__":
     import doctest

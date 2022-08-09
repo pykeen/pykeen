@@ -9,6 +9,8 @@ import torch
 from class_resolver import ClassResolver
 from torch import nn
 
+from ..utils import einsum
+
 try:
     import torch_scatter
 except ImportError:
@@ -214,7 +216,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
         message_ = message.view(message.shape[0], self.num_heads, -1)
         # compute attention coefficients, shape: (num_edges, num_heads)
         alpha = self.activation(
-            torch.einsum(
+            einsum(
                 "ihd,hd->ih",
                 torch.cat(
                     [
