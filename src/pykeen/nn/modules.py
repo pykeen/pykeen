@@ -1465,6 +1465,7 @@ class QuatEInteraction(
     func = pkf.quat_e_interaction
 
     def __init__(self) -> None:
+        """Initialize the interaction module."""
         super().__init__()
         self.register_buffer(name="table", tensor=quaterion_multiplication_table())
 

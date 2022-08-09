@@ -174,6 +174,9 @@ def init_quaternions(
     :param x: shape: (..., d, 4)
         the quaternions
 
+    :raises ValueError:
+        if the shape's last dimension is not 4.
+
     :return: shape: (..., d, 4)
         uniform quaternions
     """
