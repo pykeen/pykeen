@@ -1315,7 +1315,7 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        return dict(h=h, w_r=r[0], d_r=r[1], t=t)
+        return dict(h=h, w_r=r[1], d_r=r[0], t=t)
 
 
 class MuREInteraction(
