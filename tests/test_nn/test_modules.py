@@ -12,6 +12,7 @@ import torch
 import torch.nn.functional
 import unittest_templates
 from torch import nn
+from pykeen.models.unimodal.quate import quaternion_normalizer
 
 import pykeen.nn.modules
 import pykeen.utils
@@ -209,10 +210,15 @@ class QuatETests(cases.InteractionTestCase):
     """Tests for QuatE interaction."""
 
     cls = pykeen.nn.modules.QuatEInteraction
-    dim = 4 * cases.InteractionTestCase.dim  # quaternions
+    shape_kwargs = dict(k=4)  # quaternions
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        return -(_rotate_quaternion(*(_split_quaternion(x) for x in [h, r])) * t).sum()
+    def _exp_score(self, h, r, t, table) -> torch.FloatTensor:  # noqa: D102
+        return (_rotate_quaternion(*(x.unbind(dim=-1) for x in [h, r])) * t.view(-1, 4)).sum()
+
+    def _get_hrt(self, *shapes):
+        h, r, t = super()._get_hrt(*shapes)
+        r = quaternion_normalizer(r)
+        return h, r, t
 
 
 class RESCALTests(cases.InteractionTestCase):

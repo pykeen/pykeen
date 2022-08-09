@@ -168,11 +168,19 @@ uniform_norm_p1_ = compose(
 def init_quaternions(
     x: torch.FloatTensor,
 ) -> torch.FloatTensor:
-    """Initialize quaternion."""
-    num_elements, dim = x.shape
-    if dim % 4 != 0:
-        raise ValueError(f"Quaternions have four components, but dimension {dim} is not divisible by four.")
-    dim //= 4
+    """
+    Initialize quaternion.
+
+    :param x: shape: (..., d, 4)
+        the quaternions
+
+    :return: shape: (..., d, 4)
+        uniform quaternions
+    """
+    if x.shape[-1] != 4:
+        raise ValueError(f"Quaternions have four components, but the dimension of {x.shape} is equal to four.")
+    *shape, dim = x.shape[:-1]
+    num_elements = math.prod(shape)
     # scaling factor
     s = 1.0 / math.sqrt(2 * num_elements)
     # modulus ~ Uniform[-s, s]
