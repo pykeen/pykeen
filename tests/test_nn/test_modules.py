@@ -12,10 +12,10 @@ import torch
 import torch.nn.functional
 import unittest_templates
 from torch import nn
-from pykeen.models.unimodal.quate import quaternion_normalizer
 
 import pykeen.nn.modules
 import pykeen.utils
+from pykeen.models.unimodal.quate import quaternion_normalizer
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
 from pykeen.typing import Representation, Sign
 from pykeen.utils import clamp_norm, complex_normalize, ensure_tuple, project_entity
