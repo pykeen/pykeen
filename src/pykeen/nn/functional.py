@@ -1104,7 +1104,8 @@ def quat_e_interaction(
     :return: shape: (...)
         The scores.
     """
-    return torch.einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
+    # TODO: this sign is in the official code, too, but why do we need it?
+    return -torch.einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
 
 
 def cross_e_interaction(
