@@ -241,31 +241,18 @@ def convkb_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # decompose convolution for faster computation in 1-n case
-    num_filters = conv.weight.shape[0]
-    assert conv.weight.shape == (num_filters, 1, 1, 3)
-
-    # while ConvKB uses a convolution operation to calculate scores, its use of convolution is unusual in the
-    # following aspects
-    # 1. the "height" of the "image" is the dimension of the embedding vectors
-    # 2. the "width" of the "image" is 3, i.e., the number of vectors; moreover, since the convolution kernel is of
-    #    shape (1, 3), there is no sliding across the input, but only a single column position where the kernel is
-    #    applied
-    # 3. we always have a single input channel
-    # we utilize these observations for the ConvKB specific convolution filter to simplify and accelerate the code
-    # here, conv.weight.shape = (num_filters, 1, 1, 3)
-    # thus, we have for the output of the convolution operation: x[..., f, d] = conv.weight[f, :] * x[..., d] + b[d]
-    x = tensor_sum(
-        conv.bias.unsqueeze(dim=-1),
-        *(torch.einsum("...d,f->...fd", x, w) for (x, w) in zip((h, r, t), conv.weight[:, 0, 0, :].unbind(dim=-1))),
-    )
+    # cat into shape (..., 1, d, 3)
+    x = torch.stack(torch.broadcast_tensors(h, r, t), dim=-1).unsqueeze(dim=-3)
+    s = x.shape
+    x = x.view(-1, *s[-3:])
+    x = conv(x)
+    x = x.view(*s[:-3], -1)
     x = activation(x)
 
     # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
     x = hidden_dropout(x)
 
     # Linear layer for final scores; use flattened representations, shape: (*batch_dims, d * f)
-    x = x.view(*x.shape[:-2], -1)
     x = linear(x)
     return x.squeeze(dim=-1)
 
