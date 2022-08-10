@@ -225,8 +225,12 @@ class QuatETests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.QuatEInteraction
     shape_kwargs = dict(k=4)  # quaternions
 
-    def _exp_score(self, h, r, t, table) -> torch.FloatTensor:  # noqa: D102
-        return (_rotate_quaternion(*(x.unbind(dim=-1) for x in [h, r])) * t).sum()
+    def _exp_score(
+        self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor, table: torch.Tensor
+    ) -> torch.FloatTensor:  # noqa: D102
+        # we calculate the scores using the hard-coded formula, instead of utilizing table + einsum
+        x = _rotate_quaternion(*(x.unbind(dim=-1) for x in [h, r]))
+        return -(x * t).sum()
 
     def _get_hrt(self, *shapes):
         h, r, t = super()._get_hrt(*shapes)
