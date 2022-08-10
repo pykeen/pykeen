@@ -334,7 +334,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         if num_entities != len(self.pool):
             raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
         if self.randomize_selection:
-            assignment = random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
+            assignment = random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens, num_entities=num_entities)
         else:
             # choose first num_tokens
             assignment = torch.full(
