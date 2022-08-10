@@ -95,7 +95,9 @@ class RelationTokenizer(Tokenizer):
             e2r[e].add(r_)
 
         # randomly sample without replacement num_tokens relations for each entity
-        return 2 * num_relations + 1, random_sample_no_replacement(pool=e2r, num_tokens=num_tokens)
+        return 2 * num_relations + 1, random_sample_no_replacement(
+            pool=e2r, num_tokens=num_tokens, num_entities=num_entities
+        )
 
 
 class AnchorTokenizer(Tokenizer):

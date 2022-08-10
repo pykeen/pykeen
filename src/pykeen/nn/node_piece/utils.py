@@ -19,10 +19,13 @@ logger = logging.getLogger(__name__)
 def random_sample_no_replacement(
     pool: Mapping[int, Collection[int]],
     num_tokens: int,
+    num_entities: int,
 ) -> torch.LongTensor:
-    """Sample randomly without replacement num_tokens relations for each entity."""
+    """Sample randomly without replacement num_tokens relations for each entity.
+    If a graph has disconnected nodes, then num_entities > number of rows in the pool
+    """
     assignment = torch.full(
-        size=(len(pool), num_tokens),
+        size=(num_entities, num_tokens),
         dtype=torch.long,
         fill_value=-1,
     )
