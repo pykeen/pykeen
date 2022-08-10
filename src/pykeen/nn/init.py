@@ -180,8 +180,8 @@ def init_quaternions(
     :return: shape: (..., d, 4)
         uniform quaternions
     """
-    if x.shape[-1] != 4:
-        raise ValueError(f"Quaternions have four components, but the dimension of {x.shape} is equal to four.")
+    if x.ndim < 2 or x.shape[-1] != 4:
+        raise ValueError(f"shape must be (..., 4) but is {x.shape}.")
     *shape, dim = x.shape[:-1]
     num_elements = math.prod(shape)
     # scaling factor
@@ -196,8 +196,7 @@ def init_quaternions(
     imag = torch.rand(num_elements, dim, 3)
     imag = functional.normalize(imag, p=2, dim=-1)
     imag = imag * (modulus * phase.sin()).unsqueeze(dim=-1)
-    x = torch.cat([real, imag], dim=-1)
-    return x.view(num_elements, 4 * dim)
+    return torch.cat([real, imag], dim=-1)
 
 
 class PretrainedInitializer:

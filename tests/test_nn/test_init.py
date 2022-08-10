@@ -64,8 +64,8 @@ class QuaternionTestCase(cases.InitializerTestCase):
     """Tests for quaternion initialization."""
 
     initializer = staticmethod(pykeen.nn.init.init_quaternions)
-    # quaternion needs dim divisible by 4
-    shape = (4,)
+    # quaternion needs shape to end on 4
+    shape = (2, 4)
 
     def _verify_initialization(self, x: torch.FloatTensor) -> None:
         # check value range (actually [-s, +s] with s = 1/sqrt(2*n))
