@@ -21,8 +21,8 @@ def random_sample_no_replacement(
     num_tokens: int,
     num_entities: int,
 ) -> torch.LongTensor:
-    """
-    Sample randomly without replacement num_tokens relations for each entity.
+    """Sample randomly without replacement num_tokens relations for each entity.
+
     If a graph has disconnected nodes, then num_entities > number of rows in the pool.
 
     :param pool:
