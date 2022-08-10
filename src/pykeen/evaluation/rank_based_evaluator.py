@@ -6,7 +6,7 @@ import itertools
 import logging
 import math
 from collections import defaultdict
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import numpy.random
