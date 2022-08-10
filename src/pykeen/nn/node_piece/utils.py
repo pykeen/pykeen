@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def random_sample_no_replacement(
     pool: Mapping[int, Collection[int]],
     num_tokens: int,
-    num_entities: int,
+    num_entities: Optional[int] = None,
 ) -> torch.LongTensor:
     """Sample randomly without replacement num_tokens relations for each entity.
 
@@ -30,11 +30,14 @@ def random_sample_no_replacement(
     :param num_tokens:
         the number of tokens to sample for each entity
     :param num_entities:
-        the total number of nodes in the graph, might be bigger than the pool size for graphs with disconnected nodes
+        the total number of nodes in the graph, might be bigger than the pool size for graphs with disconnected nodes.
+        If not given, is calculated based the length of ``pool``.
 
     :return: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size
         the selected relation IDs for each entity. -1 is used as a padding token.
     """
+    if num_entities is None:
+        num_entities = len(pool)
     assignment = torch.full(
         size=(num_entities, num_tokens),
         dtype=torch.long,
