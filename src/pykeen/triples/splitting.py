@@ -39,6 +39,9 @@ def _split_triples(
 
     :return:
         The splitted triples.
+
+    :raises ValueError:
+        If the given sizes are different from the number of triples in mapped triples
     """
     num_triples = mapped_triples.shape[0]
     if sum(sizes) != num_triples:
@@ -143,6 +146,9 @@ def normalize_ratios(
 
     :return:
         A sequence of ratios of at least two elements which sums to one.
+
+    :raises ValueError:
+        if the ratio sum is bigger than 1.0
     """
     # Prepare split index
     if isinstance(ratios, float):
@@ -234,6 +240,8 @@ def _prepare_cleanup(
         The training triples.
     :param testing: shape: (m, 3)
         The testing triples.
+    :param max_ids:
+        The maximum identifier in each column. Calculates it automatically if not given.
 
     :return: shape: (m,)
         The move mask.

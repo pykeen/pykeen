@@ -19,9 +19,8 @@ from ...nn import (
     representation_resolver,
 )
 from ...nn.node_piece import RelationTokenizer
-from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode, OneOrSequence
+from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
 
 __all__ = [
     "InductiveNodePiece",
@@ -59,7 +58,6 @@ class InductiveNodePiece(ERModel):
         relation_representations_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        shape: Optional[OneOrSequence[int]] = None,
         validation_factory: Optional[CoreTriplesFactory] = None,
         test_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,
@@ -68,7 +66,13 @@ class InductiveNodePiece(ERModel):
         Initialize the model.
 
         :param triples_factory:
-            the triples factory. Must have create_inverse_triples set to True.
+            the triples factory of training triples. Must have create_inverse_triples set to True.
+        :param inference_factory:
+            the triples factory of inference triples. Must have create_inverse_triples set to True.
+        :param validation_factory:
+            the triples factory of validation triples. Must have create_inverse_triples set to True.
+        :param test_factory:
+            the triples factory of testing triples. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
             :class:`pykeen.nn.NodePieceRepresentation`.
@@ -92,9 +96,6 @@ class InductiveNodePiece(ERModel):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-            this will only be necessary if the aggregation is an *ad hoc* function.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
@@ -105,13 +106,6 @@ class InductiveNodePiece(ERModel):
             raise ValueError(
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
-            )
-
-        # Create an MLP for string aggregation
-        if aggregation == "mlp":
-            aggregation = ConcatMLP(
-                num_tokens=num_tokens,
-                embedding_dim=embedding_dim,
             )
 
         # always create representations for normal and inverse relations and padding
@@ -131,7 +125,6 @@ class InductiveNodePiece(ERModel):
                 tokenizers=RelationTokenizer,
                 token_representations=relation_representations,
                 aggregation=aggregation,
-                shape=shape,
                 num_tokens=num_tokens,
             ),
             relation_representations=SubsetRepresentation(  # hide padding relation
@@ -147,7 +140,6 @@ class InductiveNodePiece(ERModel):
                 tokenizers=RelationTokenizer,
                 token_representations=relation_representations,
                 aggregation=aggregation,
-                shape=shape,
                 num_tokens=num_tokens,
             ),
             max_id=inference_factory.num_entities,

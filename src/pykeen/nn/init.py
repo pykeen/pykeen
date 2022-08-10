@@ -5,21 +5,22 @@
 import functools
 import logging
 import math
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 
 import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
 import torch_ppr.utils
-from class_resolver import FunctionResolver, Hint, OptionalKwargs
+from class_resolver import FunctionResolver, Hint, HintOrType, OptionalKwargs
 from more_itertools import last
 from torch.nn import functional
 
-from .utils import TransformerEncoder, iter_matrix_power, safe_diagonal
+from .text import TextEncoder, text_encoder_resolver
+from .utils import iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Initializer, MappedTriples
-from ..utils import compose, get_edge_index, iter_weisfeiler_lehman
+from ..typing import Initializer, MappedTriples, OneOrSequence
+from ..utils import compose, get_edge_index, iter_weisfeiler_lehman, upgrade_to_sequence
 
 __all__ = [
     "xavier_uniform_",
@@ -30,9 +31,12 @@ __all__ = [
     "uniform_norm_p1_",
     "normal_norm_",
     "init_phases",
+    # Classes
     "PretrainedInitializer",
     "LabelBasedInitializer",
+    "WeisfeilerLehmanInitializer",
     "RandomWalkPositionalEncodingInitializer",
+    # Resolver
     "initializer_resolver",
 ]
 
@@ -47,9 +51,11 @@ def xavier_uniform_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     sampled from :math:`\mathcal{U}(-a, a)` where
 
     .. math::
-        a = \text{gain} \times \sqrt{\frac{6}{\text{fan\_out}}}
+        a = \text{gain} \times \sqrt{\frac{6}{\text{fan_out}}}
 
-    Example:
+    Example usage:
+
+    >>> import torch, pykeen.nn.init
     >>> w = torch.empty(3, 5)
     >>> pykeen.nn.init.xavier_uniform_(w, gain=torch.nn.init.calculate_gain("relu"))
 
@@ -79,9 +85,11 @@ def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     sampled from :math:`\mathcal{N}(0, \text{std}^2)` where
 
     .. math::
-        \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan\_out}}}
+        \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_out}}}
 
-    Example:
+    Example usage:
+
+    >>> import torch, pykeen.nn.init
     >>> w = torch.empty(3, 5)
     >>> pykeen.nn.init.xavier_normal_(w, gain=torch.nn.init.calculate_gain("relu"))
 
@@ -191,7 +199,7 @@ class PretrainedInitializer:
 
         import torch
         from pykeen.pipeline import pipeline
-        from pykeen.nn.init import create_init_from_pretrained
+        from pykeen.nn.init import PretrainedInitializer
 
         # this is usually loaded from somewhere else
         # the shape must match, as well as the entity-to-id mapping
@@ -222,6 +230,18 @@ class PretrainedInitializer:
             raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
         return self.tensor.to(device=x.device, dtype=x.dtype)
 
+    def as_embedding(self, **kwargs: Any):
+        """Get a static embedding from this pre-trained initializer.
+
+        :param kwargs: Keyword arguments to pass to :class:`pykeen.nn.representation.Embedding`
+        :returns: An embedding
+        :rtype: pykeen.nn.representation.Embedding
+        """
+        from .representation import Embedding
+
+        max_id, *shape = self.tensor.shape
+        return Embedding(max_id=max_id, shape=shape, initializer=self, trainable=False, **kwargs)
+
 
 class LabelBasedInitializer(PretrainedInitializer):
     """
@@ -244,6 +264,7 @@ class LabelBasedInitializer(PretrainedInitializer):
             embedding_dim=768,  # for BERT base
             entity_initializer=LabelBasedInitializer.from_triples_factory(
                 triples_factory=dataset.training,
+                encoder="transformer",
             ),
         )
     """
@@ -251,30 +272,24 @@ class LabelBasedInitializer(PretrainedInitializer):
     def __init__(
         self,
         labels: Sequence[str],
-        pretrained_model_name_or_path: str = "bert-base-cased",
+        encoder: HintOrType[TextEncoder] = None,
+        encoder_kwargs: OptionalKwargs = None,
         batch_size: Optional[int] = None,
-        max_length: Optional[int] = None,
     ):
         """
         Initialize the initializer.
 
         :param labels:
             the labels
-        :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. :func:`transformers.AutoModel.from_pretrained`
+        :param encoder:
+            the text encoder to use, cf. `text_encoder_resolver`
+        :param encoder_kwargs:
+            additional keyword-based parameters passed to the encoder
         :param batch_size: >0
             the (maximum) batch size to use while encoding. If None, use `len(labels)`, i.e., only a single batch.
-        :param max_length: >0
-            the maximum number of tokens to pad/trim the labels to
-
-        :raise ImportError:
-            if the transformers library could not be imported
         """
         super().__init__(
-            tensor=TransformerEncoder(
-                pretrained_model_name_or_path=pretrained_model_name_or_path,
-                max_length=max_length,
-            ).encode_all(
+            tensor=text_encoder_resolver.make(encoder, encoder_kwargs).encode_all(
                 labels=labels,
                 batch_size=batch_size,
             )
@@ -312,7 +327,7 @@ class LabelBasedInitializer(PretrainedInitializer):
         )
 
 
-class WeisfeilerLehmanInitializer:
+class WeisfeilerLehmanInitializer(PretrainedInitializer):
     """An initializer based on an encoding of categorical colors from the Weisfeiler-Lehman algorithm."""
 
     def __init__(
@@ -321,6 +336,7 @@ class WeisfeilerLehmanInitializer:
         # the color initializer
         color_initializer: Hint[Initializer] = None,
         color_initializer_kwargs: OptionalKwargs = None,
+        shape: OneOrSequence[int] = 32,
         # variants for the edge index
         edge_index: Optional[torch.LongTensor] = None,
         num_entities: Optional[int] = None,
@@ -336,6 +352,8 @@ class WeisfeilerLehmanInitializer:
             the initializer for initialization color representations, or a hint thereof
         :param color_initializer_kwargs:
             additional keyword-based parameters for the color initializer
+        :param shape:
+            the shape to use for the color representations
 
         :param edge_index: shape: (2, m)
             the edge index
@@ -349,29 +367,26 @@ class WeisfeilerLehmanInitializer:
         :param kwargs:
             additional keyword-based parameters passed to :func:`pykeen.utils.iter_weisfeiler_lehman`
         """
-        edge_index = get_edge_index(
-            triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
-        )
-
+        # normalize shape
+        shape = upgrade_to_sequence(shape)
         # get coloring
-        self.colors = last(iter_weisfeiler_lehman(edge_index=edge_index, num_nodes=num_entities, **kwargs))
+        colors = last(
+            iter_weisfeiler_lehman(
+                edge_index=get_edge_index(
+                    triples_factory=triples_factory, mapped_triples=mapped_triples, edge_index=edge_index
+                ),
+                num_nodes=num_entities,
+                **kwargs,
+            )
+        )
         # make color initializer
-        self.color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
-
-    @property
-    def num_colors(self) -> int:
-        """Return the number of colors."""
-        return self.colors.max().item() + 1
-
-    def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Initialize the tensor."""
-        if x.shape[0] != self.colors.shape[0]:
-            raise ValueError(f"shape does not match: expected shape[0]={self.colors.shape[0]} but got {x.shape}")
+        color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
         # initialize color representations
-        color_representation = self.color_initializer(x.new_empty(self.num_colors, *x.shape[1:]))
+        num_colors = colors.max().item() + 1
+        # note: this could be a representation?
+        color_representation = color_initializer(colors.new_empty(num_colors, *shape, dtype=torch.get_default_dtype()))
         # init entity representations according to the color
-        x[:] = color_representation[self.colors]
-        return x
+        super().__init__(tensor=color_representation[colors])
 
 
 class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
@@ -460,6 +475,7 @@ for func in [
     xavier_normal_,
     xavier_uniform_,
     init_phases,
+    init_quaternions,
     xavier_normal_norm_,
     xavier_uniform_norm_,
     normal_norm_,

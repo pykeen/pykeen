@@ -14,9 +14,10 @@ from torch import nn
 
 from .init import uniform_norm_p1_, xavier_normal_
 from .representation import LowRankRepresentation, Representation
-from .utils import adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
+from .utils import ShapeError, adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
+from ..utils import ExtraReprMixin
 
 __all__ = [
     "RGCNRepresentation",
@@ -29,7 +30,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Decomposition(nn.Module, ABC):
+class Decomposition(nn.Module, ExtraReprMixin, ABC):
     r"""Base module for relation-specific message passing.
 
     A decomposition module implementation offers a way to reduce the number of parameters needed by learning
@@ -75,12 +76,9 @@ class Decomposition(nn.Module, ABC):
         self.num_relations = num_relations
         self.output_dim = output_dim
 
-    def extra_repr(self) -> str:
-        """Return additional components for the output of `repr`."""
-        return ", ".join(self.iter_extra_repr())
-
     def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over components for `extra_repr`."""
+        yield from super().iter_extra_repr()
         yield f"input_dim={self.input_dim}"
         yield f"output_dim={self.output_dim}"
         yield f"num_relations={self.num_relations}"
@@ -592,15 +590,21 @@ class RGCNRepresentation(Representation):
         # has to be imported now to avoid cyclic imports
         from . import representation_resolver
 
-        base_embeddings = representation_resolver.make(
+        base = representation_resolver.make(
             entity_representations,
             max_id=triples_factory.num_entities,
             pos_kwargs=entity_representations_kwargs,
         )
-        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
+        if len(base.shape) > 1:
+            raise ValueError(f"{self.__class__.__name__} requires vector base entity representations.")
+        max_id = max_id or triples_factory.num_entities
+        if max_id != base.max_id:
+            raise ValueError(f"Inconsistent max_id={max_id} vs. base.max_id={base.max_id}")
+        shape = ShapeError.verify(shape=base.shape, reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # has to be assigned after call to nn.Module init
-        self.entity_embeddings = base_embeddings
+        self.entity_embeddings = base
 
         # Resolve edge weighting
         self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
@@ -615,7 +619,7 @@ class RGCNRepresentation(Representation):
         self.register_buffer("targets", t)
         self.register_buffer("edge_types", r)
 
-        dim = base_embeddings.embedding_dim
+        dim = base.shape[0]
         self.layers = nn.ModuleList(
             RGCNLayer(
                 input_dim=dim,

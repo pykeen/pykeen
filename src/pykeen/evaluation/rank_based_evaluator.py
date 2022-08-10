@@ -477,6 +477,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 
         num_entities = scores.shape[1]
         # TODO: do not require to compute all scores beforehand
+        # cf. Model.score_t(ts=...)
         triple_indices = [self.triple_to_index[h, r, t] for h, r, t in hrt_batch.cpu().tolist()]
         negative_entity_ids = self.negative_samples[target][triple_indices]
         negative_scores = scores[

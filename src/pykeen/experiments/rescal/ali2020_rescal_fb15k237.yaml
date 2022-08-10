@@ -1,0 +1,54 @@
+# RESCAL on FB15k237 from https://arxiv.org/abs/2006.13365
+metadata:
+  title: RESCAL on FB15k237 from https://arxiv.org/abs/2006.13365
+pipeline:
+  dataset: fb15k237
+  dataset_kwargs:
+    create_inverse_triples: True
+  evaluator_kwargs:
+    filtered: true
+  loss: crossentropy
+  loss_kwargs:
+    reduction: mean
+  model: rescal
+  model_kwargs:
+    embedding_dim: 256
+  optimizer: adam
+  optimizer_kwargs:
+    lr: 0.003442653313243005
+    weight_decay: 0.0
+  stopper: early
+  stopper_kwargs:
+    relative_delta: 0.002
+    frequency: 50
+    patience: 2
+  training_kwargs:
+    batch_size: 512
+    label_smoothing: 0.011161012837964961
+    num_epochs: 1000
+  training_loop: lcwa
+results:  # produced with pykeen 1.8.3-dev
+  realistic:
+    adjusted_arithmetic_mean_rank: 0.05322785264203849
+    adjusted_arithmetic_mean_rank_index: 0.9469030308891047
+    adjusted_geometric_mean_rank_index: 0.9978456954200915
+    adjusted_inverse_harmonic_mean_rank: 0.36732885992572906
+    arithmetic_mean_rank: 385.0875244140625
+    count: 20438.0
+    geometric_mean_rank: 12.468982696533203
+    harmonic_mean_rank: 2.719068430033642
+    hits_at_1: 0.2750758391232019
+    hits_at_10: 0.557295234367355
+    hits_at_3: 0.40204520990312165
+    hits_at_5: 0.46863685292102947
+    inverse_arithmetic_mean_rank: 0.0025968123227357864
+    inverse_geometric_mean_rank: 0.08019900321960449
+    inverse_harmonic_mean_rank: 0.3677730170209903
+    inverse_median_rank: 0.1428571492433548
+    median_absolute_deviation: 8.895613311033612
+    median_rank: 7.0
+    standard_deviation: 1712.5621337890625
+    variance: 2932869.0
+    z_arithmetic_mean_rank: 234.4482064163363
+    z_geometric_mean_rank: 142.899597202286
+    z_inverse_harmonic_mean_rank: 4932.295584586962

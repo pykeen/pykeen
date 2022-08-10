@@ -47,6 +47,7 @@ from ..typing import (
     TorchRandomHint,
 )
 from ..utils import (
+    ExtraReprMixin,
     compact_mapping,
     format_relative_comparison,
     get_edge_index,
@@ -78,6 +79,8 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
     :param triples: shape: (n, 3), dtype: str
+    :returns:
+        A mapping of entity labels to indices
     """
     # Split triples
     heads, tails = triples[:, 0], triples[:, 2]
@@ -87,10 +90,12 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     return {str(label): i for (i, label) in enumerate(entity_labels)}
 
 
-def create_relation_mapping(relations: set) -> RelationMapping:
+def create_relation_mapping(relations: Iterable[str]) -> RelationMapping:
     """Create mapping from relation labels to IDs.
 
-    :param relations: set
+    :param relations: A set of relation labels
+    :returns:
+        A mapping of relation labels to indices
     """
     # Sorting ensures consistent results when the triples are permuted
     relation_labels = sorted(
@@ -273,6 +278,10 @@ class Labeling:
         """Return the maximum ID (excl.)."""
         return max(self.label_to_id.values()) + 1
 
+    def all_labels(self) -> np.ndarray:
+        """Get all labels, in order."""
+        return self.label(range(self.max_id))
+
 
 def restrict_triples(
     mapped_triples: MappedTriples,
@@ -324,7 +333,7 @@ def restrict_triples(
     return mapped_triples[keep_mask]
 
 
-class KGInfo:
+class KGInfo(ExtraReprMixin):
     """An object storing information about the number of entities and relations."""
 
     #: the number of unique entities
@@ -362,15 +371,9 @@ class KGInfo:
         self.num_relations = num_relations
         self.create_inverse_triples = create_inverse_triples
 
-    def extra_repr(self) -> str:
-        """Extra representation string."""
-        return ", ".join(self._iter_extra_repr())
-
-    def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}({self.extra_repr()})"
-
-    def _iter_extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
+        yield from super().iter_extra_repr()
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
         yield f"create_inverse_triples={self.create_inverse_triples}"
@@ -384,7 +387,7 @@ class CoreTriplesFactory(KGInfo):
 
     def __init__(
         self,
-        mapped_triples: MappedTriples,
+        mapped_triples: Union[MappedTriples, np.ndarray],
         num_entities: int,
         num_relations: int,
         create_inverse_triples: bool = False,
@@ -403,13 +406,26 @@ class CoreTriplesFactory(KGInfo):
             Whether to create inverse triples.
         :param metadata:
             Arbitrary metadata to go with the graph
+
+        :raises TypeError:
+            if the mapped_triples are of non-integer dtype
+        :raises ValueError:
+            if the mapped_triples are of invalid shape
         """
         super().__init__(
             num_entities=num_entities,
             num_relations=num_relations,
             create_inverse_triples=create_inverse_triples,
         )
-        self.mapped_triples = mapped_triples
+        # ensure torch.Tensor
+        mapped_triples = torch.as_tensor(mapped_triples)
+        # input validation
+        if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
+            raise ValueError(f"Invalid shape for mapped_triples: {mapped_triples.shape}; must be (n, 3)")
+        if mapped_triples.is_complex() or mapped_triples.is_floating_point():
+            raise TypeError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
+        # always store as torch.long, i.e., torch's default integer dtype
+        self.mapped_triples = mapped_triples.to(dtype=torch.long)
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -468,9 +484,9 @@ class CoreTriplesFactory(KGInfo):
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
-    def _iter_extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
-        yield from super()._iter_extra_repr()
+        yield from super().iter_extra_repr()
         yield f"num_triples={self.num_triples}"
         for k, v in sorted(self.metadata.items()):
             if isinstance(v, (str, pathlib.Path)):
@@ -548,6 +564,10 @@ class CoreTriplesFactory(KGInfo):
 
         :param n:
             Either the (integer) number of top relations to keep or the (float) percentage of top relationships to keep.
+        :returns:
+            A set of IDs for the n most frequent relations
+        :raises TypeError:
+            If the n is the wrong type
         """
         logger.info(f"applying cutoff of {n} to {self}")
         if isinstance(n, float):
@@ -818,6 +838,8 @@ class CoreTriplesFactory(KGInfo):
 
         :param path:
             The path to store the triples factory to.
+        :returns:
+            The path to the file that got dumped
         """
         path = normalize_path(path, mkdir=True)
 
@@ -836,7 +858,8 @@ class CoreTriplesFactory(KGInfo):
     def _get_binary_state(self):
         return dict(
             num_entities=self.num_entities,
-            num_relations=self.num_relations,
+            # note: num_relations will be doubled again when instantiating with create_inverse_triples=True
+            num_relations=self.real_num_relations,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -1181,6 +1204,7 @@ class TriplesFactory(CoreTriplesFactory):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
+        :returns: A world cloud object for a Jupyter notebook
 
         .. warning::
 
@@ -1198,6 +1222,7 @@ class TriplesFactory(CoreTriplesFactory):
         """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
 
         :param top: The number of top relations to show. Defaults to 100.
+        :returns: A world cloud object for a Jupyter notebook
 
         .. warning::
 
@@ -1310,7 +1335,10 @@ def cat_triples(*triples_factories: CoreTriplesFactory) -> MappedTriples:
 def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> int:
     """Compute the number of moves to go from the first sequence of triples factories to the second.
 
+    :param a: A sequence of triples factories
+    :param b: A sequence of triples factories
     :return: The number of triples present in the training sets in both
+    :raises ValueError: If the sequences of triples factories are a different length
     """
     if len(a) != len(b):
         raise ValueError("Must have same number of triples factories")
@@ -1327,6 +1355,8 @@ def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory
 def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> float:
     """Compute the similarity between two datasets' splits.
 
+    :param a: A sequence of triples factories
+    :param b: A sequence of triples factories
     :return: The number of triples present in the training sets in both
     """
     steps = splits_steps(a, b)

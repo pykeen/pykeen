@@ -1389,6 +1389,7 @@ def pipeline(  # noqa: C901
     _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
         step=step,
+        prefix="testing" if use_testing_data else "validation",
     )
     _result_tracker.end_run()
 
@@ -1467,7 +1468,7 @@ def _safe_evaluate(
                     "Will revert to using the CPU for evaluation, which will increase the evaluation time "
                     "significantly.",
                 )
-                model.to_cpu_()
+                model.cpu()
         else:
             break  # evaluation was successful, don't continue the ``while True`` loop
 

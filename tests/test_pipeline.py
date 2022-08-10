@@ -2,6 +2,7 @@
 
 """Test the PyKEEN pipeline function."""
 
+import itertools
 import pathlib
 import tempfile
 import unittest
@@ -22,6 +23,7 @@ from pykeen.models.predict import (
 )
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
+from pykeen.nn.representation import Embedding
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
@@ -52,9 +54,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_tails_no_novelties(self):
         """Test scoring tails without labeling as novel w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
-            self.model,
-            "brazil",
-            "intergovorgs",
+            model=self.model,
+            head_label="brazil",
+            relation_label="intergovorgs",
             testing=self.testing_mapped_triples,
             triples_factory=self.dataset.training,
             add_novelties=False,
@@ -65,9 +67,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_tails_remove_known(self):
         """Test scoring tails while removing non-novel triples w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
-            self.model,
-            "brazil",
-            "intergovorgs",
+            model=self.model,
+            head_label="brazil",
+            relation_label="intergovorgs",
             testing=self.testing_mapped_triples,
             remove_known=True,
             triples_factory=self.dataset.training,
@@ -78,9 +80,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_tails_with_novelties(self):
         """Test scoring tails with labeling as novel w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
-            self.model,
-            "brazil",
-            "intergovorgs",
+            model=self.model,
+            head_label="brazil",
+            relation_label="intergovorgs",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
@@ -94,9 +96,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_relations_with_novelties(self):
         """Test scoring relations with labeling as novel w.r.t. training and testing."""
         rel_df = get_relation_prediction_df(
-            self.model,
-            "brazil",
-            "uk",
+            model=self.model,
+            head_label="brazil",
+            tail_label="uk",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
@@ -131,9 +133,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_heads_with_novelties(self):
         """Test scoring heads with labeling as novel w.r.t. training and testing."""
         heads_df = get_head_prediction_df(
-            self.model,
-            "conferences",
-            "brazil",
+            model=self.model,
+            relation_label="conferences",
+            tail_label="brazil",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
@@ -448,7 +450,7 @@ class TestAttributes(unittest.TestCase):
     def test_specify_regularizer(self):
         """Test a pipeline that uses a regularizer."""
         for regularizer, cls in [
-            (None, pykeen.regularizers.NoRegularizer),
+            (None, None),
             ("no", pykeen.regularizers.NoRegularizer),
             (NoRegularizer, pykeen.regularizers.NoRegularizer),
             ("powersum", pykeen.regularizers.PowerSumRegularizer),
@@ -463,7 +465,14 @@ class TestAttributes(unittest.TestCase):
                 )
                 self.assertIsInstance(pipeline_result, PipelineResult)
                 self.assertIsInstance(pipeline_result.model, Model)
-                self.assertIsInstance(pipeline_result.model.regularizer, cls)
+                for r in itertools.chain(
+                    pipeline_result.model.entity_representations, pipeline_result.model.relation_representations
+                ):
+                    if isinstance(r, Embedding):
+                        if cls is None:
+                            self.assertIsNone(r.regularizer)
+                        else:
+                            self.assertIsInstance(r.regularizer, cls)
 
 
 class TestPipelineEvaluationFiltering(unittest.TestCase):

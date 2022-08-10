@@ -16,35 +16,23 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.nations import Nations
-from pykeen.models import (
-    EntityRelationEmbeddingModel,
-    ERModel,
-    EvaluationOnlyModel,
-    FixedModel,
-    Model,
-    _NewAbstractModel,
-    _OldAbstractModel,
-    model_resolver,
-)
+from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
+from pykeen.models.predict import get_all_prediction_df, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
+from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
-from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
     Model,
-    _OldAbstractModel,
     _NewAbstractModel,
     # DummyModel,
     LiteralModel,
-    EntityRelationEmbeddingModel,
     ERModel,
     FixedModel,
-    SimpleInteractionModel,
     EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
@@ -210,7 +198,9 @@ class TestHolE(cases.ModelTestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
+        assert all_in_bounds(
+            self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON
+        )
 
 
 class TestKG2EWithKL(cases.BaseKG2ETest):
@@ -243,25 +233,21 @@ class TestNodePiece(cases.BaseNodePieceTest):
 class TestNodePieceMLP(cases.BaseNodePieceTest):
     """Test the NodePiece model with MLP aggregation."""
 
-    kwargs = dict(
-        num_tokens=64,
-        aggregation="mlp",
-    )
+    kwargs = dict(aggregation="mlp")
 
     def test_aggregation(self):
         """Test that the MLP gets registered properly and is trainable."""
         self.assertIsInstance(self.instance, pykeen.models.NodePiece)
-        self.assertIsInstance(self.instance.entity_representations[0], NodePieceRepresentation)
-        self.assertIsInstance(self.instance.entity_representations[0].aggregation, ConcatMLP)
+        r = self.instance.entity_representations[0]
+        self.assertIsInstance(r, NodePieceRepresentation)
+        self.assertIsInstance(r.combination, ConcatAggregationCombination)
+        self.assertIsInstance(r.combination.aggregation, ConcatMLP)
 
         # Test that the weight in the MLP is trainable (i.e. requires grad)
-        keys = [
-            "entity_representations.0.aggregation.0.weight",
-            "entity_representations.0.aggregation.0.bias",
-            "entity_representations.0.aggregation.3.weight",
-            "entity_representations.0.aggregation.3.bias",
-        ]
-        for key in keys:
+        for key in [
+            f"entity_representations.0.combination.aggregation.{key}"
+            for key in ("0.weight", "0.bias", "3.weight", "3.bias")
+        ]:
             params = dict(self.instance.named_parameters())
             self.assertIn(key, set(params))
             tensor = params[key]
@@ -306,11 +292,11 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
 
     def test_vocabulary_size(self):
         """Test the expected vocabulary size of the individual tokenizations."""
-        assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
         node_piece = self.instance.entity_representations[0]
-        assert isinstance(node_piece.token_representations, torch.nn.ModuleList)
-        assert len(node_piece.token_representations) == 2
-        anchor, relation = node_piece.token_representations
+        assert isinstance(node_piece, NodePieceRepresentation)
+        assert isinstance(node_piece.base, torch.nn.ModuleList)
+        assert len(node_piece.base) == 2
+        anchor, relation = node_piece.base
         assert anchor.vocabulary.max_id == self.num_anchors + 1
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
@@ -584,7 +570,7 @@ class TestTransE(cases.DistanceModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def test_get_all_prediction_df(self):
@@ -620,10 +606,10 @@ class TestTransH(cases.DistanceModelTestCase):
     def _check_constraints(self):
         """Check model constraints.
 
-        Entity embeddings have to have unit L2 norm.
+        Normal vectors of relation-specific hyperplanes have unit length.
         """
-        entity_norms = self.instance.normal_vector_embeddings(indices=None).norm(p=2, dim=-1)
-        assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+        norm = self.instance.relation_representations[1](indices=None).norm(p=2, dim=-1)
+        assert torch.allclose(norm, torch.ones_like(norm))
 
 
 class TestTransR(cases.DistanceModelTestCase):
@@ -805,24 +791,6 @@ def _remove_non_models(elements: Iterable[Union[str, Type[Model]]]) -> Set[Type[
 class TestModelUtilities(unittest.TestCase):
     """Extra tests for utility functions."""
 
-    def test_get_novelty_mask(self):
-        """Test `get_novelty_mask()`."""
-        num_triples = 7
-        base = torch.arange(num_triples)
-        mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
-        query_ids = torch.randperm(num_triples).numpy()[: num_triples // 2]
-        exp_novel = query_ids != 0
-        col = 2
-        other_col_ids = numpy.asarray([0, 0])
-        mask = get_novelty_mask(
-            mapped_triples=mapped_triples,
-            query_ids=query_ids,
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-        assert mask.shape == query_ids.shape
-        assert (mask == exp_novel).all()
-
     def test_extend_batch(self):
         """Test `_extend_batch()`."""
         batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
@@ -931,3 +899,9 @@ class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.m
         )
         scores = self.instance.predict_t(hr_batch=hr_batch)
         assert torch.allclose(scores, expected_scores)
+
+
+class CooccurrenceFilteredModelTests(cases.ModelTestCase):
+    """Tests for the filtered meta model."""
+
+    cls = pykeen.models.meta.filtered.CooccurrenceFilteredModel
