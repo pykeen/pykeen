@@ -37,6 +37,7 @@ from ..typing import (
     Target,
     TorchRandomHint,
 )
+from ..utils import ensure_torch_random_state
 
 __all__ = [
     "RankBasedEvaluator",
@@ -46,7 +47,6 @@ __all__ = [
     "MacroRankBasedEvaluator",
 ]
 
-from ..utils import ensure_torch_random_state
 
 logger = logging.getLogger(__name__)
 
