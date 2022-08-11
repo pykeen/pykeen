@@ -9,6 +9,7 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from collections import Counter
+from functools import lru_cache
 from operator import itemgetter
 from typing import (
     Any,
@@ -1409,6 +1410,7 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
 
 
+@lru_cache(1)
 def quaterion_multiplication_table() -> torch.Tensor:
     """
     Create the quaternion basis multiplication table.
