@@ -21,6 +21,7 @@ from pykeen.models.predict import get_all_prediction_df, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
+from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
@@ -227,6 +228,16 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
 
 class TestNodePiece(cases.BaseNodePieceTest):
     """Test the NodePiece model."""
+
+    def test_disconnected(self):
+        """Test handling of disconnected entities."""
+        edges = torch.tensor(
+            [[0, 0, 1], [1, 1, 0], [3, 1, 0], [3, 2, 1]], dtype=torch.long
+        )  # node ID 2 is missing as a disconnected node
+        factory = CoreTriplesFactory.create(
+            mapped_triples=edges, num_entities=4, num_relations=3, create_inverse_triples=True
+        )
+        pykeen.models.NodePiece(triples_factory=factory, num_tokens=2)
 
 
 class TestNodePieceMLP(cases.BaseNodePieceTest):
