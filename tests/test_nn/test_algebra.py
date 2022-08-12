@@ -6,7 +6,7 @@ import pykeen.nn.algebra
 
 
 def _test_multiplication_table(t: torch.Tensor):
-    """Generic test for multiplication tables."""
+    """Test properties of multiplication tables."""
     # check type
     assert torch.is_tensor(t)
     # check size
