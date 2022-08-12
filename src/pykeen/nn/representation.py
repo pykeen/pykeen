@@ -10,7 +10,7 @@ import math
 import string
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Iterable, List, Literal, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import more_itertools
 import numpy
@@ -922,6 +922,21 @@ class SingleCompGCNRepresentation(Representation):
         return x
 
 
+def _clean_labels(labels: Sequence[Optional[str]], missing_action) -> Sequence[str]:
+    if missing_action == "error":
+        idx = [i for i, label in enumerate(labels) if label is None]
+        if idx:
+            raise ValueError(
+                f"The labels at the following indexes were none. "
+                f"Consider an alternate `missing_action` policy.\n{idx}",
+            )
+        return labels
+    elif missing_action == "blank":
+        return [label or "" for label in labels]
+    else:
+        raise ValueError(f"Invalid `missing_action` policy: {missing_action}")
+
+
 class TextRepresentation(Representation):
     """
     Textual representations using a text encoder on labels.
@@ -956,6 +971,7 @@ class TextRepresentation(Representation):
         shape: Optional[OneOrSequence[int]] = None,
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
+        missing_action: Literal["blank", "error"] = "error",
         **kwargs,
     ):
         """
@@ -971,6 +987,8 @@ class TextRepresentation(Representation):
             the text encoder, or a hint thereof
         :param encoder_kwargs:
             keyword-based parameters used to instantiate the text encoder
+        :param missing_action:
+            Which policy for handling nones in the given labels
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
 
@@ -982,6 +1000,7 @@ class TextRepresentation(Representation):
         max_id = max_id or len(labels)
         if max_id != len(labels):
             raise ValueError(f"max_id={max_id} does not match len(labels)={len(labels)}")
+        labels = _clean_labels(labels, missing_action)
         # infer shape
         shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
         super().__init__(max_id=max_id, shape=shape, **kwargs)
