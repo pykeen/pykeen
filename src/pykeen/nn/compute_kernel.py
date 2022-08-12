@@ -5,7 +5,7 @@
 import numpy
 import torch
 
-from ..utils import einsum, extended_einsum, split_complex, tensor_product, view_complex, view_complex_native
+from ..utils import einsum, split_complex, tensor_product, view_complex, view_complex_native
 
 __all__ = [
     "batched_dot",
@@ -77,27 +77,6 @@ def _complex_direct(
         + (h_re * r_im * t_im).sum(dim=-1)
         + (h_im * r_re * t_im).sum(dim=-1)
         - (h_im * r_im * t_re).sum(dim=-1)
-    )
-
-
-# TODO unused
-def _complex_einsum(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Use einsum."""
-    x = h.new_zeros(2, 2, 2)
-    x[0, 0, 0] = 1
-    x[0, 1, 1] = 1
-    x[1, 0, 1] = 1
-    x[1, 1, 0] = -1
-    return extended_einsum(
-        "ijk,bhrtdi,bhrtdj,bhrtdk->bhrt",
-        x,
-        h.view(*h.shape[:-1], -1, 2),
-        r.view(*r.shape[:-1], -1, 2),
-        t.view(*t.shape[:-1], -1, 2),
     )
 
 
