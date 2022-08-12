@@ -33,7 +33,6 @@ def _batched_dot_einsum(
     a: torch.FloatTensor,
     b: torch.FloatTensor,
 ) -> torch.FloatTensor:
-    # TODO switch to einsum
     return einsum("...i,...i->...", a, b)
 
 
