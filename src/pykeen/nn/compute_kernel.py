@@ -80,7 +80,7 @@ def _complex_direct(
     )
 
 
-# TODO benchmark
+# TODO unused
 def _complex_einsum(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
