@@ -17,7 +17,7 @@ from .representation import LowRankRepresentation, Representation
 from .utils import ShapeError, adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
-from ..utils import ExtraReprMixin
+from ..utils import ExtraReprMixin, einsum
 
 __all__ = [
     "RGCNRepresentation",
@@ -230,14 +230,15 @@ class BasesDecomposition(Decomposition):
 
     # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
-        x = torch.einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
-        return torch.spmm(adj, x.view(-1, self.output_dim))
+        x = einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
+        # TODO: can we change the dimension order to make this contiguous?
+        return torch.spmm(adj, x.reshape(-1, self.output_dim))
 
     # docstr-coverage: inherited
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         x = torch.spmm(adj, x)
         x = x.view(self.num_relations, -1, self.input_dim)
-        return torch.einsum("rb, bio, rni -> no", self.base_weights, self.bases, x)
+        return einsum("rb, bio, rni -> no", self.base_weights, self.bases, x)
 
 
 def _make_dim_divisible(dim: int, divisor: int, name: str) -> int:
@@ -346,9 +347,9 @@ class BlockDecomposition(Decomposition):
         # (n, di) -> (n, nb, bsi)
         x = x.view(x.shape[0], self.num_blocks, self.input_block_size)
         # (n, nb, bsi), (R, nb, bsi, bso) -> (R, n, nb, bso)
-        x = torch.einsum("nbi, rbio -> rnbo", x, self.blocks)
+        x = einsum("nbi, rbio -> rnbo", x, self.blocks)
         # (R, n, nb, bso) -> (R * n, do)
-        # TODO: can we change the dimension order to make this contiguous?
+        # note: depending on the contracting order, the output may supporting viewing, or not
         x = x.reshape(-1, self.num_blocks * self.output_block_size)
         # (n, R * n), (R * n, do) -> (n, do)
         x = torch.sparse.mm(adj, x)
@@ -364,9 +365,10 @@ class BlockDecomposition(Decomposition):
         # (R * n, di) -> (R, n, nb, bsi)
         x = x.view(self.num_relations, -1, self.num_blocks, self.input_block_size)
         # (R, nb, bsi, bso), (R, n, nb, bsi) -> (n, nb, bso)
-        x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x)
+        x = einsum("rbio, rnbi -> nbo", self.blocks, x)
         # (n, nb, bso) -> (n, do)
-        x = x.view(x.shape[0], self.num_blocks * self.output_block_size)
+        # note: depending on the contracting order, the output may supporting viewing, or not
+        x = x.reshape(x.shape[0], self.num_blocks * self.output_block_size)
         # remove padding if necessary
         return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
 
