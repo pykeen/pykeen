@@ -527,16 +527,32 @@ class PyOBOCache(TextCache):
             the label for each entity, looked up via :func:`pyobo.get_name`.
             Might be none if no label is available.
         """
+        import bioregistry
+
         res: List[Optional[str]] = []
         for curie in identifiers:
-            prefix, identifier = curie.split(":")
             try:
-                name = self._get_name(prefix, identifier)
-            except subprocess.CalledProcessError:
+                prefix, identifier = curie.split(":", 1)
+            except ValueError:
+                res.append(None)
+                continue
+
+            norm_prefix = bioregistry.normalize_prefix(prefix)
+            if norm_prefix is None:
                 if prefix not in PYOBO_PREFIXES_WARNED:
-                    logger.warning("could not get names from %s", prefix)
+                    logger.warning("Prefix not registered in the Bioregistry: %s", prefix)
                     PYOBO_PREFIXES_WARNED.add(prefix)
                 res.append(None)
+                continue
+
+            try:
+                name = self._get_name(norm_prefix, identifier)
+            except subprocess.CalledProcessError:
+                if norm_prefix not in PYOBO_PREFIXES_WARNED:
+                    logger.warning("could not get names from %s", norm_prefix)
+                    PYOBO_PREFIXES_WARNED.add(norm_prefix)
+                res.append(None)
+                continue
             else:
                 res.append(name)
         return res
