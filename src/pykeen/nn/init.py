@@ -168,11 +168,22 @@ uniform_norm_p1_ = compose(
 def init_quaternions(
     x: torch.FloatTensor,
 ) -> torch.FloatTensor:
-    """Initialize quaternion."""
-    num_elements, dim = x.shape
-    if dim % 4 != 0:
-        raise ValueError(f"Quaternions have four components, but dimension {dim} is not divisible by four.")
-    dim //= 4
+    """
+    Initialize quaternion.
+
+    :param x: shape: (..., d, 4)
+        the quaternions
+
+    :raises ValueError:
+        if the shape's last dimension is not 4.
+
+    :return: shape: (..., d, 4)
+        uniform quaternions
+    """
+    if x.ndim < 2 or x.shape[-1] != 4:
+        raise ValueError(f"shape must be (..., 4) but is {x.shape}.")
+    *shape, dim = x.shape[:-1]
+    num_elements = math.prod(shape)
     # scaling factor
     s = 1.0 / math.sqrt(2 * num_elements)
     # modulus ~ Uniform[-s, s]
@@ -185,8 +196,7 @@ def init_quaternions(
     imag = torch.rand(num_elements, dim, 3)
     imag = functional.normalize(imag, p=2, dim=-1)
     imag = imag * (modulus * phase.sin()).unsqueeze(dim=-1)
-    x = torch.cat([real, imag], dim=-1)
-    return x.view(num_elements, 4 * dim)
+    return torch.cat([real, imag], dim=-1)
 
 
 class PretrainedInitializer:

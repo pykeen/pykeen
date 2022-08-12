@@ -93,7 +93,7 @@ class QuatE(ERModel):
         relation_initializer: Hint[Initializer] = init_quaternions,
         relation_regularizer: Hint[Regularizer] = LpRegularizer,
         relation_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_constrainer: Hint[Constrainer] = quaternion_normalizer,
+        relation_normalizer: Hint[Constrainer] = quaternion_normalizer,
         **kwargs,
     ) -> None:
         """Initialize QuatE.
@@ -121,8 +121,8 @@ class QuatE(ERModel):
         :param relation_regularizer_kwargs:
             The keyword arguments passed to the relation regularizer. Defaults to
             :data:`QuatE.regularizer_default_kwargs` if not specified.
-        :param relation_constrainer:
-            The constrainer to use for the relation embeddings.
+        :param relation_normalizer:
+            The normalizer to use for the relation embeddings.
         :param kwargs:
             Additional keyword based arguments passed to :class:`pykeen.models.ERModel`. Must not contain
             "interaction", "entity_representations", or "relation_representations".
@@ -130,16 +130,16 @@ class QuatE(ERModel):
         super().__init__(
             interaction=QuatEInteraction,
             entity_representations_kwargs=dict(
-                shape=(4 * embedding_dim,),
+                shape=(embedding_dim, 4),  # quaternions
                 initializer=entity_initializer,
                 dtype=torch.float,
                 regularizer=entity_regularizer,
                 regularizer_kwargs=entity_regularizer_kwargs or self.regularizer_default_kwargs,
             ),
             relation_representations_kwargs=dict(
-                shape=(4 * embedding_dim,),
+                shape=(embedding_dim, 4),  # quaternions
                 initializer=relation_initializer,
-                constrainer=relation_constrainer,
+                normalizer=relation_normalizer,
                 dtype=torch.float,
                 regularizer=relation_regularizer,
                 regularizer_kwargs=relation_regularizer_kwargs or self.regularizer_default_kwargs,
