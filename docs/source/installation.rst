@@ -102,9 +102,9 @@ of the ``setup.cfg``. They can be included with installation using the bracket n
 ``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
 ``pip install pykeen[docs,plotting]``.
 
-================  ==============================================================================
+================  =========================================================================================
 Name              Description
-================  ==============================================================================
+================  =========================================================================================
 ``templating``    Building of templated documentation, like the README
 ``plotting``      Plotting with ``seaborn`` and generation of word clouds
 ``mlflow``        Tracking of results with ``mlflow``
@@ -114,4 +114,5 @@ Name              Description
 ``transformers``  Label-based initialization with ``transformers``.
 ``tests``         Code needed to run tests. Typically handled with ``tox -e py``
 ``docs``          Building of the documentation
-================  ==============================================================================
+``opt_einsum``    Improve performance of :func:`torch.einsum` by replacing with :func:`opt_einsum.contract`
+================  =========================================================================================

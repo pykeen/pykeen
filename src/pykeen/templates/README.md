@@ -54,15 +54,15 @@
 
 ## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-The latest stable version of PyKEEN can be downloaded and installed from
-[PyPI](https://pypi.org/project/pykeen) with:
+The latest stable version of PyKEEN requires Python 3.8+. It can be downloaded
+and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
 $ pip install pykeen
 ```
 
 The latest version of PyKEEN can be installed directly from the
-source on [GitHub](https://github.com/pykeen/pykeen) with:
+source code on [GitHub](https://github.com/pykeen/pykeen) with:
 
 ```shell
 $ pip install git+https://github.com/pykeen/pykeen.git
