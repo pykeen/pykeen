@@ -77,7 +77,6 @@ __all__ = [
     "Result",
     "fix_dataclass_init_docs",
     "get_benchmark",
-    "extended_einsum",
     "upgrade_to_sequence",
     "ensure_tuple",
     "unpack_singletons",
@@ -674,39 +673,6 @@ def negative_norm(
         return -(x.abs() ** p).sum(dim=-1)
 
     return -x.norm(p=p, dim=-1)
-
-
-# TODO: deprecated?
-def extended_einsum(
-    eq: str,
-    *tensors,
-) -> torch.FloatTensor:
-    """Drop dimensions of size 1 to allow broadcasting."""
-    # TODO: check if einsum is still very slow.
-    lhs, rhs = eq.split("->")
-    mod_ops, mod_t = [], []
-    for op, t in zip(lhs.split(","), tensors):
-        mod_op = ""
-        if len(op) != len(t.shape):
-            raise ValueError(f"Shapes not equal: op={op} and t.shape={t.shape}")
-        # TODO: t_shape = list(t.shape); del t_shape[i]; t.view(*shape) -> only one reshape operation
-        for i, c in reversed(list(enumerate(op))):
-            if t.shape[i] == 1:
-                t = t.squeeze(dim=i)
-            else:
-                mod_op = c + mod_op
-        mod_ops.append(mod_op)
-        mod_t.append(t)
-    m_lhs = ",".join(mod_ops)
-    r_keep_dims = set("".join(mod_ops))
-    m_rhs = "".join(c for c in rhs if c in r_keep_dims)
-    m_eq = f"{m_lhs}->{m_rhs}"
-    mod_r = torch.einsum(m_eq, *mod_t)
-    # unsqueeze
-    for i, c in enumerate(rhs):
-        if c not in r_keep_dims:
-            mod_r = mod_r.unsqueeze(dim=i)
-    return mod_r
 
 
 def project_entity(

@@ -18,7 +18,7 @@ import pykeen.utils
 from pykeen.models.unimodal.quate import quaternion_normalizer
 from pykeen.nn.functional import distmult_interaction
 from pykeen.typing import Representation, Sign
-from pykeen.utils import clamp_norm, complex_normalize, ensure_tuple, project_entity
+from pykeen.utils import clamp_norm, complex_normalize, einsum, ensure_tuple, project_entity
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -562,7 +562,7 @@ class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
         return kwargs
 
     def _exp_score(self, core_tensor, h, r, t) -> torch.FloatTensor:
-        return torch.einsum("ijk,i,j,k", core_tensor, h, r, t)
+        return einsum("ijk,i,j,k", core_tensor, h, r, t)
 
 
 class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules.Interaction]):
