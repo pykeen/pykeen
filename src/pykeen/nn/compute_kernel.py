@@ -5,7 +5,7 @@
 import numpy
 import torch
 
-from ..utils import extended_einsum, split_complex, tensor_product, view_complex, view_complex_native
+from ..utils import einsum, extended_einsum, split_complex, tensor_product, view_complex, view_complex_native
 
 __all__ = [
     "batched_dot",
@@ -34,7 +34,7 @@ def _batched_dot_einsum(
     b: torch.FloatTensor,
 ) -> torch.FloatTensor:
     # TODO switch to einsum
-    return torch.einsum("...i,...i->...", a, b)
+    return einsum("...i,...i->...", a, b)
 
 
 def batched_dot(

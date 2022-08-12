@@ -701,8 +701,7 @@ def extended_einsum(
     r_keep_dims = set("".join(mod_ops))
     m_rhs = "".join(c for c in rhs if c in r_keep_dims)
     m_eq = f"{m_lhs}->{m_rhs}"
-    # TODO switch to new einsum
-    mod_r = torch.einsum(m_eq, *mod_t)
+    mod_r = einsum(m_eq, *mod_t)
     # unsqueeze
     for i, c in enumerate(rhs):
         if c not in r_keep_dims:
