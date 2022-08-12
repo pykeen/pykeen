@@ -1,7 +1,8 @@
 """Tests for algebraic utilities."""
 
-import pykeen.nn.algebra
 import torch
+
+import pykeen.nn.algebra
 
 
 def _test_multiplication_table(t: torch.Tensor):
