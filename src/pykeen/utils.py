@@ -1803,7 +1803,7 @@ try:
 
     einsum = functools.partial(contract, backend="torch")
     logger.info("Using opt_einsum")
-except ImportError as error:
+except ImportError:
     einsum = torch.einsum
 
 if __name__ == "__main__":
