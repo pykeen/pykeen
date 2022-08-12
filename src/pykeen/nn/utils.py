@@ -527,7 +527,7 @@ class PyOBOCache(TextCache):
             the label for each entity, looked up via :func:`pyobo.get_name`.
             Might be none if no label is available.
         """
-        res = []
+        res: List[Optional[str]] = []
         for curie in identifiers:
             prefix, identifier = curie.split(":")
             try:
