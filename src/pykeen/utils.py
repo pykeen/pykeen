@@ -676,6 +676,7 @@ def negative_norm(
     return -x.norm(p=p, dim=-1)
 
 
+# TODO: deprecated?
 def extended_einsum(
     eq: str,
     *tensors,
