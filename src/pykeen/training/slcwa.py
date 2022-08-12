@@ -97,6 +97,11 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         # split batch
         positive_batch, negative_batch, positive_filter = batch
 
+        # extract the relationids and use to lookup the correct weight
+        relation_ids = positive_batch[:, 1]
+        # look up the weight
+        # Pass to loss function
+
         # send to device
         positive_batch = positive_batch[start:stop].to(device=model.device)
         negative_batch = negative_batch[start:stop]
