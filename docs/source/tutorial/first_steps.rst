@@ -43,12 +43,12 @@ example:
     entity_ids = torch.as_tensor(triples_factory.entities_to_ids(["china", "egypt"]))
 
 Similarly, we can map a triples factory's relations to identifiers
-using :data:`TriplesFactory.relation_to_ids` like in the following
+using :data:`TriplesFactory.relations_to_ids` like in the following
 example:
 
 .. code-block:: python
 
-    relation_ids = torch.as_tensor(triples_factory.relation_to_ids(["independence", "embassy"]))
+    relation_ids = torch.as_tensor(triples_factory.relations_to_ids(["independence", "embassy"]))
 
 .. warning::
 

@@ -95,7 +95,9 @@ class RelationTokenizer(Tokenizer):
             e2r[e].add(r_)
 
         # randomly sample without replacement num_tokens relations for each entity
-        return 2 * num_relations + 1, random_sample_no_replacement(pool=e2r, num_tokens=num_tokens)
+        return 2 * num_relations + 1, random_sample_no_replacement(
+            pool=e2r, num_tokens=num_tokens, num_entities=num_entities
+        )
 
 
 class AnchorTokenizer(Tokenizer):
@@ -332,7 +334,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         if num_entities != len(self.pool):
             raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
         if self.randomize_selection:
-            assignment = random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens)
+            assignment = random_sample_no_replacement(pool=self.pool, num_tokens=num_tokens, num_entities=num_entities)
         else:
             # choose first num_tokens
             assignment = torch.full(
