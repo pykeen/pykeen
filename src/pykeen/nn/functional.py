@@ -846,12 +846,12 @@ def transh_interaction(
     return negative_norm_of_sum(
         # h projection to hyperplane
         h,
-        -torch.einsum("...i, ...i, ...j -> ...j", h, w_r, w_r),
+        -einsum("...i, ...i, ...j -> ...j", h, w_r, w_r),
         # r
         d_r,
         # -t projection to hyperplane
         -t,
-        torch.einsum("...i, ...i, ...j -> ...j", t, w_r, w_r),
+        einsum("...i, ...i, ...j -> ...j", t, w_r, w_r),
         p=p,
         power_norm=power_norm,
     )
