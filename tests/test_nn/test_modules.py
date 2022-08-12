@@ -562,6 +562,7 @@ class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
         return kwargs
 
     def _exp_score(self, core_tensor, h, r, t) -> torch.FloatTensor:
+        # TODO update einsum
         return torch.einsum("ijk,i,j,k", core_tensor, h, r, t)
 
 
