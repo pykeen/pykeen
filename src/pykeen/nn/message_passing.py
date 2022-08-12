@@ -231,7 +231,8 @@ class BasesDecomposition(Decomposition):
     # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         x = einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
-        return torch.spmm(adj, x.view(-1, self.output_dim))
+        # TODO: can we change the dimension order to make this contiguous?
+        return torch.spmm(adj, x.reshape(-1, self.output_dim))
 
     # docstr-coverage: inherited
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
@@ -348,8 +349,7 @@ class BlockDecomposition(Decomposition):
         # (n, nb, bsi), (R, nb, bsi, bso) -> (R, n, nb, bso)
         x = einsum("nbi, rbio -> rnbo", x, self.blocks)
         # (R, n, nb, bso) -> (R * n, do)
-        # TODO: can we change the dimension order to make this contiguous?
-        x = x.reshape(-1, self.num_blocks * self.output_block_size)
+        x = x.view(-1, self.num_blocks * self.output_block_size)
         # (n, R * n), (R * n, do) -> (n, do)
         x = torch.sparse.mm(adj, x)
         # remove padding if necessary
