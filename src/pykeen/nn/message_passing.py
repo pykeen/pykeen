@@ -349,7 +349,8 @@ class BlockDecomposition(Decomposition):
         # (n, nb, bsi), (R, nb, bsi, bso) -> (R, n, nb, bso)
         x = einsum("nbi, rbio -> rnbo", x, self.blocks)
         # (R, n, nb, bso) -> (R * n, do)
-        x = x.view(-1, self.num_blocks * self.output_block_size)
+        # note: depending on the contracting order, the output may supporting viewing, or not
+        x = x.reshape(-1, self.num_blocks * self.output_block_size)
         # (n, R * n), (R * n, do) -> (n, do)
         x = torch.sparse.mm(adj, x)
         # remove padding if necessary
@@ -366,6 +367,7 @@ class BlockDecomposition(Decomposition):
         # (R, nb, bsi, bso), (R, n, nb, bsi) -> (n, nb, bso)
         x = einsum("rbio, rnbi -> nbo", self.blocks, x)
         # (n, nb, bso) -> (n, do)
+        # note: depending on the contracting order, the output may supporting viewing, or not
         x = x.reshape(x.shape[0], self.num_blocks * self.output_block_size)
         # remove padding if necessary
         return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
