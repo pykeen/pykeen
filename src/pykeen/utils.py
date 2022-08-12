@@ -676,7 +676,8 @@ def negative_norm(
     return -x.norm(p=p, dim=-1)
 
 
-# TODO: deprecated?
+# TODO: deprecated? It's only used in pykeen.nn.compute_kernel._complex_einsum(),
+#  which is itself unused
 def extended_einsum(
     eq: str,
     *tensors,
