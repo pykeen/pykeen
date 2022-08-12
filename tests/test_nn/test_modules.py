@@ -15,7 +15,8 @@ from torch import nn
 
 import pykeen.nn.modules
 import pykeen.utils
-from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
+from pykeen.models.unimodal.quate import quaternion_normalizer
+from pykeen.nn.functional import distmult_interaction
 from pykeen.typing import Representation, Sign
 from pykeen.utils import clamp_norm, complex_normalize, ensure_tuple, project_entity
 from tests import cases
@@ -205,14 +206,36 @@ class ProjETests(cases.InteractionTestCase):
         return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
 
 
+def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
+    # Rotate (=Hamilton product in quaternion space).
+    return torch.stack(
+        [
+            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
+            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
+            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
+            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
+        ],
+        dim=-1,
+    )
+
+
 class QuatETests(cases.InteractionTestCase):
     """Tests for QuatE interaction."""
 
     cls = pykeen.nn.modules.QuatEInteraction
-    dim = 4 * cases.InteractionTestCase.dim  # quaternions
+    shape_kwargs = dict(k=4)  # quaternions
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        return -(_rotate_quaternion(*(_split_quaternion(x) for x in [h, r])) * t).sum()
+    def _exp_score(
+        self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor, table: torch.Tensor
+    ) -> torch.FloatTensor:  # noqa: D102
+        # we calculate the scores using the hard-coded formula, instead of utilizing table + einsum
+        x = _rotate_quaternion(*(x.unbind(dim=-1) for x in [h, r]))
+        return -(x * t).sum()
+
+    def _get_hrt(self, *shapes):
+        h, r, t = super()._get_hrt(*shapes)
+        r = quaternion_normalizer(r)
+        return h, r, t
 
 
 class RESCALTests(cases.InteractionTestCase):
