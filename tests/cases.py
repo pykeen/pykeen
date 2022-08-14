@@ -431,6 +431,10 @@ class InteractionTestCase(
     num_relations: int = 5
     num_entities: int = 7
     dtype: torch.dtype = torch.get_default_dtype()
+    # the relative tolerance for checking close results, cf. torch.allclose
+    rtol: float = 1.0e-5
+    # the absolute tolerance for checking close results, cf. torch.allclose
+    atol: float = 1.0e-8
 
     shape_kwargs = dict()
 
@@ -657,11 +661,13 @@ class InteractionTestCase(
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)
-            if not torch.allclose(scores_f, scores_f_manual):
+            if not torch.allclose(scores_f, scores_f_manual, rtol=self.rtol, atol=self.atol):
                 # allclose checks: | input - other | < atol + rtol * |other|
                 a_delta = (scores_f_manual - scores_f).abs()
                 r_delta = (scores_f_manual - scores_f).abs() / scores_f.abs().clamp_min(1.0e-08)
-                raise AssertionError(f"Abs. Diff: {a_delta.item()}; Rel. Diff: {r_delta.item()}")
+                raise AssertionError(
+                    f"Abs. Diff: {a_delta.item()} (tol.: {self.atol}); Rel. Diff: {r_delta.item()} (tol. {self.rtol})",
+                )
 
     @abstractmethod
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
