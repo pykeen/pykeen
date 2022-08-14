@@ -224,6 +224,7 @@ class QuatETests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.QuatEInteraction
     shape_kwargs = dict(k=4)  # quaternions
+    atol = 1.0e-06
 
     def _exp_score(
         self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor, table: torch.Tensor
