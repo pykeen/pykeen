@@ -923,7 +923,7 @@ class SingleCompGCNRepresentation(Representation):
         return x
 
 
-def _clean_labels(labels: Sequence[Optional[str]], missing_action) -> Sequence[str]:
+def _clean_labels(labels: Sequence[Optional[str]], missing_action: Literal["error", "blank"]) -> Sequence[str]:
     if missing_action == "error":
         idx = [i for i, label in enumerate(labels) if label is None]
         if idx:
