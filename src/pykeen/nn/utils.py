@@ -532,7 +532,7 @@ class PyOBOCache(TextCache):
         res: List[Optional[str]] = []
         for curie in identifiers:
             try:
-                prefix, identifier = curie.split(":", 1)
+                prefix, identifier = curie.split(":", maxsplit=1)
             except ValueError:
                 res.append(None)
                 continue
