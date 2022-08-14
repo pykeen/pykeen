@@ -657,7 +657,11 @@ class InteractionTestCase(
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)
-            assert torch.allclose(scores_f_manual, scores_f), f"Diff: {scores_f_manual - scores_f}"
+            if not torch.allclose(scores_f, scores_f_manual):
+                # allclose checks: | input - other | < atol + rtol * |other|
+                a_delta = (scores_f_manual - scores_f).abs()
+                r_delta = (scores_f_manual - scores_f).abs() / scores_f.abs().clamp_min(1.0e-08)
+                raise AssertionError(f"Abs. Diff: {a_delta.item()}; Rel. Diff: {r_delta.item()}")
 
     @abstractmethod
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
