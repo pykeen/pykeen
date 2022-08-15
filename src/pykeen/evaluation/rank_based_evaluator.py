@@ -7,7 +7,7 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import numpy.random
@@ -20,13 +20,7 @@ from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
 from ..constants import TARGET_TO_INDEX
-from ..metrics.ranking import (
-    HITS_METRICS,
-    HitsAtK,
-    InverseHarmonicMeanRank,
-    RankBasedMetric,
-    rank_based_metric_resolver,
-)
+from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import CoreTriplesFactory
@@ -511,95 +505,15 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         :raises NotImplementedError:
             if `batch_size` is None, i.e., automatic batch size selection is selected
         """
-        try:
-            from ogb.linkproppred import Evaluator as _OGBEvaluator
-        except ImportError as error:
-            raise ImportError("OGB evaluation requires `ogb` to be installed.") from error
+        from .ogb_evaluator import evaluate_ogb
 
-        if batch_size is None:
-            raise NotImplementedError("Automatic batch size selection not available for OGB evaluation.")
-
-        class _OGBEvaluatorBridge(_OGBEvaluator):
-            """A wrapper around OGB's evaluator to support evaluation on non-OGB datasets."""
-
-            def __init__(self):
-                """Initialize the evaluator."""
-                # note: OGB's evaluator needs a dataset name as input, and uses it to lookup the standard evaluation
-                # metric. we do want to support user-selected metrics on arbitrary datasets instead
-
-        evaluator = _OGBEvaluatorBridge()
-        # this setting is equivalent to the WikiKG2 setting, and will calculate MRR *and* H@k for k in {1, 3, 10}
-        evaluator.eval_metric = "mrr"
-        evaluator.K = None
-
-        # filter supported metrics
-        metrics: List[RankBasedMetric] = []
-        for metric in self.metrics:
-            if not isinstance(metric, (HitsAtK, InverseHarmonicMeanRank)) or (
-                isinstance(metric, HitsAtK) and metric.k not in {1, 3, 10}
-            ):
-                logger.warning(f"{metric} is not supported by OGB evaluator")
-                continue
-            metrics.append(metric)
-
-        # prepare input format, cf. `evaluator.expected_input``
-        # y_pred_pos: shape: (num_edge,)
-        # y_pred_neg: shape: (num_edge, num_nodes_neg)
-        y_pred_pos: Dict[Target, torch.Tensor] = {}
-        y_pred_neg: Dict[Target, torch.Tensor] = {}
-
-        num_triples = mapped_triples.shape[0]
-        device = mapped_triples.device
-        # iterate over prediction targets
-        for target, negatives in self.negative_samples.items():
-            # pre-allocate
-            # TODO: maybe we want to collect scores on CPU / add an option?
-            y_pred_pos[target] = y_pred_pos_side = torch.empty(size=(num_triples,), device=device)
-            num_negatives = negatives.shape[1]
-            y_pred_neg[target] = y_pred_neg_side = torch.empty(size=(num_triples, num_negatives), device=device)
-            # iterate over batches
-            offset = 0
-            for hrt_batch, negatives_batch in zip(
-                mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size)
-            ):
-                # combine ids, shape: (batch_size, num_negatives + 1)
-                ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)
-                # get scores, shape: (batch_size, num_negatives + 1)
-                scores = model.predict(hrt_batch=hrt_batch, target=target, ids=ids, mode=self.mode, **kwargs)
-                # store positive and negative scores
-                this_batch_size = scores.shape[0]
-                stop = offset + this_batch_size
-                y_pred_pos_side[offset:stop] = scores[:, 0]
-                y_pred_neg_side[offset:stop] = scores[:, 1:]
-                offset = stop
-
-        def iter_preds() -> Iterable[Tuple[ExtendedTarget, torch.Tensor, torch.Tensor]]:
-            """Iterate over predicted scores for extended prediction targets."""
-            targets = sorted(y_pred_pos.keys())
-            for target in targets:
-                yield target, y_pred_pos[target], y_pred_neg[target]
-            yield SIDE_BOTH, torch.cat([y_pred_pos[t] for t in targets], dim=0), torch.cat(
-                [y_pred_neg[t] for t in targets], dim=0
-            )
-
-        result: Dict[Tuple[str, ExtendedTarget, RankType], float] = {}
-        # TODO: ogb's rank-type is non-deterministic...
-        # https://github.com/snap-stanford/ogb/blob/ac253eb360f0fcfed1d253db628aa52f38dca21e/ogb/linkproppred/evaluate.py#L246
-        # this may change in the future, cf. https://github.com/snap-stanford/ogb/pull/357
-        rank_type = RANK_REALISTIC
-        for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
-            # combine to input dictionary
-            input_dict = dict(y_pred_pos=y_pred_pos_side, y_pred_neg=y_pred_neg_side)
-            # delegate to OGB evaluator
-            ogb_result = evaluator.eval(input_dict=input_dict)
-            # post-processing
-            for key, value in ogb_result.items():
-                # normalize name
-                key = MetricKey.lookup(key.replace("_list", "")).metric
-                # OGB does not aggregate values across triples
-                value = value.mean().item()
-                result[key, ext_target, rank_type] = value
-        return RankBasedMetricResults(data=result)
+        return evaluate_ogb(
+            rank_based_evaluator=self,
+            model=model,
+            mapped_triples=mapped_triples,
+            batch_size=batch_size,
+            **kwargs,
+        )
 
 
 class MacroRankBasedEvaluator(RankBasedEvaluator):
