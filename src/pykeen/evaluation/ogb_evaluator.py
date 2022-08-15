@@ -6,7 +6,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 import torch
 
 from .evaluator import MetricResults
-from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
+from .rank_based_evaluator import RankBasedMetricResults, SampledRankBasedEvaluator
 from .ranking_metric_lookup import MetricKey
 from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def evaluate_ogb(
-    rank_based_evaluator: RankBasedEvaluator,
+    evaluator: SampledRankBasedEvaluator,
     model: Model,
     mapped_triples: MappedTriples,
     batch_size: Optional[int] = None,
@@ -30,7 +30,7 @@ def evaluate_ogb(
     """
     Evaluate a model using OGB's evaluator.
 
-    :param rank_based_evaluator:
+    :param evaluator:
         An evaluator
     :param model:
         the model; will be set to evaluation mode.
@@ -76,7 +76,7 @@ def evaluate_ogb(
 
     # filter supported metrics
     metrics: List[RankBasedMetric] = []
-    for metric in rank_based_evaluator.metrics:
+    for metric in evaluator.metrics:
         if not isinstance(metric, (HitsAtK, InverseHarmonicMeanRank)) or (
             isinstance(metric, HitsAtK) and metric.k not in {1, 3, 10}
         ):
@@ -93,7 +93,7 @@ def evaluate_ogb(
     num_triples = mapped_triples.shape[0]
     device = mapped_triples.device
     # iterate over prediction targets
-    for target, negatives in rank_based_evaluator.negative_samples.items():
+    for target, negatives in evaluator.negative_samples.items():
         # pre-allocate
         # TODO: maybe we want to collect scores on CPU / add an option?
         y_pred_pos[target] = y_pred_pos_side = torch.empty(size=(num_triples,), device=device)
@@ -107,9 +107,7 @@ def evaluate_ogb(
             # combine ids, shape: (batch_size, num_negatives + 1)
             ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)
             # get scores, shape: (batch_size, num_negatives + 1)
-            scores = model.predict(
-                hrt_batch=hrt_batch, target=target, ids=ids, mode=rank_based_evaluator.mode, **kwargs
-            )
+            scores = model.predict(hrt_batch=hrt_batch, target=target, ids=ids, mode=evaluator.mode, **kwargs)
             # store positive and negative scores
             this_batch_size = scores.shape[0]
             stop = offset + this_batch_size

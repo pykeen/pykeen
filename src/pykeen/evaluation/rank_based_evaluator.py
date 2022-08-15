@@ -22,7 +22,6 @@ from .ranks import Ranks
 from ..constants import TARGET_TO_INDEX
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
-from ..models import Model
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     LABEL_HEAD,
@@ -476,7 +475,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 
     def evaluate_ogb(
         self,
-        model: Model,
+        model,
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
         **kwargs,
@@ -508,7 +507,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         from .ogb_evaluator import evaluate_ogb
 
         return evaluate_ogb(
-            rank_based_evaluator=self,
+            evaluator=self,
             model=model,
             mapped_triples=mapped_triples,
             batch_size=batch_size,
