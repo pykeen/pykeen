@@ -219,6 +219,13 @@ class TestPipeline(unittest.TestCase):
             assert df.shape[0] == self.testing_mapped_triples.shape[0]
             assert {"head_id", "relation_id", "tail_id", "score"}.issubset(df.columns)
 
+    # TODO: needs matplotlib; cf. decorator from https://github.com/pykeen/pykeen/pull/948
+    def test_plot(self):
+        """Test plotting."""
+        result = pipeline(dataset="nations", model="transe", training_kwargs=dict(num_epochs=0))
+        fig, axes = result.plot()
+        assert fig is not None and axes is not None
+
 
 class TestPipelineTriples(unittest.TestCase):
     """Test applying the pipeline to triples factories."""
