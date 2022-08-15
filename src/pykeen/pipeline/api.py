@@ -218,6 +218,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..evaluation.rank_based_evaluator import SampledRankBasedEvaluator
 from ..evaluation.ranking_metric_lookup import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
@@ -1201,11 +1202,7 @@ def pipeline(  # noqa: C901
     if training_loop_kwargs is None:
         training_loop_kwargs = {}
 
-    if negative_sampler is None:
-        negative_sampler_cls = None
-    elif not issubclass(training_loop_cls, SLCWATrainingLoop):
-        raise ValueError("Can not specify negative sampler with LCWA")
-    else:
+    if issubclass(training_loop_cls, SLCWATrainingLoop):
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
         training_loop_kwargs = dict(training_loop_kwargs)
         training_loop_kwargs.update(
@@ -1218,6 +1215,8 @@ def pipeline(  # noqa: C901
                 negative_sampler_kwargs=negative_sampler_kwargs,
             ),
         )
+    elif negative_sampler is not None:
+        raise ValueError("Can not specify negative sampler with LCWA")
     training_loop_instance = training_loop_cls(
         model=model_instance,
         triples_factory=training,
@@ -1236,6 +1235,8 @@ def pipeline(  # noqa: C901
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
+    if issubclass(evaluator_resolver.lookup(evaluator), SampledRankBasedEvaluator):
+        evaluator_kwargs["evaluation_factory"] = validation
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
     _result_tracker.log_params(
         params=dict(
@@ -1300,6 +1301,15 @@ def pipeline(  # noqa: C901
     _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
 
     if use_testing_data:
+        if isinstance(evaluator_instance, SampledRankBasedEvaluator):
+            # recreate evaluator instance; this is required for sampled evaluation, and evaluation on test data.
+            logger.info(
+                f"Recreating evaluator instance, since {evaluator_instance.__class__} required access to the evaluation"
+                f"triples factory.",
+            )
+            evaluator_kwargs["evaluation_factory"] = testing
+            # TODO: head / tail negatives are different
+            evaluator_instance = evaluator_resolver.make(evaluator, evaluator_kwargs)
         mapped_triples = testing.mapped_triples
     elif validation is None:
         raise ValueError("no validation triples available")

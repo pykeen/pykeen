@@ -90,6 +90,7 @@ from .unimodal import (
     TransF,
     TransH,
     TransR,
+    TripleRE,
     TuckER,
 )
 
@@ -135,6 +136,7 @@ __all__ = [
     "TransF",
     "TransH",
     "TransR",
+    "TripleRE",
     "TuckER",
     "UM",
     # Inductive Models

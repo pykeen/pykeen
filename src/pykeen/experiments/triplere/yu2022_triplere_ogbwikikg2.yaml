@@ -1,0 +1,65 @@
+# paper: https://vixra.org/abs/2112.0095
+# reference implementation: https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/master/TripleRE%2BNodepiece/ogb_wikikg2/model.py
+metadata:
+  title: Learn WikiKG2 Dataset with NodePiece + TripleRE as described by Yu et al., 2022
+pipeline:
+  dataset: OGBWikiKG2
+  dataset_kwargs:
+    create_inverse_triples: true
+  evaluator: sampled-rankbased
+  evaluator_kwargs:
+    filtered: true
+    # use the given set of negatives
+    head_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/valid.pt"
+    tail_negatives: "ogbwikikg2/ogbl_wikikg2/split/time/valid.pt"
+  loss: nssa
+  loss_kwargs:
+    adversarial_temperature: 1.0
+    margin: 6.0
+    reduction: "mean"
+  model: TripleRE
+  model_kwargs:
+    embedding_dim: 200   # for both anchors and mid relations, as well as for head/tail relations
+    anchor_tokenizer: precomputed-pool
+    anchor_tokenizer_kwargs:
+      url: "https://nodepiece-data.s3.ca-central-1.amazonaws.com/ogb-wikikg2/ogbl-wikikg2_20000_anchors_20000_paths_d0.4_b0.0_p0.4_r0.2_pykeen_50sp_bfs.pkl"
+      download_kwargs:
+        hexdigests:
+          sha512: "bc28c26f58783699b7fc3e13feda01f136bdc8d7762c7ac294ed56e905283c5d0416986d22916e54dd7b1140a46f45a51092b7e346aca99bbed7b7d4687dd767"
+      loader: galkin-pickle
+      randomize_selection: false
+    num_tokens: [ 12, 20 ]  # 12 relations, 20 anchors
+    node_piece_kwargs:
+      aggregation: mlp
+      # L2 normalization of entity representations, cf.
+      # https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L323-L324
+      normalizer: normalize
+      normalizer_kwargs:
+        p: 2
+        dim: -1
+    # https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L84-L88
+    initializer: uniform_
+    # (gamma + epsilon) / dim, cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L52-L60
+    # gamma = 6 cf. https://raw.githubusercontent.com/LongYu-360/TripleRE-Add-NodePiece/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/run_ogb.sh
+    # epsilon = 2 cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L36
+    # (6 + 2) / 200 = 8 / 200 = 0.04
+    initializer_kwargs:
+      a: -0.04
+      b: 0.04
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 128
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.001
+  random_seed: 0
+  training_kwargs:
+    batch_size: 512
+    num_epochs: 121
+  training_loop: sLCWA
+  stopper: early
+  stopper_kwargs:
+    metric: inverse_harmonic_mean_rank
+results:
+  nondeterministic: # https://github.com/snap-stanford/ogb/blob/c8f0d2aca80a4f885bfd6ad5258ecf1c2d0ac2d9/ogb/linkproppred/evaluate.py#L235
+    mean_reciprocal_rank: 0.6866

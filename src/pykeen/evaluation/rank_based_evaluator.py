@@ -5,7 +5,6 @@
 import itertools
 import logging
 import math
-import random
 from collections import defaultdict
 from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
@@ -19,7 +18,7 @@ from class_resolver import HintOrType, OptionalKwargs
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
-from ..constants import TARGET_TO_INDEX
+from ..constants import PYKEEN_DATASETS, TARGET_TO_INDEX
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
@@ -36,7 +35,9 @@ from ..typing import (
     MappedTriples,
     RankType,
     Target,
+    TorchRandomHint,
 )
+from ..utils import ensure_torch_random_state
 
 __all__ = [
     "RankBasedEvaluator",
@@ -45,6 +46,7 @@ __all__ = [
     "SampledRankBasedEvaluator",
     "MacroRankBasedEvaluator",
 ]
+
 
 logger = logging.getLogger(__name__)
 
@@ -309,11 +311,22 @@ class RankBasedEvaluator(Evaluator):
         return result
 
 
+def _sample(known: np.ndarray, num_entities: int, num_samples: int, generator: torch.Generator) -> torch.Tensor:
+    pool = list(set(range(num_entities)).difference(known.tolist()))
+    # repeat if too few
+    if len(pool) < num_samples:
+        logger.warning(f"There are less than num_samples={num_samples} candidates.")
+        pool = int(math.ceil(num_samples / len(pool))) * pool
+    pool = torch.as_tensor(data=pool, dtype=torch.long)
+    return pool[torch.randperm(len(pool), generator=generator)[:num_samples]]
+
+
 def sample_negatives(
     evaluation_triples: MappedTriples,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
     num_entities: Optional[int] = None,
+    random_seed: TorchRandomHint = None,
 ) -> Mapping[Target, torch.FloatTensor]:
     """
     Sample true negatives for sampled evaluation.
@@ -326,6 +339,8 @@ def sample_negatives(
         the number of samples
     :param num_entities:
         the number of entities
+    :param random_seed:
+        the random seed.
 
     :return:
         A mapping of sides to negative samples
@@ -336,32 +351,34 @@ def sample_negatives(
     )
     num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
     columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
-    num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
     all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
     id_df = df.reset_index()
-    all_ids = set(range(num_entities))
     negatives = {}
+    generator = ensure_torch_random_state(random_state=random_seed)
     for side in [LABEL_HEAD, LABEL_TAIL]:
-        this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
+        logger.debug(f"Sampling negatives for side={side}")
         other = [c for c in columns if c != side]
-        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
-            by=other,
-        ):
-            pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
-            if len(pool) < num_samples:
-                logger.warning(
-                    f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
-                )
-                # repeat
-                pool = int(math.ceil(num_samples / len(pool))) * pool
-            for i in group["index"].unique():
-                this_negatives[i, :] = torch.as_tensor(
-                    data=random.sample(population=pool, k=num_samples),
-                    dtype=torch.long,
-                )
-        negatives[side] = this_negatives
+        candidates = all_df.groupby(by=other).agg({side: "unique"})
+        df = pd.merge(id_df, candidates, on=other, how="left", suffixes=["_eval", "_all"])
+        negatives[side] = torch.stack(
+            df[f"{side}_all"]
+            .apply(_sample, num_samples=num_samples, num_entities=num_entities, generator=generator)
+            .tolist()
+        )
     return negatives
+
+
+def normalize_negatives(negatives: Union[torch.LongTensor, str], target: Target) -> torch.Tensor:
+    """Normalize negative samples."""
+    if torch.is_tensor(negatives):
+        return negatives
+    assert isinstance(negatives, str)
+    path = PYKEEN_DATASETS.joinpath(negatives)
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    content = torch.load(path)
+    return torch.as_tensor(content[f"{target}_neg"])
 
 
 class SampledRankBasedEvaluator(RankBasedEvaluator):
@@ -381,8 +398,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         *,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         num_negatives: Optional[int] = None,
-        head_negatives: Optional[torch.LongTensor] = None,
-        tail_negatives: Optional[torch.LongTensor] = None,
+        head_negatives: Union[None, str, torch.LongTensor] = None,
+        tail_negatives: Union[None, str, torch.LongTensor] = None,
+        random_seed: TorchRandomHint = None,
         **kwargs,
     ):
         """
@@ -400,6 +418,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             the entity IDs of negative samples for head prediction for each evaluation triple
         :param tail_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for tail prediction for each evaluation triple
+        :param random_seed:
+            the random seed to use, if negatives have to be sampled.
         :param kwargs:
             additional keyword-based arguments passed to
             :meth:`pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
@@ -422,19 +442,23 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 additional_filter_triples=additional_filter_triples,
                 num_entities=evaluation_factory.num_entities,
                 num_samples=num_negatives,
+                random_seed=random_seed,
             )
         elif head_negatives is None or tail_negatives is None:
             raise ValueError("Either both, head and tail negatives must be provided, or none.")
         else:
             negatives = {
-                LABEL_HEAD: head_negatives,
-                LABEL_TAIL: tail_negatives,
+                target: normalize_negatives(negatives=target_negatives, target=target)
+                for target, target_negatives in zip([LABEL_HEAD, LABEL_TAIL], [head_negatives, tail_negatives])
             }
 
         # verify input
         for side, side_negatives in negatives.items():
             if side_negatives.shape[0] != evaluation_factory.num_triples:
-                raise ValueError(f"Negatives for {side} are in wrong shape: {side_negatives.shape}")
+                raise ValueError(
+                    f"Negatives for {side} are in wrong shape: {side_negatives.shape}; "
+                    f"expected ({evaluation_factory.num_triples}, *)",
+                )
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
         self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
