@@ -2,7 +2,6 @@
 
 """Tests for initializers."""
 
-import unittest
 from typing import ClassVar
 
 import torch
@@ -13,10 +12,7 @@ from pykeen.datasets import Nations
 from pykeen.nn.modules import ComplExInteraction, Interaction, QuatEInteraction
 from tests import cases
 
-try:
-    import transformers
-except ImportError:
-    transformers = None
+from ..utils import needs_package
 
 
 class NormalizationMixin:
@@ -106,7 +102,7 @@ class XavierUniformNormTestCase(NormalizationMixin, cases.InitializerTestCase):
     initializer = staticmethod(pykeen.nn.init.xavier_uniform_norm_)
 
 
-@unittest.skipIf(transformers is None, "Need to install `transformers`")
+@needs_package("transformers")
 class LabelBasedInitializerTestCase(cases.InitializerTestCase):
     """Tests for label-based initialization."""
 
