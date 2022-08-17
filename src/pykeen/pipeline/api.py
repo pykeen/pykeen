@@ -1019,7 +1019,6 @@ def _handle_training_loop(
     # 5. Optimizer
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
-    clear_optimizer: bool = True,  # FIXME: not used?
     # 5.1 Learning Rate Scheduler
     lr_scheduler: HintType[LRScheduler] = None,
     lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
@@ -1524,7 +1523,6 @@ def pipeline(  # noqa: C901
         training=training,
         optimizer=optimizer,
         optimizer_kwargs=optimizer_kwargs,
-        clear_optimizer=clear_optimizer,
         lr_scheduler=lr_scheduler,
         lr_scheduler_kwargs=lr_scheduler_kwargs,
         training_loop=training_loop,
