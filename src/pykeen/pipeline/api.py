@@ -851,6 +851,36 @@ def _build_model_helper(
     )
 
 
+def _handle_checkpoint(training_kwargs: Mapping[str, Any], random_seed: Optional[int] = None) -> Tuple[int, bool]:
+    # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
+    # used random_seed to ensure reproducible results
+    checkpoint_name = training_kwargs.get("checkpoint_name")
+    if checkpoint_name is not None:
+        checkpoint_directory = pathlib.Path(training_kwargs.get("checkpoint_directory", PYKEEN_CHECKPOINTS))
+        checkpoint_directory.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = checkpoint_directory / checkpoint_name
+        if checkpoint_path.is_file():
+            checkpoint_dict = torch.load(checkpoint_path)
+            _random_seed = checkpoint_dict["random_seed"]
+            logger.info("loaded random seed %s from checkpoint.", _random_seed)
+            # We have to set clear optimizer to False since training should be continued
+            clear_optimizer = False
+            # TODO: checkpoint_dict not further used?
+        else:
+            logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
+            if random_seed is None:
+                _random_seed = random_non_negative_int()
+                logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
+            else:
+                _random_seed = random_seed
+    elif random_seed is None:
+        _random_seed = random_non_negative_int()
+        logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
+    else:
+        _random_seed = random_seed  # random seed given successfully
+    return _random_seed, clear_optimizer
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -1035,31 +1065,7 @@ def pipeline(  # noqa: C901
         training_kwargs = {}
     training_kwargs = dict(training_kwargs)
 
-    # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
-    # used random_seed to ensure reproducible results
-    checkpoint_name = training_kwargs.get("checkpoint_name")
-    if checkpoint_name is not None:
-        checkpoint_directory = pathlib.Path(training_kwargs.get("checkpoint_directory", PYKEEN_CHECKPOINTS))
-        checkpoint_directory.mkdir(parents=True, exist_ok=True)
-        checkpoint_path = checkpoint_directory / checkpoint_name
-        if checkpoint_path.is_file():
-            checkpoint_dict = torch.load(checkpoint_path)
-            _random_seed = checkpoint_dict["random_seed"]
-            logger.info("loaded random seed %s from checkpoint.", _random_seed)
-            # We have to set clear optimizer to False since training should be continued
-            clear_optimizer = False
-        else:
-            logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
-            if random_seed is None:
-                _random_seed = random_non_negative_int()
-                logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
-            else:
-                _random_seed = random_seed
-    elif random_seed is None:
-        _random_seed = random_non_negative_int()
-        logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
-    else:
-        _random_seed = random_seed  # random seed given successfully
+    _random_seed, clear_optimizer = _handle_checkpoint(training_kwargs=training_kwargs, random_seed=random_seed)
     set_random_seed(_random_seed)
 
     _result_tracker = resolve_result_trackers(result_tracker, result_tracker_kwargs)
