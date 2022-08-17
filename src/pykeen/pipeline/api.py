@@ -852,7 +852,7 @@ def _build_model_helper(
     )
 
 
-def _handle_checkpoint(training_kwargs: Mapping[str, Any], random_seed: Optional[int] = None) -> Tuple[int, bool]:
+def _handle_random_seed(training_kwargs: Mapping[str, Any], random_seed: Optional[int] = None) -> Tuple[int, bool]:
     # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
     # used random_seed to ensure reproducible results
     checkpoint_name = training_kwargs.get("checkpoint_name")
@@ -951,7 +951,7 @@ def _handle_model(
     # 4. Regularizer
     regularizer: HintType[Regularizer] = None,
     regularizer_kwargs: Optional[Mapping[str, Any]] = None,
-):
+) -> Model:
     _device: torch.device = resolve_device(device)
     logger.info(f"Using device: {device}")
 
@@ -1474,7 +1474,7 @@ def pipeline(  # noqa: C901
         training_kwargs = {}
     training_kwargs = dict(training_kwargs)
 
-    _random_seed, clear_optimizer = _handle_checkpoint(training_kwargs=training_kwargs, random_seed=random_seed)
+    _random_seed, clear_optimizer = _handle_random_seed(training_kwargs=training_kwargs, random_seed=random_seed)
     set_random_seed(_random_seed)
 
     _result_tracker = resolve_result_trackers(result_tracker, result_tracker_kwargs)
