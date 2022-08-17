@@ -1589,6 +1589,7 @@ class TransformedRepresentation(Representation):
 
 
 # TODO: can be a combined representations, with appropriate tensor-train combination
+@parse_docdata
 class TensorTrainRepresentation(Representation):
     r"""
     A tensor factorization of representations.
@@ -1609,6 +1610,8 @@ class TensorTrainRepresentation(Representation):
     with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times m_i \times n_i \times R_i$ and $R_0 = R_d = 1$.
 
     Another variant in the paper used an assignment based on hierarchical topological clustering.
+    ---
+    name: Tensor-Train Representation
     """
 
     #: shape: (max_id, num_cores)
