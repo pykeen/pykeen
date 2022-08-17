@@ -1,15 +1,11 @@
 """Test textual encoders."""
-import unittest
 
 import unittest_templates
 
 import pykeen.nn.text
 from tests import cases
 
-try:
-    import transformers
-except ImportError:
-    transformers = None
+from ..utils import needs_package
 
 
 class CharacterEmbeddingTextEncoderTestCase(cases.TextEncoderTestCase):
@@ -18,7 +14,7 @@ class CharacterEmbeddingTextEncoderTestCase(cases.TextEncoderTestCase):
     cls = pykeen.nn.text.CharacterEmbeddingTextEncoder
 
 
-@unittest.skipIf(transformers is None, "Need to install `transformers`")
+@needs_package("transformers")
 class TransformerTextEncoderTestCase(cases.TextEncoderTestCase):
     """A test case for the transformer encoder."""
 
