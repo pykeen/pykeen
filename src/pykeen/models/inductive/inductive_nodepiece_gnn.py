@@ -127,9 +127,9 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         # TODO I got lost in all the Representation Modules and shape casting and wrote this ;(
 
         hh, rr, tt = [
-            x_e.index_select(dim=0, index=h) if h is not None else x_e,
-            x_r.index_select(dim=0, index=r) if r is not None else x_r,
-            x_e.index_select(dim=0, index=t) if t is not None else x_e,
+            x_e[h] if h is not None else x_e,
+            x_r[r] if r is not None else x_r,
+            x_e[t] if t is not None else x_e,
         ]
 
         # normalization

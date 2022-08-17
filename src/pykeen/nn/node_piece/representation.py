@@ -3,7 +3,8 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, List, NamedTuple, Optional, Union
+import pathlib
+from typing import Callable, Iterable, List, NamedTuple, Optional, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -159,14 +160,11 @@ class TokenizationRepresentation(Representation):
         )
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        return "\n".join(
-            (
-                f"max_id={self.assignment.shape[0]},",
-                f"num_tokens={self.num_tokens},",
-                f"vocabulary_size={self.vocabulary_size},",
-            )
-        )
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"max_id={self.assignment.shape[0]}"
+        yield f"num_tokens={self.num_tokens}"
+        yield f"vocabulary_size={self.vocabulary_size}"
 
     # docstr-coverage: inherited
     def _plain_forward(
@@ -185,6 +183,16 @@ class TokenizationRepresentation(Representation):
     def num_tokens(self) -> int:
         """Return the number of selected tokens for ID."""
         return self.assignment.shape[1]
+
+    def save_assignment(self, output_path: pathlib.Path):
+        """Save the assignment to a file.
+
+        :param output_path:
+            the output file path. Its parent directories will be created if necessary.
+        """
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self.assignment, output_path)
+        logger.info(f"Saved assignment of shape {self.assignment.shape} to {output_path}")
 
 
 class HashDiversityInfo(NamedTuple):

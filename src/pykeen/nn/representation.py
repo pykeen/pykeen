@@ -6,10 +6,14 @@ from __future__ import annotations
 
 import itertools
 import logging
+import math
+import string
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
+import more_itertools
+import numpy
 import numpy as np
 import torch
 import torch.nn
@@ -30,7 +34,17 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.triples_factory import Labeling
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
-from ..utils import Bias, clamp_norm, complex_normalize, get_edge_index, get_preferred_device, upgrade_to_sequence
+from ..utils import (
+    Bias,
+    ExtraReprMixin,
+    broadcast_upgrade_to_sequences,
+    clamp_norm,
+    complex_normalize,
+    einsum,
+    get_edge_index,
+    get_preferred_device,
+    upgrade_to_sequence,
+)
 
 __all__ = [
     "Representation",
@@ -43,6 +57,7 @@ __all__ = [
     "SingleCompGCNRepresentation",
     "SubsetRepresentation",
     "CombinedRepresentation",
+    "TensorTrainRepresentation",
     "TextRepresentation",
     "TransformedRepresentation",
     "WikidataTextRepresentation",
@@ -54,7 +69,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Representation(nn.Module, ABC):
+class Representation(nn.Module, ExtraReprMixin, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -185,16 +200,13 @@ class Representation(nn.Module, ABC):
 
     def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over components for :meth:`extra_repr`."""
+        yield from super().iter_extra_repr()
         yield f"max_id={self.max_id}"
         yield f"shape={self.shape}"
         yield f"unique={self.unique}"
         if self.normalizer is not None:
             yield f"normalizer={self.normalizer}"
         # dropout & regularizer will appear automatically, since it is a nn.Module
-
-    # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        return ", ".join(self.iter_extra_repr())
 
     @property
     def device(self) -> torch.device:
@@ -311,6 +323,13 @@ class Embedding(Representation):
         **kwargs,
     ):
         """Instantiate an embedding with extended functionality.
+
+        .. note ::
+            the difference between a *normalizer* (cf. :class:`Representation`) and a *constrainer* is that the
+            normalizer is applied to the retrieved representations, and part of the forward call. Thus, it is part
+            of the computational graph, and may contribute towards the gradients received by the weight. A
+            *constrainer* on the other hand, is applied *after* a parameter update (using the
+            :meth:`post_parameter_update` hook), and hence *not* part of the computational graph.
 
         :param max_id: >0
             The number of embeddings.
@@ -1567,3 +1586,264 @@ class TransformedRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
         return self._help_forward(base=self.base, transformation=self.transformation, indices=indices)
+
+
+# TODO: can be a combined representations, with appropriate tensor-train combination
+class TensorTrainRepresentation(Representation):
+    r"""
+    A tensor factorization of representations.
+
+    In the simple case without provided assignment this corresponds to `TT-emb` described in
+    https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
+
+    where
+
+    .. math ::
+
+        \mathbf{A}[i_1 \cdot \ldots \cdot i_k, j_1 \cdot \ldots \cdot j_k]
+            = \sum_{r_i, \ldots, r_k} \mathbf{G}_1[0, i_1, j_1, r_1]
+                \cdot \mathbf{G}_2[r_1, i_2, j_2, r_2]
+                \cdot \ldots
+                \cdot \mathbf{G}_k[r_k, i_k, j_k, 0]
+
+    with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times m_i \times n_i \times R_i$ and $R_0 = R_d = 1$.
+
+    Another variant in the paper used an assignment based on hierarchical topological clustering.
+    """
+
+    #: shape: (max_id, num_cores)
+    assignment: torch.LongTensor
+
+    #: the bases, length: num_cores, with compatible shapes
+    bases: Sequence[Representation]
+
+    @classmethod
+    def factor_sizes(cls, max_id: int, shape: Sequence[int], num_cores: int) -> Tuple[Sequence[int], Sequence[int]]:
+        r"""Factor the representation shape into smaller shapes for the cores.
+
+        :param max_id:
+            the number of representations, "row count", $M$
+        :param shape:
+            the shape of an individual representation, "column count", $N$
+        :param num_cores:
+            the number of cores, $k$
+
+        :return:
+            a tuple (ms, ns) of positive integer sequences of length $k$ fulfilling
+
+            .. math ::
+
+                \prod \limits_{m_i \in ms} m_i \geq M
+
+                \prod \limits_{n_i \in ns} n_i \geq N
+        """
+        m_k = int(math.ceil(max_id ** (1 / num_cores)))
+        n_k = int(math.ceil(numpy.prod(shape) ** (1 / num_cores)))
+        return [m_k] * num_cores, [n_k] * num_cores
+
+    @staticmethod
+    def check_assignment(assignment: torch.Tensor, max_id: int, num_cores: int, ms: Sequence[int]):
+        """
+        Check that the assignment matches the other properties.
+
+        :param assignment: shape: (max_id, num_cores)
+            the assignment
+        :param max_id:
+            the number of representations
+        :param num_cores:
+            the number of tensor-train cores
+        :param ms:
+            the individual sizes $m_i$
+
+        :raises ValueError:
+            if the assignment is invalid
+        """
+        # check shape
+        if assignment.shape != (max_id, num_cores):
+            raise ValueError(
+                f"Invalid assignment. Expected shape (max_id, num_cores)={(max_id, num_cores)}, "
+                f"but got assignment.shape={assignment.shape}",
+            )
+        # check value range
+        low, high = assignment.min(dim=0).values, assignment.max(dim=0).values
+        if (low < 0).any() or (high >= torch.as_tensor(ms, dtype=torch.long)).any():
+            raise ValueError(
+                f"Invalid values inside assignment: ms={ms} vs. assignment.min(dim=0)={low} "
+                f"and assignment.max(dim=0)={high}",
+            )
+
+    @staticmethod
+    def get_shapes_and_einsum_eq(ranks: Sequence[int], ns: Sequence[int]) -> Tuple[str, Sequence[Tuple[int, ...]]]:
+        """
+        Determine core shapes and einsum equation.
+
+        :param ranks:
+            the core ranks
+        :param ns:
+            the sizes $n_i$
+        :return:
+            a pair (eq, shapes), where `eq` is a valid einsum equation and `shapes` a sequence of representation
+            shapes. Notice that the shapes do not include the "`max_id` dimension" of the resulting embedding.
+        """
+        shapes: List[List[int]] = []
+        terms: List[List[str]] = []
+        out_term: List[str] = ["..."]
+        i = 0
+        for n_i, (rank_in, rank_out) in zip(ns, more_itertools.pairwise([None, *ranks, None])):
+            shape = []
+            term = ["..."]
+
+            if rank_in is not None:
+                shape.append(rank_in)
+                term.append(string.ascii_lowercase[i])
+                i += 1
+
+            shape.append(n_i)
+            term.append(string.ascii_lowercase[i])
+            out_term.append(string.ascii_lowercase[i])
+            i += 1
+
+            if rank_out is not None:
+                shape.append(rank_out)
+                term.append(string.ascii_lowercase[i])
+                # do not increase counter i, since the dimension is shared with the following term
+                # i += 1
+
+            terms.append(term)
+            shapes.append(shape)
+        eq = " ".join((", ".join("".join(term) for term in terms), "->", "".join(out_term)))
+        return eq, [tuple(shape) for shape in shapes]
+
+    @staticmethod
+    def create_default_assignment(max_id: int, num_cores: int, ms: Sequence[int]) -> torch.LongTensor:
+        """
+        Create an assignment without using structural information.
+
+        :param max_id:
+            the number of representations
+        :param num_cores:
+            the number of tensor cores
+        :param ms:
+            the sizes $m_i$
+
+        :return: shape: (max_id, num_cores)
+            the assignment
+        """
+        assignment = torch.empty(max_id, num_cores, dtype=torch.long)
+        ids = torch.arange(max_id)
+        for i, m_i in enumerate(ms):
+            assignment[:, i] = ids % m_i
+            # ids //= m_i
+            ids = torch.div(ids, m_i, rounding_mode="floor")
+        return assignment
+
+    @staticmethod
+    def check_factors(ms: Sequence[int], ns: Sequence[int], max_id: int, shape: Tuple[int, ...], num_cores: int):
+        r"""
+        Check whether the factors match the other parts.
+
+        Verifies that
+
+        .. math ::
+            \prod \limits_{m_i \in ms} m_i \geq M
+            \prod \limits_{n_i \in ns} n_i \geq N
+
+        :param ms: length: num_cores
+            the $M$ factors $m_i$
+        :param ns: length: num_cores
+            the $N$ factors $n_i$
+        :param max_id:
+            the maximum id, $M$
+        :param shape:
+            the shape, $N=prod(shape)$
+        :param num_cores:
+            the number of cores
+
+        :raises ValueError:
+            if any of the conditions is violated
+        """
+        if len(ms) != num_cores or len(ns) != num_cores:
+            raise ValueError(f"Invalid length: len(ms)={len(ms)}, len(ns)={len(ns)} vs. num_cores={num_cores}")
+
+        m_prod = numpy.prod(ms).item()
+        if m_prod < max_id:
+            raise ValueError(f"prod(ms)={m_prod} < max_id={max_id}")
+
+        n_prod = numpy.prod(ns).item()
+        s_prod = numpy.prod(shape).item()
+        if n_prod < s_prod:
+            raise ValueError(f"prod(ns)={n_prod} < prod(shape)={s_prod}")
+
+    def __init__(
+        self,
+        assignment: Optional[torch.LongTensor] = None,
+        num_cores: int = 3,
+        ranks: OneOrSequence[int] = 2,
+        bases: OneOrManyHintOrType = None,
+        bases_kwargs: OneOrManyOptionalKwargs = None,
+        **kwargs,
+    ) -> None:
+        """Initialize the representation.
+
+        :param assignment: shape: (max_id, num_cores)
+            the assignment on each level
+        :param num_cores:
+            the number of cores to use
+        :param ranks: length: num_cores - 1
+            the individual ranks. Note that $R_0 = R_d = 1$ should not be included
+        :param bases:
+            the base representations for each level, or hints thereof.
+        :param bases_kwargs:
+            keyword-based parameters for the bases
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+
+        :raises ValueError:
+            if the input validation on ranks or assignment failed
+        """
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        super().__init__(**kwargs)
+
+        # normalize ranks
+        ranks = list(upgrade_to_sequence(ranks))
+        if len(ranks) == 1:
+            ranks = ranks * (num_cores - 1)
+        if len(ranks) != num_cores - 1:
+            raise ValueError(f"Inconsistent number of ranks {len(ranks)} for num_cores={num_cores}")
+
+        # determine M_k, N_k
+        # TODO: allow to pass them from outside?
+        ms, ns = self.factor_sizes(max_id=self.max_id, shape=self.shape, num_cores=num_cores)
+        self.check_factors(ms, ns, max_id=self.max_id, shape=self.shape, num_cores=num_cores)
+
+        # normalize assignment
+        if assignment is None:
+            assignment = self.create_default_assignment(max_id=self.max_id, num_cores=num_cores, ms=ms)
+        self.check_assignment(assignment=assignment, max_id=self.max_id, num_cores=num_cores, ms=ms)
+        self.register_buffer(name="assignment", tensor=assignment)
+
+        # determine shapes and einsum equation
+        self.eq, shapes = self.get_shapes_and_einsum_eq(ranks=ranks, ns=ns)
+
+        # create base representations
+        self.bases = nn.ModuleList(
+            representation_resolver.make(base, base_kwargs, max_id=m_i, shape=shape)
+            for base, base_kwargs, m_i, shape in zip(*broadcast_upgrade_to_sequences(bases, bases_kwargs, ms, shapes))
+        )
+
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"num_cores={len(self.bases)}"
+        yield f"eq='{self.eq}'"
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        assignment = self.assignment
+        if indices is not None:
+            assignment = assignment[indices]
+        return einsum(self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases))).view(
+            *assignment.shape[:-1], *self.shape
+        )

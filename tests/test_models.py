@@ -17,10 +17,11 @@ import pykeen.models
 from pykeen.datasets.nations import Nations
 from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
+from pykeen.models.predict import get_all_prediction_df, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
+from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
@@ -227,6 +228,16 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
 
 class TestNodePiece(cases.BaseNodePieceTest):
     """Test the NodePiece model."""
+
+    def test_disconnected(self):
+        """Test handling of disconnected entities."""
+        edges = torch.tensor(
+            [[0, 0, 1], [1, 1, 0], [3, 1, 0], [3, 2, 1]], dtype=torch.long
+        )  # node ID 2 is missing as a disconnected node
+        factory = CoreTriplesFactory.create(
+            mapped_triples=edges, num_entities=4, num_relations=3, create_inverse_triples=True
+        )
+        pykeen.models.NodePiece(triples_factory=factory, num_tokens=2)
 
 
 class TestNodePieceMLP(cases.BaseNodePieceTest):
@@ -761,24 +772,6 @@ def _remove_non_models(elements: Iterable[Union[str, Type[Model]]]) -> Set[Type[
 
 class TestModelUtilities(unittest.TestCase):
     """Extra tests for utility functions."""
-
-    def test_get_novelty_mask(self):
-        """Test `get_novelty_mask()`."""
-        num_triples = 7
-        base = torch.arange(num_triples)
-        mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
-        query_ids = torch.randperm(num_triples).numpy()[: num_triples // 2]
-        exp_novel = query_ids != 0
-        col = 2
-        other_col_ids = numpy.asarray([0, 0])
-        mask = get_novelty_mask(
-            mapped_triples=mapped_triples,
-            query_ids=query_ids,
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-        assert mask.shape == query_ids.shape
-        assert (mask == exp_novel).all()
 
     def test_extend_batch(self):
         """Test `_extend_batch()`."""

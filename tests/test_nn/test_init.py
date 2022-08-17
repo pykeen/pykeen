@@ -2,19 +2,17 @@
 
 """Tests for initializers."""
 
-import unittest
+from typing import ClassVar
 
 import torch
+from class_resolver import HintOrType
 
 import pykeen.nn.init
 from pykeen.datasets import Nations
-from pykeen.nn.modules import ComplExInteraction
+from pykeen.nn.modules import ComplExInteraction, Interaction, QuatEInteraction
 from tests import cases
 
-try:
-    import transformers
-except ImportError:
-    transformers = None
+from ..utils import needs_package
 
 
 class NormalizationMixin:
@@ -64,8 +62,9 @@ class QuaternionTestCase(cases.InitializerTestCase):
     """Tests for quaternion initialization."""
 
     initializer = staticmethod(pykeen.nn.init.init_quaternions)
-    # quaternion needs dim divisible by 4
-    shape = (4,)
+    # quaternion needs shape to end on 4
+    shape = (2, 4)
+    interaction: ClassVar[HintOrType[Interaction]] = QuatEInteraction
 
     def _verify_initialization(self, x: torch.FloatTensor) -> None:
         # check value range (actually [-s, +s] with s = 1/sqrt(2*n))
@@ -103,7 +102,7 @@ class XavierUniformNormTestCase(NormalizationMixin, cases.InitializerTestCase):
     initializer = staticmethod(pykeen.nn.init.xavier_uniform_norm_)
 
 
-@unittest.skipIf(transformers is None, "Need to install `transformers`")
+@needs_package("transformers")
 class LabelBasedInitializerTestCase(cases.InitializerTestCase):
     """Tests for label-based initialization."""
 

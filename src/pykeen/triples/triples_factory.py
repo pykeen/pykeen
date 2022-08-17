@@ -47,6 +47,7 @@ from ..typing import (
     TorchRandomHint,
 )
 from ..utils import (
+    ExtraReprMixin,
     compact_mapping,
     format_relative_comparison,
     get_edge_index,
@@ -332,7 +333,7 @@ def restrict_triples(
     return mapped_triples[keep_mask]
 
 
-class KGInfo:
+class KGInfo(ExtraReprMixin):
     """An object storing information about the number of entities and relations."""
 
     #: the number of unique entities
@@ -370,15 +371,9 @@ class KGInfo:
         self.num_relations = num_relations
         self.create_inverse_triples = create_inverse_triples
 
-    def extra_repr(self) -> str:
-        """Extra representation string."""
-        return ", ".join(self._iter_extra_repr())
-
-    def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}({self.extra_repr()})"
-
-    def _iter_extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
+        yield from super().iter_extra_repr()
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
         yield f"create_inverse_triples={self.create_inverse_triples}"
@@ -392,7 +387,7 @@ class CoreTriplesFactory(KGInfo):
 
     def __init__(
         self,
-        mapped_triples: MappedTriples,
+        mapped_triples: Union[MappedTriples, np.ndarray],
         num_entities: int,
         num_relations: int,
         create_inverse_triples: bool = False,
@@ -411,13 +406,26 @@ class CoreTriplesFactory(KGInfo):
             Whether to create inverse triples.
         :param metadata:
             Arbitrary metadata to go with the graph
+
+        :raises TypeError:
+            if the mapped_triples are of non-integer dtype
+        :raises ValueError:
+            if the mapped_triples are of invalid shape
         """
         super().__init__(
             num_entities=num_entities,
             num_relations=num_relations,
             create_inverse_triples=create_inverse_triples,
         )
-        self.mapped_triples = mapped_triples
+        # ensure torch.Tensor
+        mapped_triples = torch.as_tensor(mapped_triples)
+        # input validation
+        if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
+            raise ValueError(f"Invalid shape for mapped_triples: {mapped_triples.shape}; must be (n, 3)")
+        if mapped_triples.is_complex() or mapped_triples.is_floating_point():
+            raise TypeError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
+        # always store as torch.long, i.e., torch's default integer dtype
+        self.mapped_triples = mapped_triples.to(dtype=torch.long)
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -476,9 +484,9 @@ class CoreTriplesFactory(KGInfo):
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
-    def _iter_extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
-        yield from super()._iter_extra_repr()
+        yield from super().iter_extra_repr()
         yield f"num_triples={self.num_triples}"
         for k, v in sorted(self.metadata.items()):
             if isinstance(v, (str, pathlib.Path)):
@@ -850,7 +858,8 @@ class CoreTriplesFactory(KGInfo):
     def _get_binary_state(self):
         return dict(
             num_entities=self.num_entities,
-            num_relations=self.num_relations,
+            # note: num_relations will be doubled again when instantiating with create_inverse_triples=True
+            num_relations=self.real_num_relations,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )

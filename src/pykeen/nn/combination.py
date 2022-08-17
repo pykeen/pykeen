@@ -4,14 +4,14 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, Tuple
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
-from ..utils import combine_complex, split_complex
+from ..utils import ExtraReprMixin, combine_complex, split_complex
 
 __all__ = [
     "Combination",
@@ -26,7 +26,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Combination(nn.Module, ABC):
+class Combination(nn.Module, ExtraReprMixin, ABC):
     """Base class for combinations."""
 
     @abstractmethod
@@ -77,8 +77,9 @@ class ConcatCombination(Combination):
         return torch.cat(xs, dim=self.dim)
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        return f"dim={self.dim}"
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"dim={self.dim}"
 
 
 class ConcatProjectionCombination(ConcatCombination):
@@ -150,6 +151,11 @@ class ConcatAggregationCombination(ConcatCombination):
     # docstr-coverage: inherited
     def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
         return self.aggregation(super().forward(xs=xs), dim=self.dim)
+
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"aggregation={self.aggregation}"
 
 
 class ComplexSeparatedCombination(Combination):

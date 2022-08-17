@@ -45,24 +45,24 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-36">Datasets</a> •
+  <a href="#datasets">Datasets (36)</a> •
   <a href="#inductive-datasets">Inductive Datasets (5)</a> •
-  <a href="#models-44">Models</a> •
+  <a href="#models">Models (44)</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
 
 ## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-The latest stable version of PyKEEN can be downloaded and installed from
-[PyPI](https://pypi.org/project/pykeen) with:
+The latest stable version of PyKEEN requires Python 3.8+. It can be downloaded
+and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
 $ pip install pykeen
 ```
 
 The latest version of PyKEEN can be installed directly from the
-source on [GitHub](https://github.com/pykeen/pykeen) with:
+source code on [GitHub](https://github.com/pykeen/pykeen) with:
 
 ```shell
 $ pip install git+https://github.com/pykeen/pykeen.git
@@ -110,9 +110,9 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (36)
+### Datasets 
 
-The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
+The following 36 datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
 or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
 see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
@@ -160,7 +160,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 ### Inductive Datasets
 
-The following inductive datasets are built in to PyKEEN.
+The following 5 inductive datasets are built in to PyKEEN.
 
 | Name            | Documentation                                                                                                             | Citation                                                  |
 |-----------------|---------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
@@ -170,7 +170,9 @@ The following inductive datasets are built in to PyKEEN.
 | NELL            | [`pykeen.datasets.InductiveNELL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveNELL.html)         | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 | WordNet-18 (RR) | [`pykeen.datasets.InductiveWN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.InductiveWN18RR.html)     | [Teru *et al*., 2020](https://arxiv.org/abs/1911.06962)   |
 
-### Representations (18)
+### Representations
+
+The following 19 representations are implemented by PyKEEN.
 
 | Name                                      | Reference                                                                                                                                                                           | Citation   |
 |-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
@@ -185,6 +187,7 @@ The following inductive datasets are built in to PyKEEN.
 | Simple Message Passing Representation     | [`pykeen.nn.pyg.SimpleMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.SimpleMessagePassingRepresentation.html)                             |            |
 | Single CompGCN Representation             | [`pykeen.nn.representation.SingleCompGCNRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.SingleCompGCNRepresentation.html)                     |            |
 | Subset Representation                     | [`pykeen.nn.representation.SubsetRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.SubsetRepresentation.html)                                   |            |
+|                                           | [`pykeen.nn.representation.TensorTrainRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TensorTrainRepresentation.html)                         |            |
 | Text Representation                       | [`pykeen.nn.representation.TextRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TextRepresentation.html)                                       |            |
 | Tokenization Representation               | [`pykeen.nn.node_piece.representation.TokenizationRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representation.TokenizationRepresentation.html) |            |
 | Transformed Representation                | [`pykeen.nn.representation.TransformedRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TransformedRepresentation.html)                         |            |
@@ -194,6 +197,8 @@ The following inductive datasets are built in to PyKEEN.
 | Wikidata Visualization Representation     | [`pykeen.nn.vision.WikidataVisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.WikidataVisualRepresentation.html)                                   |            |
 
 ### Interactions (34)
+
+The following 34 interactions are implemented by PyKEEN.
 
 | Name              | Reference                                                                                                                                           | Citation                                                                 |
 |-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
@@ -232,7 +237,9 @@ The following inductive datasets are built in to PyKEEN.
 |                   | [`pykeen.nn.modules.TuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TuckerInteraction.html)                       |                                                                          |
 |                   | [`pykeen.nn.modules.UMInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.UMInteraction.html)                               |                                                                          |
 
-### Models (44)
+### Models
+
+The following 44 models are implemented by PyKEEN.
 
 | Name                           | Model                                                                                                                                 | Interaction                                                                                                                                 | Citation                                                                                                                |
 |--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -281,7 +288,9 @@ The following inductive datasets are built in to PyKEEN.
 | TuckER                         | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TuckER.html)                                       | [`pykeen.nn.TuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.TuckerInteraction.html)                               | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                            |
 | Unstructured Model             | [`pykeen.models.UM`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.UM.html)                                               | [`pykeen.nn.UMInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.UMInteraction.html)                                       | [Bordes *et al.*, 2014](https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf)                          |
 
-### Losses (15)
+### Losses
+
+The following 15 losses are implemented by PyKEEN.
 
 | Name                                                      | Reference                                                                                                                                   | Description                                                                                           |
 |-----------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
@@ -301,7 +310,9 @@ The following inductive datasets are built in to PyKEEN.
 | Softplus                                                  | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)                                 | The pointwise logistic loss (i.e., softplus loss).                                                    |
 | Soft Pointwise Hinge                                      | [`pykeen.losses.SoftPointwiseHingeLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftPointwiseHingeLoss.html)             | The soft pointwise hinge loss.                                                                        |
 
-### Regularizers (6)
+### Regularizers
+
+The following 6 regularizers are implemented by PyKEEN.
 
 | Name          | Reference                                                                                                                                       | Description                                                            |
 |---------------|-------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
@@ -312,14 +323,18 @@ The following inductive datasets are built in to PyKEEN.
 | orthogonality | [`pykeen.regularizers.OrthogonalityRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.OrthogonalityRegularizer.html) | A regularizer for the soft orthogonality constraints from [wang2014]_. |
 | powersum      | [`pykeen.regularizers.PowerSumRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.PowerSumRegularizer.html)           | A simple x^p based regularizer.                                        |
 
-### Training Loops (2)
+### Training Loops
+
+The following 2 training loops are implemented in PyKEEN.
 
 | Name   | Reference                                                                                                                                | Description                                                                               |
 |--------|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
 | lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that is based upon the local closed world assumption (LCWA).              |
 | slcwa  | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop) | A training loop that uses the stochastic local closed world assumption training approach. |
 
-### Negative Samplers (3)
+### Negative Samplers
+
+The following 3 negative samplers are implemented in PyKEEN.
 
 | Name        | Reference                                                                                                                                   | Description                                                                            |
 |-------------|---------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
@@ -327,14 +342,18 @@ The following inductive datasets are built in to PyKEEN.
 | bernoulli   | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html)     | An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_. |
 | pseudotyped | [`pykeen.sampling.PseudoTypedNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.PseudoTypedNegativeSampler.html) | A sampler that accounts for which entities co-occur with a relation.                   |
 
-### Stoppers (2)
+### Stoppers
+
+The following 2 stoppers are implemented in PyKEEN.
 
 | Name   | Reference                                                                                                                      | Description                   |
 |--------|--------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
 | early  | [`pykeen.stoppers.EarlyStopper`](https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#pykeen.stoppers.EarlyStopper) | A harness for early stopping. |
 | nop    | [`pykeen.stoppers.NopStopper`](https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#pykeen.stoppers.NopStopper)     | A stopper that does nothing.  |
 
-### Evaluators (4)
+### Evaluators
+
+The following 4 evaluators are implemented in PyKEEN.
 
 | Name             | Reference                                                                                                                                     | Description                                                              |
 |------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
@@ -343,7 +362,9 @@ The following inductive datasets are built in to PyKEEN.
 | rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.                                   |
 | sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) | A rank-based evaluator using sampled negatives instead of all negatives. |
 
-### Metrics (44)
+### Metrics
+
+The following 44 metrics are implemented in PyKEEN.
 
 | Name                                                                                                                   | Interval            | Direction   | Description                                                 | Type           |
 |------------------------------------------------------------------------------------------------------------------------|---------------------|-------------|-------------------------------------------------------------|----------------|
@@ -388,7 +409,9 @@ The following inductive datasets are built in to PyKEEN.
 | [z-Mean Rank (zMR)](https://arxiv.org/abs/2203.07544)                                                                  | (-∞, ∞)             | 📈          | The z-scored mean rank                                      | Ranking        |
 | [z-Mean Reciprocal Rank (zMRR)](https://arxiv.org/abs/2203.07544)                                                      | (-∞, ∞)             | 📈          | The z-scored mean reciprocal rank                           | Ranking        |
 
-### Trackers (8)
+### Trackers
+
+The following 8 trackers are implemented in PyKEEN.
 
 | Name        | Reference                                                                                                                               | Description                                               |
 |-------------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
@@ -447,6 +470,9 @@ at https://github.com/pykeen/benchmarking.
 
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated.
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
+
+If you have questions, please use the GitHub discussions feature at
+https://github.com/pykeen/pykeen/discussions/new.
 
 ## Acknowledgements
 

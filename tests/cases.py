@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from collections import ChainMap, Counter
 from typing import (
     Any,
+    Callable,
     ClassVar,
     Collection,
     Dict,
@@ -46,6 +47,7 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
+import pykeen.models.predict
 import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
@@ -112,12 +114,7 @@ from pykeen.utils import (
 )
 from tests.constants import EPSILON
 from tests.mocks import MockEvaluator
-from tests.utils import rand
-
-try:
-    import torch_geometric
-except ImportError:
-    torch_geometric = None
+from tests.utils import needs_package, rand
 
 T = TypeVar("T")
 
@@ -429,6 +426,10 @@ class InteractionTestCase(
     num_relations: int = 5
     num_entities: int = 7
     dtype: torch.dtype = torch.get_default_dtype()
+    # the relative tolerance for checking close results, cf. torch.allclose
+    rtol: float = 1.0e-5
+    # the absolute tolerance for checking close results, cf. torch.allclose
+    atol: float = 1.0e-8
 
     shape_kwargs = dict()
 
@@ -655,7 +656,13 @@ class InteractionTestCase(
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)
-            assert torch.allclose(scores_f_manual, scores_f), f"Diff: {scores_f_manual - scores_f}"
+            if not torch.allclose(scores_f, scores_f_manual, rtol=self.rtol, atol=self.atol):
+                # allclose checks: | input - other | < atol + rtol * |other|
+                a_delta = (scores_f_manual - scores_f).abs()
+                r_delta = (scores_f_manual - scores_f).abs() / scores_f.abs().clamp_min(1.0e-08)
+                raise AssertionError(
+                    f"Abs. Diff: {a_delta.item()} (tol.: {self.atol}); Rel. Diff: {r_delta.item()} (tol. {self.rtol})",
+                )
 
     @abstractmethod
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
@@ -1014,78 +1021,82 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         with tempfile.TemporaryDirectory() as temp_directory:
             torch.save(self.instance, os.path.join(temp_directory, "model.pickle"))
 
-    def test_score_hrt(self) -> None:
-        """Test the model's ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
+    def _test_score(
+        self, score: Callable, columns: Union[Sequence[int], slice], shape: Tuple[int, ...], **kwargs
+    ) -> None:
+        """Test score functions."""
+        batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
         try:
-            scores = self.instance.score_hrt(batch, mode=self.mode)
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        self.assertEqual(scores.shape, (self.batch_size, 1))
-        self._check_scores(batch, scores)
-
-    def test_score_t(self) -> None:
-        """Test the model's ``score_t()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, :2].to(self.instance.device)
-        # assert batch comprises (head, relation) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_relations).all()
-        try:
-            scores = self.instance.score_t(batch, mode=self.mode)
+            scores = score(batch, mode=self.mode, **kwargs)
+        except ValueError as error:
+            raise SkipTest() from error
         except NotImplementedError:
-            self.fail(msg="score_t not yet implemented")
+            self.fail(msg=f"{score} not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
-        assert scores.shape == (self.batch_size, self.instance.num_entities)
-        self._check_scores(batch, scores)
-
-    def test_score_r(self) -> None:
-        """Test the model's ``score_r()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
-        # assert batch comprises (head, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch < self.factory.num_entities).all()
-        try:
-            scores = self.instance.score_r(batch, mode=self.mode)
-        except NotImplementedError:
-            self.fail(msg="score_r not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        if self.create_inverse_triples:
+        if score is self.instance.score_r and self.create_inverse_triples:
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
-            assert scores.shape == (self.batch_size, self.instance.num_relations)
+            self.assertTupleEqual(tuple(scores.shape), shape)
         self._check_scores(batch, scores)
+        # clear buffers for message passing models
+        self.instance.post_parameter_update()
+
+    def _test_score_multi(self, name: str, max_id: int, **kwargs):
+        """Test score functions with multi scoring."""
+        k = max_id // 2
+        for ids in (
+            torch.randperm(max_id)[:k],
+            torch.randint(max_id, size=(self.batch_size, k)),
+        ):
+            with self.subTest(shape=ids.shape):
+                self._test_score(shape=(self.batch_size, k), **kwargs, **{name: ids.to(device=self.instance.device)})
+
+    def test_score_hrt(self) -> None:
+        """Test the model's ``score_hrt()`` function."""
+        self._test_score(score=self.instance.score_hrt, columns=slice(None), shape=(self.batch_size, 1))
+
+    def test_score_t(self) -> None:
+        """Test the model's ``score_t()`` function."""
+        self._test_score(
+            score=self.instance.score_t, columns=slice(0, 2), shape=(self.batch_size, self.instance.num_entities)
+        )
+
+    def test_score_t_multi(self) -> None:
+        """Test the model's ``score_t()`` function with custom tail candidates."""
+        self._test_score_multi(
+            name="tails", max_id=self.factory.num_entities, score=self.instance.score_t, columns=slice(0, 2)
+        )
+
+    def test_score_r(self) -> None:
+        """Test the model's ``score_r()`` function."""
+        self._test_score(
+            score=self.instance.score_r,
+            columns=[0, 2],
+            shape=(self.batch_size, self.instance.num_relations),
+        )
+
+    def test_score_r_multi(self) -> None:
+        """Test the model's ``score_r()`` function with custom relation candidates."""
+        self._test_score_multi(
+            name="relations", max_id=self.factory.num_relations, score=self.instance.score_r, columns=[0, 2]
+        )
 
     def test_score_h(self) -> None:
         """Test the model's ``score_h()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_relations).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
-        try:
-            scores = self.instance.score_h(batch, mode=self.mode)
-        except NotImplementedError:
-            self.fail(msg="score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        assert scores.shape == (self.batch_size, self.instance.num_entities)
-        self._check_scores(batch, scores)
+        self._test_score(
+            score=self.instance.score_h, columns=slice(1, None), shape=(self.batch_size, self.instance.num_entities)
+        )
+
+    def test_score_h_multi(self) -> None:
+        """Test the model's ``score_h()`` function with custom head candidates."""
+        self._test_score_multi(
+            name="heads", max_id=self.factory.num_entities, score=self.instance.score_h, columns=slice(1, None)
+        )
 
     @pytest.mark.slow
     def test_train_slcwa(self) -> None:
@@ -1545,7 +1556,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
         return kwargs
 
 
-@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+@needs_package("torch_geometric")
 class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
     """Tests for message passing representations."""
 
@@ -2626,3 +2637,34 @@ class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.Text
         x = self.instance.encode_all(labels=labels)
         assert torch.is_tensor(x)
         assert x.shape[0] == len(labels)
+
+
+class PredictionPostProcessorTestCase(
+    unittest_templates.GenericTestCase[pykeen.models.predict.PredictionPostProcessor]
+):
+    """Tests for prediction post-processing."""
+
+    # to be initialize in subclass
+    df: pandas.DataFrame
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        self.dataset = Nations()
+        kwargs.update(self.dataset.factory_dict)
+        return kwargs
+
+    def test_contains(self):
+        """Test contains method."""
+        df2 = self.instance.add_membership_columns(df=self.df)
+        assert set(df2.columns).issubset(self.df.columns)
+        for col in self.df.columns:
+            assert (df2[col] == self.df[col]).all()
+        for new_col in set(df2.columns).difference(self.df.columns):
+            assert df2[new_col].dtype == bool
+
+    def test_filter(self):
+        """Test filter method."""
+        df2 = self.instance.filter(df=self.df)
+        assert set(df2.columns) == set(self.df.columns)
+        assert len(df2) <= len(self.df)
+        # TODO: check subset

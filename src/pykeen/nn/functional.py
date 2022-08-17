@@ -22,6 +22,7 @@ from ..utils import (
     boxe_kg_arity_position_score,
     clamp_norm,
     compute_box,
+    einsum,
     ensure_complex,
     estimate_cost_of_sequence,
     is_cudnn_error,
@@ -139,7 +140,7 @@ def complex_interaction(
     """
     h, r, t = ensure_complex(h, r, t)
     # TODO: switch to einsum ?
-    # return torch.real(torch.einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
+    # return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
     return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
@@ -203,7 +204,7 @@ def conve_interaction(
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: batch_dims
-    x = torch.einsum("...d, ...d -> ...", x, t)
+    x = einsum("...d, ...d -> ...", x, t)
 
     # add bias term
     return x + t_bias
@@ -241,31 +242,18 @@ def convkb_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # decompose convolution for faster computation in 1-n case
-    num_filters = conv.weight.shape[0]
-    assert conv.weight.shape == (num_filters, 1, 1, 3)
-
-    # while ConvKB uses a convolution operation to calculate scores, its use of convolution is unusual in the
-    # following aspects
-    # 1. the "height" of the "image" is the dimension of the embedding vectors
-    # 2. the "width" of the "image" is 3, i.e., the number of vectors; moreover, since the convolution kernel is of
-    #    shape (1, 3), there is no sliding across the input, but only a single column position where the kernel is
-    #    applied
-    # 3. we always have a single input channel
-    # we utilize these observations for the ConvKB specific convolution filter to simplify and accelerate the code
-    # here, conv.weight.shape = (num_filters, 1, 1, 3)
-    # thus, we have for the output of the convolution operation: x[..., f, d] = conv.weight[f, :] * x[..., d] + b[d]
-    x = tensor_sum(
-        conv.bias.unsqueeze(dim=-1),
-        *(torch.einsum("...d,f->...fd", x, w) for (x, w) in zip((h, r, t), conv.weight[:, 0, 0, :].unbind(dim=-1))),
-    )
+    # cat into shape (..., 1, d, 3)
+    x = torch.stack(torch.broadcast_tensors(h, r, t), dim=-1).unsqueeze(dim=-3)
+    s = x.shape
+    x = x.view(-1, *s[-3:])
+    x = conv(x)
+    x = x.view(*s[:-3], -1)
     x = activation(x)
 
     # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
     x = hidden_dropout(x)
 
     # Linear layer for final scores; use flattened representations, shape: (*batch_dims, d * f)
-    x = x.view(*x.shape[:-2], -1)
     x = linear(x)
     return x.squeeze(dim=-1)
 
@@ -348,7 +336,7 @@ def ermlp_interaction(
         x = tensor_sum(
             hidden.bias.view(*make_ones_like(prefix), -1),
             *(
-                torch.einsum("...i, ji -> ...j", xx, weight)
+                einsum("...i, ji -> ...j", xx, weight)
                 for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1))
             ),
         )
@@ -383,7 +371,7 @@ def ermlpe_interaction(
     x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
     # dot product
-    return torch.einsum("...d,...d->...", x, t)
+    return einsum("...d,...d->...", x, t)
 
 
 def hole_interaction(
@@ -519,9 +507,9 @@ def ntn_interaction(
         u
         * activation(
             tensor_sum(
-                torch.einsum("...d,...kde,...e->...k", h, w, t),  # shape: (*batch_dims, k)
-                torch.einsum("...d, ...kd->...k", h, vh),
-                torch.einsum("...d, ...kd->...k", t, vt),
+                einsum("...d,...kde,...e->...k", h, w, t),  # shape: (*batch_dims, k)
+                einsum("...d, ...kd->...k", h, vh),
+                einsum("...d, ...kd->...k", t, vt),
                 b,
             )
         )
@@ -565,14 +553,14 @@ def proje_interaction(
         The scores.
     """
     # global projections
-    h = torch.einsum("...d, d -> ...d", h, d_e)
-    r = torch.einsum("...d, d -> ...d", r, d_r)
+    h = einsum("...d, d -> ...d", h, d_e)
+    r = einsum("...d, d -> ...d", r, d_r)
 
     # combination, shape: (*batch_dims, d)
     x = activation(tensor_sum(h, r, b_c))
 
     # dot product with t
-    return torch.einsum("...d, ...d -> ...", x, t) + b_p
+    return einsum("...d, ...d -> ...", x, t) + b_p
 
 
 def rescal_interaction(
@@ -592,7 +580,7 @@ def rescal_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    return torch.einsum("...d,...de,...e->...", h, r, t)
+    return einsum("...d,...de,...e->...", h, r, t)
 
 
 def rotate_interaction(
@@ -699,7 +687,7 @@ def se_interaction(
         The scores.
     """
     return negative_norm(
-        torch.einsum("...rd,...d->...r", r_h, h) - torch.einsum("...rd,...d->...r", r_t, t),
+        einsum("...rd,...d->...r", r_h, h) - einsum("...rd,...d->...r", r_t, t),
         p=p,
         power_norm=power_norm,
     )
@@ -858,12 +846,12 @@ def transh_interaction(
     return negative_norm_of_sum(
         # h projection to hyperplane
         h,
-        -(h * w_r).sum(dim=-1, keepdims=True) * w_r,
+        -einsum("...i, ...i, ...j -> ...j", h, w_r, w_r),
         # r
         d_r,
         # -t projection to hyperplane
         -t,
-        (t * w_r).sum(dim=-1, keepdims=True) * w_r,
+        einsum("...i, ...i, ...j -> ...j", t, w_r, w_r),
         p=p,
         power_norm=power_norm,
     )
@@ -896,8 +884,8 @@ def transr_interaction(
         The scores.
     """
     # project to relation specific subspace
-    h_bot = torch.einsum("...e, ...er -> ...r", h, m_r)
-    t_bot = torch.einsum("...e, ...er -> ...r", t, m_r)
+    h_bot = einsum("...e, ...er -> ...r", h, m_r)
+    t_bot = einsum("...e, ...er -> ...r", t, m_r)
     # ensure constraints
     h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.0)
     t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.0)
@@ -949,11 +937,11 @@ def tucker_interaction(
     """
     return (
         _apply_optional_bn_to_tensor(
-            x=torch.einsum(
+            x=einsum(
                 # x_1 contraction
                 "...ik,...i->...k",
                 _apply_optional_bn_to_tensor(
-                    x=torch.einsum(
+                    x=einsum(
                         # x_2 contraction
                         "ijk,...j->...ik",
                         core_tensor,
@@ -1082,53 +1070,30 @@ def pair_re_interaction(
     )
 
 
-def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
-    # Rotate (=Hamilton product in quaternion space).
-    return torch.cat(
-        [
-            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
-            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
-            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
-            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
-        ],
-        dim=-1,
-    )
-
-
-def _split_quaternion(x: torch.FloatTensor) -> torch.FloatTensor:
-    return torch.chunk(x, chunks=4, dim=-1)
-
-
 def quat_e_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
+    table: torch.FloatTensor,
 ):
     """Evaluate the interaction function of QuatE for given embeddings.
 
     The embeddings have to be in a broadcastable shape.
 
-    .. note ::
-        dim has to be divisible by 4.
-
-    :param h: shape: (`*batch_dims`, dim)
+    :param h: shape: (`*batch_dims`, dim, 4)
         The head representations.
-    :param r: shape: (`*batch_dims`, dim)
+    :param r: shape: (`*batch_dims`, dim, 4)
         The head representations.
-    :param t: shape: (`*batch_dims`, dim)
+    :param t: shape: (`*batch_dims`, dim, 4)
         The tail representations.
+    :param table:
+        the quaternion multiplication table.
 
     :return: shape: (...)
         The scores.
     """
-    return -(
-        # Rotation in quaternion space
-        _rotate_quaternion(
-            _split_quaternion(h),
-            _split_quaternion(r),
-        )
-        * t
-    ).sum(dim=-1)
+    # TODO: this sign is in the official code, too, but why do we need it?
+    return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
 
 
 def cross_e_interaction(
@@ -1460,7 +1425,7 @@ def multilinear_tucker_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    return torch.einsum("ijk,...i,...j,...k->...", core_tensor, h, r, t)
+    return einsum("ijk,...i,...j,...k->...", core_tensor, h, r, t)
 
 
 def linea_re_interaction(
