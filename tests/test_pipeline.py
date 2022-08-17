@@ -30,6 +30,7 @@ from pykeen.regularizers import NoRegularizer
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
+
 from .utils import needs_package
 
 
