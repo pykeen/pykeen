@@ -2,7 +2,6 @@
 
 """Prediction workflows."""
 
-import itertools as itt
 import logging
 import warnings
 from abc import abstractmethod
@@ -12,6 +11,7 @@ from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
 import numpy
 import pandas as pd
 import torch
+import torch.utils.data
 from tqdm.auto import tqdm
 
 from .base import Model
@@ -604,6 +604,10 @@ def predict(
     return _predict_all(model=model, batch_size=batch_size, mode=mode)
 
 
+# batch, TODO: ids?
+PredictionBatch = torch.LongTensor
+
+
 class _ScoreConsumer:
     """A consumer of scores for visitor pattern."""
 
@@ -614,9 +618,8 @@ class _ScoreConsumer:
     @abstractmethod
     def __call__(
         self,
-        head_id_range: Tuple[int, int],
-        relation_id: int,
-        hr_batch: torch.LongTensor,
+        batch: PredictionBatch,
+        target: Target,
         scores: torch.FloatTensor,
     ) -> None:
         """Consume scores for the given hr_batch."""
@@ -625,6 +628,20 @@ class _ScoreConsumer:
     def finalize(self) -> ScorePack:
         """Finalize the result to build a score pack."""
         return _build_pack(result=self.result, scores=self.scores, flatten=self.flatten)
+
+
+class CountConsumer(_ScoreConsumer):
+    """A simple consumer which counts the number of batches and scores."""
+
+    def __init__(self) -> None:
+        """Initialize the consumer."""
+        super().__init__()
+        self.batch_count = 0
+        self.score_count = 0
+
+    def __call__(self, batch: PredictionBatch, scores: torch.FloatTensor, **_kwargs) -> None:  # noqa: D102
+        self.batch_count += batch.shape[0]
+        self.score_count += scores.numel()
 
 
 class _TopKScoreConsumer(_ScoreConsumer):
@@ -731,9 +748,71 @@ class _AllConsumer(_ScoreConsumer):
         self.scores[relation_id, h_start:h_stop, :] = scores.to(self.scores.device)
 
 
+class PredictionDataset(torch.utils.data.Dataset):
+    """A base class for prediction datasets."""
+
+    def __init__(self, target: Target = LABEL_TAIL) -> None:
+        """Initialize the dataset.
+
+        :param target:
+            the prediction target to use. Prefer targets which are efficient to predict with the given model,
+            e.g., tails for ConvE.
+        """
+        super().__init__()
+        # TODO: variable target?
+        self.target = target
+
+    @abstractmethod
+    def __getitem__(self, item: int) -> PredictionBatch:
+        raise NotImplementedError
+
+    @abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError
+
+
+class AllPredictionDataset(PredictionDataset):
+    """A dataset for predicting all possible triples."""
+
+    def __init__(self, num_entities: int, num_relations: int, **kwargs) -> None:
+        """Initialize the dataset.
+
+        :param num_entities:
+            the number of entities
+        :param num_relations:
+            the number of relations
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`PredictionDataset.__init__`
+        """
+        super().__init__(**kwargs)
+        self.num_entities = num_entities
+        self.num_relations = num_relations
+        # (?, r, t) => r.stride > t.stride
+        # (h, ?, t) => h.stride > t.stride
+        # (h, r, ?) => h.stride > r.stride
+        self.divisor = num_relations if self.target == LABEL_TAIL else num_entities
+
+    def __len__(self) -> int:
+        if self.target == LABEL_RELATION:
+            return self.num_entities**2
+        return self.num_entities * self.num_relations
+
+    def __getitem__(self, item: int) -> torch.LongTensor:
+        # (?, r, t) => r.stride > t.stride
+        # (h, ?, t) => h.stride > t.stride
+        # (h, r, ?) => h.stride > r.stride
+        quotient, remainder = divmod(item, self.divisor)
+        return torch.as_tensor([quotient, remainder])
+
+
 @torch.inference_mode()
-def _consume_scores(
-    model: Model, *consumers: _ScoreConsumer, batch_size: int = 1, mode: Optional[InductiveMode]
+def consume_scores(
+    model: Model,
+    dataset: PredictionDataset,
+    *consumers: _ScoreConsumer,
+    batch_size: int = 1,
+    mode: Optional[InductiveMode] = None,
+    target: Target = LABEL_TAIL,
 ) -> None:
     """
     Batch-wise calculation of all triple scores and consumption.
@@ -748,37 +827,28 @@ def _consume_scores(
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
     """
-    # TODO: in the future, we may want to expose this method
+    if not consumers:
+        return
+
     # set model to evaluation mode
     model.eval()
-
-    for r, h_start in tqdm(
-        itt.product(
-            range(model.num_real_relations),
-            range(0, model.num_entities, batch_size),
-        ),
-        desc="scoring",
-        unit="batch",
-        unit_scale=True,
-        total=model.num_relations * model.num_entities // batch_size,
-    ):
-        # calculate batch scores
-        h_stop = min(h_start + batch_size, model.num_entities)
-        hs = torch.arange(h_start, h_stop, device=model.device)
-        hr_batch = torch.stack(
-            [
-                hs,
-                hs.new_full(size=(hs.shape[0],), fill_value=r),
-            ],
-            dim=-1,
-        )
-        scores = model.predict(hr_batch, target=LABEL_TAIL, full_batch=False, mode=mode)
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
+    for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True):
+        # calculate batch scores onces
+        scores = model.predict(batch, target=target, full_batch=False, mode=mode)
+        # consume by all consumers
         for consumer in consumers:
-            consumer(head_id_range=(h_start, h_stop), relation_id=r, hr_batch=hr_batch, scores=scores)
+            consumer(batch, target=target, scores=scores)
 
 
 @torch.inference_mode()
-def _predict_all(model: Model, *, batch_size: int = 1, mode: Optional[InductiveMode]) -> ScorePack:
+def _predict_all(
+    model: Model,
+    *,
+    batch_size: int = 1,
+    mode: Optional[InductiveMode],
+    target: Target = LABEL_TAIL,
+) -> ScorePack:
     """Compute and store scores for all triples.
 
     :param model: A PyKEEN model
@@ -788,8 +858,11 @@ def _predict_all(model: Model, *, batch_size: int = 1, mode: Optional[InductiveM
         "validation", or "testing" in the inductive setting.
     :return: A score pack of parallel triples and scores
     """
+    dataset = AllPredictionDataset(
+        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
+    )
     consumer = _AllConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
-    _consume_scores(model, consumer, batch_size=batch_size, mode=mode)
+    consume_scores(model, dataset, consumer, batch_size=batch_size, mode=mode)
     return consumer.finalize()
 
 
@@ -806,7 +879,7 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1, mode: Optional[Indu
     :return: A score pack of parallel triples and scores
     """
     consumer = _TopKScoreConsumer(k=k, device=model.device)
-    _consume_scores(model, consumer, batch_size=batch_size, mode=mode)
+    consume_scores(model, consumer, batch_size=batch_size, mode=mode)
     return consumer.finalize()
 
 
