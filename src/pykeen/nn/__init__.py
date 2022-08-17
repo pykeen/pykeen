@@ -71,6 +71,7 @@ from .representation import (
     TextRepresentation,
     TransformedRepresentation,
     WikidataTextRepresentation,
+    SingleCompGCNRepresentation,
 )
 from .vision import VisualRepresentation, WikidataVisualRepresentation
 
@@ -87,6 +88,7 @@ __all__ = [
     "BackfillRepresentation",
     "RGCNRepresentation",
     "SimpleMessagePassingRepresentation",
+    "SingleCompGCNRepresentation",
     "SubsetRepresentation",
     "TokenizationRepresentation",
     "TypedMessagePassingRepresentation",
