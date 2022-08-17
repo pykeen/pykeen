@@ -147,7 +147,7 @@ def _get_resolver_lines2(
         reference = f"{module}.{name}"
         # verify that name can be imported from the abbreviated reference
         if not name in dir(importlib.import_module(module)):
-            raise ValueError(f"{name} not visible on {module}")
+            click.secho(message=f"{name} not visible in {module}", err=True)
         docdata = resolver.docdata(clsx) or {}
         assert isinstance(docdata, dict)
         name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
