@@ -131,12 +131,18 @@ def _format_reference(reference: Optional[str], link_fmt: Optional[str], alt_ref
 
 
 def _get_resolver_lines2(
-    resolver: ClassResolver[X], link_fmt: Optional[str] = None, skip: Optional[Set[Type[X]]] = None
+    resolver: ClassResolver[X],
+    link_fmt: Optional[str] = None,
+    skip: Optional[Set[Type[X]]] = None,
+    top_k: int = 2,
 ) -> Iterable[Tuple[str, str, Optional[str]]]:
     for _, clsx in sorted(resolver.lookup_dict.items()):
         if skip and clsx in skip:
             continue
-        reference = f"{clsx.__module__}.{clsx.__qualname__}"
+        module = clsx.__module__
+        if top_k:
+            module = ".".join(module.split(".", maxsplit=top_k)[:-1])
+        reference = f"{module}.{clsx.__qualname__}"
         docdata = resolver.docdata(clsx) or {}
         assert isinstance(docdata, dict)
         name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
