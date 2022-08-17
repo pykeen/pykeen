@@ -704,6 +704,15 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     """A stateful module for the ConvKB interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
+
+    ---
+    name: ConvKB
+    citation:
+        author: Nguyen
+        year: 2018
+        link: https://www.aclweb.org/anthology/N18-2053
+        github: daiquocnguyen/ConvKB
+        arxiv: 1712.02121
     """
 
     func = pkf.convkb_interaction
@@ -1636,7 +1645,7 @@ class BoxEInteraction(
 ):
     """
     An implementation of the BoxE interaction from [abboud2020]_.
-    
+
     ---
     name: BoxE
     citation:
