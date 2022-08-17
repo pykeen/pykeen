@@ -114,12 +114,7 @@ from pykeen.utils import (
 )
 from tests.constants import EPSILON
 from tests.mocks import MockEvaluator
-from tests.utils import rand
-
-try:
-    import torch_geometric
-except ImportError:
-    torch_geometric = None
+from tests.utils import needs_package, rand
 
 T = TypeVar("T")
 
@@ -1561,7 +1556,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
         return kwargs
 
 
-@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+@needs_package("torch_geometric")
 class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
     """Tests for message passing representations."""
 
