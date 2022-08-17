@@ -196,7 +196,7 @@ The following 19 representations are implemented by PyKEEN.
 | Wikidata Text Representation              | [`pykeen.nn.representation.WikidataTextRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.WikidataTextRepresentation.html)                       |            |
 | Wikidata Visualization Representation     | [`pykeen.nn.vision.WikidataVisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.WikidataVisualRepresentation.html)                                   |            |
 
-### Interactions (34)
+### Interactions
 
 The following 34 interactions are implemented by PyKEEN.
 

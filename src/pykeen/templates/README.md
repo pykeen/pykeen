@@ -133,7 +133,7 @@ The following {{ n_representations }} representations are implemented by PyKEEN.
 
 {{ representations }}
 
-### Interactions ({{ n_interactions }})
+### Interactions
 
 The following {{ n_interactions }} interactions are implemented by PyKEEN.
 
