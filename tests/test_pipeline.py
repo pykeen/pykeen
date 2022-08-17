@@ -30,6 +30,7 @@ from pykeen.regularizers import NoRegularizer
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
+from .utils import needs_package
 
 
 class TestPipeline(unittest.TestCase):
@@ -219,7 +220,7 @@ class TestPipeline(unittest.TestCase):
             assert df.shape[0] == self.testing_mapped_triples.shape[0]
             assert {"head_id", "relation_id", "tail_id", "score"}.issubset(df.columns)
 
-    # TODO: needs matplotlib; cf. decorator from https://github.com/pykeen/pykeen/pull/948
+    @needs_package("matplotlib")
     def test_plot(self):
         """Test plotting."""
         result = pipeline(dataset="nations", model="transe", training_kwargs=dict(num_epochs=0))
