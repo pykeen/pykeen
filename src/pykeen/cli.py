@@ -196,13 +196,13 @@ def _get_resolver_lines2(
         reference = f"{clsx.__module__}.{clsx.__qualname__}"
         docdata = resolver.docdata(clsx) or {}
         assert isinstance(docdata, dict)
-        name = docdata.get("name", None)
-        if not name:
-            click.secho(message=f"Missing docdata name from {reference}", err=True)
-            name = ""
+        name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
         assert isinstance(name, str)
+        citation = _citation(docdata)
+        if not citation:
+            click.secho(message=f"Missing citation for {reference}", err=True)
         reference = _format_reference(reference, link_fmt)
-        yield name, reference, _citation(docdata)
+        yield name, reference, citation
 
 
 def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:

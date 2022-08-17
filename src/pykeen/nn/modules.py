@@ -459,8 +459,6 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
     """A stateful module for the TransE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transe_interaction`
-    ---
-    name: TransE
     """
 
     func = pkf.transe_interaction
@@ -471,8 +469,6 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     """A stateless module for the TransF interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
-    ---
-    name: TransF
     """
 
     func = pkf.transf_interaction
@@ -484,7 +480,6 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
 
     .. seealso:: :func:`pykeen.nn.functional.complex_interaction`
     ---
-    name: ComplEx
     citation:
         author: Trouillon
         year: 2016
@@ -559,7 +554,6 @@ class ConvEInteraction(
 
     .. seealso:: :func:`pykeen.nn.functional.conve_interaction`
     ---
-    name: ConvE
     citation:
         author: Dettmers
         year: 2018
@@ -706,7 +700,6 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
 
     ---
-    name: ConvKB
     citation:
         author: Nguyen
         year: 2018
@@ -770,6 +763,13 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     """A module wrapper for the stateless DistMult interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.distmult_interaction`
+
+    ---
+    citation:
+        author: Yang
+        year: 2014
+        link: https://arxiv.org/abs/1412.6575
+        arxiv: 1412.6575
     """
 
     func = pkf.distmult_interaction
@@ -780,6 +780,12 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     """A module wrapper for the stateless DistMA interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+
+    ---
+    citation:
+        author: Shi
+        year: 2019
+        link: https://www.aclweb.org/anthology/D19-1075.pdf
     """
 
     func = pkf.dist_ma_interaction
@@ -1583,6 +1589,13 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
     """A module wrapper for the CrossE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.cross_e_interaction`
+
+    ---
+    citation:
+        author: Zhang
+        year: 2019
+        link: https://arxiv.org/abs/1903.04750
+        arxiv: 1903.04750
     """
 
     func = pkf.cross_e_interaction
@@ -1647,7 +1660,6 @@ class BoxEInteraction(
     An implementation of the BoxE interaction from [abboud2020]_.
 
     ---
-    name: BoxE
     citation:
         author: Abboud
         year: 2020
@@ -1719,6 +1731,15 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     .. note ::
         For equivalence to CP, entities should have different representations for head & tail role. This is different
         to DistMult.
+
+    ---
+    name: Canonical Tensor Decomposition
+    citation:
+        author: Lacroix
+        year: 2018
+        arxiv: 1806.07297
+        link: https://arxiv.org/abs/1806.07297
+        github: facebookresearch/kbc
     """
 
     func = pkf.cp_interaction
@@ -1965,7 +1986,6 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
 
     ---
-    name: AutoSF
     citation:
         author: Zhang
         year: 2020
