@@ -560,6 +560,12 @@ class ConvEInteraction(
     .. seealso:: :func:`pykeen.nn.functional.conve_interaction`
     ---
     name: ConvE
+    citation:
+        author: Dettmers
+        year: 2018
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366
+        github: TimDettmers/ConvE
+        arxiv: 1707.01476
     """
 
     # vector & scalar offset
