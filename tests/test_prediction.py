@@ -8,8 +8,10 @@ import pytest
 import torch
 import unittest_templates
 
+import pykeen.models.mocks
 import pykeen.models.predict
 import pykeen.typing
+from pykeen.triples.triples_factory import KGInfo
 from tests import cases
 
 
@@ -78,3 +80,14 @@ class PredictionPostProcessorMetaTestCase(
 
     base_cls = pykeen.models.predict.PredictionPostProcessor
     base_test = cases.PredictionPostProcessorTestCase
+
+
+def test_consume_scores():
+    """Test for consume_scores."""
+    kg_info = KGInfo(num_entities=3, num_relations=2, create_inverse_triples=False)
+    dataset = pykeen.models.predict.AllPredictionDataset(
+        num_entities=kg_info.num_entities, num_relations=kg_info.num_relations
+    )
+    model = pykeen.models.mocks.FixedModel(triples_factory=kg_info)
+    consumer = pykeen.models.predict.CountConsumer()
+    pykeen.models.predict.consume_scores(model, dataset, consumer)
