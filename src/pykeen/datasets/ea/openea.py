@@ -40,7 +40,7 @@ GRAPH_PAIRS: Tuple[GraphPair, ...] = (D_W, D_Y, EN_DE, EN_FR)
 # graph sizes
 GraphSize = Literal["15K", "100K"]
 SIZE_15K: GraphSize = "15K"
-SIZE_100K: GraphSize = "15K"
+SIZE_100K: GraphSize = "100K"
 GRAPH_SIZES = (SIZE_15K, SIZE_100K)
 
 # graph versions
