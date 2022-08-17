@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Iterable, List, Mapping, Optional, Set, Tuple, Type, TypeVar
+from typing import Iterable, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import click
 from class_resolver import ClassResolver
@@ -495,7 +495,9 @@ def _get_metrics_lines(tablefmt: str):
         yield tuple(yv)
 
 
-def _get_resolver_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
+def _get_resolver_lines(
+    d: Mapping[str, Type[X]], tablefmt: str, submodule: str, link_fmt: Optional[str] = None
+) -> Union[Iterable[Tuple[str, str]], Iterable[Tuple[str, str, Optional[str]]]]:
     for name, value in sorted(d.items()):
         if tablefmt == "rst":
             if isinstance(value, type):
@@ -507,7 +509,7 @@ def _get_resolver_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
         elif tablefmt == "github":
             try:
                 ref = value.__name__
-                doc = value.__doc__.splitlines()[0]
+                doc = value.__doc__.splitlines()[0]  # type: ignore
             except AttributeError:
                 ref = name
                 doc = value.__class__.__doc__
@@ -520,6 +522,7 @@ def _get_resolver_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
 
             yield name, reference, doc
         else:
+            assert isinstance(value.__doc__, str)
             yield name, value.__doc__.splitlines()[0]
 
 
