@@ -1,7 +1,6 @@
 """Tests for node piece."""
 
 import random
-import unittest
 from typing import Any, MutableMapping
 
 import numpy
@@ -11,13 +10,7 @@ import unittest_templates
 
 import pykeen.nn.node_piece
 from tests import cases
-
-try:
-    import torch_sparse
-except ImportError:
-    torch_sparse = None
-
-require_torch_sparse = unittest.skipIf(torch_sparse is None, "torch_sparse is not installed")
+from tests.utils import needs_package
 
 
 class DegreeAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
@@ -98,7 +91,7 @@ class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
         numpy.testing.assert_array_equal(pool, exp_pool)
 
 
-@require_torch_sparse
+@needs_package("torch_sparse")
 class SparseBFSSearcherTests(cases.AnchorSearcherTestCase):
     """Tests for anchor search with scipy.sparse."""
 
@@ -130,7 +123,7 @@ class AnchorTokenizerTests(cases.TokenizerTestCase):
     cls = pykeen.nn.node_piece.AnchorTokenizer
 
 
-@require_torch_sparse
+@needs_package("torch_sparse")
 class MetisAnchorTokenizerTests(cases.TokenizerTestCase):
     """Tests for tokenization with anchor entities and metis."""
 
