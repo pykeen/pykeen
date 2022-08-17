@@ -1126,7 +1126,7 @@ def _handle_training(
     *,
     _result_tracker: MultiResultTracker,
     training: CoreTriplesFactory,
-    validation: CoreTriplesFactory,
+    validation: Optional[CoreTriplesFactory],
     model_instance: Model,
     evaluator_instance: Evaluator,
     training_loop_instance: TrainingLoop,
