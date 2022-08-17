@@ -644,7 +644,26 @@ class CountConsumer(_ScoreConsumer):
         self.score_count += scores.numel()
 
 
-class _TopKScoreConsumer(_ScoreConsumer):
+COLUMN_LABELS = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
+
+
+def _combine_to_triples(
+    other_indices: torch.LongTensor, score_id: torch.LongTensor, target: Target
+) -> torch.LongTensor:
+    # combine to batch
+    j = 0
+    triples = []
+    for col in COLUMN_LABELS:
+        if col == target:
+            index = score_id
+        else:
+            index = other_indices[:, j]
+            j += 1
+        triples.append(index)
+    return torch.stack(triples, dim=-1)
+
+
+class TopKScoreConsumer(_ScoreConsumer):
     """Collect top-k triples & scores."""
 
     flatten = False
@@ -666,12 +685,12 @@ class _TopKScoreConsumer(_ScoreConsumer):
     # docstr-coverage: inherited
     def __call__(
         self,
-        head_id_range: Tuple[int, int],
-        relation_id: int,
-        hr_batch: torch.LongTensor,
+        batch: torch.LongTensor,
+        target: Target,
         scores: torch.FloatTensor,
     ) -> None:  # noqa: D102
-        batch_size, num_entities = scores.shape
+        batch_size, num_scores = scores.shape
+        assert batch.shape == (batch_size, 2)
 
         # reshape, shape: (batch_size * num_entities,)
         top_scores = scores.view(-1)
@@ -683,21 +702,17 @@ class _TopKScoreConsumer(_ScoreConsumer):
                 largest=True,
                 sorted=False,
             )
-            h_start = head_id_range[0]
-            top_heads = h_start + torch.div(top_indices, num_entities, rounding_mode="trunc")
-            top_tails = top_indices % num_entities
+            # determine corresponding indices
+            # batch_id, score_id = divmod(top_indices, num_scores)
+            batch_id = torch.div(top_indices, num_scores, rounding_mode="trunc")
+            score_id = top_indices % num_scores
+            # combine to batch
+            other_indices = batch[batch_id]
         else:
-            top_heads = hr_batch[:, 0].view(-1, 1).repeat(1, num_entities).view(-1)
-            top_tails = torch.arange(num_entities, device=hr_batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
-
-        top_triples = torch.stack(
-            [
-                top_heads,
-                top_heads.new_full(size=top_heads.shape, fill_value=relation_id, dtype=top_heads.dtype),
-                top_tails,
-            ],
-            dim=-1,
-        )
+            other_indices = batch[:, 0].view(-1, 1).repeat(1, num_scores).view(-1)
+            score_id = torch.arange(num_scores, device=batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
+        # combine to top triples
+        top_triples = _combine_to_triples(other_indices=other_indices, score_id=score_id, target=target)
 
         # append to global top scores
         self.scores = torch.cat([self.scores, top_scores])
@@ -878,7 +893,7 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1, mode: Optional[Indu
         "validation", or "testing" in the inductive setting.
     :return: A score pack of parallel triples and scores
     """
-    consumer = _TopKScoreConsumer(k=k, device=model.device)
+    consumer = TopKScoreConsumer(k=k, device=model.device)
     consume_scores(model, consumer, batch_size=batch_size, mode=mode)
     return consumer.finalize()
 
