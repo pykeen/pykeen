@@ -1623,7 +1623,17 @@ class BoxEInteraction(
         Tuple[FloatTensor, FloatTensor],
     ]
 ):
-    """An implementation of the BoxE interaction from [abboud2020]_."""
+    """
+    An implementation of the BoxE interaction from [abboud2020]_.
+    
+    ---
+    name: BoxE
+    citation:
+        author: Abboud
+        year: 2020
+        link: https://arxiv.org/abs/2007.06267
+        github: ralphabb/BoxE
+    """
 
     func = pkf.boxe_interaction
 
