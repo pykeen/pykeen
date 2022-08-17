@@ -881,6 +881,57 @@ def _handle_checkpoint(training_kwargs: Mapping[str, Any], random_seed: Optional
     return _random_seed, clear_optimizer
 
 
+def _handle_dataset(
+    *,
+    _result_tracker: ResultTracker,
+    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+    dataset_kwargs: Optional[Mapping[str, Any]] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
+) -> Tuple[CoreTriplesFactory, CoreTriplesFactory, CoreTriplesFactory]:
+    # TODO: allow empty validation / testing
+    dataset_instance: Dataset = get_dataset(
+        dataset=dataset,
+        dataset_kwargs=dataset_kwargs,
+        training=training,
+        testing=testing,
+        validation=validation,
+    )
+    if dataset is not None:
+        _result_tracker.log_params(
+            dict(
+                dataset=dataset_instance.get_normalized_name(),
+                dataset_kwargs=dataset_kwargs,
+            )
+        )
+    else:  # means that dataset was defined by triples factories
+        _result_tracker.log_params(
+            dict(
+                dataset=USER_DEFINED_CODE,
+                training=training if isinstance(training, str) else USER_DEFINED_CODE,
+                testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
+                validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
+            )
+        )
+
+    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
+    # evaluation restriction to a subset of entities/relations
+    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
+        testing = testing.new_with_restriction(
+            entities=evaluation_entity_whitelist,
+            relations=evaluation_relation_whitelist,
+        )
+        if validation is not None:
+            validation = validation.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
+    return training, testing, validation
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -1080,42 +1131,16 @@ def pipeline(  # noqa: C901
     _device: torch.device = resolve_device(device)
     logger.info(f"Using device: {device}")
 
-    dataset_instance: Dataset = get_dataset(
+    training, testing, validation = _handle_dataset(
+        _result_tracker=_result_tracker,
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
         training=training,
         testing=testing,
         validation=validation,
+        evaluation_entity_whitelist=evaluation_entity_whitelist,
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
     )
-    if dataset is not None:
-        _result_tracker.log_params(
-            dict(
-                dataset=dataset_instance.get_normalized_name(),
-                dataset_kwargs=dataset_kwargs,
-            )
-        )
-    else:  # means that dataset was defined by triples factories
-        _result_tracker.log_params(
-            dict(
-                dataset=USER_DEFINED_CODE,
-                training=training if isinstance(training, str) else USER_DEFINED_CODE,
-                testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
-                validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
-            )
-        )
-
-    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
-    # evaluation restriction to a subset of entities/relations
-    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
-        testing = testing.new_with_restriction(
-            entities=evaluation_entity_whitelist,
-            relations=evaluation_relation_whitelist,
-        )
-        if validation is not None:
-            validation = validation.new_with_restriction(
-                entities=evaluation_entity_whitelist,
-                relations=evaluation_relation_whitelist,
-            )
 
     model_instance: Model
     if model is not None and interaction is not None:
