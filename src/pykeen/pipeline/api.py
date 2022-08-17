@@ -866,7 +866,7 @@ def _handle_checkpoint(training_kwargs: Mapping[str, Any], random_seed: Optional
             logger.info("loaded random seed %s from checkpoint.", _random_seed)
             # We have to set clear optimizer to False since training should be continued
             clear_optimizer = False
-            # TODO: checkpoint_dict not further used?
+            # TODO: checkpoint_dict not further used; later loaded again by TrainingLoop.train
         else:
             logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
             if random_seed is None:
