@@ -228,7 +228,8 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] =
         _get_resolver_lines2(
             resolver=representation_resolver,
             link_fmt=link_fmt,
-            skip={MessagePassingRepresentation},
+            # cf. https://github.com/python/mypy/issues/5374
+            skip={MessagePassingRepresentation},  # type: ignore
         )
     )
     headers = ["Name", "Reference", "Citation"]
