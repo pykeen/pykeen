@@ -39,10 +39,10 @@ from .hpo.cli import optimize
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .metrics.utils import Metric
-from .models import Model, model_resolver
+from .models import model_resolver
 from .models.cli import build_cli_from_cls
 from .nn import representation_resolver
-from .nn.modules import Interaction, interaction_resolver
+from .nn.modules import interaction_resolver
 from .nn.node_piece.cli import tokenize
 from .nn.pyg import MessagePassingRepresentation
 from .optimizers import optimizer_resolver
@@ -86,29 +86,6 @@ def models(tablefmt: str):
     click.echo(_help_models(tablefmt=tablefmt)[0])
 
 
-def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
-    lines = sorted(_get_model_lines(link_fmt=link_fmt))
-    headers = ["Name", "Model", "Interaction", "Citation"]
-    return (
-        tabulate(
-            lines,
-            headers=headers,
-            tablefmt=tablefmt,
-        ),
-        len(lines),
-    )
-
-
-def _get_interaction_for_model_cls(cls: Type[Model]) -> Optional[Type[Interaction]]:
-    attr_name = "interaction_cls"
-    if hasattr(cls, attr_name):
-        return getattr(cls, attr_name)
-    try:
-        return interaction_resolver.lookup(model_resolver.normalize_cls(cls))
-    except KeyError:
-        return None
-
-
 def format_class(cls: Type, module: Optional[str] = None) -> str:
     """
     Generate the fully-qualified class name.
@@ -124,40 +101,6 @@ def format_class(cls: Type, module: Optional[str] = None) -> str:
     if module is None:
         module = cls.__module__
     return f"{module}.{cls.__qualname__}"
-
-
-def _get_model_lines(*, link_fmt: Optional[str] = None) -> Iterable[Tuple[str, str, str, str]]:
-    seen_interactions: Set[Type[Interaction]] = set()
-    for _, model_cls in sorted(model_resolver.lookup_dict.items()):
-        interaction_cls = _get_interaction_for_model_cls(model_cls)
-        if interaction_cls is None:
-            click.echo(f"could not find corresponding interaction class for {model_resolver.normalize_cls(model_cls)}")
-            interaction_reference = None
-        else:
-            seen_interactions.add(interaction_cls)
-            interaction_reference = format_class(interaction_cls, module="pykeen.nn")
-
-        model_reference = format_class(model_cls, module="pykeen.models")
-        docdata = getattr(model_cls, "__docdata__", None)
-        if docdata is None:
-            raise ValueError(f"Missing docdata from {model_reference}")
-        model_reference = _format_reference(model_reference, link_fmt)
-        interaction_reference = _format_reference(interaction_reference, link_fmt)
-        name = docdata.get("name", model_cls.__name__)
-        yield name, model_reference, interaction_reference, _citation(docdata)
-
-    for unseen_interaction_cls in set(interaction_resolver) - seen_interactions:
-        docdata = getattr(unseen_interaction_cls, "__docdata__", None)
-        if docdata is None:
-            raise ValueError(f"All unmodeled interactions must have docdata: {unseen_interaction_cls}")
-        name = docdata.get("name")
-        if name is None:
-            raise ValueError(f"All unmodeled interactions must have a name: {unseen_interaction_cls}")
-        yield name, "", _format_reference(
-            f"pykeen.nn.{unseen_interaction_cls.__name__}",
-            link_fmt,
-            format_class(unseen_interaction_cls),
-        ), _citation(docdata)
 
 
 def _citation(dd):
@@ -203,6 +146,19 @@ def _get_resolver_lines2(
             click.secho(message=f"Missing citation for {reference}", err=True)
         reference = _format_reference(reference, link_fmt)
         yield name, reference, citation
+
+
+def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
+    lines = sorted(_get_resolver_lines2(resolver=model_resolver, link_fmt=link_fmt))
+    headers = ["Name", "Model", "Citation"]
+    return (
+        tabulate(
+            lines,
+            headers=headers,
+            tablefmt=tablefmt,
+        ),
+        len(lines),
+    )
 
 
 def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
