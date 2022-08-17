@@ -22,13 +22,14 @@ from ..typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
+    DeviceHint,
     InductiveMode,
     LabeledTriples,
     MappedTriples,
     ScorePack,
     Target,
 )
-from ..utils import is_cuda_oom_error
+from ..utils import is_cuda_oom_error, resolve_device
 
 __all__ = [
     "predict",
@@ -608,7 +609,7 @@ def predict(
 PredictionBatch = torch.LongTensor
 
 
-class _ScoreConsumer:
+class ScoreConsumer:
     """A consumer of scores for visitor pattern."""
 
     result: torch.LongTensor
@@ -630,7 +631,7 @@ class _ScoreConsumer:
         return _build_pack(result=self.result, scores=self.scores, flatten=self.flatten)
 
 
-class CountConsumer(_ScoreConsumer):
+class CountScoreConsumer(ScoreConsumer):
     """A simple consumer which counts the number of batches and scores."""
 
     def __init__(self) -> None:
@@ -663,12 +664,12 @@ def _combine_to_triples(
     return torch.stack(triples, dim=-1)
 
 
-class TopKScoreConsumer(_ScoreConsumer):
+class TopKScoreConsumer(ScoreConsumer):
     """Collect top-k triples & scores."""
 
     flatten = False
 
-    def __init__(self, k: int, device: torch.device) -> None:
+    def __init__(self, k: int = 3, device: DeviceHint = None) -> None:
         """
         Initialize the consumer.
 
@@ -678,6 +679,7 @@ class TopKScoreConsumer(_ScoreConsumer):
             the model's device
         """
         self.k = k
+        device = resolve_device(device=device)
         # initialize buffer on device
         self.result = torch.empty(0, 3, dtype=torch.long, device=device)
         self.scores = torch.empty(0, device=device)
@@ -733,7 +735,7 @@ class TopKScoreConsumer(_ScoreConsumer):
             self.result = self.result[indices]
 
 
-class AllConsumer(_ScoreConsumer):
+class AllScoreConsumer(ScoreConsumer):
     """Collect scores for all triples."""
 
     flatten = True
@@ -840,7 +842,7 @@ class AllPredictionDataset(PredictionDataset):
 def consume_scores(
     model: Model,
     dataset: PredictionDataset,
-    *consumers: _ScoreConsumer,
+    *consumers: ScoreConsumer,
     batch_size: int = 1,
     mode: Optional[InductiveMode] = None,
     target: Target = LABEL_TAIL,
@@ -892,7 +894,7 @@ def _predict_all(
     dataset = AllPredictionDataset(
         num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
     )
-    consumer = AllConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+    consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
     consume_scores(model, dataset, consumer, batch_size=batch_size, mode=mode)
     return consumer.finalize()
 
