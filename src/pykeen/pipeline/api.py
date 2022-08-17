@@ -1011,6 +1011,93 @@ def _handle_model(
     return model_instance
 
 
+def _handle_training_loop(
+    *,
+    _result_tracker: ResultTracker,
+    model_instance: Model,
+    training: CoreTriplesFactory,
+    # 5. Optimizer
+    optimizer: HintType[Optimizer] = None,
+    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+    clear_optimizer: bool = True,  # FIXME: not used?
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
+    # 6. Training Loop
+    training_loop: HintType[TrainingLoop] = None,
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
+    negative_sampler: HintType[NegativeSampler] = None,
+    negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
+) -> TrainingLoop:
+    optimizer_kwargs = dict(optimizer_kwargs or {})
+    optimizer_instance = optimizer_resolver.make(
+        optimizer,
+        optimizer_kwargs,
+        params=model_instance.get_grad_params(),
+    )
+    for key, value in optimizer_instance.defaults.items():
+        optimizer_kwargs.setdefault(key, value)
+    _result_tracker.log_params(
+        params=dict(
+            optimizer=optimizer_instance.__class__.__name__,
+            optimizer_kwargs=optimizer_kwargs,
+        ),
+    )
+
+    lr_scheduler_instance: Optional[LRScheduler]
+    if lr_scheduler is None:
+        lr_scheduler_instance = None
+    else:
+        lr_scheduler_instance = lr_scheduler_resolver.make(
+            lr_scheduler,
+            lr_scheduler_kwargs,
+            optimizer=optimizer_instance,
+        )
+        _result_tracker.log_params(
+            params=dict(
+                lr_scheduler=lr_scheduler_instance.__class__.__name__,
+                lr_scheduler_kwargs=lr_scheduler_kwargs,
+            ),
+        )
+
+    training_loop_cls = training_loop_resolver.lookup(training_loop)
+    if training_loop_kwargs is None:
+        training_loop_kwargs = {}
+
+    if negative_sampler is None:
+        negative_sampler_cls = None
+    elif not issubclass(training_loop_cls, SLCWATrainingLoop):
+        raise ValueError("Can not specify negative sampler with LCWA")
+    else:
+        negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
+        training_loop_kwargs = dict(training_loop_kwargs)
+        training_loop_kwargs.update(
+            negative_sampler=negative_sampler_cls,
+            negative_sampler_kwargs=negative_sampler_kwargs,
+        )
+        _result_tracker.log_params(
+            params=dict(
+                negative_sampler=negative_sampler_cls.__name__,
+                negative_sampler_kwargs=negative_sampler_kwargs,
+            ),
+        )
+    training_loop_instance = training_loop_cls(
+        model=model_instance,
+        triples_factory=training,
+        optimizer=optimizer_instance,
+        lr_scheduler=lr_scheduler_instance,
+        result_tracker=_result_tracker,
+        **training_loop_kwargs,
+    )
+    _result_tracker.log_params(
+        params=dict(
+            training_loop=training_loop_instance.__class__.__name__,
+            training_loop_kwargs=training_loop_kwargs,
+        ),
+    )
+    return training_loop_instance
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -1234,71 +1321,19 @@ def pipeline(  # noqa: C901
         regularizer_kwargs=regularizer_kwargs,
     )
 
-    optimizer_kwargs = dict(optimizer_kwargs or {})
-    optimizer_instance = optimizer_resolver.make(
-        optimizer,
-        optimizer_kwargs,
-        params=model_instance.get_grad_params(),
-    )
-    for key, value in optimizer_instance.defaults.items():
-        optimizer_kwargs.setdefault(key, value)
-    _result_tracker.log_params(
-        params=dict(
-            optimizer=optimizer_instance.__class__.__name__,
-            optimizer_kwargs=optimizer_kwargs,
-        ),
-    )
-
-    lr_scheduler_instance: Optional[LRScheduler]
-    if lr_scheduler is None:
-        lr_scheduler_instance = None
-    else:
-        lr_scheduler_instance = lr_scheduler_resolver.make(
-            lr_scheduler,
-            lr_scheduler_kwargs,
-            optimizer=optimizer_instance,
-        )
-        _result_tracker.log_params(
-            params=dict(
-                lr_scheduler=lr_scheduler_instance.__class__.__name__,
-                lr_scheduler_kwargs=lr_scheduler_kwargs,
-            ),
-        )
-
-    training_loop_cls = training_loop_resolver.lookup(training_loop)
-    if training_loop_kwargs is None:
-        training_loop_kwargs = {}
-
-    if negative_sampler is None:
-        negative_sampler_cls = None
-    elif not issubclass(training_loop_cls, SLCWATrainingLoop):
-        raise ValueError("Can not specify negative sampler with LCWA")
-    else:
-        negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
-        training_loop_kwargs = dict(training_loop_kwargs)
-        training_loop_kwargs.update(
-            negative_sampler=negative_sampler_cls,
-            negative_sampler_kwargs=negative_sampler_kwargs,
-        )
-        _result_tracker.log_params(
-            params=dict(
-                negative_sampler=negative_sampler_cls.__name__,
-                negative_sampler_kwargs=negative_sampler_kwargs,
-            ),
-        )
-    training_loop_instance = training_loop_cls(
+    training_loop_instance = _handle_training_loop(
+        _result_tracker=_result_tracker,
         model=model_instance,
-        triples_factory=training,
-        optimizer=optimizer_instance,
-        lr_scheduler=lr_scheduler_instance,
-        result_tracker=_result_tracker,
-        **training_loop_kwargs,
-    )
-    _result_tracker.log_params(
-        params=dict(
-            training_loop=training_loop_instance.__class__.__name__,
-            training_loop_kwargs=training_loop_kwargs,
-        ),
+        training=training,
+        optimizer=optimizer,
+        optimizer_kwargs=optimizer_kwargs,
+        clear_optimizer=clear_optimizer,
+        lr_scheduler=lr_scheduler,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
+        training_loop=training_loop,
+        training_loop_kwargs=training_loop_kwargs,
+        negative_sampler=negative_sampler,
+        negative_sampler_kwargs=negative_sampler_kwargs,
     )
 
     if evaluator_kwargs is None:
