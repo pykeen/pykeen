@@ -230,7 +230,7 @@ from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, resolve_result_trackers
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
-from ..typing import Hint, HintType, MappedTriples
+from ..typing import DeviceHint, Hint, HintType, MappedTriples
 from ..utils import (
     Result,
     ensure_ftp_directory,
@@ -932,6 +932,85 @@ def _handle_dataset(
     return training, testing, validation
 
 
+def _handle_model(
+    *,
+    device: DeviceHint,
+    _result_tracker: ResultTracker,
+    _random_seed: int,
+    training: CoreTriplesFactory,
+    # 2. Model
+    model: Union[None, str, Model, Type[Model]] = None,
+    model_kwargs: Optional[Mapping[str, Any]] = None,
+    interaction: Union[None, str, Interaction, Type[Interaction]] = None,
+    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    dimensions: Union[None, int, Mapping[str, int]] = None,
+    # 3. Loss
+    loss: HintType[Loss] = None,
+    loss_kwargs: Optional[Mapping[str, Any]] = None,
+    # 4. Regularizer
+    regularizer: HintType[Regularizer] = None,
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+):
+    _device: torch.device = resolve_device(device)
+    logger.info(f"Using device: {device}")
+
+    model_instance: Model
+    if model is not None and interaction is not None:
+        raise ValueError("can not pass both a model and interaction")
+    elif model is None and interaction is None:
+        raise ValueError("must pass one of model or interaction")
+    elif interaction is not None:
+        if dimensions is None:
+            raise ValueError("missing dimensions")
+        model = make_model_cls(
+            interaction=interaction,
+            dimensions=dimensions,
+            interaction_kwargs=interaction_kwargs,
+        )
+
+    if isinstance(model, Model):
+        model_instance = cast(Model, model)
+        # TODO should training be reset?
+        # TODO should kwargs for loss and regularizer be checked and raised for?
+    else:
+        model_instance, model_kwargs = _build_model_helper(
+            model=model,
+            model_kwargs=model_kwargs,
+            loss=loss,
+            loss_kwargs=loss_kwargs,
+            regularizer=regularizer,
+            regularizer_kwargs=regularizer_kwargs,
+            _device=_device,
+            _random_seed=_random_seed,
+            training_triples_factory=training,
+        )
+
+    model_instance = model_instance.to(_device)
+
+    # Log model parameters
+    _result_tracker.log_params(
+        params=dict(
+            model=model_instance.__class__.__name__,
+            model_kwargs=model_kwargs,
+        ),
+    )
+
+    # Log loss parameters
+    _result_tracker.log_params(
+        params=dict(
+            # the loss was already logged as part of the model kwargs
+            # loss=loss_resolver.normalize_inst(model_instance.loss),
+            loss_kwargs=loss_kwargs
+        ),
+    )
+
+    # Log regularizer parameters
+    _result_tracker.log_params(
+        params=dict(regularizer_kwargs=regularizer_kwargs),
+    )
+    return model_instance
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -1128,9 +1207,6 @@ def pipeline(  # noqa: C901
     # Start tracking
     _result_tracker.start_run(run_name=title)
 
-    _device: torch.device = resolve_device(device)
-    logger.info(f"Using device: {device}")
-
     training, testing, validation = _handle_dataset(
         _result_tracker=_result_tracker,
         dataset=dataset,
@@ -1142,59 +1218,20 @@ def pipeline(  # noqa: C901
         evaluation_relation_whitelist=evaluation_relation_whitelist,
     )
 
-    model_instance: Model
-    if model is not None and interaction is not None:
-        raise ValueError("can not pass both a model and interaction")
-    elif model is None and interaction is None:
-        raise ValueError("must pass one of model or interaction")
-    elif interaction is not None:
-        if dimensions is None:
-            raise ValueError("missing dimensions")
-        model = make_model_cls(
-            interaction=interaction,
-            dimensions=dimensions,
-            interaction_kwargs=interaction_kwargs,
-        )
-
-    if isinstance(model, Model):
-        model_instance = cast(Model, model)
-        # TODO should training be reset?
-        # TODO should kwargs for loss and regularizer be checked and raised for?
-    else:
-        model_instance, model_kwargs = _build_model_helper(
-            model=model,
-            model_kwargs=model_kwargs,
-            loss=loss,
-            loss_kwargs=loss_kwargs,
-            regularizer=regularizer,
-            regularizer_kwargs=regularizer_kwargs,
-            _device=_device,
-            _random_seed=_random_seed,
-            training_triples_factory=training,
-        )
-
-    model_instance = model_instance.to(_device)
-
-    # Log model parameters
-    _result_tracker.log_params(
-        params=dict(
-            model=model_instance.__class__.__name__,
-            model_kwargs=model_kwargs,
-        ),
-    )
-
-    # Log loss parameters
-    _result_tracker.log_params(
-        params=dict(
-            # the loss was already logged as part of the model kwargs
-            # loss=loss_resolver.normalize_inst(model_instance.loss),
-            loss_kwargs=loss_kwargs
-        ),
-    )
-
-    # Log regularizer parameters
-    _result_tracker.log_params(
-        params=dict(regularizer_kwargs=regularizer_kwargs),
+    model_instance = _handle_model(
+        device=device,
+        _result_tracker=_result_tracker,
+        _random_seed=_random_seed,
+        training=training,
+        model=model,
+        model_kwargs=model_kwargs,
+        interaction=interaction,
+        interaction_kwargs=interaction_kwargs,
+        dimensions=dimensions,
+        loss=loss,
+        loss_kwargs=loss_kwargs,
+        regularizer=regularizer,
+        regularizer_kwargs=regularizer_kwargs,
     )
 
     optimizer_kwargs = dict(optimizer_kwargs or {})
