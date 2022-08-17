@@ -2,6 +2,7 @@
 
 """Implementation of ranked based evaluator."""
 
+from functools import lru_cache
 import itertools
 import logging
 import math
@@ -478,49 +479,40 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
     """Macro-average rank-based evaluation."""
 
     COLUMNS = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
-    precomputed_weights: Mapping[Target, Mapping[Tuple[int, int], float]]
     weights: MutableMapping[Target, List[numpy.ndarray]]
 
-    def __init__(
-        self,
-        *,
-        evaluation_factory: Optional[CoreTriplesFactory] = None,
-        evaluation_triples: Optional[MappedTriples] = None,
-        **kwargs,
-    ):
+    def __init__(self, **kwargs):
         """
         Initialize the evaluator.
 
-        :param evaluation_factory:
-            the evaluation triples' factory. Must be provided, if no explicit triples are provided.
-        :param evaluation_triples:
-            the evaluation triples. If given, takes precedence over extracting triples from a factory.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`RankBasedEvaluator.__init__`.
-
-        :raises ValueError:
-            if neither evaluation triples nor a factory are provided
         """
         super().__init__(**kwargs)
-        if evaluation_triples is None:
-            if evaluation_factory is None:
-                raise ValueError("Need to provide either evaluation_triples or evaluation_factory.")
-            evaluation_triples = evaluation_factory.mapped_triples
-        # compute macro weights
-        df = pandas.DataFrame(data=evaluation_triples.numpy(), columns=list(self.COLUMNS))
-        self.precomputed_weights = dict()
-        self.weights = defaultdict(list)
-        for target in (LABEL_HEAD, LABEL_TAIL):
-            key = self._get_key(target)
-            counts = df.groupby(by=key).nunique()[target]
-            key_list = cast(Iterable[Tuple[int, int]], map(tuple, counts.index.tolist()))
-            self.precomputed_weights[target] = dict(
-                zip(key_list, numpy.reciprocal(counts.values.astype(float)).tolist())
-            )
-            self.weights[target] = []
+        self.keys = defaultdict(list)
 
-    def _get_key(self, target: Target) -> List[Target]:
-        return [c for c in self.COLUMNS if c != target]
+    @lru_cache(maxsize=3)
+    def _get_key(self, target: Target) -> List[int]:
+        return [TARGET_TO_INDEX[c] for c in self.COLUMNS if c != target]
+
+    @staticmethod
+    def _calculate_weights(keys: Iterable[np.ndarray]) -> np.ndarray:
+        """Calculate macro weights, i.e., weights inversely proportional to the key frequency.
+
+        :param keys:
+            the keys, in batches
+
+        :return: shape: (n,)
+            the weights
+        """
+        # combine key batches
+        keys = np.concatenate(list(keys), axis=0)
+        # calculate key frequency
+        inverse, counts = np.unique(keys, axis=0, return_inverse=True, return_counts=True)[1:]
+        # weight = inverse frequency
+        weights = np.reciprocal(counts)
+        # broadcast to samples
+        return weights[inverse]
 
     # docstr-coverage: inherited
     def process_scores_(
@@ -538,22 +530,22 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             true_scores=true_scores,
             dense_positive_mask=dense_positive_mask,
         )
-        key_list = (
-            hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().cpu().numpy().tolist()
-        )
-        keys = cast(List[Tuple[int, int]], list(map(tuple, key_list)))
-        self.weights[target].append(numpy.asarray([self.precomputed_weights[target][k] for k in keys]))
+        # store keys for calculating macro weights
+        self.keys[target].append(hrt_batch[:, self._get_key(target=target)].detach().cpu().numpy())
 
     # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
+        # compute macro weights
+        weights = {target: self._calculate_weights(keys=keys) for target, keys in self.keys.items()}
+        # calculate weighted metrics
         result = RankBasedMetricResults.from_ranks(
             metrics=self.metrics,
-            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=self.weights),
+            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights),
         )
         # Clear buffers
-        self.weights.clear()
+        self.keys.clear()
         self.ranks.clear()
         self.num_candidates.clear()
 
