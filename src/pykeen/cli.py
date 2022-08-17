@@ -140,22 +140,28 @@ def _get_resolver_lines2(
     for _, clsx in sorted(resolver.lookup_dict.items()):
         if skip and clsx in skip:
             continue
-        module = clsx.__module__
+        # determine fully qualified name
+        module, name = clsx.__module__, clsx.__qualname__
+        full = f"{module}.{name}"
+        # shorten to main module
         if top_k:
             module = ".".join(module.split(".", maxsplit=top_k)[:-1])
-        name = clsx.__qualname__
-        reference = f"{module}.{name}"
-        # verify that name can be imported from the abbreviated reference
+        short = f"{module}.{name}"
+        # verify that short name can be imported from the abbreviated reference
         if not name in dir(importlib.import_module(module)):
             click.secho(message=f"{name} not visible in {module}", err=True)
+        # get docdata and extract name & citation
         docdata = resolver.docdata(clsx) or {}
         assert isinstance(docdata, dict)
+        # fallback for name: capitalized class name without base suffix
         name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
         assert isinstance(name, str)
+        # extract citation information and warn about lack thereof
         citation = _citation(docdata)
         if not citation:
-            click.secho(message=f"Missing citation for {reference}", err=True)
-        reference = _format_reference(reference, link_fmt)
+            click.secho(message=f"Missing citation for {short}", err=True)
+        # compose reference
+        reference = _format_reference(reference=short, link_fmt=link_fmt, alt_reference=full)
         yield name, reference, citation
 
 
