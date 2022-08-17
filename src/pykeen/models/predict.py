@@ -772,7 +772,7 @@ def _consume_scores(
             ],
             dim=-1,
         )
-        scores = model.predict_t(hr_batch=hr_batch, mode=mode)
+        scores = model.predict(hr_batch, target=LABEL_TAIL, full_batch=False, mode=mode)
         for consumer in consumers:
             consumer(head_id_range=(h_start, h_stop), relation_id=r, hr_batch=hr_batch, scores=scores)
 
