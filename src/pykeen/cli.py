@@ -189,15 +189,18 @@ def _format_reference(reference: Optional[str], link_fmt: Optional[str], alt_ref
 
 def _get_resolver_lines2(
     resolver: ClassResolver[X], link_fmt: Optional[str] = None, skip: Optional[Set[Type[X]]] = None
-) -> Iterable[Tuple[str, Optional[str]]]:
+) -> Iterable[Tuple[str, str, Optional[str]]]:
     for _, clsx in sorted(resolver.lookup_dict.items()):
         if skip and clsx in skip:
             continue
         reference = f"{clsx.__module__}.{clsx.__qualname__}"
         docdata = resolver.docdata(clsx) or {}
-        name = docdata.get("name")
+        assert isinstance(docdata, dict)
+        name = docdata.get("name", None)
         if not name:
             click.secho(message=f"Missing docdata name from {reference}", err=True)
+            name = ""
+        assert isinstance(name, str)
         reference = _format_reference(reference, link_fmt)
         yield name, reference, _citation(docdata)
 

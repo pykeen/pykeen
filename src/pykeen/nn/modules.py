@@ -1941,7 +1941,7 @@ class TripleREInteraction(
 
 @parse_docdata
 class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
-    """
+    r"""
     An implementation of the AutoSF interaction as described by [zhang2020]_.
 
     This interaction function is a parametrized way to express bi-linear models
