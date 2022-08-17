@@ -892,7 +892,7 @@ def _handle_dataset(
     validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
-) -> Tuple[CoreTriplesFactory, Optional[CoreTriplesFactory], Optional[CoreTriplesFactory]]:
+) -> Tuple[CoreTriplesFactory, CoreTriplesFactory, Optional[CoreTriplesFactory]]:
     # TODO: allow empty validation / testing
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
@@ -1126,7 +1126,7 @@ def _handle_training(
     *,
     _result_tracker: MultiResultTracker,
     training: CoreTriplesFactory,
-    validation: Optional[CoreTriplesFactory],
+    validation: CoreTriplesFactory,
     model_instance: Model,
     evaluator_instance: Evaluator,
     training_loop_instance: TrainingLoop,
