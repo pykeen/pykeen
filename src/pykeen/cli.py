@@ -13,6 +13,7 @@ later, but that will cause problems - the code will get executed twice:
 .. seealso:: http://click.pocoo.org/5/setuptools/#setuptools-integration
 """
 
+import importlib
 import inspect
 import os
 import sys
@@ -142,7 +143,11 @@ def _get_resolver_lines2(
         module = clsx.__module__
         if top_k:
             module = ".".join(module.split(".", maxsplit=top_k)[:-1])
-        reference = f"{module}.{clsx.__qualname__}"
+        name = clsx.__qualname__
+        reference = f"{module}.{name}"
+        # verify that name can be imported from the abbreviated reference
+        if not name in dir(importlib.import_module(module)):
+            raise ValueError(f"{name} not visible on {module}")
         docdata = resolver.docdata(clsx) or {}
         assert isinstance(docdata, dict)
         name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
