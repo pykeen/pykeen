@@ -82,12 +82,14 @@ class PredictionPostProcessorMetaTestCase(
     base_test = cases.PredictionPostProcessorTestCase
 
 
-def test_consume_scores():
+@pytest.mark.parametrize(["num_entities", "num_relations"], [(3, 2)])
+def test_consume_scores(num_entities: int, num_relations: int):
     """Test for consume_scores."""
-    kg_info = KGInfo(num_entities=3, num_relations=2, create_inverse_triples=False)
-    dataset = pykeen.models.predict.AllPredictionDataset(
-        num_entities=kg_info.num_entities, num_relations=kg_info.num_relations
+    dataset = pykeen.models.predict.AllPredictionDataset(num_entities=num_entities, num_relations=num_relations)
+    model = pykeen.models.mocks.FixedModel(
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
     )
-    model = pykeen.models.mocks.FixedModel(triples_factory=kg_info)
     consumer = pykeen.models.predict.CountConsumer()
     pykeen.models.predict.consume_scores(model, dataset, consumer)
+    assert consumer.batch_count == num_relations * num_entities
+    assert consumer.score_count == num_relations * num_entities**2
