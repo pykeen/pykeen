@@ -1075,7 +1075,7 @@ class CombinedRepresentation(Representation):
     """A combined representation.
 
     ---
-    name: Combine Representation
+    name: Combined Representation
     """
 
     #: the base representations
