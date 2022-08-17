@@ -509,7 +509,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # compute macro weights
         df = pandas.DataFrame(data=evaluation_triples.numpy(), columns=list(self.COLUMNS))
         self.precomputed_weights = dict()
-        self.weights = {}
+        self.weights = defaultdict(list)
         for target in (LABEL_HEAD, LABEL_TAIL):
             key = self._get_key(target)
             counts = df.groupby(by=key).nunique()[target]
@@ -539,7 +539,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             dense_positive_mask=dense_positive_mask,
         )
         key_list = (
-            hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().numpy().tolist()
+            hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().cpu().numpy().tolist()
         )
         keys = cast(List[Tuple[int, int]], list(map(tuple, key_list)))
         self.weights[target].append(numpy.asarray([self.precomputed_weights[target][k] for k in keys]))
