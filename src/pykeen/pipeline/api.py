@@ -228,6 +228,7 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, resolve_result_trackers
+from ..trackers.base import MultiResultTracker
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import DeviceHint, Hint, HintType, MappedTriples
@@ -891,7 +892,7 @@ def _handle_dataset(
     validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
-) -> Tuple[CoreTriplesFactory, CoreTriplesFactory, CoreTriplesFactory]:
+) -> Tuple[CoreTriplesFactory, Optional[CoreTriplesFactory], Optional[CoreTriplesFactory]]:
     # TODO: allow empty validation / testing
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
@@ -1103,7 +1104,7 @@ def _handle_evaluator(
     evaluator: HintType[Evaluator] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-) -> Tuple[Evaluator, Mapping[str, Any]]:
+) -> Tuple[Evaluator, Dict[str, Any]]:
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
@@ -1123,9 +1124,9 @@ def _handle_evaluator(
 
 def _handle_training(
     *,
-    _result_tracker: ResultTracker,
+    _result_tracker: MultiResultTracker,
     training: CoreTriplesFactory,
-    validation: CoreTriplesFactory,
+    validation: Optional[CoreTriplesFactory],
     model_instance: Model,
     evaluator_instance: Evaluator,
     training_loop_instance: TrainingLoop,
@@ -1133,7 +1134,7 @@ def _handle_training(
     evaluation_kwargs: Mapping[str, Any],
     # 7. Training (ronaldo style)
     epochs: Optional[int] = None,
-    training_kwargs: Dict[str, Any] = None,
+    training_kwargs: Dict[str, Any],
     stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
@@ -1468,11 +1469,6 @@ def pipeline(  # noqa: C901
         loop and evaluation have it turned on by default.
 
     :returns: A pipeline result package.
-
-    :raises ValueError:
-        If a negative sampler is specified with LCWA
-    :raises TypeError:
-        If an invalid argument type is given for ``evaluation_kwargs["additional_filter_triples"]``
     """
     if training_kwargs is None:
         training_kwargs = {}
@@ -1519,7 +1515,7 @@ def pipeline(  # noqa: C901
 
     training_loop_instance = _handle_training_loop(
         _result_tracker=_result_tracker,
-        model=model_instance,
+        model_instance=model_instance,
         training=training,
         optimizer=optimizer,
         optimizer_kwargs=optimizer_kwargs,
