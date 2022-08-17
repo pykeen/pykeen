@@ -706,13 +706,22 @@ class TopKScoreConsumer(_ScoreConsumer):
             # batch_id, score_id = divmod(top_indices, num_scores)
             batch_id = torch.div(top_indices, num_scores, rounding_mode="trunc")
             score_id = top_indices % num_scores
-            # combine to batch
             other_indices = batch[batch_id]
         else:
             other_indices = batch[:, 0].view(-1, 1).repeat(1, num_scores).view(-1)
             score_id = torch.arange(num_scores, device=batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
+
         # combine to top triples
-        top_triples = _combine_to_triples(other_indices=other_indices, score_id=score_id, target=target)
+        j = 0
+        triples = []
+        for col in COLUMN_LABELS:
+            if col == target:
+                index = score_id
+            else:
+                index = other_indices[:, j]
+                j += 1
+            triples.append(index)
+        top_triples = torch.stack(triples, dim=-1)
 
         # append to global top scores
         self.scores = torch.cat([self.scores, top_scores])
@@ -724,7 +733,7 @@ class TopKScoreConsumer(_ScoreConsumer):
             self.result = self.result[indices]
 
 
-class _AllConsumer(_ScoreConsumer):
+class AllConsumer(_ScoreConsumer):
     """Collect scores for all triples."""
 
     flatten = True
@@ -740,27 +749,34 @@ class _AllConsumer(_ScoreConsumer):
         """
         assert num_entities**2 * num_relations < (2**63 - 1)
         # initialize buffer on cpu
-        self.scores = torch.empty(num_relations, num_entities, num_entities, device="cpu")
+        self.scores = torch.empty(num_entities, num_relations, num_entities, device="cpu")
         # Explicitly create triples
         self.result = torch.stack(
             [
-                torch.arange(num_relations).view(-1, 1, 1).repeat(1, num_entities, num_entities),
-                torch.arange(num_entities).view(1, -1, 1).repeat(num_relations, 1, num_entities),
-                torch.arange(num_entities).view(1, 1, -1).repeat(num_relations, num_entities, 1),
+                torch.arange(num_entities).view(-1, 1, 1).repeat(1, num_relations, num_entities),
+                torch.arange(num_relations).view(1, -1, 1).repeat(num_entities, 1, num_entities),
+                torch.arange(num_entities).view(1, 1, -1).repeat(num_entities, num_relations, 1),
             ],
             dim=-1,
-        ).view(-1, 3)[:, [1, 0, 2]]
+        ).view(-1, 3)
 
     # docstr-coverage: inherited
     def __call__(
         self,
-        head_id_range: Tuple[int, int],
-        relation_id: int,
-        hr_batch: torch.LongTensor,
-        scores: torch.FloatTensor,
+        batch: torch.LongTensor,
+        target: Target,
+        scores: torch.LongTensor,
     ) -> None:  # noqa: D102
-        h_start, h_stop = head_id_range
-        self.scores[relation_id, h_start:h_stop, :] = scores.to(self.scores.device)
+        j = 0
+        selectors: List[Union[slice, torch.LongTensor]] = []
+        for col in COLUMN_LABELS:
+            if col == target:
+                selector = slice(None)
+            else:
+                selector = batch[:, j]
+                j += 1
+            selectors.append(selector)
+        self.scores[selectors[0], selectors[1], selectors[2]] = scores.to(self.scores.device)
 
 
 class PredictionDataset(torch.utils.data.Dataset):
@@ -876,7 +892,7 @@ def _predict_all(
     dataset = AllPredictionDataset(
         num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
     )
-    consumer = _AllConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+    consumer = AllConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
     consume_scores(model, dataset, consumer, batch_size=batch_size, mode=mode)
     return consumer.finalize()
 
