@@ -1098,6 +1098,203 @@ def _handle_training_loop(
     return training_loop_instance
 
 
+def _handle_evaluator(
+    _result_tracker: ResultTracker,
+    # 8. Evaluation
+    evaluator: HintType[Evaluator] = None,
+    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
+    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+) -> Tuple[Evaluator, Mapping[str, Any]]:
+    if evaluator_kwargs is None:
+        evaluator_kwargs = {}
+    evaluator_kwargs = dict(evaluator_kwargs)
+    evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+    _result_tracker.log_params(
+        params=dict(
+            evaluator=evaluator_instance.__class__.__name__,
+            evaluator_kwargs=evaluator_kwargs,
+        ),
+    )
+
+    if evaluation_kwargs is None:
+        evaluation_kwargs = {}
+    evaluation_kwargs = dict(evaluation_kwargs)
+    return evaluator_instance, evaluation_kwargs
+
+
+def _handle_training(
+    *,
+    _result_tracker: ResultTracker,
+    training: CoreTriplesFactory,
+    validation: CoreTriplesFactory,
+    model_instance: Model,
+    evaluator_instance: Evaluator,
+    training_loop_instance: TrainingLoop,
+    clear_optimizer: bool,
+    evaluation_kwargs: Mapping[str, Any],
+    # 7. Training (ronaldo style)
+    epochs: Optional[int] = None,
+    training_kwargs: Dict[str, Any] = None,
+    stopper: HintType[Stopper] = None,
+    stopper_kwargs: Optional[Mapping[str, Any]] = None,
+    # Misc
+    use_tqdm: Optional[bool] = None,
+) -> Tuple[Stopper, Mapping[str, Any], List[float], float]:
+    # Stopping
+    if "stopper" in training_kwargs and stopper is not None:
+        raise ValueError("Specified stopper in training_kwargs and as stopper")
+    if "stopper" in training_kwargs:
+        stopper = training_kwargs.pop("stopper")
+    if stopper_kwargs is None:
+        stopper_kwargs = {}
+    stopper_kwargs = dict(stopper_kwargs)
+
+    # Load the evaluation batch size for the stopper, if it has been set
+    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
+    if _evaluation_batch_size is not None:
+        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
+
+    stopper_instance: Stopper = stopper_resolver.make(
+        stopper,
+        model=model_instance,
+        evaluator=evaluator_instance,
+        training_triples_factory=training,
+        evaluation_triples_factory=validation,
+        result_tracker=_result_tracker,
+        **stopper_kwargs,
+    )
+
+    if epochs is not None:
+        training_kwargs["num_epochs"] = epochs
+    if use_tqdm is not None:
+        training_kwargs["use_tqdm"] = use_tqdm
+    training_kwargs.setdefault("num_epochs", 5)
+    training_kwargs.setdefault("batch_size", 256)
+    _result_tracker.log_params(params=training_kwargs)
+
+    # Add logging for debugging
+    configuration = _result_tracker.get_configuration()
+    logging.debug("Run Pipeline based on following config:")
+    for key, value in configuration.items():
+        logging.debug(f"{key}: {value}")
+
+    # Train like Cristiano Ronaldo
+    training_start_time = time.time()
+    losses = training_loop_instance.train(
+        triples_factory=training,
+        stopper=stopper_instance,
+        clear_optimizer=clear_optimizer,
+        **training_kwargs,
+    )
+    assert losses is not None  # losses is only none if it's doing search mode
+    training_end_time = time.time() - training_start_time
+    step = training_kwargs.get("num_epochs")
+    _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
+    return stopper_instance, configuration, losses, training_end_time
+
+
+def _handle_evaluation(
+    *,
+    _result_tracker: ResultTracker,
+    model_instance: Model,
+    evaluator_instance: Evaluator,
+    stopper_instance: Stopper,
+    training: Hint[CoreTriplesFactory],
+    testing: Hint[CoreTriplesFactory],
+    validation: Hint[CoreTriplesFactory],
+    training_kwargs: Dict[str, Any],
+    evaluation_kwargs: Dict[str, Any],
+    # Misc
+    use_testing_data: bool = True,
+    evaluation_fallback: bool = False,
+    filter_validation_when_testing: bool = True,
+    use_tqdm: Optional[bool] = None,
+) -> Tuple[MetricResults, float]:
+    if use_testing_data:
+        mapped_triples = testing.mapped_triples
+    elif validation is None:
+        raise ValueError("no validation triples available")
+    else:
+        mapped_triples = validation.mapped_triples
+
+    # Build up a list of triples if we want to be in the filtered setting
+    additional_filter_triples_names = dict()
+    if evaluator_instance.filtered:
+        additional_filter_triples: List[MappedTriples] = [
+            training.mapped_triples,
+        ]
+        additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
+
+        # If the user gave custom "additional_filter_triples"
+        popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
+        if popped_additional_filter_triples:
+            additional_filter_triples_names["custom"] = triple_hash(*popped_additional_filter_triples)
+        if isinstance(popped_additional_filter_triples, (list, tuple)):
+            additional_filter_triples.extend(popped_additional_filter_triples)
+        elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
+            additional_filter_triples.append(popped_additional_filter_triples)
+        else:
+            raise TypeError(
+                f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
+                f" {type(popped_additional_filter_triples)}",
+            )
+
+        # Determine whether the validation triples should also be filtered while performing test evaluation
+        if use_testing_data and filter_validation_when_testing and validation is not None:
+            if isinstance(stopper_instance, EarlyStopper):
+                logging.info(
+                    "When evaluating the test dataset after running the pipeline with early stopping, the validation"
+                    " triples are added to the set of known positive triples which are filtered out when performing"
+                    " filtered evaluation following the approach described by (Bordes et al., 2013).",
+                )
+            else:
+                logging.info(
+                    "When evaluating the test dataset, validation triples are added to the set of known positive"
+                    " triples which are filtered out when performing filtered evaluation following the approach"
+                    " described by (Bordes et al., 2013).",
+                )
+            additional_filter_triples.append(validation.mapped_triples)
+            additional_filter_triples_names["validation"] = triple_hash(validation.mapped_triples)
+
+        # TODO consider implications of duplicates
+        evaluation_kwargs["additional_filter_triples"] = additional_filter_triples
+
+    # Evaluate
+    # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
+    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
+        evaluation_kwargs["batch_size"] = evaluator_instance.batch_size
+        evaluation_kwargs["slice_size"] = evaluator_instance.slice_size
+    if use_tqdm is not None:
+        evaluation_kwargs["use_tqdm"] = use_tqdm
+    # Add logging about evaluator for debugging
+    _result_tracker.log_params(
+        params=dict(
+            evaluation_kwargs={
+                k: (additional_filter_triples_names if k == "additional_filter_triples" else v)
+                for k, v in evaluation_kwargs.items()
+            }
+        )
+    )
+    evaluate_start_time = time.time()
+    metric_results: MetricResults = _safe_evaluate(
+        model=model_instance,
+        mapped_triples=mapped_triples,
+        evaluator=evaluator_instance,
+        evaluation_kwargs=evaluation_kwargs,
+        evaluation_fallback=evaluation_fallback,
+    )
+    evaluate_end_time = time.time() - evaluate_start_time
+    step = training_kwargs.get("num_epochs")
+    _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
+    _result_tracker.log_metrics(
+        metrics=metric_results.to_dict(),
+        step=step,
+        prefix="testing" if use_testing_data else "validation",
+    )
+
+    return metric_results, evaluate_end_time
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -1336,151 +1533,43 @@ def pipeline(  # noqa: C901
         negative_sampler_kwargs=negative_sampler_kwargs,
     )
 
-    if evaluator_kwargs is None:
-        evaluator_kwargs = {}
-    evaluator_kwargs = dict(evaluator_kwargs)
-    evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
-    _result_tracker.log_params(
-        params=dict(
-            evaluator=evaluator_instance.__class__.__name__,
-            evaluator_kwargs=evaluator_kwargs,
-        ),
-    )
-
-    if evaluation_kwargs is None:
-        evaluation_kwargs = {}
-    evaluation_kwargs = dict(evaluation_kwargs)
-
-    # Stopping
-    if "stopper" in training_kwargs and stopper is not None:
-        raise ValueError("Specified stopper in training_kwargs and as stopper")
-    if "stopper" in training_kwargs:
-        stopper = training_kwargs.pop("stopper")
-    if stopper_kwargs is None:
-        stopper_kwargs = {}
-    stopper_kwargs = dict(stopper_kwargs)
-
-    # Load the evaluation batch size for the stopper, if it has been set
-    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
-    if _evaluation_batch_size is not None:
-        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
-
-    stopper_instance: Stopper = stopper_resolver.make(
-        stopper,
-        model=model_instance,
-        evaluator=evaluator_instance,
-        training_triples_factory=training,
-        evaluation_triples_factory=validation,
-        result_tracker=_result_tracker,
-        **stopper_kwargs,
-    )
-
-    if epochs is not None:
-        training_kwargs["num_epochs"] = epochs
-    if use_tqdm is not None:
-        training_kwargs["use_tqdm"] = use_tqdm
-    training_kwargs.setdefault("num_epochs", 5)
-    training_kwargs.setdefault("batch_size", 256)
-    _result_tracker.log_params(params=training_kwargs)
-
-    # Add logging for debugging
-    configuration = _result_tracker.get_configuration()
-    logging.debug("Run Pipeline based on following config:")
-    for key, value in configuration.items():
-        logging.debug(f"{key}: {value}")
-
-    # Train like Cristiano Ronaldo
-    training_start_time = time.time()
-    losses = training_loop_instance.train(
-        triples_factory=training,
-        stopper=stopper_instance,
-        clear_optimizer=clear_optimizer,
-        **training_kwargs,
-    )
-    assert losses is not None  # losses is only none if it's doing search mode
-    training_end_time = time.time() - training_start_time
-    step = training_kwargs.get("num_epochs")
-    _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
-
-    if use_testing_data:
-        mapped_triples = testing.mapped_triples
-    elif validation is None:
-        raise ValueError("no validation triples available")
-    else:
-        mapped_triples = validation.mapped_triples
-
-    # Build up a list of triples if we want to be in the filtered setting
-    additional_filter_triples_names = dict()
-    if evaluator_instance.filtered:
-        additional_filter_triples: List[MappedTriples] = [
-            training.mapped_triples,
-        ]
-        additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
-
-        # If the user gave custom "additional_filter_triples"
-        popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
-        if popped_additional_filter_triples:
-            additional_filter_triples_names["custom"] = triple_hash(*popped_additional_filter_triples)
-        if isinstance(popped_additional_filter_triples, (list, tuple)):
-            additional_filter_triples.extend(popped_additional_filter_triples)
-        elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
-            additional_filter_triples.append(popped_additional_filter_triples)
-        else:
-            raise TypeError(
-                f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
-                f" {type(popped_additional_filter_triples)}",
-            )
-
-        # Determine whether the validation triples should also be filtered while performing test evaluation
-        if use_testing_data and filter_validation_when_testing and validation is not None:
-            if isinstance(stopper, EarlyStopper):
-                logging.info(
-                    "When evaluating the test dataset after running the pipeline with early stopping, the validation"
-                    " triples are added to the set of known positive triples which are filtered out when performing"
-                    " filtered evaluation following the approach described by (Bordes et al., 2013).",
-                )
-            else:
-                logging.info(
-                    "When evaluating the test dataset, validation triples are added to the set of known positive"
-                    " triples which are filtered out when performing filtered evaluation following the approach"
-                    " described by (Bordes et al., 2013).",
-                )
-            additional_filter_triples.append(validation.mapped_triples)
-            additional_filter_triples_names["validation"] = triple_hash(validation.mapped_triples)
-
-        # TODO consider implications of duplicates
-        evaluation_kwargs["additional_filter_triples"] = additional_filter_triples
-
-    # Evaluate
-    # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
-    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
-        evaluation_kwargs["batch_size"] = evaluator_instance.batch_size
-        evaluation_kwargs["slice_size"] = evaluator_instance.slice_size
-    if use_tqdm is not None:
-        evaluation_kwargs["use_tqdm"] = use_tqdm
-    # Add logging about evaluator for debugging
-    _result_tracker.log_params(
-        params=dict(
-            evaluation_kwargs={
-                k: (additional_filter_triples_names if k == "additional_filter_triples" else v)
-                for k, v in evaluation_kwargs.items()
-            }
-        )
-    )
-    evaluate_start_time = time.time()
-    metric_results: MetricResults = _safe_evaluate(
-        model=model_instance,
-        mapped_triples=mapped_triples,
-        evaluator=evaluator_instance,
+    evaluator_instance, evaluation_kwargs = _handle_evaluator(
+        _result_tracker=_result_tracker,
+        evaluator=evaluator,
+        evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
-        evaluation_fallback=evaluation_fallback,
     )
-    evaluate_end_time = time.time() - evaluate_start_time
-    _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
-    _result_tracker.log_metrics(
-        metrics=metric_results.to_dict(),
-        step=step,
-        prefix="testing" if use_testing_data else "validation",
+
+    stopper_instance, configuration, losses, train_seconds = _handle_training(
+        _result_tracker=_result_tracker,
+        training=training,
+        validation=validation,
+        model_instance=model_instance,
+        evaluator_instance=evaluator_instance,
+        training_loop_instance=training_loop_instance,
+        clear_optimizer=clear_optimizer,
+        evaluation_kwargs=evaluation_kwargs,
+        epochs=epochs,
+        training_kwargs=training_kwargs,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
+        use_tqdm=use_tqdm,
+    )
+
+    metric_results, evaluate_seconds = _handle_evaluation(
+        _result_tracker=_result_tracker,
+        model_instance=model_instance,
+        evaluator_instance=evaluator_instance,
+        stopper_instance=stopper_instance,
+        training=training,
+        testing=testing,
+        validation=validation,
+        training_kwargs=training_kwargs,
+        evaluation_kwargs=evaluation_kwargs,
+        use_testing_data=use_testing_data,
+        evaluation_fallback=evaluation_fallback,
+        filter_validation_when_testing=filter_validation_when_testing,
+        use_tqdm=use_tqdm,
     )
     _result_tracker.end_run()
 
@@ -1494,8 +1583,8 @@ def pipeline(  # noqa: C901
         configuration=configuration,
         metric_results=metric_results,
         metadata=metadata,
-        train_seconds=training_end_time,
-        evaluate_seconds=evaluate_end_time,
+        train_seconds=train_seconds,
+        evaluate_seconds=evaluate_seconds,
     )
 
 
