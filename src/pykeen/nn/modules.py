@@ -485,6 +485,11 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
     .. seealso:: :func:`pykeen.nn.functional.complex_interaction`
     ---
     name: ComplEx
+    citation:
+        author: Trouillon
+        year: 2016
+        link: https://arxiv.org/abs/1606.06357
+        github: ttrouill/complex
     """
 
     func = pkf.complex_interaction
