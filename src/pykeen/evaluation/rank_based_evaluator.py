@@ -538,7 +538,8 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         if self.num_entities is None:
             raise ValueError
         # compute macro weights
-        weights = {target: self._calculate_weights(keys=keys) for target, keys in self.keys.items()}
+        # note: we wrap the array into a list to be able to re-use _iter_ranks
+        weights = {target: [self._calculate_weights(keys=keys)] for target, keys in self.keys.items()}
         # calculate weighted metrics
         result = RankBasedMetricResults.from_ranks(
             metrics=self.metrics,
