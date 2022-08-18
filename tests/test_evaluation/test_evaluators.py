@@ -100,11 +100,6 @@ class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
 
     cls = MacroRankBasedEvaluator
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["evaluation_factory"] = self.factory
-        return kwargs
-
 
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
     """Unittest for the ClassificationEvaluator."""
