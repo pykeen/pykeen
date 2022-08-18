@@ -18,7 +18,7 @@ from class_resolver import HintOrType, OptionalKwargs
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
-from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
+from ..constants import TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
@@ -472,9 +472,6 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # write back correct num_entities
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
         self.num_entities = num_entities
-
-
-TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
 
 
 class MacroRankBasedEvaluator(RankBasedEvaluator):

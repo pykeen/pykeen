@@ -68,3 +68,4 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
 }
 
 COLUMN_LABELS: Tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
+TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
