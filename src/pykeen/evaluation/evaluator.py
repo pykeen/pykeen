@@ -15,7 +15,7 @@ import pandas
 import torch
 from tqdm.autonotebook import tqdm
 
-from ..constants import TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEYS
 from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
@@ -842,10 +842,9 @@ def get_candidate_set_size(
     )
 
     # evaluation triples as dataframe
-    columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
     df_eval = pandas.DataFrame(
         data=mapped_triples.numpy(),
-        columns=columns,
+        columns=COLUMN_LABELS,
     ).reset_index()
 
     # determine filter triples
@@ -869,14 +868,14 @@ def get_candidate_set_size(
     )
     df_filter = pandas.DataFrame(
         data=filter_triples.numpy(),
-        columns=columns,
+        columns=COLUMN_LABELS,
     )
 
     # compute candidate set sizes for different targets
     # TODO: extend to relations?
     for target in [LABEL_HEAD, LABEL_TAIL]:
         total = num_entities
-        group_keys = [c for c in columns if c != target]
+        group_keys = TARGET_TO_KEYS[target]
         df_count = df_filter.groupby(by=group_keys).agg({target: "count"})
         column = f"{target}_candidates"
         df_count[column] = total - df_count[target]

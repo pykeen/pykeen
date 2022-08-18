@@ -18,13 +18,12 @@ from class_resolver import HintOrType, OptionalKwargs
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
-from ..constants import TARGET_TO_KEYS
+from ..constants import COLUMN_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     LABEL_HEAD,
-    LABEL_RELATION,
     LABEL_TAIL,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
@@ -334,16 +333,15 @@ def sample_negatives(
         additional_filter_triples=additional_filter_triples,
     )
     num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
-    columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
     num_triples = evaluation_triples.shape[0]
-    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
-    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
+    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=COLUMN_LABELS)
+    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=COLUMN_LABELS)
     id_df = df.reset_index()
     all_ids = set(range(num_entities))
     negatives = {}
     for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
-        other = [c for c in columns if c != side]
+        other = TARGET_TO_KEYS[side]
         for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
             by=other,
         ):
