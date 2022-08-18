@@ -3,6 +3,7 @@
 """Prediction workflows."""
 
 import logging
+import math
 import warnings
 from abc import abstractmethod
 from operator import itemgetter
@@ -854,6 +855,47 @@ class AllPredictionDataset(PredictionDataset):
     def __getitem__(self, item: int) -> torch.LongTensor:  # noqa: D102
         quotient, remainder = divmod(item, self.divisor)
         return torch.as_tensor([quotient, remainder])
+
+
+Restriction = Union[torch.LongTensor, Collection[int], int]
+
+
+class PartiallyRestrictedPredictionDataset(PredictionDataset):
+    """A dataset for scoring some links."""
+
+    parts: List[torch.LongTensor]
+
+    def __init__(
+        self,
+        *,
+        heads: Optional[Restriction] = None,
+        relations: Optional[Restriction] = None,
+        tails: Optional[Restriction] = None,
+        target: Target = LABEL_TAIL,
+    ) -> None:
+        super().__init__(target=target)
+        self.parts = []
+        for restriction, on in zip((heads, relations, tails), COLUMN_LABELS):
+            if on == target:
+                if restriction is not None:
+                    raise NotImplementedError(f"Restrictions on the target are not yet supported.")
+                continue
+            if restriction is None:
+                raise NotImplementedError(f"Requires size info")  # FIXME
+            elif isinstance(restriction, int):
+                restriction = [restriction]
+            restriction = torch.as_tensor(restriction)
+            self.parts.append(restriction)
+        assert len(self.parts) == 2
+
+    # docstr-coverage: inherited
+    def __len__(self) -> int:  # noqa: D102
+        return math.prod(map(len, self.parts))
+
+    # docstr-coverage: inherited
+    def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D102
+        quotient, remainder = divmod(item, len(self.parts[0]))
+        return torch.as_tensor([self.parts[0][quotient], self.parts[1][remainder]])
 
 
 @maximize_memory_utilization(parameter_name="batch_size", keys=["model", "dataset", "consumers", "mode"])
