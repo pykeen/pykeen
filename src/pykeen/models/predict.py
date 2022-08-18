@@ -12,6 +12,7 @@ import numpy
 import pandas as pd
 import torch
 import torch.utils.data
+from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 from typing_extensions import TypeAlias  # Python <=3.9
 
@@ -578,32 +579,50 @@ def get_all_prediction_df(
     )
 
 
+@torch.inference_mode()
 def predict(
-    model: Model, *, k: Optional[int] = None, batch_size: int = 1, mode: Optional[InductiveMode] = None
+    model: Model,
+    *,
+    k: Optional[int] = None,
+    batch_size: int = 1,
+    mode: Optional[InductiveMode] = None,
+    target: Target = LABEL_TAIL,
 ) -> ScorePack:
     """Calculate and store scores for either all triples, or the top k triples.
 
-    :param model: A PyKEEN model
-    :param k: The number of triples to return. Set to ``None`` to keep all.
-    :param batch_size: The batch size to use for calculating scores
+    :param model:
+        A PyKEEN model
+    :param k:
+        The number of triples to return. Set to ``None`` to keep all.
+    :param batch_size:
+        The batch size to use for calculating scores; set to `None` to determine largest possible batch size
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
-    :return: A score pack of parallel triples and scores
+
+    :return:
+        A score pack of parallel triples and scores
     """
+    # set model to evaluation mode
+    model.eval()
+
     logger.warning(
-        f"_predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations} "
+        f"predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations:,} "
         f"score evaluations.",
     )
 
     if k is not None:
-        return _predict_k(model=model, k=k, batch_size=batch_size, mode=mode)
-
-    logger.warning(
-        "Not providing k to score_all_triples entails huge memory requirements for reasonably-sized "
-        "knowledge graphs.",
+        consumer = TopKScoreConsumer(k=k, device=model.device)
+    else:
+        logger.warning(
+            "Not providing k to `predict` entails huge memory requirements for reasonably-sized knowledge graphs.",
+        )
+        consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+    dataset = AllPredictionDataset(
+        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
     )
-    return _predict_all(model=model, batch_size=batch_size, mode=mode)
+    consume_scores(model, dataset, consumer, batch_size=batch_size or len(dataset), mode=mode)
+    return consumer.finalize()
 
 
 # note type alias annotation required,
@@ -831,9 +850,7 @@ class AllPredictionDataset(PredictionDataset):
         return torch.as_tensor([quotient, remainder])
 
 
-@torch.inference_mode()
-# TODO: depends on https://github.com/mberr/torch-max-mem/issues/5
-# @maximize_memory_utilization(parameter_name="batch_size", keys=["model", "dataset", "consumers", "mode"])
+@maximize_memory_utilization(parameter_name="batch_size", keys=["model", "dataset", "consumers", "mode"])
 def consume_scores(
     model: Model,
     dataset: PredictionDataset,
@@ -862,8 +879,6 @@ def consume_scores(
     if not consumers:
         raise ValueError("Did not receive any consumer")
 
-    # set model to evaluation mode
-    model.eval()
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
     for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True):
         # calculate batch scores onces
@@ -871,73 +886,6 @@ def consume_scores(
         # consume by all consumers
         for consumer in consumers:
             consumer(batch, target=dataset.target, scores=scores)
-
-
-@torch.inference_mode()
-def _predict_all(
-    model: Model,
-    *,
-    batch_size: int = 1,
-    mode: Optional[InductiveMode] = None,
-    target: Target = LABEL_TAIL,
-) -> ScorePack:
-    """Compute and store scores for all triples.
-
-    :param model:
-        A PyKEEN model
-    :param batch_size:
-        The batch size to use for calculating scores
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-    :param target:
-        the prediction target to use. Prefer targets which are efficient to predict with the given model,
-        e.g., tails for ConvE.
-
-    :return:
-        A score pack of parallel triples and scores
-    """
-    dataset = AllPredictionDataset(
-        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
-    )
-    consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
-    consume_scores(model, dataset, consumer, batch_size=batch_size, mode=mode)
-    return consumer.finalize()
-
-
-@torch.inference_mode()
-def _predict_k(
-    model: Model,
-    *,
-    k: int,
-    batch_size: int = 1,
-    mode: Optional[InductiveMode] = None,
-    target: Target = LABEL_TAIL,
-) -> ScorePack:
-    """Compute and store scores for the top k-scoring triples.
-
-    :param model:
-        A PyKEEN model
-    :param k:
-        The number of triples to return
-    :param batch_size:
-        The batch size to use for calculating scores
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-    :param target:
-        the prediction target to use. Prefer targets which are efficient to predict with the given model,
-        e.g., tails for :class:`ConvE`.
-
-    :return:
-        A score pack of parallel triples and scores
-    """
-    dataset = AllPredictionDataset(
-        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
-    )
-    consumer = TopKScoreConsumer(k=k, device=model.device)
-    consume_scores(model, dataset, consumer, batch_size=batch_size, mode=mode)
-    return consumer.finalize()
 
 
 def _build_pack(result: torch.LongTensor, scores: torch.FloatTensor, flatten: bool = False) -> ScorePack:
