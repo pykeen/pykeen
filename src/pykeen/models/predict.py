@@ -600,6 +600,9 @@ def predict(
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
+    :param target:
+        the prediction target to use. Prefer targets which are efficient to predict with the given model,
+        e.g., tails for ConvE.
 
     :return:
         A score pack of parallel triples and scores
@@ -612,13 +615,14 @@ def predict(
         f"score evaluations.",
     )
 
-    if k is not None:
-        consumer = TopKScoreConsumer(k=k, device=model.device)
-    else:
+    consumer: ScoreConsumer
+    if k is None:
         logger.warning(
             "Not providing k to `predict` entails huge memory requirements for reasonably-sized knowledge graphs.",
         )
         consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+    else:
+        consumer = TopKScoreConsumer(k=k, device=model.device)
     dataset = AllPredictionDataset(
         num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
     )
