@@ -804,7 +804,7 @@ class PredictionDataset(torch.utils.data.Dataset):
             e.g., tails for ConvE.
         """
         super().__init__()
-        # TODO: variable target?
+        # TODO: variable targets across batches/samples?
         self.target = target
 
     @abstractmethod
@@ -837,15 +837,14 @@ class AllPredictionDataset(PredictionDataset):
         # (h, r, ?) => h.stride > r.stride
         self.divisor = num_relations if self.target == LABEL_TAIL else num_entities
 
-    def __len__(self) -> int:
+    # docstr-coverage: inherited
+    def __len__(self) -> int:  # noqa: D102
         if self.target == LABEL_RELATION:
             return self.num_entities**2
         return self.num_entities * self.num_relations
 
-    def __getitem__(self, item: int) -> torch.LongTensor:
-        # (?, r, t) => r.stride > t.stride
-        # (h, ?, t) => h.stride > t.stride
-        # (h, r, ?) => h.stride > r.stride
+    # docstr-coverage: inherited
+    def __getitem__(self, item: int) -> torch.LongTensor:  # noqa: D102
         quotient, remainder = divmod(item, self.divisor)
         return torch.as_tensor([quotient, remainder])
 
