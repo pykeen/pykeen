@@ -880,7 +880,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         from pykeen.pipeline import pipeline
         result = pipeline(dataset="nations", model="mure", training_kwargs=dict(num_epochs=0))
 
-        # create prediction dataset, where the head entities is from a set of European countries, 
+        # create prediction dataset, where the head entities is from a set of European countries,
         # and the relations are connected to tourism
         from pykeen.models.predict import PartiallyRestrictedPredictionDataset
         heads = result.training.entities_to_ids(entities=["netherlands", "poland", "uk"])
@@ -945,14 +945,25 @@ def consume_scores(
     """
     Batch-wise calculation of all triple scores and consumption.
 
+    From a high-level perspective, this method does the following:
+
+    .. code-block:: python
+
+        for batch in dataset:
+            scores = model.predict(batch)
+            for consumer in consumers:
+                consumer(batch, scores)
+
+    By bringing custom prediction datasets and/or score consumers, this method is highly configurable.
+
     :param model:
-        the model, will be set to evaluation mode
+        the model used to calculate scores
     :param dataset:
-        the dataset defining the prediction tasks
+        the dataset defining the prediction tasks, i.e., inputs to `model.predict` to loop over.
     :param consumers:
         the consumers of score batches
     :param batch_size:
-        the batch size to use  # TODO: automatic batch size maximization
+        the batch size to use. Will automatically be lowered, if the hardware cannot handle this large batch sizes
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
@@ -964,7 +975,7 @@ def consume_scores(
         raise ValueError("Did not receive any consumer")
 
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
-    for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True):
+    for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True, leave=False):
         batch = batch.to(model.device)
         # calculate batch scores onces
         scores = model.predict(batch, target=dataset.target, full_batch=False, mode=mode)
