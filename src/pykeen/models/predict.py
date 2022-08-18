@@ -832,6 +832,8 @@ class AllPredictionDataset(PredictionDataset):
 
 
 @torch.inference_mode()
+# TODO: depends on https://github.com/mberr/torch-max-mem/issues/5
+# @maximize_memory_utilization(parameter_name="batch_size", keys=["model", "dataset", "consumers", "mode"])
 def consume_scores(
     model: Model,
     dataset: PredictionDataset,
