@@ -790,6 +790,8 @@ class AllScoreConsumer(ScoreConsumer):
                 selector = batch[:, j]
                 j += 1
             selectors.append(selector)
+        if target == LABEL_HEAD:
+            scores = scores.t()
         self.scores[selectors[0], selectors[1], selectors[2]] = scores.to(self.scores.device)
 
 
