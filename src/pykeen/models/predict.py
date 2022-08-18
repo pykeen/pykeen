@@ -838,7 +838,6 @@ def consume_scores(
     *consumers: ScoreConsumer,
     batch_size: int = 1,
     mode: Optional[InductiveMode] = None,
-    target: Target = LABEL_TAIL,
 ) -> None:
     """
     Batch-wise calculation of all triple scores and consumption.
@@ -854,11 +853,8 @@ def consume_scores(
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
-    :param target:
-        the prediction target to use. Prefer targets which are efficient to predict with the given model,
-        e.g., tails for ConvE.
 
-    :raise ValueError:
+    :raises ValueError:
         if no score consumers are given
     """
     if not consumers:
@@ -869,10 +865,10 @@ def consume_scores(
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
     for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True):
         # calculate batch scores onces
-        scores = model.predict(batch, target=target, full_batch=False, mode=mode)
+        scores = model.predict(batch, target=dataset.target, full_batch=False, mode=mode)
         # consume by all consumers
         for consumer in consumers:
-            consumer(batch, target=target, scores=scores)
+            consumer(batch, target=dataset.target, scores=scores)
 
 
 @torch.inference_mode()
@@ -880,17 +876,24 @@ def _predict_all(
     model: Model,
     *,
     batch_size: int = 1,
-    mode: Optional[InductiveMode],
+    mode: Optional[InductiveMode] = None,
     target: Target = LABEL_TAIL,
 ) -> ScorePack:
     """Compute and store scores for all triples.
 
-    :param model: A PyKEEN model
-    :param batch_size: The batch size to use for calculating scores
+    :param model:
+        A PyKEEN model
+    :param batch_size:
+        The batch size to use for calculating scores
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
-    :return: A score pack of parallel triples and scores
+    :param target:
+        the prediction target to use. Prefer targets which are efficient to predict with the given model,
+        e.g., tails for ConvE.
+
+    :return:
+        A score pack of parallel triples and scores
     """
     dataset = AllPredictionDataset(
         num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
@@ -901,19 +904,37 @@ def _predict_all(
 
 
 @torch.inference_mode()
-def _predict_k(model: Model, *, k: int, batch_size: int = 1, mode: Optional[InductiveMode]) -> ScorePack:
+def _predict_k(
+    model: Model,
+    *,
+    k: int,
+    batch_size: int = 1,
+    mode: Optional[InductiveMode] = None,
+    target: Target = LABEL_TAIL,
+) -> ScorePack:
     """Compute and store scores for the top k-scoring triples.
 
-    :param model: A PyKEEN model
-    :param k: The number of triples to return
-    :param batch_size: The batch size to use for calculating scores
+    :param model:
+        A PyKEEN model
+    :param k:
+        The number of triples to return
+    :param batch_size:
+        The batch size to use for calculating scores
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
-    :return: A score pack of parallel triples and scores
+    :param target:
+        the prediction target to use. Prefer targets which are efficient to predict with the given model,
+        e.g., tails for :class:`ConvE`.
+
+    :return:
+        A score pack of parallel triples and scores
     """
+    dataset = AllPredictionDataset(
+        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
+    )
     consumer = TopKScoreConsumer(k=k, device=model.device)
-    consume_scores(model, consumer, batch_size=batch_size, mode=mode)
+    consume_scores(model, dataset, consumer, batch_size=batch_size, mode=mode)
     return consumer.finalize()
 
 
