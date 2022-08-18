@@ -7,7 +7,6 @@ import logging
 import math
 import random
 from collections import defaultdict
-from functools import lru_cache
 from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
@@ -475,10 +474,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self.num_entities = num_entities
 
 
-@lru_cache(maxsize=3)
-def _get_key(target: Target) -> List[TargetColumn]:
-    """Get the IDs of all columns except the target."""
-    return [TARGET_TO_INDEX[c] for c in COLUMN_LABELS if c != target]
+TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
 
 
 class MacroRankBasedEvaluator(RankBasedEvaluator):
@@ -532,7 +528,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             dense_positive_mask=dense_positive_mask,
         )
         # store keys for calculating macro weights
-        self.keys[target].append(hrt_batch[:, _get_key(target=target)].detach().cpu().numpy())
+        self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().cpu().numpy())
 
     # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
