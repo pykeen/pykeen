@@ -2,12 +2,12 @@
 
 """Implementation of ranked based evaluator."""
 
-from functools import lru_cache
 import itertools
 import logging
 import math
 import random
 from collections import defaultdict
+from functools import lru_cache
 from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
