@@ -39,6 +39,9 @@ __all__ = [
     "predict_triples_df",
     "get_all_prediction_df",
     "get_prediction_df",
+    # score consumption / prediction loop
+    "consume_scores",
+    "ScoreConsumer",
     # deprecated
     "get_head_prediction_df",
     "get_relation_prediction_df",
