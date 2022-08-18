@@ -35,7 +35,6 @@ from ..typing import (
     MappedTriples,
     RankType,
     Target,
-    TargetColumn,
 )
 
 __all__ = [
