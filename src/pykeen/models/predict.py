@@ -721,9 +721,9 @@ class TopKScoreConsumer(ScoreConsumer):
             # batch_id, score_id = divmod(top_indices, num_scores)
             batch_id = torch.div(top_indices, num_scores, rounding_mode="trunc")
             score_id = top_indices % num_scores
-            other_indices = batch[batch_id]
+            key_indices = batch[batch_id]
         else:
-            other_indices = batch.unsqueeze(dim=1).repeat(1, num_scores, 1).view(-1, 2)
+            key_indices = batch.unsqueeze(dim=1).repeat(1, num_scores, 1).view(-1, 2)
             score_id = torch.arange(num_scores, device=batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
 
         # combine to top triples
@@ -733,7 +733,7 @@ class TopKScoreConsumer(ScoreConsumer):
             if col == target:
                 index = score_id
             else:
-                index = other_indices[:, j]
+                index = key_indices[:, j]
                 j += 1
             triples.append(index)
         top_triples = torch.stack(triples, dim=-1)
