@@ -872,6 +872,29 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
     .. note ::
         For now, the target, i.e., position whose prediction method in the model is utilized,
         must be the full set of entities/relations.
+
+    Example
+
+    .. code-block:: python
+        # train model; note: needs larger number of epochs to do something useful ;-)
+        from pykeen.pipeline import pipeline
+        result = pipeline(dataset="nations", model="mure", training_kwargs=dict(num_epochs=0))
+
+        # create prediction dataset, where the head entities is from a set of European countries, 
+        # and the relations are connected to tourism
+        from pykeen.models.predict import PartiallyRestrictedPredictionDataset
+        heads = result.training.entities_to_ids(entities=["netherlands", "poland", "uk"])
+        relations = result.training.relations_to_ids(relations=["reltourism", "tourism", "tourism3"])
+        dataset = PartiallyRestrictedPredictionDataset(heads=heads, relations=relations)
+
+        # calculate all scores for this restricted set, and keep k=3 largest
+        from pykeen.models.predict import consume_scores, TopKScoreConsumer
+        consumer = TopKScoreConsumer(k=3)
+        consume_scores(result.model, ds, consumer)
+        score_pack = consumer.finalize()
+
+        # add labels
+        df = result.training.tensor_to_df(score_pack.result, score=score_pack.scores)
     """
 
     parts: Tuple[torch.LongTensor, torch.LongTensor]
@@ -910,6 +933,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         return torch.as_tensor([self.parts[0][quotient], self.parts[1][remainder]])
 
 
+@torch.inference_mode()
 @maximize_memory_utilization(parameter_name="batch_size", keys=["model", "dataset", "consumers", "mode"])
 def consume_scores(
     model: Model,
