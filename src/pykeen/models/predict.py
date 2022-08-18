@@ -519,7 +519,7 @@ def get_all_prediction_df(
     *,
     triples_factory: CoreTriplesFactory,
     k: Optional[int] = None,
-    batch_size: int = 1,
+    batch_size: Optional[int] = 1,
     return_tensors: bool = False,
     add_novelties: bool = True,
     remove_known: bool = False,
@@ -534,7 +534,8 @@ def get_all_prediction_df(
     :param model: A PyKEEN model
     :param triples_factory: Training triples factory
     :param k: The number of triples to return. Set to ``None`` to keep all.
-    :param batch_size: The batch size to use for calculating scores
+    :param batch_size:
+        The batch size to use for calculating scores. Can be set to `None` to determine the largest possible
     :param return_tensors: If true, only return tensors. If false (default), return as a pandas DataFrame
     :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
         to novel triples?
@@ -584,7 +585,7 @@ def predict(
     model: Model,
     *,
     k: Optional[int] = None,
-    batch_size: int = 1,
+    batch_size: Optional[int] = 1,
     mode: Optional[InductiveMode] = None,
     target: Target = LABEL_TAIL,
 ) -> ScorePack:
@@ -722,7 +723,7 @@ class TopKScoreConsumer(ScoreConsumer):
             score_id = top_indices % num_scores
             other_indices = batch[batch_id]
         else:
-            other_indices = batch[:, 0].view(-1, 1).repeat(1, num_scores).view(-1)
+            other_indices = batch.unsqueeze(dim=1).repeat(1, num_scores, 1).view(-1, 2)
             score_id = torch.arange(num_scores, device=batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
 
         # combine to top triples
@@ -882,6 +883,7 @@ def consume_scores(
 
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
     for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True):
+        batch = batch.to(model.device)
         # calculate batch scores onces
         scores = model.predict(batch, target=dataset.target, full_batch=False, mode=mode)
         # consume by all consumers
