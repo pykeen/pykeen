@@ -879,6 +879,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
     Example
 
     .. code-block:: python
+
         # train model; note: needs larger number of epochs to do something useful ;-)
         from pykeen.pipeline import pipeline
         result = pipeline(dataset="nations", model="mure", training_kwargs=dict(num_epochs=0))
