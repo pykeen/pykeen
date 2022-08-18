@@ -13,6 +13,7 @@ import pandas as pd
 import torch
 import torch.utils.data
 from tqdm.auto import tqdm
+from typing_extensions import TypeAlias  # Python <=3.9
 
 from .base import Model
 from ..constants import TARGET_TO_INDEX
@@ -605,8 +606,10 @@ def predict(
     return _predict_all(model=model, batch_size=batch_size, mode=mode)
 
 
+# note type alias annotation required,
+# cf. https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
 # batch, TODO: ids?
-PredictionBatch = torch.LongTensor
+PredictionBatch: TypeAlias = torch.LongTensor
 
 
 class ScoreConsumer:
@@ -640,28 +643,18 @@ class CountScoreConsumer(ScoreConsumer):
         self.batch_count = 0
         self.score_count = 0
 
-    def __call__(self, batch: PredictionBatch, scores: torch.FloatTensor, **_kwargs) -> None:  # noqa: D102
+    # docstr-coverage: inherited
+    def __call__(
+        self,
+        batch: PredictionBatch,
+        target: Target,
+        scores: torch.FloatTensor,
+    ) -> None:  # noqa: D102
         self.batch_count += batch.shape[0]
         self.score_count += scores.numel()
 
 
 COLUMN_LABELS = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
-
-
-def _combine_to_triples(
-    other_indices: torch.LongTensor, score_id: torch.LongTensor, target: Target
-) -> torch.LongTensor:
-    # combine to batch
-    j = 0
-    triples = []
-    for col in COLUMN_LABELS:
-        if col == target:
-            index = score_id
-        else:
-            index = other_indices[:, j]
-            j += 1
-        triples.append(index)
-    return torch.stack(triples, dim=-1)
 
 
 class TopKScoreConsumer(ScoreConsumer):
@@ -687,7 +680,7 @@ class TopKScoreConsumer(ScoreConsumer):
     # docstr-coverage: inherited
     def __call__(
         self,
-        batch: torch.LongTensor,
+        batch: PredictionBatch,
         target: Target,
         scores: torch.FloatTensor,
     ) -> None:  # noqa: D102
@@ -765,9 +758,9 @@ class AllScoreConsumer(ScoreConsumer):
     # docstr-coverage: inherited
     def __call__(
         self,
-        batch: torch.LongTensor,
+        batch: PredictionBatch,
         target: Target,
-        scores: torch.LongTensor,
+        scores: torch.FloatTensor,
     ) -> None:  # noqa: D102
         j = 0
         selectors: List[Union[slice, torch.LongTensor]] = []
@@ -852,6 +845,8 @@ def consume_scores(
 
     :param model:
         the model, will be set to evaluation mode
+    :param dataset:
+        the dataset defining the prediction tasks
     :param consumers:
         the consumers of score batches
     :param batch_size:
@@ -859,9 +854,15 @@ def consume_scores(
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
+    :param target:
+        the prediction target to use. Prefer targets which are efficient to predict with the given model,
+        e.g., tails for ConvE.
+
+    :raise ValueError:
+        if no score consumers are given
     """
     if not consumers:
-        return
+        raise ValueError("Did not receive any consumer")
 
     # set model to evaluation mode
     model.eval()
