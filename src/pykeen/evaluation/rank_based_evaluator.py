@@ -12,7 +12,6 @@ from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, 
 
 import numpy as np
 import numpy.random
-import pandas
 import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -20,7 +19,7 @@ from class_resolver import HintOrType, OptionalKwargs
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
-from ..constants import TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
@@ -37,6 +36,7 @@ from ..typing import (
     MappedTriples,
     RankType,
     Target,
+    TargetColumn,
 )
 
 __all__ = [
@@ -475,11 +475,16 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self.num_entities = num_entities
 
 
+@lru_cache(maxsize=3)
+def _get_key(target: Target) -> List[TargetColumn]:
+    """Get the IDs of all columns except the target."""
+    return [TARGET_TO_INDEX[c] for c in COLUMN_LABELS if c != target]
+
+
 class MacroRankBasedEvaluator(RankBasedEvaluator):
     """Macro-average rank-based evaluation."""
 
-    COLUMNS = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
-    weights: MutableMapping[Target, List[numpy.ndarray]]
+    weights: MutableMapping[Target, List[np.ndarray]]
 
     def __init__(self, **kwargs):
         """
@@ -490,10 +495,6 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         """
         super().__init__(**kwargs)
         self.keys = defaultdict(list)
-
-    @lru_cache(maxsize=3)
-    def _get_key(self, target: Target) -> List[int]:
-        return [TARGET_TO_INDEX[c] for c in self.COLUMNS if c != target]
 
     @staticmethod
     def _calculate_weights(keys: Iterable[np.ndarray]) -> np.ndarray:
@@ -531,7 +532,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             dense_positive_mask=dense_positive_mask,
         )
         # store keys for calculating macro weights
-        self.keys[target].append(hrt_batch[:, self._get_key(target=target)].detach().cpu().numpy())
+        self.keys[target].append(hrt_batch[:, _get_key(target=target)].detach().cpu().numpy())
 
     # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102

@@ -3,7 +3,7 @@
 """Constants for PyKEEN."""
 
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Tuple
 
 import pystow
 import torch
@@ -66,3 +66,5 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
     LABEL_RELATION: COLUMN_RELATION,
     LABEL_TAIL: COLUMN_TAIL,
 }
+
+COLUMN_LABELS: Tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
