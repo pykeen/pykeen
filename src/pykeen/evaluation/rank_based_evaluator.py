@@ -509,7 +509,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # compute macro weights
         df = pandas.DataFrame(data=evaluation_triples.numpy(), columns=list(self.COLUMNS))
         self.precomputed_weights = dict()
-        self.weights = defaultdict(list)
+        self.weights = {}
         for target in (LABEL_HEAD, LABEL_TAIL):
             key = self._get_key(target)
             counts = df.groupby(by=key).nunique()[target]
