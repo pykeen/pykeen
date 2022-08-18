@@ -861,9 +861,20 @@ Restriction = Union[torch.LongTensor, Collection[int], int]
 
 
 class PartiallyRestrictedPredictionDataset(PredictionDataset):
-    """A dataset for scoring some links."""
+    r"""
+    A dataset for scoring some links.
 
-    parts: List[torch.LongTensor]
+    "Some links" is defined as
+
+    .. math ::
+        \mathcal{T}_{interest} = \mathcal{E}_{h} \times \mathcal{R}_{r} \times \mathcal{E}_{t}
+
+    .. note ::
+        For now, the target, i.e., position whose prediction method in the model is utilized,
+        must be the full set of entities/relations.
+    """
+
+    parts: Tuple[torch.LongTensor, torch.LongTensor]
 
     def __init__(
         self,
@@ -874,7 +885,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         target: Target = LABEL_TAIL,
     ) -> None:
         super().__init__(target=target)
-        self.parts = []
+        parts: List[torch.LongTensor] = []
         for restriction, on in zip((heads, relations, tails), COLUMN_LABELS):
             if on == target:
                 if restriction is not None:
@@ -885,8 +896,9 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
             elif isinstance(restriction, int):
                 restriction = [restriction]
             restriction = torch.as_tensor(restriction)
-            self.parts.append(restriction)
-        assert len(self.parts) == 2
+            parts.append(restriction)
+        assert len(parts) == 2
+        self.parts = tuple(parts)
 
     # docstr-coverage: inherited
     def __len__(self) -> int:  # noqa: D102
