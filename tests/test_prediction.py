@@ -125,13 +125,15 @@ def test_consume_scores(num_entities: int, num_relations: int):
 
 
 @pytest.mark.parametrize(
-    ["k", "target"],
-    itertools.product([None, 2], [pykeen.typing.LABEL_HEAD, pykeen.typing.LABEL_RELATION, pykeen.typing.LABEL_TAIL]),
+    ["k", "target", "batch_size"],
+    itertools.product(
+        [None, 2], [pykeen.typing.LABEL_HEAD, pykeen.typing.LABEL_RELATION, pykeen.typing.LABEL_TAIL], [1, 2]
+    ),
 )
-def test_predict(k: Optional[int], target: pykeen.typing.Target):
+def test_predict(k: Optional[int], target: pykeen.typing.Target, batch_size: int):
     """Test the predict method."""
     num_entities, num_relations = 3, 2
     model = pykeen.models.mocks.FixedModel(
         triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
     )
-    pykeen.models.predict.predict(model=model, k=k, target=target)
+    pykeen.models.predict.predict(model=model, k=k, target=target, batch_size=batch_size)
