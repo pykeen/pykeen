@@ -539,7 +539,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             dense_positive_mask=dense_positive_mask,
         )
         key_list = (
-            hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().numpy().tolist()
+            hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().cpu().numpy().tolist()
         )
         keys = cast(List[Tuple[int, int]], list(map(tuple, key_list)))
         self.weights[target].append(numpy.asarray([self.precomputed_weights[target][k] for k in keys]))
