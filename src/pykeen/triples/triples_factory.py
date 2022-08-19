@@ -1229,11 +1229,10 @@ class TriplesFactory(CoreTriplesFactory):
 
     def _word_cloud(self, *, ids: torch.LongTensor, id_to_label: Mapping[int, str], top: int):
         try:
-            from word_cloud.word_cloud_generator import WordCloud
+            from wordcloud import WordCloud
         except ImportError:
             logger.warning(
-                "Could not import module `word_cloud`. "
-                "Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`",
+                "Could not import module `wordcloud`. Try installing it with `pip install wordcloud`",
             )
             return
 
@@ -1244,22 +1243,18 @@ class TriplesFactory(CoreTriplesFactory):
         top = min(top, uniq.numel())
         top_counts, top_ids = counts.topk(k=top, largest=True)
 
-        # generate text score dataframe
-        score_df = pd.DataFrame(
-            list(
-                zip(
-                    map(id_to_label.__getitem__, top_ids.tolist()),
-                    top_counts.tolist(),  # TODO: do we need to normalize?
-                )
-            ),
-            # columns must match expected columns
-            columns=["words", "score"],
+        # Generate a word cloud image
+        svg_str: str = (
+            WordCloud(normalize_plurals=False, max_words=top, mode="RGBA", background_color=None)
+            .generate_from_frequencies(
+                frequencies=dict(zip(map(id_to_label.__getitem__, top_ids.tolist()), top_counts.tolist()))
+            )
+            .to_svg()
         )
 
-        from IPython.core.display import HTML
+        from IPython.core.display import HTML, SVG
 
-        word_cloud = WordCloud()
-        return HTML(word_cloud.get_embed_code(text_scores=score_df, topn=top))
+        return HTML(SVG(data=svg_str))
 
     # docstr-coverage: inherited
     def tensor_to_df(
