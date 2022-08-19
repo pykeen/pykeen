@@ -9,7 +9,7 @@ import torch
 
 __all__ = [
     "rand",
-    "needs_package",
+    "needs_packages",
 ]
 
 
@@ -18,10 +18,15 @@ def rand(*size: int, generator: torch.Generator, device: torch.device) -> torch.
     return torch.rand(*size, generator=generator).to(device=device)
 
 
-def needs_package(name: str):
+def needs_packages(*names: str) -> unittest.skipIf:
     """Decorate a test such that it only runs if the rqeuired package is available."""
-    try:
-        mod = importlib.import_module(name=name)
-    except ImportError:
-        mod = None
-    return unittest.skipIf(condition=mod is None, reason=f"Test requires `{name}` to be installed.")
+    mods = []
+    for name in names:
+        try:
+            mod = importlib.import_module(name=name)
+        except ImportError:
+            mod = None
+        mods.append(mod)
+    return unittest.skipIf(
+        condition=any(mod is None for mod in mods), reason=f"Test requires `{names}` to be installed."
+    )

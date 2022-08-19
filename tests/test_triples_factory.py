@@ -22,7 +22,7 @@ from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
-from tests.utils import needs_package
+from tests.utils import needs_packages
 
 triples = np.array(
     [
@@ -260,15 +260,15 @@ class TestTriplesFactory(unittest.TestCase):
         # check that in all other splits no inverse triples are to be created
         assert not any(f.create_inverse_triples for f in others)
 
-    @needs_package("word_cloud")
-    @needs_package("IPython")
+    @needs_packages("word_cloud")
+    @needs_packages("IPython")
     def test_entity_word_cloud(self):
         """Test word cloud generation."""
         wc = self.factory.entity_word_cloud(top=3)
         self.assertIsNotNone(wc)
 
-    @needs_package("word_cloud")
-    @needs_package("IPython")
+    @needs_packages("word_cloud")
+    @needs_packages("IPython")
     def test_relation_word_cloud(self):
         """Test word cloud generation."""
         wc = self.factory.relation_word_cloud(top=3)

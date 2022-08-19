@@ -7,7 +7,7 @@ from pykeen.trackers.base import ConsoleResultTracker, MultiResultTracker, Pytho
 from pykeen.trackers.file import CSVResultTracker, JSONResultTracker
 from tests import cases
 
-from .utils import needs_package
+from .utils import needs_packages
 
 
 class PythonResultTrackerTests(cases.ResultTrackerTests):
@@ -46,7 +46,7 @@ class MultiResultTrackerTests(cases.ResultTrackerTests):
     )
 
 
-@needs_package("tensorboard")
+@needs_packages("tensorboard")
 class TensorboardTrackerTests(cases.ResultTrackerTests):
     """Tests for TensorBoard tracker."""
 

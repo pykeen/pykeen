@@ -114,7 +114,7 @@ from pykeen.utils import (
 )
 from tests.constants import EPSILON
 from tests.mocks import MockEvaluator
-from tests.utils import needs_package, rand
+from tests.utils import needs_packages, rand
 
 T = TypeVar("T")
 
@@ -1556,7 +1556,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
         return kwargs
 
 
-@needs_package("torch_geometric")
+@needs_packages("torch_geometric")
 class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
     """Tests for message passing representations."""
 
