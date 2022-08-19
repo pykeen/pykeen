@@ -231,7 +231,7 @@ from ..trackers import ResultTracker, resolve_result_trackers
 from ..trackers.base import MultiResultTracker
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, Hint, HintType, MappedTriples
+from ..typing import TESTING, TRAINING, VALIDATION, DeviceHint, Hint, HintType, MappedTriples
 from ..utils import (
     Result,
     ensure_ftp_directory,
@@ -884,6 +884,70 @@ def _handle_random_seed(
     return _random_seed, clear_optimizer
 
 
+class TrainingTriplesFactoryPack:
+    """A package of up to three triples factories used during training."""
+
+    # TODO: there is some overlap with the Dataset class
+
+    training: CoreTriplesFactory
+    validation: Optional[CoreTriplesFactory]
+    testing: Optional[CoreTriplesFactory]
+
+    def __init__(
+        self,
+        *,
+        result_tracker: ResultTracker,
+        dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+        dataset_kwargs: Optional[Mapping[str, Any]] = None,
+        training: Hint[CoreTriplesFactory] = None,
+        testing: Hint[CoreTriplesFactory] = None,
+        validation: Hint[CoreTriplesFactory] = None,
+        evaluation_entity_whitelist: Optional[Collection[str]] = None,
+        evaluation_relation_whitelist: Optional[Collection[str]] = None,
+        no_validation: bool = False,
+        no_testing: bool = False,
+    ) -> None:
+        info = dict()
+        if training is None:
+            if dataset is None:
+                raise ValueError
+            dataset_instance: Dataset = get_dataset(dataset=dataset, dataset_kwargs=dataset_kwargs)
+            info.update(dataset=dataset_instance.get_normalized_name(), dataset_kwargs=dataset_kwargs)
+            training = dataset_instance.training
+            if validation is None:
+                validation = dataset_instance.validation
+            if testing is None:
+                testing = dataset_instance.testing
+        else:
+            if dataset is not None:
+                raise ValueError
+            info.update(dataset=USER_DEFINED_CODE)
+        if no_validation:
+            validation = None
+        if no_testing:
+            testing = None
+        if evaluation_entity_whitelist or evaluation_relation_whitelist:
+            if validation is not None:
+                validation = validation.new_with_restriction(
+                    entities=evaluation_entity_whitelist, relations=evaluation_relation_whitelist
+                )
+            if testing is not None:
+                testing = testing.new_with_restriction(
+                    entities=evaluation_entity_whitelist, relations=evaluation_relation_whitelist
+                )
+        info.update(
+            {
+                key: triple_hash(tf.mapped_triples)
+                for key, tf in zip([TRAINING, VALIDATION, TESTING], [training, validation, testing])
+                if tf is not None
+            }
+        )
+        result_tracker.log_params(info)
+        self.training = training
+        self.validation = validation
+        self.testing = testing
+
+
 def _handle_dataset(
     *,
     _result_tracker: ResultTracker,
@@ -1127,8 +1191,7 @@ def _handle_evaluator(
 def _handle_training(
     *,
     _result_tracker: MultiResultTracker,
-    training: CoreTriplesFactory,
-    validation: Optional[CoreTriplesFactory],
+    triples_factory_pack: TrainingTriplesFactoryPack,
     model_instance: Model,
     evaluator_instance: Evaluator,
     training_loop_instance: TrainingLoop,
@@ -1160,8 +1223,8 @@ def _handle_training(
         stopper,
         model=model_instance,
         evaluator=evaluator_instance,
-        training_triples_factory=training,
-        evaluation_triples_factory=validation,
+        training_triples_factory=triples_factory_pack.training,
+        evaluation_triples_factory=triples_factory_pack.training,
         result_tracker=_result_tracker,
         **stopper_kwargs,
     )
@@ -1183,7 +1246,7 @@ def _handle_training(
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
     losses = training_loop_instance.train(
-        triples_factory=training,
+        triples_factory=triples_factory_pack.training,
         stopper=stopper_instance,
         clear_optimizer=clear_optimizer,
         **training_kwargs,
@@ -1201,9 +1264,7 @@ def _handle_evaluation(
     model_instance: Model,
     evaluator_instance: Evaluator,
     stopper_instance: Stopper,
-    training: Hint[CoreTriplesFactory],
-    testing: Hint[CoreTriplesFactory],
-    validation: Hint[CoreTriplesFactory],
+    triples_factory_pack: TrainingTriplesFactoryPack,
     training_kwargs: Dict[str, Any],
     evaluation_kwargs: Dict[str, Any],
     # Misc
@@ -1211,21 +1272,18 @@ def _handle_evaluation(
     evaluation_fallback: bool = False,
     filter_validation_when_testing: bool = True,
     use_tqdm: Optional[bool] = None,
-) -> Tuple[MetricResults, float]:
-    if use_testing_data:
-        mapped_triples = testing.mapped_triples
-    elif validation is None:
-        raise ValueError("no validation triples available")
-    else:
-        mapped_triples = validation.mapped_triples
+) -> Tuple[Optional[MetricResults], float]:
+    evaluation = triples_factory_pack.testing if use_testing_data else triples_factory_pack.validation
+    if evaluation is None:
+        return None, 0.0
 
     # Build up a list of triples if we want to be in the filtered setting
     additional_filter_triples_names = dict()
     if evaluator_instance.filtered:
         additional_filter_triples: List[MappedTriples] = [
-            training.mapped_triples,
+            triples_factory_pack.training.mapped_triples,
         ]
-        additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
+        additional_filter_triples_names["training"] = triple_hash(triples_factory_pack.training.mapped_triples)
 
         # If the user gave custom "additional_filter_triples"
         popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
@@ -1242,7 +1300,7 @@ def _handle_evaluation(
             )
 
         # Determine whether the validation triples should also be filtered while performing test evaluation
-        if use_testing_data and filter_validation_when_testing and validation is not None:
+        if use_testing_data and filter_validation_when_testing and triples_factory_pack.validation is not None:
             if isinstance(stopper_instance, EarlyStopper):
                 logging.info(
                     "When evaluating the test dataset after running the pipeline with early stopping, the validation"
@@ -1255,8 +1313,8 @@ def _handle_evaluation(
                     " triples which are filtered out when performing filtered evaluation following the approach"
                     " described by (Bordes et al., 2013).",
                 )
-            additional_filter_triples.append(validation.mapped_triples)
-            additional_filter_triples_names["validation"] = triple_hash(validation.mapped_triples)
+            additional_filter_triples.append(triples_factory_pack.validation.mapped_triples)
+            additional_filter_triples_names["validation"] = triple_hash(triples_factory_pack.validation.mapped_triples)
 
         # TODO consider implications of duplicates
         evaluation_kwargs["additional_filter_triples"] = additional_filter_triples
@@ -1280,7 +1338,7 @@ def _handle_evaluation(
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
-        mapped_triples=mapped_triples,
+        mapped_triples=evaluation.mapped_triples,
         evaluator=evaluator_instance,
         evaluation_kwargs=evaluation_kwargs,
         evaluation_fallback=evaluation_fallback,
@@ -1291,7 +1349,7 @@ def _handle_evaluation(
     _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
         step=step,
-        prefix="testing" if use_testing_data else "validation",
+        prefix=TESTING if use_testing_data else VALIDATION,
     )
 
     return metric_results, evaluate_end_time
@@ -1490,7 +1548,7 @@ def pipeline(  # noqa: C901
     # Start tracking
     _result_tracker.start_run(run_name=title)
 
-    training, testing, validation = _handle_dataset(
+    tfs = TrainingTriplesFactoryPack(
         _result_tracker=_result_tracker,
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
@@ -1505,7 +1563,7 @@ def pipeline(  # noqa: C901
         device=device,
         _result_tracker=_result_tracker,
         _random_seed=_random_seed,
-        training=training,
+        training=tfs.training,
         model=model,
         model_kwargs=model_kwargs,
         interaction=interaction,
@@ -1520,7 +1578,7 @@ def pipeline(  # noqa: C901
     training_loop_instance = _handle_training_loop(
         _result_tracker=_result_tracker,
         model_instance=model_instance,
-        training=training,
+        training=tfs.training,
         optimizer=optimizer,
         optimizer_kwargs=optimizer_kwargs,
         lr_scheduler=lr_scheduler,
@@ -1540,8 +1598,7 @@ def pipeline(  # noqa: C901
 
     stopper_instance, configuration, losses, train_seconds = _handle_training(
         _result_tracker=_result_tracker,
-        training=training,
-        validation=validation,
+        triples_factory_pack=tfs,
         model_instance=model_instance,
         evaluator_instance=evaluator_instance,
         training_loop_instance=training_loop_instance,
@@ -1559,9 +1616,7 @@ def pipeline(  # noqa: C901
         model_instance=model_instance,
         evaluator_instance=evaluator_instance,
         stopper_instance=stopper_instance,
-        training=training,
-        testing=testing,
-        validation=validation,
+        triples_factory_pack=tfs,
         training_kwargs=training_kwargs,
         evaluation_kwargs=evaluation_kwargs,
         use_testing_data=use_testing_data,
