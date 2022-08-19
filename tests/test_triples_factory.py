@@ -260,15 +260,13 @@ class TestTriplesFactory(unittest.TestCase):
         # check that in all other splits no inverse triples are to be created
         assert not any(f.create_inverse_triples for f in others)
 
-    @needs_packages("word_cloud")
-    @needs_packages("IPython")
+    @needs_packages("word_cloud", "IPython")
     def test_entity_word_cloud(self):
         """Test word cloud generation."""
         wc = self.factory.entity_word_cloud(top=3)
         self.assertIsNotNone(wc)
 
-    @needs_packages("word_cloud")
-    @needs_packages("IPython")
+    @needs_packages("word_cloud", "IPython")
     def test_relation_word_cloud(self):
         """Test word cloud generation."""
         wc = self.factory.relation_word_cloud(top=3)
