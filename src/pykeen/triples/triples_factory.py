@@ -1247,7 +1247,7 @@ class TriplesFactory(CoreTriplesFactory):
             return
 
         # pre-filter to keep only topk
-        uniq, counts = ids.view(-1).unique(return_counts=True)
+        uniq, counts = ids.reshape(-1).unique(return_counts=True)
 
         # if top is larger than the number of available options
         top = min(top, uniq.numel())
