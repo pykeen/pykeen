@@ -20,7 +20,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 from .base import Dataset
 from .utils import dataset_regex_option, iter_dataset_instances, max_triples_option, min_triples_option
-from ..constants import PYKEEN_DATASETS
+from ..constants import COLUMN_LABELS, PYKEEN_DATASETS
 from ..evaluation.evaluator import get_candidate_set_size
 from ..metrics.ranking import (
     ArithmeticMeanRank,
@@ -366,7 +366,7 @@ def expected_metrics(
 
 
 def _summarize_degree_distribution(factory: CoreTriplesFactory) -> Iterable[List]:
-    df = pd.DataFrame(data=factory.mapped_triples.numpy(), columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    df = pd.DataFrame(data=factory.mapped_triples.numpy(), columns=COLUMN_LABELS)
     for target in [LABEL_HEAD, LABEL_TAIL]:
         key = [LABEL_TAIL if target == LABEL_HEAD else LABEL_HEAD, LABEL_RELATION]
         unique_targets = df.groupby(by=key)[target].nunique()
