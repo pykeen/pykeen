@@ -948,57 +948,6 @@ class TrainingTriplesFactoryPack:
         self.testing = testing
 
 
-def _handle_dataset(
-    *,
-    _result_tracker: ResultTracker,
-    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
-    dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Hint[CoreTriplesFactory] = None,
-    testing: Hint[CoreTriplesFactory] = None,
-    validation: Hint[CoreTriplesFactory] = None,
-    evaluation_entity_whitelist: Optional[Collection[str]] = None,
-    evaluation_relation_whitelist: Optional[Collection[str]] = None,
-) -> Tuple[CoreTriplesFactory, CoreTriplesFactory, Optional[CoreTriplesFactory]]:
-    # TODO: allow empty validation / testing
-    dataset_instance: Dataset = get_dataset(
-        dataset=dataset,
-        dataset_kwargs=dataset_kwargs,
-        training=training,
-        testing=testing,
-        validation=validation,
-    )
-    if dataset is not None:
-        _result_tracker.log_params(
-            dict(
-                dataset=dataset_instance.get_normalized_name(),
-                dataset_kwargs=dataset_kwargs,
-            )
-        )
-    else:  # means that dataset was defined by triples factories
-        _result_tracker.log_params(
-            dict(
-                dataset=USER_DEFINED_CODE,
-                training=training if isinstance(training, str) else USER_DEFINED_CODE,
-                testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
-                validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
-            )
-        )
-
-    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
-    # evaluation restriction to a subset of entities/relations
-    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
-        testing = testing.new_with_restriction(
-            entities=evaluation_entity_whitelist,
-            relations=evaluation_relation_whitelist,
-        )
-        if validation is not None:
-            validation = validation.new_with_restriction(
-                entities=evaluation_entity_whitelist,
-                relations=evaluation_relation_whitelist,
-            )
-    return training, testing, validation
-
-
 def _handle_model(
     *,
     device: DeviceHint,
