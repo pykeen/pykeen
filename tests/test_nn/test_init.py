@@ -12,7 +12,7 @@ from pykeen.datasets import Nations
 from pykeen.nn.modules import ComplExInteraction, Interaction, QuatEInteraction
 from tests import cases
 
-from ..utils import needs_package
+from ..utils import needs_packages
 
 
 class NormalizationMixin:
@@ -102,7 +102,7 @@ class XavierUniformNormTestCase(NormalizationMixin, cases.InitializerTestCase):
     initializer = staticmethod(pykeen.nn.init.xavier_uniform_norm_)
 
 
-@needs_package("transformers")
+@needs_packages("transformers")
 class LabelBasedInitializerTestCase(cases.InitializerTestCase):
     """Tests for label-based initialization."""
 

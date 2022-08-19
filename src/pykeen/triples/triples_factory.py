@@ -3,7 +3,6 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 import dataclasses
-import itertools
 import logging
 import pathlib
 import re
@@ -1190,19 +1189,17 @@ class TriplesFactory(CoreTriplesFactory):
         invert: bool = False,
     ) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given relations."""
-        return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations))
+        return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations), invert=invert)
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
-        :returns: A world cloud object for a Jupyter notebook
+        :returns: A word cloud object for a Jupyter notebook
 
         .. warning::
 
-            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
-            install it automatically, or install it yourself with
-            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
         """
         return self._word_cloud(
             ids=get_edge_index(mapped_triples=self.mapped_triples).t(),
@@ -1218,9 +1215,7 @@ class TriplesFactory(CoreTriplesFactory):
 
         .. warning::
 
-            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
-            install it automatically, or install it yourself with
-            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
         """
         return self._word_cloud(
             ids=self.mapped_triples[:, 1],
@@ -1230,35 +1225,32 @@ class TriplesFactory(CoreTriplesFactory):
 
     def _word_cloud(self, *, ids: torch.LongTensor, id_to_label: Mapping[int, str], top: int):
         try:
-            from word_cloud.word_cloud_generator import WordCloud
+            from wordcloud import WordCloud
         except ImportError:
             logger.warning(
-                "Could not import module `word_cloud`. "
-                "Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`",
+                "Could not import module `wordcloud`. Try installing it with `pip install wordcloud`",
             )
             return
 
         # pre-filter to keep only topk
-        uniq, counts = ids.view(-1).unique(return_counts=True)
+        uniq, counts = ids.reshape(-1).unique(return_counts=True)
 
         # if top is larger than the number of available options
         top = min(top, uniq.numel())
         top_counts, top_ids = counts.topk(k=top, largest=True)
 
-        # generate text
-        text = list(
-            itertools.chain(
-                *(
-                    itertools.repeat(id_to_label[e_id], count)
-                    for e_id, count in zip(top_ids.tolist(), top_counts.tolist())
-                )
+        # Generate a word cloud image
+        svg_str: str = (
+            WordCloud(normalize_plurals=False, max_words=top, mode="RGBA", background_color=None)
+            .generate_from_frequencies(
+                frequencies=dict(zip(map(id_to_label.__getitem__, top_ids.tolist()), top_counts.tolist()))
             )
+            .to_svg()
         )
 
-        from IPython.core.display import HTML
+        from IPython.core.display import SVG
 
-        word_cloud = WordCloud()
-        return HTML(word_cloud.get_embed_code(text=text, topn=top))
+        return SVG(data=svg_str)
 
     # docstr-coverage: inherited
     def tensor_to_df(
