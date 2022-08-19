@@ -18,9 +18,9 @@ from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
 
 from .base import EADataset
-from ...constants import PYKEEN_DATASETS_MODULE
+from ...constants import COLUMN_LABELS, PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
-from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, EASide
+from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, LABEL_HEAD, LABEL_TAIL, EASide
 
 __all__ = [
     "MTransEDataset",
@@ -108,7 +108,7 @@ class MTransEDataset(EADataset, ABC):
     # docstr-coverage: inherited
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         logger.info(f"Loading graph for side: {side}")
-        df = self._load_df(key=side, names=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+        df = self._load_df(key=side, names=COLUMN_LABELS)
         # create triples factory
         return TriplesFactory.from_labeled_triples(
             triples=df.values, metadata=dict(graph_pair=self.graph_pair, side=side)
@@ -121,9 +121,7 @@ class MTransEDataset(EADataset, ABC):
         # load mappings for both sides
         dfs = [self._load_df(key=key, names=list(key)) for key in (EA_SIDES, EA_SIDES_R)]
         # load triple alignments
-        df = self._load_df(
-            key=None, names=[(side, column) for side in EA_SIDES for column in [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]]
-        )
+        df = self._load_df(key=None, names=[(side, column) for side in EA_SIDES for column in COLUMN_LABELS])
         # extract entity alignments
         # (h1, r1, t1) = (h2, r2, t2) => h1 = h2 and t1 = t2
         for column in [LABEL_HEAD, LABEL_TAIL]:

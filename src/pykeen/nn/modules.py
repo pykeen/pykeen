@@ -37,6 +37,7 @@ from torch import FloatTensor, nn
 from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
+from .algebra import quaterion_multiplication_table
 from .init import initializer_resolver
 from ..typing import (
     HeadRepresentation,
@@ -1315,7 +1316,7 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        return dict(h=h, w_r=r[0], d_r=r[1], t=t)
+        return dict(h=h, w_r=r[1], d_r=r[0], t=t)
 
 
 class MuREInteraction(
@@ -1421,7 +1422,18 @@ class QuatEInteraction(
     .. seealso:: :func:`pykeen.nn.functional.quat_e_interaction`
     """
 
+    # with k=4
+    entity_shape: Sequence[str] = ("dk",)
+    relation_shape: Sequence[str] = ("dk",)
     func = pkf.quat_e_interaction
+
+    def __init__(self) -> None:
+        """Initialize the interaction module."""
+        super().__init__()
+        self.register_buffer(name="table", tensor=quaterion_multiplication_table())
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(table=self.table)
 
 
 class MonotonicAffineTransformationInteraction(

@@ -101,6 +101,7 @@ from pykeen.typing import (
     MappedTriples,
     RelationRepresentation,
     TailRepresentation,
+    Target,
 )
 from pykeen.utils import (
     all_in_bounds,
@@ -114,12 +115,7 @@ from pykeen.utils import (
 )
 from tests.constants import EPSILON
 from tests.mocks import MockEvaluator
-from tests.utils import rand
-
-try:
-    import torch_geometric
-except ImportError:
-    torch_geometric = None
+from tests.utils import needs_package, rand
 
 T = TypeVar("T")
 
@@ -431,6 +427,10 @@ class InteractionTestCase(
     num_relations: int = 5
     num_entities: int = 7
     dtype: torch.dtype = torch.get_default_dtype()
+    # the relative tolerance for checking close results, cf. torch.allclose
+    rtol: float = 1.0e-5
+    # the absolute tolerance for checking close results, cf. torch.allclose
+    atol: float = 1.0e-8
 
     shape_kwargs = dict()
 
@@ -657,7 +657,13 @@ class InteractionTestCase(
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)
-            assert torch.allclose(scores_f_manual, scores_f), f"Diff: {scores_f_manual - scores_f}"
+            if not torch.allclose(scores_f, scores_f_manual, rtol=self.rtol, atol=self.atol):
+                # allclose checks: | input - other | < atol + rtol * |other|
+                a_delta = (scores_f_manual - scores_f).abs()
+                r_delta = (scores_f_manual - scores_f).abs() / scores_f.abs().clamp_min(1.0e-08)
+                raise AssertionError(
+                    f"Abs. Diff: {a_delta.item()} (tol.: {self.atol}); Rel. Diff: {r_delta.item()} (tol. {self.rtol})",
+                )
 
     @abstractmethod
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
@@ -1551,7 +1557,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
         return kwargs
 
 
-@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+@needs_package("torch_geometric")
 class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
     """Tests for message passing representations."""
 
@@ -2663,3 +2669,23 @@ class PredictionPostProcessorTestCase(
         assert set(df2.columns) == set(self.df.columns)
         assert len(df2) <= len(self.df)
         # TODO: check subset
+
+
+class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.models.predict.ScoreConsumer]):
+    """Tests for score consumers."""
+
+    batch_size: int = 2
+    num_entities: int = 3
+    target: Target = LABEL_TAIL
+
+    def test_consumption(self):
+        """Test calling."""
+        generator = torch.manual_seed(seed=42)
+        batch = torch.randint(self.num_entities, size=(self.batch_size, 2), generator=generator)
+        scores = torch.rand(self.batch_size, self.num_entities)
+        self.instance(batch=batch, target=self.target, scores=scores)
+        self.check()
+
+    def check(self):
+        """Perform additional verification."""
+        pass

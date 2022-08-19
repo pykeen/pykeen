@@ -39,6 +39,7 @@ from ..utils import (
     broadcast_upgrade_to_sequences,
     clamp_norm,
     complex_normalize,
+    einsum,
     get_edge_index,
     get_preferred_device,
     upgrade_to_sequence,
@@ -1799,6 +1800,6 @@ class TensorTrainRepresentation(Representation):
         assignment = self.assignment
         if indices is not None:
             assignment = assignment[indices]
-        return torch.einsum(
-            self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases))
-        ).view(*assignment.shape[:-1], *self.shape)
+        return einsum(self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases))).view(
+            *assignment.shape[:-1], *self.shape
+        )
