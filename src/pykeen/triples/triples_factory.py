@@ -1252,9 +1252,9 @@ class TriplesFactory(CoreTriplesFactory):
             .to_svg()
         )
 
-        from IPython.core.display import HTML, SVG
+        from IPython.core.display import SVG
 
-        return HTML(SVG(data=svg_str))
+        return SVG(data=svg_str)
 
     # docstr-coverage: inherited
     def tensor_to_df(
