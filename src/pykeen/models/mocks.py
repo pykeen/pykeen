@@ -10,7 +10,7 @@ from typing import Any, ClassVar, Mapping, Optional
 import torch
 
 from .base import Model
-from ..triples import CoreTriplesFactory
+from ..triples.triples_factory import KGInfo
 from ..typing import InductiveMode
 
 __all__ = [
@@ -35,7 +35,7 @@ class FixedModel(Model):
 
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, *, triples_factory: CoreTriplesFactory, **_kwargs):
+    def __init__(self, *, triples_factory: KGInfo, **_kwargs):
         """
         Initialize the model.
 

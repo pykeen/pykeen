@@ -12,6 +12,7 @@ import pandas
 import torch
 from class_resolver.api import ClassResolver, HintOrType
 
+from ..constants import COLUMN_LABELS
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target, TorchRandomHint
 from ..utils import ensure_torch_random_state
 
@@ -88,10 +89,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    df = pandas.DataFrame(
-        data=triples.numpy(),
-        columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
-    ).reset_index()
+    df = pandas.DataFrame(data=triples.numpy(), columns=COLUMN_LABELS).reset_index()
 
     # select one triple per relation
     chosen = _get_cover_for_column(df=df, column=LABEL_RELATION)

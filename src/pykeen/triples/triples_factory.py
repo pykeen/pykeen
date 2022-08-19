@@ -36,16 +36,8 @@ from torch.utils.data import Dataset
 from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
-from ..typing import (
-    LABEL_HEAD,
-    LABEL_RELATION,
-    LABEL_TAIL,
-    EntityMapping,
-    LabeledTriples,
-    MappedTriples,
-    RelationMapping,
-    TorchRandomHint,
-)
+from ..constants import COLUMN_LABELS
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import (
     ExtraReprMixin,
     compact_mapping,
@@ -846,7 +838,7 @@ class CoreTriplesFactory(KGInfo):
         # store numeric triples
         pd.DataFrame(
             data=self.mapped_triples.numpy(),
-            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+            columns=COLUMN_LABELS,
         ).to_csv(path.joinpath(self.triples_file_name), sep="\t", index=False)
 
         # store metadata

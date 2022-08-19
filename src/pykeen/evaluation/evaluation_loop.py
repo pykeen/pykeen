@@ -17,10 +17,10 @@ from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
 from .evaluator import Evaluator, MetricResults, filter_scores_
-from ..constants import TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..models import Model
 from ..triples import CoreTriplesFactory
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
+from ..typing import LABEL_HEAD, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
 from ..utils import upgrade_to_sequence
 
 logger = logging.getLogger(__name__)
@@ -232,7 +232,7 @@ class FilterIndex:
             a filter index object
         """
         # input verification
-        expected_columns = {LABEL_HEAD, LABEL_RELATION, LABEL_TAIL}
+        expected_columns = set(COLUMN_LABELS)
         if not expected_columns.issubset(df.columns):
             raise ValueError(f"Missing columns: {sorted(expected_columns.difference(df.columns))}")
 
@@ -344,7 +344,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
                         *(get_mapped_triples(x) for x in upgrade_to_sequence(additional_filter_triples or [])),
                     ]
                 ),
-                columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+                columns=COLUMN_LABELS,
             )
             self.filter_indices = {target: FilterIndex.from_df(df=df, target=target) for target in targets}
         else:

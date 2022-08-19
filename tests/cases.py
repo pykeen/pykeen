@@ -101,6 +101,7 @@ from pykeen.typing import (
     MappedTriples,
     RelationRepresentation,
     TailRepresentation,
+    Target,
 )
 from pykeen.utils import (
     all_in_bounds,
@@ -2668,3 +2669,23 @@ class PredictionPostProcessorTestCase(
         assert set(df2.columns) == set(self.df.columns)
         assert len(df2) <= len(self.df)
         # TODO: check subset
+
+
+class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.models.predict.ScoreConsumer]):
+    """Tests for score consumers."""
+
+    batch_size: int = 2
+    num_entities: int = 3
+    target: Target = LABEL_TAIL
+
+    def test_consumption(self):
+        """Test calling."""
+        generator = torch.manual_seed(seed=42)
+        batch = torch.randint(self.num_entities, size=(self.batch_size, 2), generator=generator)
+        scores = torch.rand(self.batch_size, self.num_entities)
+        self.instance(batch=batch, target=self.target, scores=scores)
+        self.check()
+
+    def check(self):
+        """Perform additional verification."""
+        pass
