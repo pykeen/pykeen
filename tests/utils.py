@@ -18,15 +18,24 @@ def rand(*size: int, generator: torch.Generator, device: torch.device) -> torch.
     return torch.rand(*size, generator=generator).to(device=device)
 
 
+def is_installed(name: str) -> bool:
+    """
+    Return whether a package is installed.
+
+    :param name:
+        the package's name
+
+    :return:
+        whether the package can be imported
+    """
+    try:
+        importlib.import_module(name=name)
+    except ImportError:
+        return False
+    return True
+
+
 def needs_packages(*names: str) -> unittest.skipIf:
     """Decorate a test such that it only runs if the rqeuired package is available."""
-    mods = []
-    for name in names:
-        try:
-            mod = importlib.import_module(name=name)
-        except ImportError:
-            mod = None
-        mods.append(mod)
-    return unittest.skipIf(
-        condition=any(mod is None for mod in mods), reason=f"Test requires `{names}` to be installed."
-    )
+    missing = {name for name in names if not is_installed(name=name)}
+    return unittest.skipIf(condition=missing, reason=f"Missing required packages: {sorted(missing)}.")
