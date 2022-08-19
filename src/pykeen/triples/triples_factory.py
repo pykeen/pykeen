@@ -1195,7 +1195,7 @@ class TriplesFactory(CoreTriplesFactory):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
-        :returns: A world cloud object for a Jupyter notebook
+        :returns: A word cloud object for a Jupyter notebook
 
         .. warning::
 
