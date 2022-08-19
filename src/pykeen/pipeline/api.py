@@ -1664,8 +1664,6 @@ def _safe_evaluate(
     :raises RuntimeError:
         If CUDA ran into OOM issues trying to evaluate the model on the hardware at hand with the given parameters.
     """
-    if not mapped_triples.shape[0]:
-        return MetricResults(data={})
     while True:
         try:
             metric_results: MetricResults = evaluator.evaluate(
