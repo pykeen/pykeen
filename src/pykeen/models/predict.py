@@ -877,7 +877,6 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         must be the full set of entities/relations.
 
     Example
-
     .. code-block:: python
 
         # train model; note: needs larger number of epochs to do something useful ;-)
@@ -901,6 +900,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         df = result.training.tensor_to_df(score_pack.result, score=score_pack.scores)
     """
 
+    #: the choices for the first and second component of the input batch
     parts: Tuple[torch.LongTensor, torch.LongTensor]
 
     def __init__(
@@ -911,21 +911,36 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         tails: Optional[Restriction] = None,
         target: Target = LABEL_TAIL,
     ) -> None:
+        """
+        Initialize restricted prediction dataset.
+
+        :param heads:
+            the restricted head entities
+        :param relations:
+            the restricted relations
+        :param tails:
+            the restricted tails
+        :param target:
+            the prediction target
+
+        :raises NotImplementedError:
+            if the target position restricted, or any non-target position is not restricted
+        """
         super().__init__(target=target)
         parts: List[torch.LongTensor] = []
         for restriction, on in zip((heads, relations, tails), COLUMN_LABELS):
             if on == target:
                 if restriction is not None:
-                    raise NotImplementedError(f"Restrictions on the target are not yet supported.")
+                    raise NotImplementedError("Restrictions on the target are not yet supported.")
                 continue
             if restriction is None:
-                raise NotImplementedError(f"Requires size info")  # FIXME
+                raise NotImplementedError("Requires size info")
             elif isinstance(restriction, int):
                 restriction = [restriction]
             restriction = torch.as_tensor(restriction)
             parts.append(restriction)
         assert len(parts) == 2
-        self.parts = tuple(parts)
+        self.parts = (parts[0], parts[1])  # for mypy
 
     # docstr-coverage: inherited
     def __len__(self) -> int:  # noqa: D102
