@@ -16,6 +16,7 @@ import torch
 import unittest_templates
 from more_itertools import pairwise
 
+from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import (
@@ -99,11 +100,6 @@ class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the MacroRankBasedEvaluator."""
 
     cls = MacroRankBasedEvaluator
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["evaluation_factory"] = self.factory
-        return kwargs
 
 
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
@@ -584,10 +580,7 @@ class CandidateSetSizeTests(unittest.TestCase):
         # value range
         if not restrict_entities_to and not restrict_relations_to:
             numpy.testing.assert_array_equal(df["index"], numpy.arange(mapped_triples.shape[0]))
-            numpy.testing.assert_array_equal(
-                df[[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]].values,
-                mapped_triples.numpy(),
-            )
+            numpy.testing.assert_array_equal(df[list(COLUMN_LABELS)].values, mapped_triples.numpy())
         for candidate_column in (f"{LABEL_HEAD}_candidates", f"{LABEL_TAIL}_candidates"):
             numpy.testing.assert_array_less(-1, df[candidate_column])
             numpy.testing.assert_array_less(df[candidate_column], self.dataset.num_entities)
