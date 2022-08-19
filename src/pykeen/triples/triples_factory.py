@@ -3,7 +3,6 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 import dataclasses
-import itertools
 import logging
 import pathlib
 import re
