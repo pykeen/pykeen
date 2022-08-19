@@ -1253,20 +1253,22 @@ class TriplesFactory(CoreTriplesFactory):
         top = min(top, uniq.numel())
         top_counts, top_ids = counts.topk(k=top, largest=True)
 
-        # generate text
-        text = list(
-            itertools.chain(
-                *(
-                    itertools.repeat(id_to_label[e_id], count)
-                    for e_id, count in zip(top_ids.tolist(), top_counts.tolist())
+        # generate text score dataframe
+        score_df = pd.DataFrame(
+            list(
+                zip(
+                    map(id_to_label.__getitem__, top_ids.tolist()),
+                    top_counts.tolist(),  # TODO: do we need to normalize?
                 )
-            )
+            ),
+            # columns must match expected columns
+            columns=["words", "score"],
         )
 
         from IPython.core.display import HTML
 
         word_cloud = WordCloud()
-        return HTML(word_cloud.get_embed_code(text=text, topn=top))
+        return HTML(word_cloud.get_embed_code(text_scores=score_df, topn=top))
 
     # docstr-coverage: inherited
     def tensor_to_df(
