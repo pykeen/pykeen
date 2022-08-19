@@ -1199,9 +1199,7 @@ class TriplesFactory(CoreTriplesFactory):
 
         .. warning::
 
-            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
-            install it automatically, or install it yourself with
-            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
         """
         return self._word_cloud(
             ids=get_edge_index(mapped_triples=self.mapped_triples).t(),
@@ -1217,9 +1215,7 @@ class TriplesFactory(CoreTriplesFactory):
 
         .. warning::
 
-            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
-            install it automatically, or install it yourself with
-            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
         """
         return self._word_cloud(
             ids=self.mapped_triples[:, 1],
