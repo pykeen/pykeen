@@ -1189,7 +1189,7 @@ class TriplesFactory(CoreTriplesFactory):
         invert: bool = False,
     ) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given relations."""
-        return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations))
+        return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations), invert=invert)
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
