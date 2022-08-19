@@ -125,9 +125,7 @@ def evaluate_ogb(
         )
 
     result: Dict[Tuple[str, ExtendedTarget, RankType], float] = {}
-    # TODO: ogb's rank-type is non-deterministic...
-    # https://github.com/snap-stanford/ogb/blob/ac253eb360f0fcfed1d253db628aa52f38dca21e/ogb/linkproppred/evaluate.py#L246
-    # this may change in the future, cf. https://github.com/snap-stanford/ogb/pull/357
+    # cf. https://github.com/snap-stanford/ogb/pull/357
     rank_type = RANK_REALISTIC
     for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
         # combine to input dictionary
