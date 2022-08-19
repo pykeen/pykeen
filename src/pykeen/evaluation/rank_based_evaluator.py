@@ -498,11 +498,6 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 
         :return:
             the evaluation results
-
-        :raises ImportError:
-            if ogb is not installed
-        :raises NotImplementedError:
-            if `batch_size` is None, i.e., automatic batch size selection is selected
         """
         from .ogb_evaluator import evaluate_ogb
 
