@@ -5,7 +5,7 @@ import unittest_templates
 import pykeen.nn.text
 from tests import cases
 
-from ..utils import needs_package
+from ..utils import needs_packages
 
 
 class CharacterEmbeddingTextEncoderTestCase(cases.TextEncoderTestCase):
@@ -14,7 +14,7 @@ class CharacterEmbeddingTextEncoderTestCase(cases.TextEncoderTestCase):
     cls = pykeen.nn.text.CharacterEmbeddingTextEncoder
 
 
-@needs_package("transformers")
+@needs_packages("transformers")
 class TransformerTextEncoderTestCase(cases.TextEncoderTestCase):
     """A test case for the transformer encoder."""
 
