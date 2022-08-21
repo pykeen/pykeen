@@ -56,7 +56,7 @@ from pykeen.typing import (
     Target,
 )
 from tests import cases
-from tests.utils import needs_package
+from tests.utils import needs_packages
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
 
-    @needs_package("ogb")
+    @needs_packages("ogb")
     def test_ogb_evaluate(self):
         """Test OGB evaluation."""
         self.instance: SampledRankBasedEvaluator
