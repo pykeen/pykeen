@@ -427,6 +427,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 LABEL_HEAD: head_negatives,
                 LABEL_TAIL: tail_negatives,
             }
+            if additional_filter_triples is not None:
+                logger.warning(f"Ignoring parameter additional_filter_triples={additional_filter_triples}")
 
         # verify input
         for side, side_negatives in negatives.items():
