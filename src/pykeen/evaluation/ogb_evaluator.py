@@ -120,8 +120,10 @@ def evaluate_ogb(
         targets = sorted(y_pred_pos.keys())
         for _target in targets:
             yield _target, y_pred_pos[_target], y_pred_neg[_target]
-        yield SIDE_BOTH, torch.cat([y_pred_pos[t] for t in targets], dim=0), torch.cat(
-            [y_pred_neg[t] for t in targets], dim=0
+        yield (
+            SIDE_BOTH,
+            torch.cat([y_pred_pos[t] for t in targets], dim=0),
+            torch.cat([y_pred_neg[t] for t in targets], dim=0),
         )
 
     result: Dict[Tuple[str, ExtendedTarget, RankType], float] = {}
