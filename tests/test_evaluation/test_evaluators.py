@@ -55,7 +55,7 @@ from pykeen.typing import (
     MappedTriples,
     Target,
 )
-from tests import cases
+from tests import cases, mocks
 from tests.utils import needs_packages
 
 logger = logging.getLogger(__name__)
@@ -829,3 +829,14 @@ class MetricResultMetaTestCase(unittest_templates.MetaTestCase):
 
     base_cls = MetricResults
     base_test = cases.MetricResultTestCase
+
+
+class EvaluatorMetaTestCase(unittest_templates.MetaTestCase):
+    """Test for tests for evaluators."""
+
+    base_cls = Evaluator
+    base_test = cases.EvaluatorTestCase
+    skip_cls = {
+        mocks.MockEvaluator,
+        DummyEvaluator,
+    }
