@@ -111,12 +111,11 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
 
     cls = OGBEvaluator
     kwargs = dict(num_negatives=3)
-    # TODO batch size of 1?
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["evaluation_factory"] = self.factory
-        kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
+        kwargs["batch_size"] = 1
         return kwargs
 
 
