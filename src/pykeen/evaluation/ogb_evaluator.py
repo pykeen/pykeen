@@ -14,10 +14,32 @@ from ..models import Model
 from ..typing import RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, RankType, Target
 
 __all__ = [
+    "OGBEvaluator",
     "evaluate_ogb",
 ]
 
 logger = logging.getLogger(__name__)
+
+
+class OGBEvaluator(SampledRankBasedEvaluator):
+    """A sampled, rank-based evaluator that applies a custom OGB evaluation."""
+
+    def evaluate(
+        self,
+        model: Model,
+        mapped_triples: MappedTriples,
+        batch_size: Optional[int] = None,
+        slice_size: Optional[int] = None,
+        **kwargs,
+    ) -> MetricResults:
+        """Run :func:`evaluate_ogb` with this evaluator."""
+        return evaluate_ogb(
+            evaluator=self,
+            model=model,
+            mapped_triples=mapped_triples,
+            batch_size=batch_size,
+            **kwargs,
+        )
 
 
 def evaluate_ogb(

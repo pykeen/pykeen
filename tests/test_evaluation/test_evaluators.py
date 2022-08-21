@@ -18,7 +18,7 @@ from more_itertools import pairwise
 
 from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets import Nations
-from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
+from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import (
     CLASSIFICATION_METRICS,
     ClassificationEvaluator,
@@ -103,6 +103,21 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         model = FixedModel(triples_factory=self.factory)
         result = self.instance.evaluate_ogb(model=model, mapped_triples=self.factory.mapped_triples, batch_size=1)
         assert isinstance(result, MetricResults)
+
+
+@needs_packages("ogb")
+class OGBEvaluatorTests(RankBasedEvaluatorTests):
+    """Unit test for OGB evaluator."""
+
+    cls = OGBEvaluator
+    kwargs = dict(num_negatives=3)
+    # TODO batch size of 1?
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["evaluation_factory"] = self.factory
+        kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
+        return kwargs
 
 
 class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
