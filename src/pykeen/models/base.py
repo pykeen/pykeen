@@ -316,18 +316,142 @@ class Model(nn.Module, ABC):
         """
         self.load_state_dict(torch.load(path, map_location=self.device))
 
-    """Prediction methods"""
+    """Extended scoring methods"""
 
-    def _prepare_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
+    def _prepare_batch(
+        self,
+        batch: Optional[torch.LongTensor],
+        index_relation: int,
+        invert_relation: bool,
+    ) -> torch.LongTensor:
+        if invert_relation and not self.use_inverse_relations:
+            raise ValueError("Can only invert relations if use_inverse_relations is set to True")
+
+        # TODO: with the current default inversion, we have to materialize the relation IDs
+        if self.use_inverse_relations and batch is None:
+            batch = torch.arange(self.num_relations, device=self.device)
+
+        if batch is None:
+            return None
+
         # send to device
         batch = batch.to(self.device)
 
-        # special handling of inverse relations
-        if not self.use_inverse_triples:
-            return batch
+        # map relation
+        return self.relation_inverter.map(batch=batch, index=index_relation, invert=invert_relation)
 
-        # when trained on inverse relations, the internal relation ID is twice the original relation ID
-        return relation_inverter.map(batch=batch, index=index_relation, invert=False)
+    def score_hrt_extended(
+        self,
+        hrt_batch: torch.LongTensor,
+        invert_relation: bool = False,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        """Forward pass.
+
+        This method takes head, relation and tail of each triple and calculates the corresponding score.
+
+        :param hrt_batch: shape: (batch_size, 3), dtype: long
+            The indices of (head, relation, tail) triples.
+        :param invert_relation:
+            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`score_hrt`.
+
+        :return: shape: (batch_size, 1), dtype: float
+            The score for each triple.
+        """
+        return self.score_hrt(
+            hrt_batch=self._prepare_batch(
+                batch=hrt_batch,
+                index_relation=1,
+                invert_relation=invert_relation,
+            ),
+            **kwargs,
+        )
+
+    def score_h_extended(
+        self,
+        rt_batch: torch.LongTensor,
+        invert_relation: bool = False,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction.
+
+        This method calculates the score for all possible heads for each (relation, tail) pair.
+
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+        :param invert_relation:
+            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`score_h`.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+        return self.score_h(
+            rt_batch=self._prepare_batch(
+                batch=rt_batch,
+                index_relation=0,
+                invert_relation=invert_relation,
+            ),
+            **kwargs,
+        )
+
+    def score_r_extended(
+        self,
+        ht_batch: torch.LongTensor,
+        invert_relation: bool = False,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction.
+
+        This method calculates the score for all possible relations for each (head, tail) pair.
+
+        :param ht_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+        :param invert_relation:
+            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`score_r`.
+
+        :return: shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+        if invert_relation:
+            raise NotImplementedError
+        return self.score_r(ht_batch=ht_batch, **kwargs)
+
+    def score_t_extended(
+        self,
+        hr_batch: torch.LongTensor,
+        invert_relation: bool = False,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction.
+
+        This method calculates the score for all possible tails for each (head, relation) pair.
+
+        :param hr_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
+        :param invert_relation:
+            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`score_t`.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
+        """
+        return self.score_t(
+            hr_batch=self._prepare_batch(
+                batch=hr_batch,
+                index_relation=1,
+                invert_relation=invert_relation,
+            ),
+            **kwargs,
+        )
+
+    """Prediction methods"""
 
     def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -377,6 +501,7 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         if self.use_inverse_relations:
+            # TODO: properly handle heads restriction
             scores = self.score_t_extended(hr_batch=rt_batch.flip(1), invert_relation=True, **kwargs)
         else:
             scores = self.score_h_extended(rt_batch=rt_batch, **kwargs)
@@ -413,7 +538,7 @@ class Model(nn.Module, ABC):
             behavior regardless of the use of inverse triples.
         """
         self.eval()  # Enforce evaluation mode
-        scores = self.score_t_extended(hr_batch, slice_size=slice_size, mode=mode)
+        scores = self.score_t_extended(hr_batch, **kwargs)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -438,7 +563,7 @@ class Model(nn.Module, ABC):
             For each h-t pair, the scores for all possible relations.
         """
         self.eval()  # Enforce evaluation mode
-        scores = self.score_r_extended(ht_batch.to(self.device), slice_size=slice_size, mode=mode)
+        scores = self.score_r_extended(ht_batch.to(self.device), **kwargs)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
