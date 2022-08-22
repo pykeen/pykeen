@@ -369,7 +369,7 @@ class RankBasedEvaluator(Evaluator):
 
             single_result = RankBasedMetricResults.from_ranks(
                 metrics=self.metrics,
-                rank_and_candidates=map(resample, _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)),
+                rank_and_candidates=itertools.starmap(resample, (self.ranks, self.num_candidates)),
             )
             for k, v in single_result.to_flat_dict().items():
                 result[k].append(v)
