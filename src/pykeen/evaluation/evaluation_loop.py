@@ -416,6 +416,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         evaluator_kwargs: OptionalKwargs = None,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
         mode: Optional[InductiveMode] = None,
+        additional_filter_triples: Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]] = None,
         **kwargs,
     ) -> None:
         """
@@ -431,6 +432,8 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             the prediction targets.
         :param mode:
             the inductive mode, or None for transductive evaluation
+        :param additional_filter_triples:
+            additional filter triples to use for creating the filter
         :param kwargs:
             additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain the keys
             `dataset` or `evaluator`.
@@ -445,6 +448,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
                 factory=triples_factory,
                 targets=targets,
                 filtered=evaluator.filtered or evaluator.requires_positive_mask,
+                additional_filter_triples=additional_filter_triples,
             ),
             evaluator=evaluator,
             **kwargs,
