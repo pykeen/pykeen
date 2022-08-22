@@ -24,13 +24,7 @@ from pykeen.evaluation.classification_evaluator import (
     ClassificationEvaluator,
     ClassificationMetricResults,
 )
-from pykeen.evaluation.evaluator import (
-    create_dense_positive_mask_,
-    create_sparse_positive_filter_,
-    filter_scores_,
-    get_candidate_set_size,
-    prepare_filter_triples,
-)
+from pykeen.evaluation.evaluator import filter_scores_, get_candidate_set_size, prepare_filter_triples
 from pykeen.evaluation.rank_based_evaluator import MacroRankBasedEvaluator, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranking_metric_lookup import MetricKey
 from pykeen.evaluation.ranks import Ranks
@@ -185,53 +179,6 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert number_of_options is not None
         assert number_of_options.shape == (batch_size,)
         assert (number_of_options == exp_number_of_options).all(), (number_of_options, exp_number_of_options)
-
-    def test_create_sparse_positive_filter_(self):
-        """Test method create_sparse_positive_filter_."""
-        batch_size = 4
-        factory = Nations().training
-        all_triples = factory.mapped_triples
-        batch = all_triples[:batch_size, :]
-
-        # head based filter
-        sparse_positives, relation_filter = create_sparse_positive_filter_(
-            hrt_batch=batch,
-            all_pos_triples=all_triples,
-            relation_filter=None,
-            filter_col=0,
-        )
-
-        # preprocessing for faster lookup
-        triples = set()
-        for trip in all_triples.detach().numpy():
-            triples.add(tuple(map(int, trip)))
-
-        # check that all found positives are positive
-        for batch_id, entity_id in sparse_positives:
-            same = batch[batch_id, 1:]
-            assert (int(entity_id),) + tuple(map(int, same)) in triples
-
-    def test_create_dense_positive_mask_(self):
-        """Test method create_dense_positive_mask_."""
-        batch_size = 3
-        num_positives = 5
-        num_entities = 7
-        zero_tensor = torch.zeros(batch_size, num_entities)
-        filter_batch = torch.empty(num_positives, 2, dtype=torch.long)
-        for i in range(num_positives):
-            filter_batch[i, 0] = i % batch_size
-        filter_batch[:, 1] = torch.randperm(num_positives, generator=self.generator)
-        dense_mask = create_dense_positive_mask_(zero_tensor=zero_tensor, filter_batch=filter_batch)
-
-        # check in-place
-        assert id(dense_mask) == id(zero_tensor)
-
-        for b in range(batch_size):
-            for e in range(num_entities):
-                if (torch.as_tensor([b, e]).view(1, 2) == filter_batch).all(dim=1).any():
-                    assert dense_mask[b, e] == 1
-                else:
-                    assert dense_mask[b, e] == 0
 
     def test_filter_corrupted_triples(self):
         """Test the filter_corrupted_triples() function."""

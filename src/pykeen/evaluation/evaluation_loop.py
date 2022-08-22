@@ -81,15 +81,16 @@ def _evaluate(
     loop.model.eval()
     loader = loop.get_loader(batch_size=batch_size, **kwargs)
     total = len(loader)
-    if use_tqdm:
-        loader = tqdm(
-            loader,
-            desc="evaluation",
-            total=total,
-            unit="batch",
-            unit_scale=True,
-            **(tqdm_kwargs or {}),
-        )
+    loader = tqdm(
+        loader,
+        desc="evaluation",
+        total=total,
+        unit="batch",
+        unit_scale=True,
+        disable=not use_tqdm,
+        **(tqdm_kwargs or {}),
+    )
+    # TODO: slicing
     for batch in loader:
         loop.process_batch(batch=batch)
     return loop.evaluator.finalize()
@@ -411,12 +412,19 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
+        triples_factory: CoreTriplesFactory = None,
+        mapped_triples: Optional[MappedTriples] = None,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
         mode: Optional[InductiveMode] = None,
         additional_filter_triples: Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]] = None,
+        # TODO: restriction
+        restrict_entities_to: Optional[Collection[int]] = None,
+        restrict_relations_to: Optional[Collection[int]] = None,
+        do_time_consuming_checks: bool = True,
+        pre_filtered_triples: bool = True,
         **kwargs,
     ) -> None:
         """
@@ -445,6 +453,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         evaluator = evaluator_resolver.make(evaluator, pos_kwargs=evaluator_kwargs)
         super().__init__(
             dataset=LCWAEvaluationDataset(
+                mapped_triples=mapped_triples,
                 factory=triples_factory,
                 targets=targets,
                 filtered=evaluator.filtered or evaluator.requires_positive_mask,
