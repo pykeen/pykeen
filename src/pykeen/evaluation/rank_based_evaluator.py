@@ -8,6 +8,7 @@ import math
 import random
 from collections import defaultdict
 from typing import (
+    Callable,
     DefaultDict,
     Iterable,
     List,
@@ -340,7 +341,7 @@ class RankBasedEvaluator(Evaluator):
             the random seed.
 
         :return:
-            a flat dictionary from metrics to list of values
+            a flat dictionary from metric names to list of values
         """
         result: DefaultDict[str, List[float]] = defaultdict(list)
 
@@ -370,6 +371,71 @@ class RankBasedEvaluator(Evaluator):
             for k, v in single_result.to_flat_dict().items():
                 result[k].append(v)
         return result
+
+    def finalize_with_confidence(
+        self,
+        estimator: np.median,
+        ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
+        n_boot: int = 1_000,
+        seed: int = 42,
+    ) -> Mapping[str, Tuple[float, float]]:
+        """Finalize result with confidence estimation via bootstrapping.
+
+        :param estimator:
+            the estimator of central tendency.
+        :param ci:
+            the confidence interval
+        :param n_boot:
+            the number of resamplings to use for bootstrapping
+        :param seed:
+            the random seed
+
+        :return:
+            a dictionary from metric names to (central tendency, confidence) pairs
+        """
+        return {
+            k: summarize_values(vs, estimator=estimator, ci=ci)
+            for k, vs in self.finalize_multi(num=n_boot, seed=seed).items()
+        }
+
+
+def summarize_values(
+    vs: Sequence[float],
+    estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
+    ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
+) -> Tuple[float, float]:
+    """Summarize values.
+
+    :param vs:
+        the values
+    :param estimator:
+        the central tendency estimator
+    :param ci:
+        the confidence estimator
+
+    :return:
+        a tuple estimates of central tendency and confidence
+
+    :raises ValueError:
+        if the confidence interval is numeric and outside of [0, 100].
+    """
+    if isinstance(estimator, str):
+        estimator = getattr(np, estimator)
+
+    if isinstance(ci, str):
+        ci = getattr(np, ci)
+    elif isinstance(ci, (int, float)):
+        if ci < 0 or ci > 100:
+            raise ValueError(f"Invalid CI value: {ci}. Must be in [0, 100].")
+        ci_half = ci / 2.0
+
+        def ipr(vs: Sequence[float]) -> float:
+            """Return the inter-percentile range."""
+            return np.diff(np.percentile(vs, q=[100 - ci_half, ci_half])).item()
+
+        ci = ipr
+
+    return estimator(vs), ci(vs)
 
 
 def sample_negatives(

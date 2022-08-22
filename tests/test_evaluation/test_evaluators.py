@@ -12,6 +12,7 @@ import numpy
 import numpy.random
 import numpy.testing
 import pandas
+import pytest
 import torch
 import unittest_templates
 from more_itertools import pairwise
@@ -31,7 +32,12 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.rank_based_evaluator import MacroRankBasedEvaluator, SampledRankBasedEvaluator, sample_negatives
+from pykeen.evaluation.rank_based_evaluator import (
+    MacroRankBasedEvaluator,
+    SampledRankBasedEvaluator,
+    sample_negatives,
+    summarize_values,
+)
 from pykeen.evaluation.ranking_metric_lookup import MetricKey
 from pykeen.evaluation.ranks import Ranks
 from pykeen.metrics.ranking import (
@@ -57,7 +63,18 @@ from pykeen.typing import (
 )
 from tests import cases
 
-logger = logging.getLogger(__name__)
+
+@pytest.mark.parametrize(["estimator", "ci"], [(numpy.mean, 60), ("mean", "std"), (numpy.mean, numpy.var)])
+def test_summarize_values(estimator, ci):
+    """Test value summarization."""
+    gen = numpy.random.default_rng(seed=42)
+    vs = gen.random(size=(17,)).tolist()
+    r = summarize_values(vs=vs, estimator=estimator, ci=ci)
+    assert isinstance(r, tuple)
+    assert len(r) == 2
+    center, variation = r
+    assert isinstance(center, float)
+    assert isinstance(variation, float)
 
 
 class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
