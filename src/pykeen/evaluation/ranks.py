@@ -99,7 +99,35 @@ class Ranks:
 
 @dataclass
 class RankBuilder:
-    """Incremental rank builder."""
+    """
+    Incremental rank builder.
+
+    The incremental rank builder can be used to calculate ranks whenever we do not have access to all candidate scores
+    at once, but are able to iterate over (batches of) them, e.g., in combination with score slicing. And advantage
+    over the current slicing implementation is that we do not need to be able to store all scores, but can already
+    start aggregating them.
+
+    In general, the following pattern can be used.
+
+    We start by initializing the builder with a (batch of) true score(s)
+
+    >>> builder = RankBuilder(y_true=torch.as_tensor([1.0, 2.0]))
+
+    Now, we iterate over batches of scores, e.g., `2 * 15` scores at once. Note that all but the last dimension have
+    to match the shape of `y_true`. Also notice that the operation does *not* work in-place, but rather returns an
+    updated object. This does not pose a serious memory problem, since each RankBuilder object only holds references to
+    tensors, and does not copy the tensors themselves.
+
+    >>> for _ in range(10):
+    ...    builder = builder.update(y_pred=torch.rand(2, 15))
+
+    After we aggregated all batches, we can obtain the ranks by
+
+    >>> ranks = builder.compute()
+
+    Note that this pattern is somewhat similar to the one found in :mod:`torchmetrics`, except that it works on
+    "sub-batch" / "slice" basis rather than batch level.
+    """
 
     #: the scores of the true choice, shape: (*bs), dtype: float
     y_true: torch.Tensor
