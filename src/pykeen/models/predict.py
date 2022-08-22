@@ -2,27 +2,47 @@
 
 """Prediction workflows."""
 
-import itertools as itt
 import logging
+import math
+import warnings
 from abc import abstractmethod
-from typing import Optional, Sequence, Tuple, Union
+from operator import itemgetter
+from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
 
 import numpy
-import numpy as np
 import pandas as pd
 import torch
+import torch.utils.data
+from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
+from typing_extensions import TypeAlias  # Python <=3.9
 
 from .base import Model
+from ..constants import TARGET_TO_INDEX
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.utils import tensor_to_df
-from ..typing import InductiveMode, LabeledTriples, MappedTriples, ScorePack
-from ..utils import is_cuda_oom_error, triple_tensor_to_set
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    DeviceHint,
+    InductiveMode,
+    LabeledTriples,
+    MappedTriples,
+    ScorePack,
+    Target,
+)
+from ..utils import is_cuda_oom_error, resolve_device
 
 __all__ = [
     "predict",
     "predict_triples_df",
     "get_all_prediction_df",
+    "get_prediction_df",
+    # score consumption / prediction loop
+    "consume_scores",
+    "ScoreConsumer",
+    # deprecated
     "get_head_prediction_df",
     "get_relation_prediction_df",
     "get_tail_prediction_df",
@@ -31,40 +51,344 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def get_head_prediction_df(
-    model: Model,
-    relation_label: str,
-    tail_label: str,
-    *,
+def _get_targets(
+    ids: Union[None, torch.Tensor, Collection[str]],
     triples_factory: TriplesFactory,
+    device: torch.device,
+    entity: bool = True,
+) -> Tuple[List[Tuple[str, int]], Optional[torch.Tensor]]:
+    label_to_id = triples_factory.entity_to_id if entity else triples_factory.relation_to_id
+    if ids is None:
+        return sorted(label_to_id.items(), key=itemgetter(1)), None
+    id_tensor = None
+    if isinstance(ids, torch.Tensor):
+        id_tensor = ids
+        ids = ids.tolist()
+    ids = triples_factory.entities_to_ids(entities=ids) if entity else triples_factory.relations_to_ids(relations=ids)
+    ids = sorted(set(ids))
+    if id_tensor is None:
+        id_tensor = torch.as_tensor(ids, torch.long, device=device)
+    id_to_label = triples_factory.entity_id_to_label if entity else triples_factory.relation_id_to_label
+    return [(id_to_label[i], i) for i in ids], id_tensor
+
+
+def _get_input_batch(
+    triples_factory: TriplesFactory,
+    # exactly one of them is None
+    head_label: Optional[str] = None,
+    relation_label: Optional[str] = None,
+    tail_label: Optional[str] = None,
+) -> Tuple[Target, torch.LongTensor, Tuple[int, int]]:
+    """Prepare input batch for prediction.
+
+    :param triples_factory:
+        the triples factory used to translate labels to ids.
+    :param head_label:
+        the head entity label
+    :param relation_label:
+        the relation label
+    :param tail_label:
+        the tail entity label
+
+    :raises ValueError:
+        if not exactly one of {head_label, relation_label, tail_label} is None
+
+    :return:
+        a 3-tuple (target, batch, batch_tuple) of the prediction target, the input batch, and the input batch as tuple.
+    """
+    # create input batch
+    batch_ids = []
+    target = None
+    if head_label:
+        batch_ids.append(triples_factory.entity_to_id[head_label])
+    else:
+        target = LABEL_HEAD
+    if relation_label:
+        batch_ids.append(triples_factory.relation_to_id[relation_label])
+    else:
+        target = LABEL_RELATION
+    if tail_label:
+        batch_ids.append(triples_factory.entity_to_id[tail_label])
+    else:
+        target = LABEL_TAIL
+    if target is None or len(batch_ids) != 2:
+        raise ValueError(
+            f"Exactly one of {{head,relation,tail}}_label must be None, but got "
+            f"{head_label}, {relation_label}, {tail_label}",
+        )
+
+    batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long))
+    return target, batch, (batch_ids[0], batch_ids[1])
+
+
+def _get_mapped_triples(mapped_triples: Union[CoreTriplesFactory, MappedTriples]):
+    """Get mapped triples."""
+    if isinstance(mapped_triples, CoreTriplesFactory):
+        mapped_triples = mapped_triples.mapped_triples
+    return mapped_triples
+
+
+class PredictionPostProcessor:
+    """A post-processor for predictions."""
+
+    def __init__(self, **filter_triples: Union[None, CoreTriplesFactory, MappedTriples]) -> None:
+        """Instantiate the processor.
+
+        :param filter_triples:
+            a mapping from keys to triples to be used for filtering. `None` entries will be ignored. The keys are
+            used to derive column names.
+        """
+        self.filter_triples = {
+            key: _get_mapped_triples(value) for key, value in filter_triples.items() if value is not None
+        }
+
+    @abstractmethod
+    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
+        """
+        Return which of the rows of the given data frame are contained in the ID-based triples.
+
+        :param df: nrows: n
+            the predictions
+        :param mapped_triples: shape: (m, 3)
+            the ID-based triples
+        :param invert:
+            whether to invert the result
+
+        :return: shape: (n,), dtype: bool
+            a boolean mask indicating which row is contained in the given ID-based triples
+        """
+        raise NotImplementedError
+
+    def filter(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Filter out known triples.
+
+        .. note ::
+            this operation does *not* work in-place.
+
+        :param df:
+            the predictions
+
+        :return:
+            the filtered dataframe
+        """
+        for mapped_triples in self.filter_triples.values():
+            df = df[self._contains(df=df, mapped_triples=mapped_triples, invert=True)]
+        return df
+
+    def add_membership_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Add columns indicating whether the triples are known.
+
+        :param df:
+            the predictions
+
+        :return:
+            the predictions with extra columns
+        """
+        for key, mapped_triples in self.filter_triples.items():
+            df[f"in_{key}"] = self._contains(df=df, mapped_triples=mapped_triples)
+        return df
+
+    def process(self, df: pd.DataFrame, remove_known: bool, add_novelties: bool) -> pd.DataFrame:
+        """
+        Post-process a prediction dataframe.
+
+        .. warning ::
+            if both, `remove_known` and `add_novelties` are enabled, only the first will be applied.
+
+        :param df:
+            the dataframe of predictions
+        :param remove_known:
+            whether to remove rows corresponding to known triples
+        :param add_novelties:
+            whether to add extra columns denoting whether triples are novel given the filter triples
+
+        :return:
+            the filtered, modified or original predictions dataframe
+        """
+        if add_novelties and remove_known:
+            logger.warning("Since remove_known is enabled, will not add novelty column")
+            add_novelties = False
+        if add_novelties:
+            return self.add_membership_columns(df=df)
+        if remove_known:
+            return self.filter(df=df)
+        return df
+
+
+class SinglePredictionPostProcessor(PredictionPostProcessor):
+    """Post-processor for single-target predictions."""
+
+    def __init__(self, target: Target, other_columns_fixed_ids: Tuple[int, int], **kwargs) -> None:
+        """Initialize the post-processor.
+
+        :param target:
+            the prediction target
+        :param other_columns_fixed_ids:
+            the fixed IDs for the other columns
+
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`PredictionPostProcessor.__init__`
+        """
+        super().__init__(**kwargs)
+        self.target = target
+        self.other_columns_fixed_ids = other_columns_fixed_ids
+
+    # docstr-coverage: inherited
+    def _contains(
+        self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False
+    ) -> numpy.ndarray:  # noqa: D102
+        col = TARGET_TO_INDEX[self.target]
+        other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
+        device = mapped_triples.device
+        other_col_ids = torch.as_tensor(data=self.other_columns_fixed_ids, dtype=torch.long, device=device)
+        filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
+        known_ids = mapped_triples[filter_mask, col].unique()
+        query_ids = torch.as_tensor(df[f"{self.target}_id"].to_numpy(), device=device)
+        return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, invert=invert).cpu().numpy()
+
+
+def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> torch.BoolTensor:
+    """Return whether elements are contained in test elements."""
+    inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
+        return_counts=True, return_inverse=True, dim=dim
+    )[1:]
+    return counts[inverse[: elements.shape[dim]]] > 1
+
+
+class AllPredictionPostProcessor(PredictionPostProcessor):
+    """Post-processor for all-triples predictions."""
+
+    # docstr-coverage: inherited
+    def _contains(
+        self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False
+    ) -> numpy.ndarray:  # noqa: D102
+        contained = (
+            isin_many_dim(
+                elements=torch.as_tensor(
+                    df[[f"{target}_id" for target, _ in sorted(TARGET_TO_INDEX.items(), key=itemgetter(1))]].values,
+                    device=mapped_triples.device,
+                ),
+                test_elements=mapped_triples,
+            )
+            .cpu()
+            .numpy()
+        )
+        if invert:
+            return ~contained
+        return contained
+
+
+@torch.inference_mode()
+def get_prediction_df(
+    model: Model,
+    triples_factory: TriplesFactory,
+    *,
+    # exactly one of them is None
+    head_label: Optional[str] = None,
+    relation_label: Optional[str] = None,
+    tail_label: Optional[str] = None,
+    #
+    targets: Optional[Sequence[str]] = None,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
     mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
-    """Predict heads for the given relation and tail (given by label).
+    """Get predictions for the head, relation, and/or tail combination.
 
-    :param model: A PyKEEN model
-    :param relation_label: The string label for the relation
-    :param tail_label: The string label for the tail entity
-    :param triples_factory: Training triples factory
-    :param add_novelties: Should the dataframe include a column denoting if the ranked head entities correspond
-        to novel triples?
-    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
+    .. note ::
+        Exactly one of `head_label`, `relation_label` and `tail_label` should be None. This is the position
+        which will be predicted.
+
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
+
+    :param head_label:
+        the head entity label. If None, predict heads
+    :param relation_label:
+        the relation label. If None, predict relations
+    :param tail_label:
+        the tail entity label. If None, predict tails
+    :param targets:
+        restrict prediction to these targets
+
+    :param add_novelties:
+        should the dataframe include a column denoting if the ranked head entities correspond to novel triples?
+    :param remove_known:
+        should non-novel triples (those appearing in the training set) be shown with the results?
         On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
         non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param testing:
+        the mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
+
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-        or all possible triples if k is None.
+        or all possible triples if k is None
+    """
+    # get input & target
+    target, batch, other_col_ids = _get_input_batch(
+        triples_factory, head_label=head_label, relation_label=relation_label, tail_label=tail_label
+    )
+
+    # get label-to-id mapping and prediction targets
+    label_ids, targets = _get_targets(
+        ids=targets, triples_factory=triples_factory, device=model.device, entity=relation_label is not None
+    )
+
+    # get scores
+    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
+
+    # create raw dataframe
+    rv = pd.DataFrame(
+        [(target_id, target_label, score) for (target_label, target_id), score in zip(label_ids, scores)],
+        columns=[f"{target}_id", f"{target}_label", "score"],
+    ).sort_values("score", ascending=False)
+
+    # postprocess prediction df
+    return SinglePredictionPostProcessor(
+        target=target, other_columns_fixed_ids=other_col_ids, training=triples_factory, testing=testing
+    ).process(df=rv, remove_known=remove_known, add_novelties=add_novelties)
+
+
+def get_head_prediction_df(
+    model: Model,
+    triples_factory: TriplesFactory,
+    relation_label: str,
+    tail_label: str,
+    *,
+    heads: Optional[Sequence[str]] = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """Predict heads for the given relation and tail (given by label).
+
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
+
+    :param relation_label:
+        the string label for the relation
+    :param tail_label:
+        the string label for the tail entity
+    :param heads:
+        restrict head prediction to the given entities
+    :param kwargs:
+        additional keyword-based parameters passed to :func:`get_prediction_df`.
+    :return: shape: (k, 3)
+        A dataframe for head predictions. Contains either the k highest scoring triples,
+        or all possible triples if k is None
 
     The following example shows that after you train a model on the Nations dataset,
-    you can score all entities w.r.t a given relation and tail entity.
+    you can score all entities w.r.t. a given relation and tail entity.
 
     >>> from pykeen.pipeline import pipeline
     >>> from pykeen.models.predict import get_head_prediction_df
@@ -74,65 +398,47 @@ def get_head_prediction_df(
     ... )
     >>> df = get_head_prediction_df(result.model, 'accusation', 'brazil', triples_factory=result.training)
     """
-    tail_id = triples_factory.entity_to_id[tail_label]
-    relation_id = triples_factory.relation_to_id[relation_label]
-    rt_batch = torch.as_tensor([[relation_id, tail_id]], dtype=torch.long, device=model.device)
-    scores = model.predict_h(rt_batch, mode=mode)
-    scores = scores[0, :].tolist()
-    rv = pd.DataFrame(
-        [
-            (entity_id, entity_label, scores[entity_id])
-            for entity_label, entity_id in triples_factory.entity_to_id.items()
-        ],
-        columns=["head_id", "head_label", "score"],
-    ).sort_values("score", ascending=False)
-
-    return _postprocess_prediction_df(
-        df=rv,
-        add_novelties=add_novelties,
-        remove_known=remove_known,
-        training=triples_factory.mapped_triples,
-        testing=testing,
-        query_ids_key="head_id",
-        col=0,
-        other_col_ids=(relation_id, tail_id),
+    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
+    return get_prediction_df(
+        model=model,
+        triples_factory=triples_factory,
+        relation_label=relation_label,
+        tail_label=tail_label,
+        targets=heads,
+        **kwargs,
     )
 
 
 def get_tail_prediction_df(
     model: Model,
+    triples_factory: TriplesFactory,
     head_label: str,
     relation_label: str,
     *,
-    triples_factory: TriplesFactory,
-    add_novelties: bool = True,
-    remove_known: bool = False,
-    testing: Optional[torch.LongTensor] = None,
-    mode: Optional[InductiveMode] = None,
+    tails: Optional[Sequence[str]] = None,
+    **kwargs,
 ) -> pd.DataFrame:
     """Predict tails for the given head and relation (given by label).
 
-    :param model: A PyKEEN model
-    :param head_label: The string label for the head entity
-    :param relation_label: The string label for the relation
-    :param triples_factory: Training triples factory
-    :param add_novelties: Should the dataframe include a column denoting if the ranked tail entities correspond
-        to novel triples?
-    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
+
+    :param head_label:
+        the string label for the head entity
+    :param relation_label:
+        the string label for the relation
+    :param tails:
+        restrict tail prediction to the given entities
+    :param kwargs:
+        additional keyword-based parameters passed to :func:`get_prediction_df`.
     :return: shape: (k, 3)
-        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-        or all possible triples if k is None.
+        A dataframe for tail predictions. Contains either the k highest scoring triples,
+        or all possible triples if k is None
 
     The following example shows that after you train a model on the Nations dataset,
-    you can score all entities w.r.t a given head entity and relation.
+    you can score all entities w.r.t. a given head entity and relation.
 
     >>> from pykeen.pipeline import pipeline
     >>> from pykeen.models.predict import get_tail_prediction_df
@@ -141,66 +447,57 @@ def get_tail_prediction_df(
     ...     model='RotatE',
     ... )
     >>> df = get_tail_prediction_df(result.model, 'brazil', 'accusation', triples_factory=result.training)
-    """
-    head_id = triples_factory.entity_to_id[head_label]
-    relation_id = triples_factory.relation_to_id[relation_label]
-    batch = torch.as_tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
-    scores = model.predict_t(batch, mode=mode)
-    scores = scores[0, :].tolist()
-    rv = pd.DataFrame(
-        [
-            (entity_id, entity_label, scores[entity_id])
-            for entity_label, entity_id in triples_factory.entity_to_id.items()
-        ],
-        columns=["tail_id", "tail_label", "score"],
-    ).sort_values("score", ascending=False)
 
-    return _postprocess_prediction_df(
-        rv,
-        add_novelties=add_novelties,
-        remove_known=remove_known,
-        testing=testing,
-        training=triples_factory.mapped_triples,
-        query_ids_key="tail_id",
-        col=2,
-        other_col_ids=(head_id, relation_id),
+    The optional `tails` parameter can be used to restrict prediction to a subset of entities, e.g.
+    >>> df = get_tail_prediction_df(
+    ...     result.model,
+    ...     'brazil',
+    ...     'accusation',
+    ...     triples_factory=result.training,
+    ...     tails=["burma", "china", "india", "indonesia"],
+    ... )
+    """
+    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
+    return get_prediction_df(
+        model=model,
+        triples_factory=triples_factory,
+        head_label=head_label,
+        relation_label=relation_label,
+        targets=tails,
+        **kwargs,
     )
 
 
 def get_relation_prediction_df(
     model: Model,
+    triples_factory: TriplesFactory,
     head_label: str,
     tail_label: str,
     *,
-    triples_factory: TriplesFactory,
-    add_novelties: bool = True,
-    remove_known: bool = False,
-    testing: Optional[torch.LongTensor] = None,
-    mode: Optional[InductiveMode] = None,
+    relations: Optional[Sequence[str]] = None,
+    **kwargs,
 ) -> pd.DataFrame:
     """Predict relations for the given head and tail (given by label).
 
-    :param model: A PyKEEN model
-    :param head_label: The string label for the head entity
-    :param tail_label: The string label for the tail entity
-    :param triples_factory: Training triples factory
-    :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
-        to novel triples?
-    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
+
+    :param head_label:
+        the string label for the head entity
+    :param tail_label:
+        the string label for the tail entity
+    :param relations:
+        restrict relation prediction to the given relations
+    :param kwargs:
+        additional keyword-based parameters passed to :func:`get_prediction_df`.
     :return: shape: (k, 3)
-        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-        or all possible triples if k is None.
+        A dataframe for relation predictions. Contains either the k highest scoring triples,
+        or all possible triples if k is None
 
     The following example shows that after you train a model on the Nations dataset,
-    you can score all relations w.r.t a given head entity and tail entity.
+    you can score all relations w.r.t. a given head entity and tail entity.
 
     >>> from pykeen.pipeline import pipeline
     >>> from pykeen.models.predict import get_relation_prediction_df
@@ -210,28 +507,14 @@ def get_relation_prediction_df(
     ... )
     >>> df = get_relation_prediction_df(result.model, 'brazil', 'uk', triples_factory=result.training)
     """
-    head_id = triples_factory.entity_to_id[head_label]
-    tail_id = triples_factory.entity_to_id[tail_label]
-    batch = torch.as_tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
-    scores = model.predict_r(batch, mode=mode)
-    scores = scores[0, :].tolist()
-    rv = pd.DataFrame(
-        [
-            (relation_id, relation_label, scores[relation_id])
-            for relation_label, relation_id in triples_factory.relation_to_id.items()
-        ],
-        columns=["relation_id", "relation_label", "score"],
-    ).sort_values("score", ascending=False)
-
-    return _postprocess_prediction_df(
-        rv,
-        add_novelties=add_novelties,
-        remove_known=remove_known,
-        testing=testing,
-        training=triples_factory.mapped_triples,
-        query_ids_key="relation_id",
-        col=1,
-        other_col_ids=(head_id, tail_id),
+    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
+    return get_prediction_df(
+        model=model,
+        triples_factory=triples_factory,
+        head_label=head_label,
+        tail_label=tail_label,
+        targets=relations,
+        **kwargs,
     )
 
 
@@ -240,7 +523,7 @@ def get_all_prediction_df(
     *,
     triples_factory: CoreTriplesFactory,
     k: Optional[int] = None,
-    batch_size: int = 1,
+    batch_size: Optional[int] = 1,
     return_tensors: bool = False,
     add_novelties: bool = True,
     remove_known: bool = False,
@@ -255,7 +538,8 @@ def get_all_prediction_df(
     :param model: A PyKEEN model
     :param triples_factory: Training triples factory
     :param k: The number of triples to return. Set to ``None`` to keep all.
-    :param batch_size: The batch size to use for calculating scores
+    :param batch_size:
+        The batch size to use for calculating scores. Can be set to `None` to determine the largest possible
     :param return_tensors: If true, only return tensors. If false (default), return as a pandas DataFrame
     :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
         to novel triples?
@@ -293,45 +577,70 @@ def get_all_prediction_df(
     if return_tensors:
         return score_pack
 
-    df = triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores)
-    return _postprocess_prediction_all_df(
-        df=df,
-        add_novelties=add_novelties,
+    return AllPredictionPostProcessor(training=triples_factory, testing=testing).process(
+        df=triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores),
         remove_known=remove_known,
-        training=triples_factory.mapped_triples,
-        testing=testing,
+        add_novelties=add_novelties,
     )
 
 
+@torch.inference_mode()
 def predict(
-    model: Model, *, k: Optional[int] = None, batch_size: int = 1, mode: Optional[InductiveMode] = None
+    model: Model,
+    *,
+    k: Optional[int] = None,
+    batch_size: Optional[int] = 1,
+    mode: Optional[InductiveMode] = None,
+    target: Target = LABEL_TAIL,
 ) -> ScorePack:
     """Calculate and store scores for either all triples, or the top k triples.
 
-    :param model: A PyKEEN model
-    :param k: The number of triples to return. Set to ``None`` to keep all.
-    :param batch_size: The batch size to use for calculating scores
+    :param model:
+        A PyKEEN model
+    :param k:
+        The number of triples to return. Set to ``None`` to keep all.
+    :param batch_size:
+        The batch size to use for calculating scores; set to `None` to determine largest possible batch size
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
-    :return: A score pack of parallel triples and scores
+    :param target:
+        the prediction target to use. Prefer targets which are efficient to predict with the given model,
+        e.g., tails for ConvE.
+
+    :return:
+        A score pack of parallel triples and scores
     """
+    # set model to evaluation mode
+    model.eval()
+
     logger.warning(
-        f"_predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations} "
+        f"predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations:,} "
         f"score evaluations.",
     )
 
-    if k is not None:
-        return _predict_k(model=model, k=k, batch_size=batch_size, mode=mode)
-
-    logger.warning(
-        "Not providing k to score_all_triples entails huge memory requirements for reasonably-sized "
-        "knowledge graphs.",
+    consumer: ScoreConsumer
+    if k is None:
+        logger.warning(
+            "Not providing k to `predict` entails huge memory requirements for reasonably-sized knowledge graphs.",
+        )
+        consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+    else:
+        consumer = TopKScoreConsumer(k=k, device=model.device)
+    dataset = AllPredictionDataset(
+        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
     )
-    return _predict_all(model=model, batch_size=batch_size, mode=mode)
+    consume_scores(model, dataset, consumer, batch_size=batch_size or len(dataset), mode=mode)
+    return consumer.finalize()
 
 
-class _ScoreConsumer:
+# note type alias annotation required,
+# cf. https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
+# batch, TODO: ids?
+PredictionBatch: TypeAlias = torch.LongTensor
+
+
+class ScoreConsumer:
     """A consumer of scores for visitor pattern."""
 
     result: torch.LongTensor
@@ -341,9 +650,8 @@ class _ScoreConsumer:
     @abstractmethod
     def __call__(
         self,
-        head_id_range: Tuple[int, int],
-        relation_id: int,
-        hr_batch: torch.LongTensor,
+        batch: PredictionBatch,
+        target: Target,
         scores: torch.FloatTensor,
     ) -> None:
         """Consume scores for the given hr_batch."""
@@ -354,12 +662,35 @@ class _ScoreConsumer:
         return _build_pack(result=self.result, scores=self.scores, flatten=self.flatten)
 
 
-class _TopKScoreConsumer(_ScoreConsumer):
+class CountScoreConsumer(ScoreConsumer):
+    """A simple consumer which counts the number of batches and scores."""
+
+    def __init__(self) -> None:
+        """Initialize the consumer."""
+        super().__init__()
+        self.batch_count = 0
+        self.score_count = 0
+
+    # docstr-coverage: inherited
+    def __call__(
+        self,
+        batch: PredictionBatch,
+        target: Target,
+        scores: torch.FloatTensor,
+    ) -> None:  # noqa: D102
+        self.batch_count += batch.shape[0]
+        self.score_count += scores.numel()
+
+
+COLUMN_LABELS = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
+
+
+class TopKScoreConsumer(ScoreConsumer):
     """Collect top-k triples & scores."""
 
     flatten = False
 
-    def __init__(self, k: int, device: torch.device) -> None:
+    def __init__(self, k: int = 3, device: DeviceHint = None) -> None:
         """
         Initialize the consumer.
 
@@ -369,6 +700,7 @@ class _TopKScoreConsumer(_ScoreConsumer):
             the model's device
         """
         self.k = k
+        device = resolve_device(device=device)
         # initialize buffer on device
         self.result = torch.empty(0, 3, dtype=torch.long, device=device)
         self.scores = torch.empty(0, device=device)
@@ -376,12 +708,12 @@ class _TopKScoreConsumer(_ScoreConsumer):
     # docstr-coverage: inherited
     def __call__(
         self,
-        head_id_range: Tuple[int, int],
-        relation_id: int,
-        hr_batch: torch.LongTensor,
+        batch: PredictionBatch,
+        target: Target,
         scores: torch.FloatTensor,
     ) -> None:  # noqa: D102
-        batch_size, num_entities = scores.shape
+        batch_size, num_scores = scores.shape
+        assert batch.shape == (batch_size, 2)
 
         # reshape, shape: (batch_size * num_entities,)
         top_scores = scores.view(-1)
@@ -393,21 +725,26 @@ class _TopKScoreConsumer(_ScoreConsumer):
                 largest=True,
                 sorted=False,
             )
-            h_start = head_id_range[0]
-            top_heads = h_start + torch.div(top_indices, num_entities, rounding_mode="trunc")
-            top_tails = top_indices % num_entities
+            # determine corresponding indices
+            # batch_id, score_id = divmod(top_indices, num_scores)
+            batch_id = torch.div(top_indices, num_scores, rounding_mode="trunc")
+            score_id = top_indices % num_scores
+            key_indices = batch[batch_id]
         else:
-            top_heads = hr_batch[:, 0].view(-1, 1).repeat(1, num_entities).view(-1)
-            top_tails = torch.arange(num_entities, device=hr_batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
+            key_indices = batch.unsqueeze(dim=1).repeat(1, num_scores, 1).view(-1, 2)
+            score_id = torch.arange(num_scores, device=batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
 
-        top_triples = torch.stack(
-            [
-                top_heads,
-                top_heads.new_full(size=top_heads.shape, fill_value=relation_id, dtype=top_heads.dtype),
-                top_tails,
-            ],
-            dim=-1,
-        )
+        # combine to top triples
+        j = 0
+        triples = []
+        for col in COLUMN_LABELS:
+            if col == target:
+                index = score_id
+            else:
+                index = key_indices[:, j]
+                j += 1
+            triples.append(index)
+        top_triples = torch.stack(triples, dim=-1)
 
         # append to global top scores
         self.scores = torch.cat([self.scores, top_scores])
@@ -419,7 +756,7 @@ class _TopKScoreConsumer(_ScoreConsumer):
             self.result = self.result[indices]
 
 
-class _AllConsumer(_ScoreConsumer):
+class AllScoreConsumer(ScoreConsumer):
     """Collect scores for all triples."""
 
     flatten = True
@@ -435,106 +772,235 @@ class _AllConsumer(_ScoreConsumer):
         """
         assert num_entities**2 * num_relations < (2**63 - 1)
         # initialize buffer on cpu
-        self.scores = torch.empty(num_relations, num_entities, num_entities, device="cpu")
+        self.scores = torch.empty(num_entities, num_relations, num_entities, device="cpu")
         # Explicitly create triples
         self.result = torch.stack(
             [
-                torch.arange(num_relations).view(-1, 1, 1).repeat(1, num_entities, num_entities),
-                torch.arange(num_entities).view(1, -1, 1).repeat(num_relations, 1, num_entities),
-                torch.arange(num_entities).view(1, 1, -1).repeat(num_relations, num_entities, 1),
+                torch.arange(num_entities).view(-1, 1, 1).repeat(1, num_relations, num_entities),
+                torch.arange(num_relations).view(1, -1, 1).repeat(num_entities, 1, num_entities),
+                torch.arange(num_entities).view(1, 1, -1).repeat(num_entities, num_relations, 1),
             ],
             dim=-1,
-        ).view(-1, 3)[:, [1, 0, 2]]
+        ).view(-1, 3)
 
     # docstr-coverage: inherited
     def __call__(
         self,
-        head_id_range: Tuple[int, int],
-        relation_id: int,
-        hr_batch: torch.LongTensor,
+        batch: PredictionBatch,
+        target: Target,
         scores: torch.FloatTensor,
     ) -> None:  # noqa: D102
-        h_start, h_stop = head_id_range
-        self.scores[relation_id, h_start:h_stop, :] = scores.to(self.scores.device)
+        j = 0
+        selectors: List[Union[slice, torch.LongTensor]] = []
+        for col in COLUMN_LABELS:
+            if col == target:
+                selector = slice(None)
+            else:
+                selector = batch[:, j]
+                j += 1
+            selectors.append(selector)
+        if target == LABEL_HEAD:
+            scores = scores.t()
+        self.scores[selectors[0], selectors[1], selectors[2]] = scores.to(self.scores.device)
+
+
+class PredictionDataset(torch.utils.data.Dataset):
+    """A base class for prediction datasets."""
+
+    def __init__(self, target: Target = LABEL_TAIL) -> None:
+        """Initialize the dataset.
+
+        :param target:
+            the prediction target to use. Prefer targets which are efficient to predict with the given model,
+            e.g., tails for ConvE.
+        """
+        super().__init__()
+        # TODO: variable targets across batches/samples?
+        self.target = target
+
+    @abstractmethod
+    def __getitem__(self, item: int) -> PredictionBatch:
+        raise NotImplementedError
+
+    @abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError
+
+
+class AllPredictionDataset(PredictionDataset):
+    """A dataset for predicting all possible triples."""
+
+    def __init__(self, num_entities: int, num_relations: int, **kwargs) -> None:
+        """Initialize the dataset.
+
+        :param num_entities:
+            the number of entities
+        :param num_relations:
+            the number of relations
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`PredictionDataset.__init__`
+        """
+        super().__init__(**kwargs)
+        self.num_entities = num_entities
+        self.num_relations = num_relations
+        # (?, r, t) => r.stride > t.stride
+        # (h, ?, t) => h.stride > t.stride
+        # (h, r, ?) => h.stride > r.stride
+        self.divisor = num_relations if self.target == LABEL_TAIL else num_entities
+
+    # docstr-coverage: inherited
+    def __len__(self) -> int:  # noqa: D102
+        if self.target == LABEL_RELATION:
+            return self.num_entities**2
+        return self.num_entities * self.num_relations
+
+    # docstr-coverage: inherited
+    def __getitem__(self, item: int) -> torch.LongTensor:  # noqa: D102
+        quotient, remainder = divmod(item, self.divisor)
+        return torch.as_tensor([quotient, remainder])
+
+
+Restriction = Union[torch.LongTensor, Collection[int], int]
+
+
+class PartiallyRestrictedPredictionDataset(PredictionDataset):
+    r"""
+    A dataset for scoring some links.
+
+    "Some links" is defined as
+
+    .. math ::
+        \mathcal{T}_{interest} = \mathcal{E}_{h} \times \mathcal{R}_{r} \times \mathcal{E}_{t}
+
+    .. note ::
+        For now, the target, i.e., position whose prediction method in the model is utilized,
+        must be the full set of entities/relations.
+
+    Example
+    .. code-block:: python
+
+        # train model; note: needs larger number of epochs to do something useful ;-)
+        from pykeen.pipeline import pipeline
+        result = pipeline(dataset="nations", model="mure", training_kwargs=dict(num_epochs=0))
+
+        # create prediction dataset, where the head entities is from a set of European countries,
+        # and the relations are connected to tourism
+        from pykeen.models.predict import PartiallyRestrictedPredictionDataset
+        heads = result.training.entities_to_ids(entities=["netherlands", "poland", "uk"])
+        relations = result.training.relations_to_ids(relations=["reltourism", "tourism", "tourism3"])
+        dataset = PartiallyRestrictedPredictionDataset(heads=heads, relations=relations)
+
+        # calculate all scores for this restricted set, and keep k=3 largest
+        from pykeen.models.predict import consume_scores, TopKScoreConsumer
+        consumer = TopKScoreConsumer(k=3)
+        consume_scores(result.model, ds, consumer)
+        score_pack = consumer.finalize()
+
+        # add labels
+        df = result.training.tensor_to_df(score_pack.result, score=score_pack.scores)
+    """
+
+    #: the choices for the first and second component of the input batch
+    parts: Tuple[torch.LongTensor, torch.LongTensor]
+
+    def __init__(
+        self,
+        *,
+        heads: Optional[Restriction] = None,
+        relations: Optional[Restriction] = None,
+        tails: Optional[Restriction] = None,
+        target: Target = LABEL_TAIL,
+    ) -> None:
+        """
+        Initialize restricted prediction dataset.
+
+        :param heads:
+            the restricted head entities
+        :param relations:
+            the restricted relations
+        :param tails:
+            the restricted tails
+        :param target:
+            the prediction target
+
+        :raises NotImplementedError:
+            if the target position restricted, or any non-target position is not restricted
+        """
+        super().__init__(target=target)
+        parts: List[torch.LongTensor] = []
+        for restriction, on in zip((heads, relations, tails), COLUMN_LABELS):
+            if on == target:
+                if restriction is not None:
+                    raise NotImplementedError("Restrictions on the target are not yet supported.")
+                continue
+            if restriction is None:
+                raise NotImplementedError("Requires size info")
+            elif isinstance(restriction, int):
+                restriction = [restriction]
+            restriction = torch.as_tensor(restriction)
+            parts.append(restriction)
+        assert len(parts) == 2
+        self.parts = (parts[0], parts[1])  # for mypy
+
+    # docstr-coverage: inherited
+    def __len__(self) -> int:  # noqa: D102
+        return math.prod(map(len, self.parts))
+
+    # docstr-coverage: inherited
+    def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D102
+        quotient, remainder = divmod(item, len(self.parts[0]))
+        return torch.as_tensor([self.parts[0][quotient], self.parts[1][remainder]])
 
 
 @torch.inference_mode()
-def _consume_scores(
-    model: Model, *consumers: _ScoreConsumer, batch_size: int = 1, mode: Optional[InductiveMode]
+@maximize_memory_utilization(parameter_name="batch_size", keys=["model", "dataset", "consumers", "mode"])
+def consume_scores(
+    model: Model,
+    dataset: PredictionDataset,
+    *consumers: ScoreConsumer,
+    batch_size: int = 1,
+    mode: Optional[InductiveMode] = None,
 ) -> None:
     """
     Batch-wise calculation of all triple scores and consumption.
 
+    From a high-level perspective, this method does the following:
+
+    .. code-block:: python
+
+        for batch in dataset:
+            scores = model.predict(batch)
+            for consumer in consumers:
+                consumer(batch, scores)
+
+    By bringing custom prediction datasets and/or score consumers, this method is highly configurable.
+
     :param model:
-        the model, will be set to evaluation mode
+        the model used to calculate scores
+    :param dataset:
+        the dataset defining the prediction tasks, i.e., inputs to `model.predict` to loop over.
     :param consumers:
         the consumers of score batches
     :param batch_size:
-        the batch size to use  # TODO: automatic batch size maximization
+        the batch size to use. Will automatically be lowered, if the hardware cannot handle this large batch sizes
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
-    """
-    # TODO: in the future, we may want to expose this method
-    # set model to evaluation mode
-    model.eval()
 
-    for r, h_start in tqdm(
-        itt.product(
-            range(model.num_real_relations),
-            range(0, model.num_entities, batch_size),
-        ),
-        desc="scoring",
-        unit="batch",
-        unit_scale=True,
-        total=model.num_relations * model.num_entities // batch_size,
-    ):
-        # calculate batch scores
-        h_stop = min(h_start + batch_size, model.num_entities)
-        hs = torch.arange(h_start, h_stop, device=model.device)
-        hr_batch = torch.stack(
-            [
-                hs,
-                hs.new_full(size=(hs.shape[0],), fill_value=r),
-            ],
-            dim=-1,
-        )
-        scores = model.predict_t(hr_batch=hr_batch, mode=mode)
+    :raises ValueError:
+        if no score consumers are given
+    """
+    if not consumers:
+        raise ValueError("Did not receive any consumer")
+
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
+    for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True, leave=False):
+        batch = batch.to(model.device)
+        # calculate batch scores onces
+        scores = model.predict(batch, target=dataset.target, full_batch=False, mode=mode)
+        # consume by all consumers
         for consumer in consumers:
-            consumer(head_id_range=(h_start, h_stop), relation_id=r, hr_batch=hr_batch, scores=scores)
-
-
-@torch.inference_mode()
-def _predict_all(model: Model, *, batch_size: int = 1, mode: Optional[InductiveMode]) -> ScorePack:
-    """Compute and store scores for all triples.
-
-    :param model: A PyKEEN model
-    :param batch_size: The batch size to use for calculating scores
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-    :return: A score pack of parallel triples and scores
-    """
-    consumer = _AllConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
-    _consume_scores(model, consumer, batch_size=batch_size, mode=mode)
-    return consumer.finalize()
-
-
-@torch.inference_mode()
-def _predict_k(model: Model, *, k: int, batch_size: int = 1, mode: Optional[InductiveMode]) -> ScorePack:
-    """Compute and store scores for the top k-scoring triples.
-
-    :param model: A PyKEEN model
-    :param k: The number of triples to return
-    :param batch_size: The batch size to use for calculating scores
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-    :return: A score pack of parallel triples and scores
-    """
-    consumer = _TopKScoreConsumer(k=k, device=model.device)
-    _consume_scores(model, consumer, batch_size=batch_size, mode=mode)
-    return consumer.finalize()
+            consumer(batch, target=dataset.target, scores=scores)
 
 
 def _build_pack(result: torch.LongTensor, scores: torch.FloatTensor, flatten: bool = False) -> ScorePack:
@@ -542,117 +1008,6 @@ def _build_pack(result: torch.LongTensor, scores: torch.FloatTensor, flatten: bo
     scores, indices = torch.sort(scores.flatten() if flatten else scores, descending=True)
     result = result[indices]
     return ScorePack(result=result, scores=scores)
-
-
-def _postprocess_prediction_df(
-    df: pd.DataFrame,
-    *,
-    col: int,
-    add_novelties: bool,
-    remove_known: bool,
-    training: Optional[torch.LongTensor],
-    testing: Optional[torch.LongTensor],
-    query_ids_key: str,
-    other_col_ids: Tuple[int, int],
-) -> pd.DataFrame:
-    if add_novelties or remove_known:
-        df["in_training"] = ~get_novelty_mask(
-            mapped_triples=training,
-            query_ids=df[query_ids_key],
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-    if add_novelties and testing is not None:
-        df["in_testing"] = ~get_novelty_mask(
-            mapped_triples=testing,
-            query_ids=df[query_ids_key],
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-    return _process_remove_known(df, remove_known, testing)
-
-
-def _postprocess_prediction_all_df(
-    df: pd.DataFrame,
-    *,
-    add_novelties: bool,
-    remove_known: bool,
-    training: Optional[torch.LongTensor],
-    testing: Optional[torch.LongTensor],
-) -> pd.DataFrame:
-    if add_novelties or remove_known:
-        assert training is not None
-        df["in_training"] = ~get_novelty_all_mask(
-            mapped_triples=training,
-            query=df[["head_id", "relation_id", "tail_id"]].values,
-        )
-    if add_novelties and testing is not None:
-        assert testing is not None
-        df["in_testing"] = ~get_novelty_all_mask(
-            mapped_triples=testing,
-            query=df[["head_id", "relation_id", "tail_id"]].values,
-        )
-    return _process_remove_known(df, remove_known, testing)
-
-
-def get_novelty_mask(
-    mapped_triples: MappedTriples,
-    query_ids: np.ndarray,
-    col: int,
-    other_col_ids: Tuple[int, int],
-) -> np.ndarray:
-    r"""Calculate for each query ID whether it is novel.
-
-    In particular, computes:
-
-    .. math ::
-        q \notin \{t[col] in T \mid t[\neg col] = p\}
-
-    for each q in query_ids where :math:`\neg col` denotes all columns but `col`, and `p` equals `other_col_ids`.
-
-    :param mapped_triples: shape: (num_triples, 3), dtype: long
-        The mapped triples (i.e. ID-based).
-    :param query_ids: shape: (num_queries,), dtype: long
-        The query IDs. Are assumed to be unique (i.e. without duplicates).
-    :param col:
-        The column to which the query IDs correspond.
-    :param other_col_ids:
-        Fixed IDs for the other columns.
-
-    :return: shape: (num_queries,), dtype: bool
-        A boolean mask indicating whether the ID does not correspond to a known triple.
-    """
-    other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
-    other_col_ids = torch.as_tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
-    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)  # type: ignore
-    known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
-    return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
-
-
-def get_novelty_all_mask(
-    mapped_triples: MappedTriples,
-    query: np.ndarray,
-) -> np.ndarray:
-    """Get novelty mask."""
-    known = triple_tensor_to_set(mapped_triples)
-    return np.asarray(
-        [tuple(triple) not in known for triple in query],
-        dtype=bool,
-    )
-
-
-def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optional[torch.LongTensor]) -> pd.DataFrame:
-    if not remove_known:
-        return df
-
-    df = df[~df["in_training"]]
-    del df["in_training"]
-    if testing is None:
-        return df
-
-    df = df[~df["in_testing"]]
-    del df["in_testing"]
-    return df
 
 
 @torch.inference_mode()

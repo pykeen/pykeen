@@ -12,6 +12,7 @@ import pandas
 import torch
 from class_resolver.api import ClassResolver, HintOrType
 
+from ..constants import COLUMN_LABELS
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target, TorchRandomHint
 from ..utils import ensure_torch_random_state
 
@@ -39,6 +40,9 @@ def _split_triples(
 
     :return:
         The splitted triples.
+
+    :raises ValueError:
+        If the given sizes are different from the number of triples in mapped triples
     """
     num_triples = mapped_triples.shape[0]
     if sum(sizes) != num_triples:
@@ -85,10 +89,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    df = pandas.DataFrame(
-        data=triples.numpy(),
-        columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
-    ).reset_index()
+    df = pandas.DataFrame(data=triples.numpy(), columns=COLUMN_LABELS).reset_index()
 
     # select one triple per relation
     chosen = _get_cover_for_column(df=df, column=LABEL_RELATION)
@@ -143,6 +144,9 @@ def normalize_ratios(
 
     :return:
         A sequence of ratios of at least two elements which sums to one.
+
+    :raises ValueError:
+        if the ratio sum is bigger than 1.0
     """
     # Prepare split index
     if isinstance(ratios, float):
@@ -234,6 +238,8 @@ def _prepare_cleanup(
         The training triples.
     :param testing: shape: (m, 3)
         The testing triples.
+    :param max_ids:
+        The maximum identifier in each column. Calculates it automatically if not given.
 
     :return: shape: (m,)
         The move mask.

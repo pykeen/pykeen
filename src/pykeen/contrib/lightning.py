@@ -118,14 +118,19 @@ class LitModule(pytorch_lightning.LightningModule):
         self.mode = mode
         self.label_smoothing = label_smoothing
 
-    def forward(self, x):
+    def forward(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         """
-        Perform the prediction or inference step.
+        Perform the prediction or inference step by wrapping :meth:`pykeen.models.ERModel.predict_t`.
+
+        :param hr_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
 
         .. note::
             in lightning, forward defines the prediction/inference actions
         """
-        return self.model.predict_t(x)
+        return self.model.predict_t(hr_batch)
 
     @abstractmethod
     def _step(self, batch, prefix: str):

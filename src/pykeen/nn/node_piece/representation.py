@@ -3,14 +3,17 @@
 """Representation modules for NodePiece."""
 
 import logging
-from typing import Callable, List, NamedTuple, Optional, Sequence, Union
+import pathlib
+from typing import Callable, Iterable, List, NamedTuple, Optional, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
-from class_resolver.contrib.torch import aggregation_resolver
 
 from .tokenization import Tokenizer, tokenizer_resolver
-from ..representation import Representation
+from ..combination import ConcatAggregationCombination
+from ..perceptron import ConcatMLP
+from ..representation import CombinedRepresentation, Representation
+from ..utils import ShapeError
 from ...triples import CoreTriplesFactory
 from ...typing import MappedTriples, OneOrSequence
 from ...utils import broadcast_upgrade_to_sequences
@@ -41,6 +44,7 @@ class TokenizationRepresentation(Representation):
         assignment: torch.LongTensor,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
+        shape: Optional[OneOrSequence[int]] = None,
         **kwargs,
     ) -> None:
         """
@@ -52,8 +56,11 @@ class TokenizationRepresentation(Representation):
             the token representations
         :param token_representation_kwargs:
             additional keyword-based parameters
+        :param shape:
+            The shape of an individual representation. If provided, has to match.
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
+            additional keyword-based parameters passed to :meth:`Representation.__init__`
+
         :raises ValueError: if there's a mismatch between the representation size
             and the vocabulary size
         """
@@ -79,7 +86,8 @@ class TokenizationRepresentation(Representation):
             token_representation_kwargs,
             max_id=self.vocabulary_size,
         )
-        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape, **kwargs)
+        shape = ShapeError.verify(shape=(num_chosen_tokens,) + token_representation.shape, reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # input validation
         if token_representation.max_id < self.vocabulary_size:
@@ -117,7 +125,7 @@ class TokenizationRepresentation(Representation):
         :param num_tokens:
             the number of tokens to select for each entity.
         :param token_representation:
-            the pre-instantiated token representations, or an EmbeddingSpecification to create them
+            the pre-instantiated token representations, class, or name of a class
         :param token_representation_kwargs:
             additional keyword-based parameters
         :param mapped_triples:
@@ -146,14 +154,11 @@ class TokenizationRepresentation(Representation):
         )
 
     # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        return "\n".join(
-            (
-                f"max_id={self.assignment.shape[0]},",
-                f"num_tokens={self.assignment.shape[1]},",
-                f"vocabulary_size={self.vocabulary_size},",
-            )
-        )
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"max_id={self.assignment.shape[0]}"
+        yield f"num_tokens={self.num_tokens}"
+        yield f"vocabulary_size={self.vocabulary_size}"
 
     # docstr-coverage: inherited
     def _plain_forward(
@@ -167,6 +172,21 @@ class TokenizationRepresentation(Representation):
 
         # lookup token representations, shape: (*, num_chosen_tokens, *shape)
         return self.vocabulary(token_ids)
+
+    @property
+    def num_tokens(self) -> int:
+        """Return the number of selected tokens for ID."""
+        return self.assignment.shape[1]
+
+    def save_assignment(self, output_path: pathlib.Path):
+        """Save the assignment to a file.
+
+        :param output_path:
+            the output file path. Its parent directories will be created if necessary.
+        """
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self.assignment, output_path)
+        logger.info(f"Saved assignment of shape {self.assignment.shape} to {output_path}")
 
 
 class HashDiversityInfo(NamedTuple):
@@ -185,7 +205,7 @@ class HashDiversityInfo(NamedTuple):
     uniques_total: float
 
 
-class NodePieceRepresentation(Representation):
+class NodePieceRepresentation(CombinedRepresentation):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
 
@@ -194,13 +214,7 @@ class NodePieceRepresentation(Representation):
 
     where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
     an aggregation function, which aggregates the individual token representations to a single entity representation.
-
-    .. note ::
-        This implementation currently only supports representation of entities by bag-of-relations.
     """
-
-    #: the token representations
-    token_representations: Sequence[TokenizationRepresentation]
 
     def __init__(
         self,
@@ -213,7 +227,6 @@ class NodePieceRepresentation(Representation):
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         max_id: Optional[int] = None,
-        shape: Optional[Sequence[int]] = None,
         **kwargs,
     ):
         """
@@ -243,15 +256,10 @@ class NodePieceRepresentation(Representation):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-            this will only be necessary if the aggregation is an *ad hoc* function.
         :param max_id:
             Only pass this to check if the number of entities in the triples factories is the same
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
-        :raises ValueError: if the shapes for any vocabulary entry
-            in all token representations are inconsistent
+            additional keyword-based parameters passed to :meth:`CombinedRepresentation.__init__`
         """
         if max_id:
             assert max_id == triples_factory.num_entities
@@ -285,39 +293,21 @@ class NodePieceRepresentation(Representation):
             )
         ]
 
-        # determine shape
-        if shape is None:
-            shapes = {t.vocabulary.shape for t in token_representations}
-            if len(shapes) != 1:
-                raise ValueError(f"Inconsistent token shapes: {shapes}")
-            shape = list(shapes)[0]
+        # Create an MLP for string aggregation
+        if aggregation == "mlp":
+            # note: the token representations' shape includes the number of tokens as leading dim
+            embedding_dim = token_representations[0].shape[1]
+            aggregation = ConcatMLP(
+                input_dim=embedding_dim * sum(num_tokens),
+                output_dim=embedding_dim,
+            )
 
-        # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape, **kwargs)
-
-        # assign module
-        self.token_representations = torch.nn.ModuleList(token_representations)
-
-        # Assign default aggregation
-        self.aggregation = aggregation_resolver.lookup(aggregation)
-        self.aggregation_index = -(1 + len(shape))
-
-    # docstr-coverage: inherited
-    def extra_repr(self) -> str:  # noqa: D102
-        aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
-        return f"aggregation={aggregation_str}, "
-
-    # docstr-coverage: inherited
-    def _plain_forward(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        return self.aggregation(
-            torch.cat(
-                [tokenization(indices=indices) for tokenization in self.token_representations],
-                dim=self.aggregation_index,
-            ),
-            self.aggregation_index,
+        super().__init__(
+            max_id=triples_factory.num_entities,
+            base=token_representations,
+            combination=ConcatAggregationCombination,
+            combination_kwargs=dict(aggregation=aggregation, dim=-len(token_representations[0].shape)),
+            **kwargs,
         )
 
     def estimate_diversity(self) -> HashDiversityInfo:

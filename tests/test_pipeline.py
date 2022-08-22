@@ -31,6 +31,8 @@ from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
 
+from .utils import needs_packages
+
 
 class TestPipeline(unittest.TestCase):
     """Test the pipeline."""
@@ -54,9 +56,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_tails_no_novelties(self):
         """Test scoring tails without labeling as novel w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
-            self.model,
-            "brazil",
-            "intergovorgs",
+            model=self.model,
+            head_label="brazil",
+            relation_label="intergovorgs",
             testing=self.testing_mapped_triples,
             triples_factory=self.dataset.training,
             add_novelties=False,
@@ -67,9 +69,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_tails_remove_known(self):
         """Test scoring tails while removing non-novel triples w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
-            self.model,
-            "brazil",
-            "intergovorgs",
+            model=self.model,
+            head_label="brazil",
+            relation_label="intergovorgs",
             testing=self.testing_mapped_triples,
             remove_known=True,
             triples_factory=self.dataset.training,
@@ -80,9 +82,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_tails_with_novelties(self):
         """Test scoring tails with labeling as novel w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
-            self.model,
-            "brazil",
-            "intergovorgs",
+            model=self.model,
+            head_label="brazil",
+            relation_label="intergovorgs",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
@@ -96,9 +98,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_relations_with_novelties(self):
         """Test scoring relations with labeling as novel w.r.t. training and testing."""
         rel_df = get_relation_prediction_df(
-            self.model,
-            "brazil",
-            "uk",
+            model=self.model,
+            head_label="brazil",
+            tail_label="uk",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
@@ -133,9 +135,9 @@ class TestPipeline(unittest.TestCase):
     def test_predict_heads_with_novelties(self):
         """Test scoring heads with labeling as novel w.r.t. training and testing."""
         heads_df = get_head_prediction_df(
-            self.model,
-            "conferences",
-            "brazil",
+            model=self.model,
+            relation_label="conferences",
+            tail_label="brazil",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
@@ -218,6 +220,13 @@ class TestPipeline(unittest.TestCase):
             assert isinstance(df, pandas.DataFrame)
             assert df.shape[0] == self.testing_mapped_triples.shape[0]
             assert {"head_id", "relation_id", "tail_id", "score"}.issubset(df.columns)
+
+    @needs_packages("matplotlib")
+    def test_plot(self):
+        """Test plotting."""
+        result = pipeline(dataset="nations", model="transe", training_kwargs=dict(num_epochs=0))
+        fig, axes = result.plot()
+        assert fig is not None and axes is not None
 
 
 class TestPipelineTriples(unittest.TestCase):

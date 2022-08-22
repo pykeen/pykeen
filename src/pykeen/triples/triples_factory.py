@@ -3,7 +3,6 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 import dataclasses
-import itertools
 import logging
 import pathlib
 import warnings
@@ -33,17 +32,10 @@ from torch.utils.data import Dataset
 from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
-from ..typing import (
-    LABEL_HEAD,
-    LABEL_RELATION,
-    LABEL_TAIL,
-    EntityMapping,
-    LabeledTriples,
-    MappedTriples,
-    RelationMapping,
-    TorchRandomHint,
-)
+from ..constants import COLUMN_LABELS
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import (
+    ExtraReprMixin,
     compact_mapping,
     format_relative_comparison,
     get_edge_index,
@@ -70,6 +62,8 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
     :param triples: shape: (n, 3), dtype: str
+    :returns:
+        A mapping of entity labels to indices
     """
     # Split triples
     heads, tails = triples[:, 0], triples[:, 2]
@@ -79,10 +73,12 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     return {str(label): i for (i, label) in enumerate(entity_labels)}
 
 
-def create_relation_mapping(relations: set) -> RelationMapping:
+def create_relation_mapping(relations: Iterable[str]) -> RelationMapping:
     """Create mapping from relation labels to IDs.
 
-    :param relations: set
+    :param relations: A set of relation labels
+    :returns:
+        A mapping of relation labels to indices
     """
     # Sorting ensures consistent results when the triples are permuted
     relation_labels = sorted(relations)
@@ -209,6 +205,10 @@ class Labeling:
         """Return the maximum ID (excl.)."""
         return max(self.label_to_id.values()) + 1
 
+    def all_labels(self) -> np.ndarray:
+        """Get all labels, in order."""
+        return self.label(range(self.max_id))
+
 
 def restrict_triples(
     mapped_triples: MappedTriples,
@@ -260,7 +260,7 @@ def restrict_triples(
     return mapped_triples[keep_mask]
 
 
-class KGInfo:
+class KGInfo(ExtraReprMixin):
     """An object storing information about the number of entities and relations."""
 
     #: the number of unique entities
@@ -285,15 +285,9 @@ class KGInfo:
         self.num_entities = num_entities
         self.num_relations = num_relations
 
-    def extra_repr(self) -> str:
-        """Extra representation string."""
-        return ", ".join(self._iter_extra_repr())
-
-    def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}({self.extra_repr()})"
-
-    def _iter_extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
+        yield from super().iter_extra_repr()
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
 
@@ -306,7 +300,7 @@ class CoreTriplesFactory(KGInfo):
 
     def __init__(
         self,
-        mapped_triples: MappedTriples,
+        mapped_triples: Union[MappedTriples, np.ndarray],
         num_entities: int,
         num_relations: int,
         metadata: Optional[Mapping[str, Any]] = None,
@@ -322,12 +316,25 @@ class CoreTriplesFactory(KGInfo):
             The number of relations.
         :param metadata:
             Arbitrary metadata to go with the graph
+
+        :raises TypeError:
+            if the mapped_triples are of non-integer dtype
+        :raises ValueError:
+            if the mapped_triples are of invalid shape
         """
         super().__init__(
             num_entities=num_entities,
             num_relations=num_relations,
         )
-        self.mapped_triples = mapped_triples
+        # ensure torch.Tensor
+        mapped_triples = torch.as_tensor(mapped_triples)
+        # input validation
+        if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
+            raise ValueError(f"Invalid shape for mapped_triples: {mapped_triples.shape}; must be (n, 3)")
+        if mapped_triples.is_complex() or mapped_triples.is_floating_point():
+            raise TypeError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
+        # always store as torch.long, i.e., torch's default integer dtype
+        self.mapped_triples = mapped_triples.to(dtype=torch.long)
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -382,9 +389,9 @@ class CoreTriplesFactory(KGInfo):
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
-    def _iter_extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
-        yield from super()._iter_extra_repr()
+        yield from super().iter_extra_repr()
         yield f"num_triples={self.num_triples}"
         for k, v in sorted(self.metadata.items()):
             if isinstance(v, (str, pathlib.Path)):
@@ -442,6 +449,10 @@ class CoreTriplesFactory(KGInfo):
 
         :param n:
             Either the (integer) number of top relations to keep or the (float) percentage of top relationships to keep.
+        :returns:
+            A set of IDs for the n most frequent relations
+        :raises TypeError:
+            If the n is the wrong type
         """
         logger.info(f"applying cutoff of {n} to {self}")
         if isinstance(n, float):
@@ -702,13 +713,15 @@ class CoreTriplesFactory(KGInfo):
 
         :param path:
             The path to store the triples factory to.
+        :returns:
+            The path to the file that got dumped
         """
         path = normalize_path(path, mkdir=True)
 
         # store numeric triples
         pd.DataFrame(
             data=self.mapped_triples.numpy(),
-            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+            columns=COLUMN_LABELS,
         ).to_csv(path.joinpath(self.triples_file_name), sep="\t", index=False)
 
         # store metadata
@@ -720,7 +733,8 @@ class CoreTriplesFactory(KGInfo):
     def _get_binary_state(self):
         return dict(
             num_entities=self.num_entities,
-            num_relations=self.num_relations,
+            # note: num_relations will be doubled again when instantiating with create_inverse_triples=True
+            num_relations=self.real_num_relations,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -1022,19 +1036,17 @@ class TriplesFactory(CoreTriplesFactory):
         invert: bool = False,
     ) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given relations."""
-        # TODO: invert is not used
         return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations))
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
+        :returns: A word cloud object for a Jupyter notebook
 
         .. warning::
 
-            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
-            install it automatically, or install it yourself with
-            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
         """
         return self._word_cloud(
             ids=get_edge_index(mapped_triples=self.mapped_triples).t(),
@@ -1046,12 +1058,11 @@ class TriplesFactory(CoreTriplesFactory):
         """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
 
         :param top: The number of top relations to show. Defaults to 100.
+        :returns: A world cloud object for a Jupyter notebook
 
         .. warning::
 
-            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
-            install it automatically, or install it yourself with
-            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
         """
         return self._word_cloud(
             ids=self.mapped_triples[:, 1],
@@ -1061,35 +1072,32 @@ class TriplesFactory(CoreTriplesFactory):
 
     def _word_cloud(self, *, ids: torch.LongTensor, id_to_label: Mapping[int, str], top: int):
         try:
-            from word_cloud.word_cloud_generator import WordCloud
+            from wordcloud import WordCloud
         except ImportError:
             logger.warning(
-                "Could not import module `word_cloud`. "
-                "Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`",
+                "Could not import module `wordcloud`. Try installing it with `pip install wordcloud`",
             )
             return
 
         # pre-filter to keep only topk
-        uniq, counts = ids.view(-1).unique(return_counts=True)
+        uniq, counts = ids.reshape(-1).unique(return_counts=True)
 
         # if top is larger than the number of available options
         top = min(top, uniq.numel())
         top_counts, top_ids = counts.topk(k=top, largest=True)
 
-        # generate text
-        text = list(
-            itertools.chain(
-                *(
-                    itertools.repeat(id_to_label[e_id], count)
-                    for e_id, count in zip(top_ids.tolist(), top_counts.tolist())
-                )
+        # Generate a word cloud image
+        svg_str: str = (
+            WordCloud(normalize_plurals=False, max_words=top, mode="RGBA", background_color=None)
+            .generate_from_frequencies(
+                frequencies=dict(zip(map(id_to_label.__getitem__, top_ids.tolist()), top_counts.tolist()))
             )
+            .to_svg()
         )
 
-        from IPython.core.display import HTML
+        from IPython.core.display import SVG
 
-        word_cloud = WordCloud()
-        return HTML(word_cloud.get_embed_code(text=text, topn=top))
+        return SVG(data=svg_str)
 
     # docstr-coverage: inherited
     def tensor_to_df(
@@ -1158,7 +1166,10 @@ def cat_triples(*triples_factories: CoreTriplesFactory) -> MappedTriples:
 def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> int:
     """Compute the number of moves to go from the first sequence of triples factories to the second.
 
+    :param a: A sequence of triples factories
+    :param b: A sequence of triples factories
     :return: The number of triples present in the training sets in both
+    :raises ValueError: If the sequences of triples factories are a different length
     """
     if len(a) != len(b):
         raise ValueError("Must have same number of triples factories")
@@ -1175,6 +1186,8 @@ def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory
 def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> float:
     """Compute the similarity between two datasets' splits.
 
+    :param a: A sequence of triples factories
+    :param b: A sequence of triples factories
     :return: The number of triples present in the training sets in both
     """
     steps = splits_steps(a, b)

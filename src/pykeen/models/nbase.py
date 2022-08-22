@@ -17,7 +17,7 @@ from torch import nn
 
 from .base import Model
 from ..nn import representation_resolver
-from ..nn.modules import Interaction, interaction_resolver
+from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
 from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
@@ -280,11 +280,7 @@ class ERModel(
         self,
         *,
         triples_factory: KGInfo,
-        interaction: Union[
-            str,
-            Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
-        ],
+        interaction: HintOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         interaction_kwargs: OptionalKwargs = None,
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
@@ -469,13 +465,9 @@ class ERModel(
         if get_batchnorm_modules(self):  # if there are any, this is truthy
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
+    # docstr-coverage: inherited
     def score_t(
-        self,
-        hr_batch: torch.LongTensor,
-        *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-        invert_relation: bool = False,
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -493,21 +485,16 @@ class ERModel(
             For each h-r pair, the scores for all possible tails.
         """
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(
-            h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode, invert_relation=invert_relation
-        )
+        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
         return repeat_if_necessary(
-            scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
+            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode),
+            num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
         )
 
+    # docstr-coverage: inherited
     def score_h(
-        self,
-        rt_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-        invert_relation: bool = False,
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -525,21 +512,16 @@ class ERModel(
             For each r-t pair, the scores for all possible heads.
         """
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(
-            h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode, invert_relation=invert_relation
-        )
+        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
         return repeat_if_necessary(
-            scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
+            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode),
+            num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
         )
 
+    # docstr-coverage: inherited
     def score_r(
-        self,
-        ht_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-        invert_relation: bool = False,
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -557,13 +539,11 @@ class ERModel(
             For each h-t pair, the scores for all possible relations.
         """
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(
-            h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode, invert_relation=invert_relation
-        )
+        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
         return repeat_if_necessary(
-            scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
+            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
             representations=self.relation_representations,
-            num=self.num_relations,
+            num=self.num_relations if relations is None else relations.shape[-1],
         )
 
     def _get_entity_representations_from_inductive_mode(

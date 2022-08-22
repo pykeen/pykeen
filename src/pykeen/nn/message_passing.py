@@ -14,9 +14,10 @@ from torch import nn
 
 from .init import uniform_norm_p1_, xavier_normal_
 from .representation import LowRankRepresentation, Representation
-from .utils import adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
+from .utils import ShapeError, adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
+from ..utils import ExtraReprMixin, einsum
 
 __all__ = [
     "RGCNRepresentation",
@@ -29,7 +30,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Decomposition(nn.Module, ABC):
+class Decomposition(nn.Module, ExtraReprMixin, ABC):
     r"""Base module for relation-specific message passing.
 
     A decomposition module implementation offers a way to reduce the number of parameters needed by learning
@@ -75,12 +76,9 @@ class Decomposition(nn.Module, ABC):
         self.num_relations = num_relations
         self.output_dim = output_dim
 
-    def extra_repr(self) -> str:
-        """Return additional components for the output of `repr`."""
-        return ", ".join(self.iter_extra_repr())
-
     def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over components for `extra_repr`."""
+        yield from super().iter_extra_repr()
         yield f"input_dim={self.input_dim}"
         yield f"output_dim={self.output_dim}"
         yield f"num_relations={self.num_relations}"
@@ -232,14 +230,15 @@ class BasesDecomposition(Decomposition):
 
     # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
-        x = torch.einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
-        return torch.spmm(adj, x.view(-1, self.output_dim))
+        x = einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
+        # TODO: can we change the dimension order to make this contiguous?
+        return torch.spmm(adj, x.reshape(-1, self.output_dim))
 
     # docstr-coverage: inherited
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         x = torch.spmm(adj, x)
         x = x.view(self.num_relations, -1, self.input_dim)
-        return torch.einsum("rb, bio, rni -> no", self.base_weights, self.bases, x)
+        return einsum("rb, bio, rni -> no", self.base_weights, self.bases, x)
 
 
 def _make_dim_divisible(dim: int, divisor: int, name: str) -> int:
@@ -348,9 +347,9 @@ class BlockDecomposition(Decomposition):
         # (n, di) -> (n, nb, bsi)
         x = x.view(x.shape[0], self.num_blocks, self.input_block_size)
         # (n, nb, bsi), (R, nb, bsi, bso) -> (R, n, nb, bso)
-        x = torch.einsum("nbi, rbio -> rnbo", x, self.blocks)
+        x = einsum("nbi, rbio -> rnbo", x, self.blocks)
         # (R, n, nb, bso) -> (R * n, do)
-        # TODO: can we change the dimension order to make this contiguous?
+        # note: depending on the contracting order, the output may supporting viewing, or not
         x = x.reshape(-1, self.num_blocks * self.output_block_size)
         # (n, R * n), (R * n, do) -> (n, do)
         x = torch.sparse.mm(adj, x)
@@ -366,9 +365,10 @@ class BlockDecomposition(Decomposition):
         # (R * n, di) -> (R, n, nb, bsi)
         x = x.view(self.num_relations, -1, self.num_blocks, self.input_block_size)
         # (R, nb, bsi, bso), (R, n, nb, bsi) -> (n, nb, bso)
-        x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x)
+        x = einsum("rbio, rnbi -> nbo", self.blocks, x)
         # (n, nb, bso) -> (n, do)
-        x = x.view(x.shape[0], self.num_blocks * self.output_block_size)
+        # note: depending on the contracting order, the output may supporting viewing, or not
+        x = x.reshape(x.shape[0], self.num_blocks * self.output_block_size)
         # remove padding if necessary
         return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
 
@@ -592,17 +592,21 @@ class RGCNRepresentation(Representation):
         # has to be imported now to avoid cyclic imports
         from . import representation_resolver
 
-        base_embeddings = representation_resolver.make(
+        base = representation_resolver.make(
             entity_representations,
             max_id=triples_factory.num_entities,
             pos_kwargs=entity_representations_kwargs,
         )
-        if len(base_embeddings.shape) > 1:
+        if len(base.shape) > 1:
             raise ValueError(f"{self.__class__.__name__} requires vector base entity representations.")
-        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape, **kwargs)
+        max_id = max_id or triples_factory.num_entities
+        if max_id != base.max_id:
+            raise ValueError(f"Inconsistent max_id={max_id} vs. base.max_id={base.max_id}")
+        shape = ShapeError.verify(shape=base.shape, reference=shape)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # has to be assigned after call to nn.Module init
-        self.entity_embeddings = base_embeddings
+        self.entity_embeddings = base
 
         # Resolve edge weighting
         self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
@@ -617,7 +621,7 @@ class RGCNRepresentation(Representation):
         self.register_buffer("targets", t)
         self.register_buffer("edge_types", r)
 
-        dim = base_embeddings.shape[0]
+        dim = base.shape[0]
         self.layers = nn.ModuleList(
             RGCNLayer(
                 input_dim=dim,

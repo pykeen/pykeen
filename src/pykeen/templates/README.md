@@ -45,24 +45,24 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-{{ n_datasets }}">Datasets</a> •
+  <a href="#datasets">Datasets ({{ n_datasets }})</a> •
   <a href="#inductive-datasets">Inductive Datasets ({{ n_inductive_datasets }})</a> •
-  <a href="#models-{{ n_models }}">Models</a> •
+  <a href="#models">Models ({{ n_models }})</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
 
 ## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-The latest stable version of PyKEEN can be downloaded and installed from
-[PyPI](https://pypi.org/project/pykeen) with:
+The latest stable version of PyKEEN requires Python 3.8+. It can be downloaded
+and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
 $ pip install pykeen
 ```
 
 The latest version of PyKEEN can be installed directly from the
-source on [GitHub](https://github.com/pykeen/pykeen) with:
+source code on [GitHub](https://github.com/pykeen/pykeen) with:
 
 ```shell
 $ pip install git+https://github.com/pykeen/pykeen.git
@@ -110,9 +110,9 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets ({{ n_datasets }})
+### Datasets 
 
-The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
+The following {{ n_datasets }} datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
 or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
 see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
@@ -123,43 +123,61 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 ### Inductive Datasets
 
-The following inductive datasets are built in to PyKEEN.
+The following {{ n_inductive_datasets }} inductive datasets are built in to PyKEEN.
 
 {{ inductive_datasets }}
 
-### Models ({{ n_models }})
+### Models
+
+The following {{ n_models }} models are implemented by PyKEEN.
 
 {{ models }}
 
-### Losses ({{ n_losses }})
+### Losses
+
+The following {{ n_losses }} losses are implemented by PyKEEN.
 
 {{ losses }}
 
-### Regularizers ({{ n_regularizers }})
+### Regularizers
+
+The following {{ n_regularizers }} regularizers are implemented by PyKEEN.
 
 {{ regularizers }}
 
-### Training Loops ({{ n_training_loops }})
+### Training Loops
+
+The following {{ n_training_loops }} training loops are implemented in PyKEEN.
 
 {{ training_loops }}
 
-### Negative Samplers ({{ n_negative_samplers }})
+### Negative Samplers
+
+The following {{ n_negative_samplers }} negative samplers are implemented in PyKEEN.
 
 {{ negative_samplers }}
 
-### Stoppers ({{ n_stoppers }})
+### Stoppers
+
+The following {{ n_stoppers }} stoppers are implemented in PyKEEN.
 
 {{ stoppers }}
 
-### Evaluators ({{ n_evaluators }})
+### Evaluators
+
+The following {{ n_evaluators }} evaluators are implemented in PyKEEN.
 
 {{ evaluators }}
 
-### Metrics ({{ n_metrics }})
+### Metrics
+
+The following {{ n_metrics }} metrics are implemented in PyKEEN.
 
 {{ metrics }}
 
-### Trackers ({{ n_trackers }})
+### Trackers
+
+The following {{ n_trackers }} trackers are implemented in PyKEEN.
 
 {{ trackers }}
 
@@ -209,6 +227,9 @@ at https://github.com/pykeen/benchmarking.
 
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated.
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
+
+If you have questions, please use the GitHub discussions feature at
+https://github.com/pykeen/pykeen/discussions/new.
 
 ## Acknowledgements
 

@@ -43,12 +43,12 @@ example:
     entity_ids = torch.as_tensor(triples_factory.entities_to_ids(["china", "egypt"]))
 
 Similarly, we can map a triples factory's relations to identifiers
-using :data:`TriplesFactory.relation_to_ids` like in the following
+using :data:`TriplesFactory.relations_to_ids` like in the following
 example:
 
 .. code-block:: python
 
-    relation_ids = torch.as_tensor(triples_factory.relation_to_ids(["independence", "embassy"]))
+    relation_ids = torch.as_tensor(triples_factory.relations_to_ids(["independence", "embassy"]))
 
 .. warning::
 
@@ -264,3 +264,13 @@ tenth epoch
 
 For further information about different result trackers, take a look at the section
 on :ref:`trackers`.
+
+Next Steps
+----------
+The first steps tutorial taught you how to train and use a model for some of the
+most common tasks. There are several other topic-specific tutorials in the section
+of the documentation. You might also want to jump ahead to the :ref:`troubleshooting`
+section in case you're having trouble, or look through
+`questions <https://github.com/pykeen/pykeen/issues?q=is%3Aissue+is%3Aopen+label%3Aquestion>`_
+and `discussions <https://github.com/pykeen/pykeen/discussions>`_ that others have posted
+on GitHub.

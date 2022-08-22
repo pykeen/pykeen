@@ -17,9 +17,9 @@ from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
 
 from .base import EADataset
-from ...constants import PYKEEN_DATASETS_MODULE
+from ...constants import COLUMN_LABELS, PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
-from ...typing import EA_SIDE_LEFT, EA_SIDES, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, EASide
+from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide
 
 __all__ = [
     "OpenEA",
@@ -40,7 +40,7 @@ GRAPH_PAIRS: Tuple[GraphPair, ...] = (D_W, D_Y, EN_DE, EN_FR)
 # graph sizes
 GraphSize = Literal["15K", "100K"]
 SIZE_15K: GraphSize = "15K"
-SIZE_100K: GraphSize = "15K"
+SIZE_100K: GraphSize = "100K"
 GRAPH_SIZES = (SIZE_15K, SIZE_100K)
 
 # graph versions
@@ -131,7 +131,7 @@ class OpenEA(EADataset):
                 path=self.zip_path,
                 inner_path=str(self.inner_path.joinpath(file_name)),
                 header=None,
-                names=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+                names=COLUMN_LABELS,
                 sep="\t",
                 encoding="utf8",
                 dtype=str,

@@ -198,7 +198,12 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+        self,
+        hr_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        tails: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -211,14 +216,21 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
+        :param tails: shape: (num_tails,) | (batch_size, num_tails)
+            tail entity indices to score against. If `None`, scores against all entities (from the given mode).
 
-        :return: shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_tails), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
 
     @abstractmethod
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+        self,
+        ht_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        relations: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -231,6 +243,8 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
+        :param relations: shape: (num_relations,) | (batch_size, num_relations)
+            relation indices to score against. If None, scores against all relations (from the given mode).
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
@@ -240,7 +254,12 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+        self,
+        rt_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        heads: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -253,8 +272,10 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
+        :param heads: shape: (num_heads,) | (batch_size, num_heads)
+            head entity indices to score against. If None, scores against all entities (from the given mode).
 
-        :return: shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_heads), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
 
@@ -295,142 +316,18 @@ class Model(nn.Module, ABC):
         """
         self.load_state_dict(torch.load(path, map_location=self.device))
 
-    """Extended scoring methods"""
+    """Prediction methods"""
 
-    def _prepare_batch(
-        self,
-        batch: Optional[torch.LongTensor],
-        index_relation: int,
-        invert_relation: bool,
-    ) -> torch.LongTensor:
-        if invert_relation and not self.use_inverse_relations:
-            raise ValueError("Can only invert relations if use_inverse_relations is set to True")
-
-        # TODO: with the current default inversion, we have to materialize the relation IDs
-        if self.use_inverse_relations and batch is None:
-            batch = torch.arange(self.num_relations, device=self.device)
-
-        if batch is None:
-            return None
-
+    def _prepare_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
         # send to device
         batch = batch.to(self.device)
 
-        # map relation
-        return self.relation_inverter.map(batch=batch, index=index_relation, invert=invert_relation)
+        # special handling of inverse relations
+        if not self.use_inverse_triples:
+            return batch
 
-    def score_hrt_extended(
-        self,
-        hrt_batch: torch.LongTensor,
-        invert_relation: bool = False,
-        **kwargs,
-    ) -> torch.FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail of each triple and calculates the corresponding score.
-
-        :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-        :param invert_relation:
-            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`score_hrt`.
-
-        :return: shape: (batch_size, 1), dtype: float
-            The score for each triple.
-        """
-        return self.score_hrt(
-            hrt_batch=self._prepare_batch(
-                batch=hrt_batch,
-                index_relation=1,
-                invert_relation=invert_relation,
-            ),
-            **kwargs,
-        )
-
-    def score_h_extended(
-        self,
-        rt_batch: torch.LongTensor,
-        invert_relation: bool = False,
-        **kwargs,
-    ) -> torch.FloatTensor:
-        """Forward pass using left side (head) prediction.
-
-        This method calculates the score for all possible heads for each (relation, tail) pair.
-
-        :param rt_batch: shape: (batch_size, 2), dtype: long
-            The indices of (relation, tail) pairs.
-        :param invert_relation:
-            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`score_h`.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each r-t pair, the scores for all possible heads.
-        """
-        return self.score_h(
-            rt_batch=self._prepare_batch(
-                batch=rt_batch,
-                index_relation=0,
-                invert_relation=invert_relation,
-            ),
-            **kwargs,
-        )
-
-    def score_r_extended(
-        self,
-        ht_batch: torch.LongTensor,
-        invert_relation: bool = False,
-        **kwargs,
-    ) -> torch.FloatTensor:
-        """Forward pass using middle (relation) prediction.
-
-        This method calculates the score for all possible relations for each (head, tail) pair.
-
-        :param ht_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, tail) pairs.
-        :param invert_relation:
-            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`score_r`.
-
-        :return: shape: (batch_size, num_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
-        """
-        if invert_relation:
-            raise NotImplementedError
-        return self.score_r(ht_batch=ht_batch, **kwargs)
-
-    def score_t_extended(
-        self,
-        hr_batch: torch.LongTensor,
-        invert_relation: bool = False,
-        **kwargs,
-    ) -> torch.FloatTensor:
-        """Forward pass using right side (tail) prediction.
-
-        This method calculates the score for all possible tails for each (head, relation) pair.
-
-        :param hr_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, relation) pairs.
-        :param invert_relation:
-            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`score_t`.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each h-r pair, the scores for all possible tails.
-        """
-        return self.score_t(
-            hr_batch=self._prepare_batch(
-                batch=hr_batch,
-                index_relation=1,
-                invert_relation=invert_relation,
-            ),
-            **kwargs,
-        )
-
-    """Prediction methods"""
+        # when trained on inverse relations, the internal relation ID is twice the original relation ID
+        return relation_inverter.map(batch=batch, index=index_relation, invert=False)
 
     def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -454,7 +351,9 @@ class Model(nn.Module, ABC):
         return scores
 
     def predict_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
+        self,
+        rt_batch: torch.LongTensor,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -470,21 +369,17 @@ class Model(nn.Module, ABC):
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
             The indices of (relation, tail) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-        :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Model.score_h`
 
-        :return: shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_heads), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
         if self.use_inverse_relations:
-            scores = self.score_t_extended(
-                hr_batch=rt_batch.flip(1), slice_size=slice_size, mode=mode, invert_relation=True
-            )
+            scores = self.score_t_extended(hr_batch=rt_batch.flip(1), invert_relation=True, **kwargs)
         else:
-            scores = self.score_h_extended(rt_batch=rt_batch, slice_size=slice_size, mode=mode)
+            scores = self.score_h_extended(rt_batch=rt_batch, **kwargs)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -492,9 +387,7 @@ class Model(nn.Module, ABC):
     def predict_t(
         self,
         hr_batch: torch.LongTensor,
-        *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
@@ -504,12 +397,10 @@ class Model(nn.Module, ABC):
 
         :param hr_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, relation) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-        :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Model.score_t`
 
-        :return: shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_tails), dtype: float
             For each h-r pair, the scores for all possible tails.
 
         .. note::
@@ -530,9 +421,7 @@ class Model(nn.Module, ABC):
     def predict_r(
         self,
         ht_batch: torch.LongTensor,
-        *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
@@ -542,12 +431,10 @@ class Model(nn.Module, ABC):
 
         :param ht_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-        :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Model.score_r`
 
-        :return: shape: (batch_size, num_real_relations), dtype: float
+        :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
         self.eval()  # Enforce evaluation mode
@@ -560,19 +447,44 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode],
+        full_batch: bool = True,
+        ids: Optional[torch.LongTensor] = None,
+        **kwargs,
     ) -> torch.FloatTensor:
-        """Predict scores for the given target."""
+        """
+        Predict scores for the given target.
+
+        :param hrt_batch: shape: (batch_size, 3) or (batch_size, 2)
+            the full batch, or the relevant part of it
+        :param target:
+            the target to predict
+        :param full_batch:
+            whether `hrt_batch` is the full batch, or only the "input" part of the target prediction method
+        :param ids:
+            restrict prediction to only those ids
+        :param kwargs:
+            additional keyword-based parameters passed to the specific target prediction method.
+
+        :raises ValueError:
+            if the target is invalid
+
+        :return: shape: (batch_size, num)
+            the scores
+        """
         if target == LABEL_TAIL:
-            return self.predict_t(hrt_batch[:, 0:2], slice_size=slice_size, mode=mode)
+            if full_batch:
+                hrt_batch = hrt_batch[:, 0:2]
+            return self.predict_t(hrt_batch, **kwargs, tails=ids)
 
         if target == LABEL_RELATION:
-            return self.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size, mode=mode)
+            if full_batch:
+                hrt_batch = hrt_batch[:, 0::2]
+            return self.predict_r(hrt_batch, **kwargs, relations=ids)
 
         if target == LABEL_HEAD:
-            return self.predict_h(hrt_batch[:, 1:3], slice_size=slice_size, mode=mode)
+            if full_batch:
+                hrt_batch = hrt_batch[:, 1:3]
+            return self.predict_h(hrt_batch, **kwargs, heads=ids)
 
         raise ValueError(f"Unknown target={target}")
 
@@ -600,6 +512,24 @@ class Model(nn.Module, ABC):
 
         warnings.warn("Use pykeen.models.predict.get_all_prediction_df", DeprecationWarning)
         return get_all_prediction_df(model=self, k=k, batch_size=batch_size, **kwargs)
+
+    def get_prediction_df(
+        self,
+        *args,
+        **kwargs,
+    ) -> Union[ScorePack, pd.DataFrame]:
+        """Get predictions for the head, relation, and/or tail combination.
+
+        :param args: Positional arguments to pass to :func:`pykeen.models.predict.get_prediction_df`.
+        :param kwargs: Keyword arguments to pass to :func:`pykeen.models.predict.get_prediction_df`.
+        :return: shape: (k, 3)
+            A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
+            or all possible triples if k is None
+        """
+        from .predict import get_prediction_df
+
+        warnings.warn("Use pykeen.models.predict.get_prediction_df", DeprecationWarning)
+        return get_prediction_df(self, *args, **kwargs)
 
     def get_head_prediction_df(
         self,
@@ -701,14 +631,10 @@ class Model(nn.Module, ABC):
         """
         return self.score_hrt_extended(hrt_batch=hrt_batch.flip(1), mode=mode, invert_relation=True)
 
-    def score_t_inverse(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
-    ):
+    def score_t_inverse(self, hr_batch: torch.LongTensor, *, tails: Optional[torch.LongTensor] = None, **kwargs):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
-        return self.score_h_extended(rt_batch=hr_batch.flip(1), slice_size=slice_size, mode=mode, invert_relation=True)
+        return self.score_h_extended(rt_batch=hr_batch.flip(1), heads=tails, invert_relation=True, **kwargs)
 
-    def score_h_inverse(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
-    ):
+    def score_h_inverse(self, rt_batch: torch.LongTensor, *, heads: Optional[torch.LongTensor] = None, **kwargs):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
-        return self.score_t_extended(hr_batch=rt_batch.flip(1), slice_size=slice_size, mode=mode, invert_relation=True)
+        return self.score_t_extended(hr_batch=rt_batch.flip(1), tails=heads, invert_relation=True, **kwargs)

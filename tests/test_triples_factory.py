@@ -6,10 +6,13 @@ import itertools as itt
 import os
 import tempfile
 import unittest
+from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Collection, Optional
+from typing import Collection, Optional, Tuple
+from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
@@ -19,6 +22,7 @@ from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import _map_triples_elements_to_ids
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
+from tests.utils import needs_packages
 
 triples = np.array(
     [
@@ -330,7 +334,7 @@ class TestLiterals(unittest.TestCase):
         relations_ids = t.relations_to_ids(relations=relations)
         self.assertEqual(v.metadata, dict(path=NATIONS_TRAIN_PATH, relation_restriction=relations_ids))
 
-        w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
+        w = t.clone_and_exchange_triples(t.mapped_triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
         self.assertEqual(w.metadata, dict())
 
@@ -411,6 +415,11 @@ class TestUtils(unittest.TestCase):
         tf1 = Nations().training.to_core_triples_factory()
         self.assert_binary_io(tf1, CoreTriplesFactory)
 
+    def test_core_binary_inverse_relations(self):
+        """Test binary i/o on core triples factory with inverse relations."""
+        tf1 = Nations(create_inverse_triples=True).training.to_core_triples_factory()
+        self.assert_binary_io(tf1, CoreTriplesFactory)
+
     def assert_binary_io(self, tf, tf_cls):
         """Check the triples factory can be written and reloaded properly."""
         self.assertIsInstance(tf, tf_cls)
@@ -431,8 +440,37 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(tf1.entity_labeling, tf2.entity_labeling)
             self.assertEqual(tf1.relation_labeling, tf2.relation_labeling)
         self.assertEqual(tf1.metadata, tf2.metadata)
+        self.assertEqual(tf1.num_entities, tf2.num_entities)
+        self.assertEqual(tf1.num_relations, tf2.num_relations)
         self.assertEqual(tf1.create_inverse_triples, tf2.create_inverse_triples)
         self.assertEqual(
             tf1.mapped_triples.detach().cpu().numpy().tolist(),
             tf2.mapped_triples.detach().cpu().numpy().tolist(),
+        )
+
+
+# cf. https://docs.pytest.org/en/7.1.x/example/parametrize.html#parametrizing-conditional-raising
+@pytest.mark.parametrize(
+    ["dtype", "size", "expectation"],
+    [
+        # wrong ndim
+        (torch.long, (3,), pytest.raises(ValueError)),
+        # wrong last dim
+        (torch.long, (3, 11), pytest.raises(ValueError)),
+        # wrong dtype: float
+        (torch.float, (11, 3), pytest.raises(TypeError)),
+        # wrong dtype: complex
+        (torch.cfloat, (11, 3), pytest.raises(TypeError)),
+        # correct
+        (torch.long, (11, 3), does_not_raise()),
+        (torch.long, (0, 3), does_not_raise()),
+        (torch.uint8, (11, 3), does_not_raise()),
+        (torch.bool, (11, 3), does_not_raise()),
+    ],
+)
+def test_core_triples_factory_error_handling(dtype: torch.dtype, size: Tuple[int, ...], expectation):
+    """Test error handling in init method of CoreTriplesFactory."""
+    with expectation:
+        CoreTriplesFactory(
+            mapped_triples=torch.randint(33, size=size).to(dtype=dtype), num_entities=..., num_relations=...
         )
