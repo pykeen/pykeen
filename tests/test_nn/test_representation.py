@@ -17,7 +17,7 @@ import pykeen.nn.vision
 from pykeen.datasets import get_dataset
 from tests import cases, constants, mocks
 
-from ..utils import needs_package
+from ..utils import needs_packages
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -236,7 +236,7 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
 
 
 @constants.skip_if_windows
-@needs_package("torchvision")
+@needs_packages("torchvision")
 class VisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for VisualRepresentation."""
 
@@ -256,7 +256,7 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
 
 
 @constants.skip_if_windows
-@needs_package("torchvision")
+@needs_packages("torchvision")
 class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for Wikidata visual representations."""
 
