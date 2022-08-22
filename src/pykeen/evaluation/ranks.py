@@ -3,7 +3,7 @@
 """Utility class for storing ranks."""
 
 from dataclasses import dataclass
-from typing import Iterable, Mapping, Tuple
+from typing import Iterable, Mapping, Optional, Tuple, Union
 
 import torch
 
@@ -94,4 +94,50 @@ class Ranks:
             pessimistic=pessimistic_rank,
             realistic=realistic_rank,
             number_of_options=number_of_options,
+        )
+
+
+@dataclass
+class RankBuilder:
+    """Incremental rank builder."""
+
+    #: the scores of the true choice, shape: (*bs), dtype: float
+    y_true: torch.Tensor
+
+    #: the number of scores which were larger than the true score, shape: (*bs), dtype: long
+    larger: Union[torch.Tensor, int] = 0
+
+    #: the number of scores which were not smaller than the true score, shape: (*bs), dtype: long
+    not_smaller: Union[torch.Tensor, int] = 0
+
+    #: the total number of compared scores, shape: (*bs), dtype: long
+    total: Union[torch.Tensor, int] = 0
+
+    def update(self, y_pred: torch.FloatTensor) -> "RankBuilder":
+        """Update the rank builder with a batch of scores.
+
+        :param y_pred: shape: (*bs, partial_num_choices)
+            the predicted scores, which are aligned to the batch of true scores
+
+        :return:
+            the updated rank builder
+        """
+        return RankBuilder(
+            y_true=self.y_true,
+            larger=self.larger + (y_pred > self.y_true).sum(dim=-1),
+            not_smaller=self.not_smaller + (y_pred >= self.y_true).sum(dim=-1),
+            total=self.total + torch.isfinite(y_pred).sum(dim=-1),
+        )
+
+    def compute(self) -> torch.Tensor:
+        """Calculate the ranks for the aggregated counts.
+
+        :return:
+            a rank object for different rank types
+        """
+        return Ranks(
+            optimistic=self.larger + 1,
+            pessimistic=self.not_smaller + 1,
+            realistic=0.5 * (self.larger + self.not_smaller).float(),
+            number_of_options=self.total,
         )
