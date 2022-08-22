@@ -234,6 +234,7 @@ class RankBasedEvaluator(Evaluator):
         metrics: Optional[Sequence[HintOrType[RankBasedMetric]]] = None,
         metrics_kwargs: OptionalKwargs = None,
         add_defaults: bool = True,
+        clear_on_finalize: bool = True,
         **kwargs,
     ):
         """Initialize rank-based evaluator.
@@ -247,7 +248,14 @@ class RankBasedEvaluator(Evaluator):
             additional keyword parameter
         :param add_defaults:
             whether to add all default metrics besides the ones specified by `metrics` / `metrics_kwargs`.
-        :param kwargs: Additional keyword arguments that are passed to the base class.
+        :param clear_on_finalize:
+            whether to clear buffers on `finalize` call
+
+            .. warning ::
+                disabling this option may lead to memory leaks and incorrect results when used from the pipeline
+
+        :param kwargs:
+            Additional keyword arguments that are passed to the base class.
         """
         super().__init__(
             filtered=filtered,
@@ -270,6 +278,7 @@ class RankBasedEvaluator(Evaluator):
         self.ranks = defaultdict(list)
         self.num_candidates = defaultdict(list)
         self.num_entities = None
+        self.clear_on_finalize = clear_on_finalize
 
     # docstr-coverage: inherited
     def process_scores_(
@@ -300,6 +309,9 @@ class RankBasedEvaluator(Evaluator):
             metrics=self.metrics,
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates),
         )
+        if not self.clear_on_finalize:
+            return result
+
         # Clear buffers
         self.ranks.clear()
         self.num_candidates.clear()
