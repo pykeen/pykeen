@@ -172,7 +172,7 @@ class Evaluator(ABC):
             logger.warning(f"Ignoring provided mode={mode}, and use the evaluator's mode={self.mode} instead")
         kwargs["mode"] = self.mode
         loop = LCWAEvaluationLoop(model=model, **kwargs)
-        return loop.evaluate(batch_size=batch_size, use_tqdm=use_tqdm, tqdm_kwargs=tqdm_kwargs)
+        return loop.evaluate(batch_size=batch_size, slice_size=slice_size, use_tqdm=use_tqdm, tqdm_kwargs=tqdm_kwargs)
 
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int, entities: bool, relations: bool) -> None:

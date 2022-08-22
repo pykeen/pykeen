@@ -54,8 +54,9 @@ evaluation_batch_size_maximizer = MemoryUtilizationMaximizer(hasher=_hasher)
 def _evaluate(
     loop: "EvaluationLoop",
     batch_size: int,
-    use_tqdm: bool,
-    tqdm_kwargs: OptionalKwargs,
+    use_tqdm: bool = False,
+    tqdm_kwargs: OptionalKwargs = None,
+    slice_size: Optional[int] = None,
     **kwargs,
 ) -> MetricResults:
     """
@@ -90,10 +91,18 @@ def _evaluate(
         disable=not use_tqdm,
         **(tqdm_kwargs or {}),
     )
-    # TODO: slicing
     for batch in loader:
-        loop.process_batch(batch=batch)
+        loop.process_batch(batch=batch, slice_size=slice_size)
     return loop.evaluator.finalize()
+
+
+#: the MemoryUtilizationMaximizer instance for :func:`_evaluate`.
+evaluation_slice_size_maximizer = MemoryUtilizationMaximizer(hasher=_hasher, parameter_name="slice_size")
+
+
+@evaluation_slice_size_maximizer
+def _evaluate_sliced(slice_size: int, **kwargs) -> MetricResults:
+    return _evaluate(slice_size=slice_size, **kwargs)
 
 
 class EvaluationLoop(Generic[BatchType]):
@@ -120,7 +129,7 @@ class EvaluationLoop(Generic[BatchType]):
         self.dataset = dataset
 
     @abstractmethod
-    def process_batch(self, batch: BatchType) -> None:
+    def process_batch(self, batch: BatchType, slice_size: Optional[int] = None) -> None:
         """
         Process a single batch.
 
@@ -161,6 +170,7 @@ class EvaluationLoop(Generic[BatchType]):
         self,
         # batch
         batch_size: Optional[int] = None,
+        slice_size: Optional[int] = None,
         # tqdm
         use_tqdm: bool = True,
         tqdm_kwargs: OptionalKwargs = None,
@@ -193,14 +203,17 @@ class EvaluationLoop(Generic[BatchType]):
                 batch_size = len(self.dataset)
         # set model to evaluation mode
         self.model.eval()
-        # delegate to AMO wrapper
-        return _evaluate(
-            loop=self,
-            batch_size=batch_size,
-            use_tqdm=use_tqdm,
-            tqdm_kwargs=tqdm_kwargs,
-            **kwargs,
-        )
+        # try without slicing
+        try:
+            # delegate to AMO wrapper
+            return _evaluate(loop=self, batch_size=batch_size, use_tqdm=use_tqdm, tqdm_kwargs=tqdm_kwargs, **kwargs)
+        except MemoryError:
+            if not slice_size:
+                slice_size = max(self.model.num_entities, self.model.num_real_relations)
+            # delegate to AMO wrapper
+            return _evaluate_sliced(
+                loop=self, slice_size=slice_size, use_tqdm=use_tqdm, tqdm_kwargs=tqdm_kwargs, **kwargs
+            )
 
 
 @dataclasses.dataclass
@@ -470,14 +483,16 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         return LCWAEvaluationDataset.collate
 
     # docstr-coverage: inherited
-    def process_batch(self, batch: Mapping[Target, MappedTriples]) -> None:  # noqa: D102
+    def process_batch(
+        self, batch: Mapping[Target, MappedTriples], slice_size: Optional[int] = None
+    ) -> None:  # noqa: D102
         # note: most of the time, this loop will only make a single iteration, since the evaluation dataset typically is
         #       not shuffled, and contains evaluation ranking tasks sorted by target
         for target, (hrt_batch, filter_batch) in batch.items():
             # TODO: in theory, we could make a single score calculation for e.g.,
             # {(h, r, t1), (h, r, t1), ..., (h, r, tk)}
             # predict scores for all candidates
-            scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode)
+            scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode, slice_size=slice_size)
             true_scores = dense_positive_mask = None
 
             # filter scores
