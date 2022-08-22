@@ -350,7 +350,6 @@ class RankBasedEvaluator(Evaluator):
 
             def resample(
                 entry: Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]],
-                generator=generator,
             ) -> Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]:
                 """Resample ranks.
 
@@ -362,6 +361,7 @@ class RankBasedEvaluator(Evaluator):
                 :return:
                     a re-sampled pack
                 """
+                nonlocal generator
                 target, rank_type, ranks, candidates, weights = entry
                 n = len(ranks)
                 ids = generator.integers(n, size=(n,))
