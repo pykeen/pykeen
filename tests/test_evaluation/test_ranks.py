@@ -1,8 +1,10 @@
 """Test for ranks."""
 from typing import Sequence
-import pykeen.evaluation.ranks
+
 import pytest
 import torch
+
+import pykeen.evaluation.ranks
 
 
 @pytest.mark.parametrize(

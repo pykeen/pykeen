@@ -3,7 +3,7 @@
 """Utility class for storing ranks."""
 
 from dataclasses import dataclass
-from typing import Iterable, Mapping, Optional, Tuple, Union
+from typing import Iterable, Mapping, Tuple, Union
 
 import torch
 
@@ -11,6 +11,7 @@ from ..typing import RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC, RankType
 
 __all__ = [
     "Ranks",
+    "RankBuilder",
 ]
 
 
@@ -111,7 +112,9 @@ class RankBuilder:
 
     We start by initializing the builder with a (batch of) true score(s)
 
-    >>> builder = RankBuilder(y_true=torch.as_tensor([1.0, 2.0]))
+    >>> import torch
+    >>> from pykeen.evaluation.ranks import RankBuilder
+    >>> builder = RankBuilder(y_true=torch.as_tensor([0.2, 0.1]))
 
     Now, we iterate over batches of scores, e.g., `2 * 15` scores at once. Note that all but the last dimension have
     to match the shape of `y_true`. Also notice that the operation does *not* work in-place, but rather returns an
@@ -163,9 +166,10 @@ class RankBuilder:
         :return:
             a rank object for different rank types
         """
-        return Ranks(
-            optimistic=self.larger + 1,
-            pessimistic=self.not_smaller + 1,
-            realistic=0.5 * (self.larger + self.not_smaller).float(),
-            number_of_options=self.total,
-        )
+        optimistic = self.larger + 1
+        pessimistic = self.not_smaller + 1
+        realistic = optimistic + pessimistic
+        if isinstance(realistic, torch.Tensor):
+            realistic = realistic.float()
+        realistic = 0.5 * realistic
+        return Ranks(optimistic=optimistic, pessimistic=pessimistic, realistic=realistic, number_of_options=self.total)
