@@ -3,7 +3,6 @@
 """Test the evaluators."""
 
 import itertools
-import logging
 import unittest
 from operator import itemgetter
 from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union

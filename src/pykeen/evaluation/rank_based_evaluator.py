@@ -346,16 +346,18 @@ class RankBasedEvaluator(Evaluator):
         result: DefaultDict[str, List[float]] = defaultdict(list)
 
         for i in range(num):
-            ranks_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
             generator = numpy.random.default_rng(seed=seed + i)
 
             def resample(
-                entry: Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]
+                entry: Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]],
+                generator=generator,
             ) -> Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]:
-                """Resample ranks
+                """Resample ranks.
 
                 :param entry:
                     the rank-pack
+                :param generator:
+                    the random number generator instance
 
                 :return:
                     a re-sampled pack
@@ -366,7 +368,8 @@ class RankBasedEvaluator(Evaluator):
                 return target, rank_type, ranks[ids], candidates[ids], None if weights is None else weights[ids]
 
             single_result = RankBasedMetricResults.from_ranks(
-                metrics=self.metrics, rank_and_candidates=map(resample, ranks_and_candidates)
+                metrics=self.metrics,
+                rank_and_candidates=map(resample, _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)),
             )
             for k, v in single_result.to_flat_dict().items():
                 result[k].append(v)
@@ -382,7 +385,7 @@ class RankBasedEvaluator(Evaluator):
         """Finalize result with confidence estimation via bootstrapping.
 
         Example
-
+        -------
         Start by training a model (here, only for a one epochs)
 
         >>> from pykeen.pipeline import pipeline
@@ -419,6 +422,28 @@ class RankBasedEvaluator(Evaluator):
         }
 
 
+def _resolve_estimator(estimator: Union[str, Callable[[Sequence[float]], float]]) -> Callable[[Sequence[float]], float]:
+    if callable(estimator):
+        return estimator
+    return getattr(np, estimator)
+
+
+def _resolve_confidence(ci: Union[int, str, Callable[[Sequence[float]], float]]) -> Callable[[Sequence[float]], float]:
+    if callable(ci):
+        return ci
+    if isinstance(ci, (int, float)):
+        if ci < 0 or ci > 100:
+            raise ValueError(f"Invalid CI value: {ci}. Must be in [0, 100].")
+        ci_half = ci / 2.0
+
+        def ipr(vs: Sequence[float]) -> float:
+            """Return the inter-percentile range."""
+            return np.diff(np.percentile(vs, q=[ci_half, 100 - ci_half])).item()
+
+        return ipr
+    return getattr(np, ci)
+
+
 def summarize_values(
     vs: Sequence[float],
     estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
@@ -435,26 +460,9 @@ def summarize_values(
 
     :return:
         a tuple estimates of central tendency and confidence
-
-    :raises ValueError:
-        if the confidence interval is numeric and outside of [0, 100].
     """
-    if isinstance(estimator, str):
-        estimator = getattr(np, estimator)
-
-    if isinstance(ci, str):
-        ci = getattr(np, ci)
-    elif isinstance(ci, (int, float)):
-        if ci < 0 or ci > 100:
-            raise ValueError(f"Invalid CI value: {ci}. Must be in [0, 100].")
-        ci_half = ci / 2.0
-
-        def ipr(vs: Sequence[float]) -> float:
-            """Return the inter-percentile range."""
-            return np.diff(np.percentile(vs, q=[ci_half, 100 - ci_half])).item()
-
-        ci = ipr
-
+    estimator = _resolve_estimator(estimator=estimator)
+    ci = _resolve_confidence(ci=ci)
     return estimator(vs), ci(vs)
 
 
