@@ -374,12 +374,32 @@ class RankBasedEvaluator(Evaluator):
 
     def finalize_with_confidence(
         self,
-        estimator: np.median,
+        estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
         ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
         n_boot: int = 1_000,
         seed: int = 42,
     ) -> Mapping[str, Tuple[float, float]]:
         """Finalize result with confidence estimation via bootstrapping.
+
+        Example
+
+        Start by training a model (here, only for a one epochs)
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(dataset="nations", model="rotate", training_kwargs=dict(num_epochs=1))
+
+        Create an evaluator with `clear_on_finalize` set to `False`, e.g., via
+
+        >>> from pykeen.evaluation import evaluator_resolver
+        >>> evaluator = evaluator_resolver.make("rankbased", clear_on_finalize=False)
+
+        Evaluate *once*, this time ignoring the result
+
+        >>> evaluator.evaluate(model=result.model, mapped_triples=result.training.mapped_triples)
+
+        Now, call `finalize_with_confidence` to obtain estimates for metrics together with confidence intervals
+
+        >>> evaluator.finalize_with_confidence(n_boot=10)
 
         :param estimator:
             the estimator of central tendency.
@@ -431,7 +451,7 @@ def summarize_values(
 
         def ipr(vs: Sequence[float]) -> float:
             """Return the inter-percentile range."""
-            return np.diff(np.percentile(vs, q=[100 - ci_half, ci_half])).item()
+            return np.diff(np.percentile(vs, q=[ci_half, 100 - ci_half])).item()
 
         ci = ipr
 
