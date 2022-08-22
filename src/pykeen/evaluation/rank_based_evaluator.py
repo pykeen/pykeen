@@ -7,7 +7,20 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import (
+    DefaultDict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import numpy.random
@@ -316,6 +329,46 @@ class RankBasedEvaluator(Evaluator):
         self.ranks.clear()
         self.num_candidates.clear()
 
+        return result
+
+    def finalize_multi(self, num: int = 1_000, seed: int = 42) -> Mapping[str, Sequence[float]]:
+        """Bootstrap from :meth:`finalize`.
+
+        :param num:
+            the number of resampling steps
+        :param seed:
+            the random seed.
+
+        :return:
+            a flat dictionary from metrics to list of values
+        """
+        result: DefaultDict[str, List[float]] = defaultdict(list)
+
+        for i in range(num):
+            ranks_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
+            generator = numpy.random.default_rng(seed=seed + i)
+
+            def resample(
+                entry: Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]
+            ) -> Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]:
+                """Resample ranks
+
+                :param entry:
+                    the rank-pack
+
+                :return:
+                    a re-sampled pack
+                """
+                target, rank_type, ranks, candidates, weights = entry
+                n = len(ranks)
+                ids = generator.integers(n, size=(n,))
+                return target, rank_type, ranks[ids], candidates[ids], None if weights is None else weights[ids]
+
+            single_result = RankBasedMetricResults.from_ranks(
+                metrics=self.metrics, rank_and_candidates=map(resample, ranks_and_candidates)
+            )
+            for k, v in single_result.to_flat_dict().items():
+                result[k].append(v)
         return result
 
 

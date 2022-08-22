@@ -82,6 +82,19 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
             self.assertIsInstance(metric, str)
             self.assertIsInstance(value, (float, int))
 
+    def test_finalize_multi(self) -> None:
+        """Test multi finalize."""
+        self._process_batches()
+        assert isinstance(self.instance, RankBasedEvaluator)
+        num = 3
+        result = self.instance.finalize_multi(num=num)
+        # check type
+        assert isinstance(result, dict)
+        assert all(isinstance(k, str) for k in result.keys())
+        assert all(isinstance(v, list) for v in result.values())
+        # check length
+        assert all(len(v) == num for v in result.values())
+
 
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
