@@ -2,6 +2,7 @@
 
 """Implementation of ranked based evaluator."""
 
+import functools
 import itertools
 import logging
 import math
@@ -78,6 +79,20 @@ class RankPack(NamedTuple):
     ranks: np.ndarray
     num_candidates: np.ndarray
     weights: Optional[np.ndarray]
+
+    def resample(self, seed: Optional[int]) -> "RankPack":
+        """Resample rank pack."""
+        generator = np.random.default_rng(seed=seed)
+        n = len(self.ranks)
+        ids = generator.integers(n, size=(n,))
+        weights = None if self.weights is None else self.weights[ids]
+        return RankPack(
+            target=self.target,
+            rank_type=self.rank_type,
+            ranks=self.ranks[ids],
+            num_candidates=self.num_candidates[ids],
+            weights=weights,
+        )
 
 
 def _iter_ranks(
@@ -359,30 +374,10 @@ class RankBasedEvaluator(Evaluator):
         result: DefaultDict[str, List[float]] = defaultdict(list)
 
         for i in range(num):
-            generator = numpy.random.default_rng(seed=seed + i)
-
-            def resample(entry: RankPack) -> RankPack:
-                """Resample ranks.
-
-                :param entry:
-                    the rank-pack
-                :param generator:
-                    the random number generator instance
-
-                :return:
-                    a re-sampled pack
-                """
-                nonlocal generator
-                target, rank_type, ranks, candidates, weights = entry
-                n = len(ranks)
-                ids = generator.integers(n, size=(n,))
-                return RankPack(
-                    target, rank_type, ranks[ids], candidates[ids], None if weights is None else weights[ids]
-                )
-
+            rank_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
+            rank_and_candidates = map(functools.partial(RankPack.resample, seed=seed + i), rank_and_candidates)
             single_result = RankBasedMetricResults.from_ranks(
-                metrics=self.metrics,
-                rank_and_candidates=itertools.starmap(resample, (self.ranks, self.num_candidates)),
+                metrics=self.metrics, rank_and_candidates=rank_and_candidates
             )
             for k, v in single_result.to_flat_dict().items():
                 result[k].append(v)
