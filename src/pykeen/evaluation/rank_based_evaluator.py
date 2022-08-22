@@ -14,6 +14,7 @@ from typing import (
     List,
     Mapping,
     MutableMapping,
+    NamedTuple,
     Optional,
     Sequence,
     Tuple,
@@ -69,11 +70,21 @@ def _flatten(nested: Mapping[K, Sequence[np.ndarray]]) -> Mapping[K, np.ndarray]
     return {key: np.concatenate(value) for key, value in nested.items()}
 
 
+class RankPack(NamedTuple):
+    """A pack of ranks for aggregation."""
+
+    target: ExtendedTarget
+    rank_type: RankType
+    ranks: np.ndarray
+    num_candidates: np.ndarray
+    weights: Optional[np.ndarray]
+
+
 def _iter_ranks(
     ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
     weights: Optional[Mapping[Target, Sequence[np.ndarray]]] = None,
-) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]]:
+) -> Iterable[RankPack]:
     # terminate early if there are no ranks
     if not ranks:
         logger.debug("Empty ranks. This should only happen during size probing.")
@@ -91,13 +102,15 @@ def _iter_ranks(
     for rank_type in RANK_TYPES:
         # individual side
         for side in sides:
-            yield side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side], weights_flat.get(side)
+            yield RankPack(
+                side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side], weights_flat.get(side)
+            )
 
         # combined
         c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in sides])
         c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
         c_weights = None if weights is None else np.concatenate([weights_flat[side] for side in sides])
-        yield SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights
+        yield RankPack(SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights)
 
 
 class RankBasedMetricResults(MetricResults):
@@ -111,15 +124,15 @@ class RankBasedMetricResults(MetricResults):
     def from_ranks(
         cls,
         metrics: Iterable[RankBasedMetric],
-        rank_and_candidates: Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]],
+        rank_and_candidates: Iterable[RankPack],
     ) -> "RankBasedMetricResults":
         """Create rank-based metric results from the given rank/candidate sets."""
         return cls(
             data={
-                (metric.key, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates, weights=weights)
-                for metric, (target, rank_type, ranks, num_candidates, weights) in itertools.product(
-                    metrics, rank_and_candidates
+                (metric.key, pack.target, pack.rank_type): metric(
+                    ranks=pack.ranks, num_candidates=pack.num_candidates, weights=pack.weights
                 )
+                for metric, pack in itertools.product(metrics, rank_and_candidates)
             }
         )
 
@@ -348,9 +361,7 @@ class RankBasedEvaluator(Evaluator):
         for i in range(num):
             generator = numpy.random.default_rng(seed=seed + i)
 
-            def resample(
-                entry: Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]],
-            ) -> Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]:
+            def resample(entry: RankPack) -> RankPack:
                 """Resample ranks.
 
                 :param entry:
@@ -365,7 +376,9 @@ class RankBasedEvaluator(Evaluator):
                 target, rank_type, ranks, candidates, weights = entry
                 n = len(ranks)
                 ids = generator.integers(n, size=(n,))
-                return target, rank_type, ranks[ids], candidates[ids], None if weights is None else weights[ids]
+                return RankPack(
+                    target, rank_type, ranks[ids], candidates[ids], None if weights is None else weights[ids]
+                )
 
             single_result = RankBasedMetricResults.from_ranks(
                 metrics=self.metrics,
