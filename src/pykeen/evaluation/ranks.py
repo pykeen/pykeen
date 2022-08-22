@@ -124,8 +124,8 @@ class RankBuilder:
         """
         return RankBuilder(
             y_true=self.y_true,
-            larger=self.larger + (y_pred > self.y_true).sum(dim=-1),
-            not_smaller=self.not_smaller + (y_pred >= self.y_true).sum(dim=-1),
+            larger=self.larger + (y_pred > self.y_true.unsqueeze(dim=-1)).sum(dim=-1),
+            not_smaller=self.not_smaller + (y_pred >= self.y_true.unsqueeze(dim=-1)).sum(dim=-1),
             total=self.total + torch.isfinite(y_pred).sum(dim=-1),
         )
 
