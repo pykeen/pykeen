@@ -20,8 +20,10 @@ from .evaluator import Evaluator, MetricResults, filter_scores_
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..models import Model
 from ..triples import CoreTriplesFactory
+from ..triples.triples_factory import restrict_triples
+from ..triples.utils import get_entities, get_relations
 from ..typing import LABEL_HEAD, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
-from ..utils import upgrade_to_sequence
+from ..utils import format_relative_comparison, upgrade_to_sequence
 
 logger = logging.getLogger(__name__)
 
@@ -414,6 +416,72 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         return result
 
 
+def maybe_restrict_triples(
+    mapped_triples: MappedTriples,
+    pre_filtered_triples: bool,
+    do_time_consuming_checks: bool,
+    restrict_entities_to: Optional[Collection[int]] = None,
+    restrict_relations_to: Optional[Collection[int]] = None,
+) -> MappedTriples:
+    """Select a subset of triples based on the given entity and relation ID selection.
+
+    :param mapped_triples:
+        The ID-based triples.
+    :param restrict_entities_to:
+        Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in a
+        part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking the
+        entities, we still compute all scores for all possible replacement entities to avoid irregular access patterns
+        which might decrease performance, but the scores will afterwards be filtered to only keep those of interest.
+        If provided, we assume by default that the triples are already filtered, such that it only contains the
+        entities of interest. To explicitly filter within this method, pass `pre_filtered_triples=False`.
+    :param restrict_relations_to:
+        Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested in a
+        part of the relations, e.g. due to relation types, but wants to train on all available data. If provided, we
+        assume by default that the triples are already filtered, such that it only contains the relations of interest.
+        To explicitly filter within this method, pass `pre_filtered_triples=False`.
+    :param do_time_consuming_checks:
+        Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
+        - If restrict_entities_to or restrict_relations_to is not None, check whether the triples have been filtered.
+        Disabling this option can accelerate the method. Only effective if pre_filtered_triples is set to True.
+    :param pre_filtered_triples:
+        Whether the triples have been pre-filtered to adhere to restrict_entities_to / restrict_relations_to. When set
+        to True, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the triples
+        accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
+
+    :return:
+        A tensor of triples containing the entities and relations of interest.
+    """
+    # verify that the triples have been filtered
+    if pre_filtered_triples and do_time_consuming_checks:
+        if restrict_entities_to is not None:
+            present_entity_ids = get_entities(triples=mapped_triples)
+            unwanted = present_entity_ids.difference(restrict_entities_to)
+            if len(unwanted) > 0:
+                raise ValueError(
+                    f"mapped_triples contains IDs of entities which are not contained in restrict_entities_to:"
+                    f"{unwanted}. This will invalidate the evaluation results.",
+                )
+        if restrict_relations_to is not None:
+            present_relation_ids = get_relations(triples=mapped_triples)
+            unwanted = present_relation_ids.difference(restrict_relations_to)
+            if len(unwanted):
+                raise ValueError(
+                    f"mapped_triples contains IDs of relations which are not contained in restrict_relations_to:"
+                    f"{unwanted}. This will invalidate the evaluation results.",
+                )
+
+    # Filter triples if necessary
+    if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
+        old_num_triples = mapped_triples.shape[0]
+        mapped_triples = restrict_triples(
+            mapped_triples=mapped_triples,
+            entities=restrict_entities_to,
+            relations=restrict_relations_to,
+        )
+        logger.info(f"keeping {format_relative_comparison(mapped_triples.shape[0], old_num_triples)} triples.")
+    return mapped_triples
+
+
 class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
     r"""
     Evaluation loop using 1:n scoring.
@@ -433,11 +501,8 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
         mode: Optional[InductiveMode] = None,
         additional_filter_triples: Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]] = None,
-        # TODO: restriction
         restrict_entities_to: Optional[Collection[int]] = None,
         restrict_relations_to: Optional[Collection[int]] = None,
-        do_time_consuming_checks: bool = True,
-        pre_filtered_triples: bool = True,
         **kwargs,
     ) -> None:
         """
@@ -455,6 +520,15 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             the inductive mode, or None for transductive evaluation
         :param additional_filter_triples:
             additional filter triples to use for creating the filter
+        :param restrict_entities_to:
+            Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in a
+            part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking the
+            entities, we still compute all scores for all possible replacement entities to avoid irregular access patterns
+            which might decrease performance, but the scores will afterwards be filtered to only keep those of interest.
+        :param restrict_relations_to:
+            Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested in a
+            part of the relations, e.g. due to relation types, but wants to train on all available data.
+
         :param kwargs:
             additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain the keys
             `dataset` or `evaluator`.
@@ -466,8 +540,13 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         evaluator = evaluator_resolver.make(evaluator, pos_kwargs=evaluator_kwargs)
         super().__init__(
             dataset=LCWAEvaluationDataset(
-                mapped_triples=mapped_triples,
-                factory=triples_factory,
+                mapped_triples=maybe_restrict_triples(
+                    mapped_triples=get_mapped_triples(mapped_triples=mapped_triples, factory=triples_factory),
+                    pre_filtered_triples=False,  # the evaluation loop is created only once
+                    do_time_consuming_checks=True,  # see above
+                    restrict_entities_to=restrict_entities_to,
+                    restrict_relations_to=restrict_relations_to,
+                ),
                 targets=targets,
                 filtered=evaluator.filtered or evaluator.requires_positive_mask,
                 additional_filter_triples=additional_filter_triples,
