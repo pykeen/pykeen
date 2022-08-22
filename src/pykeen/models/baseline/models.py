@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class EvaluationOnlyModel(Model, ABC):
+class EvaluationOnlyModel(Model):
     """A model which only implements the methods used for evaluation."""
 
     can_slice_h = False
