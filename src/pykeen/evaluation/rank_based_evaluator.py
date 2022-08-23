@@ -363,7 +363,7 @@ class RankBasedEvaluator(Evaluator):
     def finalize_multi(self, n_boot: int = 1_000, seed: int = 42) -> Mapping[str, Sequence[float]]:
         """Bootstrap from :meth:`finalize`.
 
-        :param num:
+        :param n_boot:
             the number of resampling steps
         :param seed:
             the random seed.
