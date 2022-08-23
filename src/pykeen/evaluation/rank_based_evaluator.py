@@ -392,8 +392,6 @@ class RankBasedEvaluator(Evaluator):
     ) -> Mapping[str, Tuple[float, float]]:
         """Finalize result with confidence estimation via bootstrapping.
 
-        Example
-        -------
         Start by training a model (here, only for a one epochs)
 
         >>> from pykeen.pipeline import pipeline
