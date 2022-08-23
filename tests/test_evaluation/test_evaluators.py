@@ -102,14 +102,14 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         """Test multi finalize."""
         self._process_batches()
         assert isinstance(self.instance, RankBasedEvaluator)
-        num = 3
-        result = self.instance.finalize_multi(num=num)
+        n_boot = 3
+        result = self.instance.finalize_multi(n_boot=n_boot)
         # check type
         assert isinstance(result, dict)
         assert all(isinstance(k, str) for k in result.keys())
         assert all(isinstance(v, list) for v in result.values())
         # check length
-        assert all(len(v) == num for v in result.values())
+        assert all(len(v) == n_boot for v in result.values())
 
     def test_finalize_with_confidence(self):
         """Test finalization with confidence estimation."""

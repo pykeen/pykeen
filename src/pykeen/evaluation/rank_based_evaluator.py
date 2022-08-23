@@ -360,7 +360,7 @@ class RankBasedEvaluator(Evaluator):
 
         return result
 
-    def finalize_multi(self, num: int = 1_000, seed: int = 42) -> Mapping[str, Sequence[float]]:
+    def finalize_multi(self, n_boot: int = 1_000, seed: int = 42) -> Mapping[str, Sequence[float]]:
         """Bootstrap from :meth:`finalize`.
 
         :param num:
@@ -373,7 +373,7 @@ class RankBasedEvaluator(Evaluator):
         """
         result: DefaultDict[str, List[float]] = defaultdict(list)
 
-        for i in range(num):
+        for i in range(n_boot):
             rank_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
             rank_and_candidates = map(functools.partial(RankPack.resample, seed=seed + i), rank_and_candidates)
             single_result = RankBasedMetricResults.from_ranks(
@@ -424,7 +424,7 @@ class RankBasedEvaluator(Evaluator):
         """
         return {
             k: summarize_values(vs, estimator=estimator, ci=ci)
-            for k, vs in self.finalize_multi(num=n_boot, seed=seed).items()
+            for k, vs in self.finalize_multi(n_boot=n_boot, seed=seed).items()
         }
 
 
