@@ -111,6 +111,20 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         # check length
         assert all(len(v) == num for v in result.values())
 
+    def test_finalize_with_confidence(self):
+        """Test finalization with confidence estimation."""
+        self._process_batches()
+        assert isinstance(self.instance, RankBasedEvaluator)
+        result = self.instance.finalize_with_confidence(n_boot=3)
+        # check type
+        assert isinstance(result, dict)
+        assert all(isinstance(k, str) for k in result.keys())
+        assert all(isinstance(v, tuple) for v in result.values())
+        # check length
+        assert all(len(v) == 2 for v in result.values())
+        # check confidence positivity
+        assert all(c >= 0 for _, c in result.values())
+
 
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
