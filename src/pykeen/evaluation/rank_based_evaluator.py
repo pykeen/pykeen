@@ -535,7 +535,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     cf. https://arxiv.org/abs/2106.06935.
     """
 
-    negatives: Mapping[Target, torch.LongTensor]
+    negative_samples: Mapping[Target, torch.LongTensor]
 
     def __init__(
         self,
@@ -634,6 +634,42 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # write back correct num_entities
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
         self.num_entities = num_entities
+
+    def evaluate_ogb(
+        self,
+        model,
+        mapped_triples: MappedTriples,
+        batch_size: Optional[int] = None,
+        **kwargs,
+    ) -> MetricResults:
+        """
+        Evaluate a model using OGB's evaluator.
+
+        :param model:
+            the model; will be set to evaluation mode.
+        :param mapped_triples:
+            the evaluation triples
+
+            .. note ::
+                the evaluation triples have to match with the stored explicit negatives
+
+        :param batch_size:
+            the batch size
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`pykeen.nn.Model.predict`
+
+        :return:
+            the evaluation results
+        """
+        from .ogb_evaluator import evaluate_ogb
+
+        return evaluate_ogb(
+            evaluator=self,
+            model=model,
+            mapped_triples=mapped_triples,
+            batch_size=batch_size,
+            **kwargs,
+        )
 
 
 class MacroRankBasedEvaluator(RankBasedEvaluator):
