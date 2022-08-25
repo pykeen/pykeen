@@ -44,6 +44,14 @@ All Predictions
 >>> pred_filtered.df
 
 
+Details
+-------
+
+ScorePack
+Predictions
+
+ScoreConsumer
+consume_scores
 """
 
 import collections
