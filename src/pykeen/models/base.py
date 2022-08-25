@@ -8,11 +8,9 @@ import inspect
 import logging
 import os
 import pickle
-import warnings
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
 
-import pandas as pd
 import torch
 from class_resolver import HintOrType
 from docdata import parse_docdata
