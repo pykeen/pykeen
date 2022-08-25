@@ -20,7 +20,7 @@ from typing_extensions import TypeAlias  # Python <=3.9
 
 from .base import Model
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
-from ..triples import CoreTriplesFactory, TriplesFactory, get_mapped_triples
+from ..triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from ..triples.utils import tensor_to_df
 from ..typing import (
     LABEL_HEAD,
@@ -90,22 +90,28 @@ class Predictions(ABC):
         """
         raise NotImplementedError
 
-    def filter_triples(self, *triples: Union[None, MappedTriples]) -> pd.DataFrame:
+    def filter_triples(self, *triples: Optional[AnyTriples]) -> pd.DataFrame:
         """Filter out known triples."""
         df = self.df
         for mapped_triples in triples:
             if mapped_triples is None:
                 continue
-            df = df[self._contains(df=df, mapped_triples=get_mapped_triples(mapped_triples), invert=True)]
+            df = df[
+                self._contains(
+                    df=df, mapped_triples=get_mapped_triples(mapped_triples, factory=self.factory), invert=True
+                )
+            ]
         return self.new(df=df, factory=self.factory)
 
-    def add_membership_columns(self, **filter_triples: Union[None, MappedTriples]) -> pd.DataFrame:
+    def add_membership_columns(self, **filter_triples: Optional[AnyTriples]) -> pd.DataFrame:
         """Add columns indicating whether the triples are known."""
         df = self.df
         for key, mapped_triples in filter_triples.items():
             if mapped_triples is None:
                 continue
-            df[f"in_{key}"] = self._contains(df=df, mapped_triples=get_mapped_triples(mapped_triples))
+            df[f"in_{key}"] = self._contains(
+                df=df, mapped_triples=get_mapped_triples(mapped_triples, factory=self.factory)
+            )
         return self.new(df=df, factory=self.factory)
 
     def to_df(self) -> pd.DataFrame:

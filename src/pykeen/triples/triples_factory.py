@@ -60,6 +60,7 @@ __all__ = [
     "splits_similarity",
     "RelationInverter",
     "relation_inverter",
+    "AnyTriples",
     "get_mapped_triples",
 ]
 
@@ -1350,8 +1351,13 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     return 1 - steps / n
 
 
+AnyTriples = Union[
+    Tuple[str, str, str], Sequence[Tuple[str, str, str]], LabeledTriples, MappedTriples, CoreTriplesFactory
+]
+
+
 def get_mapped_triples(
-    x: Union[None, Tuple[str, str, str], Sequence[Tuple[str, str, str]], MappedTriples, CoreTriplesFactory] = None,
+    x: Optional[AnyTriples] = None,
     *,
     mapped_triples: Optional[MappedTriples] = None,
     triples: Union[None, LabeledTriples, Tuple[str, str, str], Sequence[Tuple[str, str, str]]] = None,
