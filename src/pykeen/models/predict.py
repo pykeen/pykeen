@@ -57,7 +57,9 @@ Target Scoring
 :func:`pykeen.models.predict.predict_target`'s primary usecase is link prediction or relation prediction.
 For instance, we could use our models to score all possible tail entities for the query `("uk", "conferences", ?)` via
 
+>>> from pykeen.datasets import get_dataset
 >>> from pykeen.models.predict import predict_target
+>>> dataset = get_dataset(dataset="nations")
 >>> pred = predict_target(
 ...     model=result.model,
 ...     head="uk",
@@ -65,11 +67,18 @@ For instance, we could use our models to score all possible tail entities for th
 ...     triples_factory=result.training,
 ... )
 
-# remove known targets from training
+Notice that the result stored into `pred` is a :class:`pykeen.models.predict.Predictions` object, which offers some
+post-processing options. For instance, we can remove all targets which are already know from the training set
+
 >>> pred_filtered = pred.filter_triples(dataset.training)
-# indicate validation and test triples
+
+or add additional columns to the dataframe proving the information whether the target is contained in another set,
+e.g., the validation or testing set.
+
 >>> pred_annotated = pred_filtered.add_membership_columns(validation=dataset.validation, testing=dataset.testing)
-# convert to df
+
+The predictions object also exposes filtered / annotated dataframe through its `df` attribute
+
 >>> pred_annotated.df
 
 Full Scoring
@@ -891,6 +900,8 @@ def predict_target(
 
     # get scores
     scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
+    if ids is None:
+        ids = range(len(scores))
 
     # create raw dataframe
     data = {f"{target}_id": ids, "score": scores}
