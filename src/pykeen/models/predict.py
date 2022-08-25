@@ -83,13 +83,26 @@ The predictions object also exposes filtered / annotated dataframe through its `
 
 Full Scoring
 ------------
-All Predictions
+Finally, we can use :func:`pykeen.models.predict.predict` to calculate scores for *all* possible triples. Notice that
+this operation can be prohibitively expensive for reasonably sized knowledge graphs, and the model may produce
+additional ill-calibrated scores for entity/relation combinations it has never seen paired before during training.
+The next line calculates *and* stores all triples and scores
 
->>> pack = predict(model=result.model, k=100)
+>>> from pykeen.models.predict import predict
+>>> pack = predict(model=result.model)
+
+In addition to the expensive calculations, this additionally requires us to have sufficient memory available to store
+all scores. A computationally equally expensive option with reduced, fixed memory requirement is to store only
+the triples with the top $k$ scores. This can be done through the optional parameter `k`
+
+>>> pack = predict(model=result.model, k=10)
+
+We can again convert the score pack to a predictions object for further filtering, e.g., adding a column indicating
+whether the triple has been seen during training
+
 >>> pred = pack.process(factory=result.training)
->>> pred_filtered = pred.filter_triples(result.training)
 >>> pred_annotated = pred.add_membership_columns(training=result.training)
->>> pred_filtered.df
+>>> pred_annotated.df
 
 
 Details
