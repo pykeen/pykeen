@@ -52,7 +52,7 @@ __all__ = [
     "predict",
     "predict_triples_df",
     "get_all_prediction",
-    "get_prediction_df",
+    "predict_target",
     # score consumption / prediction loop
     "consume_scores",
     "ScoreConsumer",
@@ -271,7 +271,7 @@ def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int 
 
 
 @torch.inference_mode()
-def get_prediction_df(
+def predict_target(
     model: Model,
     triples_factory: TriplesFactory,
     *,
@@ -281,11 +281,8 @@ def get_prediction_df(
     tail_label: Optional[str] = None,
     #
     targets: Optional[Sequence[str]] = None,
-    add_novelties: bool = True,
-    remove_known: bool = False,
-    testing: Optional[torch.LongTensor] = None,
     mode: Optional[InductiveMode] = None,
-) -> pd.DataFrame:
+) -> Predictions:
     """Get predictions for the head, relation, and/or tail combination.
 
     .. note ::
@@ -306,23 +303,12 @@ def get_prediction_df(
     :param targets:
         restrict prediction to these targets
 
-    :param add_novelties:
-        should the dataframe include a column denoting if the ranked head entities correspond to novel triples?
-    :param remove_known:
-        should non-novel triples (those appearing in the training set) be shown with the results?
-        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-    :param testing:
-        the mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
 
     :return: shape: (k, 3)
-        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-        or all possible triples if k is None
+        The predictions containing either the $k$ highest scoring targets, or all targets if $k$ is `None`.
     """
     # get input & target
     target, batch, other_col_ids = _get_input_batch(
@@ -343,171 +329,7 @@ def get_prediction_df(
         columns=[f"{target}_id", f"{target}_label", "score"],
     ).sort_values("score", ascending=False)
 
-    pred = TargetPredictions(df=rv, factory=triples_factory, target=target, other_columns_fixed_ids=other_col_ids)
-    if remove_known:
-        pred = pred.filter_triples(triples_factory, testing)
-    if add_novelties:
-        pred = pred.add_membership_columns(training=triples_factory, testing=testing)
-    return pred.df
-
-
-def get_head_prediction_df(
-    model: Model,
-    triples_factory: TriplesFactory,
-    relation_label: str,
-    tail_label: str,
-    *,
-    heads: Optional[Sequence[str]] = None,
-    **kwargs,
-) -> pd.DataFrame:
-    """Predict heads for the given relation and tail (given by label).
-
-    :param model:
-        A PyKEEN model
-    :param triples_factory:
-        the training triples factory
-
-    :param relation_label:
-        the string label for the relation
-    :param tail_label:
-        the string label for the tail entity
-    :param heads:
-        restrict head prediction to the given entities
-    :param kwargs:
-        additional keyword-based parameters passed to :func:`get_prediction_df`.
-    :return: shape: (k, 3)
-        A dataframe for head predictions. Contains either the k highest scoring triples,
-        or all possible triples if k is None
-
-    The following example shows that after you train a model on the Nations dataset,
-    you can score all entities w.r.t. a given relation and tail entity.
-
-    >>> from pykeen.pipeline import pipeline
-    >>> from pykeen.models.predict import get_head_prediction_df
-    >>> result = pipeline(
-    ...     dataset='Nations',
-    ...     model='RotatE',
-    ... )
-    >>> df = get_head_prediction_df(result.model, 'accusation', 'brazil', triples_factory=result.training)
-    """
-    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
-    return get_prediction_df(
-        model=model,
-        triples_factory=triples_factory,
-        relation_label=relation_label,
-        tail_label=tail_label,
-        targets=heads,
-        **kwargs,
-    )
-
-
-def get_tail_prediction_df(
-    model: Model,
-    triples_factory: TriplesFactory,
-    head_label: str,
-    relation_label: str,
-    *,
-    tails: Optional[Sequence[str]] = None,
-    **kwargs,
-) -> pd.DataFrame:
-    """Predict tails for the given head and relation (given by label).
-
-    :param model:
-        A PyKEEN model
-    :param triples_factory:
-        the training triples factory
-
-    :param head_label:
-        the string label for the head entity
-    :param relation_label:
-        the string label for the relation
-    :param tails:
-        restrict tail prediction to the given entities
-    :param kwargs:
-        additional keyword-based parameters passed to :func:`get_prediction_df`.
-    :return: shape: (k, 3)
-        A dataframe for tail predictions. Contains either the k highest scoring triples,
-        or all possible triples if k is None
-
-    The following example shows that after you train a model on the Nations dataset,
-    you can score all entities w.r.t. a given head entity and relation.
-
-    >>> from pykeen.pipeline import pipeline
-    >>> from pykeen.models.predict import get_tail_prediction_df
-    >>> result = pipeline(
-    ...     dataset='Nations',
-    ...     model='RotatE',
-    ... )
-    >>> df = get_tail_prediction_df(result.model, 'brazil', 'accusation', triples_factory=result.training)
-
-    The optional `tails` parameter can be used to restrict prediction to a subset of entities, e.g.
-    >>> df = get_tail_prediction_df(
-    ...     result.model,
-    ...     'brazil',
-    ...     'accusation',
-    ...     triples_factory=result.training,
-    ...     tails=["burma", "china", "india", "indonesia"],
-    ... )
-    """
-    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
-    return get_prediction_df(
-        model=model,
-        triples_factory=triples_factory,
-        head_label=head_label,
-        relation_label=relation_label,
-        targets=tails,
-        **kwargs,
-    )
-
-
-def get_relation_prediction_df(
-    model: Model,
-    triples_factory: TriplesFactory,
-    head_label: str,
-    tail_label: str,
-    *,
-    relations: Optional[Sequence[str]] = None,
-    **kwargs,
-) -> pd.DataFrame:
-    """Predict relations for the given head and tail (given by label).
-
-    :param model:
-        A PyKEEN model
-    :param triples_factory:
-        the training triples factory
-
-    :param head_label:
-        the string label for the head entity
-    :param tail_label:
-        the string label for the tail entity
-    :param relations:
-        restrict relation prediction to the given relations
-    :param kwargs:
-        additional keyword-based parameters passed to :func:`get_prediction_df`.
-    :return: shape: (k, 3)
-        A dataframe for relation predictions. Contains either the k highest scoring triples,
-        or all possible triples if k is None
-
-    The following example shows that after you train a model on the Nations dataset,
-    you can score all relations w.r.t. a given head entity and tail entity.
-
-    >>> from pykeen.pipeline import pipeline
-    >>> from pykeen.models.predict import get_relation_prediction_df
-    >>> result = pipeline(
-    ...     dataset='Nations',
-    ...     model='RotatE',
-    ... )
-    >>> df = get_relation_prediction_df(result.model, 'brazil', 'uk', triples_factory=result.training)
-    """
-    warnings.warn("Please directly use `pykeen.models.predict.get_prediction_df`", DeprecationWarning)
-    return get_prediction_df(
-        model=model,
-        triples_factory=triples_factory,
-        head_label=head_label,
-        tail_label=tail_label,
-        targets=relations,
-        **kwargs,
-    )
+    return TargetPredictions(df=rv, factory=triples_factory, target=target, other_columns_fixed_ids=other_col_ids)
 
 
 @torch.inference_mode()

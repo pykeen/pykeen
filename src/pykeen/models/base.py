@@ -514,10 +514,10 @@ class Model(nn.Module, ABC):
             A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
             or all possible triples if k is None
         """
-        from .predict import get_prediction_df
+        from .predict import predict_target
 
         warnings.warn("Use pykeen.models.predict.get_prediction_df", DeprecationWarning)
-        return get_prediction_df(self, *args, **kwargs)
+        return predict_target(self, *args, **kwargs)
 
     def get_head_prediction_df(
         self,
