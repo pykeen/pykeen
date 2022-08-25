@@ -8,8 +8,8 @@ from .triples_factory import (
     KGInfo,
     RelationInverter,
     TriplesFactory,
-    relation_inverter,
     get_mapped_triples,
+    relation_inverter,
 )
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 

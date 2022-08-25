@@ -1056,9 +1056,6 @@ def predict_triples_df(
     :return: columns: head_id | relation_id | tail_id | score | *
         A dataframe with one row per triple.
 
-    :raises ValueError:
-        If label-based triples have been provided, but the triples factory does not provide a mapping.
-
     The TransE model can be trained and used to predict a given triple.
 
     >>> from pykeen.pipeline import pipeline

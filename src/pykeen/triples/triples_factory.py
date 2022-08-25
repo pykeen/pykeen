@@ -1367,9 +1367,11 @@ def get_mapped_triples(
     4. `x`
 
     :param x:
-        either of ID-based triples, a factory, or None.
+        either of label-based triples, ID-based triples, a factory, or None.
     :param mapped_triples: shape: (n, 3)
         the ID-based triples
+    :param triples:
+        the label-based triples
     :param factory:
         the triples factory
 
