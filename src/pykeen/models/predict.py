@@ -2,6 +2,7 @@
 
 """Prediction workflows."""
 
+import dataclasses
 import logging
 import math
 import warnings
@@ -18,7 +19,7 @@ from tqdm.auto import tqdm
 from typing_extensions import TypeAlias  # Python <=3.9
 
 from .base import Model
-from ..constants import TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..triples import CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from ..triples.utils import tensor_to_df
 from ..typing import (
@@ -49,6 +50,106 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass
+class Predictions:
+    """Base class for predictions"""
+
+    #: the dataframe; has to have a column named "score"
+    df: pd.DataFrame
+
+    #: an optional factory to use for labeling
+    factory: Optional[TriplesFactory]
+
+    @abstractmethod
+    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
+        """
+        Return which of the rows of the given data frame are contained in the ID-based triples.
+
+        :param df: nrows: n
+            the predictions
+        :param mapped_triples: shape: (m, 3)
+            the ID-based triples
+        :param invert:
+            whether to invert the result
+
+        :return: shape: (n,), dtype: bool
+            a boolean mask indicating which row is contained in the given ID-based triples
+        """
+        raise NotImplementedError
+
+    def filter_triples(self, *triples: Union[None, MappedTriples]) -> pd.DataFrame:
+        """Filter out known triples."""
+        df = self.df
+        for mapped_triples in triples:
+            if mapped_triples is None:
+                continue
+            df = df[self._contains(df=df, mapped_triples=get_mapped_triples(mapped_triples), invert=True)]
+        return Predictions(df=df, factory=self.factory)
+
+    def add_membership_columns(self, **filter_triples: Union[None, MappedTriples]) -> pd.DataFrame:
+        """Add columns indicating whether the triples are known."""
+        df = self.df
+        for key, mapped_triples in filter_triples.items():
+            if mapped_triples is None:
+                continue
+            df[f"in_{key}"] = self._contains(df=df, mapped_triples=get_mapped_triples(mapped_triples))
+        return Predictions(df=df, factory=self.factory)
+
+    def to_df(self) -> pd.DataFrame:
+        """Convert to a dataframe."""
+        raise NotImplementedError
+
+
+@dataclasses.dataclass
+class TriplePredictions(Predictions):
+    """Triples with their predicted scores."""
+
+    # predict_triples_df(triples) -> scores for triples
+    # get_all_prediction_df() -> scores for triples
+
+    # docstr-coverage: inherited
+    def _contains(
+        self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False
+    ) -> numpy.ndarray:  # noqa: D102
+        contained = (
+            isin_many_dim(
+                elements=torch.as_tensor(
+                    df[[f"{target}_id" for target, _ in sorted(TARGET_TO_INDEX.items(), key=itemgetter(1))]].values,
+                    device=mapped_triples.device,
+                ),
+                test_elements=mapped_triples,
+            )
+            .cpu()
+            .numpy()
+        )
+        if invert:
+            return ~contained
+        return contained
+
+
+@dataclasses.dataclass
+class TargetPredictions(Predictions):
+    """Targets with their predicted scores."""
+
+    # get_prediction_df(head | relation | tail) -> score targets
+
+    target: Target
+    other_columns_fixed_ids: Tuple[int, int]
+
+    # docstr-coverage: inherited
+    def _contains(
+        self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False
+    ) -> numpy.ndarray:  # noqa: D102
+        col = TARGET_TO_INDEX[self.target]
+        other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
+        device = mapped_triples.device
+        other_col_ids = torch.as_tensor(data=self.other_columns_fixed_ids, dtype=torch.long, device=device)
+        filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
+        known_ids = mapped_triples[filter_mask, col].unique()
+        query_ids = torch.as_tensor(df[f"{self.target}_id"].to_numpy(), device=device)
+        return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, invert=invert).cpu().numpy()
 
 
 def _get_targets(
@@ -121,156 +222,12 @@ def _get_input_batch(
     return target, batch, (batch_ids[0], batch_ids[1])
 
 
-class PredictionPostProcessor:
-    """A post-processor for predictions."""
-
-    def __init__(self, **filter_triples: Union[None, CoreTriplesFactory, MappedTriples]) -> None:
-        """Instantiate the processor.
-
-        :param filter_triples:
-            a mapping from keys to triples to be used for filtering. `None` entries will be ignored. The keys are
-            used to derive column names.
-        """
-        self.filter_triples = {
-            key: get_mapped_triples(value) for key, value in filter_triples.items() if value is not None
-        }
-
-    @abstractmethod
-    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
-        """
-        Return which of the rows of the given data frame are contained in the ID-based triples.
-
-        :param df: nrows: n
-            the predictions
-        :param mapped_triples: shape: (m, 3)
-            the ID-based triples
-        :param invert:
-            whether to invert the result
-
-        :return: shape: (n,), dtype: bool
-            a boolean mask indicating which row is contained in the given ID-based triples
-        """
-        raise NotImplementedError
-
-    def filter(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Filter out known triples.
-
-        .. note ::
-            this operation does *not* work in-place.
-
-        :param df:
-            the predictions
-
-        :return:
-            the filtered dataframe
-        """
-        for mapped_triples in self.filter_triples.values():
-            df = df[self._contains(df=df, mapped_triples=mapped_triples, invert=True)]
-        return df
-
-    def add_membership_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Add columns indicating whether the triples are known.
-
-        :param df:
-            the predictions
-
-        :return:
-            the predictions with extra columns
-        """
-        for key, mapped_triples in self.filter_triples.items():
-            df[f"in_{key}"] = self._contains(df=df, mapped_triples=mapped_triples)
-        return df
-
-    def process(self, df: pd.DataFrame, remove_known: bool, add_novelties: bool) -> pd.DataFrame:
-        """
-        Post-process a prediction dataframe.
-
-        .. warning ::
-            if both, `remove_known` and `add_novelties` are enabled, only the first will be applied.
-
-        :param df:
-            the dataframe of predictions
-        :param remove_known:
-            whether to remove rows corresponding to known triples
-        :param add_novelties:
-            whether to add extra columns denoting whether triples are novel given the filter triples
-
-        :return:
-            the filtered, modified or original predictions dataframe
-        """
-        if add_novelties and remove_known:
-            logger.warning("Since remove_known is enabled, will not add novelty column")
-            add_novelties = False
-        if add_novelties:
-            return self.add_membership_columns(df=df)
-        if remove_known:
-            return self.filter(df=df)
-        return df
-
-
-class SinglePredictionPostProcessor(PredictionPostProcessor):
-    """Post-processor for single-target predictions."""
-
-    def __init__(self, target: Target, other_columns_fixed_ids: Tuple[int, int], **kwargs) -> None:
-        """Initialize the post-processor.
-
-        :param target:
-            the prediction target
-        :param other_columns_fixed_ids:
-            the fixed IDs for the other columns
-
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`PredictionPostProcessor.__init__`
-        """
-        super().__init__(**kwargs)
-        self.target = target
-        self.other_columns_fixed_ids = other_columns_fixed_ids
-
-    # docstr-coverage: inherited
-    def _contains(
-        self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False
-    ) -> numpy.ndarray:  # noqa: D102
-        col = TARGET_TO_INDEX[self.target]
-        other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
-        device = mapped_triples.device
-        other_col_ids = torch.as_tensor(data=self.other_columns_fixed_ids, dtype=torch.long, device=device)
-        filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
-        known_ids = mapped_triples[filter_mask, col].unique()
-        query_ids = torch.as_tensor(df[f"{self.target}_id"].to_numpy(), device=device)
-        return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, invert=invert).cpu().numpy()
-
-
 def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> torch.BoolTensor:
     """Return whether elements are contained in test elements."""
     inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
         return_counts=True, return_inverse=True, dim=dim
     )[1:]
     return counts[inverse[: elements.shape[dim]]] > 1
-
-
-class AllPredictionPostProcessor(PredictionPostProcessor):
-    """Post-processor for all-triples predictions."""
-
-    # docstr-coverage: inherited
-    def _contains(
-        self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False
-    ) -> numpy.ndarray:  # noqa: D102
-        contained = (
-            isin_many_dim(
-                elements=torch.as_tensor(
-                    df[[f"{target}_id" for target, _ in sorted(TARGET_TO_INDEX.items(), key=itemgetter(1))]].values,
-                    device=mapped_triples.device,
-                ),
-                test_elements=mapped_triples,
-            )
-            .cpu()
-            .numpy()
-        )
-        if invert:
-            return ~contained
-        return contained
 
 
 @torch.inference_mode()
@@ -346,10 +303,12 @@ def get_prediction_df(
         columns=[f"{target}_id", f"{target}_label", "score"],
     ).sort_values("score", ascending=False)
 
-    # postprocess prediction df
-    return SinglePredictionPostProcessor(
-        target=target, other_columns_fixed_ids=other_col_ids, training=triples_factory, testing=testing
-    ).process(df=rv, remove_known=remove_known, add_novelties=add_novelties)
+    pred = TargetPredictions(df=rv, factory=triples_factory, target=target, other_columns_fixed_ids=other_col_ids)
+    if remove_known:
+        pred = pred.filter_triples(triples_factory, testing)
+    if add_novelties:
+        pred = pred.add_membership_columns(training=triples_factory, testing=testing)
+    return pred.to_df()
 
 
 def get_head_prediction_df(
@@ -567,14 +526,18 @@ def get_all_prediction_df(
         top_df = get_all_prediction_df(model, k=15, triples_factory=result.training)
     """
     score_pack = predict(model=model, k=k, batch_size=batch_size, mode=mode)
+
     if return_tensors:
         return score_pack
 
-    return AllPredictionPostProcessor(training=triples_factory, testing=testing).process(
-        df=triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores),
-        remove_known=remove_known,
-        add_novelties=add_novelties,
+    pred = TriplePredictions(
+        df=triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores), factory=triples_factory
     )
+    if remove_known:
+        pred = pred.filter_triples(triples_factory, testing)
+    if add_novelties:
+        pred = pred.add_membership_columns(training=triples_factory, testing=testing)
+    return pred.to_df()
 
 
 @torch.inference_mode()
