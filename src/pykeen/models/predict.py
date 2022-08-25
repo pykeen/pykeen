@@ -1068,7 +1068,7 @@ def predict_triples_df(
     ... )
     """
     # normalize input
-    triples = get_mapped_triples(mapped_triples=triples, factory=triples_factory)
+    triples = get_mapped_triples(triples, factory=triples_factory)
     # calculate scores (with automatic memory optimization)
     scores = _predict_triples_batched(
         model=model, mapped_triples=triples, batch_size=batch_size or len(triples), mode=mode

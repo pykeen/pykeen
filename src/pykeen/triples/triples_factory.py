@@ -1363,8 +1363,8 @@ def get_mapped_triples(
     Preference order:
     1. `mapped_triples`
     2. `triples` (converted using factory)
-    3. `factory.mapped_triples`
-    4. `x`
+    3. `x`
+    4. `factory.mapped_triples`
 
     :param x:
         either of label-based triples, ID-based triples, a factory, or None.
@@ -1406,7 +1406,7 @@ def get_mapped_triples(
         return factory.map_triples(triples)
 
     # triples factory
-    if factory is not None:
+    if x is None and factory is not None:
         return factory.mapped_triples
 
     # all keyword-based options have been none
@@ -1422,4 +1422,4 @@ def get_mapped_triples(
         return get_mapped_triples(mapped_triples=x.mapped_triples)
 
     # only labeled triples are remaining
-    return get_mapped_triples(triples=x)
+    return get_mapped_triples(triples=x, factory=factory)
