@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Collection, Optional, Tuple
+from typing import Any, Collection, Iterable, Mapping, Optional, Tuple
 from unittest.mock import patch
 
 import numpy as np
@@ -19,7 +19,7 @@ from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.splitting import splitter_resolver
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids, get_mapped_triples
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
@@ -560,3 +560,36 @@ def test_core_triples_factory_error_handling(dtype: torch.dtype, size: Tuple[int
         CoreTriplesFactory(
             mapped_triples=torch.randint(33, size=size).to(dtype=dtype), num_entities=..., num_relations=...
         )
+
+
+def _iter_get_mapped_triples_inputs() -> Iterable[Tuple[Any, Mapping[str, Any]]]:
+    """Iterate valid test inputs for get_mapped_triples."""
+    factory = Nations().training
+    # >>> positional argument
+    # mapped_triples
+    yield factory.mapped_triples, {}
+    # triples factory
+    yield factory, {}
+    # labeled triples + factory
+    labeled = [("brazil", "accusation", "burma"), ("brazil", "accusation", "uk")]
+    # single labeled triple
+    yield labeled[0], dict(factory=factory)
+    # multiple labeled triples as list
+    yield labeled, dict(factory=factory)
+    # multiple labeled triples as array
+    yield np.asarray(labeled), dict(factory=factory)
+    # >>> keyword only
+    yield None, dict(mapped_triples=factory.mapped_triples)
+    yield None, dict(factory=factory)
+    yield None, dict(triples=labeled, factory=factory)
+    yield None, dict(triples=np.asarray(labeled), factory=factory)
+
+
+@pytest.mark.parametrize(["x", "inputs"], _iter_get_mapped_triples_inputs())
+def test_get_mapped_triples(x, inputs: Mapping[str, Any]):
+    """Test get_mapped_triples."""
+    mapped_triples = get_mapped_triples(x, **inputs)
+    assert torch.is_tensor(mapped_triples)
+    assert mapped_triples.dtype == torch.long
+    assert mapped_triples.ndim == 2
+    assert mapped_triples.shape[-1] == 3
