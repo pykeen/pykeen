@@ -19,7 +19,6 @@ Train Model
 import dataclasses
 import logging
 import math
-import warnings
 from abc import ABC, abstractmethod
 from operator import itemgetter
 from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
@@ -50,8 +49,7 @@ from ..utils import resolve_device
 
 __all__ = [
     "predict",
-    "predict_triples_df",
-    "get_all_prediction",
+    "predict_triples",
     "predict_target",
     # score consumption / prediction loop
     "consume_scores",
@@ -268,118 +266,6 @@ def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int 
         return_counts=True, return_inverse=True, dim=dim
     )[1:]
     return counts[inverse[: elements.shape[dim]]] > 1
-
-
-@torch.inference_mode()
-def predict_target(
-    model: Model,
-    triples_factory: TriplesFactory,
-    *,
-    # exactly one of them is None
-    head_label: Optional[str] = None,
-    relation_label: Optional[str] = None,
-    tail_label: Optional[str] = None,
-    #
-    targets: Optional[Sequence[str]] = None,
-    mode: Optional[InductiveMode] = None,
-) -> Predictions:
-    """Get predictions for the head, relation, and/or tail combination.
-
-    .. note ::
-        Exactly one of `head_label`, `relation_label` and `tail_label` should be None. This is the position
-        which will be predicted.
-
-    :param model:
-        A PyKEEN model
-    :param triples_factory:
-        the training triples factory
-
-    :param head_label:
-        the head entity label. If None, predict heads
-    :param relation_label:
-        the relation label. If None, predict relations
-    :param tail_label:
-        the tail entity label. If None, predict tails
-    :param targets:
-        restrict prediction to these targets
-
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-
-    :return: shape: (k, 3)
-        The predictions containing either the $k$ highest scoring targets, or all targets if $k$ is `None`.
-    """
-    # get input & target
-    target, batch, other_col_ids = _get_input_batch(
-        triples_factory, head_label=head_label, relation_label=relation_label, tail_label=tail_label
-    )
-
-    # get label-to-id mapping and prediction targets
-    label_ids, targets = _get_targets(
-        ids=targets, triples_factory=triples_factory, device=model.device, entity=relation_label is not None
-    )
-
-    # get scores
-    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
-
-    # create raw dataframe
-    rv = pd.DataFrame(
-        [(target_id, target_label, score) for (target_label, target_id), score in zip(label_ids, scores)],
-        columns=[f"{target}_id", f"{target}_label", "score"],
-    ).sort_values("score", ascending=False)
-
-    return TargetPredictions(df=rv, factory=triples_factory, target=target, other_columns_fixed_ids=other_col_ids)
-
-
-@torch.inference_mode()
-def predict(
-    model: Model,
-    *,
-    k: Optional[int] = None,
-    batch_size: Optional[int] = 1,
-    mode: Optional[InductiveMode] = None,
-    target: Target = LABEL_TAIL,
-) -> ScorePack:
-    """Calculate and store scores for either all triples, or the top k triples.
-
-    :param model:
-        A PyKEEN model
-    :param k:
-        The number of triples to return. Set to ``None`` to keep all.
-    :param batch_size:
-        The batch size to use for calculating scores; set to `None` to determine largest possible batch size
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-    :param target:
-        the prediction target to use. Prefer targets which are efficient to predict with the given model,
-        e.g., tails for ConvE.
-
-    :return:
-        A score pack of parallel triples and scores
-    """
-    # set model to evaluation mode
-    model.eval()
-
-    logger.warning(
-        f"predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations:,} "
-        f"score evaluations.",
-    )
-
-    consumer: ScoreConsumer
-    if k is None:
-        logger.warning(
-            "Not providing k to `predict` entails huge memory requirements for reasonably-sized knowledge graphs.",
-        )
-        consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
-    else:
-        consumer = TopKScoreConsumer(k=k, device=model.device)
-    dataset = AllPredictionDataset(
-        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
-    )
-    consume_scores(model, dataset, consumer, batch_size=batch_size or len(dataset), mode=mode)
-    return consumer.finalize()
 
 
 # note type alias annotation required,
@@ -774,14 +660,126 @@ def _predict_triples_batched(
 
 
 @torch.inference_mode()
-def predict_triples_df(
+def predict(
+    model: Model,
+    *,
+    k: Optional[int] = None,
+    batch_size: Optional[int] = 1,
+    mode: Optional[InductiveMode] = None,
+    target: Target = LABEL_TAIL,
+) -> ScorePack:
+    """Calculate and store scores for either all triples, or the top k triples.
+
+    :param model:
+        A PyKEEN model
+    :param k:
+        The number of triples to return. Set to ``None`` to keep all.
+    :param batch_size:
+        The batch size to use for calculating scores; set to `None` to determine largest possible batch size
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
+    :param target:
+        the prediction target to use. Prefer targets which are efficient to predict with the given model,
+        e.g., tails for ConvE.
+
+    :return:
+        A score pack of parallel triples and scores
+    """
+    # set model to evaluation mode
+    model.eval()
+
+    logger.warning(
+        f"predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations:,} "
+        f"score evaluations.",
+    )
+
+    consumer: ScoreConsumer
+    if k is None:
+        logger.warning(
+            "Not providing k to `predict` entails huge memory requirements for reasonably-sized knowledge graphs.",
+        )
+        consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+    else:
+        consumer = TopKScoreConsumer(k=k, device=model.device)
+    dataset = AllPredictionDataset(
+        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
+    )
+    consume_scores(model, dataset, consumer, batch_size=batch_size or len(dataset), mode=mode)
+    return consumer.finalize()
+
+
+@torch.inference_mode()
+def predict_target(
+    model: Model,
+    triples_factory: TriplesFactory,
+    *,
+    # exactly one of them is None
+    head_label: Optional[str] = None,
+    relation_label: Optional[str] = None,
+    tail_label: Optional[str] = None,
+    #
+    targets: Optional[Sequence[str]] = None,
+    mode: Optional[InductiveMode] = None,
+) -> Predictions:
+    """Get predictions for the head, relation, and/or tail combination.
+
+    .. note ::
+        Exactly one of `head_label`, `relation_label` and `tail_label` should be None. This is the position
+        which will be predicted.
+
+    :param model:
+        A PyKEEN model
+    :param triples_factory:
+        the training triples factory
+
+    :param head_label:
+        the head entity label. If None, predict heads
+    :param relation_label:
+        the relation label. If None, predict relations
+    :param tail_label:
+        the tail entity label. If None, predict tails
+    :param targets:
+        restrict prediction to these targets
+
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
+
+    :return: shape: (k, 3)
+        The predictions containing either the $k$ highest scoring targets, or all targets if $k$ is `None`.
+    """
+    # get input & target
+    target, batch, other_col_ids = _get_input_batch(
+        triples_factory, head_label=head_label, relation_label=relation_label, tail_label=tail_label
+    )
+
+    # get label-to-id mapping and prediction targets
+    label_ids, targets = _get_targets(
+        ids=targets, triples_factory=triples_factory, device=model.device, entity=relation_label is not None
+    )
+
+    # get scores
+    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
+
+    # create raw dataframe
+    rv = pd.DataFrame(
+        [(target_id, target_label, score) for (target_label, target_id), score in zip(label_ids, scores)],
+        columns=[f"{target}_id", f"{target}_label", "score"],
+    ).sort_values("score", ascending=False)
+
+    return TargetPredictions(df=rv, factory=triples_factory, target=target, other_columns_fixed_ids=other_col_ids)
+
+
+@torch.inference_mode()
+def predict_triples(
     model: Model,
     *,
     triples: Union[None, MappedTriples, LabeledTriples, Union[Tuple[str, str, str], Sequence[Tuple[str, str, str]]]],
     triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
     mode: Optional[InductiveMode] = None,
-) -> pd.DataFrame:
+) -> TriplePredictions:
     """
     Predict on labeled or mapped triples.
 
@@ -825,8 +823,4 @@ def predict_triples_df(
     scores = _predict_triples_batched(
         model=model, mapped_triples=triples, batch_size=batch_size or len(triples), mode=mode
     ).squeeze(dim=1)
-
-    if triples_factory is None:
-        return tensor_to_df(tensor=triples, score=scores)
-
-    return triples_factory.tensor_to_df(tensor=triples, score=scores)
+    return ScorePack(result=triples, scores=scores).process(factory=triples_factory)

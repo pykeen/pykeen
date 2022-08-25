@@ -19,7 +19,7 @@ from pykeen.models.predict import (
     get_head_prediction_df,
     get_relation_prediction_df,
     get_tail_prediction_df,
-    predict_triples_df,
+    predict_triples,
 )
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
@@ -212,7 +212,7 @@ class TestPipeline(unittest.TestCase):
     def test_predict_triples(self):
         """Test scoring explicitly provided triples."""
         for triples_factory in (None, self.dataset.training):
-            df = predict_triples_df(
+            df = predict_triples(
                 model=self.model,
                 triples=self.testing_mapped_triples,
                 triples_factory=triples_factory,
