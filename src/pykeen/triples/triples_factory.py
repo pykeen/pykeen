@@ -1351,7 +1351,7 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
 
 
 def get_mapped_triples(
-    x: Union[None, MappedTriples, CoreTriplesFactory] = None,
+    x: Union[None, Tuple[str, str, str], Sequence[Tuple[str, str, str]], MappedTriples, CoreTriplesFactory] = None,
     *,
     mapped_triples: Optional[MappedTriples] = None,
     triples: Union[None, LabeledTriples, Tuple[str, str, str], Sequence[Tuple[str, str, str]]] = None,
