@@ -3,7 +3,14 @@
 """Classes for creating and storing training data from triples."""
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
-from .triples_factory import CoreTriplesFactory, KGInfo, RelationInverter, TriplesFactory, relation_inverter
+from .triples_factory import (
+    CoreTriplesFactory,
+    KGInfo,
+    RelationInverter,
+    TriplesFactory,
+    relation_inverter,
+    get_mapped_triples,
+)
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -16,4 +23,5 @@ __all__ = [
     "relation_inverter",
     "TriplesFactory",
     "TriplesNumericLiteralsFactory",
+    "get_mapped_triples",
 ]

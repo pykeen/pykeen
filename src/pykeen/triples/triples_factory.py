@@ -22,6 +22,7 @@ from typing import (
     Sequence,
     Set,
     TextIO,
+    Tuple,
     TypeVar,
     Union,
     cast,
@@ -59,6 +60,7 @@ __all__ = [
     "splits_similarity",
     "RelationInverter",
     "relation_inverter",
+    "get_mapped_triples",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1346,3 +1348,76 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     steps = splits_steps(a, b)
     n = sum(tf.num_triples for tf in a)
     return 1 - steps / n
+
+
+def get_mapped_triples(
+    x: Union[None, MappedTriples, CoreTriplesFactory] = None,
+    *,
+    mapped_triples: Optional[MappedTriples] = None,
+    triples: Union[None, LabeledTriples, Tuple[str, str, str], Sequence[Tuple[str, str, str]]] = None,
+    factory: Optional[CoreTriplesFactory] = None,
+) -> MappedTriples:
+    """
+    Get ID-based triples either directly, or from a factory.
+
+    Preference order:
+    1. `mapped_triples`
+    2. `triples` (converted using factory)
+    3. `factory.mapped_triples`
+    4. `x`
+
+    :param x:
+        either of ID-based triples, a factory, or None.
+    :param mapped_triples: shape: (n, 3)
+        the ID-based triples
+    :param factory:
+        the triples factory
+
+    :raises ValueError:
+        if all inputs are None, or provided inputs are invalid.
+
+    :return:
+        the ID-based triples
+    """
+    # ID-based triples
+    if mapped_triples is not None:
+        if torch.is_floating_point(mapped_triples):
+            raise ValueError(
+                f"mapped_triples must be on long (or compatible) data type, but are {mapped_triples.dtype}"
+            )
+        if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
+            raise ValueError(f"mapped_triples must be of shape (?, 3), but are {mapped_triples.shape}")
+        return mapped_triples
+
+    # labeled triples
+    if triples is not None:
+        if factory is None or not isinstance(factory, TriplesFactory):
+            raise ValueError("If triples are not ID-based, a triples factory must be provided and label-based.")
+
+        # make sure triples are a numpy array
+        triples = np.asanyarray(triples)
+
+        # make sure triples are 2d
+        triples = np.atleast_2d(triples)
+
+        # convert to ID-based
+        return factory.map_triples(triples)
+
+    # triples factory
+    if factory is not None:
+        return factory.mapped_triples
+
+    # all keyword-based options have been none
+    if x is None:
+        raise ValueError("All parameters were None.")
+
+    if isinstance(x, torch.Tensor):
+        # delegate to keyword-based get_mapped_triples to re-use optional validation logic
+        return get_mapped_triples(mapped_triples=x)
+
+    if isinstance(x, CoreTriplesFactory):
+        # delegate to keyword-based get_mapped_triples to re-use optional validation logic
+        return get_mapped_triples(mapped_triples=x.mapped_triples)
+
+    # only labeled triples are remaining
+    return get_mapped_triples(triples=x)
