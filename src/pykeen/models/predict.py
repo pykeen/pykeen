@@ -28,7 +28,7 @@ Predict Targets
 # indicate validation and test triples
 >>> pred_annotated = pred_filtered.add_membership_columns(validation=dataset.validation, testing=dataset.testing)
 # convert to df
->>> pred.df
+>>> pred_annotated.df
 
 All Predictions
 
@@ -41,6 +41,7 @@ All Predictions
 
 """
 
+import collections
 import dataclasses
 import logging
 import math
@@ -104,6 +105,10 @@ class Predictions(ABC):
         if "score" not in self.df.columns:
             raise ValueError(f"df must have a column named 'score', but df.columns={self.df.columns}")
 
+    def exchange_df(self, df: pd.DataFrame) -> "Predictions":
+        """Create a copy of the object with its dataframe exchanged."""
+        return self.__class__(**collections.ChainMap(dict(df=df), dataclasses.asdict(self)))
+
     @abstractmethod
     def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
         """
@@ -132,27 +137,23 @@ class Predictions(ABC):
                     df=df, mapped_triples=get_mapped_triples(mapped_triples, factory=self.factory), invert=True
                 )
             ]
-        # TODO: fix for TargetPredictions
-        return self.__class__(df=df, factory=self.factory)
+        return self.exchange_df(df=df)
 
     def add_membership_columns(self, **filter_triples: Optional[AnyTriples]) -> pd.DataFrame:
         """Add columns indicating whether the triples are known."""
-        df = self.df
+        df = self.df.copy()
         for key, mapped_triples in filter_triples.items():
             if mapped_triples is None:
                 continue
             df[f"in_{key}"] = self._contains(
                 df=df, mapped_triples=get_mapped_triples(mapped_triples, factory=self.factory)
             )
-        return self.__class__(df=df, factory=self.factory)
+        return self.exchange_df(df=df)
 
 
 @dataclasses.dataclass
 class TriplePredictions(Predictions):
     """Triples with their predicted scores."""
-
-    # predict_triples_df(triples) -> scores for triples
-    # get_all_prediction_df() -> scores for triples
 
     # docstr-coverage: inherited
     def _contains(
@@ -178,9 +179,10 @@ class TriplePredictions(Predictions):
 class TargetPredictions(Predictions):
     """Targets with their predicted scores."""
 
-    # get_prediction_df(head | relation | tail) -> score targets
-
+    #: the prediction target
     target: Target
+
+    #: the other column's fixed IDs
     other_columns_fixed_ids: Tuple[int, int]
 
     # docstr-coverage: inherited
