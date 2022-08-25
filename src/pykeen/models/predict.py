@@ -3,25 +3,52 @@
 """
 Prediction workflows.
 
-Train Model
+This module contains methods to score triples or prediction targets with a given model.
+For the remainder of this part of the documentation, we assume that we have trained a model, e.g. via
+
+>>> from pykeen.pipeline import pipeline
+>>> result = pipeline(dataset="nations", model="pairre", training_kwargs=dict(num_epochs=0))
+
+High-Level
+==========
+The prediction workflow offers three high-level methods to perform predictions
+
+- :func:`pykeen.models.predict.predict_triples` can be used to calculate scores for a given set of triples.
+- :func:`pykeen.models.predict.predict_target` can be used to score choices for a given prediction target, i.e.
+  calculate scores for head entities, relations, or tail entities given the other two.
+- :func:`pykeen.models.predict.predict` can be used to calculate scores for all possible triples.
+
+.. warning ::
+    Please note that not all models automatically have interpretable scores, and their calibration may be poor. Thus,
+    exercise caution when interpreting the results.
+
+Triple Scoring
+--------------
+
+When scoring triples with :func:`pykeen.models.predict.predict_triples`, we obtain a score for each of the given
+triples. As an example, we will calculate scores for all validation triples from the dataset we trained the model upon.
 
 >>> from pykeen.datasets import get_dataset
->>> from pykeen.models.predict import predict, predict_target, predict_triples
->>> from pykeen.pipeline import pipeline
-
 >>> dataset = get_dataset(dataset="nations")
->>> result = pipeline(dataset=dataset, model="pairre", training_kwargs=dict(num_epochs=0))
-
-Predict Triples
-
 >>> pack = predict_triples(model=result.model, triples=dataset.validation)
-# add labels
->>> pred = pack.process(factory=result.training)
-# convert to df
->>> pred.df
 
-Predict Targets
+The variable :data:`pack` now contains a :class:`pykeen.models.predict.ScorePack`, which essentially is a pair of
+ID-based triples with their predicted scores. For interpretation, it can be helpful to add their corresponding labels,
+which the `"nations"` dataset offers, and convert them to a pandas dataframe:
 
+>>> df = pack.process(factory=result.training).df
+
+Since we now have a dataframe, we can utilize the full power of pandas for our subsequent analysis, e.g., showing the
+triples which received the highest score
+
+>>> df.largest(n=5, columns="score")
+
+or investigate whether certain entities generally receive larger scores
+
+>>> df.groupby(by="head_id").agg({"score": ["mean", "std", "count"]})
+
+Target Scoring
+--------------
 >>> pred = predict_target(
 ...     model=result.model,
 ...     head_label="uk",
@@ -35,6 +62,8 @@ Predict Targets
 # convert to df
 >>> pred_annotated.df
 
+Full Scoring
+------------
 All Predictions
 
 >>> pack = predict(model=result.model, k=100)
@@ -45,12 +74,13 @@ All Predictions
 
 
 Details
--------
+=======
 
 ScorePack
 Predictions
 
 ScoreConsumer
+PredictionDataset
 consume_scores
 """
 
