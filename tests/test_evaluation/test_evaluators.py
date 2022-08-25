@@ -3,7 +3,6 @@
 """Test the evaluators."""
 
 import itertools
-import logging
 import unittest
 from operator import itemgetter
 from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
@@ -12,6 +11,7 @@ import numpy
 import numpy.random
 import numpy.testing
 import pandas
+import pytest
 import torch
 import unittest_templates
 from more_itertools import pairwise
@@ -31,7 +31,12 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.rank_based_evaluator import MacroRankBasedEvaluator, SampledRankBasedEvaluator, sample_negatives
+from pykeen.evaluation.rank_based_evaluator import (
+    MacroRankBasedEvaluator,
+    SampledRankBasedEvaluator,
+    sample_negatives,
+    summarize_values,
+)
 from pykeen.evaluation.ranking_metric_lookup import MetricKey
 from pykeen.evaluation.ranks import Ranks
 from pykeen.metrics.ranking import (
@@ -58,7 +63,18 @@ from pykeen.typing import (
 from tests import cases, mocks
 from tests.utils import needs_packages
 
-logger = logging.getLogger(__name__)
+
+@pytest.mark.parametrize(["estimator", "ci"], [(numpy.mean, 60), ("mean", "std"), (numpy.mean, numpy.var)])
+def test_summarize_values(estimator, ci):
+    """Test value summarization."""
+    gen = numpy.random.default_rng(seed=42)
+    vs = gen.random(size=(17,)).tolist()
+    r = summarize_values(vs=vs, estimator=estimator, ci=ci)
+    assert isinstance(r, tuple)
+    assert len(r) == 2
+    center, variation = r
+    assert isinstance(center, float)
+    assert isinstance(variation, float)
 
 
 class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
@@ -83,6 +99,33 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
             self.assertIsInstance(metric, str)
             self.assertIsInstance(value, (float, int))
 
+    def test_finalize_multi(self) -> None:
+        """Test multi finalize."""
+        self._process_batches()
+        assert isinstance(self.instance, RankBasedEvaluator)
+        n_boot = 3
+        result = self.instance.finalize_multi(n_boot=n_boot)
+        # check type
+        assert isinstance(result, dict)
+        assert all(isinstance(k, str) for k in result.keys())
+        assert all(isinstance(v, list) for v in result.values())
+        # check length
+        assert all(len(v) == n_boot for v in result.values())
+
+    def test_finalize_with_confidence(self):
+        """Test finalization with confidence estimation."""
+        self._process_batches()
+        assert isinstance(self.instance, RankBasedEvaluator)
+        result = self.instance.finalize_with_confidence(n_boot=3)
+        # check type
+        assert isinstance(result, dict)
+        assert all(isinstance(k, str) for k in result.keys())
+        assert all(isinstance(v, tuple) for v in result.values())
+        # check length
+        assert all(len(v) == 2 for v in result.values())
+        # check confidence positivity
+        assert all(c >= 0 for _, c in result.values())
+
 
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
@@ -95,6 +138,14 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["evaluation_factory"] = self.factory
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
+
+    @needs_packages("ogb")
+    def test_ogb_evaluate(self):
+        """Test OGB evaluation."""
+        self.instance: SampledRankBasedEvaluator
+        model = FixedModel(triples_factory=self.factory)
+        result = self.instance.evaluate_ogb(model=model, mapped_triples=self.factory.mapped_triples, batch_size=1)
+        assert isinstance(result, MetricResults)
 
 
 @needs_packages("ogb")

@@ -1912,9 +1912,8 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
             dense_positive_mask=mask,
         )
 
-    def test_finalize(self) -> None:
-        """Test the finalize() function."""
-        # Process one batch
+    def _process_batches(self):
+        """Process one batch per side."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
         for target in (LABEL_HEAD, LABEL_TAIL):
@@ -1925,6 +1924,12 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
                 scores=scores,
                 dense_positive_mask=mask,
             )
+        return hrt_batch, scores, mask
+
+    def test_finalize(self) -> None:
+        """Test the finalize() function."""
+        # Process one batch
+        hrt_batch, scores, mask = self._process_batches()
 
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)
