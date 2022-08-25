@@ -5,15 +5,40 @@ Prediction workflows.
 
 Train Model
 
+>>> from pykeen.datasets import get_dataset
+>>> from pykeen.models.predict import predict, predict_target, predict_triples
 >>> from pykeen.pipeline import pipeline
->>> from pykeen.models.predict import predict
 
->>> result = pipeline(dataset="nations", model="pairre", training_kwargs=dict(num_epochs=0))
->>> pack = predict(model=result.model)
+>>> dataset = get_dataset(dataset="nations")
+>>> result = pipeline(dataset=dataset, model="pairre", training_kwargs=dict(num_epochs=0))
+
+Predict Triples
+
+>>> pack = predict_triples(model=result.model, triples=dataset.validation)
+# add labels
+>>> pred = pack.process(factory=result.training)
+# convert to df
+>>> pred.df
+
+Predict Targets
+
+>>> pred = predict_target(model=result.model, head_label="uk", relation_label="conferences", triples_factory=result.training)
+# remove known targets from training
+>>> pred_filtered = pred.filter_triples(dataset.training)
+# indicate validation and test triples
+>>> pred_annotated = pred_filtered.add_membership_columns(validation=dataset.validation, testing=dataset.testing)
+# convert to df
+>>> pred.df
+
+All Predictions
+
+>>> pack = predict(model=result.model, k=100)
 >>> pred = pack.process(factory=result.training)
 >>> pred_filtered = pred.filter_triples(result.training)
 >>> pred_annotated = pred.add_membership_columns(training=result.training)
 >>> pred_filtered.df
+
+
 """
 
 import dataclasses
@@ -107,6 +132,7 @@ class Predictions(ABC):
                     df=df, mapped_triples=get_mapped_triples(mapped_triples, factory=self.factory), invert=True
                 )
             ]
+        # TODO: fix for TargetPredictions
         return self.__class__(df=df, factory=self.factory)
 
     def add_membership_columns(self, **filter_triples: Optional[AnyTriples]) -> pd.DataFrame:
@@ -659,6 +685,7 @@ def _predict_triples_batched(
     )
 
 
+# TODO: Support partial dataset
 @torch.inference_mode()
 def predict(
     model: Model,
@@ -779,7 +806,7 @@ def predict_triples(
     triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
     mode: Optional[InductiveMode] = None,
-) -> TriplePredictions:
+) -> ScorePack:
     """
     Predict on labeled or mapped triples.
 
@@ -823,4 +850,4 @@ def predict_triples(
     scores = _predict_triples_batched(
         model=model, mapped_triples=triples, batch_size=batch_size or len(triples), mode=mode
     ).squeeze(dim=1)
-    return ScorePack(result=triples, scores=scores).process(factory=triples_factory)
+    return ScorePack(result=triples, scores=scores)
