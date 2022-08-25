@@ -8,10 +8,9 @@ import tempfile
 import unittest
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Any, Collection, Iterable, Mapping, Optional, Tuple, Union
+from typing import Any, Collection, Iterable, Mapping, Optional, Tuple
 from unittest.mock import patch
 
-import numpy
 import numpy as np
 import pytest
 import torch
@@ -578,12 +577,12 @@ def _iter_get_mapped_triples_inputs() -> Iterable[Tuple[Any, Mapping[str, Any]]]
     # multiple labeled triples as list
     yield labeled, dict(factory=factory)
     # multiple labeled triples as array
-    yield numpy.asarray(labeled), dict(factory=factory)
+    yield np.asarray(labeled), dict(factory=factory)
     # >>> keyword only
     yield None, dict(mapped_triples=factory.mapped_triples)
     yield None, dict(factory=factory)
     yield None, dict(triples=labeled, factory=factory)
-    yield None, dict(triples=numpy.asarray(labeled), factory=factory)
+    yield None, dict(triples=np.asarray(labeled), factory=factory)
 
 
 @pytest.mark.parametrize(["x", "inputs"], _iter_get_mapped_triples_inputs())
