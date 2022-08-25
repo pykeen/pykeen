@@ -199,6 +199,7 @@ class TargetPredictions(Predictions):
         return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, invert=invert).cpu().numpy()
 
 
+# TODO: merge with other ScorePack again
 @dataclasses.dataclass
 class ScorePack:
     """A pair of result triples and scores."""
