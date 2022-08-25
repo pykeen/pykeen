@@ -80,10 +80,6 @@ __all__ = [
     # score consumption / prediction loop
     "consume_scores",
     "ScoreConsumer",
-    # deprecated
-    "get_head_prediction_df",
-    "get_relation_prediction_df",
-    "get_tail_prediction_df",
 ]
 
 logger = logging.getLogger(__name__)
@@ -219,46 +215,80 @@ class ScorePack:
 
 
 def _get_targets(
-    ids: Union[None, torch.Tensor, Collection[str]],
-    triples_factory: TriplesFactory,
+    ids: Union[None, torch.Tensor, Collection[Union[str, int]]],
+    triples_factory: Optional[TriplesFactory],
     device: torch.device,
     entity: bool = True,
-) -> Tuple[List[Tuple[str, int]], Optional[torch.Tensor]]:
-    label_to_id = triples_factory.entity_to_id if entity else triples_factory.relation_to_id
+) -> Tuple[Optional[List[str]], Optional[List[int]], Optional[torch.Tensor]]:
+    """
+    Prepare prediction targets for restricted target prediction.
+
+    :param ids:
+        the target IDs in any of the supported formats
+    :param triples_factory:
+        the triples factory used to obtain labels. Must be provided, if any of the `ids` is given as a string
+    :param device:
+        the device to move the tensor to
+    :param entity:
+        whether the prediction target is an entity or relation
+
+    :return:
+        a 3-tuple of an optional list of labels, a list of ids, and the tensor to pass to the prediction method.
+    """
+    # extract label information, if possible
+    if isinstance(triples_factory, TriplesFactory):
+        label_to_id = triples_factory.entity_to_id if entity else triples_factory.relation_to_id
+    else:
+        label_to_id = None
+
+    # no restriction
     if ids is None:
-        return sorted(label_to_id.items(), key=itemgetter(1)), None
-    id_tensor = None
-    if isinstance(ids, torch.Tensor):
-        id_tensor = ids
-        ids = ids.tolist()
-    ids = triples_factory.entities_to_ids(entities=ids) if entity else triples_factory.relations_to_ids(relations=ids)
-    ids = sorted(set(ids))
-    if id_tensor is None:
-        id_tensor = torch.as_tensor(ids, torch.long, device=device)
-    id_to_label = triples_factory.entity_id_to_label if entity else triples_factory.relation_id_to_label
-    return [(id_to_label[i], i) for i in ids], id_tensor
+        if label_to_id is None:
+            return None, None, None
+        return tuple([*zip(*sorted(label_to_id.items(), key=itemgetter(1))), None])
+
+    # restriction is a tensor
+    if torch.is_tensor(ids):
+        ids_list = ids.tolist()
+        ids = ids.to(device)
+        if label_to_id is None:
+            return None, ids_list, ids
+        return [label_to_id[i] for i in ids_list], ids_list, ids
+
+    # restricton is a sequence of integers or strings
+    if not all(isinstance(i, int) for i in ids):
+        if label_to_id is None:
+            raise ValueError
+        ids = [i if isinstance(i, int) else label_to_id[i] for i in ids]
+    ids = sorted(ids)
+
+    # now, restriction is a sequence of integers
+    id_tensor = torch.as_tensor(ids, torch.long, device=device)
+    if label_to_id is None:
+        return None, ids, id_tensor
+    return [label_to_id[i] for i in ids], ids, id_tensor
 
 
 def _get_input_batch(
-    triples_factory: TriplesFactory,
+    triples_factory: Optional[TriplesFactory] = None,
     # exactly one of them is None
-    head_label: Optional[str] = None,
-    relation_label: Optional[str] = None,
-    tail_label: Optional[str] = None,
+    head: Union[None, int, str] = None,
+    relation: Union[None, int, str] = None,
+    tail: Union[None, int, str] = None,
 ) -> Tuple[Target, torch.LongTensor, Tuple[int, int]]:
     """Prepare input batch for prediction.
 
     :param triples_factory:
         the triples factory used to translate labels to ids.
-    :param head_label:
-        the head entity label
-    :param relation_label:
-        the relation label
-    :param tail_label:
-        the tail entity label
+    :param head:
+        the head entity
+    :param relation:
+        the relation
+    :param tail:
+        the tail entity
 
     :raises ValueError:
-        if not exactly one of {head_label, relation_label, tail_label} is None
+        if not exactly one of {head, relation, tail} is None
 
     :return:
         a 3-tuple (target, batch, batch_tuple) of the prediction target, the input batch, and the input batch as tuple.
@@ -266,22 +296,33 @@ def _get_input_batch(
     # create input batch
     batch_ids = []
     target = None
-    if head_label:
-        batch_ids.append(triples_factory.entity_to_id[head_label])
-    else:
+    if head is None:
         target = LABEL_HEAD
-    if relation_label:
-        batch_ids.append(triples_factory.relation_to_id[relation_label])
     else:
+        if not isinstance(head, int):
+            if triples_factory is None:
+                raise ValueError("If head is not given as index, a triples factory must be passed.")
+            head = triples_factory.entity_to_id[head]
+        batch_ids.append(head)
+    if relation is None:
         target = LABEL_RELATION
-    if tail_label:
-        batch_ids.append(triples_factory.entity_to_id[tail_label])
     else:
+        if not isinstance(relation, int):
+            if triples_factory is None:
+                raise ValueError("If relation is not given as index, a triples factory must be passed.")
+            relation = triples_factory.relation_to_id[relation]
+        batch_ids.append(relation)
+    if tail is None:
         target = LABEL_TAIL
+    else:
+        if not isinstance(tail, int):
+            if triples_factory is None:
+                raise ValueError("If tail is not given as index, a triples factory must be passed.")
+            tail = triples_factory.entity_to_id[tail]
+        batch_ids.append(tail)
     if target is None or len(batch_ids) != 2:
         raise ValueError(
-            f"Exactly one of {{head,relation,tail}}_label must be None, but got "
-            f"{head_label}, {relation_label}, {tail_label}",
+            f"Exactly one of {{head, relation, tail}} must be None, but got {head}, {relation}, {tail}",
         )
 
     batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long))
@@ -741,35 +782,35 @@ def predict(
 @torch.inference_mode()
 def predict_target(
     model: Model,
-    triples_factory: TriplesFactory,
     *,
     # exactly one of them is None
-    head_label: Optional[str] = None,
-    relation_label: Optional[str] = None,
-    tail_label: Optional[str] = None,
+    head: Optional[str] = None,
+    relation: Optional[str] = None,
+    tail: Optional[str] = None,
     #
-    targets: Optional[Sequence[str]] = None,
+    triples_factory: Optional[TriplesFactory] = None,
+    targets: Optional[Sequence[Union[int, str]]] = None,
     mode: Optional[InductiveMode] = None,
 ) -> Predictions:
     """Get predictions for the head, relation, and/or tail combination.
 
     .. note ::
-        Exactly one of `head_label`, `relation_label` and `tail_label` should be None. This is the position
+        Exactly one of `head`, `relation` and `tail` should be None. This is the position
         which will be predicted.
 
     :param model:
         A PyKEEN model
-    :param triples_factory:
-        the training triples factory
 
-    :param head_label:
-        the head entity label. If None, predict heads
-    :param relation_label:
-        the relation label. If None, predict relations
-    :param tail_label:
-        the tail entity label. If None, predict tails
+    :param head:
+        the head entity. If None, predict heads
+    :param relation:
+        the relation. If None, predict relations
+    :param tail:
+        the tail entity. If None, predict tails
     :param targets:
         restrict prediction to these targets
+    :param triples_factory:
+        the training triples factory; required if head/relation/tail are given as string
 
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
@@ -779,25 +820,22 @@ def predict_target(
         The predictions containing either the $k$ highest scoring targets, or all targets if $k$ is `None`.
     """
     # get input & target
-    target, batch, other_col_ids = _get_input_batch(
-        triples_factory, head_label=head_label, relation_label=relation_label, tail_label=tail_label
-    )
+    target, batch, other_col_ids = _get_input_batch(factory=triples_factory, head=head, relation=relation, tail=tail)
 
     # get label-to-id mapping and prediction targets
-    label_ids, targets = _get_targets(
-        ids=targets, triples_factory=triples_factory, device=model.device, entity=relation_label is not None
+    labels, ids, targets = _get_targets(
+        ids=targets, triples_factory=triples_factory, device=model.device, entity=relation is not None
     )
 
     # get scores
     scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
 
     # create raw dataframe
-    rv = pandas.DataFrame(
-        [(target_id, target_label, score) for (target_label, target_id), score in zip(label_ids, scores)],
-        columns=[f"{target}_id", f"{target}_label", "score"],
-    ).sort_values("score", ascending=False)
-
-    return TargetPredictions(df=rv, factory=triples_factory, target=target, other_columns_fixed_ids=other_col_ids)
+    data = {f"{target}_id": ids, "score": scores}
+    if labels is not None:
+        data[f"{target}_label"] = labels
+    df = pandas.DataFrame(data=data).sort_values("score", ascending=False)
+    return TargetPredictions(df=df, factory=triples_factory, target=target, other_columns_fixed_ids=other_col_ids)
 
 
 @torch.inference_mode()
