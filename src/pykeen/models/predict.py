@@ -22,7 +22,12 @@ Predict Triples
 
 Predict Targets
 
->>> pred = predict_target(model=result.model, head_label="uk", relation_label="conferences", triples_factory=result.training)
+>>> pred = predict_target(
+...     model=result.model,
+...     head_label="uk",
+...     relation_label="conferences",
+...     triples_factory=result.training,
+... )
 # remove known targets from training
 >>> pred_filtered = pred.filter_triples(dataset.training)
 # indicate validation and test triples
@@ -47,7 +52,7 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from operator import itemgetter
-from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
+from typing import Collection, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy
 import pandas
@@ -71,7 +76,7 @@ from ..typing import (
     MappedTriples,
     Target,
 )
-from ..utils import resolve_device
+from ..utils import invert_mapping, resolve_device
 
 __all__ = [
     "predict",
@@ -219,7 +224,7 @@ def _get_targets(
     triples_factory: Optional[TriplesFactory],
     device: torch.device,
     entity: bool = True,
-) -> Tuple[Optional[List[str]], Optional[List[int]], Optional[torch.Tensor]]:
+) -> Tuple[Optional[Iterable[str]], Optional[Iterable[int]], Optional[torch.Tensor]]:
     """
     Prepare prediction targets for restricted target prediction.
 
@@ -232,45 +237,54 @@ def _get_targets(
     :param entity:
         whether the prediction target is an entity or relation
 
+    :raises ValueError:
+        if any of the ids is given as string, but no triples factory is available for conversion to IDs.
+
     :return:
         a 3-tuple of an optional list of labels, a list of ids, and the tensor to pass to the prediction method.
     """
+    # 3-tuple for return
+    labels: Optional[Iterable[str]] = None
+    id_list: Optional[Iterable[int]] = None
+    tensor: Optional[torch.Tensor] = None
+
     # extract label information, if possible
+    label_to_id: Optional[Mapping[str, int]]
+    id_to_label: Optional[Mapping[int, str]]
     if isinstance(triples_factory, TriplesFactory):
         label_to_id = triples_factory.entity_to_id if entity else triples_factory.relation_to_id
+        id_to_label = invert_mapping(label_to_id)
     else:
-        label_to_id = None
+        id_to_label = label_to_id = None
 
     # no restriction
     if ids is None:
-        if label_to_id is None:
-            return None, None, None
-        return tuple([*zip(*sorted(label_to_id.items(), key=itemgetter(1))), None])
-
-    # restriction is a tensor
-    if torch.is_tensor(ids):
-        ids_list = ids.tolist()
-        ids = ids.to(device)
-        if label_to_id is None:
-            return None, ids_list, ids
-        return [label_to_id[i] for i in ids_list], ids_list, ids
-
-    # restricton is a sequence of integers or strings
-    if not all(isinstance(i, int) for i in ids):
-        if label_to_id is None:
-            raise ValueError
-        ids = [i if isinstance(i, int) else label_to_id[i] for i in ids]
-    ids = sorted(ids)
-
-    # now, restriction is a sequence of integers
-    id_tensor = torch.as_tensor(ids, torch.long, device=device)
-    if label_to_id is None:
-        return None, ids, id_tensor
-    return [label_to_id[i] for i in ids], ids, id_tensor
+        if id_to_label is not None:
+            labels = map(itemgetter(1), sorted(id_to_label.items()))
+    elif isinstance(ids, torch.Tensor):
+        # restriction is a tensor
+        tensor = ids.to(device)
+        id_list = ids.tolist()
+    else:
+        # restriction is a sequence of integers or strings
+        if not all(isinstance(i, int) for i in ids):
+            if label_to_id is None:
+                raise ValueError(
+                    "If any of the ids is given as string, a triples factory must be provided for ID conversion."
+                )
+            ids = [i if isinstance(i, int) else label_to_id[i] for i in ids]
+        # now, restriction is a sequence of integers
+        assert all(isinstance(i, int) for i in ids)
+        id_list = sorted(ids)  # type: ignore
+        tensor = torch.as_tensor(id_list, torch.long, device=device)
+    # if explicit ids have been given, and label information is available, extract list of labels
+    if id_list is not None and id_to_label is not None:
+        labels = map(id_to_label.__getitem__, id_list)
+    return labels, id_list, tensor
 
 
 def _get_input_batch(
-    triples_factory: Optional[TriplesFactory] = None,
+    factory: Optional[TriplesFactory] = None,
     # exactly one of them is None
     head: Union[None, int, str] = None,
     relation: Union[None, int, str] = None,
@@ -278,7 +292,7 @@ def _get_input_batch(
 ) -> Tuple[Target, torch.LongTensor, Tuple[int, int]]:
     """Prepare input batch for prediction.
 
-    :param triples_factory:
+    :param factory:
         the triples factory used to translate labels to ids.
     :param head:
         the head entity
@@ -294,31 +308,31 @@ def _get_input_batch(
         a 3-tuple (target, batch, batch_tuple) of the prediction target, the input batch, and the input batch as tuple.
     """
     # create input batch
-    batch_ids = []
-    target = None
+    batch_ids: List[int] = []
+    target: Optional[Target] = None
     if head is None:
         target = LABEL_HEAD
     else:
         if not isinstance(head, int):
-            if triples_factory is None:
+            if factory is None:
                 raise ValueError("If head is not given as index, a triples factory must be passed.")
-            head = triples_factory.entity_to_id[head]
+            head = factory.entity_to_id[head]
         batch_ids.append(head)
     if relation is None:
         target = LABEL_RELATION
     else:
         if not isinstance(relation, int):
-            if triples_factory is None:
+            if factory is None:
                 raise ValueError("If relation is not given as index, a triples factory must be passed.")
-            relation = triples_factory.relation_to_id[relation]
+            relation = factory.relation_to_id[relation]
         batch_ids.append(relation)
     if tail is None:
         target = LABEL_TAIL
     else:
         if not isinstance(tail, int):
-            if triples_factory is None:
+            if factory is None:
                 raise ValueError("If tail is not given as index, a triples factory must be passed.")
-            tail = triples_factory.entity_to_id[tail]
+            tail = factory.entity_to_id[tail]
         batch_ids.append(tail)
     if target is None or len(batch_ids) != 2:
         raise ValueError(
