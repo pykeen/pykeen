@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class Predictions:
-    """Base class for predictions"""
+    """Base class for predictions."""
 
     #: the dataframe; has to have a column named "score"
     df: pd.DataFrame
@@ -636,9 +636,6 @@ class CountScoreConsumer(ScoreConsumer):
     ) -> None:  # noqa: D102
         self.batch_count += batch.shape[0]
         self.score_count += scores.numel()
-
-
-COLUMN_LABELS = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
 
 
 class TopKScoreConsumer(ScoreConsumer):
