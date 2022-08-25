@@ -53,12 +53,18 @@ or investigate whether certain entities generally receive larger scores
 
 Target Scoring
 --------------
+
+:func:`pykeen.models.predict.predict_target`'s primary usecase is link prediction or relation prediction.
+For instance, we could use our models to score all possible tail entities for the query `("uk", "conferences", ?)` via
+
+>>> from pykeen.models.predict import predict_target
 >>> pred = predict_target(
 ...     model=result.model,
-...     head_label="uk",
-...     relation_label="conferences",
+...     head="uk",
+...     relation="conferences",
 ...     triples_factory=result.training,
 ... )
+
 # remove known targets from training
 >>> pred_filtered = pred.filter_triples(dataset.training)
 # indicate validation and test triples
