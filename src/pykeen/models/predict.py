@@ -6,7 +6,7 @@ import dataclasses
 import logging
 import math
 import warnings
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from operator import itemgetter
 from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
 
@@ -52,20 +52,26 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass
-class Predictions:
+# cf. https://github.com/python/mypy/issues/5374
+@dataclasses.dataclass  # type: ignore
+class Predictions(ABC):
     """Base class for predictions."""
 
     #: the dataframe; has to have a column named "score"
     df: pd.DataFrame
 
     #: an optional factory to use for labeling
-    factory: Optional[TriplesFactory]
+    factory: Optional[CoreTriplesFactory]
 
     def __post_init__(self):
         """Verify constraints."""
         if "score" not in self.df.columns:
-            raise ValueError(f"df must have a column named 'score', but df.columns={df.columns}")
+            raise ValueError(f"df must have a column named 'score', but df.columns={self.df.columns}")
+
+    @classmethod
+    def new(cls, df: pd.DataFrame, factory: Optional[CoreTriplesFactory]) -> "Predictions":
+        """Create predictions with exchanged df/factory."""
+        return cls(df=df, factory=factory)
 
     @abstractmethod
     def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
@@ -91,7 +97,7 @@ class Predictions:
             if mapped_triples is None:
                 continue
             df = df[self._contains(df=df, mapped_triples=get_mapped_triples(mapped_triples), invert=True)]
-        return Predictions(df=df, factory=self.factory)
+        return self.new(df=df, factory=self.factory)
 
     def add_membership_columns(self, **filter_triples: Union[None, MappedTriples]) -> pd.DataFrame:
         """Add columns indicating whether the triples are known."""
@@ -100,11 +106,11 @@ class Predictions:
             if mapped_triples is None:
                 continue
             df[f"in_{key}"] = self._contains(df=df, mapped_triples=get_mapped_triples(mapped_triples))
-        return Predictions(df=df, factory=self.factory)
+        return self.new(df=df, factory=self.factory)
 
     def to_df(self) -> pd.DataFrame:
         """Convert to a dataframe."""
-        raise NotImplementedError
+        return self.df
 
 
 @dataclasses.dataclass
