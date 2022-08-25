@@ -20,7 +20,7 @@ from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..triples import KGInfo, relation_inverter
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 from ..utils import NoRandomSeedNecessary, get_preferred_device, set_random_seed
 
 __all__ = [

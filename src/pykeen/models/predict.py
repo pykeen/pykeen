@@ -61,7 +61,7 @@ from .base import Model
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from ..triples.utils import tensor_to_df
-from ..typing import (  # ScorePack,
+from ..typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
@@ -199,7 +199,6 @@ class TargetPredictions(Predictions):
         return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, invert=invert).cpu().numpy()
 
 
-# TODO: merge with other ScorePack again
 @dataclasses.dataclass
 class ScorePack:
     """A pair of result triples and scores."""
