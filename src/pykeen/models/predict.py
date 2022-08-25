@@ -62,6 +62,11 @@ class Predictions:
     #: an optional factory to use for labeling
     factory: Optional[TriplesFactory]
 
+    def __post_init__(self):
+        """Verify constraints."""
+        if "score" not in self.df.columns:
+            raise ValueError(f"df must have a column named 'score', but df.columns={df.columns}")
+
     @abstractmethod
     def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
         """
