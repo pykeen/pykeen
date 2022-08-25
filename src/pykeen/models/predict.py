@@ -9,6 +9,7 @@ For the remainder of this part of the documentation, we assume that we have trai
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(dataset="nations", model="pairre", training_kwargs=dict(num_epochs=0))
 
+
 High-Level
 ==========
 The prediction workflow offers three high-level methods to perform predictions
@@ -22,6 +23,7 @@ The prediction workflow offers three high-level methods to perform predictions
     Please note that not all models automatically have interpretable scores, and their calibration may be poor. Thus,
     exercise caution when interpreting the results.
 
+
 Triple Scoring
 --------------
 
@@ -29,6 +31,7 @@ When scoring triples with :func:`pykeen.models.predict.predict_triples`, we obta
 triples. As an example, we will calculate scores for all validation triples from the dataset we trained the model upon.
 
 >>> from pykeen.datasets import get_dataset
+>>> from pykeen.models.predict import predict_triples
 >>> dataset = get_dataset(dataset="nations")
 >>> pack = predict_triples(model=result.model, triples=dataset.validation)
 
@@ -41,11 +44,12 @@ which the `"nations"` dataset offers, and convert them to a pandas dataframe:
 Since we now have a dataframe, we can utilize the full power of pandas for our subsequent analysis, e.g., showing the
 triples which received the highest score
 
->>> df.largest(n=5, columns="score")
+>>> df.nlargest(n=5, columns="score")
 
 or investigate whether certain entities generally receive larger scores
 
->>> df.groupby(by="head_id").agg({"score": ["mean", "std", "count"]})
+>>> df.groupby(by=["head_id", "head_label"]).agg({"score": ["mean", "std", "count"]})
+
 
 Target Scoring
 --------------
