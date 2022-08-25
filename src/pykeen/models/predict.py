@@ -105,15 +105,39 @@ whether the triple has been seen during training
 >>> pred_annotated.df
 
 
-Details
-=======
+Low-Level
+=========
+The following section outlines some details about the implementation of operations
+which require calculating scores for all triples. The algorithm works are follows:
 
-ScorePack
-Predictions
+.. code-block:: python
 
-ScoreConsumer
-PredictionDataset
-consume_scores
+  for batch in DataLoader(dataset, batch_size=batch_size):
+    scores = model.predict(batch)
+    for consumer in consumers:
+      consumer(batch, scores)
+
+Here, `dataset` is a :class:`pykeen.models.predict.PredictionDataset`, which breaks
+the score calculation down into individual target predictions (e.g., tail predictions).
+Implementations include :class:`pykeen.models.predict.AllPredictionDataset` and
+:class:`pykeen.models.predict.PartiallyRestrictedPredictionDataset`. Notice that the
+prediction tasks are built lazily, i.e., only instantiating the prediction tasks when
+accessed. Moreover, the :mod:`torch_max_mem` package is used to automatically tune the
+batch size to maximize the memory utilization of the hardware at hand.
+
+For each batch, the scores of the prediction task are calculated once. Afterwards, multiple
+*consumers* can process these scores. A consumer extends :class:`pykeen.models.predict.ScoreConsumer`
+and receives the batch, i.e., input to the predict method, as well as the tensor of predicted scores.
+Examples include 
+
+- :class:`pykeen.models.predict.CountScoreConsumer`: a simple consumer which only counts how many scores
+  it has seen. Mostly used for debugging or testing purposes
+- :class:`pykeen.models.predict.AllScoreConsumer`: accumulates all scores into a single huge tensor.
+  This incurs massive memory requirements for reasonably sized datasets, and often can be avoided by
+  interleaving the processing of the scores with calculation of individual batches.
+- :class:`pykeen.models.predict.TopKScoreConsumer`: keeps only the top $k$ scores as well as the inputs
+  leading to them. This is a memory-efficient variant of first accumulating all scores, then sorting by
+  score and keeping only the top entries.
 """
 
 import collections
