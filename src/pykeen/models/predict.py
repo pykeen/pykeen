@@ -8,7 +8,7 @@ import math
 import warnings
 from abc import ABC, abstractmethod
 from operator import itemgetter
-from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
+from typing import Collection, List, Literal, Optional, Sequence, Tuple, Union, cast
 
 import numpy
 import pandas as pd
@@ -38,7 +38,7 @@ from ..utils import resolve_device
 __all__ = [
     "predict",
     "predict_triples_df",
-    "get_all_prediction_df",
+    "get_all_prediction",
     "get_prediction_df",
     # score consumption / prediction loop
     "consume_scores",
@@ -487,43 +487,31 @@ def get_relation_prediction_df(
     )
 
 
-def get_all_prediction_df(
+def get_all_prediction(
     model: Model,
     *,
     triples_factory: CoreTriplesFactory,
     k: Optional[int] = None,
     batch_size: Optional[int] = 1,
-    return_tensors: bool = False,
-    add_novelties: bool = True,
-    remove_known: bool = False,
-    testing: Optional[torch.LongTensor] = None,
     mode: Optional[InductiveMode] = None,
-) -> Union[ScorePack, pd.DataFrame]:
+) -> Predictions:
     """Compute scores for all triples, optionally returning only the k highest scoring.
 
     .. note:: This operation is computationally very expensive for reasonably-sized knowledge graphs.
-    .. warning:: Setting k=None may lead to huge memory requirements.
+    .. warning:: Setting `k=None` may lead to huge memory requirements.
 
     :param model: A PyKEEN model
     :param triples_factory: Training triples factory
     :param k: The number of triples to return. Set to ``None`` to keep all.
     :param batch_size:
         The batch size to use for calculating scores. Can be set to `None` to determine the largest possible
-    :param return_tensors: If true, only return tensors. If false (default), return as a pandas DataFrame
-    :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
-        to novel triples?
-    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
+
     :return: shape: (k, 3)
-        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-        or all possible triples if k is None.
+        A predictions object which contains either the $k$ highest scoring triples,
+        or all possible triples if $k$ is `None`.
 
     Example usage:
 
@@ -537,24 +525,15 @@ def get_all_prediction_df(
         model = result.model
 
         # Get scores for *all* triples
-        df = get_all_prediction_df(model, triples_factory=result.training)
+        df = get_all_prediction_df(model, triples_factory=result.training).to_df()
 
         # Get scores for top 15 triples
-        top_df = get_all_prediction_df(model, k=15, triples_factory=result.training)
+        top_df = get_all_prediction_df(model, k=15, triples_factory=result.training).to_df()
     """
     score_pack = predict(model=model, k=k, batch_size=batch_size, mode=mode)
-
-    if return_tensors:
-        return score_pack
-
-    pred = TriplePredictions(
+    return TriplePredictions(
         df=triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores), factory=triples_factory
     )
-    if remove_known:
-        pred = pred.filter_triples(triples_factory, testing)
-    if add_novelties:
-        pred = pred.add_membership_columns(training=triples_factory, testing=testing)
-    return pred.to_df()
 
 
 @torch.inference_mode()

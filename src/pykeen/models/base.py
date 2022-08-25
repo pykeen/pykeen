@@ -496,10 +496,10 @@ class Model(nn.Module, ABC):
         :return: shape: (k, 3)
             A tensor containing the k highest scoring triples, or all possible triples if k=None.
         """
-        from .predict import get_all_prediction_df
+        from .predict import get_all_prediction
 
         warnings.warn("Use pykeen.models.predict.get_all_prediction_df", DeprecationWarning)
-        return get_all_prediction_df(model=self, k=k, batch_size=batch_size, **kwargs)
+        return get_all_prediction(model=self, k=k, batch_size=batch_size, **kwargs)
 
     def get_prediction_df(
         self,

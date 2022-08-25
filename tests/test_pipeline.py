@@ -15,7 +15,7 @@ import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
 from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.predict import (
-    get_all_prediction_df,
+    get_all_prediction,
     get_head_prediction_df,
     get_relation_prediction_df,
     get_tail_prediction_df,
@@ -150,7 +150,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_no_novelties(self):
         """Test scoring all triples without labeling as novel w.r.t. training and testing."""
-        all_df = get_all_prediction_df(
+        all_df = get_all_prediction(
             model=self.model,
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
@@ -166,7 +166,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_remove_known(self):
         """Test scoring all triples while removing non-novel triples w.r.t. training and testing."""
-        all_df = get_all_prediction_df(
+        all_df = get_all_prediction(
             model=self.model,
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
@@ -184,7 +184,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_with_novelties(self):
         """Test scoring all triples with labeling as novel w.r.t. training and testing."""
-        all_df = get_all_prediction_df(
+        all_df = get_all_prediction(
             model=self.model,
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,

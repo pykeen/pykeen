@@ -17,7 +17,7 @@ import pykeen.models
 from pykeen.datasets.nations import Nations
 from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_all_prediction_df, predict
+from pykeen.models.predict import get_all_prediction, predict
 from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
@@ -587,7 +587,7 @@ class TestTransE(cases.DistanceModelTestCase):
         """Test consistency of top-k scoring."""
         ks = [5, 10]
         dfs = [
-            get_all_prediction_df(
+            get_all_prediction(
                 model=self.instance,
                 triples_factory=self.factory,
                 batch_size=1,
