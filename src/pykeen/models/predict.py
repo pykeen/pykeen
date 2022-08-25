@@ -1,6 +1,20 @@
 # -*- coding: utf-8 -*-
 
-"""Prediction workflows."""
+"""
+Prediction workflows.
+
+Train Model
+
+>>> from pykeen.pipeline import pipeline
+>>> from pykeen.models.predict import predict
+
+>>> result = pipeline(dataset="nations", model="pairre", training_kwargs=dict(num_epochs=0))
+>>> pack = predict(model=result.model)
+>>> pred = pack.process(factory=result.training)
+>>> pred_filtered = pred.filter_triples(result.training)
+>>> pred_annotated = pred.add_membership_columns(training=result.training)
+>>> pred_filtered.df
+"""
 
 import dataclasses
 import logging
@@ -8,7 +22,7 @@ import math
 import warnings
 from abc import ABC, abstractmethod
 from operator import itemgetter
-from typing import Collection, List, Literal, Optional, Sequence, Tuple, Union, cast
+from typing import Collection, List, Optional, Sequence, Tuple, Union, cast
 
 import numpy
 import pandas as pd
@@ -22,7 +36,7 @@ from .base import Model
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from ..triples.utils import tensor_to_df
-from ..typing import (
+from ..typing import (  # ScorePack,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
@@ -30,7 +44,6 @@ from ..typing import (
     InductiveMode,
     LabeledTriples,
     MappedTriples,
-    ScorePack,
     Target,
 )
 from ..utils import resolve_device
@@ -114,10 +127,6 @@ class Predictions(ABC):
             )
         return self.new(df=df, factory=self.factory)
 
-    def to_df(self) -> pd.DataFrame:
-        """Convert to a dataframe."""
-        return self.df
-
 
 @dataclasses.dataclass
 class TriplePredictions(Predictions):
@@ -167,6 +176,25 @@ class TargetPredictions(Predictions):
         known_ids = mapped_triples[filter_mask, col].unique()
         query_ids = torch.as_tensor(df[f"{self.target}_id"].to_numpy(), device=device)
         return torch.isin(elements=query_ids, test_elements=known_ids, assume_unique=True, invert=invert).cpu().numpy()
+
+
+@dataclasses.dataclass
+class ScorePack:
+    """A pair of result triples and scores."""
+
+    #: the ID-based triples, shape: (n, 3)
+    result: torch.LongTensor
+
+    #: the scores
+    scores: torch.FloatTensor
+
+    def process(self, factory: Optional[CoreTriplesFactory] = None, **kwargs) -> "TriplePredictions":
+        """Start post-processing scores."""
+        if factory is None:
+            df = tensor_to_df(self.result, score=self.scores, **kwargs)
+        else:
+            df = factory.tensor_to_df(self.result, score=self.scores, **kwargs)
+        return TriplePredictions(df=df, factory=factory)
 
 
 def _get_targets(
@@ -325,7 +353,7 @@ def get_prediction_df(
         pred = pred.filter_triples(triples_factory, testing)
     if add_novelties:
         pred = pred.add_membership_columns(training=triples_factory, testing=testing)
-    return pred.to_df()
+    return pred.df
 
 
 def get_head_prediction_df(
@@ -484,55 +512,6 @@ def get_relation_prediction_df(
         tail_label=tail_label,
         targets=relations,
         **kwargs,
-    )
-
-
-def get_all_prediction(
-    model: Model,
-    *,
-    triples_factory: CoreTriplesFactory,
-    k: Optional[int] = None,
-    batch_size: Optional[int] = 1,
-    mode: Optional[InductiveMode] = None,
-) -> Predictions:
-    """Compute scores for all triples, optionally returning only the k highest scoring.
-
-    .. note:: This operation is computationally very expensive for reasonably-sized knowledge graphs.
-    .. warning:: Setting `k=None` may lead to huge memory requirements.
-
-    :param model: A PyKEEN model
-    :param triples_factory: Training triples factory
-    :param k: The number of triples to return. Set to ``None`` to keep all.
-    :param batch_size:
-        The batch size to use for calculating scores. Can be set to `None` to determine the largest possible
-    :param mode:
-        The pass mode, which is None in the transductive setting and one of "training",
-        "validation", or "testing" in the inductive setting.
-
-    :return: shape: (k, 3)
-        A predictions object which contains either the $k$ highest scoring triples,
-        or all possible triples if $k$ is `None`.
-
-    Example usage:
-
-    .. code-block::
-
-        from pykeen.pipeline import pipeline
-        from pykeen.models.predict import get_all_prediction_df
-
-        # Train a model (quickly)
-        result = pipeline(model='RotatE', dataset='Nations', epochs=5)
-        model = result.model
-
-        # Get scores for *all* triples
-        df = get_all_prediction_df(model, triples_factory=result.training).to_df()
-
-        # Get scores for top 15 triples
-        top_df = get_all_prediction_df(model, k=15, triples_factory=result.training).to_df()
-    """
-    score_pack = predict(model=model, k=k, batch_size=batch_size, mode=mode)
-    return TriplePredictions(
-        df=triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores), factory=triples_factory
     )
 
 
