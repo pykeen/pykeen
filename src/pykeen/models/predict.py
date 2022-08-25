@@ -81,11 +81,6 @@ class Predictions(ABC):
         if "score" not in self.df.columns:
             raise ValueError(f"df must have a column named 'score', but df.columns={self.df.columns}")
 
-    @classmethod
-    def new(cls, df: pd.DataFrame, factory: Optional[CoreTriplesFactory]) -> "Predictions":
-        """Create predictions with exchanged df/factory."""
-        return cls(df=df, factory=factory)
-
     @abstractmethod
     def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
         """
@@ -114,7 +109,7 @@ class Predictions(ABC):
                     df=df, mapped_triples=get_mapped_triples(mapped_triples, factory=self.factory), invert=True
                 )
             ]
-        return self.new(df=df, factory=self.factory)
+        return self.__class__(df=df, factory=self.factory)
 
     def add_membership_columns(self, **filter_triples: Optional[AnyTriples]) -> pd.DataFrame:
         """Add columns indicating whether the triples are known."""
@@ -125,7 +120,7 @@ class Predictions(ABC):
             df[f"in_{key}"] = self._contains(
                 df=df, mapped_triples=get_mapped_triples(mapped_triples, factory=self.factory)
             )
-        return self.new(df=df, factory=self.factory)
+        return self.__class__(df=df, factory=self.factory)
 
 
 @dataclasses.dataclass
