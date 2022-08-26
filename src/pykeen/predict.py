@@ -266,7 +266,7 @@ from .typing import (
     MappedTriples,
     Target,
 )
-from .utils import invert_mapping, resolve_device
+from .utils import invert_mapping, isin_many_dim, resolve_device
 
 __all__ = [
     # high-level
@@ -556,15 +556,6 @@ def _get_input_batch(
 
     batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long))
     return target, batch, (batch_ids[0], batch_ids[1])
-
-
-# TODO: move to utils?
-def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> torch.BoolTensor:
-    """Return whether elements are contained in test elements."""
-    inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
-        return_counts=True, return_inverse=True, dim=dim
-    )[1:]
-    return counts[inverse[: elements.shape[dim]]] > 1
 
 
 # note type alias annotation required,
