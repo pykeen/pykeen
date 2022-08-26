@@ -1,5 +1,5 @@
 """Tests for prediction tools."""
-from typing import Any, Iterable, MutableMapping, Optional, Tuple
+from typing import Any, Iterable, MutableMapping, Optional, Sequence, Tuple, Union
 
 import numpy
 import pandas
@@ -215,6 +215,47 @@ def test_predict_triples(
     else:
         num_triples = len(triples)
     _check_score_pack(pack=pack, model=model, num_triples=num_triples)
+
+
+def _iter_predict_target_inputs() -> Iterable[
+    Tuple[
+        pykeen.models.Model,
+        Union[None, int, str],
+        Union[None, int, str],
+        Union[None, int, str],
+        Optional[CoreTriplesFactory],
+        Union[None, torch.LongTensor, Sequence[Union[int, str]]],
+    ]
+]:
+    # create model
+    dataset = Nations()
+    factory = dataset.training
+    model = pykeen.models.mocks.FixedModel(triples_factory=factory)
+    # id-based head/relation/tail prediction, no factory, no restriction
+    yield model, None, 0, 1, None, None
+    yield model, 1, None, 2, None, None
+    yield model, 0, 1, None, None, None
+    # restriction by list of ints
+    yield model, 0, 1, None, None, [0, 3, 7]
+    # restriction by list of tensor
+    yield model, 0, None, 7, None, torch.as_tensor([0, 3, 7], dtype=torch.long)
+
+
+@pytest.mark.parametrize(["model", "head", "relation", "tail", "factory", "targets"], _iter_predict_target_inputs())
+def test_predict_target(
+    model: pykeen.models.Model,
+    head: Union[None, int, str],
+    relation: Union[None, int, str],
+    tail: Union[None, int, str],
+    factory: Optional[CoreTriplesFactory],
+    targets: Union[None, torch.LongTensor, Sequence[Union[int, str]]],
+):
+    """Test target scoring."""
+    pred = pykeen.predict.predict_target(
+        model=model, head=head, relation=relation, tail=tail, triples_factory=factory, targets=targets
+    )
+    assert isinstance(pred, pykeen.predict.TargetPredictions)
+    # TODO: additional verification
 
 
 # class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.models.FixedModel]):
