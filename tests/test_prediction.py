@@ -317,27 +317,19 @@ def test_get_targets(
 
 
 def _iter_predict_target_inputs() -> Iterable[
-    Tuple[
-        pykeen.models.Model,
-        Union[None, int, str],
-        Union[None, int, str],
-        Union[None, int, str],
-        Optional[CoreTriplesFactory],
-        Union[None, torch.LongTensor, Sequence[Union[int, str]]],
-    ]
+    Tuple[pykeen.models.Model, int, int, int, Optional[CoreTriplesFactory], Optional[Sequence[int]]]
 ]:
+    # comment: we only use id-based input, since the normalization has already been tested
     # create model
-    dataset = Nations()
-    factory = dataset.training
+    factory = Nations().training
     model = pykeen.models.mocks.FixedModel(triples_factory=factory)
-    # id-based head/relation/tail prediction, no factory, no restriction
-    yield model, None, 0, 1, None, None
-    yield model, 1, None, 2, None, None
-    yield model, 0, 1, None, None, None
-    # restriction by list of ints
-    yield model, 0, 1, None, None, [0, 3, 7]
-    # restriction by list of tensor
-    yield model, 0, None, 7, None, torch.as_tensor([0, 3, 7], dtype=torch.long)
+    for factory_ in (None, factory):
+        # id-based head/relation/tail prediction, no restriction
+        yield model, None, 0, 1, factory_, None
+        yield model, 1, None, 2, factory_, None
+        yield model, 0, 1, None, factory_, None
+        # restriction by list of ints
+        yield model, 0, 1, None, factory_, [0, 3, 7]
 
 
 @pytest.mark.parametrize(["model", "head", "relation", "tail", "factory", "targets"], _iter_predict_target_inputs())
@@ -354,6 +346,7 @@ def test_predict_target(
         model=model, head=head, relation=relation, tail=tail, triples_factory=factory, targets=targets
     )
     assert isinstance(pred, pykeen.predict.TargetPredictions)
+    assert pred.factory == factory
     # TODO: additional verification
 
 
