@@ -101,6 +101,7 @@ from pykeen.typing import (
     MappedTriples,
     RelationRepresentation,
     TailRepresentation,
+    Target,
 )
 from pykeen.utils import (
     all_in_bounds,
@@ -114,7 +115,7 @@ from pykeen.utils import (
 )
 from tests.constants import EPSILON
 from tests.mocks import MockEvaluator
-from tests.utils import needs_package, rand
+from tests.utils import needs_packages, rand
 
 T = TypeVar("T")
 
@@ -1556,7 +1557,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
         return kwargs
 
 
-@needs_package("torch_geometric")
+@needs_packages("torch_geometric")
 class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
     """Tests for message passing representations."""
 
@@ -1911,9 +1912,8 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
             dense_positive_mask=mask,
         )
 
-    def test_finalize(self) -> None:
-        """Test the finalize() function."""
-        # Process one batch
+    def _process_batches(self):
+        """Process one batch per side."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
         for target in (LABEL_HEAD, LABEL_TAIL):
@@ -1924,6 +1924,12 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
                 scores=scores,
                 dense_positive_mask=mask,
             )
+        return hrt_batch, scores, mask
+
+    def test_finalize(self) -> None:
+        """Test the finalize() function."""
+        # Process one batch
+        hrt_batch, scores, mask = self._process_batches()
 
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)
@@ -2668,3 +2674,23 @@ class PredictionPostProcessorTestCase(
         assert set(df2.columns) == set(self.df.columns)
         assert len(df2) <= len(self.df)
         # TODO: check subset
+
+
+class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.models.predict.ScoreConsumer]):
+    """Tests for score consumers."""
+
+    batch_size: int = 2
+    num_entities: int = 3
+    target: Target = LABEL_TAIL
+
+    def test_consumption(self):
+        """Test calling."""
+        generator = torch.manual_seed(seed=42)
+        batch = torch.randint(self.num_entities, size=(self.batch_size, 2), generator=generator)
+        scores = torch.rand(self.batch_size, self.num_entities)
+        self.instance(batch=batch, target=self.target, scores=scores)
+        self.check()
+
+    def check(self):
+        """Perform additional verification."""
+        pass

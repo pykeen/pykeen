@@ -10,7 +10,7 @@ import unittest_templates
 
 import pykeen.nn.node_piece
 from tests import cases
-from tests.utils import needs_package
+from tests.utils import needs_packages
 
 
 class DegreeAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
@@ -91,7 +91,7 @@ class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
         numpy.testing.assert_array_equal(pool, exp_pool)
 
 
-@needs_package("torch_sparse")
+@needs_packages("torch_sparse")
 class SparseBFSSearcherTests(cases.AnchorSearcherTestCase):
     """Tests for anchor search with scipy.sparse."""
 
@@ -123,7 +123,7 @@ class AnchorTokenizerTests(cases.TokenizerTestCase):
     cls = pykeen.nn.node_piece.AnchorTokenizer
 
 
-@needs_package("torch_sparse")
+@needs_packages("torch_sparse")
 class MetisAnchorTokenizerTests(cases.TokenizerTestCase):
     """Tests for tokenization with anchor entities and metis."""
 

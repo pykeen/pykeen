@@ -8,7 +8,7 @@ import unittest_templates
 import pykeen.nn.weighting
 from tests import cases
 
-from ..utils import needs_package
+from ..utils import needs_packages
 
 
 class InverseInDegreeEdgeWeightingTests(cases.EdgeWeightingTestCase):
@@ -29,7 +29,7 @@ class SymmetricEdgeWeightingTests(cases.EdgeWeightingTestCase):
     cls = pykeen.nn.weighting.SymmetricEdgeWeighting
 
 
-@needs_package("torch_scatter")
+@needs_packages("torch_scatter")
 class AttentionWeightingTests(cases.EdgeWeightingTestCase):
     """Tests for attention weighting."""
 
