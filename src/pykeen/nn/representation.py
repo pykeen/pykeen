@@ -477,6 +477,12 @@ class LowRankRepresentation(Representation):
         """
         Construct a low-rank approximation of another representation.
 
+        .. note ::
+
+            While this method tries to find a good approximation of the base representation, you may lose all (useful)
+            inductive biases you had with the original one, e.g., from shared tokens in
+            :class:`pykeen.representation.NodePieceRepresentation`.
+
         :param other:
             the other representation
         :param kwargs:
