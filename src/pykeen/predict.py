@@ -739,12 +739,14 @@ class PredictionDataset(torch.utils.data.Dataset):
         # TODO: variable targets across batches/samples?
         self.target = target
 
+    # docstr-coverage: inherited
     @abstractmethod
-    def __getitem__(self, item: int) -> PredictionBatch:
+    def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D105
         raise NotImplementedError
 
+    # docstr-coverage: inherited
     @abstractmethod
-    def __len__(self) -> int:
+    def __len__(self) -> int:  # noqa: D105
         raise NotImplementedError
 
 
@@ -770,13 +772,13 @@ class AllPredictionDataset(PredictionDataset):
         self.divisor = num_relations if self.target == LABEL_TAIL else num_entities
 
     # docstr-coverage: inherited
-    def __len__(self) -> int:  # noqa: D102
+    def __len__(self) -> int:  # noqa: D105
         if self.target == LABEL_RELATION:
             return self.num_entities**2
         return self.num_entities * self.num_relations
 
     # docstr-coverage: inherited
-    def __getitem__(self, item: int) -> torch.LongTensor:  # noqa: D102
+    def __getitem__(self, item: int) -> torch.LongTensor:  # noqa: D105
         quotient, remainder = divmod(item, self.divisor)
         return torch.as_tensor([quotient, remainder])
 
@@ -864,11 +866,11 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         self.parts = (parts[0], parts[1])  # for mypy
 
     # docstr-coverage: inherited
-    def __len__(self) -> int:  # noqa: D102
+    def __len__(self) -> int:  # noqa: D105
         return math.prod(map(len, self.parts))
 
     # docstr-coverage: inherited
-    def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D102
+    def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D105
         quotient, remainder = divmod(item, len(self.parts[0]))
         return torch.as_tensor([self.parts[0][quotient], self.parts[1][remainder]])
 
