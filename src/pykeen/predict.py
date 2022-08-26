@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-.. _predictions:
-
 Prediction workflows.
+
+.. _predictions:
 
 After training, the interaction model (e.g., TransE, ConvE, RotatE) can assign a score to an arbitrary triple,
 whether it appeared during training, testing, or not. In PyKEEN, each is implemented such that the higher the score
@@ -141,7 +141,7 @@ batch size to maximize the memory utilization of the hardware at hand.
 For each batch, the scores of the prediction task are calculated once. Afterwards, multiple
 *consumers* can process these scores. A consumer extends :class:`pykeen.models.predict.ScoreConsumer`
 and receives the batch, i.e., input to the predict method, as well as the tensor of predicted scores.
-Examples include 
+Examples include
 
 - :class:`pykeen.models.predict.CountScoreConsumer`: a simple consumer which only counts how many scores
   it has seen. Mostly used for debugging or testing purposes
@@ -154,7 +154,7 @@ Examples include
 
 Potential Caveats
 =================
-The model is trained on a particular link prediction task, e.g. to predict the appropriate tail for a 
+The model is trained on a particular link prediction task, e.g. to predict the appropriate tail for a
 given head/relation pair. This means that while the model can technically also predict other links, e.g.,
 relations between a given head/tail pair, it must be done with the caveat that it was not
 trained for this task, and thus its scores may behave unexpectedly.
@@ -192,7 +192,12 @@ of directly using `get_prediction_df`.
 The old use of
 
 >>> from pykeen.models import predict
->>> predict.get_prediction_df(model=model, head_label="brazil", relation_label="intergovorgs", triples_factory=result.training)
+>>> predict.get_prediction_df(
+...     model=model,
+...     head_label="brazil",
+...     relation_label="intergovorgs",
+...     triples_factory=result.training,
+... )
 
 can be replaced by
 
@@ -247,8 +252,8 @@ from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 from typing_extensions import TypeAlias  # Python <=3.9
 
-from .models.base import Model
 from .constants import COLUMN_LABELS, TARGET_TO_INDEX
+from .models.base import Model
 from .triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from .triples.utils import tensor_to_df
 from .typing import (

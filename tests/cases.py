@@ -47,13 +47,13 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
-import pykeen.predict
 import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
 import pykeen.nn.text
 import pykeen.nn.weighting
+import pykeen.predict
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
