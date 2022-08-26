@@ -217,6 +217,43 @@ def test_predict_triples(
     _check_score_pack(pack=pack, model=model, num_triples=num_triples)
 
 
+def _iter_get_input_batch_inputs():
+    """Iterate over test inputs for _get_input_batch."""
+    factory = Nations().training
+    # ID-based, no factory
+    yield None, 0, 1, None, pykeen.typing.LABEL_TAIL
+    yield None, 1, None, 0, pykeen.typing.LABEL_RELATION
+    yield None, None, 0, 1, pykeen.typing.LABEL_HEAD
+    # string-based + factory
+    yield factory, "uk", "accusation", None, pykeen.typing.LABEL_TAIL
+    yield factory, "uk", None, "uk", pykeen.typing.LABEL_RELATION
+    yield factory, None, "accusation", "uk", pykeen.typing.LABEL_HEAD
+    # mixed + factory
+    yield factory, 0, "accusation", None, pykeen.typing.LABEL_TAIL
+    yield factory, "uk", None, 0, pykeen.typing.LABEL_RELATION
+    yield factory, None, 1, "uk", pykeen.typing.LABEL_HEAD
+
+
+@pytest.mark.parametrize(["factory", "head", "relation", "tail", "exp_target"], _iter_get_input_batch_inputs())
+def test_get_input_batch(
+    factory: Optional[CoreTriplesFactory],
+    head: Union[None, int, str],
+    relation: Union[None, int, str],
+    tail: Union[None, int, str],
+    exp_target: pykeen.typing.Target,
+):
+    """Test input batch construction for target prediction."""
+    target, batch, batch_tuple = pykeen.predict._get_input_batch(
+        factory=factory, head=head, relation=relation, tail=tail
+    )
+    assert target == exp_target
+    assert isinstance(batch, torch.Tensor)
+    assert isinstance(batch_tuple, tuple)
+    assert batch.shape == (1, 2)
+    assert len(batch_tuple) == 2
+    assert batch.flatten().tolist() == list(batch_tuple)
+
+
 def _iter_predict_target_inputs() -> Iterable[
     Tuple[
         pykeen.models.Model,
