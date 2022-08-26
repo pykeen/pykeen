@@ -269,32 +269,21 @@ def _iter_get_targets_inputs() -> Iterable[
 ]:
     """Iterate over test inputs for _get_targets."""
     factory = Nations().training
-    entity_labels = [label for _, label in sorted(factory.entity_id_to_label.items())]
-    relation_labels = [label for _, label in sorted(factory.entity_id_to_label.items())]
-    # no restriction, no factory
-    yield None, None, False, None, None, None
-    yield None, None, True, None, None, None
-    # no restriction, factory
-    yield None, factory, False, entity_labels, None, None
-    yield None, factory, True, relation_labels, None, None
-    # id restriction, no factory ...
-    id_list = [0, 2, 3]
-    id_tensor = torch.as_tensor(id_list, dtype=torch.long)
-    # ... entity
-    yield id_list, None, True, None, id_list, id_tensor
-    yield id_tensor, None, True, None, id_list, id_tensor
-    # ... relation
-    yield id_list, None, False, None, id_list, id_tensor
-    yield id_tensor, None, False, None, id_list, id_tensor
-    # with factory
-    # ... entity
-    labels = [entity_labels[i] for i in id_list]
-    yield id_list, None, True, labels, id_list, id_tensor
-    yield id_tensor, None, True, labels, id_list, id_tensor
-    # ... relation
-    labels = [relation_labels[i] for i in id_list]
-    yield id_list, None, False, labels, id_list, id_tensor
-    yield id_tensor, None, False, labels, id_list, id_tensor
+    for entity, id_to_label in ((True, factory.entity_id_to_label), (False, factory.relation_id_to_label)):
+        all_labels = [label for _, label in sorted(id_to_label.items())]
+        # no restriction, no factory
+        yield None, None, entity, None, None, None
+        # no restriction, factory
+        yield None, factory, entity, all_labels, None, None
+        # id restriction, no factory ...
+        id_list = [0, 2, 3]
+        id_tensor = torch.as_tensor(id_list, dtype=torch.long)
+        yield id_list, None, entity, None, id_list, id_tensor
+        yield id_tensor, None, entity, None, id_list, id_tensor
+        # id restriction with factory
+        labels = [all_labels[i] for i in id_list]
+        yield id_list, factory, entity, labels, id_list, id_tensor
+        yield id_tensor, factory, entity, labels, id_list, id_tensor
 
 
 @pytest.mark.parametrize(
