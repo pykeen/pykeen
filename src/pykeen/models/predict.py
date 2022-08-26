@@ -158,6 +158,77 @@ The model is trained on a particular link prediction task, e.g. to predict the a
 given head/relation pair. This means that while the model can technically also predict other links, e.g.,
 relations between a given head/tail pair, it must be done with the caveat that it was not
 trained for this task, and thus its scores may behave unexpectedly.
+
+Migration Guide
+===============
+Until version 1.9, the model itself provided wrappers which would delegate to the corresponding method
+in `pykeen.models.predict`
+
+- `model.get_all_prediction_df`
+- `model.get_prediction_df`
+- `model.get_head_prediction_df`
+- `model.get_relation_prediction_df`
+- `model.get_tail_prediction_df`
+
+These methods were already deprecated and could be replaced by providing the model as explicit parameter
+to the stand-alone functions from the prediction module. Thus, we will focus on the migrating the
+stand-alone functions.
+
+In the `pykeen.models.predict` module, the prediction methods were organized differently. There were
+
+- `get_prediction_df`
+- `get_head_prediction_df`
+- `get_relation_prediction_df`
+- `get_tail_prediction_df`
+- `get_all_prediction_df`
+- `predict_triples_df`
+
+where `get_head_prediction_df`, `get_relation_prediction_df` and `get_tail_prediction_df` were deprecated in favour
+of directly using `get_prediction_df`.
+
+`get_prediction_df`
+-------------------
+
+The old use of
+
+>>> from pykeen.models import predict
+>>> predict.get_prediction_df(model=model, head_label="brazil", relation_label="intergovorgs", triples_factory=result.training)
+
+can be replaced by
+
+>>> predict.predict_target(model=model, head="brazil", relation="intergovorgs", triples_factory=result.training).df
+
+`get_all_prediction_df`
+-----------------------
+
+The old use of
+
+>>> from pykeen.models import predict
+>>> predictions_df = predict.get_all_prediction_df(model, triples_factory=result.training)
+
+can be replaced by
+
+>>> predict.predict(model=model, triples_factory=result.training).process().df
+
+`predict_triples_df`
+--------------------
+
+The old use of
+
+>>> from pykeen.models import predict
+>>> score_df = predict.predict_triples_df(
+...     model=model,
+...     triples=[("brazil", "conferences", "uk"), ("brazil", "intergovorgs", "uk")],
+...     triples_factory=result.training,
+... )
+
+can be replaced by
+
+>>> score_df = predict.predict_triples(
+...     model=model,
+...     triples=[("brazil", "conferences", "uk"), ("brazil", "intergovorgs", "uk")],
+...     triples_factory=result.training,
+... )
 """
 
 import collections
