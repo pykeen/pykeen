@@ -201,6 +201,7 @@ The old use of
 
 can be replaced by
 
+>>> from pykeen import predict
 >>> predict.predict_target(model=model, head="brazil", relation="intergovorgs", triples_factory=result.training).df
 
 `get_all_prediction_df`
@@ -213,6 +214,7 @@ The old use of
 
 can be replaced by
 
+>>> from pykeen import predict
 >>> predict.predict_all(model=model, triples_factory=result.training).process().df
 
 `predict_triples_df`
@@ -229,6 +231,7 @@ The old use of
 
 can be replaced by
 
+>>> from pykeen import predict
 >>> score_df = predict.predict_triples(
 ...     model=model,
 ...     triples=[("brazil", "conferences", "uk"), ("brazil", "intergovorgs", "uk")],
@@ -808,13 +811,13 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
 
         # create prediction dataset, where the head entities is from a set of European countries,
         # and the relations are connected to tourism
-        from pykeen.models.predict import PartiallyRestrictedPredictionDataset
+        from pykeen.predict import PartiallyRestrictedPredictionDataset
         heads = result.training.entities_to_ids(entities=["netherlands", "poland", "uk"])
         relations = result.training.relations_to_ids(relations=["reltourism", "tourism", "tourism3"])
         dataset = PartiallyRestrictedPredictionDataset(heads=heads, relations=relations)
 
         # calculate all scores for this restricted set, and keep k=3 largest
-        from pykeen.models.predict import consume_scores, TopKScoreConsumer
+        from pykeen.predict import consume_scores, TopKScoreConsumer
         consumer = TopKScoreConsumer(k=3)
         consume_scores(result.model, ds, consumer)
         score_pack = consumer.finalize()
@@ -1102,7 +1105,7 @@ def predict_triples(
 
     >>> from pykeen.pipeline import pipeline
     >>> result = pipeline(dataset="nations", model="TransE")
-    >>> from pykeen.models.predict import predict_triples_df
+    >>> from pykeen.predict import predict_triples_df
     >>> df = predict_triples_df(
     ...     model=result.model,
     ...     triples=("uk", "conferences", "brazil"),
