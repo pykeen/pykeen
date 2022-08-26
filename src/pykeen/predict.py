@@ -342,6 +342,13 @@ class TriplePredictions(Predictions):
     """Triples with their predicted scores."""
 
     # docstr-coverage: inherited
+    def __post_init__(self):  # noqa: D105
+        super().__post_init__()
+        columns = set(f"{column}_id" for column in COLUMN_LABELS)
+        if not columns.issubset(self.df.columns):
+            raise ValueError(f"df must have a columns named {columns}, but df.columns={self.df.columns}")
+
+    # docstr-coverage: inherited
     def _contains(
         self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False
     ) -> numpy.ndarray:  # noqa: D102
