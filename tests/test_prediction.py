@@ -1,11 +1,12 @@
 """Tests for prediction tools."""
-from typing import Any, Iterable, MutableMapping, Optional, Sequence, Tuple, Union
+from typing import Any, Collection, Iterable, List, MutableMapping, Optional, Sequence, Tuple, Union
 
 import numpy
 import pandas
 import pytest
 import torch
 import unittest_templates
+from pykeen import triples
 
 import pykeen.models
 import pykeen.models.mocks
@@ -15,6 +16,7 @@ import pykeen.typing
 from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets.nations import Nations
 from pykeen.triples.triples_factory import AnyTriples, CoreTriplesFactory, KGInfo
+from pykeen.utils import resolve_device
 from tests import cases
 
 
@@ -217,7 +219,15 @@ def test_predict_triples(
     _check_score_pack(pack=pack, model=model, num_triples=num_triples)
 
 
-def _iter_get_input_batch_inputs():
+def _iter_get_input_batch_inputs() -> Iterable[
+    Tuple[
+        Optional[CoreTriplesFactory],
+        Union[None, int, str],
+        Union[None, int, str],
+        Union[None, int, str],
+        pykeen.typing.Target,
+    ]
+]:
     """Iterate over test inputs for _get_input_batch."""
     factory = Nations().training
     # ID-based, no factory
@@ -252,6 +262,69 @@ def test_get_input_batch(
     assert batch.shape == (1, 2)
     assert len(batch_tuple) == 2
     assert batch.flatten().tolist() == list(batch_tuple)
+
+
+def _iter_get_targets_inputs() -> Iterable[
+    Tuple[Union[None, torch.Tensor, Collection[Union[str, int]]], Optional[CoreTriplesFactory], bool]
+]:
+    """Iterate over test inputs for _get_targets."""
+    factory = Nations().training
+    entity_labels = [label for _, label in sorted(factory.entity_id_to_label.items())]
+    relation_labels = [label for _, label in sorted(factory.entity_id_to_label.items())]
+    # no restriction, no factory
+    yield None, None, False, None, None, None
+    yield None, None, True, None, None, None
+    # no restriction, factory
+    yield None, factory, False, entity_labels, None, None
+    yield None, factory, True, relation_labels, None, None
+    # id restriction, no factory ...
+    id_list = [0, 2, 3]
+    id_tensor = torch.as_tensor(id_list, dtype=torch.long)
+    # ... entity
+    yield id_list, None, True, None, id_list, id_tensor
+    yield id_tensor, None, True, None, id_list, id_tensor
+    # ... relation
+    yield id_list, None, False, None, id_list, id_tensor
+    yield id_tensor, None, False, None, id_list, id_tensor
+    # with factory
+    # ... entity
+    labels = [entity_labels[i] for i in id_list]
+    yield id_list, None, True, labels, id_list, id_tensor
+    yield id_tensor, None, True, labels, id_list, id_tensor
+    # ... relation
+    labels = [relation_labels[i] for i in id_list]
+    yield id_list, None, False, labels, id_list, id_tensor
+    yield id_tensor, None, False, labels, id_list, id_tensor
+
+
+@pytest.mark.parametrize(
+    ["ids", "factory", "entity", "exp_labels", "exp_ids", "exp_tensor"], _iter_get_targets_inputs()
+)
+def test_get_targets(
+    ids: Union[None, torch.Tensor, Collection[Union[str, int]]],
+    factory: Optional[CoreTriplesFactory],
+    entity: bool,
+    exp_labels: Optional[Sequence[str]],
+    exp_ids: Optional[Sequence[int]],
+    exp_tensor: Optional[torch.Tensor],
+):
+    """Test target normalization for target prediction."""
+    device = resolve_device(device=None)
+    labels_list, ids_list, ids_tensor = pykeen.predict._get_targets(
+        ids=ids, triples_factory=factory, device=device, entity=entity
+    )
+    if exp_labels is None:
+        assert labels_list is None
+    else:
+        assert list(labels_list) == list(exp_labels)
+    if exp_ids is None:
+        assert exp_ids is None
+    else:
+        assert list(ids_list) == list(exp_ids)
+    if exp_tensor is None:
+        assert ids_tensor is None
+    else:
+        assert (ids_tensor == exp_tensor).all()
 
 
 def _iter_predict_target_inputs() -> Iterable[
