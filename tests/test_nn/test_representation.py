@@ -2,7 +2,6 @@
 
 """Test embeddings."""
 
-import unittest
 from collections import ChainMap
 from typing import Any, ClassVar, MutableMapping, Tuple
 
@@ -18,10 +17,7 @@ import pykeen.nn.vision
 from pykeen.datasets import get_dataset
 from tests import cases, constants, mocks
 
-try:
-    import torchvision
-except ImportError:
-    torchvision = None
+from ..utils import needs_packages
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -240,7 +236,7 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
 
 
 @constants.skip_if_windows
-@unittest.skipIf(torchvision is None, "Need to install `torchvision`")
+@needs_packages("torchvision")
 class VisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for VisualRepresentation."""
 
@@ -260,7 +256,7 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
 
 
 @constants.skip_if_windows
-@unittest.skipIf(torchvision is None, "Need to install `torchvision`")
+@needs_packages("torchvision")
 class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for Wikidata visual representations."""
 

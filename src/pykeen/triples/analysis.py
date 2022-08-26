@@ -13,7 +13,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from . import TriplesFactory
-from ..constants import TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
 
 logger = logging.getLogger(__name__)
@@ -404,7 +404,7 @@ def iter_relation_cardinality_types(
 def _help_iter_relation_cardinality_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> Iterable[Tuple[int, int, float, float]]:
-    df = pd.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    df = pd.DataFrame(data=mapped_triples, columns=COLUMN_LABELS)
     for relation, group in df.groupby(by=LABEL_RELATION):
         n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source=LABEL_HEAD, target=LABEL_TAIL)
         n_unique_tails, tail_injective_conf = _is_injective_mapping(df=group, source=LABEL_TAIL, target=LABEL_HEAD)
@@ -683,7 +683,7 @@ def get_relation_functionality(
     :return:
         A dataframe with columns ( functionality | inverse_functionality )
     """
-    df = pd.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    df = pd.DataFrame(data=mapped_triples, columns=COLUMN_LABELS)
     df = df.groupby(by=LABEL_RELATION).agg({LABEL_HEAD: ["nunique", COUNT_COLUMN_NAME], LABEL_TAIL: "nunique"})
     df[FUNCTIONALITY_COLUMN_NAME] = df[(LABEL_HEAD, "nunique")] / df[(LABEL_HEAD, COUNT_COLUMN_NAME)]
     df[INVERSE_FUNCTIONALITY_COLUMN_NAME] = df[(LABEL_TAIL, "nunique")] / df[(LABEL_HEAD, COUNT_COLUMN_NAME)]
