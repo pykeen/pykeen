@@ -2645,9 +2645,7 @@ class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.Text
         assert x.shape[0] == len(labels)
 
 
-class PredictionPostProcessorTestCase(
-    unittest_templates.GenericTestCase[pykeen.models.predict.PredictionPostProcessor]
-):
+class PredictionTestCase(unittest_templates.GenericTestCase[pykeen.predict.Predictions]):
     """Tests for prediction post-processing."""
 
     # to be initialize in subclass
@@ -2656,12 +2654,12 @@ class PredictionPostProcessorTestCase(
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
         self.dataset = Nations()
-        kwargs.update(self.dataset.factory_dict)
+        kwargs["factory"] = self.dataset.training
         return kwargs
 
     def test_contains(self):
         """Test contains method."""
-        df2 = self.instance.add_membership_columns(df=self.df)
+        df2 = self.instance.add_membership_columns(**self.dataset.factory_dict)
         assert set(df2.columns).issubset(self.df.columns)
         for col in self.df.columns:
             assert (df2[col] == self.df[col]).all()
@@ -2670,7 +2668,7 @@ class PredictionPostProcessorTestCase(
 
     def test_filter(self):
         """Test filter method."""
-        df2 = self.instance.filter(df=self.df)
+        df2 = self.instance.filter_triples(*self.dataset.factory_dict.values())
         assert set(df2.columns) == set(self.df.columns)
         assert len(df2) <= len(self.df)
         # TODO: check subset
