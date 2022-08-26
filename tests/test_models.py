@@ -17,7 +17,7 @@ import pykeen.models
 from pykeen.datasets.nations import Nations
 from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_all_prediction, predict_all
+from pykeen.predict import get_all_prediction, predict_all
 from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP

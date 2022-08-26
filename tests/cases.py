@@ -47,7 +47,7 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
-import pykeen.models.predict
+import pykeen.predict
 import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
@@ -2676,7 +2676,7 @@ class PredictionPostProcessorTestCase(
         # TODO: check subset
 
 
-class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.models.predict.ScoreConsumer]):
+class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.ScoreConsumer]):
     """Tests for score consumers."""
 
     batch_size: int = 2

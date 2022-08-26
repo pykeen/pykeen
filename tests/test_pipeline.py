@@ -14,7 +14,7 @@ import torch
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
 from pykeen.models import ERModel, FixedModel, Model
-from pykeen.models.predict import (
+from pykeen.predict import (
     get_all_prediction,
     get_head_prediction_df,
     get_relation_prediction_df,
