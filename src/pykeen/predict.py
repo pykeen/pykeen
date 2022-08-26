@@ -269,12 +269,24 @@ from .typing import (
 from .utils import invert_mapping, resolve_device
 
 __all__ = [
+    # high-level
     "predict_all",
     "predict_triples",
     "predict_target",
-    # score consumption / prediction loop
+    # Low-Level
     "consume_scores",
     "ScoreConsumer",
+    "CountScoreConsumer",
+    "TopKScoreConsumer",
+    "AllScoreConsumer",
+    "CountScoreConsumer",
+    "ScorePack",
+    "Predictions",
+    "TriplePredictions",
+    "TargetPredictions",
+    "PredictionDataset",
+    "AllPredictionDataset",
+    "PartiallyRestrictedPredictionDataset",
 ]
 
 logger = logging.getLogger(__name__)
