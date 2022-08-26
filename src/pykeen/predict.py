@@ -528,6 +528,7 @@ def _get_input_batch(
     return target, batch, (batch_ids[0], batch_ids[1])
 
 
+# TODO: move to utils?
 def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> torch.BoolTensor:
     """Return whether elements are contained in test elements."""
     inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
