@@ -89,11 +89,10 @@ class InductiveFB15k237(UnpackedRemoteDisjointInductiveDataset):
         inductive test triples: 1424
     """
 
-    def __init__(self, version: str = "v1", create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, version: str = "v1", **kwargs):
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
@@ -101,7 +100,6 @@ class InductiveFB15k237(UnpackedRemoteDisjointInductiveDataset):
             inductive_inference_url=FB_INDUCTIVE_INFERENCE_URL.format(base_url=BASE_URL, version=version),
             inductive_validation_url=FB_INDUCTIVE_VALIDATION_URL.format(base_url=BASE_URL, version=version),
             inductive_testing_url=FB_INDUCTIVE_TEST_URL.format(base_url=BASE_URL, version=version),
-            create_inverse_triples=create_inverse_triples,
             version=version,
             eager=True,
             **kwargs,
@@ -157,11 +155,10 @@ class InductiveWN18RR(UnpackedRemoteDisjointInductiveDataset):
         inductive test triples: 1429
     """
 
-    def __init__(self, version: str = "v1", create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, version: str = "v1", **kwargs):
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
@@ -169,7 +166,6 @@ class InductiveWN18RR(UnpackedRemoteDisjointInductiveDataset):
             inductive_inference_url=WN_INDUCTIVE_INFERENCE_URL.format(base_url=BASE_URL, version=version),
             inductive_validation_url=WN_INDUCTIVE_VALIDATION_URL.format(base_url=BASE_URL, version=version),
             inductive_testing_url=WN_INDUCTIVE_TEST_URL.format(base_url=BASE_URL, version=version),
-            create_inverse_triples=create_inverse_triples,
             version=version,
             eager=True,
             **kwargs,
@@ -225,11 +221,10 @@ class InductiveNELL(UnpackedRemoteDisjointInductiveDataset):
         inductive test triples: 731
     """
 
-    def __init__(self, version: str = "v1", create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, version: str = "v1", **kwargs):
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
@@ -237,7 +232,6 @@ class InductiveNELL(UnpackedRemoteDisjointInductiveDataset):
             inductive_inference_url=NELL_INDUCTIVE_INFERENCE_URL.format(base_url=BASE_URL, version=version),
             inductive_validation_url=NELL_INDUCTIVE_VALIDATION_URL.format(base_url=BASE_URL, version=version),
             inductive_testing_url=NELL_INDUCTIVE_TEST_URL.format(base_url=BASE_URL, version=version),
-            create_inverse_triples=create_inverse_triples,
             version=version,
             eager=True,
             **kwargs,
