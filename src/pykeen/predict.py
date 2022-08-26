@@ -984,12 +984,12 @@ def predict_target(
     model: Model,
     *,
     # exactly one of them is None
-    head: Optional[str] = None,
-    relation: Optional[str] = None,
-    tail: Optional[str] = None,
+    head: Union[None, int, str] = None,
+    relation: Union[None, int, str] = None,
+    tail: Union[None, int, str] = None,
     #
     triples_factory: Optional[TriplesFactory] = None,
-    targets: Optional[Sequence[Union[int, str]]] = None,
+    targets: Union[None, torch.LongTensor, Sequence[Union[int, str]]] = None,
     mode: Optional[InductiveMode] = None,
 ) -> Predictions:
     """Get predictions for the head, relation, and/or tail combination.
