@@ -44,6 +44,11 @@ class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
         shape=(3, 7),
     )
 
+    def test_approximate(self):
+        """Test approximation of other representations."""
+        approx = self.cls.approximate(other=pykeen.nn.representation.Embedding(**self.instance_kwargs))
+        assert isinstance(approx, self.cls)
+
 
 class TensorEmbeddingTests(cases.RepresentationTestCase):
     """Tests for Embedding with 2-dimensional shape."""
