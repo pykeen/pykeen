@@ -6,6 +6,7 @@ import pytest
 import torch
 import unittest_templates
 import pandas
+from pykeen.constants import COLUMN_LABELS
 
 import pykeen.models.mocks
 import pykeen.predict
@@ -52,28 +53,19 @@ class TriplePredictionsTest(cases.PredictionTestCase):
 
     cls = pykeen.predict.TriplePredictions
 
-    # def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-    #     kwargs = super()._pre_instantiation_hook(kwargs)
-    #     # mock prediction data frame
-    #     data = list(
-    #         map(
-    #             functools.partial(sum, start=tuple()),
-    #             itertools.product(
-    #                 self.dataset.entity_to_id.items(),
-    #                 self.dataset.relation_to_id.items(),
-    #                 self.dataset.entity_to_id.items(),
-    #             ),
-    #         )
-    #     )
-    #     columns = list(
-    #         itertools.chain.from_iterable(
-    #             (f"{col}_label", f"{col}_id")
-    #             for col in (pykeen.typing.LABEL_HEAD, pykeen.typing.LABEL_RELATION, pykeen.typing.LABEL_TAIL)
-    #         )
-    #     )
-    #     self.df = pandas.DataFrame(data=data, columns=columns)
-    #     self.df["score"] = torch.rand(size=(len(self.df),), generator=torch.manual_seed(seed=42)).numpy()
-    #     return kwargs
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # mock prediction data frame
+        generator = torch.manual_seed(seed=42)
+        data = {
+            f"{label}_id": torch.randint(max_id, size=(5,), generator=generator).numpy()
+            for label, max_id in zip(
+                COLUMN_LABELS, [self.dataset.num_entities, self.dataset.num_relations, self.dataset.num_entities]
+            )
+        }
+        data["score"] = torch.rand(size=(5,), generator=generator).numpy()
+        self.df = kwargs["df"] = pandas.DataFrame(data=data)
+        return kwargs
 
 
 class PredictionsMetaTestCase(unittest_templates.MetaTestCase[pykeen.predict.Predictions]):
