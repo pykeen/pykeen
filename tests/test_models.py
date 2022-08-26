@@ -17,7 +17,7 @@ import pykeen.models
 from pykeen.datasets.nations import Nations
 from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_all_prediction, predict
+from pykeen.models.predict import get_all_prediction, predict_all
 from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
@@ -86,7 +86,7 @@ class TestConvE(cases.ModelTestCase):
 
     def test_predict(self):
         """Test prediction workflow with inverse relations."""
-        predict(model=self.instance, k=10)
+        predict_all(model=self.instance, k=10)
 
 
 class TestConvKB(cases.ModelTestCase):
@@ -119,7 +119,7 @@ class TestDistMult(cases.ModelTestCase):
         :param k: The number of triples to return. Set to None, to keep all.
         :param batch_size: The batch size to use for calculating scores.
         """
-        top_triples, top_scores = predict(model=self.instance, batch_size=batch_size, k=k)
+        top_triples, top_scores = predict_all(model=self.instance, batch_size=batch_size, k=k)
 
         # check type
         assert torch.is_tensor(top_triples)

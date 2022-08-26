@@ -28,8 +28,8 @@ The prediction workflow offers three high-level methods to perform predictions
 - :func:`pykeen.models.predict.predict_triples` can be used to calculate scores for a given set of triples.
 - :func:`pykeen.models.predict.predict_target` can be used to score choices for a given prediction target, i.e.
   calculate scores for head entities, relations, or tail entities given the other two.
-- :func:`pykeen.models.predict.predict` can be used to calculate scores for all possible triples.
-  Scientifically, :func:`pykeen.models.predict.predict` is the most interesting in a scenario where
+- :func:`pykeen.models.predict.predict_all` can be used to calculate scores for all possible triples.
+  Scientifically, :func:`pykeen.models.predict.predict_all` is the most interesting in a scenario where
   predictions could be tested and validated experimentally.
 
 .. warning ::
@@ -101,14 +101,14 @@ this operation can be prohibitively expensive for reasonably sized knowledge gra
 additional ill-calibrated scores for entity/relation combinations it has never seen paired before during training.
 The next line calculates *and* stores all triples and scores
 
->>> from pykeen.models.predict import predict
->>> pack = predict(model=result.model)
+>>> from pykeen.models.predict import predict_all
+>>> pack = predict_all(model=result.model)
 
 In addition to the expensive calculations, this additionally requires us to have sufficient memory available to store
 all scores. A computationally equally expensive option with reduced, fixed memory requirement is to store only
 the triples with the top $k$ scores. This can be done through the optional parameter `k`
 
->>> pack = predict(model=result.model, k=10)
+>>> pack = predict_all(model=result.model, k=10)
 
 We can again convert the score pack to a predictions object for further filtering, e.g., adding a column indicating
 whether the triple has been seen during training
@@ -208,7 +208,7 @@ The old use of
 
 can be replaced by
 
->>> predict.predict(model=model, triples_factory=result.training).process().df
+>>> predict.predict_all(model=model, triples_factory=result.training).process().df
 
 `predict_triples_df`
 --------------------
@@ -264,7 +264,7 @@ from ..typing import (
 from ..utils import invert_mapping, resolve_device
 
 __all__ = [
-    "predict",
+    "predict_all",
     "predict_triples",
     "predict_target",
     # score consumption / prediction loop
@@ -929,7 +929,7 @@ def _predict_triples_batched(
 
 # TODO: Support partial dataset
 @torch.inference_mode()
-def predict(
+def predict_all(
     model: Model,
     *,
     k: Optional[int] = None,
@@ -937,7 +937,7 @@ def predict(
     mode: Optional[InductiveMode] = None,
     target: Target = LABEL_TAIL,
 ) -> ScorePack:
-    """Calculate and store scores for either all triples, or the top k triples.
+    """Calculate scores for all triples, and either keep all of them or only the top k triples.
 
     :param model:
         A PyKEEN model

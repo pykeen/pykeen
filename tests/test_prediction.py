@@ -136,4 +136,4 @@ def test_predict(k: Optional[int], target: pykeen.typing.Target, batch_size: int
     model = pykeen.models.mocks.FixedModel(
         triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
     )
-    pykeen.models.predict.predict(model=model, k=k, target=target, batch_size=batch_size)
+    pykeen.models.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
