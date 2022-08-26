@@ -982,9 +982,7 @@ def predict_all(
     :return:
         A score pack of parallel triples and scores
     """
-    # set model to evaluation mode
-    model.eval()
-
+    # note: the models' predict method takes care of setting the model to evaluation mode
     logger.warning(
         f"predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations:,} "
         f"score evaluations.",
@@ -993,7 +991,7 @@ def predict_all(
     consumer: ScoreConsumer
     if k is None:
         logger.warning(
-            "Not providing k to `predict` entails huge memory requirements for reasonably-sized knowledge graphs.",
+            "Not providing k to `predict_all` entails huge memory requirements for reasonably-sized knowledge graphs.",
         )
         consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
     else:
@@ -1028,23 +1026,27 @@ def predict_target(
         A PyKEEN model
 
     :param head:
-        the head entity. If None, predict heads
+        the head entity, either as ID or as label. If None, predict heads
     :param relation:
-        the relation. If None, predict relations
+        the relation, either as ID or as label. If None, predict relations
     :param tail:
-        the tail entity. If None, predict tails
+        the tail entity, either as ID or as label. If None, predict tails
+
     :param targets:
-        restrict prediction to these targets
+        restrict prediction to these targets. `None` means no restriction, i.e., scoring all entities/relations.
     :param triples_factory:
-        the training triples factory; required if head/relation/tail are given as string
+        the training triples factory; required if head/relation/tail are given as string, and used to translate the
+        label to an ID.
 
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
 
-    :return: shape: (k, 3)
-        The predictions containing either the $k$ highest scoring targets, or all targets if $k$ is `None`.
+    :return:
+        The predictions, containing either the $k$ highest scoring targets, or all targets if $k$ is `None`.
     """
+    # note: the models' predict method takes care of setting the model to evaluation mode
+
     # get input & target
     target, batch, other_col_ids = _get_input_batch(factory=triples_factory, head=head, relation=relation, tail=tail)
 
@@ -1098,20 +1100,10 @@ def predict_triples(
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
 
-    :return: columns: head_id | relation_id | tail_id | score | *
-        A dataframe with one row per triple.
-
-    The TransE model can be trained and used to predict a given triple.
-
-    >>> from pykeen.pipeline import pipeline
-    >>> result = pipeline(dataset="nations", model="TransE")
-    >>> from pykeen.predict import predict_triples_df
-    >>> df = predict_triples_df(
-    ...     model=result.model,
-    ...     triples=("uk", "conferences", "brazil"),
-    ...     triples_factory=result.training,
-    ... )
+    :return:
+        a score pack of the triples with the predicted scores.
     """
+    # note: the models' predict method takes care of setting the model to evaluation mode
     # normalize input
     triples = get_mapped_triples(triples, factory=triples_factory)
     # calculate scores (with automatic memory optimization)
