@@ -25,11 +25,11 @@ High-Level
 ==========
 The prediction workflow offers three high-level methods to perform predictions
 
-- :func:`pykeen.models.predict.predict_triples` can be used to calculate scores for a given set of triples.
-- :func:`pykeen.models.predict.predict_target` can be used to score choices for a given prediction target, i.e.
+- :func:`pykeen.predict.predict_triples` can be used to calculate scores for a given set of triples.
+- :func:`pykeen.predict.predict_target` can be used to score choices for a given prediction target, i.e.
   calculate scores for head entities, relations, or tail entities given the other two.
-- :func:`pykeen.models.predict.predict_all` can be used to calculate scores for all possible triples.
-  Scientifically, :func:`pykeen.models.predict.predict_all` is the most interesting in a scenario where
+- :func:`pykeen.predict.predict_all` can be used to calculate scores for all possible triples.
+  Scientifically, :func:`pykeen.predict.predict_all` is the most interesting in a scenario where
   predictions could be tested and validated experimentally.
 
 .. warning ::
@@ -40,15 +40,15 @@ The prediction workflow offers three high-level methods to perform predictions
 Triple Scoring
 --------------
 
-When scoring triples with :func:`pykeen.models.predict.predict_triples`, we obtain a score for each of the given
+When scoring triples with :func:`pykeen.predict.predict_triples`, we obtain a score for each of the given
 triples. As an example, we will calculate scores for all validation triples from the dataset we trained the model upon.
 
 >>> from pykeen.datasets import get_dataset
->>> from pykeen.models.predict import predict_triples
+>>> from pykeen.predict import predict_triples
 >>> dataset = get_dataset(dataset="nations")
 >>> pack = predict_triples(model=result.model, triples=dataset.validation)
 
-The variable :data:`pack` now contains a :class:`pykeen.models.predict.ScorePack`, which essentially is a pair of
+The variable :data:`pack` now contains a :class:`pykeen.predict.ScorePack`, which essentially is a pair of
 ID-based triples with their predicted scores. For interpretation, it can be helpful to add their corresponding labels,
 which the `"nations"` dataset offers, and convert them to a pandas dataframe:
 
@@ -67,11 +67,11 @@ or investigate whether certain entities generally receive larger scores
 Target Scoring
 --------------
 
-:func:`pykeen.models.predict.predict_target`'s primary usecase is link prediction or relation prediction.
+:func:`pykeen.predict.predict_target`'s primary usecase is link prediction or relation prediction.
 For instance, we could use our models to score all possible tail entities for the query `("uk", "conferences", ?)` via
 
 >>> from pykeen.datasets import get_dataset
->>> from pykeen.models.predict import predict_target
+>>> from pykeen.predict import predict_target
 >>> dataset = get_dataset(dataset="nations")
 >>> pred = predict_target(
 ...     model=result.model,
@@ -80,7 +80,7 @@ For instance, we could use our models to score all possible tail entities for th
 ...     triples_factory=result.training,
 ... )
 
-Notice that the result stored into `pred` is a :class:`pykeen.models.predict.Predictions` object, which offers some
+Notice that the result stored into `pred` is a :class:`pykeen.predict.Predictions` object, which offers some
 post-processing options. For instance, we can remove all targets which are already know from the training set
 
 >>> pred_filtered = pred.filter_triples(dataset.training)
@@ -96,12 +96,12 @@ The predictions object also exposes filtered / annotated dataframe through its `
 
 Full Scoring
 ------------
-Finally, we can use :func:`pykeen.models.predict.predict` to calculate scores for *all* possible triples. Notice that
+Finally, we can use :func:`pykeen.predict.predict` to calculate scores for *all* possible triples. Notice that
 this operation can be prohibitively expensive for reasonably sized knowledge graphs, and the model may produce
 additional ill-calibrated scores for entity/relation combinations it has never seen paired before during training.
 The next line calculates *and* stores all triples and scores
 
->>> from pykeen.models.predict import predict_all
+>>> from pykeen.predict import predict_all
 >>> pack = predict_all(model=result.model)
 
 In addition to the expensive calculations, this additionally requires us to have sufficient memory available to store
@@ -130,25 +130,25 @@ which require calculating scores for all triples. The algorithm works are follow
     for consumer in consumers:
       consumer(batch, scores)
 
-Here, `dataset` is a :class:`pykeen.models.predict.PredictionDataset`, which breaks
+Here, `dataset` is a :class:`pykeen.predict.PredictionDataset`, which breaks
 the score calculation down into individual target predictions (e.g., tail predictions).
-Implementations include :class:`pykeen.models.predict.AllPredictionDataset` and
-:class:`pykeen.models.predict.PartiallyRestrictedPredictionDataset`. Notice that the
+Implementations include :class:`pykeen.predict.AllPredictionDataset` and
+:class:`pykeen.predict.PartiallyRestrictedPredictionDataset`. Notice that the
 prediction tasks are built lazily, i.e., only instantiating the prediction tasks when
 accessed. Moreover, the :mod:`torch_max_mem` package is used to automatically tune the
 batch size to maximize the memory utilization of the hardware at hand.
 
 For each batch, the scores of the prediction task are calculated once. Afterwards, multiple
-*consumers* can process these scores. A consumer extends :class:`pykeen.models.predict.ScoreConsumer`
+*consumers* can process these scores. A consumer extends :class:`pykeen.predict.ScoreConsumer`
 and receives the batch, i.e., input to the predict method, as well as the tensor of predicted scores.
 Examples include
 
-- :class:`pykeen.models.predict.CountScoreConsumer`: a simple consumer which only counts how many scores
+- :class:`pykeen.predict.CountScoreConsumer`: a simple consumer which only counts how many scores
   it has seen. Mostly used for debugging or testing purposes
-- :class:`pykeen.models.predict.AllScoreConsumer`: accumulates all scores into a single huge tensor.
+- :class:`pykeen.predict.AllScoreConsumer`: accumulates all scores into a single huge tensor.
   This incurs massive memory requirements for reasonably sized datasets, and often can be avoided by
   interleaving the processing of the scores with calculation of individual batches.
-- :class:`pykeen.models.predict.TopKScoreConsumer`: keeps only the top $k$ scores as well as the inputs
+- :class:`pykeen.predict.TopKScoreConsumer`: keeps only the top $k$ scores as well as the inputs
   leading to them. This is a memory-efficient variant of first accumulating all scores, then sorting by
   score and keeping only the top entries.
 
