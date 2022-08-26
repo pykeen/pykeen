@@ -247,11 +247,11 @@ from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 from typing_extensions import TypeAlias  # Python <=3.9
 
-from .base import Model
-from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
-from ..triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
-from ..triples.utils import tensor_to_df
-from ..typing import (
+from .models.base import Model
+from .constants import COLUMN_LABELS, TARGET_TO_INDEX
+from .triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
+from .triples.utils import tensor_to_df
+from .typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
@@ -261,7 +261,7 @@ from ..typing import (
     MappedTriples,
     Target,
 )
-from ..utils import invert_mapping, resolve_device
+from .utils import invert_mapping, resolve_device
 
 __all__ = [
     "predict_all",
