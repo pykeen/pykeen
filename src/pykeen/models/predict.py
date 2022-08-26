@@ -1,9 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
+.. _predictions:
+
 Prediction workflows.
 
-This module contains methods to score triples or prediction targets with a given model.
+After training, the interaction model (e.g., TransE, ConvE, RotatE) can assign a score to an arbitrary triple,
+whether it appeared during training, testing, or not. In PyKEEN, each is implemented such that the higher the score
+(or less negative the score), the more likely a triple is to be true.
+
+However, for most models, these scores do not have obvious statistical interpretations. This has two main consequences:
+
+1. The score for a triple from one model can not be compared to the score for that triple from another model
+2. There is no *a priori* minimum score for a triple to be labeled as true, so predictions must be given as
+   a prioritization by sorting a set of triples by their respective scores.
+
 For the remainder of this part of the documentation, we assume that we have trained a model, e.g. via
 
 >>> from pykeen.pipeline import pipeline
@@ -18,6 +29,8 @@ The prediction workflow offers three high-level methods to perform predictions
 - :func:`pykeen.models.predict.predict_target` can be used to score choices for a given prediction target, i.e.
   calculate scores for head entities, relations, or tail entities given the other two.
 - :func:`pykeen.models.predict.predict` can be used to calculate scores for all possible triples.
+  Scientifically, :func:`pykeen.models.predict.predict` is the most interesting in a scenario where
+  predictions could be tested and validated experimentally.
 
 .. warning ::
     Please note that not all models automatically have interpretable scores, and their calibration may be poor. Thus,
@@ -138,6 +151,13 @@ Examples include
 - :class:`pykeen.models.predict.TopKScoreConsumer`: keeps only the top $k$ scores as well as the inputs
   leading to them. This is a memory-efficient variant of first accumulating all scores, then sorting by
   score and keeping only the top entries.
+
+Potential Caveats
+=================
+The model is trained on a particular link prediction task, e.g. to predict the appropriate tail for a 
+given head/relation pair. This means that while the model can technically also predict other links, e.g.,
+relations between a given head/tail pair, it must be done with the caveat that it was not
+trained for this task, and thus its scores may behave unexpectedly.
 """
 
 import collections
