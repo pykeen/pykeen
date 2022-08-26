@@ -1,3 +1,5 @@
+.. _making_predictions:
+
 Prediction
 ===========
 .. automodapi:: pykeen.predict
