@@ -2648,7 +2648,7 @@ class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.Text
 class PredictionTestCase(unittest_templates.GenericTestCase[pykeen.predict.Predictions]):
     """Tests for prediction post-processing."""
 
-    # to be initialize in subclass
+    # to be initialized in subclass
     df: pandas.DataFrame
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
@@ -2659,19 +2659,27 @@ class PredictionTestCase(unittest_templates.GenericTestCase[pykeen.predict.Predi
 
     def test_contains(self):
         """Test contains method."""
-        df2 = self.instance.add_membership_columns(**self.dataset.factory_dict)
-        assert set(df2.columns).issubset(self.df.columns)
+        pred_annotated = self.instance.add_membership_columns(**self.dataset.factory_dict)
+        assert isinstance(pred_annotated, pykeen.predict.Predictions)
+        df_annot = pred_annotated.df
+        # no column has been removed
+        assert set(df_annot.columns).issuperset(self.df.columns)
+        # all old columns are unmodified
         for col in self.df.columns:
-            assert (df2[col] == self.df[col]).all()
-        for new_col in set(df2.columns).difference(self.df.columns):
-            assert df2[new_col].dtype == bool
+            assert (df_annot[col] == self.df[col]).all()
+        # new columns are boolean
+        for new_col in set(df_annot.columns).difference(self.df.columns):
+            assert df_annot[new_col].dtype == bool
 
     def test_filter(self):
         """Test filter method."""
-        df2 = self.instance.filter_triples(*self.dataset.factory_dict.values())
-        assert set(df2.columns) == set(self.df.columns)
-        assert len(df2) <= len(self.df)
-        # TODO: check subset
+        pred_filtered = self.instance.filter_triples(*self.dataset.factory_dict.values())
+        assert isinstance(pred_filtered, pykeen.predict.Predictions)
+        df_filtered = pred_filtered.df
+        # no columns have been added
+        assert set(df_filtered.columns) == set(self.df.columns)
+        # check subset relation
+        assert set(df_filtered.itertuples()).issubset(self.df.itertuples())
 
 
 class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.ScoreConsumer]):

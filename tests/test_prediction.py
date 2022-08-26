@@ -1,10 +1,11 @@
 """Tests for prediction tools."""
 import itertools
-from typing import Optional, Tuple
+from typing import Any, MutableMapping, Optional, Tuple
 
 import pytest
 import torch
 import unittest_templates
+import pandas
 
 import pykeen.models.mocks
 import pykeen.predict
@@ -32,6 +33,18 @@ class TargetPredictionsTests(cases.PredictionTestCase):
 
     cls = pykeen.predict.TargetPredictions
     kwargs = dict(target=pykeen.typing.LABEL_HEAD, other_columns_fixed_ids=(0, 1))
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        generator = torch.manual_seed(seed=42)
+        target = kwargs["target"]
+        self.df = kwargs["df"] = pandas.DataFrame(
+            data={
+                f"{target}_id": range(self.dataset.num_entities),
+                "score": torch.rand(size=(self.dataset.num_entities,), generator=generator),
+            }
+        )
+        return kwargs
 
 
 class TriplePredictionsTest(cases.PredictionTestCase):
