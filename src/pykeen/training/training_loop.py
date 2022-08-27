@@ -183,7 +183,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         elements, counts = torch.unique(triples_factory.mapped_triples[:, 1], return_counts=True)
         counts = 1 / counts
-        self.relation_weight = dict(zip(elements.numpy(), counts.numpy()))
+        self.relation_weights = dict(zip(elements.numpy(), counts.numpy()))
 
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints

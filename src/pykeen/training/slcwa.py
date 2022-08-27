@@ -89,6 +89,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         stop: Optional[int],
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
+        relation_weights: dict = None,
     ) -> torch.FloatTensor:
         # Slicing is not possible in sLCWA training loops
         if slice_size is not None:
@@ -98,7 +99,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         positive_batch, negative_batch, positive_filter = batch
 
         # extract the relationids and use to lookup the correct weight
-        relation_ids = positive_batch[:, 1]
+        relation_ids = list(positive_batch[:, 1].cpu().numpy())
+        triple_weights = [relation_weights[x] for x in list(positive_batch[:, 1].cpu().numpy())]
+
+        print(triple_weights)
+        print("---------------------------")
+
         # look up the weight
         # Pass to loss function
 
@@ -150,6 +156,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             stop=stop,
             label_smoothing=label_smoothing,
             slice_size=slice_size,
+            relation_weights=self.relation_weights,
         )
 
     # docstr-coverage: inherited
