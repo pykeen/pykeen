@@ -10,7 +10,7 @@ from typing import Any, ClassVar, Mapping, Optional
 import torch
 
 from .base import Model
-from ..triples import CoreTriplesFactory
+from ..triples.triples_factory import KGInfo
 from ..typing import InductiveMode
 
 __all__ = [
@@ -35,7 +35,7 @@ class FixedModel(Model):
 
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, *, triples_factory: CoreTriplesFactory, **_kwargs):
+    def __init__(self, *, triples_factory: KGInfo, **_kwargs):
         """
         Initialize the model.
 
@@ -82,25 +82,25 @@ class FixedModel(Model):
         return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(
-            h=hr_batch[:, 0:1],
-            r=hr_batch[:, 1:2],
-            t=torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0),
-        )
+    def score_t(
+        self, hr_batch: torch.LongTensor, tails: Optional[torch.LongTensor] = None, **kwargs
+    ) -> torch.FloatTensor:  # noqa: D102
+        if tails is None:
+            tails = torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0)
+        return self._generate_fake_scores(h=hr_batch[:, 0:1], r=hr_batch[:, 1:2], t=tails)
 
     # docstr-coverage: inherited
-    def score_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(
-            h=ht_batch[:, 0:1],
-            r=torch.arange(self.num_relations, device=ht_batch.device).unsqueeze(dim=0),
-            t=ht_batch[:, 1:2],
-        )
+    def score_r(
+        self, ht_batch: torch.LongTensor, relations: Optional[torch.LongTensor] = None, **kwargs
+    ) -> torch.FloatTensor:  # noqa: D102
+        if relations is None:
+            relations = torch.arange(self.num_relations, device=ht_batch.device).unsqueeze(dim=0)
+        return self._generate_fake_scores(h=ht_batch[:, 0:1], r=relations, t=ht_batch[:, 1:2])
 
     # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(
-            h=torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0),
-            r=rt_batch[:, 0:1],
-            t=rt_batch[:, 1:2],
-        )
+    def score_h(
+        self, rt_batch: torch.LongTensor, heads: Optional[torch.LongTensor] = None, **kwargs
+    ) -> torch.FloatTensor:  # noqa: D102
+        if heads is None:
+            heads = torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0)
+        return self._generate_fake_scores(h=heads, r=rt_batch[:, 0:1], t=rt_batch[:, 1:2])

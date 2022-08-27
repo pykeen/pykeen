@@ -2,7 +2,6 @@
 
 """Non-parametric baseline models."""
 
-from abc import ABC
 from typing import Optional
 
 import numpy
@@ -20,7 +19,7 @@ __all__ = [
 ]
 
 
-class EvaluationOnlyModel(Model, ABC):
+class EvaluationOnlyModel(Model):
     """A model which only implements the methods used for evaluation."""
 
     can_slice_h = False

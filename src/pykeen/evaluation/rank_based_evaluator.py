@@ -2,16 +2,31 @@
 
 """Implementation of ranked based evaluator."""
 
+import functools
 import itertools
 import logging
 import math
 import random
 from collections import defaultdict
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import (
+    Callable,
+    DefaultDict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import numpy.random
-import pandas
 import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -19,13 +34,12 @@ from class_resolver import HintOrType, OptionalKwargs
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
-from ..constants import TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     LABEL_HEAD,
-    LABEL_RELATION,
     LABEL_TAIL,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
@@ -57,11 +71,35 @@ def _flatten(nested: Mapping[K, Sequence[np.ndarray]]) -> Mapping[K, np.ndarray]
     return {key: np.concatenate(value) for key, value in nested.items()}
 
 
+class RankPack(NamedTuple):
+    """A pack of ranks for aggregation."""
+
+    target: ExtendedTarget
+    rank_type: RankType
+    ranks: np.ndarray
+    num_candidates: np.ndarray
+    weights: Optional[np.ndarray]
+
+    def resample(self, seed: Optional[int]) -> "RankPack":
+        """Resample rank pack."""
+        generator = np.random.default_rng(seed=seed)
+        n = len(self.ranks)
+        ids = generator.integers(n, size=(n,))
+        weights = None if self.weights is None else self.weights[ids]
+        return RankPack(
+            target=self.target,
+            rank_type=self.rank_type,
+            ranks=self.ranks[ids],
+            num_candidates=self.num_candidates[ids],
+            weights=weights,
+        )
+
+
 def _iter_ranks(
     ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
     weights: Optional[Mapping[Target, Sequence[np.ndarray]]] = None,
-) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]]:
+) -> Iterable[RankPack]:
     # terminate early if there are no ranks
     if not ranks:
         logger.debug("Empty ranks. This should only happen during size probing.")
@@ -79,13 +117,15 @@ def _iter_ranks(
     for rank_type in RANK_TYPES:
         # individual side
         for side in sides:
-            yield side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side], weights_flat.get(side)
+            yield RankPack(
+                side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side], weights_flat.get(side)
+            )
 
         # combined
         c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in sides])
         c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
         c_weights = None if weights is None else np.concatenate([weights_flat[side] for side in sides])
-        yield SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights
+        yield RankPack(SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights)
 
 
 class RankBasedMetricResults(MetricResults):
@@ -99,15 +139,15 @@ class RankBasedMetricResults(MetricResults):
     def from_ranks(
         cls,
         metrics: Iterable[RankBasedMetric],
-        rank_and_candidates: Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]],
+        rank_and_candidates: Iterable[RankPack],
     ) -> "RankBasedMetricResults":
         """Create rank-based metric results from the given rank/candidate sets."""
         return cls(
             data={
-                (metric.key, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates, weights=weights)
-                for metric, (target, rank_type, ranks, num_candidates, weights) in itertools.product(
-                    metrics, rank_and_candidates
+                (metric.key, pack.target, pack.rank_type): metric(
+                    ranks=pack.ranks, num_candidates=pack.num_candidates, weights=pack.weights
                 )
+                for metric, pack in itertools.product(metrics, rank_and_candidates)
             }
         )
 
@@ -236,6 +276,7 @@ class RankBasedEvaluator(Evaluator):
         metrics: Optional[Sequence[HintOrType[RankBasedMetric]]] = None,
         metrics_kwargs: OptionalKwargs = None,
         add_defaults: bool = True,
+        clear_on_finalize: bool = True,
         **kwargs,
     ):
         """Initialize rank-based evaluator.
@@ -249,7 +290,14 @@ class RankBasedEvaluator(Evaluator):
             additional keyword parameter
         :param add_defaults:
             whether to add all default metrics besides the ones specified by `metrics` / `metrics_kwargs`.
-        :param kwargs: Additional keyword arguments that are passed to the base class.
+        :param clear_on_finalize:
+            whether to clear buffers on `finalize` call
+
+            .. warning ::
+                disabling this option may lead to memory leaks and incorrect results when used from the pipeline
+
+        :param kwargs:
+            Additional keyword arguments that are passed to the base class.
         """
         super().__init__(
             filtered=filtered,
@@ -272,6 +320,7 @@ class RankBasedEvaluator(Evaluator):
         self.ranks = defaultdict(list)
         self.num_candidates = defaultdict(list)
         self.num_entities = None
+        self.clear_on_finalize = clear_on_finalize
 
     # docstr-coverage: inherited
     def process_scores_(
@@ -302,11 +351,125 @@ class RankBasedEvaluator(Evaluator):
             metrics=self.metrics,
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates),
         )
+        if not self.clear_on_finalize:
+            return result
+
         # Clear buffers
         self.ranks.clear()
         self.num_candidates.clear()
 
         return result
+
+    def finalize_multi(self, n_boot: int = 1_000, seed: int = 42) -> Mapping[str, Sequence[float]]:
+        """Bootstrap from :meth:`finalize`.
+
+        :param n_boot:
+            the number of resampling steps
+        :param seed:
+            the random seed.
+
+        :return:
+            a flat dictionary from metric names to list of values
+        """
+        result: DefaultDict[str, List[float]] = defaultdict(list)
+
+        for i in range(n_boot):
+            rank_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
+            rank_and_candidates = map(functools.partial(RankPack.resample, seed=seed + i), rank_and_candidates)
+            single_result = RankBasedMetricResults.from_ranks(
+                metrics=self.metrics, rank_and_candidates=rank_and_candidates
+            )
+            for k, v in single_result.to_flat_dict().items():
+                result[k].append(v)
+        return result
+
+    def finalize_with_confidence(
+        self,
+        estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
+        ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
+        n_boot: int = 1_000,
+        seed: int = 42,
+    ) -> Mapping[str, Tuple[float, float]]:
+        """Finalize result with confidence estimation via bootstrapping.
+
+        Start by training a model (here, only for a one epochs)
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(dataset="nations", model="rotate", training_kwargs=dict(num_epochs=1))
+
+        Create an evaluator with `clear_on_finalize` set to `False`, e.g., via
+
+        >>> from pykeen.evaluation import evaluator_resolver
+        >>> evaluator = evaluator_resolver.make("rankbased", clear_on_finalize=False)
+
+        Evaluate *once*, this time ignoring the result
+
+        >>> evaluator.evaluate(model=result.model, mapped_triples=result.training.mapped_triples)
+
+        Now, call `finalize_with_confidence` to obtain estimates for metrics together with confidence intervals
+
+        >>> evaluator.finalize_with_confidence(n_boot=10)
+
+        :param estimator:
+            the estimator of central tendency.
+        :param ci:
+            the confidence interval
+        :param n_boot:
+            the number of resamplings to use for bootstrapping
+        :param seed:
+            the random seed
+
+        :return:
+            a dictionary from metric names to (central tendency, confidence) pairs
+        """
+        return {
+            k: summarize_values(vs, estimator=estimator, ci=ci)
+            for k, vs in self.finalize_multi(n_boot=n_boot, seed=seed).items()
+        }
+
+
+def _resolve_estimator(estimator: Union[str, Callable[[Sequence[float]], float]]) -> Callable[[Sequence[float]], float]:
+    if callable(estimator):
+        return estimator
+    return getattr(np, estimator)
+
+
+def _resolve_confidence(ci: Union[int, str, Callable[[Sequence[float]], float]]) -> Callable[[Sequence[float]], float]:
+    if callable(ci):
+        return ci
+    if isinstance(ci, (int, float)):
+        if ci < 0 or ci > 100:
+            raise ValueError(f"Invalid CI value: {ci}. Must be in [0, 100].")
+        ci_half = ci / 2.0
+
+        def ipr(vs: Sequence[float]) -> float:
+            """Return the inter-percentile range."""
+            return np.diff(np.percentile(vs, q=[ci_half, 100 - ci_half])).item()
+
+        return ipr
+    return getattr(np, ci)
+
+
+def summarize_values(
+    vs: Sequence[float],
+    estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
+    ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
+) -> Tuple[float, float]:
+    """Summarize values.
+
+    :param vs:
+        the values
+    :param estimator:
+        the central tendency estimator
+    :param ci:
+        the confidence estimator
+
+    :return:
+        a tuple estimates of central tendency and confidence
+    """
+    estimator = _resolve_estimator(estimator=estimator)
+    ci = _resolve_confidence(ci=ci)
+    return estimator(vs), ci(vs)
 
 
 def sample_negatives(
@@ -335,16 +498,15 @@ def sample_negatives(
         additional_filter_triples=additional_filter_triples,
     )
     num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
-    columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
     num_triples = evaluation_triples.shape[0]
-    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
-    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
+    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=COLUMN_LABELS)
+    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=COLUMN_LABELS)
     id_df = df.reset_index()
     all_ids = set(range(num_entities))
     negatives = {}
     for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
-        other = [c for c in columns if c != side]
+        other = TARGET_TO_KEY_LABELS[side]
         for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
             by=other,
         ):
@@ -373,7 +535,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     cf. https://arxiv.org/abs/2106.06935.
     """
 
-    negatives: Mapping[Target, torch.LongTensor]
+    negative_samples: Mapping[Target, torch.LongTensor]
 
     def __init__(
         self,
@@ -473,54 +635,76 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
         self.num_entities = num_entities
 
+    def evaluate_ogb(
+        self,
+        model,
+        mapped_triples: MappedTriples,
+        batch_size: Optional[int] = None,
+        **kwargs,
+    ) -> MetricResults:
+        """
+        Evaluate a model using OGB's evaluator.
+
+        :param model:
+            the model; will be set to evaluation mode.
+        :param mapped_triples:
+            the evaluation triples
+
+            .. note ::
+                the evaluation triples have to match with the stored explicit negatives
+
+        :param batch_size:
+            the batch size
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`pykeen.nn.Model.predict`
+
+        :return:
+            the evaluation results
+        """
+        from .ogb_evaluator import evaluate_ogb
+
+        return evaluate_ogb(
+            evaluator=self,
+            model=model,
+            mapped_triples=mapped_triples,
+            batch_size=batch_size,
+            **kwargs,
+        )
+
 
 class MacroRankBasedEvaluator(RankBasedEvaluator):
     """Macro-average rank-based evaluation."""
 
-    COLUMNS = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
-    precomputed_weights: Mapping[Target, Mapping[Tuple[int, int], float]]
-    weights: MutableMapping[Target, List[numpy.ndarray]]
+    weights: MutableMapping[Target, List[np.ndarray]]
 
-    def __init__(
-        self,
-        *,
-        evaluation_factory: Optional[CoreTriplesFactory] = None,
-        evaluation_triples: Optional[MappedTriples] = None,
-        **kwargs,
-    ):
+    def __init__(self, **kwargs):
         """
         Initialize the evaluator.
 
-        :param evaluation_factory:
-            the evaluation triples' factory. Must be provided, if no explicit triples are provided.
-        :param evaluation_triples:
-            the evaluation triples. If given, takes precedence over extracting triples from a factory.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`RankBasedEvaluator.__init__`.
-
-        :raises ValueError:
-            if neither evaluation triples nor a factory are provided
         """
         super().__init__(**kwargs)
-        if evaluation_triples is None:
-            if evaluation_factory is None:
-                raise ValueError("Need to provide either evaluation_triples or evaluation_factory.")
-            evaluation_triples = evaluation_factory.mapped_triples
-        # compute macro weights
-        df = pandas.DataFrame(data=evaluation_triples.numpy(), columns=list(self.COLUMNS))
-        self.precomputed_weights = dict()
-        self.weights = {}
-        for target in (LABEL_HEAD, LABEL_TAIL):
-            key = self._get_key(target)
-            counts = df.groupby(by=key).nunique()[target]
-            key_list = cast(Iterable[Tuple[int, int]], map(tuple, counts.index.tolist()))
-            self.precomputed_weights[target] = dict(
-                zip(key_list, numpy.reciprocal(counts.values.astype(float)).tolist())
-            )
-            self.weights[target] = []
+        self.keys = defaultdict(list)
 
-    def _get_key(self, target: Target) -> List[Target]:
-        return [c for c in self.COLUMNS if c != target]
+    @staticmethod
+    def _calculate_weights(keys: Iterable[np.ndarray]) -> np.ndarray:
+        """Calculate macro weights, i.e., weights inversely proportional to the key frequency.
+
+        :param keys:
+            the keys, in batches
+
+        :return: shape: (n,)
+            the weights
+        """
+        # combine key batches
+        keys = np.concatenate(list(keys), axis=0)
+        # calculate key frequency
+        inverse, counts = np.unique(keys, axis=0, return_inverse=True, return_counts=True)[1:]
+        # weight = inverse frequency
+        weights = np.reciprocal(counts, dtype=float)
+        # broadcast to samples
+        return weights[inverse]
 
     # docstr-coverage: inherited
     def process_scores_(
@@ -538,22 +722,23 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             true_scores=true_scores,
             dense_positive_mask=dense_positive_mask,
         )
-        key_list = (
-            hrt_batch[:, [TARGET_TO_INDEX[key] for key in self._get_key(target=target)]].detach().numpy().tolist()
-        )
-        keys = cast(List[Tuple[int, int]], list(map(tuple, key_list)))
-        self.weights[target].append(numpy.asarray([self.precomputed_weights[target][k] for k in keys]))
+        # store keys for calculating macro weights
+        self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().cpu().numpy())
 
     # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
+        # compute macro weights
+        # note: we wrap the array into a list to be able to re-use _iter_ranks
+        weights = {target: [self._calculate_weights(keys=keys)] for target, keys in self.keys.items()}
+        # calculate weighted metrics
         result = RankBasedMetricResults.from_ranks(
             metrics=self.metrics,
-            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=self.weights),
+            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights),
         )
         # Clear buffers
-        self.weights.clear()
+        self.keys.clear()
         self.ranks.clear()
         self.num_candidates.clear()
 
