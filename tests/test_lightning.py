@@ -68,8 +68,8 @@ def test_lit_training(model, model_kwargs, training_loop):
     from pykeen.contrib.lightning import lit_pipeline
 
     # some models require inverse relations
-    create_inverse_triples = model is not models.RGCN
-    dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=create_inverse_triples))
+    use_inverse_relations = model is not models.RGCN
+    dataset = get_dataset(dataset="nations", dataset_kwargs=dict(use_inverse_relations=use_inverse_relations))
 
     # some model require access to the training triples
     if "triples_factory" in model_kwargs:

@@ -172,7 +172,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         def _triples_factory(path: Optional[str]) -> Optional[TriplesFactory]:
             if path is None:
                 return None
-            return TriplesFactory.from_path(path=path, create_inverse_triples=use_inverse_relations)
+            return TriplesFactory.from_path(path=path, use_inverse_relations=use_inverse_relations)
 
         training = _triples_factory(training_triples_factory)
         testing = _triples_factory(testing_triples_factory)
@@ -187,7 +187,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             model=model,
             model_kwargs=model_kwargs,
             dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=use_inverse_relations),
+            dataset_kwargs=dict(use_inverse_relations=use_inverse_relations),
             training=training,
             testing=testing or training,
             validation=validation,

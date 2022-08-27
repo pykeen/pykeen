@@ -43,7 +43,7 @@ class TestCompGCN(cases.ModelTestCase):
     """Test the CompGCN model."""
 
     cls = pykeen.models.CompGCN
-    create_inverse_triples = True
+    use_inverse_relations = True
     num_constant_init = 3  # BN(2) + Bias
     cli_extras = ["--create-inverse-triples"]
 
@@ -72,7 +72,7 @@ class TestConvE(cases.ModelTestCase):
 
     cls = pykeen.models.ConvE
     embedding_dim = 12
-    create_inverse_triples = True
+    use_inverse_relations = True
     kwargs = {
         "output_channels": 2,
         "embedding_height": 3,
@@ -235,7 +235,7 @@ class TestNodePiece(cases.BaseNodePieceTest):
             [[0, 0, 1], [1, 1, 0], [3, 1, 0], [3, 2, 1]], dtype=torch.long
         )  # node ID 2 is missing as a disconnected node
         factory = CoreTriplesFactory.create(
-            mapped_triples=edges, num_entities=4, num_relations=3, create_inverse_triples=True
+            mapped_triples=edges, num_entities=4, num_relations=3, use_inverse_relations=True
         )
         pykeen.models.NodePiece(triples_factory=factory, num_tokens=2)
 
@@ -315,7 +315,7 @@ class TestInductiveNodePiece(cases.InductiveModelTestCase):
     """Test the InductiveNodePiece model."""
 
     cls = pykeen.models.InductiveNodePiece
-    create_inverse_triples = True
+    use_inverse_relations = True
 
 
 class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
@@ -323,7 +323,7 @@ class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
 
     cls = pykeen.models.InductiveNodePieceGNN
     num_constant_init = 6
-    create_inverse_triples = True
+    use_inverse_relations = True
     train_batch_size = 8
 
 
@@ -826,7 +826,7 @@ class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.m
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         # create triples factory with inverse relations
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["triples_factory"] = self.factory = Nations(create_inverse_triples=True).training
+        kwargs["triples_factory"] = self.factory = Nations(use_inverse_relations=True).training
         return kwargs
 
     def _combination_batch(

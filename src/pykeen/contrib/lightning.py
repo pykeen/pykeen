@@ -13,7 +13,7 @@ has some nice features:
 
     model = LitLCWAModule(
         dataset="fb15k237",
-        dataset_kwargs=dict(create_inverse_triples=True),
+        dataset_kwargs=dict(use_inverse_relations=True),
         model="mure",
         model_kwargs=dict(embedding_dim=128, loss="bcewithlogits"),
         batch_size=128,

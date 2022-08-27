@@ -47,14 +47,14 @@ The remainder of the examples will be for :func:`pykeen.pipeline.pipeline`, but 
 for :func:`pykeen.hpo.hpo_pipeline`.
 
 If you want to add dataset-wide arguments, you can use the ``dataset_kwargs`` argument
-to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse_triples=True``.
+to the :class:`pykeen.pipeline.pipeline` to enable options like ``use_inverse_relations=True``.
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
 >>> result = pipeline(
 ...     training=NATIONS_TRAIN_PATH,
 ...     testing=NATIONS_TEST_PATH,
-...     dataset_kwargs={'create_inverse_triples': True},
+...     dataset_kwargs={'use_inverse_relations': True},
 ...     model='TransE',
 ...     epochs=5,  # short epochs for testing - you should go higher
 ... )
@@ -89,7 +89,7 @@ TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
     the wrong identifiers in the training set during evaluation, and we'd get nonsense results.
 
 The ``dataset_kwargs`` argument is ignored when passing your own :class:`pykeen.triples.TriplesFactory`, so be
-sure to include the ``create_inverse_triples=True`` in the instantiation of those classes if that's your
+sure to include the ``use_inverse_relations=True`` in the instantiation of those classes if that's your
 desired behavior as in:
 
 >>> from pykeen.triples import TriplesFactory
@@ -97,13 +97,13 @@ desired behavior as in:
 >>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
 >>> training = TriplesFactory.from_path(
 ...     NATIONS_TRAIN_PATH,
-...     create_inverse_triples=True,
+...     use_inverse_relations=True,
 ... )
 >>> testing = TriplesFactory.from_path(
 ...     NATIONS_TEST_PATH,
 ...     entity_to_id=training.entity_to_id,
 ...     relation_to_id=training.relation_to_id,
-...     create_inverse_triples=True,
+...     use_inverse_relations=True,
 ... )
 >>> result = pipeline(
 ...     training=training,

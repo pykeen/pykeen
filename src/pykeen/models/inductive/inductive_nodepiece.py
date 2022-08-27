@@ -66,13 +66,13 @@ class InductiveNodePiece(ERModel):
         Initialize the model.
 
         :param triples_factory:
-            the triples factory of training triples. Must have create_inverse_triples set to True.
+            the triples factory of training triples. Must have use_inverse_relations set to True.
         :param inference_factory:
-            the triples factory of inference triples. Must have create_inverse_triples set to True.
+            the triples factory of inference triples. Must have use_inverse_relations set to True.
         :param validation_factory:
-            the triples factory of validation triples. Must have create_inverse_triples set to True.
+            the triples factory of validation triples. Must have use_inverse_relations set to True.
         :param test_factory:
-            the triples factory of testing triples. Must have create_inverse_triples set to True.
+            the triples factory of testing triples. Must have use_inverse_relations set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
             :class:`pykeen.nn.NodePieceRepresentation`.
@@ -102,7 +102,7 @@ class InductiveNodePiece(ERModel):
         :raises ValueError:
             if the triples factory does not create inverse triples
         """
-        if not triples_factory.create_inverse_triples:
+        if not triples_factory.use_inverse_relations:
             raise ValueError(
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",

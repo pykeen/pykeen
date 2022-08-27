@@ -62,7 +62,7 @@ class ConvE(ERModel):
 
     >>> # Step 1: Get triples
     >>> from pykeen.datasets import Nations
-    >>> dataset = Nations(create_inverse_triples=True)
+    >>> dataset = Nations(use_inverse_relations=True)
     >>> # Step 2: Configure the model
     >>> from pykeen.models import ConvE
     >>> model = ConvE(
@@ -139,10 +139,10 @@ class ConvE(ERModel):
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
-        if not triples_factory.create_inverse_triples:
+        if not triples_factory.use_inverse_relations:
             logger.warning(
                 "\nThe ConvE model should be trained with inverse triples.\n"
-                "This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set "
+                "This can be done by defining the TriplesFactory class with the _use_inverse_relations_ parameter set "
                 "to true.",
             )
 

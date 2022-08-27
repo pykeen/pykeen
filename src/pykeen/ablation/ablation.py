@@ -36,7 +36,7 @@ def ablation_pipeline(
     training_loops: Union[str, List[str]],
     *,
     epochs: Optional[int] = None,
-    create_inverse_triples: Union[bool, List[bool]] = False,
+    use_inverse_relations: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     negative_sampler: Union[str, None] = None,
     evaluator: Optional[str] = None,
@@ -80,7 +80,7 @@ def ablation_pipeline(
     :param optimizers: An optimizer name or list of optimizer names.
     :param training_loops: A training loop name or list of training loop names.
     :param epochs: A quick way to set the ``num_epochs`` in the training kwargs.
-    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
+    :param use_inverse_relations: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler
         is desired. Negative sampling is used only in combination with :class:`pykeen.training.SLCWATrainingLoop`.
@@ -148,7 +148,7 @@ def ablation_pipeline(
         optimizers=optimizers,
         training_loops=training_loops,
         epochs=epochs,
-        create_inverse_triples=create_inverse_triples,
+        use_inverse_relations=use_inverse_relations,
         regularizers=regularizers,
         model_to_model_kwargs=model_to_model_kwargs,
         model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
@@ -324,7 +324,7 @@ def prepare_ablation(  # noqa:C901
     directory: Union[str, pathlib.Path],
     *,
     epochs: Optional[int] = None,
-    create_inverse_triples: Union[bool, List[bool]] = False,
+    use_inverse_relations: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str], List[None]] = None,
     negative_sampler: Optional[str] = None,
     evaluator: Optional[str] = None,
@@ -362,7 +362,7 @@ def prepare_ablation(  # noqa:C901
     :param optimizers: An optimizer name or list of optimizer names.
     :param training_loops: A training loop name or list of training loop names.
     :param epochs: A quick way to set the ``num_epochs`` in the training kwargs.
-    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
+    :param use_inverse_relations: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler
         is desired. Negative sampling is used only in combination with the pykeen.training.sclwa training loop.
@@ -423,8 +423,8 @@ def prepare_ablation(  # noqa:C901
     directory = normalize_path(path=directory)
     if isinstance(datasets, str):
         datasets = [datasets]
-    if isinstance(create_inverse_triples, bool):
-        create_inverse_triples = [create_inverse_triples]
+    if isinstance(use_inverse_relations, bool):
+        use_inverse_relations = [use_inverse_relations]
     if isinstance(models, str):
         models = [models]
     if isinstance(losses, str):
@@ -440,7 +440,7 @@ def prepare_ablation(  # noqa:C901
 
     it = itt.product(
         datasets,
-        create_inverse_triples,
+        use_inverse_relations,
         models,
         losses,
         regularizers,
@@ -456,7 +456,7 @@ def prepare_ablation(  # noqa:C901
     directories = []
     for counter, (
         dataset,
-        create_inverse_triples,
+        use_inverse_relations,
         model,
         loss,
         regularizer,
@@ -515,8 +515,8 @@ def prepare_ablation(  # noqa:C901
                 "the paths to the training, testing, and validation data.",
             )
         logger.info(f"Dataset: {dataset}")
-        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=create_inverse_triples)
-        logger.info(f"Add inverse triples: {create_inverse_triples}")
+        hpo_config["dataset_kwargs"] = dict(use_inverse_relations=use_inverse_relations)
+        logger.info(f"Add inverse triples: {use_inverse_relations}")
 
         hpo_config["model"] = model
         hpo_config["model_kwargs"] = model_to_model_kwargs.get(model, {})

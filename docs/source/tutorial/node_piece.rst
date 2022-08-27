@@ -18,7 +18,7 @@ throughout the following examples.
    from pykeen.datasets import FB15k237
 
    # inverses are necessary for the current version of NodePiece
-   dataset = FB15k237(create_inverse_triples=True)
+   dataset = FB15k237(use_inverse_relations=True)
 
 In the simplest usage of :class:`pykeen.models.NodePiece`, we'll only
 use relations for tokenization. We can do this by with the following
@@ -286,7 +286,7 @@ Let's pack the last NodePiece model into the pipeline:
    result = pipeline(
        dataset="fb15k237",
        dataset_kwargs=dict(
-           create_inverse_triples=True,
+           use_inverse_relations=True,
        ),
        model=NodePiece,
        model_kwargs=dict(
@@ -498,7 +498,7 @@ pipeline:
    result = pipeline(
        dataset="fb15k237",
        dataset_kwargs=dict(
-           create_inverse_triples=True,
+           use_inverse_relations=True,
        ),
        model=NodePiece,
        model_kwargs=dict(
@@ -590,7 +590,7 @@ Let's use the new tokenizer for the Wikidata5M graph of 5M nodes and 20M edges.
 
     from pykeen.datasets import Wikidata5M
 
-    dataset = Wikidata5M(create_inverse_triples=True)
+    dataset = Wikidata5M(use_inverse_relations=True)
 
     model = NodePiece(
         triples_factory=dataset.training,

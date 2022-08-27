@@ -26,7 +26,7 @@ relation representations and a DistMult interaction function.
     from pykeen.nn.init import LabelBasedInitializer
     from pykeen.pipeline import pipeline
 
-    dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=True))
+    dataset = get_dataset(dataset="nations", dataset_kwargs=dict(use_inverse_relations=True))
     entity_initializer = LabelBasedInitializer.from_triples_factory(
         triples_factory=dataset.training,
         for_entities=True,

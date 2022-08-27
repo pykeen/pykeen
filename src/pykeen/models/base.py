@@ -99,7 +99,7 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
-        self.use_inverse_triples = triples_factory.create_inverse_triples
+        self.use_inverse_triples = triples_factory.use_inverse_relations
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
 
@@ -605,7 +605,7 @@ class Model(nn.Module, ABC):
         if not self.use_inverse_triples:
             raise ValueError(
                 "Your model is not configured to predict with inverse relations."
-                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
+                " Set ``use_inverse_relations=True`` when creating the dataset/triples factory"
                 " or using the pipeline().",
             )
         return relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
