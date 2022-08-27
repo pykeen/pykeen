@@ -1,15 +1,17 @@
 """Tests for prediction tools."""
 import functools
 import itertools
-from typing import Any, MutableMapping, Tuple
+from typing import Any, MutableMapping, Optional, Tuple
 
 import pandas
 import pytest
 import torch
 import unittest_templates
 
+import pykeen.models.mocks
 import pykeen.models.predict
 import pykeen.typing
+from pykeen.triples.triples_factory import KGInfo
 from tests import cases
 
 
@@ -78,3 +80,60 @@ class PredictionPostProcessorMetaTestCase(
 
     base_cls = pykeen.models.predict.PredictionPostProcessor
     base_test = cases.PredictionPostProcessorTestCase
+
+
+class CountScoreConsumerTestCase(cases.ScoreConsumerTests):
+    """Test count score consumer."""
+
+    cls = pykeen.models.predict.CountScoreConsumer
+
+
+class TopKScoreConsumerTestCase(cases.ScoreConsumerTests):
+    """Test top-k score consumer."""
+
+    cls = pykeen.models.predict.TopKScoreConsumer
+
+
+class AllScoreConsumerTestCase(cases.ScoreConsumerTests):
+    """Test all score consumer."""
+
+    cls = pykeen.models.predict.AllScoreConsumer
+    kwargs = dict(
+        num_entities=cases.ScoreConsumerTests.num_entities,
+        num_relations=cases.ScoreConsumerTests.num_entities,
+    )
+
+
+class ScoreConsumerMetaTestCase(unittest_templates.MetaTestCase[pykeen.models.predict.ScoreConsumer]):
+    """Test for tests for score consumers."""
+
+    base_cls = pykeen.models.predict.ScoreConsumer
+    base_test = cases.ScoreConsumerTests
+
+
+@pytest.mark.parametrize(["num_entities", "num_relations"], [(3, 2)])
+def test_consume_scores(num_entities: int, num_relations: int):
+    """Test for consume_scores."""
+    dataset = pykeen.models.predict.AllPredictionDataset(num_entities=num_entities, num_relations=num_relations)
+    model = pykeen.models.mocks.FixedModel(
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
+    )
+    consumer = pykeen.models.predict.CountScoreConsumer()
+    pykeen.models.predict.consume_scores(model, dataset, consumer)
+    assert consumer.batch_count == num_relations * num_entities
+    assert consumer.score_count == num_relations * num_entities**2
+
+
+@pytest.mark.parametrize(
+    ["k", "target", "batch_size"],
+    itertools.product(
+        [None, 2], [pykeen.typing.LABEL_HEAD, pykeen.typing.LABEL_RELATION, pykeen.typing.LABEL_TAIL], [1, 2]
+    ),
+)
+def test_predict(k: Optional[int], target: pykeen.typing.Target, batch_size: int):
+    """Test the predict method."""
+    num_entities, num_relations = 3, 2
+    model = pykeen.models.mocks.FixedModel(
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
+    )
+    pykeen.models.predict.predict(model=model, k=k, target=target, batch_size=batch_size)

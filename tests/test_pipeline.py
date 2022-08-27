@@ -31,6 +31,8 @@ from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
 
+from .utils import needs_packages
+
 
 class TestPipeline(unittest.TestCase):
     """Test the pipeline."""
@@ -218,6 +220,13 @@ class TestPipeline(unittest.TestCase):
             assert isinstance(df, pandas.DataFrame)
             assert df.shape[0] == self.testing_mapped_triples.shape[0]
             assert {"head_id", "relation_id", "tail_id", "score"}.issubset(df.columns)
+
+    @needs_packages("matplotlib")
+    def test_plot(self):
+        """Test plotting."""
+        result = pipeline(dataset="nations", model="transe", training_kwargs=dict(num_epochs=0))
+        fig, axes = result.plot()
+        assert fig is not None and axes is not None
 
 
 class TestPipelineTriples(unittest.TestCase):

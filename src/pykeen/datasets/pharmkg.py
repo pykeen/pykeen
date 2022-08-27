@@ -48,19 +48,16 @@ class PharmKG8k(UnpackedRemoteDataset):
 
     def __init__(
         self,
-        create_inverse_triples: bool = False,
         **kwargs,
     ):
         """Initialize the PharmKG8k dataset from [zheng2020]_.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=TRAIN_URL,
             testing_url=TEST_URL,
             validation_url=VALID_URL,
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 
@@ -88,19 +85,16 @@ class PharmKG(SingleTabbedDataset):
 
     def __init__(
         self,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         **kwargs,
     ):
         """Initialize the PharmKG dataset from [zheng2020]_.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             url=RAW_URL,
-            create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             read_csv_kwargs=dict(
                 usecols=["Entity1_name", "relationship_type", "Entity2_name"],

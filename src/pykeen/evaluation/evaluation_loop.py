@@ -17,10 +17,10 @@ from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
 
 from .evaluator import Evaluator, MetricResults, filter_scores_
-from ..constants import TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..models import Model
-from ..triples import CoreTriplesFactory
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
+from ..triples import CoreTriplesFactory, get_mapped_triples
+from ..typing import LABEL_HEAD, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
 from ..utils import upgrade_to_sequence
 
 logger = logging.getLogger(__name__)
@@ -232,7 +232,7 @@ class FilterIndex:
             a filter index object
         """
         # input verification
-        expected_columns = {LABEL_HEAD, LABEL_RELATION, LABEL_TAIL}
+        expected_columns = set(COLUMN_LABELS)
         if not expected_columns.issubset(df.columns):
             raise ValueError(f"Missing columns: {sorted(expected_columns.difference(df.columns))}")
 
@@ -259,39 +259,6 @@ class FilterIndex:
         key_id = self.triple_id_to_key_id[item]
         low, high = self.bounds[key_id : key_id + 2]
         return self.indices[low:high]
-
-
-def get_mapped_triples(
-    x: Union[None, MappedTriples, CoreTriplesFactory] = None,
-    *,
-    mapped_triples: Optional[MappedTriples] = None,
-    factory: Optional[CoreTriplesFactory] = None,
-) -> MappedTriples:
-    """
-    Get ID-based triples either directly, or from a factory.
-
-    :param x:
-        either of ID-based triples, a factory, or None.
-    :param mapped_triples: shape: (n, 3)
-        the ID-based triples
-    :param factory:
-        the triples factory
-
-    :raises ValueError:
-        if all inputs are None
-
-    :return:
-        the ID-based triples
-    """
-    if x is not None:
-        if isinstance(x, CoreTriplesFactory):
-            return x.mapped_triples
-        return x
-    if mapped_triples is not None:
-        return mapped_triples
-    if factory is None:
-        raise ValueError("Needs at least one of `mapped_triples` and `factory`.")
-    return factory.mapped_triples
 
 
 class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]]):
@@ -344,7 +311,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
                         *(get_mapped_triples(x) for x in upgrade_to_sequence(additional_filter_triples or [])),
                     ]
                 ),
-                columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+                columns=COLUMN_LABELS,
             )
             self.filter_indices = {target: FilterIndex.from_df(df=df, target=target) for target in targets}
         else:

@@ -3,7 +3,6 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 import dataclasses
-import itertools
 import logging
 import pathlib
 import re
@@ -23,6 +22,7 @@ from typing import (
     Sequence,
     Set,
     TextIO,
+    Tuple,
     TypeVar,
     Union,
     cast,
@@ -36,16 +36,8 @@ from torch.utils.data import Dataset
 from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
-from ..typing import (
-    LABEL_HEAD,
-    LABEL_RELATION,
-    LABEL_TAIL,
-    EntityMapping,
-    LabeledTriples,
-    MappedTriples,
-    RelationMapping,
-    TorchRandomHint,
-)
+from ..constants import COLUMN_LABELS
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import (
     ExtraReprMixin,
     compact_mapping,
@@ -68,6 +60,7 @@ __all__ = [
     "splits_similarity",
     "RelationInverter",
     "relation_inverter",
+    "get_mapped_triples",
 ]
 
 logger = logging.getLogger(__name__)
@@ -846,7 +839,7 @@ class CoreTriplesFactory(KGInfo):
         # store numeric triples
         pd.DataFrame(
             data=self.mapped_triples.numpy(),
-            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+            columns=COLUMN_LABELS,
         ).to_csv(path.joinpath(self.triples_file_name), sep="\t", index=False)
 
         # store metadata
@@ -1198,19 +1191,17 @@ class TriplesFactory(CoreTriplesFactory):
         invert: bool = False,
     ) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given relations."""
-        return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations))
+        return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations), invert=invert)
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
-        :returns: A world cloud object for a Jupyter notebook
+        :returns: A word cloud object for a Jupyter notebook
 
         .. warning::
 
-            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
-            install it automatically, or install it yourself with
-            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
         """
         return self._word_cloud(
             ids=get_edge_index(mapped_triples=self.mapped_triples).t(),
@@ -1226,9 +1217,7 @@ class TriplesFactory(CoreTriplesFactory):
 
         .. warning::
 
-            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
-            install it automatically, or install it yourself with
-            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
         """
         return self._word_cloud(
             ids=self.mapped_triples[:, 1],
@@ -1238,35 +1227,32 @@ class TriplesFactory(CoreTriplesFactory):
 
     def _word_cloud(self, *, ids: torch.LongTensor, id_to_label: Mapping[int, str], top: int):
         try:
-            from word_cloud.word_cloud_generator import WordCloud
+            from wordcloud import WordCloud
         except ImportError:
             logger.warning(
-                "Could not import module `word_cloud`. "
-                "Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`",
+                "Could not import module `wordcloud`. Try installing it with `pip install wordcloud`",
             )
             return
 
         # pre-filter to keep only topk
-        uniq, counts = ids.view(-1).unique(return_counts=True)
+        uniq, counts = ids.reshape(-1).unique(return_counts=True)
 
         # if top is larger than the number of available options
         top = min(top, uniq.numel())
         top_counts, top_ids = counts.topk(k=top, largest=True)
 
-        # generate text
-        text = list(
-            itertools.chain(
-                *(
-                    itertools.repeat(id_to_label[e_id], count)
-                    for e_id, count in zip(top_ids.tolist(), top_counts.tolist())
-                )
+        # Generate a word cloud image
+        svg_str: str = (
+            WordCloud(normalize_plurals=False, max_words=top, mode="RGBA", background_color=None)
+            .generate_from_frequencies(
+                frequencies=dict(zip(map(id_to_label.__getitem__, top_ids.tolist()), top_counts.tolist()))
             )
+            .to_svg()
         )
 
-        from IPython.core.display import HTML
+        from IPython.core.display import SVG
 
-        word_cloud = WordCloud()
-        return HTML(word_cloud.get_embed_code(text=text, topn=top))
+        return SVG(data=svg_str)
 
     # docstr-coverage: inherited
     def tensor_to_df(
@@ -1362,3 +1348,78 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     steps = splits_steps(a, b)
     n = sum(tf.num_triples for tf in a)
     return 1 - steps / n
+
+
+def get_mapped_triples(
+    x: Union[None, Tuple[str, str, str], Sequence[Tuple[str, str, str]], MappedTriples, CoreTriplesFactory] = None,
+    *,
+    mapped_triples: Optional[MappedTriples] = None,
+    triples: Union[None, LabeledTriples, Tuple[str, str, str], Sequence[Tuple[str, str, str]]] = None,
+    factory: Optional[CoreTriplesFactory] = None,
+) -> MappedTriples:
+    """
+    Get ID-based triples either directly, or from a factory.
+
+    Preference order:
+    1. `mapped_triples`
+    2. `triples` (converted using factory)
+    3. `x`
+    4. `factory.mapped_triples`
+
+    :param x:
+        either of label-based triples, ID-based triples, a factory, or None.
+    :param mapped_triples: shape: (n, 3)
+        the ID-based triples
+    :param triples:
+        the label-based triples
+    :param factory:
+        the triples factory
+
+    :raises ValueError:
+        if all inputs are None, or provided inputs are invalid.
+
+    :return:
+        the ID-based triples
+    """
+    # ID-based triples
+    if mapped_triples is not None:
+        if torch.is_floating_point(mapped_triples):
+            raise ValueError(
+                f"mapped_triples must be on long (or compatible) data type, but are {mapped_triples.dtype}"
+            )
+        if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
+            raise ValueError(f"mapped_triples must be of shape (?, 3), but are {mapped_triples.shape}")
+        return mapped_triples
+
+    # labeled triples
+    if triples is not None:
+        if factory is None or not isinstance(factory, TriplesFactory):
+            raise ValueError("If triples are not ID-based, a triples factory must be provided and label-based.")
+
+        # make sure triples are a numpy array
+        triples = np.asanyarray(triples)
+
+        # make sure triples are 2d
+        triples = np.atleast_2d(triples)
+
+        # convert to ID-based
+        return factory.map_triples(triples)
+
+    # triples factory
+    if x is None and factory is not None:
+        return factory.mapped_triples
+
+    # all keyword-based options have been none
+    if x is None:
+        raise ValueError("All parameters were None.")
+
+    if isinstance(x, torch.Tensor):
+        # delegate to keyword-based get_mapped_triples to re-use optional validation logic
+        return get_mapped_triples(mapped_triples=x)
+
+    if isinstance(x, CoreTriplesFactory):
+        # delegate to keyword-based get_mapped_triples to re-use optional validation logic
+        return get_mapped_triples(mapped_triples=x.mapped_triples)
+
+    # only labeled triples are remaining
+    return get_mapped_triples(triples=x, factory=factory)
