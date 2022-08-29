@@ -9,7 +9,6 @@ import unittest
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
 from typing import Any, Collection, Iterable, Mapping, Optional, Tuple
-from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -22,7 +21,6 @@ from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import _map_triples_elements_to_ids, get_mapped_triples
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
-from tests.utils import needs_packages
 
 triples = np.array(
     [
