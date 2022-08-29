@@ -203,7 +203,7 @@ def predict_hrt_uncertain(
     Example Usage::
 
         from pykeen.pipeline import pipeline
-        from pykeen.models.predict import predict_hrt_uncertain
+        from pykeen.models.uncertainty import predict_hrt_uncertain
 
         result = pipeline(dataset="nations", model="ERMLPE")
         prediction_with_uncertainty = predict_hrt_uncertain(

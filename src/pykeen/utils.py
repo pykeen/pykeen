@@ -123,6 +123,7 @@ __all__ = [
     "rate_limited",
     "ExtraReprMixin",
     "einsum",
+    "isin_many_dim",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1772,6 +1773,15 @@ try:
     logger.info("Using opt_einsum")
 except ImportError:
     einsum = torch.einsum
+
+
+def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> torch.BoolTensor:
+    """Return whether elements are contained in test elements."""
+    inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
+        return_counts=True, return_inverse=True, dim=dim
+    )[1:]
+    return counts[inverse[: elements.shape[dim]]] > 1
+
 
 if __name__ == "__main__":
     import doctest
