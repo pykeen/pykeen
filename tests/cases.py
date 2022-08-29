@@ -965,11 +965,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        dataset = Nations(create_inverse_triples=self.create_inverse_triples)
+        dataset = Nations()
         self.factory = dataset.training
         # insert shared parameters
         kwargs["triples_factory"] = self.factory
         kwargs["embedding_dim"] = self.embedding_dim
+        kwargs["use_inverse_relations"] = self.create_inverse_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
@@ -1448,7 +1449,6 @@ class InductiveModelTestCase(ModelTestCase):
             num_triples_training=self.num_triples_training,
             num_triples_inference=self.num_triples_inference,
             num_triples_testing=self.num_triples_testing,
-            create_inverse_triples=self.create_inverse_triples,
         )
         training_loop_kwargs = dict(self.training_loop_kwargs or dict())
         training_loop_kwargs["mode"] = self.mode

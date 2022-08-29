@@ -417,7 +417,7 @@ class Model(nn.Module, ABC):
             For each h-t pair, the scores for all possible relations.
         """
         if invert_relation:
-            raise NotImplementedError
+            raise NotImplementedError  # fixme
         return self.score_r(ht_batch=ht_batch, **kwargs)
 
     def score_t_extended(

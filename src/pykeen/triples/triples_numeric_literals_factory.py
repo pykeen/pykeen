@@ -103,7 +103,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             entity_to_id=base.entity_to_id,
             relation_to_id=base.relation_to_id,
             mapped_triples=base.mapped_triples,
-            create_inverse_triples=base.create_inverse_triples,
             numeric_literals=numeric_literals,
             literals_to_id=literals_to_id,
         )
@@ -128,15 +127,11 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         mapped_triples: MappedTriples,
         extra_metadata: Optional[Dict[str, Any]] = None,
         keep_metadata: bool = True,
-        create_inverse_triples: Optional[bool] = None,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
-        if create_inverse_triples is None:
-            create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(
             mapped_triples=mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
-            create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore

@@ -98,21 +98,12 @@ class InductiveNodePiece(ERModel):
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
-
-        :raises ValueError:
-            if the triples factory does not create inverse triples
         """
-        if not triples_factory.create_inverse_triples:
-            raise ValueError(
-                "The provided triples factory does not create inverse triples. However, for the node piece "
-                "representations inverse relation representations are required.",
-            )
-
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
             query=None,
             pos_kwargs=relation_representations_kwargs,
-            max_id=2 * triples_factory.real_num_relations + 1,
+            max_id=2 * triples_factory.num_relations + 1,
             shape=embedding_dim,
         )
 

@@ -815,15 +815,14 @@ class CombinedCompGCNRepresentations(nn.Module):
             2. If the dimensions were given as a ist but it does not match the number of layers that were given
         """
         super().__init__()
-        # TODO: Check
-        assert triples_factory.create_inverse_triples
         self.entity_representations = build_representation(
             max_id=triples_factory.num_entities,
             representation=entity_representations,
             representation_kwargs=entity_representations_kwargs,
         )
+        # always create inverse relations
         self.relation_representations = build_representation(
-            max_id=2 * triples_factory.real_num_relations,
+            max_id=2 * triples_factory.num_relations,
             representation=relation_representations,
             representation_kwargs=relation_representations_kwargs,
         )

@@ -110,20 +110,11 @@ class NodePiece(ERModel):
             a hint for regularizing relation embeddings
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
-
-        :raises ValueError:
-            if the triples factory does not create inverse triples
         """
-        if not triples_factory.create_inverse_triples:
-            raise ValueError(
-                "The provided triples factory does not create inverse triples. However, for the node piece "
-                "representations inverse relation representations are required.",
-            )
-
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
             query=None,
-            max_id=2 * triples_factory.real_num_relations + 1,
+            max_id=2 * triples_factory.num_relations + 1,
             shape=embedding_dim,
             initializer=relation_initializer,
             normalizer=relation_normalizer,
@@ -169,5 +160,6 @@ class NodePiece(ERModel):
                 # max_id=triples_factory.num_relations,  # will get added by ERModel
                 base=relation_representations,
             ),
+            use_inverse_relations=True,
             **kwargs,
         )

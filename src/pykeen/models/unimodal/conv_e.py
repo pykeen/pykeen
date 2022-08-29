@@ -135,11 +135,12 @@ class ConvE(ERModel):
         apply_batch_normalization: bool = True,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
+        use_inverse_relations: bool = True,
         **kwargs,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
-        if not triples_factory.create_inverse_triples:
+        if not use_inverse_relations:
             logger.warning(
                 "\nThe ConvE model should be trained with inverse triples.\n"
                 "This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set "
@@ -178,5 +179,6 @@ class ConvE(ERModel):
                 shape=embedding_dim,
                 initializer=relation_initializer,
             ),
+            use_inverse_relations=use_inverse_relations,
             **kwargs,
         )

@@ -383,7 +383,6 @@ class CoreTriplesFactory(KGInfo):
             (self.num_entities == __o.num_entities)
             and (self.num_relations == __o.num_relations)
             and (self.num_triples == __o.num_triples)
-            and (self.create_inverse_triples == __o.create_inverse_triples)
             and bool((self.mapped_triples == __o.mapped_triples).all().item())
         )
 
@@ -765,8 +764,6 @@ class TriplesFactory(CoreTriplesFactory):
             The mapping from entities' labels to their indices.
         :param relation_to_id:
             The mapping from relations' labels to their indices.
-        :param create_inverse_triples:
-            Whether to create inverse triples.
         :param metadata:
             Arbitrary metadata to go with the graph
         """
