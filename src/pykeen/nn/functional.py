@@ -70,18 +70,6 @@ __all__ = [
 ]
 
 
-def _extract_sizes(
-    h: torch.Tensor,
-    r: torch.Tensor,
-    t: torch.Tensor,
-) -> Tuple[int, int, int, int, int]:
-    """Extract size dimensions from head/relation/tail representations."""
-    num_heads, num_relations, num_tails = [xx.shape[i] for i, xx in enumerate((h, r, t), start=1)]
-    d_e = h.shape[-1]
-    d_r = r.shape[-1]
-    return num_heads, num_relations, num_tails, d_e, d_r
-
-
 def _apply_optional_bn_to_tensor(
     x: torch.FloatTensor,
     output_dropout: nn.Dropout,
