@@ -4,6 +4,7 @@
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .triples_factory import (
+    AnyTriples,
     CoreTriplesFactory,
     KGInfo,
     RelationInverter,
@@ -24,4 +25,5 @@ __all__ = [
     "TriplesFactory",
     "TriplesNumericLiteralsFactory",
     "get_mapped_triples",
+    "AnyTriples",
 ]
