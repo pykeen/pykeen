@@ -47,13 +47,13 @@ from torch.optim import SGD, Adagrad
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
-import pykeen.models.predict
 import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
 import pykeen.nn.text
 import pykeen.nn.weighting
+import pykeen.predict
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
@@ -1912,9 +1912,8 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
             dense_positive_mask=mask,
         )
 
-    def test_finalize(self) -> None:
-        """Test the finalize() function."""
-        # Process one batch
+    def _process_batches(self):
+        """Process one batch per side."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
         for target in (LABEL_HEAD, LABEL_TAIL):
@@ -1925,6 +1924,12 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
                 scores=scores,
                 dense_positive_mask=mask,
             )
+        return hrt_batch, scores, mask
+
+    def test_finalize(self) -> None:
+        """Test the finalize() function."""
+        # Process one batch
+        hrt_batch, scores, mask = self._process_batches()
 
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)
@@ -2640,38 +2645,44 @@ class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.Text
         assert x.shape[0] == len(labels)
 
 
-class PredictionPostProcessorTestCase(
-    unittest_templates.GenericTestCase[pykeen.models.predict.PredictionPostProcessor]
-):
+class PredictionTestCase(unittest_templates.GenericTestCase[pykeen.predict.Predictions]):
     """Tests for prediction post-processing."""
 
-    # to be initialize in subclass
+    # to be initialized in subclass
     df: pandas.DataFrame
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
         self.dataset = Nations()
-        kwargs.update(self.dataset.factory_dict)
+        kwargs["factory"] = self.dataset.training
         return kwargs
 
     def test_contains(self):
         """Test contains method."""
-        df2 = self.instance.add_membership_columns(df=self.df)
-        assert set(df2.columns).issubset(self.df.columns)
+        pred_annotated = self.instance.add_membership_columns(**self.dataset.factory_dict)
+        assert isinstance(pred_annotated, pykeen.predict.Predictions)
+        df_annot = pred_annotated.df
+        # no column has been removed
+        assert set(df_annot.columns).issuperset(self.df.columns)
+        # all old columns are unmodified
         for col in self.df.columns:
-            assert (df2[col] == self.df[col]).all()
-        for new_col in set(df2.columns).difference(self.df.columns):
-            assert df2[new_col].dtype == bool
+            assert (df_annot[col] == self.df[col]).all()
+        # new columns are boolean
+        for new_col in set(df_annot.columns).difference(self.df.columns):
+            assert df_annot[new_col].dtype == bool
 
     def test_filter(self):
         """Test filter method."""
-        df2 = self.instance.filter(df=self.df)
-        assert set(df2.columns) == set(self.df.columns)
-        assert len(df2) <= len(self.df)
-        # TODO: check subset
+        pred_filtered = self.instance.filter_triples(*self.dataset.factory_dict.values())
+        assert isinstance(pred_filtered, pykeen.predict.Predictions)
+        df_filtered = pred_filtered.df
+        # no columns have been added
+        assert set(df_filtered.columns) == set(self.df.columns)
+        # check subset relation
+        assert set(df_filtered.itertuples()).issubset(self.df.itertuples())
 
 
-class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.models.predict.ScoreConsumer]):
+class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.ScoreConsumer]):
     """Tests for score consumers."""
 
     batch_size: int = 2

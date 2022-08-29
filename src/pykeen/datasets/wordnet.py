@@ -71,7 +71,6 @@ class WN18RR(TarFileRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the WordNet-18 (RR) dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
