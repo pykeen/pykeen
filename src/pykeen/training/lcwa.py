@@ -229,10 +229,22 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
 class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedTriples]]):
-    """
+    r"""
     A "symmetric" LCWA scoring heads *and* tails at once.
 
-    .. seealso:: [lacroix2018]
+    This objective was introduced by [lacroix2018] as
+
+    .. math ::
+
+        l_{i,j,k}(X) = - X_{i,j,k} + \log \left(
+            \sum_{k'} \exp(X_{i,j,k′})
+        \right) - X_{k,j+P,i} + \log \left(
+            \sum_{i'} \exp (X_{k, j+P, i'})
+        \right)
+
+
+    which can be seen as a "symmetric LCWA", where for one batch of triples, we score both, heads *and* tails, given
+    the remainder of the triple.
     """
 
     # docstr-coverage: inherited
