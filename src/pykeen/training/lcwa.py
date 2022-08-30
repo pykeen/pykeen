@@ -84,13 +84,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self,
-        triples_factory: CoreTriplesFactory,
-        batch_size: int,
-        drop_last: bool,
-        num_workers: int,
-        pin_memory: bool,
-        sampler: Optional[str],
+        self, triples_factory: CoreTriplesFactory, sampler: Optional[str], **kwargs
     ) -> DataLoader[LCWABatchType]:  # noqa: D102
         if sampler:
             raise NotImplementedError(
@@ -99,15 +93,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             )
 
         dataset = triples_factory.create_lcwa_instances(target=self.target)
-        return DataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            drop_last=drop_last,
-            shuffle=True,
-            pin_memory=pin_memory,
-            collate_fn=dataset.get_collator(),
-        )
+        return DataLoader(dataset=dataset, collate_fn=dataset.get_collator(), **kwargs)
 
     @staticmethod
     # docstr-coverage: inherited
@@ -251,22 +237,10 @@ class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedT
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self,
-        triples_factory: CoreTriplesFactory,
-        batch_size: int,
-        drop_last: bool,
-        num_workers: int,
-        pin_memory: bool,
-        sampler: Optional[str],
+        self, triples_factory: CoreTriplesFactory, sampler: Optional[str], **kwargs
     ) -> DataLoader[Tuple[MappedTriples]]:  # noqa: D102
         assert sampler is None
-        return DataLoader(
-            dataset=TensorDataset(triples_factory.mapped_triples),
-            batch_size=batch_size,
-            drop_last=drop_last,
-            num_workers=num_workers,
-            pin_memory=pin_memory,
-        )
+        return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
 
     # docstr-coverage: inherited
     def _process_batch(
