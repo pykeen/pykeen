@@ -1,6 +1,6 @@
 """New-Style Pipeline API."""
 import dataclasses
-from typing import Optional
+from typing import Any, Dict, Literal, Optional
 
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 
@@ -13,54 +13,49 @@ from pykeen.nn.representation import Representation
 from pykeen.triples.triples_factory import KGInfo
 
 
+def _default_representation_kwargs():
+    """Return default representation kwargs."""
+    return dict(shape=(32,))
+
+
 @dataclasses.dataclass
 class ModelBuilder:
     """A state-ful model builder."""
 
-    defer: bool = False
-
     # KG info
-    kg_info: Optional[KGInfo] = None
+    triples_factory: Optional[KGInfo] = KGInfo(num_entities=7, num_relations=2, create_inverse_triples=False)
 
     # interaction
     interaction: HintOrType[Interaction] = None
-    interaction_kwargs: OptionalKwargs = None
+    interaction_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
 
     # representations: entities
     entity_representations: OneOrManyHintOrType[Representation] = None
-    entity_representations_kwargs: OneOrManyOptionalKwargs = None
+    entity_representations_kwargs: OneOrManyOptionalKwargs = dataclasses.field(
+        default_factory=_default_representation_kwargs
+    )
 
     # representations: relations
     relation_representations = None
-    relation_representations_kwargs: OneOrManyOptionalKwargs = None
+    relation_representations_kwargs: OneOrManyOptionalKwargs = dataclasses.field(
+        default_factory=_default_representation_kwargs
+    )
 
     # loss
     loss: HintOrType[Loss] = None
-    loss_kwargs: OptionalKwargs = None
+    loss_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
 
     # other
     predict_with_sigmoid: bool = False
     random_seed: Optional[int] = None
 
-    # interaction
-    def set_interaction_(self, interaction: HintOrType[Interaction], kwargs: OptionalKwargs = None):
-        self.interaction, self.interaction_kwargs = interaction, kwargs
-        if not self.defer:
-            self._resolve_interaction()
-
     def _resolve_interaction(self):
         self.interaction = interaction_resolver.make(self.interaction, pos_kwargs=self.interaction_kwargs)
         self.interaction_kwargs = None
 
-    # entities
-    def set_entity_representations(self, representations: OneOrManyHintOrType, kwargs: OneOrManyOptionalKwargs = None):
-        self.entity_representations, self.entity_representations_kwargs = representations, kwargs
-        if not self.defer:
-            self._resolve_entity_representations()
-
     def _resolve_entity_representations(self):
         self.entity_representations = _prepare_representation_module_list(
-            max_id=self.kg_info.num_entities,
+            max_id=self.triples_factory.num_entities,
             shapes=self.interaction.full_entity_shapes(),
             label="entity",
             representations=self.entity_representations,
@@ -68,17 +63,9 @@ class ModelBuilder:
         )
         self.entity_representations_kwargs = None
 
-    # relations
-    def set_relation_representations(
-        self, representations: OneOrManyHintOrType, kwargs: OneOrManyOptionalKwargs = None
-    ):
-        self.relation_representations, self.relation_representations_kwargs = representations, kwargs
-        if not self.defer:
-            self._resolve_relation_representations()
-
     def _resolve_relation_representations(self):
         self.relation_representations = _prepare_representation_module_list(
-            max_id=self.kg_info.num_relations,
+            max_id=self.triples_factory.num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
             representations=self.relation_representations,
@@ -86,21 +73,21 @@ class ModelBuilder:
         )
         self.relation_representations_kwargs = None
 
-    # loss
-    def set_loss(self, loss: HintOrType[Loss], kwargs: OptionalKwargs = None):
-        self.loss, self.loss_kwargs = loss, kwargs
-
     def _resolve_loss(self):
         self.loss = loss_resolver.make(self.loss, pos_kwargs=self.loss_kwargs)
         self.loss_kwargs = None
 
-    def resolve(self):
+    def resolve(self, component: Literal[None, "interaction", "entities", "relations", "loss"] = None):
         """Resolve all components."""
         # resolve interaction first, to enable shape verification
-        self._resolve_interaction()
-        self._resolve_entity_representations()
-        self._resolve_relation_representations()
-        self._resolve_loss()
+        if component is None or component == "interaction":
+            self._resolve_interaction()
+        if component is None or component == "entities":
+            self._resolve_entity_representations()
+        if component is None or component == "relations":
+            self._resolve_relation_representations()
+        if component is None or component == "loss":
+            self._resolve_loss()
 
     def build(self) -> Model:
         return ERModel(**dataclasses.asdict(self))
