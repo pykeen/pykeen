@@ -232,7 +232,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedT
     r"""
     A "symmetric" LCWA scoring heads *and* tails at once.
 
-    This objective was introduced by [lacroix2018] as
+    This objective was introduced by [lacroix2018]_ as
 
     .. math ::
 
