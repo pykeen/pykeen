@@ -4,7 +4,7 @@
 
 import logging
 from math import ceil
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Tuple, Union
 
 import torch
 from torch.nn import functional
@@ -19,6 +19,7 @@ from ..typing import InductiveMode, MappedTriples
 
 __all__ = [
     "LCWATrainingLoop",
+    "SymmetricLCWATrainingLoop",
 ]
 
 logger = logging.getLogger(__name__)
@@ -240,7 +241,8 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
 
 
-class SymmetricLCWA(TrainingLoop[MappedTriples, MappedTriples]):
+# note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
+class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedTriples]]):
     """
     A "symmetric" LCWA scoring heads *and* tails at once.
 
@@ -249,30 +251,50 @@ class SymmetricLCWA(TrainingLoop[MappedTriples, MappedTriples]):
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, **kwargs
-    ) -> DataLoader[MappedTriples]:  # noqa: D102
-        return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
+        self,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        drop_last: bool,
+        num_workers: int,
+        pin_memory: bool,
+        sampler: Optional[str],
+    ) -> DataLoader[Tuple[MappedTriples]]:  # noqa: D102
+        assert sampler is None
+        return DataLoader(
+            dataset=TensorDataset(triples_factory.mapped_triples),
+            batch_size=batch_size,
+            drop_last=drop_last,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
 
     # docstr-coverage: inherited
     def _process_batch(
-        self, batch: MappedTriples, start: int, stop: int, label_smoothing: float = 0, slice_size: Optional[int] = None
+        self,
+        batch: Tuple[MappedTriples],
+        start: int,
+        stop: int,
+        label_smoothing: float = 0,
+        slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # unpack
+        hrt_batch = batch[0]
         # Send batch to device
-        batch = batch[start:stop].to(device=self.model.device)
+        hrt_batch = hrt_batch[start:stop].to(device=self.model.device)
         return (
             # head prediction
             self.loss.process_lcwa_scores(
-                predictions=self.model.score_h(rt_batch=batch[:, 1:], slice_size=slice_size, mode=self.mode),
+                predictions=self.model.score_h(rt_batch=hrt_batch[:, 1:], slice_size=slice_size, mode=self.mode),
                 # TODO: exploit sparsity
-                labels=functional.one_hot(batch[:, 0], num_classes=self.model.num_entities),
+                labels=functional.one_hot(hrt_batch[:, 0], num_classes=self.model.num_entities).float(),
                 label_smoothing=label_smoothing,
                 num_entities=self.model.num_entities,
             )
             # tail prediction
             + self.loss.process_lcwa_scores(
-                predictions=self.model.score_t(hr_batch=batch[:, :-1], slice_size=slice_size, mode=self.mode),
+                predictions=self.model.score_t(hr_batch=hrt_batch[:, :-1], slice_size=slice_size, mode=self.mode),
                 # TODO: exploit sparsity
-                labels=functional.one_hot(batch[:, 2], num_classes=self.model.num_entities),
+                labels=functional.one_hot(hrt_batch[:, 2], num_classes=self.model.num_entities).float(),
                 label_smoothing=label_smoothing,
                 num_entities=self.model.num_entities,
             )
@@ -282,8 +304,9 @@ class SymmetricLCWA(TrainingLoop[MappedTriples, MappedTriples]):
 
     @staticmethod
     # docstr-coverage: inherited
-    def _get_batch_size(batch: MappedTriples) -> int:  # noqa: D102
-        return batch.shape[0]
+    def _get_batch_size(batch: Tuple[MappedTriples]) -> int:  # noqa: D102
+        assert len(batch) == 1
+        return batch[0].shape[0]
 
     def _slice_size_search(self, **kwargs) -> int:
         # TODO?
