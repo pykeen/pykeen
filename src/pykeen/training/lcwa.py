@@ -260,6 +260,8 @@ class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedT
             self.loss.process_lcwa_scores(
                 predictions=self.model.score_h(rt_batch=hrt_batch[:, 1:], slice_size=slice_size, mode=self.mode),
                 # TODO: exploit sparsity
+                # note: this is different to what we do for LCWA, where we collect *all* training entities
+                #   for which the combination is true
                 labels=functional.one_hot(hrt_batch[:, 0], num_classes=self.model.num_entities).float(),
                 label_smoothing=label_smoothing,
                 num_entities=self.model.num_entities,
