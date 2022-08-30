@@ -7,14 +7,15 @@ from math import ceil
 from typing import Callable, Optional, Union
 
 import torch
-from torch.utils.data import DataLoader
+from torch.nn import functional
+from torch.utils.data import DataLoader, TensorDataset
 
 from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models import Model
 from ..triples import CoreTriplesFactory
 from ..triples.instances import LCWABatchType, LCWASampleType
-from ..typing import InductiveMode
+from ..typing import InductiveMode, MappedTriples
 
 __all__ = [
     "LCWATrainingLoop",
@@ -236,4 +237,54 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             report = "This model doesn't support sub-batching and slicing is not" " implemented for this model yet."
         logger.warning(report)
+        raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+class SymmetricLCWA(TrainingLoop[MappedTriples, MappedTriples]):
+    """
+    A "symmetric" LCWA scoring heads *and* tails at once.
+
+    .. seealso:: [lacroix2018]
+    """
+
+    # docstr-coverage: inherited
+    def _create_training_data_loader(
+        self, triples_factory: CoreTriplesFactory, **kwargs
+    ) -> DataLoader[MappedTriples]:  # noqa: D102
+        return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
+
+    # docstr-coverage: inherited
+    def _process_batch(
+        self, batch: MappedTriples, start: int, stop: int, label_smoothing: float = 0, slice_size: Optional[int] = None
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Send batch to device
+        batch = batch[start:stop].to(device=self.model.device)
+        return (
+            # head prediction
+            self.loss.process_lcwa_scores(
+                predictions=self.model.score_h(rt_batch=batch[:, 1:], slice_size=slice_size, mode=self.mode),
+                # TODO: exploit sparsity
+                labels=functional.one_hot(batch[:, 0], num_classes=self.model.num_entities),
+                label_smoothing=label_smoothing,
+                num_entities=self.model.num_entities,
+            )
+            # tail prediction
+            + self.loss.process_lcwa_scores(
+                predictions=self.model.score_t(hr_batch=batch[:, :-1], slice_size=slice_size, mode=self.mode),
+                # TODO: exploit sparsity
+                labels=functional.one_hot(batch[:, 2], num_classes=self.model.num_entities),
+                label_smoothing=label_smoothing,
+                num_entities=self.model.num_entities,
+            )
+            # regularization
+            + self.model.collect_regularization_term()
+        )
+
+    @staticmethod
+    # docstr-coverage: inherited
+    def _get_batch_size(batch: MappedTriples) -> int:  # noqa: D102
+        return batch.shape[0]
+
+    def _slice_size_search(self, **kwargs) -> int:
+        # TODO?
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
