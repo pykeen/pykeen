@@ -516,6 +516,7 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
 
     # TODO: update class docstring
 
+    # TODO: give this a better name?
     @staticmethod
     def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         r"""Evaluate the interaction function.
