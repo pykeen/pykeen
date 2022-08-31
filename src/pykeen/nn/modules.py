@@ -48,7 +48,7 @@ from ..typing import (
     Sign,
     TailRepresentation,
 )
-from ..utils import ensure_tuple, unpack_singletons, upgrade_to_sequence
+from ..utils import ensure_complex, ensure_tuple, tensor_product, unpack_singletons, upgrade_to_sequence
 
 __all__ = [
     "interaction_resolver",
@@ -473,12 +473,35 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless ComplEx interaction function.
+    r"""The ComplEx interaction.
 
-    .. seealso:: :func:`pykeen.nn.functional.complex_interaction`
+    .. math ::
+        Re(\langle h, r, conj(t) \rangle)
+
+    .. note::
+        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
     """
 
-    func = pkf.complex_interaction
+    # TODO: update class docstring
+
+    @staticmethod
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""Evaluate the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The complex head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The complex relation representations.
+        :param t: shape: (`*batch_dims`, dim)
+            The complex tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        h, r, t = ensure_complex(h, r, t)
+        # TODO: switch to einsum ?
+        # return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
+        return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 def _calculate_missing_shape_information(
