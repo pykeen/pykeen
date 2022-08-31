@@ -8,7 +8,21 @@ import logging
 from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
-from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
+from typing import (
+    Any,
+    ClassVar,
+    Generic,
+    Iterable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -314,19 +328,17 @@ class ERModel(
         # values are either a regularizer hint (=the same regularizer for all repr); or a sequence of appropriate length
         super().__init__(triples_factory=triples_factory, **kwargs)
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
-        self.entity_representations = _prepare_representation_module_list(
+        self.entity_representations = self._build_representations(
+            triples_factory=triples_factory,
             representations=entity_representations,
             representation_kwargs=entity_representations_kwargs,
-            max_id=triples_factory.num_entities,
-            shapes=self.interaction.full_entity_shapes(),
             label="entity",
             skip_checks=skip_checks,
         )
-        self.relation_representations = _prepare_representation_module_list(
+        self.relation_representations = self._build_representations(
+            triples_factory=triples_factory,
             representations=relation_representations,
             representation_kwargs=relation_representations_kwargs,
-            max_id=triples_factory.num_relations,
-            shapes=self.interaction.relation_shape,
             label="relation",
             skip_checks=skip_checks,
         )
@@ -335,6 +347,24 @@ class ERModel(
         self.weight_regularizers = nn.ModuleList()
         # Explicitly call reset_parameters to trigger initialization
         self.reset_parameters_()
+
+    def _build_representations(
+        self,
+        triples_factory: KGInfo,
+        representations: OneOrManyHintOrType[Representation] = None,
+        representations_kwargs: OneOrManyOptionalKwargs = None,
+        label: Literal["entity", "relation"] = "entity",
+        **kwargs,
+    ) -> Sequence[Representation]:
+        """Build representations for the given factory."""
+        return _prepare_representation_module_list(
+            representations=representations,
+            representation_kwargs=representations_kwargs,
+            max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
+            shapes=self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape,
+            label=label,
+            **kwargs,
+        )
 
     def append_weight_regularizer(
         self,
