@@ -472,14 +472,46 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.transf_interaction
 
 
+@parse_docdata
 class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    r"""The ComplEx interaction.
+    r"""The ComplEx interaction proposed by [trouillon2016]_.
 
-    .. math ::
-        Re(\langle h, r, conj(t) \rangle)
+    ComplEx operates on complex-valued entity and relation representations, i.e.,
+    $\textbf{e}_i, \textbf{r}_i \in \mathbb{C}^d$ and calculates the plausibility score via the Hadamard product:
+
+    .. math::
+
+        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\bar{\mathbf{e}}_t)
+
+    Which expands to:
+
+    .. math::
+
+        f(h,r,t) = \left\langle Re(\mathbf{e}_h),Re(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
+        + \left\langle Im(\mathbf{e}_h),Re(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        + \left\langle Re(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
+
+    where $Re(\textbf{x})$ and $Im(\textbf{x})$ denote the real and imaginary parts of the complex valued vector
+    $\textbf{x}$. Because the Hadamard product is not commutative in the complex space, ComplEx can model
+    anti-symmetric relations in contrast to DistMult.
+
+    .. seealso ::
+
+        Official implementation: https://github.com/ttrouill/complex/
 
     .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
+        this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
+        `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
+        is compliant with :func:`torch.view_as_complex`, cf. :func:`pykeen.utils.ensure_complex`.
+
+    ---
+    citation:
+        arxiv: 1606.06357
+        author: Trouillon
+        github: ttrouill/complex
+        link: https://arxiv.org/abs/1606.06357
+        year: 2016
     """
 
     # TODO: update class docstring

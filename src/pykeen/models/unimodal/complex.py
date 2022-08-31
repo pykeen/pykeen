@@ -23,31 +23,9 @@ __all__ = [
 class ComplEx(ERModel):
     r"""An implementation of ComplEx [trouillon2016]_.
 
-    ComplEx is an extension of :class:`pykeen.models.DistMult` that uses complex valued representations for the
-    entities and relations. Entities and relations are represented as vectors
-    $\textbf{e}_i, \textbf{r}_i \in \mathbb{C}^d$, and the plausibility score is computed using the
-    Hadamard product:
+    The ComplEx model combines complex-valued :class:`pykeen.nn.Embedding` entity and relation representations with a
+    :class:`pykeen.nn.ComplExInteraction`.
 
-    .. math::
-
-        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\bar{\mathbf{e}}_t)
-
-    Which expands to:
-
-    .. math::
-
-        f(h,r,t) = \left\langle Re(\mathbf{e}_h),Re(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
-        + \left\langle Im(\mathbf{e}_h),Re(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
-        + \left\langle Re(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
-        - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
-
-    where $Re(\textbf{x})$ and $Im(\textbf{x})$ denote the real and imaginary parts of the complex valued vector
-    $\textbf{x}$. Because the Hadamard product is not commutative in the complex space, ComplEx can model
-    anti-symmetric relations in contrast to DistMult.
-
-    .. seealso ::
-
-        Official implementation: https://github.com/ttrouill/complex/
     ---
     citation:
         author: Trouillon
