@@ -133,6 +133,7 @@ class InductiveNodePiece(ERModel):
             ),
             **kwargs,
         )
+        # create inference entity representations
         self.inference_representation = _prepare_representation_module_list(
             representations=NodePieceRepresentation,
             representation_kwargs=dict(
@@ -146,6 +147,11 @@ class InductiveNodePiece(ERModel):
             shapes=self.interaction.full_entity_shapes(),
             label="entity",
         )
+        # note: we need to share the aggregation across representations, since the aggregation may have
+        #   trainable parameters
+        np: NodePieceRepresentation = self.entity_representations[0]
+        np_inf: NodePieceRepresentation = self.inference_representation[0]
+        np_inf.combination = np.combination
 
         self.num_train_entities = triples_factory.num_entities
         self.num_inference_entities, self.num_valid_entities, self.num_test_entities = None, None, None
