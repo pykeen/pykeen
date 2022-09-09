@@ -31,9 +31,7 @@ class InductiveERModel(ERModel):
         )
         # note: this is *not* a nn.ModuleDict; the modules have to be registered elsewhere
         self._mode_to_representations = {TRAINING: self.entity_representations}
-        self._mode_to_representations[
-            VALIDATION
-        ] = self.validation_entity_representations = self._build_representations(
+        self._mode_to_representations[VALIDATION] = validation_entity_representations = self._build_representations(
             triples_factory=validation_factory,
             entity_representations=entity_representations,
             entity_representations_kwargs=entity_representations_kwargs,
@@ -41,15 +39,15 @@ class InductiveERModel(ERModel):
 
         # shared
         if testing_factory is None:
-            self.testing_entity_representations = self.validation_entity_representations
+            testing_entity_representations = validation_entity_representations
         else:
             # non-shared
-            self.testing_entity_representations = self._build_representations(
+            testing_entity_representations = self._build_representations(
                 triples_factory=testing_factory,
                 entity_representations=entity_representations,
                 entity_representations_kwargs=entity_representations_kwargs,
             )
-        self._mode_to_representations[TESTING] = self.testing_entity_representations
+        self._mode_to_representations[TESTING] = testing_entity_representations
 
     # docstr-coverage: inherited
     def _get_entity_representations_from_inductive_mode(
