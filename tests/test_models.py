@@ -16,10 +16,10 @@ from pykeen.models import (
     ERModel,
     EvaluationOnlyModel,
     FixedModel,
+    InductiveERModel,
     Model,
     _NewAbstractModel,
     model_resolver,
-    InductiveERModel,
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.nn import Embedding, NodePieceRepresentation
