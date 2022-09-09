@@ -9,7 +9,6 @@ import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
 
 from .base import InductiveERModel
-
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
     DistMultInteraction,
