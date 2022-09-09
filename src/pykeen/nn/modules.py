@@ -164,6 +164,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     value_range: ClassVar[ValueRange] = ValueRange()
 
     # TODO: annotate modelling capabilities? cf., e.g., https://arxiv.org/abs/1902.10197, Table 2
+    # TODO: annotate properties, e.g., symmetry, and use them for testing?
+    # TODO: annotate complexity?
 
     @property
     def tail_entity_shape(self) -> Sequence[str]:
