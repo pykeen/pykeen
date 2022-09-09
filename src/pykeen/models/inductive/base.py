@@ -11,7 +11,13 @@ from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
 
 
 class InductiveERModel(ERModel):
-    """A base class for inductive models."""
+    """
+    A base class for inductive models.
+
+    This model assumes a shared set of relations between all triple sets (e.g., training and validation), and a
+    separate inference factory used during validation. During testing time, either the validation factory is re-used
+    or another separate testing factory may be provided.
+    """
 
     def __init__(
         self,
