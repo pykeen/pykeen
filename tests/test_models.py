@@ -12,7 +12,15 @@ import unittest_templates
 
 import pykeen.experiments
 import pykeen.models
-from pykeen.models import ERModel, EvaluationOnlyModel, FixedModel, Model, _NewAbstractModel, model_resolver
+from pykeen.models import (
+    ERModel,
+    EvaluationOnlyModel,
+    FixedModel,
+    Model,
+    _NewAbstractModel,
+    model_resolver,
+    InductiveERModel,
+)
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
@@ -28,6 +36,7 @@ SKIP_MODULES = {
     # DummyModel,
     LiteralModel,
     ERModel,
+    InductiveERModel,
     FixedModel,
     EvaluationOnlyModel,
 }
