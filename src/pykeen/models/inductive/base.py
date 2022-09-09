@@ -23,6 +23,22 @@ class InductiveERModel(ERModel):
         testing_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,
     ) -> None:
+        """Initialize the inductive model.
+
+        :param triples_factory:
+            the (training) factory
+        :param entity_representations:
+            the training entity representations
+        :param entity_representations_kwargs:
+            additional keyword-based parameters for the training entity representations
+        :param validation_factory:
+            the validation factory
+        :param testing_factory:
+            the testing factory. If None, the validation factory is re-used, i.e., validation and test entities come
+            from the same (unseen) set of entities.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         super().__init__(
             triples_factory=triples_factory,
             entity_representations=entity_representations,
