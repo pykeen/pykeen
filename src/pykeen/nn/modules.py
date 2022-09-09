@@ -49,7 +49,7 @@ from ..typing import (
     Sign,
     TailRepresentation,
 )
-from ..utils import einsum, ensure_complex, ensure_tuple, tensor_product, unpack_singletons, upgrade_to_sequence
+from ..utils import einsum, ensure_complex, ensure_tuple, unpack_singletons, upgrade_to_sequence
 
 __all__ = [
     "interaction_resolver",
