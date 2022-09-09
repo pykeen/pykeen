@@ -39,6 +39,7 @@ from torch.nn.init import xavier_normal_
 from . import functional as pkf
 from .algebra import quaterion_multiplication_table
 from .init import initializer_resolver
+from ..metrics.utils import ValueRange
 from ..typing import (
     HeadRepresentation,
     HintOrType,
@@ -158,6 +159,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     # if the interaction function's tail parameter should only receive a subset of entity representations
     _tail_indices: Optional[Sequence[int]] = None
+
+    #: the interaction's value range (for unrestricted input)
+    value_range: ClassVar[ValueRange] = ValueRange()
 
     @property
     def tail_entity_shape(self) -> Sequence[str]:
