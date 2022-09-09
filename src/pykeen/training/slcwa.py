@@ -98,16 +98,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         # split batch
         positive_batch, negative_batch, positive_filter = batch
 
-        # extract the relationids and use to lookup the correct weight
-        relation_ids = list(positive_batch[:, 1].cpu().numpy())
-        triple_weights = [relation_weights[x] for x in list(positive_batch[:, 1].cpu().numpy())]
-
-        print(triple_weights)
-        print("---------------------------")
-
-        # look up the weight
-        # Pass to loss function
-
         # send to device
         positive_batch = positive_batch[start:stop].to(device=model.device)
         negative_batch = negative_batch[start:stop]
@@ -120,12 +110,21 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         negative_batch = negative_batch.view(-1, 3)
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
-        # BasicNegativeSampler, BernoulliNegativeSampler
+        # BasicNegativeSampler, BernoulliNegativeSampler)
         negative_batch = negative_batch.to(model.device)
 
         # Compute negative and positive scores
         positive_scores = model.score_hrt(positive_batch, mode=mode)
         negative_scores = model.score_hrt(negative_batch, mode=mode).view(*negative_score_shape)
+
+        # some ideas for relation weighted loss functions that reweights the score for the interaction function
+        # this will cause issues for values that are negative
+        # see: https://arxiv.org/abs/2011.05138
+        pos_triple_weights = torch.stack([relation_weights[x] for x in list(positive_batch[:, 1].cpu().numpy())])
+        neg_triple_weights = torch.stack([relation_weights[x] for x in list(negative_batch[:, 1].cpu().numpy())])
+
+        positive_scores = positive_scores * pos_triple_weights.unsqueeze(dim=1)
+        negative_scores = negative_scores * neg_triple_weights.unsqueeze(dim=1)
 
         return (
             loss.process_slcwa_scores(
