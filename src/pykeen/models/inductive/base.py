@@ -1,4 +1,5 @@
 """Base classes for inductive models."""
+from collections import ChainMap
 from typing import Optional, Sequence
 
 from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
@@ -45,12 +46,20 @@ class InductiveERModel(ERModel):
             entity_representations_kwargs=entity_representations_kwargs,
             **kwargs,
         )
+        # entity representation kwargs may contain a triples factory, which needs to be replaced
+        entity_representations_kwargs = entity_representations_kwargs or {}
+        # entity_representations_kwargs.pop("triples_factory", None)
         # note: this is *not* a nn.ModuleDict; the modules have to be registered elsewhere
         self._mode_to_representations = {TRAINING: self.entity_representations}
+        if "triples_factory" in entity_representations_kwargs:
+            entity_representations_kwargs = ChainMap(
+                dict(triples_factory=validation_factory), entity_representations_kwargs
+            )
         self._mode_to_representations[VALIDATION] = validation_entity_representations = self._build_representations(
             triples_factory=validation_factory,
-            entity_representations=entity_representations,
-            entity_representations_kwargs=entity_representations_kwargs,
+            representations=entity_representations,
+            representations_kwargs=entity_representations_kwargs,
+            label="entity",
         )
 
         # shared
@@ -58,10 +67,15 @@ class InductiveERModel(ERModel):
             testing_entity_representations = validation_entity_representations
         else:
             # non-shared
+            if "triples_factory" in entity_representations_kwargs:
+                entity_representations_kwargs = ChainMap(
+                    dict(triples_factory=testing_factory), entity_representations_kwargs
+                )
             testing_entity_representations = self._build_representations(
                 triples_factory=testing_factory,
-                entity_representations=entity_representations,
-                entity_representations_kwargs=entity_representations_kwargs,
+                representations=entity_representations,
+                representations_kwargs=entity_representations_kwargs,
+                label="entity",
             )
         self._mode_to_representations[TESTING] = testing_entity_representations
 
