@@ -163,6 +163,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: the interaction's value range (for unrestricted input)
     value_range: ClassVar[ValueRange] = ValueRange()
 
+    # TODO: annotate modelling capabilities? cf., e.g., https://arxiv.org/abs/1902.10197, Table 2
+
     @property
     def tail_entity_shape(self) -> Sequence[str]:
         """Return the symbolic shape for tail entity representations."""
