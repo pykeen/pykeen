@@ -136,4 +136,11 @@ class InductiveNodePiece(InductiveERModel):
             testing_factory=test_factory,
             **kwargs,
         )
-        # TODO: re-apply fix from https://github.com/pykeen/pykeen/pull/1104
+        # note: we need to share the aggregation across representations, since the aggregation may have
+        #   trainable parameters
+        np: NodePieceRepresentation = self.entity_representations[0]
+        for representations in self._mode_to_representation.values():
+            assert len(representations) == 1
+            np2 = representations[0]
+            assert isinstance(np2, NodePieceRepresentation)
+            np2.combination = np.combination
