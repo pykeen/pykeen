@@ -30,8 +30,10 @@ class InductiveERModel(ERModel):
             **kwargs,
         )
         # note: this is *not* a nn.ModuleDict; the modules have to be registered elsewhere
-        self._mode_to_representation = {TRAINING: self.entity_representations}
-        self._mode_to_representation[VALIDATION] = self.validation_entity_representations = self._build_representations(
+        self._mode_to_representations = {TRAINING: self.entity_representations}
+        self._mode_to_representations[
+            VALIDATION
+        ] = self.validation_entity_representations = self._build_representations(
             triples_factory=validation_factory,
             entity_representations=entity_representations,
             entity_representations_kwargs=entity_representations_kwargs,
@@ -47,14 +49,14 @@ class InductiveERModel(ERModel):
                 entity_representations=entity_representations,
                 entity_representations_kwargs=entity_representations_kwargs,
             )
-        self._mode_to_representation[TESTING] = self.testing_entity_representations
+        self._mode_to_representations[TESTING] = self.testing_entity_representations
 
     # docstr-coverage: inherited
     def _get_entity_representations_from_inductive_mode(
         self, *, mode: Optional[InductiveMode]
     ) -> Sequence[Representation]:  # noqa: D102
-        if mode in self._mode_to_representation:
-            return self._mode_to_representation[mode]
+        if mode in self._mode_to_representations:
+            return self._mode_to_representations[mode]
         elif mode is None:
             raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         else:

@@ -139,7 +139,7 @@ class InductiveNodePiece(InductiveERModel):
         # note: we need to share the aggregation across representations, since the aggregation may have
         #   trainable parameters
         np: NodePieceRepresentation = self.entity_representations[0]
-        for representations in self._mode_to_representation.values():
+        for representations in self._mode_to_representations.values():
             assert len(representations) == 1
             np2 = representations[0]
             assert isinstance(np2, NodePieceRepresentation)
