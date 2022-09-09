@@ -165,7 +165,7 @@ def _prepare_representation_module_list(
     shapes: Sequence[str],
     label: str,
     representations: OneOrManyHintOrType[Representation] = None,
-    representation_kwargs: OneOrManyOptionalKwargs = None,
+    representations_kwargs: OneOrManyOptionalKwargs = None,
     skip_checks: bool = False,
 ) -> Sequence[Representation]:
     """
@@ -176,7 +176,7 @@ def _prepare_representation_module_list(
 
     :param representations:
         the representations, or hints for them.
-    :param representation_kwargs:
+    :param representations_kwargs:
         additional keyword-based parameters for instantiating representations from hints.
     :param max_id:
         the maximum representation ID. Newly instantiated representations will contain that many representations, and
@@ -196,7 +196,7 @@ def _prepare_representation_module_list(
     """
     # TODO: allow max_id being present in representation_kwargs; if it matches max_id
     # TODO: we could infer some shapes from the given interaction shape information
-    rs = representation_resolver.make_many(representations, kwargs=representation_kwargs, max_id=max_id)
+    rs = representation_resolver.make_many(representations, kwargs=representations_kwargs, max_id=max_id)
 
     # check max-id
     for r in rs:
@@ -331,14 +331,14 @@ class ERModel(
         self.entity_representations = self._build_representations(
             triples_factory=triples_factory,
             representations=entity_representations,
-            representation_kwargs=entity_representations_kwargs,
+            representations_kwargs=entity_representations_kwargs,
             label="entity",
             skip_checks=skip_checks,
         )
         self.relation_representations = self._build_representations(
             triples_factory=triples_factory,
             representations=relation_representations,
-            representation_kwargs=relation_representations_kwargs,
+            representations_kwargs=relation_representations_kwargs,
             label="relation",
             skip_checks=skip_checks,
         )
@@ -359,7 +359,7 @@ class ERModel(
         """Build representations for the given factory."""
         return _prepare_representation_module_list(
             representations=representations,
-            representation_kwargs=representations_kwargs,
+            representations_kwargs=representations_kwargs,
             max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
             shapes=self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape,
             label=label,
