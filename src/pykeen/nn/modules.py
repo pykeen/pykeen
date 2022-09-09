@@ -49,7 +49,7 @@ from ..typing import (
     Sign,
     TailRepresentation,
 )
-from ..utils import ensure_complex, ensure_tuple, tensor_product, unpack_singletons, upgrade_to_sequence
+from ..utils import einsum, ensure_complex, ensure_tuple, tensor_product, unpack_singletons, upgrade_to_sequence
 
 __all__ = [
     "interaction_resolver",
@@ -536,9 +536,7 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
             The scores.
         """
         h, r, t = ensure_complex(h, r, t)
-        # TODO: switch to einsum ?
-        # return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
-        return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
+        return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
 
 
 def _calculate_missing_shape_information(
