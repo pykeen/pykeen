@@ -64,15 +64,18 @@ class ComplEx(ERModel):
         """Initialize ComplEx.
 
         :param embedding_dim:
-            The embedding dimensionality of the entity embeddings.
-        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.normal_`
-        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.normal_`
+            the embedding dimension to use for entity and relation embeddings, cf. :meth:`Embedding.__init__`'s `shape`
+            parameter.
+        :param entity_initializer:
+            entity initializer function. Defaults to :func:`torch.nn.init.normal_`. cf. :meth:`Embedding.__init__`.
+        :param relation_initializer:
+            relation initializer function. Defaults to :func:`torch.nn.init.normal_`. cf. :meth:`Embedding.__init__`.
         :param regularizer:
-            the regularizer to apply.
+            the regularizer to apply to both, entity and relation, representations.
         :param regularizer_kwargs:
             additional keyword arguments passed to the regularizer. Defaults to `ComplEx.regularizer_default_kwargs`.
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
         """
         regularizer_kwargs = regularizer_kwargs or ComplEx.regularizer_default_kwargs
         super().__init__(
