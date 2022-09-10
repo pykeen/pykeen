@@ -1909,12 +1909,15 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
     This parametrization allows to express several well-known interaction functions, e.g.
 
-    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
-    - :class:`pykeen.models.ComplEx`: two blocks,
-    $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
-    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+    - :class:`pykeen.nn.DistMultInteraction`:
+        one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+    - :class:`pykeen.nn.ComplExInteraction`:
+        two blocks, $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+    - :class:`pykeen.nn.SimplEInteraction`:
+        two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
     """
 
+    #: a description of the block structure
     coefficients: Tuple[AutoSFBlock, ...]
 
     @staticmethod
@@ -1933,25 +1936,43 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         if duplicates:
             raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
 
-    def __init__(self, coefficients: Sequence[Tuple[int, int, int, Sign]]) -> None:
+    def __init__(
+        self, 
+        coefficients: Sequence[Tuple[int, int, int, Sign]],
+        *,
+        num_blocks: Optional[int] = None,
+        num_entity_representations: Optional[int] = None,
+        num_relation_representations: Optional[int] = None,
+    ) -> None:
         """
         Initialize the interaction function.
 
         :param coefficients:
             the coefficients for the individual blocks, cf. :class:`pykeen.nn.AutoSFInteraction`
-
-        :raises ValueError:
-            if there are duplicate coefficients
+        
+        :param num_blocks:
+            the number of blocks. If given, will be used for both, entity and relation representations.
+        :param num_entity_representations:
+            an explicit number of entity representations / blocks. Only used if `num_blocks` is `None`.
+            If `num_entity_representations` is `None`, too, this number if inferred from `coefficients`.
+        :param num_relation_representations:
+            an explicit number of relation representations / blocks. Only used if `num_blocks` is `None`.
+            If `num_relation_representations` is `None`, too, this number if inferred from `coefficients`.
         """
         super().__init__()
         self._raise_on_duplicate(coefficients=coefficients)
         self.coefficients = tuple(coefficients)
 
         # infer the number of entity and relation representations
-        num_entity_representations = 1 + max(
-            itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
-        )
-        num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
+        if num_blocks is None:
+            if num_entity_representations is None:
+                num_entity_representations = 1 + max(
+                    itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
+                )
+            if num_relation_representations is None:
+                num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
+        else:
+            num_entity_representations = num_relation_representations = num_blocks
 
         # dynamic entity / relation shapes
         self.entity_shape = tuple(["d"] * num_entity_representations)
