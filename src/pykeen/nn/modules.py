@@ -1915,6 +1915,9 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         two blocks, $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
     - :class:`pykeen.nn.SimplEInteraction`:
         two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+    
+    While in theory, we can have up to `num_blocks**3` unique triples, usually, a smaller number is preferable to have
+    some sparsity.
     """
 
     #: a description of the block structure
