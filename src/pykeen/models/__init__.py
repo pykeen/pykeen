@@ -51,7 +51,7 @@ from class_resolver import ClassResolver, get_subclasses
 
 from .base import Model
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
-from .inductive import InductiveNodePiece, InductiveNodePieceGNN
+from .inductive import InductiveERModel, InductiveNodePiece, InductiveNodePieceGNN
 from .meta import CooccurrenceFilteredModel
 from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
@@ -97,6 +97,7 @@ __all__ = [
     # Base Models
     "Model",
     "ERModel",
+    "InductiveERModel",
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models
@@ -158,6 +159,7 @@ model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
         _NewAbstractModel,
         # We might be able to relax this later
         ERModel,
+        InductiveERModel,
         LiteralModel,
         # baseline models behave differently
         EvaluationOnlyModel,
