@@ -1,6 +1,6 @@
 """Base classes for inductive models."""
 from collections import ChainMap
-from typing import Optional, Sequence
+from typing import Mapping, Optional, Sequence
 
 from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
 
@@ -18,6 +18,10 @@ class InductiveERModel(ERModel):
     separate inference factory used during validation. During testing time, either the validation factory is re-used
     or another separate testing factory may be provided.
     """
+
+    #: a mapping from inductive mode to corresponding entity representations
+    #: note: there may be duplicate values, if entity representations are shared between validation and testing
+    _mode_to_representations: Mapping[InductiveMode, Sequence[Representation]]
 
     def __init__(
         self,
@@ -90,11 +94,9 @@ class InductiveERModel(ERModel):
         self, *, mode: Optional[InductiveMode]
     ) -> Sequence[Representation]:  # noqa: D102
         if mode in self._mode_to_representations:
+            assert mode is not None  # for mypy
             return self._mode_to_representations[mode]
-        elif mode is None:
-            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
-        else:
-            raise ValueError(f"Invalid mode: {mode}")
+        raise ValueError(f"{self.__class__.__name__} does not support mode={mode}")
 
     # docstr-coverage: inherited
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa: D102
