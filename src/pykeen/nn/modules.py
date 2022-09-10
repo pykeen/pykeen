@@ -1925,6 +1925,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
         )
 
+    # TODO: de-dup docstring with class docstring
     @staticmethod
     def func(
         h: FloatTensor,
