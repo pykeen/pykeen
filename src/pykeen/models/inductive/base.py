@@ -94,7 +94,9 @@ class InductiveERModel(ERModel):
         self, *, mode: Optional[InductiveMode]
     ) -> Sequence[Representation]:  # noqa: D102
         if mode is None:
-            raise ValueError(f"{self.__class__.__name__} does not support the transductive setting (i.e., when mode is None)")
+            raise ValueError(
+                f"{self.__class__.__name__} does not support the transductive setting (i.e., when mode is None)"
+            )
         if mode in self._mode_to_representations:
             return self._mode_to_representations[mode]
         raise ValueError(f"{self.__class__.__name__} does not support mode={mode}")
