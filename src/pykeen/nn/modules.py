@@ -1936,6 +1936,22 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         if duplicates:
             raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
 
+    @staticmethod
+    def _infer_number(coefficients: Sequence[Tuple[int, int, int, Sign]], *indices: int) -> int:
+        """Infer the number of blocks from the given coefficients.
+
+        :param coefficients:
+            the block coefficients
+        :param indices:
+            the indices, either `(0, 2)` for entities, or `(1,)` for relations.
+        
+        :return:
+            the inferred number of blocks
+        """
+        return 1 + max(
+            itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in indices))
+        )
+
     def __init__(
         self, 
         coefficients: Sequence[Tuple[int, int, int, Sign]],
@@ -1964,15 +1980,8 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         self.coefficients = tuple(coefficients)
 
         # infer the number of entity and relation representations
-        if num_blocks is None:
-            if num_entity_representations is None:
-                num_entity_representations = 1 + max(
-                    itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
-                )
-            if num_relation_representations is None:
-                num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
-        else:
-            num_entity_representations = num_relation_representations = num_blocks
+        num_entity_representations = num_blocks or num_entity_representations or self._infer_number(coefficients, 0, 2)
+        num_relation_representations = num_blocks or num_relation_representations or self._infer_number(coefficients, 1)
 
         # dynamic entity / relation shapes
         self.entity_shape = tuple(["d"] * num_entity_representations)
