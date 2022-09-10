@@ -19,6 +19,7 @@ from typing import (
     List,
     Mapping,
     MutableMapping,
+    NamedTuple,
     Optional,
     Sequence,
     Set,
@@ -1872,35 +1873,87 @@ class TripleREInteraction(
         )
 
 
-class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
-    """An implementation of the AutoSF interaction as described by [zhang2020]_."""
+# TODO: better use this class; or use type alias instead?
+class AutoSFBlock(NamedTuple):
+    """A description of a single block of AutoSF."""
 
-    coefficients: Tuple[Tuple[int, int, int, Sign], ...]
+    #: the index of the head entity representation
+    head_index: int
+
+    #: the index of the relation representation
+    relation_index: int
+
+    #: the index of the tail entity representation
+    tail_index: int
+
+    #: the sign
+    sign: Sign
+
+
+class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    r"""
+    The AutoSF interaction as described by [zhang2020]_.
+
+    This interaction function is a parametrized way to express bi-linear models
+    with block structure. It divides the entity and relation representations into blocks,
+    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
+    and $s \in {-1, 1}$ is the sign.
+
+    The interaction function is then given as
+
+    .. math::
+        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
+
+    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
+
+    This parametrization allows to express several well-known interaction functions, e.g.
+
+    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+    - :class:`pykeen.models.ComplEx`: two blocks,
+    $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+    """
+
+    coefficients: Tuple[AutoSFBlock, ...]
+
+    @staticmethod
+    def _raise_on_duplicate(coefficients: Sequence[Tuple[int, int, int, Sign]]):
+        """
+        Ensure that there are no duplicate blocks.
+
+        :param coefficients:
+            the block description
+
+        :raises ValueError:
+            if there are duplicate coefficients
+        """
+        counter = Counter(coef[:3] for coef in coefficients)
+        duplicates = {k for k, v in counter.items() if v > 1}
+        if duplicates:
+            raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
 
     def __init__(self, coefficients: Sequence[Tuple[int, int, int, Sign]]) -> None:
         """
         Initialize the interaction function.
 
         :param coefficients:
-            the coefficients, in order:
-                1. head_representation_index,
-                2. relation_representation_index,
-                3. tail_representation_index,
-                4. sign
+            the coefficients for the individual blocks, cf. :class:`pykeen.nn.AutoSFInteraction`
 
         :raises ValueError:
             if there are duplicate coefficients
         """
         super().__init__()
-        counter = Counter((hi, ri, ti) for hi, ri, ti, _ in coefficients)
-        duplicates = {k for k, v in counter.items() if v > 1}
-        if duplicates:
-            raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
+        self._raise_on_duplicate(coefficients=coefficients)
         self.coefficients = tuple(coefficients)
+
+        # infer the number of entity and relation representations
         num_entity_representations = 1 + max(
             itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
         )
         num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
+
+        # dynamic entity / relation shapes
         self.entity_shape = tuple(["d"] * num_entity_representations)
         self.relation_shape = tuple(["d"] * num_relation_representations)
 
@@ -1914,62 +1967,37 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
         :param coefficients:
             the coefficients in the "official" serialization format.
-        :returns:
+
+        :return:
             An AutoSF interaction module
 
         .. seealso::
             https://github.com/AutoML-Research/AutoSF/blob/07b7243ccf15e579176943c47d6e65392cd57af3/searched_SFs.txt
         """
         return cls(
-            coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
-            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
+            coefficients=[AutoSFBlock(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
+            + [AutoSFBlock(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
         )
 
-    # TODO: de-dup docstring with class docstring
     @staticmethod
     def func(
-        h: FloatTensor,
-        r: FloatTensor,
-        t: FloatTensor,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
         coefficients: Sequence[Tuple[int, int, int, Sign]],
     ) -> FloatTensor:
         r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
 
-        This interaction function is a parametrized way to express bi-linear models
-        with block structure. It divides the entity and relation representations into blocks,
-        and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
-        where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
-        and $s \in {-1, 1}$ is the sign.
-
-        The interaction function is then given as
-
-        .. math::
-            \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
-
-        where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
-
-        This parametrization allows to express several well-known interaction functions, e.g.
-
-        - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
-        - :class:`pykeen.models.ComplEx`: two blocks,
-        $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
-        - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
-
-        :param h: each shape: (`*batch_dims`, rank, dim)
+        :param h: each shape: (`*batch_dims`, dim)
             The list of head representations.
-        :param r: each shape: (`*batch_dims`, rank, dim)
+        :param r: each shape: (`*batch_dims`, dim)
             The list of relation representations.
-        :param t: each shape: (`*batch_dims`, rank, dim)
+        :param t: each shape: (`*batch_dims`, dim)
             The list of tail representations.
         :param coefficients:
-            the coefficients, in order:
+            the coefficients, cf. :class:`pykeen.nn.AutoSFInteraction`
 
-            1. head_representation_index,
-            2. relation_representation_index,
-            3. tail_representation_index,
-            4. sign
-
-        :return:
+        :return: shape: `batch_dims`
             The scores
         """
         return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
