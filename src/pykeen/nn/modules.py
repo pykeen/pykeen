@@ -13,6 +13,7 @@ from operator import itemgetter
 from typing import (
     Any,
     Callable,
+    Collection,
     ClassVar,
     Generic,
     Iterable,
@@ -1873,21 +1874,9 @@ class TripleREInteraction(
         )
 
 
-# TODO: better use this class; or use type alias instead?
-class AutoSFBlock(NamedTuple):
-    """A description of a single block of AutoSF."""
-
-    #: the index of the head entity representation
-    head_index: int
-
-    #: the index of the relation representation
-    relation_index: int
-
-    #: the index of the tail entity representation
-    tail_index: int
-
-    #: the sign
-    sign: Sign
+# type alias for AutoSF block description
+# head_index, relation_index, tail_index, sign
+AutoSFBlock = Tuple[int, int, int, Sign]
 
 
 class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
@@ -1924,7 +1913,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     coefficients: Tuple[AutoSFBlock, ...]
 
     @staticmethod
-    def _raise_on_duplicate(coefficients: Sequence[Tuple[int, int, int, Sign]]):
+    def _raise_on_duplicate(coefficients: Collection[AutoSFBlock]):
         """
         Ensure that there are no duplicate blocks.
 
@@ -1940,7 +1929,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
 
     @staticmethod
-    def _infer_number(coefficients: Sequence[Tuple[int, int, int, Sign]], *indices: int) -> int:
+    def _infer_number(coefficients: Collection[AutoSFBlock], *indices: int) -> int:
         """Infer the number of blocks from the given coefficients.
 
         :param coefficients:
@@ -1957,7 +1946,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
     def __init__(
         self, 
-        coefficients: Sequence[Tuple[int, int, int, Sign]],
+        coefficients: Collection[AutoSFBlock],
         *,
         num_blocks: Optional[int] = None,
         num_entity_representations: Optional[int] = None,
@@ -1986,12 +1975,14 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         num_entity_representations = num_blocks or num_entity_representations or self._infer_number(coefficients, 0, 2)
         num_relation_representations = num_blocks or num_relation_representations or self._infer_number(coefficients, 1)
 
+        # TODO: check for unused representations, and warn about them
+
         # dynamic entity / relation shapes
         self.entity_shape = tuple(["d"] * num_entity_representations)
         self.relation_shape = tuple(["d"] * num_relation_representations)
 
     @classmethod
-    def from_searched_sf(cls, coefficients: Sequence[int]) -> "AutoSFInteraction":
+    def from_searched_sf(cls, coefficients: Sequence[int], **kwargs) -> "AutoSFInteraction":
         """
         Instantiate AutoSF interaction from the "official" serialization format.
 
@@ -2000,6 +1991,8 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
         :param coefficients:
             the coefficients in the "official" serialization format.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`pykeen.nn.AutoSFInteraction.__init__`
 
         :return:
             An AutoSF interaction module
@@ -2008,8 +2001,9 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             https://github.com/AutoML-Research/AutoSF/blob/07b7243ccf15e579176943c47d6e65392cd57af3/searched_SFs.txt
         """
         return cls(
-            coefficients=[AutoSFBlock(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
-            + [AutoSFBlock(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
+            coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
+            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)],
+            **kwargs,
         )
 
     @staticmethod
@@ -2017,7 +2011,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-        coefficients: Sequence[Tuple[int, int, int, Sign]],
+        coefficients: Collection[AutoSFBlock],
     ) -> FloatTensor:
         r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
 
