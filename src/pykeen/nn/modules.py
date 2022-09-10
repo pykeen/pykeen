@@ -1875,7 +1875,6 @@ class TripleREInteraction(
 class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """An implementation of the AutoSF interaction as described by [zhang2020]_."""
 
-    func = pkf.auto_sf_interaction
     coefficients: Tuple[Tuple[int, int, int, Sign], ...]
 
     def __init__(self, coefficients: Sequence[Tuple[int, int, int, Sign]]) -> None:
@@ -1925,6 +1924,54 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
             + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
         )
+
+    @staticmethod
+    def func(
+        h: FloatTensor,
+        r: FloatTensor,
+        t: FloatTensor,
+        coefficients: Sequence[Tuple[int, int, int, Sign]],
+    ) -> FloatTensor:
+        r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
+
+        This interaction function is a parametrized way to express bi-linear models
+        with block structure. It divides the entity and relation representations into blocks,
+        and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+        where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
+        and $s \in {-1, 1}$ is the sign.
+
+        The interaction function is then given as
+
+        .. math::
+            \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
+
+        where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
+
+        This parametrization allows to express several well-known interaction functions, e.g.
+
+        - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+        - :class:`pykeen.models.ComplEx`: two blocks,
+        $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+        - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+
+        :param h: each shape: (`*batch_dims`, rank, dim)
+            The list of head representations.
+        :param r: each shape: (`*batch_dims`, rank, dim)
+            The list of relation representations.
+        :param t: each shape: (`*batch_dims`, rank, dim)
+            The list of tail representations.
+        :param coefficients:
+            the coefficients, in order:
+
+            1. head_representation_index,
+            2. relation_representation_index,
+            3. tail_representation_index,
+            4. sign
+
+        :return:
+            The scores
+        """
+        return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(coefficients=self.coefficients)
