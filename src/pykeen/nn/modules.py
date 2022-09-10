@@ -1913,12 +1913,17 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     coefficients: Tuple[AutoSFBlock, ...]
 
     @staticmethod
-    def _raise_on_duplicate(coefficients: Collection[AutoSFBlock]):
-        """
-        Ensure that there are no duplicate blocks.
+    def _check_coefficients(
+        coefficients: Collection[AutoSFBlock], num_entity_representations: int, num_relation_representations: int
+    ):
+        """Check coefficients.
 
         :param coefficients:
             the block description
+        :param num_entity_representations:
+            the number of entity representations / blocks
+        :param num_relation_representations:
+            the number of relation representations / blocks
 
         :raises ValueError:
             if there are duplicate coefficients
@@ -1927,26 +1932,45 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         duplicates = {k for k, v in counter.items() if v > 1}
         if duplicates:
             raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
+        for entities, num_blocks in ((True, num_entity_representations), (False, num_relation_representations)):
+            missing_ids = set(range(num_blocks)).difference(self._iter_ids(coefficients, entities=entities))
+            if missing_ids:
+                label = "entity" if entities else "relation"
+                logger.warning(f"Unused {label} blocks: {missing_ids}. This may indicate an error.")
 
     @staticmethod
-    def _infer_number(coefficients: Collection[AutoSFBlock], *indices: int) -> int:
+    def _iter_ids(coefficients: Collection[AutoSFBlock], entities: bool) -> Iterable[int]:
+        """Iterate over selected parts of the blocks.
+
+        :param coefficients:
+            the block coefficients
+        :param entities:
+            whether to select entity or relation ids, i.e., components `(0, 2)` for entities, or `(1,)` for relations.
+        
+        :yield:
+            the used indices
+        """
+        indices = (0, 2) if entities else (1,)
+        yield from itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in indices))
+
+    
+    @classmethod
+    def _infer_number(coefficients: Collection[AutoSFBlock], entities: bool) -> int:
         """Infer the number of blocks from the given coefficients.
 
         :param coefficients:
             the block coefficients
-        :param indices:
-            the indices, either `(0, 2)` for entities, or `(1,)` for relations.
+        :param entities:
+            whether to select entity or relation ids, i.e., components `(0, 2)` for entities, or `(1,)` for relations.
         
         :return:
             the inferred number of blocks
         """
-        return 1 + max(
-            itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in indices))
-        )
+        return 1 + max(cls._iter_ids(coefficients, *indices))
 
     def __init__(
         self, 
-        coefficients: Collection[AutoSFBlock],
+        coefficients: Iterable[AutoSFBlock],
         *,
         num_blocks: Optional[int] = None,
         num_entity_representations: Optional[int] = None,
@@ -1968,15 +1992,26 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             If `num_relation_representations` is `None`, too, this number if inferred from `coefficients`.
         """
         super().__init__()
-        self._raise_on_duplicate(coefficients=coefficients)
-        self.coefficients = tuple(coefficients)
+
+        # convert to tuple
+        coefficients = tuple(coefficients)
 
         # infer the number of entity and relation representations
-        num_entity_representations = num_blocks or num_entity_representations or self._infer_number(coefficients, 0, 2)
-        num_relation_representations = num_blocks or num_relation_representations or self._infer_number(coefficients, 1)
+        num_entity_representations = (
+            num_blocks or num_entity_representations or self._infer_number(coefficients, entities=True)
+        )
+        num_relation_representations = (
+            num_blocks or num_relation_representations or self._infer_number(coefficients, entities=False)
+        )
 
-        # TODO: check for unused representations, and warn about them
+        # verify coefficients
+        self._check_coefficients(
+            coefficients=coefficients,
+            num_entity_representations=num_entity_representations,
+            num_relation_representations=num_relation_representations,
+        )
 
+        self.coefficients = coefficients
         # dynamic entity / relation shapes
         self.entity_shape = tuple(["d"] * num_entity_representations)
         self.relation_shape = tuple(["d"] * num_relation_representations)
