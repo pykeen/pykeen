@@ -271,7 +271,7 @@ class Loss(_Loss):
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, reduction: str = "mean"):
+    def __init__(self, reduction: str = "mean", reweight_triples: bool = False):
         """
         Initialize the loss.
 
@@ -280,6 +280,7 @@ class Loss(_Loss):
         """
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
+        self.reweight_triples = reweight_triples
 
     def process_slcwa_scores(
         self,
@@ -288,6 +289,7 @@ class Loss(_Loss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
         num_entities: Optional[int] = None,
+        triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """
         Process scores from sLCWA training loop.
@@ -321,7 +323,10 @@ class Loss(_Loss):
             num_classes=num_entities,
         )
 
-        return self(predictions, labels)
+        if self.reweight_triples:
+            return self(predictions, labels, triple_weights)
+        else:
+            return self(predictions, labels)
 
     def process_lcwa_scores(
         self,
@@ -416,8 +421,12 @@ class BCEWithLogitsLoss(PointwiseLoss):
         self,
         scores: torch.FloatTensor,
         labels: torch.FloatTensor,
+        triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
+        loss = functional.binary_cross_entropy_with_logits(scores, labels, reduction="none")
+        if triple_weights is not None:
+            loss = loss * triple_weights
+        return self._reduction_method(loss)
 
 
 @parse_docdata
