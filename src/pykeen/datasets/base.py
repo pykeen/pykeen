@@ -22,7 +22,7 @@ from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
-from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory, StatementFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
@@ -44,6 +44,7 @@ __all__ = [
     "ZipSingleDataset",
     "TabbedDataset",
     "SingleTabbedDataset",
+    "HyperRelationalUnpackedRemoteDataset",
     # Utilities
     "dataset_similarity",
 ]
@@ -944,3 +945,105 @@ class SingleTabbedDataset(TabbedDataset):
             df = df[usecols]
 
         return df
+
+
+class HyperRelationalUnpackedRemoteDataset(PathDataset):
+
+    def __init__(
+            self,
+            training_url: str,
+            testing_url: str,
+            validation_url: str,
+            cache_root: Optional[str] = None,
+            force: bool = False,
+            eager: bool = False,
+            create_inverse_triples: bool = False,
+            max_num_qualifier_pairs: int = -1,
+            load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+            download_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        """Initialize dataset.
+
+        :param training_url: The URL of the training file
+        :param testing_url: The URL of the testing file
+        :param validation_url: The URL of the validation file
+        :param cache_root:
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
+        :param force: If true, redownload any cached files
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
+            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
+        """
+        self.cache_root = self._help_cache(cache_root)
+
+        self.training_url = training_url
+        self.testing_url = testing_url
+        self.validation_url = validation_url
+
+        self.max_num_qualifier_pairs = max_num_qualifier_pairs
+
+        training_path = self.cache_root.joinpath(name_from_url(self.training_url))
+        testing_path = self.cache_root.joinpath(name_from_url(self.testing_url))
+        validation_path = self.cache_root.joinpath(name_from_url(self.validation_url))
+
+        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
+        download_kwargs.setdefault("backend", "urllib")
+
+
+        # TODO the only difference with vanilla UnpackedRemoteDataset is here:
+        # we update the kwargs with the max number of qualifier pairs to keep
+        if load_triples_kwargs is None:
+            load_triples_kwargs = {"max_num_qualifier_pairs": max_num_qualifier_pairs}
+        else:
+            load_triples_kwargs.update({"max_num_qualifier_pairs": max_num_qualifier_pairs})
+
+        for url, path in [
+            (self.training_url, training_path),
+            (self.testing_url, testing_path),
+            (self.validation_url, validation_path),
+        ]:
+            if force or not path.is_file():
+                download(url, path, **download_kwargs)
+
+        super().__init__(
+            training_path=training_path,
+            testing_path=testing_path,
+            validation_path=validation_path,
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+            load_triples_kwargs=load_triples_kwargs,
+        )
+
+    def _load(self) -> None:
+        self._training = StatementFactory.from_path(
+            path=self.training_path,
+            create_inverse_triples=self._create_inverse_triples,
+            load_triples_kwargs=self.load_triples_kwargs,
+        )
+        self._testing = StatementFactory.from_path(
+            path=self.testing_path,
+            entity_to_id=self._training.entity_to_id,  # share entity index with training
+            relation_to_id=self._training.relation_to_id,  # share relation index with training
+            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+            create_inverse_triples=False,
+            load_triples_kwargs=self.load_triples_kwargs,
+        )
+
+    def _load_validation(self) -> None:
+        # don't call this function by itself. assumes called through the `validation`
+        # property and the _training factory has already been loaded
+        assert self._training is not None
+        if self.validation_path is None:
+            self._validation = None
+        else:
+            self._validation = StatementFactory.from_path(
+                path=self.validation_path,
+                entity_to_id=self._training.entity_to_id,  # share entity index with training
+                relation_to_id=self._training.relation_to_id,  # share relation index with training
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=False,
+                load_triples_kwargs=self.load_triples_kwargs,
+            )

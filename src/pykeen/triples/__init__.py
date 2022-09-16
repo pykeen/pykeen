@@ -12,6 +12,7 @@ from .triples_factory import (
     get_mapped_triples,
     relation_inverter,
 )
+from .statement_factory import StatementFactory
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "TriplesNumericLiteralsFactory",
     "get_mapped_triples",
     "AnyTriples",
+    "StatementFactory"
 ]
