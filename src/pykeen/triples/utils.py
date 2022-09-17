@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
-STATEMENT_PADDING = '__padding__'
+STATEMENT_PADDING = "__padding__"
 
 
 def _load_importers(group_subname: str) -> Mapping[str, Callable[[str], LabeledTriples]]:
@@ -118,7 +118,7 @@ def load_rdf_star_statements(
 
         for prefix, handler in PREFIX_IMPORTERS.items():
             if path.startswith(f"{prefix}:"):
-                return handler(path[len(f"{prefix}:"):])
+                return handler(path[len(f"{prefix}:") :])
 
     if encoding is None:
         encoding = "utf-8"
@@ -138,8 +138,8 @@ def load_rdf_star_statements(
         header=None,
         usecols=column_remapping,
         na_filter=False,
-        names=list(range(max_len))  # instruct pandas to load a fixed number of columns
-    ).replace('', STATEMENT_PADDING)
+        names=list(range(max_len)),  # instruct pandas to load a fixed number of columns
+    ).replace("", STATEMENT_PADDING)
     if column_remapping is not None:
         df = df[[df.columns[c] for c in column_remapping]]
     return df.to_numpy()

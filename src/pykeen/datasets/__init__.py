@@ -16,6 +16,7 @@ from .base import (  # noqa:F401
     CompressedSingleDataset,
     Dataset,
     EagerDataset,
+    HyperRelationalUnpackedRemoteDataset,
     LazyDataset,
     PackedZipRemoteDataset,
     PathDataset,
@@ -26,7 +27,6 @@ from .base import (  # noqa:F401
     TarFileSingleDataset,
     UnpackedRemoteDataset,
     ZipSingleDataset,
-    HyperRelationalUnpackedRemoteDataset,
 )
 from .biokg import BioKG
 from .ckg import CKG
@@ -50,7 +50,7 @@ from .pharmkg import PharmKG, PharmKG8k
 from .primekg import PrimeKG
 from .umls import UMLS
 from .utils import get_dataset
-from .wd50k import WD50KT, WD50K, WD50K_33, WD50K_66, WD50K_100
+from .wd50k import WD50K, WD50K_33, WD50K_66, WD50K_100, WD50KT
 from .wikidata5m import Wikidata5M
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310

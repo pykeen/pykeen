@@ -5,9 +5,8 @@ import functools
 import logging
 import pathlib
 import re
-from collections import defaultdict
-
 from abc import abstractmethod
+from collections import defaultdict
 from typing import (
     Any,
     Callable,
@@ -33,9 +32,9 @@ import torch
 from tqdm import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
-from .utils import load_rdf_star_statements, STATEMENT_PADDING
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from .triples_factory import KGInfo
+from .utils import STATEMENT_PADDING, load_rdf_star_statements
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import (
     ExtraReprMixin,
     compact_mapping,
@@ -48,8 +47,8 @@ from ..utils import (
 
 logger = logging.getLogger(__name__)
 
-INVERSE_SUFFIX = '_inverse'
-TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
+INVERSE_SUFFIX = "_inverse"
+TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
 
 
 def _map_statements(
@@ -88,7 +87,9 @@ def _map_statements(
             f"In total {non_mappable_statements.sum():.0f} from {statements.shape[0]:.0f} triples were filtered out",
         )
 
-    mapped_statements = np.empty((entity_column.shape[0], entity_column.shape[1]+relation_column.shape[1]), dtype=np.int64)
+    mapped_statements = np.empty(
+        (entity_column.shape[0], entity_column.shape[1] + relation_column.shape[1]), dtype=np.int64
+    )
     mapped_statements[:, 0::2] = entity_column
     mapped_statements[:, 1::2] = relation_column
 
@@ -147,8 +148,10 @@ class StatementFactory(KGInfo):
         mapped_statements = torch.as_tensor(mapped_statements)
         # input validation
         if mapped_statements.ndim != 2 or mapped_statements.shape[1] != (max_num_qualifier_pairs * 2 + 3):
-            raise ValueError(f"Invalid shape for mapped_triples: {mapped_statements.shape}; "
-                             f"must be (n, 3 + max_num_qualifier_pairs * 2)")
+            raise ValueError(
+                f"Invalid shape for mapped_triples: {mapped_statements.shape}; "
+                f"must be (n, 3 + max_num_qualifier_pairs * 2)"
+            )
         if mapped_statements.is_complex() or mapped_statements.is_floating_point():
             raise TypeError(f"Invalid type: {mapped_statements.dtype}. Must be integer dtype.")
         # always store as torch.long, i.e., torch's default integer dtype
@@ -157,22 +160,21 @@ class StatementFactory(KGInfo):
             metadata = dict()
         self.metadata = metadata
         self.max_num_qualifier_pairs = max_num_qualifier_pairs
-        self.paddix_idx = entity_to_id['__padding__']
+        self.paddix_idx = entity_to_id["__padding__"]
         self.non_qualifier_only_entities = self.mapped_statements[:, [0, 2]].unique()
-
 
     @classmethod
     def from_path(
-            cls,
-            path: Union[str, pathlib.Path, TextIO],
-            *,
-            create_inverse_triples: bool = False,
-            entity_to_id: Optional[EntityMapping] = None,
-            relation_to_id: Optional[RelationMapping] = None,
-            compact_id: bool = True,
-            metadata: Optional[Dict[str, Any]] = None,
-            load_triples_kwargs: Optional[Mapping[str, Any]] = None,
-            **kwargs,
+        cls,
+        path: Union[str, pathlib.Path, TextIO],
+        *,
+        create_inverse_triples: bool = False,
+        entity_to_id: Optional[EntityMapping] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        compact_id: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
+        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
     ) -> "StatementFactory":
         """
         Create a new statement factory from statements stored in a file.
@@ -217,15 +219,15 @@ class StatementFactory(KGInfo):
 
     @classmethod
     def from_labeled_statements(
-            cls,
-            statements: LabeledTriples,
-            *,
-            create_inverse_triples: bool = False,
-            entity_to_id: Optional[EntityMapping] = None,
-            relation_to_id: Optional[RelationMapping] = None,
-            compact_id: bool = True,
-            filter_out_candidate_inverse_relations: bool = True,
-            metadata: Optional[Dict[str, Any]] = None,
+        cls,
+        statements: LabeledTriples,
+        *,
+        create_inverse_triples: bool = False,
+        entity_to_id: Optional[EntityMapping] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        compact_id: bool = True,
+        filter_out_candidate_inverse_relations: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> "StatementFactory":
         """
         Create a new state e t factory from label-based statements.
@@ -292,7 +294,7 @@ class StatementFactory(KGInfo):
             mapped_statements=mapped_statements,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
-            max_num_qualifier_pairs=(mapped_statements.shape[1] - 3) // 2
+            max_num_qualifier_pairs=(mapped_statements.shape[1] - 3) // 2,
         )
 
     def _process_inverse_relations(self):
@@ -305,19 +307,16 @@ class StatementFactory(KGInfo):
             self.create_inverse_triples = True
             if relations_already_inverted:
                 logger.info(
-                    f'Some triples already have suffix {INVERSE_SUFFIX}. '
-                    f'Creating TriplesFactory based on inverse triples',
+                    f"Some triples already have suffix {INVERSE_SUFFIX}. "
+                    f"Creating TriplesFactory based on inverse triples",
                 )
                 self.relation_to_inverse = {
-                    re.sub('_inverse$', '', relation): f"{re.sub('_inverse$', '', relation)}{INVERSE_SUFFIX}"
+                    re.sub("_inverse$", "", relation): f"{re.sub('_inverse$', '', relation)}{INVERSE_SUFFIX}"
                     for relation in relations
                 }
 
             else:
-                self.relation_to_inverse = {
-                    relation: f"{relation}{INVERSE_SUFFIX}"
-                    for relation in relations
-                }
+                self.relation_to_inverse = {relation: f"{relation}{INVERSE_SUFFIX}" for relation in relations}
                 inverse_statements = [[s[2], self.relation_to_inverse[s[1]], s[0], *s[3:]] for s in self.statements]
                 # extend original triples with inverse ones
                 self.statements.extend(inverse_statements)
@@ -366,10 +365,7 @@ class StatementFactory(KGInfo):
         batch_size = len(keys)
 
         # Lookup IDs of qualifiers
-        qualifier_ids = [
-            mapping.get(tuple(k.tolist()))
-            for k in keys
-        ]
+        qualifier_ids = [mapping.get(tuple(k.tolist())) for k in keys]
 
         # Determine maximum length (for dynamic padding)
         max_len = max(map(len, qualifier_ids))
@@ -386,13 +382,13 @@ class StatementFactory(KGInfo):
             # limit number of qualifiers
             # TODO: shuffle?
             this_qualifier_ids = this_qualifier_ids[:max_len]
-            result[i, :len(this_qualifier_ids)] = torch.as_tensor(data=this_qualifier_ids, dtype=torch.long)
+            result[i, : len(this_qualifier_ids)] = torch.as_tensor(data=this_qualifier_ids, dtype=torch.long)
 
         return result
 
     def _create_qualifier_index(self):
-        """
-        Create a COO matrix of shape (3, num_qualifiers). Only non-zero (non-padded) qualifiers are retained.
+        """Create a COO matrix of shape (3, num_qualifiers). Only non-zero (non-padded) qualifiers are retained.
+
         row0: qualifying relations
         row1: qualifying entities
         row2: index row which connects a pair (qual_r, qual_e) to a statement index k
@@ -411,8 +407,9 @@ class StatementFactory(KGInfo):
             # Ensure that PADDING has id=0
             non_zero_rels = relations[np.nonzero(relations)]
             non_zero_ents = entities[np.nonzero(entities)]
-            assert len(non_zero_rels) == len(non_zero_ents), \
-                "Number of non-padded qualifying relations is not equal to the # of qualifying entities"
+            assert len(non_zero_rels) == len(
+                non_zero_ents
+            ), "Number of non-padded qualifying relations is not equal to the # of qualifying entities"
             num_qualifier_pairs = non_zero_ents.shape[0]
 
             for j in range(num_qualifier_pairs):
@@ -420,15 +417,18 @@ class StatementFactory(KGInfo):
                 qual_entities.append(non_zero_ents[j].item())
                 qual_k.append(triple_id)
 
-        qualifier_index = torch.stack([
-            torch.tensor(qual_relations, dtype=torch.long),
-            torch.tensor(qual_entities, dtype=torch.long),
-            torch.tensor(qual_k, dtype=torch.long)
-        ], dim=0)
+        qualifier_index = torch.stack(
+            [
+                torch.tensor(qual_relations, dtype=torch.long),
+                torch.tensor(qual_entities, dtype=torch.long),
+                torch.tensor(qual_k, dtype=torch.long),
+            ],
+            dim=0,
+        )
 
         if self.create_inverse_triples:
             # qualifier index is the same for inverse statements
-            qualifier_index[2, len(qual_relations) // 2:] = qualifier_index[2, :len(qual_relations) // 2]
+            qualifier_index[2, len(qual_relations) // 2 :] = qualifier_index[2, : len(qual_relations) // 2]
 
         return qualifier_index
 
@@ -513,11 +513,13 @@ class StatementFactory(KGInfo):
 
     def extra_repr(self) -> str:
         """Extra representation."""
-        return f"num_entities={self.num_entities:,}, " \
-               f"num_relations={self.num_relations:,}, " \
-               f"num_statements={self.num_statements:,}, " \
-               f"max_num_qualifier_pairs={self.max_num_qualifier_pairs}, " \
-               f"qualifier_ratio={self.qualifier_ratio:.2%}"
+        return (
+            f"num_entities={self.num_entities:,}, "
+            f"num_relations={self.num_relations:,}, "
+            f"num_statements={self.num_statements:,}, "
+            f"max_num_qualifier_pairs={self.max_num_qualifier_pairs}, "
+            f"qualifier_ratio={self.qualifier_ratio:.2%}"
+        )
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.extra_repr()})"
@@ -527,10 +529,7 @@ class StatementFactory(KGInfo):
         return self.num_statements
 
 
-def create_statement_entity_mapping(
-    statements: Iterable[str]
-):
-
+def create_statement_entity_mapping(statements: Iterable[str]):
     entities = list(sorted(set([e for s in statements for e in s[::2]])))  # padding is already in the ndarray
     entity_to_id = {entity: id for id, entity in enumerate(entities)}
     return entity_to_id
@@ -551,12 +550,12 @@ def _create_multi_label_tails_instance(
     use_tqdm: Optional[bool] = None,
 ) -> Dict[Tuple[int, int], List[int]]:
     """Create for each (h,r,q*) pair the multi tail label."""
-    logger.debug('Creating multi label tails instance')
+    logger.debug("Creating multi label tails instance")
 
-    '''
+    """
     The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
     https://github.com/pykeen/pykeen/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
-    '''
+    """
     mapped_statements = mapped_statements.cpu().detach().numpy()
 
     s_p_q_to_multi_tails_new = _create_multi_label_instances(
@@ -567,7 +566,7 @@ def _create_multi_label_tails_instance(
         use_tqdm=use_tqdm,
     )
 
-    logger.debug('Created multi label tails instance')
+    logger.debug("Created multi label tails instance")
 
     return s_p_q_to_multi_tails_new
 
@@ -588,18 +587,14 @@ def _create_multi_label_instances(
     it = mapped_statements
 
     if use_tqdm:
-        it = tqdm(mapped_statements, unit='statement', unit_scale=True, desc='Grouping statements')
+        it = tqdm(mapped_statements, unit="statement", unit_scale=True, desc="Grouping statements")
 
     for row in it:
         instance = tuple([row[element_1_index], row[element_2_index]] + row[3:].tolist())
-        instance_to_multi_label[instance].add(
-            row[label_index])
+        instance_to_multi_label[instance].add(row[label_index])
 
     # Create lists out of sets for proper numpy indexing when loading the labels
     # TODO is there a need to have a canonical sort order here?
-    instance_to_multi_label_new = {
-        key: list(value)
-        for key, value in instance_to_multi_label.items()
-    }
+    instance_to_multi_label_new = {key: list(value) for key, value in instance_to_multi_label.items()}
 
     return instance_to_multi_label_new

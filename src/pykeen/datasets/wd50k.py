@@ -12,7 +12,7 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import UnpackedRemoteDataset, HyperRelationalUnpackedRemoteDataset
+from .base import HyperRelationalUnpackedRemoteDataset, UnpackedRemoteDataset
 
 BASE_URL = "https://raw.githubusercontent.com/migalkin/StarE/master/data/clean/wd50k/"
 TRIPLES_VALID_URL = f"{BASE_URL}/triples/valid.txt"
@@ -72,7 +72,6 @@ class WD50KT(UnpackedRemoteDataset):
         )
 
 
-
 @parse_docdata
 class WD50K(HyperRelationalUnpackedRemoteDataset):
     """The hyper-relational version of WD50K.
@@ -107,6 +106,7 @@ class WD50K(HyperRelationalUnpackedRemoteDataset):
             load_triples_kwargs={"delimiter": ","},
             **kwargs,
         )
+
 
 @parse_docdata
 class WD50K_33(HyperRelationalUnpackedRemoteDataset):
@@ -143,6 +143,7 @@ class WD50K_33(HyperRelationalUnpackedRemoteDataset):
             **kwargs,
         )
 
+
 @parse_docdata
 class WD50K_66(HyperRelationalUnpackedRemoteDataset):
     """The hyper-relational version of WD50K where 66% of statements have at lease one qualifier pair.
@@ -177,6 +178,7 @@ class WD50K_66(HyperRelationalUnpackedRemoteDataset):
             load_triples_kwargs={"delimiter": ","},
             **kwargs,
         )
+
 
 @parse_docdata
 class WD50K_100(HyperRelationalUnpackedRemoteDataset):
