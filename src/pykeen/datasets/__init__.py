@@ -16,7 +16,6 @@ from .base import (  # noqa:F401
     CompressedSingleDataset,
     Dataset,
     EagerDataset,
-    HyperRelationalUnpackedRemoteDataset,
     LazyDataset,
     PackedZipRemoteDataset,
     PathDataset,
@@ -41,6 +40,7 @@ from .ea import CN3l, EADataset, MTransEDataset, OpenEA, WK3l15k, WK3l120k
 from .freebase import FB15k, FB15k237
 from .globi import Globi
 from .hetionet import Hetionet
+from .hyper.base import HyperRelationalUnpackedRemoteDataset
 from .kinships import Kinships
 from .literal_base import NumericPathDataset
 from .nations import Nations

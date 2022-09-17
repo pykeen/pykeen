@@ -12,29 +12,29 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import HyperRelationalUnpackedRemoteDataset, UnpackedRemoteDataset
+from .base import UnpackedRemoteDataset
+from .hyper.base import HyperRelationalUnpackedRemoteDataset
 
-BASE_URL = "https://raw.githubusercontent.com/migalkin/StarE/master/data/clean/wd50k/"
-TRIPLES_VALID_URL = f"{BASE_URL}/triples/valid.txt"
-TRIPLES_TEST_URL = f"{BASE_URL}/triples/test.txt"
-TRIPLES_TRAIN_URL = f"{BASE_URL}/triples/train.txt"
+BASE_URL = "https://raw.githubusercontent.com/migalkin/StarE/master/data/clean"
+TRIPLES_VALID_URL = f"{BASE_URL}/wd50k/triples/valid.txt"
+TRIPLES_TEST_URL = f"{BASE_URL}/wd50k/triples/test.txt"
+TRIPLES_TRAIN_URL = f"{BASE_URL}/wd50k/triples/train.txt"
 
-HYPER_RELATIONAL_BASE_URL = "https://raw.githubusercontent.com/migalkin/StarE/master/data/clean/"
-HYPER_RELATIONAL_MAIN_TRAIN_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k/statements/train.txt"
-HYPER_RELATIONAL_MAIN_VALID_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k/statements/valid.txt"
-HYPER_RELATIONAL_MAIN_TEST_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k/statements/test.txt"
+HYPER_RELATIONAL_MAIN_TRAIN_URL = f"{BASE_URL}/wd50k/statements/train.txt"
+HYPER_RELATIONAL_MAIN_VALID_URL = f"{BASE_URL}/wd50k/statements/valid.txt"
+HYPER_RELATIONAL_MAIN_TEST_URL = f"{BASE_URL}/wd50k/statements/test.txt"
 
-HYPER_RELATIONAL_33_TRAIN_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_33/statements/train.txt"
-HYPER_RELATIONAL_33_VALID_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_33/statements/valid.txt"
-HYPER_RELATIONAL_33_TEST_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_33/statements/test.txt"
+HYPER_RELATIONAL_33_TRAIN_URL = f"{BASE_URL}/wd50k_33/statements/train.txt"
+HYPER_RELATIONAL_33_VALID_URL = f"{BASE_URL}/wd50k_33/statements/valid.txt"
+HYPER_RELATIONAL_33_TEST_URL = f"{BASE_URL}/wd50k_33/statements/test.txt"
 
-HYPER_RELATIONAL_66_TRAIN_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_66/statements/train.txt"
-HYPER_RELATIONAL_66_VALID_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_66/statements/valid.txt"
-HYPER_RELATIONAL_66_TEST_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_66/statements/test.txt"
+HYPER_RELATIONAL_66_TRAIN_URL = f"{BASE_URL}/wd50k_66/statements/train.txt"
+HYPER_RELATIONAL_66_VALID_URL = f"{BASE_URL}/wd50k_66/statements/valid.txt"
+HYPER_RELATIONAL_66_TEST_URL = f"{BASE_URL}/wd50k_66/statements/test.txt"
 
-HYPER_RELATIONAL_100_TRAIN_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_100/statements/train.txt"
-HYPER_RELATIONAL_100_VALID_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_100/statements/valid.txt"
-HYPER_RELATIONAL_100_TEST_URL = f"{HYPER_RELATIONAL_BASE_URL}/wd50k_100/statements/test.txt"
+HYPER_RELATIONAL_100_TRAIN_URL = f"{BASE_URL}/wd50k_100/statements/train.txt"
+HYPER_RELATIONAL_100_VALID_URL = f"{BASE_URL}/wd50k_100/statements/valid.txt"
+HYPER_RELATIONAL_100_TEST_URL = f"{BASE_URL}/wd50k_100/statements/test.txt"
 
 
 @parse_docdata

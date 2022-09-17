@@ -22,7 +22,7 @@ from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
-from ..triples import CoreTriplesFactory, StatementFactory, TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
@@ -44,7 +44,6 @@ __all__ = [
     "ZipSingleDataset",
     "TabbedDataset",
     "SingleTabbedDataset",
-    "HyperRelationalUnpackedRemoteDataset",
     # Utilities
     "dataset_similarity",
 ]
@@ -945,42 +944,3 @@ class SingleTabbedDataset(TabbedDataset):
             df = df[usecols]
 
         return df
-
-
-class HyperRelationalDataset(Dataset):
-    """A hyper-relational dataset."""
-
-    training: StatementFactory
-    testing: StatementFactory
-    validation: Optional[StatementFactory]
-    triples_factory_cls = StatementFactory
-
-
-class HyperRelationalUnpackedRemoteDataset(UnpackedRemoteDataset, HyperRelationalDataset):
-    """A remote, unpacked, hyper-relational dataset."""
-
-    def __init__(
-        self,
-        *,
-        max_num_qualifier_pairs: int = -1,
-        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
-        **kwargs
-    ):
-        """Initialize dataset.
-
-        :param load_triples_kwargs:
-            Arguments to pass through to :func:`StatementFactory.from_path`
-            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
-        :param max_num_qualifier_pairs:
-            TODO migalkin
-        :param kwargs:
-            Keyword arguments to pass to parent constructor
-        """
-        self.max_num_qualifier_pairs = max_num_qualifier_pairs
-
-        # TODO the only difference with vanilla UnpackedRemoteDataset is here:
-        # we update the kwargs with the max number of qualifier pairs to keep
-        load_triples_kwargs = dict(load_triples_kwargs or {})
-        load_triples_kwargs["max_num_qualifier_pairs"] = max_num_qualifier_pairs
-
-        super().__init__(load_triples_kwargs=load_triples_kwargs, **kwargs)
