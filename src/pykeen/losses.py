@@ -494,10 +494,16 @@ class MarginPairwiseLoss(PairwiseLoss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
         num_entities: Optional[int] = None,
+        triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
+
+        # print(f"Pos Scores:{positive_scores.shape}")
+        # print(f"Neg Scores: {negative_scores.shape}")
+
+        # print(batch_filter)
 
         # prepare for broadcasting, shape: (batch_size, 1, 3)
         positive_scores = positive_scores.unsqueeze(dim=1)
@@ -507,6 +513,8 @@ class MarginPairwiseLoss(PairwiseLoss):
             num_neg_per_pos = batch_filter.shape[1]
             positive_scores = positive_scores.repeat(1, num_neg_per_pos, 1)[batch_filter]
             # shape: (nnz,)
+
+        # print(f"Pos Scores 2:{positive_scores.shape}")
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
@@ -559,6 +567,11 @@ class MarginPairwiseLoss(PairwiseLoss):
         :return:
             A scalar loss term.
         """
+
+        # print(f"Pos Scores:{pos_scores.shape}")
+        # print(f"Neg Scores: {neg_scores.shape}")
+        # print(f"Result: {self.margin_activation(neg_scores - pos_scores + self.margin,).shape}")
+
         return self._reduction_method(
             self.margin_activation(
                 neg_scores - pos_scores + self.margin,
