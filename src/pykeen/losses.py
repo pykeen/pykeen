@@ -289,7 +289,8 @@ class Loss(_Loss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
         num_entities: Optional[int] = None,
-        triple_weights: Optional[torch.FloatTensor] = None,
+        pos_triple_weights: Optional[torch.FloatTensor] = None,
+        neg_triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """
         Process scores from sLCWA training loop.
@@ -324,7 +325,7 @@ class Loss(_Loss):
         )
 
         if self.reweight_triples:
-            return self(predictions, labels, triple_weights)
+            return self(predictions, labels, pos_triple_weights, neg_triple_weights)
         else:
             return self(predictions, labels)
 
@@ -421,10 +422,13 @@ class BCEWithLogitsLoss(PointwiseLoss):
         self,
         scores: torch.FloatTensor,
         labels: torch.FloatTensor,
-        triple_weights: Optional[torch.FloatTensor] = None,
+        pos_triple_weights: Optional[torch.FloatTensor] = None,
+        neg_triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         loss = functional.binary_cross_entropy_with_logits(scores, labels, reduction="none")
-        if triple_weights is not None:
+
+        if pos_triple_weights is not None and neg_triple_weights is not None:
+            triple_weights = torch.cat([pos_triple_weights, neg_triple_weights], dim=0)
             loss = loss * triple_weights
         return self._reduction_method(loss)
 
@@ -469,6 +473,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         margin: float,
         margin_activation: Hint[nn.Module],
         reduction: str = "mean",
+        reweight_triples: bool = False,
     ):
         r"""Initialize the margin loss instance.
 
@@ -485,6 +490,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         super().__init__(reduction=reduction)
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
+        self.reweight_triples = reweight_triples
 
     # docstr-coverage: inherited
     def process_slcwa_scores(
@@ -494,16 +500,12 @@ class MarginPairwiseLoss(PairwiseLoss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
         num_entities: Optional[int] = None,
-        triple_weights: Optional[torch.FloatTensor] = None,
+        pos_triple_weights: Optional[torch.FloatTensor] = None,
+        neg_triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
-
-        # print(f"Pos Scores:{positive_scores.shape}")
-        # print(f"Neg Scores: {negative_scores.shape}")
-
-        # print(batch_filter)
 
         # prepare for broadcasting, shape: (batch_size, 1, 3)
         positive_scores = positive_scores.unsqueeze(dim=1)
@@ -514,9 +516,10 @@ class MarginPairwiseLoss(PairwiseLoss):
             positive_scores = positive_scores.repeat(1, num_neg_per_pos, 1)[batch_filter]
             # shape: (nnz,)
 
-        # print(f"Pos Scores 2:{positive_scores.shape}")
-
-        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+        if self.reweight_triples:
+            return self(pos_scores=positive_scores, neg_scores=negative_scores, pos_triple_weights=pos_triple_weights)
+        else:
+            return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
     # docstr-coverage: inherited
     def process_lcwa_scores(
@@ -553,6 +556,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
+        pos_triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """
         Compute the margin loss.
@@ -568,15 +572,13 @@ class MarginPairwiseLoss(PairwiseLoss):
             A scalar loss term.
         """
 
-        # print(f"Pos Scores:{pos_scores.shape}")
-        # print(f"Neg Scores: {neg_scores.shape}")
-        # print(f"Result: {self.margin_activation(neg_scores - pos_scores + self.margin,).shape}")
-
-        return self._reduction_method(
-            self.margin_activation(
-                neg_scores - pos_scores + self.margin,
-            )
+        loss = self.margin_activation(
+            neg_scores - pos_scores + self.margin,
         )
+        if pos_triple_weights is not None:
+            loss = loss * pos_triple_weights.unsqueeze(dim=1)
+
+        return self._reduction_method(loss)
 
 
 @parse_docdata
@@ -611,7 +613,12 @@ class MarginRankingLoss(MarginPairwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+    def __init__(
+        self,
+        margin: float = 1.0,
+        reduction: str = "mean",
+        reweight_triples: bool = False,
+    ):
         r"""Initialize the margin loss instance.
 
         :param margin:
@@ -620,7 +627,9 @@ class MarginRankingLoss(MarginPairwiseLoss):
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
         """
-        super().__init__(margin=margin, margin_activation="relu", reduction=reduction)
+        super().__init__(
+            margin=margin, margin_activation="relu", reduction=reduction, reweight_triples=reweight_triples
+        )
 
 
 @parse_docdata

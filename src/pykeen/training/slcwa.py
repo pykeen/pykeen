@@ -123,9 +123,9 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         if loss.reweight_triples:
             pos_triple_weights = torch.stack([relation_weights[x] for x in list(positive_batch[:, 1].cpu().numpy())])
             neg_triple_weights = torch.stack([relation_weights[x] for x in list(negative_batch[:, 1].cpu().numpy())])
-            triple_weights = torch.cat([pos_triple_weights, neg_triple_weights], dim=0)
         else:
-            triple_weights = None
+            pos_triple_weights = None
+            neg_triple_weights = None
 
         return (
             loss.process_slcwa_scores(
@@ -134,7 +134,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
                 label_smoothing=label_smoothing,
                 batch_filter=positive_filter,
                 num_entities=model._get_entity_len(mode=mode),
-                triple_weights=triple_weights,
+                pos_triple_weights=pos_triple_weights,
+                neg_triple_weights=neg_triple_weights,
             )
             + model.collect_regularization_term()
         )
