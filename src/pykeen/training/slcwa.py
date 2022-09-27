@@ -117,9 +117,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         positive_scores = model.score_hrt(positive_batch, mode=mode)
         negative_scores = model.score_hrt(negative_batch, mode=mode).view(*negative_score_shape)
 
-        # some ideas for relation weighted loss functions that reweights the score for the interaction function
-        # this will cause issues for values that are negative
-        # see: https://arxiv.org/abs/2011.05138
+        # Compute the weights the both the positive and negative triples
         if loss.reweight_triples:
             pos_triple_weights = torch.stack([relation_weights[x] for x in list(positive_batch[:, 1].cpu().numpy())])
             neg_triple_weights = torch.stack([relation_weights[x] for x in list(negative_batch[:, 1].cpu().numpy())])
