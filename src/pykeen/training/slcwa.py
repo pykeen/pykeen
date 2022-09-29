@@ -119,8 +119,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
 
         # Compute the weights the both the positive and negative triples
         if loss.reweight_triples:
-            pos_triple_weights = torch.stack([relation_weights[x] for x in list(positive_batch[:, 1].cpu().numpy())])
-            neg_triple_weights = torch.stack([relation_weights[x] for x in list(negative_batch[:, 1].cpu().numpy())])
+            pos_triple_weights = torch.stack(
+                [relation_weights[x] for x in list(positive_batch[:, 1].cpu().numpy())]
+            ).to(model.device)
+            neg_triple_weights = torch.stack(
+                [relation_weights[x] for x in list(negative_batch[:, 1].cpu().numpy())]
+            ).to(model.device)
         else:
             pos_triple_weights = None
             neg_triple_weights = None
