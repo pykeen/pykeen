@@ -245,6 +245,10 @@ class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedT
 
     which can be seen as a "symmetric LCWA", where for one batch of triples, we score both, heads *and* tails, given
     the remainder of the triple.
+
+    .. note ::
+        at the same time, there is a also a difference to the :class:`LCWATrainingLoop`: we do not group by e.g.,
+        head+relation pairs. Thus, the name might be suboptimal and change in the future.
     """
 
     # docstr-coverage: inherited
