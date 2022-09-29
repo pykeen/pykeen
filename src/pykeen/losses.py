@@ -428,7 +428,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
         loss = functional.binary_cross_entropy_with_logits(scores, labels, reduction="none")
 
         if pos_triple_weights is not None and neg_triple_weights is not None:
-            triple_weights = torch.cat([pos_triple_weights, neg_triple_weights], dim=0)
+            triple_weights = torch.cat([pos_triple_weights, neg_triple_weights], dim=0).to(loss.device)
             loss = loss * triple_weights
         return self._reduction_method(loss)
 
