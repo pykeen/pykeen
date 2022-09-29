@@ -56,7 +56,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         return DataLoader(
             dataset=triples_factory.create_slcwa_instances(
                 batch_size=batch_size,
-                shuffle=True,
+                shuffle=kwargs.pop("shuffle", True),
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
