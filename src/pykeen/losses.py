@@ -841,7 +841,7 @@ class DoubleMarginLoss(PointwiseLoss):
                 )
         else:
             num_neg_per_pos = batch_filter.shape[1]
-            positive_scores = positive_scores.unsqueeze(dim=1).repeat(1, num_neg_per_pos, 1)[batch_filter]
+            positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
             # shape: (nnz,)
             positive_loss = self._reduction_method(self.margin_activation(self.positive_margin - positive_scores))
 
