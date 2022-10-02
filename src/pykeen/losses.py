@@ -493,7 +493,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         if batch_filter is not None:
             # negative_scores have already been filtered in the sampler!
             num_neg_per_pos = batch_filter.shape[1]
-            positive_scores = positive_scores.repeat(1, num_neg_per_pos, 1)[batch_filter]
+            positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
             # shape: (nnz,)
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
