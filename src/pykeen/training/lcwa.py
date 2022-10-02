@@ -4,20 +4,22 @@
 
 import logging
 from math import ceil
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Tuple, Union
 
 import torch
-from torch.utils.data import DataLoader
+from torch.nn import functional
+from torch.utils.data import DataLoader, TensorDataset
 
 from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models import Model
 from ..triples import CoreTriplesFactory
 from ..triples.instances import LCWABatchType, LCWASampleType
-from ..typing import InductiveMode
+from ..typing import InductiveMode, MappedTriples
 
 __all__ = [
     "LCWATrainingLoop",
+    "SymmetricLCWATrainingLoop",
 ]
 
 logger = logging.getLogger(__name__)
@@ -82,13 +84,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self,
-        triples_factory: CoreTriplesFactory,
-        batch_size: int,
-        drop_last: bool,
-        num_workers: int,
-        pin_memory: bool,
-        sampler: Optional[str],
+        self, triples_factory: CoreTriplesFactory, sampler: Optional[str], **kwargs
     ) -> DataLoader[LCWABatchType]:  # noqa: D102
         if sampler:
             raise NotImplementedError(
@@ -97,15 +93,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             )
 
         dataset = triples_factory.create_lcwa_instances(target=self.target)
-        return DataLoader(
-            dataset=dataset,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            drop_last=drop_last,
-            shuffle=True,
-            pin_memory=pin_memory,
-            collate_fn=dataset.get_collator(),
-        )
+        return DataLoader(dataset=dataset, collate_fn=dataset.get_collator(), **kwargs)
 
     @staticmethod
     # docstr-coverage: inherited
@@ -236,4 +224,82 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             report = "This model doesn't support sub-batching and slicing is not" " implemented for this model yet."
         logger.warning(report)
+        raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+# note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
+class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedTriples]]):
+    r"""
+    A "symmetric" LCWA scoring heads *and* tails at once.
+
+    This objective was introduced by [lacroix2018]_ as
+
+    .. math ::
+
+        l_{i,j,k}(X) = - X_{i,j,k} + \log \left(
+            \sum_{k'} \exp(X_{i,j,k′})
+        \right) - X_{k,j+P,i} + \log \left(
+            \sum_{i'} \exp (X_{k, j+P, i'})
+        \right)
+
+
+    which can be seen as a "symmetric LCWA", where for one batch of triples, we score both, heads *and* tails, given
+    the remainder of the triple.
+
+    .. note ::
+        at the same time, there is a also a difference to the :class:`LCWATrainingLoop`: we do not group by e.g.,
+        head+relation pairs. Thus, the name might be suboptimal and change in the future.
+    """
+
+    # docstr-coverage: inherited
+    def _create_training_data_loader(
+        self, triples_factory: CoreTriplesFactory, sampler: Optional[str], **kwargs
+    ) -> DataLoader[Tuple[MappedTriples]]:  # noqa: D102
+        assert sampler is None
+        return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
+
+    # docstr-coverage: inherited
+    def _process_batch(
+        self,
+        batch: Tuple[MappedTriples],
+        start: int,
+        stop: int,
+        label_smoothing: float = 0,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # unpack
+        hrt_batch = batch[0]
+        # Send batch to device
+        hrt_batch = hrt_batch[start:stop].to(device=self.model.device)
+        return (
+            # head prediction
+            self.loss.process_lcwa_scores(
+                predictions=self.model.score_h(rt_batch=hrt_batch[:, 1:], slice_size=slice_size, mode=self.mode),
+                # TODO: exploit sparsity
+                # note: this is different to what we do for LCWA, where we collect *all* training entities
+                #   for which the combination is true
+                labels=functional.one_hot(hrt_batch[:, 0], num_classes=self.model.num_entities).float(),
+                label_smoothing=label_smoothing,
+                num_entities=self.model.num_entities,
+            )
+            # tail prediction
+            + self.loss.process_lcwa_scores(
+                predictions=self.model.score_t(hr_batch=hrt_batch[:, :-1], slice_size=slice_size, mode=self.mode),
+                # TODO: exploit sparsity
+                labels=functional.one_hot(hrt_batch[:, 2], num_classes=self.model.num_entities).float(),
+                label_smoothing=label_smoothing,
+                num_entities=self.model.num_entities,
+            )
+            # regularization
+            + self.model.collect_regularization_term()
+        )
+
+    @staticmethod
+    # docstr-coverage: inherited
+    def _get_batch_size(batch: Tuple[MappedTriples]) -> int:  # noqa: D102
+        assert len(batch) == 1
+        return batch[0].shape[0]
+
+    def _slice_size_search(self, **kwargs) -> int:
+        # TODO?
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
