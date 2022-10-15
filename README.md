@@ -258,12 +258,13 @@ The following 6 regularizers are implemented by PyKEEN.
 
 ### Training Loops
 
-The following 2 training loops are implemented in PyKEEN.
+The following 3 training loops are implemented in PyKEEN.
 
-| Name   | Reference                                                                                                                                | Description                                                                               |
-|--------|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that is based upon the local closed world assumption (LCWA).              |
-| slcwa  | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop) | A training loop that uses the stochastic local closed world assumption training approach. |
+| Name          | Reference                                                                                                                                                | Description                                                                               |
+|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| lcwa          | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)                   | A training loop that is based upon the local closed world assumption (LCWA).              |
+| slcwa         | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop)                 | A training loop that uses the stochastic local closed world assumption training approach. |
+| symmetriclcwa | [`pykeen.training.SymmetricLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SymmetricLCWATrainingLoop) |                                                                                           |
 
 ### Negative Samplers
 

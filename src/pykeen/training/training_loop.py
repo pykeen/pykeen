@@ -586,10 +586,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         train_data_loader = self._create_training_data_loader(
             triples_factory,
-            batch_size,
-            drop_last,
-            num_workers,
-            pin_memory,
+            batch_size=batch_size,
+            drop_last=drop_last,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            shuffle=True,  # always shuffle during training
             sampler=sampler,
         )
         if len(train_data_loader) == 0:
@@ -779,13 +780,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     @abstractmethod
     def _create_training_data_loader(
-        self,
-        triples_factory: CoreTriplesFactory,
-        batch_size: int,
-        drop_last: bool,
-        num_workers: int,
-        pin_memory: bool,
-        sampler: Optional[str],
+        self, triples_factory: CoreTriplesFactory, *, sampler: Optional[str], batch_size: int, drop_last: bool, **kwargs
     ) -> DataLoader[BatchType]:
         """
         Create a data loader over training instances.
@@ -796,12 +791,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             the batch size to use
         :param drop_last:
             whether to drop the last (incomplete) batch, cf. torch.utils.data.DataLoader
-        :param num_workers:
-            the number of CPU workers to use for preparing batches, cf. torch.utils.data.DataLoader
-        :param pin_memory:
-            whether to pin the memory, cf. torch.utils.data.DataLoader
         :param sampler:
             the batch sampler to use. Either None, or "schlichtkrull".
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`torch.utils.data.DataLoader.__init__`
 
         :return:
             a data loader over training instances.

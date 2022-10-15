@@ -50,28 +50,22 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self,
-        triples_factory: CoreTriplesFactory,
-        batch_size: int,
-        drop_last: bool,
-        num_workers: int,
-        pin_memory: bool,
-        sampler: Optional[str],
+        self, triples_factory: CoreTriplesFactory, sampler: Optional[str], batch_size: int, drop_last: bool, **kwargs
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
+        assert "batch_sampler" not in kwargs
         return DataLoader(
             dataset=triples_factory.create_slcwa_instances(
                 batch_size=batch_size,
-                shuffle=True,
+                shuffle=kwargs.pop("shuffle", True),
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
                 sampler=sampler,
             ),
-            num_workers=num_workers,
-            pin_memory=pin_memory,
             # disable automatic batching
             batch_size=None,
             batch_sampler=None,
+            **kwargs,
         )
 
     @staticmethod

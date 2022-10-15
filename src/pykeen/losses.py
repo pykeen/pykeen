@@ -507,13 +507,10 @@ class MarginPairwiseLoss(PairwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
-        # prepare for broadcasting, shape: (batch_size, 1, 3)
-        positive_scores = positive_scores.unsqueeze(dim=1)
-
         if batch_filter is not None:
             # negative_scores have already been filtered in the sampler!
             num_neg_per_pos = batch_filter.shape[1]
-            positive_scores = positive_scores.repeat(1, num_neg_per_pos, 1)[batch_filter]
+            positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
             # shape: (nnz,)
 
         if self.reweight_triples:
@@ -875,7 +872,7 @@ class DoubleMarginLoss(PointwiseLoss):
                 )
         else:
             num_neg_per_pos = batch_filter.shape[1]
-            positive_scores = positive_scores.unsqueeze(dim=1).repeat(1, num_neg_per_pos, 1)[batch_filter]
+            positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
             # shape: (nnz,)
             positive_loss = self._reduction_method(self.margin_activation(self.positive_margin - positive_scores))
 
