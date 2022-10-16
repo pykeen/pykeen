@@ -277,6 +277,8 @@ class Loss(_Loss):
 
         :param reduction:
             the reduction, cf. `_Loss.__init__`
+        :param reweight_triples:
+            Parameter to enable the reweighting of triple loss values.
         """
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
@@ -307,6 +309,10 @@ class Loss(_Loss):
             pre-filtered.
         :param num_entities:
             The number of entities. Only required if label smoothing is enabled.
+        :param pos_triple_weights: (num_pos_triples, 1)
+            The weights for the positive triples.
+        :param neg_triple_weights: (num_neg_triples, 1)
+            The weights for the negative triples.
 
         :return:
             A scalar loss term.
@@ -428,7 +434,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
         loss = functional.binary_cross_entropy_with_logits(scores, labels, reduction="none")
 
         if pos_triple_weights is not None and neg_triple_weights is not None:
-            triple_weights = torch.cat([pos_triple_weights, neg_triple_weights], dim=0).to(loss.device)
+            triple_weights = torch.cat([pos_triple_weights, neg_triple_weights], dim=0)
             loss = loss * triple_weights
         return self._reduction_method(loss)
 

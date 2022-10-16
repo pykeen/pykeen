@@ -181,9 +181,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
 
+        # Give all unique relation types equal weight by weighting each triple inversely related to its relations
+        # frequency in the original graph: n_triples / (n_unique_relations * count(relations))
         elements, counts = torch.unique(triples_factory.mapped_triples[:, 1], return_counts=True)
-        counts = 1 / counts
-        self.relation_weights = dict(zip(elements.numpy(), counts))
+        weights = len(triples_factory.mapped_triples[:, 1]) / (len(counts) * counts)
+        self.relation_weights = dict(zip(elements.numpy(), weights))
 
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
