@@ -364,3 +364,20 @@ def test_predict_target(
     )
     assert isinstance(pred, pykeen.predict.TargetPredictions)
     assert pred.factory == factory
+
+
+@pytest.mark.parametrize(
+    ["heads", "relations", "tails", "target"],
+    [
+        # tail prediction
+        ([1, 2], [3], None, pykeen.typing.LABEL_TAIL),
+    ],
+)
+def test_partially_restricted_prediction_dataset(heads, relations, tails, target):
+    """Test for PartiallyRestrictedPredictionDataset."""
+    ds = pykeen.predict.PartiallyRestrictedPredictionDataset(
+        heads=heads, relations=relations, tails=tails, target=target
+    )
+    # try accessing each element
+    for i in range(len(ds)):
+        _item = ds[i]
