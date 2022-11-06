@@ -11,7 +11,7 @@ try:
 except ImportError:
     LIT_MODULES = []
 from pykeen import models
-from pykeen.datasets import get_dataset
+from pykeen.datasets import get_dataset, EagerDataset
 from pykeen.typing import TRAINING
 
 EMBEDDING_DIM = 8
@@ -91,6 +91,32 @@ def test_lit_training(model, model_kwargs, training_loop):
             model_kwargs=model_kwargs,
             batch_size=8,
             mode=mode,
+        ),
+        trainer_kwargs=dict(
+            # automatically choose accelerator
+            accelerator="auto",
+            # defaults to TensorBoard; explicitly disabled here
+            logger=False,
+            # disable checkpointing
+            enable_checkpointing=False,
+            # fast run
+            max_epochs=2,
+        ),
+    )
+
+
+def test_lit_pipeline_with_dataset_without_validation():
+    """Test training on a dataset without validation triples."""
+    from pykeen.contrib.lightning import lit_pipeline
+
+    dataset = get_dataset(dataset="nations")
+    dataset = EagerDataset(training=dataset.training, testing=dataset.testing, metadata=dataset.metadata)
+
+    lit_pipeline(
+        training_loop="slcwa",
+        training_loop_kwargs=dict(
+            model="transe",
+            dataset=dataset,
         ),
         trainer_kwargs=dict(
             # automatically choose accelerator
