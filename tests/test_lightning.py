@@ -11,7 +11,7 @@ try:
 except ImportError:
     LIT_MODULES = []
 from pykeen import models
-from pykeen.datasets import get_dataset, EagerDataset
+from pykeen.datasets import EagerDataset, get_dataset
 from pykeen.typing import TRAINING
 
 EMBEDDING_DIM = 8
