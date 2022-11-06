@@ -157,6 +157,8 @@ class LitModule(pytorch_lightning.LightningModule):
     def val_dataloader(self):
         """Create the validation data loader."""
         # TODO: In sLCWA, we still want to calculate validation *metrics* in LCWA
+        if self.dataset.validation is None:
+            return []
         return self._dataloader(triples_factory=self.dataset.validation, shuffle=False)
 
     def configure_optimizers(self):
