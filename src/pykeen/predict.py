@@ -874,8 +874,8 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
 
     # docstr-coverage: inherited
     def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D105
-        quotient, remainder = divmod(item, len(self.parts[0]))
-        return torch.as_tensor([self.parts[0][remainder], self.parts[1][quotient]])
+        remainder, quotient = divmod(item, len(self.parts[0]))
+        return torch.as_tensor([self.parts[0][quotient], self.parts[1][remainder]])
 
 
 @torch.inference_mode()
