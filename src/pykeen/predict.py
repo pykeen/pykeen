@@ -850,7 +850,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
             the prediction target
 
         :raises NotImplementedError:
-            if the target position restricted, or any non-target position is not restricted
+            if the target position is restricted, or any non-target position is not restricted
         """
         super().__init__(target=target)
         parts: List[torch.LongTensor] = []
