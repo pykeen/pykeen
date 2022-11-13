@@ -3,25 +3,22 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
+from typing import Any, Callable, ClassVar, Mapping, Optional
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
 
-from ..nbase import ERModel, _prepare_representation_module_list
+from .base import InductiveERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
     DistMultInteraction,
     Interaction,
     NodePieceRepresentation,
-    Representation,
     SubsetRepresentation,
     representation_resolver,
 )
 from ...nn.node_piece import RelationTokenizer
-from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode, OneOrSequence
 
 __all__ = [
     "InductiveNodePiece",
@@ -30,7 +27,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class InductiveNodePiece(ERModel):
+class InductiveNodePiece(InductiveERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
     This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical
@@ -59,7 +56,6 @@ class InductiveNodePiece(ERModel):
         relation_representations_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        shape: Optional[OneOrSequence[int]] = None,
         validation_factory: Optional[CoreTriplesFactory] = None,
         test_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,
@@ -98,9 +94,6 @@ class InductiveNodePiece(ERModel):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-            this will only be necessary if the aggregation is an *ad hoc* function.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
@@ -113,13 +106,6 @@ class InductiveNodePiece(ERModel):
                 "representations inverse relation representations are required.",
             )
 
-        # Create an MLP for string aggregation
-        if aggregation == "mlp":
-            aggregation = ConcatMLP(
-                num_tokens=num_tokens,
-                embedding_dim=embedding_dim,
-            )
-
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
             query=None,
@@ -127,6 +113,8 @@ class InductiveNodePiece(ERModel):
             max_id=2 * triples_factory.real_num_relations + 1,
             shape=embedding_dim,
         )
+        if validation_factory is None:
+            validation_factory = inference_factory
 
         super().__init__(
             triples_factory=triples_factory,
@@ -137,59 +125,21 @@ class InductiveNodePiece(ERModel):
                 tokenizers=RelationTokenizer,
                 token_representations=relation_representations,
                 aggregation=aggregation,
-                shape=shape,
                 num_tokens=num_tokens,
             ),
             relation_representations=SubsetRepresentation(  # hide padding relation
                 max_id=triples_factory.num_relations,
                 base=relation_representations,
             ),
+            validation_factory=validation_factory,
+            testing_factory=test_factory,
             **kwargs,
         )
-        self.inference_representation = _prepare_representation_module_list(
-            representations=NodePieceRepresentation,
-            representation_kwargs=dict(
-                triples_factory=inference_factory,
-                tokenizers=RelationTokenizer,
-                token_representations=relation_representations,
-                aggregation=aggregation,
-                shape=shape,
-                num_tokens=num_tokens,
-            ),
-            max_id=inference_factory.num_entities,
-            shapes=self.interaction.full_entity_shapes(),
-            label="entity",
-        )
-
-        self.num_train_entities = triples_factory.num_entities
-        self.num_inference_entities, self.num_valid_entities, self.num_test_entities = None, None, None
-        if inference_factory is not None:
-            self.num_inference_entities = inference_factory.num_entities
-            self.num_valid_entities = self.num_test_entities = self.num_inference_entities
-        else:
-            self.num_valid_entities = validation_factory.num_entities
-            self.num_test_entities = test_factory.num_entities
-
-    # docstr-coverage: inherited
-    def _get_entity_representations_from_inductive_mode(
-        self, *, mode: Optional[InductiveMode]
-    ) -> Sequence[Representation]:  # noqa: D102
-        if mode == TRAINING:
-            return self.entity_representations
-        elif mode == TESTING or mode == VALIDATION:
-            return self.inference_representation
-        elif mode is None:
-            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
-        else:
-            raise ValueError(f"Invalid mode: {mode}")
-
-    # docstr-coverage: inherited
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa: D102
-        if mode == TRAINING:
-            return self.num_train_entities
-        elif mode == TESTING:
-            return self.num_test_entities
-        elif mode == VALIDATION:
-            return self.num_valid_entities
-        else:
-            raise ValueError
+        # note: we need to share the aggregation across representations, since the aggregation may have
+        #   trainable parameters
+        np: NodePieceRepresentation = self.entity_representations[0]
+        for representations in self._mode_to_representations.values():
+            assert len(representations) == 1
+            np2 = representations[0]
+            assert isinstance(np2, NodePieceRepresentation)
+            np2.combination = np.combination

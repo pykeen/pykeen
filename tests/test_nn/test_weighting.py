@@ -2,17 +2,13 @@
 
 """Tests for edge weightings."""
 
-import unittest
 
 import unittest_templates
 
 import pykeen.nn.weighting
 from tests import cases
 
-try:
-    import torch_scatter
-except ImportError:
-    torch_scatter = None
+from ..utils import needs_packages
 
 
 class InverseInDegreeEdgeWeightingTests(cases.EdgeWeightingTestCase):
@@ -33,7 +29,7 @@ class SymmetricEdgeWeightingTests(cases.EdgeWeightingTestCase):
     cls = pykeen.nn.weighting.SymmetricEdgeWeighting
 
 
-@unittest.skipIf(torch_scatter is None, reason="torch_scatter is not installed")
+@needs_packages("torch_scatter")
 class AttentionWeightingTests(cases.EdgeWeightingTestCase):
     """Tests for attention weighting."""
 

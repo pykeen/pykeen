@@ -39,6 +39,8 @@ class WANDBResultTracker(ResultTracker):
             whether to run in offline mode, i.e, without syncing with the wandb server.
         :param kwargs:
             additional keyword arguments passed to :func:`wandb.init`.
+        :raises ValueError:
+            If the project name is given as None
         """
         import wandb as _wandb
 

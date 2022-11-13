@@ -228,9 +228,10 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, resolve_result_trackers
+from ..trackers.base import MultiResultTracker
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
-from ..typing import Hint, HintType, MappedTriples
+from ..typing import DeviceHint, Hint, HintType, MappedTriples
 from ..utils import (
     Result,
     ensure_ftp_directory,
@@ -851,6 +852,451 @@ def _build_model_helper(
     )
 
 
+def _handle_random_seed(
+    training_kwargs: Mapping[str, Any], random_seed: Optional[int] = None, clear_optimizer: bool = True
+) -> Tuple[int, bool]:
+    # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
+    # used random_seed to ensure reproducible results
+    checkpoint_name = training_kwargs.get("checkpoint_name")
+    if checkpoint_name is not None:
+        checkpoint_directory = pathlib.Path(training_kwargs.get("checkpoint_directory", PYKEEN_CHECKPOINTS))
+        checkpoint_directory.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = checkpoint_directory / checkpoint_name
+        if checkpoint_path.is_file():
+            checkpoint_dict = torch.load(checkpoint_path)
+            _random_seed = checkpoint_dict["random_seed"]
+            logger.info("loaded random seed %s from checkpoint.", _random_seed)
+            # We have to set clear optimizer to False since training should be continued
+            clear_optimizer = False
+            # TODO: checkpoint_dict not further used; later loaded again by TrainingLoop.train
+        else:
+            logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
+            if random_seed is None:
+                _random_seed = random_non_negative_int()
+                logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
+            else:
+                _random_seed = random_seed
+    elif random_seed is None:
+        _random_seed = random_non_negative_int()
+        logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
+    else:
+        _random_seed = random_seed  # random seed given successfully
+    return _random_seed, clear_optimizer
+
+
+def _handle_dataset(
+    *,
+    _result_tracker: ResultTracker,
+    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+    dataset_kwargs: Optional[Mapping[str, Any]] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
+) -> Tuple[CoreTriplesFactory, CoreTriplesFactory, Optional[CoreTriplesFactory]]:
+    # TODO: allow empty validation / testing
+    dataset_instance: Dataset = get_dataset(
+        dataset=dataset,
+        dataset_kwargs=dataset_kwargs,
+        training=training,
+        testing=testing,
+        validation=validation,
+    )
+    if dataset is not None:
+        _result_tracker.log_params(
+            dict(
+                dataset=dataset_instance.get_normalized_name(),
+                dataset_kwargs=dataset_kwargs,
+            )
+        )
+    else:  # means that dataset was defined by triples factories
+        _result_tracker.log_params(
+            dict(
+                dataset=USER_DEFINED_CODE,
+                training=training if isinstance(training, str) else USER_DEFINED_CODE,
+                testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
+                validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
+            )
+        )
+
+    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
+    # evaluation restriction to a subset of entities/relations
+    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
+        testing = testing.new_with_restriction(
+            entities=evaluation_entity_whitelist,
+            relations=evaluation_relation_whitelist,
+        )
+        if validation is not None:
+            validation = validation.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
+    return training, testing, validation
+
+
+def _handle_model(
+    *,
+    device: DeviceHint,
+    _result_tracker: ResultTracker,
+    _random_seed: int,
+    training: CoreTriplesFactory,
+    # 2. Model
+    model: Union[None, str, Model, Type[Model]] = None,
+    model_kwargs: Optional[Mapping[str, Any]] = None,
+    interaction: Union[None, str, Interaction, Type[Interaction]] = None,
+    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    dimensions: Union[None, int, Mapping[str, int]] = None,
+    # 3. Loss
+    loss: HintType[Loss] = None,
+    loss_kwargs: Optional[Mapping[str, Any]] = None,
+    # 4. Regularizer
+    regularizer: HintType[Regularizer] = None,
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+) -> Model:
+    _device: torch.device = resolve_device(device)
+    logger.info(f"Using device: {device}")
+
+    model_instance: Model
+    if model is not None and interaction is not None:
+        raise ValueError("can not pass both a model and interaction")
+    elif model is None and interaction is None:
+        raise ValueError("must pass one of model or interaction")
+    elif interaction is not None:
+        if dimensions is None:
+            raise ValueError("missing dimensions")
+        model = make_model_cls(
+            interaction=interaction,
+            dimensions=dimensions,
+            interaction_kwargs=interaction_kwargs,
+        )
+
+    if isinstance(model, Model):
+        model_instance = cast(Model, model)
+        # TODO should training be reset?
+        # TODO should kwargs for loss and regularizer be checked and raised for?
+    else:
+        model_instance, model_kwargs = _build_model_helper(
+            model=model,
+            model_kwargs=model_kwargs,
+            loss=loss,
+            loss_kwargs=loss_kwargs,
+            regularizer=regularizer,
+            regularizer_kwargs=regularizer_kwargs,
+            _device=_device,
+            _random_seed=_random_seed,
+            training_triples_factory=training,
+        )
+
+    model_instance = model_instance.to(_device)
+
+    # Log model parameters
+    _result_tracker.log_params(
+        params=dict(
+            model=model_instance.__class__.__name__,
+            model_kwargs=model_kwargs,
+        ),
+    )
+
+    # Log loss parameters
+    _result_tracker.log_params(
+        params=dict(
+            # the loss was already logged as part of the model kwargs
+            # loss=loss_resolver.normalize_inst(model_instance.loss),
+            loss_kwargs=loss_kwargs
+        ),
+    )
+
+    # Log regularizer parameters
+    _result_tracker.log_params(
+        params=dict(regularizer_kwargs=regularizer_kwargs),
+    )
+    return model_instance
+
+
+def _handle_training_loop(
+    *,
+    _result_tracker: ResultTracker,
+    model_instance: Model,
+    training: CoreTriplesFactory,
+    # 5. Optimizer
+    optimizer: HintType[Optimizer] = None,
+    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
+    # 6. Training Loop
+    training_loop: HintType[TrainingLoop] = None,
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
+    negative_sampler: HintType[NegativeSampler] = None,
+    negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
+) -> TrainingLoop:
+    optimizer_kwargs = dict(optimizer_kwargs or {})
+    optimizer_instance = optimizer_resolver.make(
+        optimizer,
+        optimizer_kwargs,
+        params=model_instance.get_grad_params(),
+    )
+    for key, value in optimizer_instance.defaults.items():
+        optimizer_kwargs.setdefault(key, value)
+    _result_tracker.log_params(
+        params=dict(
+            optimizer=optimizer_instance.__class__.__name__,
+            optimizer_kwargs=optimizer_kwargs,
+        ),
+    )
+
+    lr_scheduler_instance: Optional[LRScheduler]
+    if lr_scheduler is None:
+        lr_scheduler_instance = None
+    else:
+        lr_scheduler_instance = lr_scheduler_resolver.make(
+            lr_scheduler,
+            lr_scheduler_kwargs,
+            optimizer=optimizer_instance,
+        )
+        _result_tracker.log_params(
+            params=dict(
+                lr_scheduler=lr_scheduler_instance.__class__.__name__,
+                lr_scheduler_kwargs=lr_scheduler_kwargs,
+            ),
+        )
+
+    training_loop_cls = training_loop_resolver.lookup(training_loop)
+    if training_loop_kwargs is None:
+        training_loop_kwargs = {}
+
+    if negative_sampler is None:
+        negative_sampler_cls = None
+    elif not issubclass(training_loop_cls, SLCWATrainingLoop):
+        raise ValueError("Can not specify negative sampler with LCWA")
+    else:
+        negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
+        training_loop_kwargs = dict(training_loop_kwargs)
+        training_loop_kwargs.update(
+            negative_sampler=negative_sampler_cls,
+            negative_sampler_kwargs=negative_sampler_kwargs,
+        )
+        _result_tracker.log_params(
+            params=dict(
+                negative_sampler=negative_sampler_cls.__name__,
+                negative_sampler_kwargs=negative_sampler_kwargs,
+            ),
+        )
+    training_loop_instance = training_loop_cls(
+        model=model_instance,
+        triples_factory=training,
+        optimizer=optimizer_instance,
+        lr_scheduler=lr_scheduler_instance,
+        result_tracker=_result_tracker,
+        **training_loop_kwargs,
+    )
+    _result_tracker.log_params(
+        params=dict(
+            training_loop=training_loop_instance.__class__.__name__,
+            training_loop_kwargs=training_loop_kwargs,
+        ),
+    )
+    return training_loop_instance
+
+
+def _handle_evaluator(
+    _result_tracker: ResultTracker,
+    # 8. Evaluation
+    evaluator: HintType[Evaluator] = None,
+    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
+    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+) -> Tuple[Evaluator, Dict[str, Any]]:
+    if evaluator_kwargs is None:
+        evaluator_kwargs = {}
+    evaluator_kwargs = dict(evaluator_kwargs)
+    evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+    _result_tracker.log_params(
+        params=dict(
+            evaluator=evaluator_instance.__class__.__name__,
+            evaluator_kwargs=evaluator_kwargs,
+        ),
+    )
+
+    if evaluation_kwargs is None:
+        evaluation_kwargs = {}
+    evaluation_kwargs = dict(evaluation_kwargs)
+    return evaluator_instance, evaluation_kwargs
+
+
+def _handle_training(
+    *,
+    _result_tracker: MultiResultTracker,
+    training: CoreTriplesFactory,
+    validation: Optional[CoreTriplesFactory],
+    model_instance: Model,
+    evaluator_instance: Evaluator,
+    training_loop_instance: TrainingLoop,
+    clear_optimizer: bool,
+    evaluation_kwargs: Mapping[str, Any],
+    # 7. Training (ronaldo style)
+    epochs: Optional[int] = None,
+    training_kwargs: Dict[str, Any],
+    stopper: HintType[Stopper] = None,
+    stopper_kwargs: Optional[Mapping[str, Any]] = None,
+    # Misc
+    use_tqdm: Optional[bool] = None,
+) -> Tuple[Stopper, Mapping[str, Any], List[float], float]:
+    # Stopping
+    if "stopper" in training_kwargs and stopper is not None:
+        raise ValueError("Specified stopper in training_kwargs and as stopper")
+    if "stopper" in training_kwargs:
+        stopper = training_kwargs.pop("stopper")
+    if stopper_kwargs is None:
+        stopper_kwargs = {}
+    stopper_kwargs = dict(stopper_kwargs)
+
+    # Load the evaluation batch size for the stopper, if it has been set
+    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
+    if _evaluation_batch_size is not None:
+        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
+
+    stopper_instance: Stopper = stopper_resolver.make(
+        stopper,
+        model=model_instance,
+        evaluator=evaluator_instance,
+        training_triples_factory=training,
+        evaluation_triples_factory=validation,
+        result_tracker=_result_tracker,
+        **stopper_kwargs,
+    )
+
+    if epochs is not None:
+        training_kwargs["num_epochs"] = epochs
+    if use_tqdm is not None:
+        training_kwargs["use_tqdm"] = use_tqdm
+    training_kwargs.setdefault("num_epochs", 5)
+    training_kwargs.setdefault("batch_size", 256)
+    _result_tracker.log_params(params=training_kwargs)
+
+    # Add logging for debugging
+    configuration = _result_tracker.get_configuration()
+    logging.debug("Run Pipeline based on following config:")
+    for key, value in configuration.items():
+        logging.debug(f"{key}: {value}")
+
+    # Train like Cristiano Ronaldo
+    training_start_time = time.time()
+    losses = training_loop_instance.train(
+        triples_factory=training,
+        stopper=stopper_instance,
+        clear_optimizer=clear_optimizer,
+        **training_kwargs,
+    )
+    assert losses is not None  # losses is only none if it's doing search mode
+    training_end_time = time.time() - training_start_time
+    step = training_kwargs.get("num_epochs")
+    _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
+    return stopper_instance, configuration, losses, training_end_time
+
+
+def _handle_evaluation(
+    *,
+    _result_tracker: ResultTracker,
+    model_instance: Model,
+    evaluator_instance: Evaluator,
+    stopper_instance: Stopper,
+    training: Hint[CoreTriplesFactory],
+    testing: Hint[CoreTriplesFactory],
+    validation: Hint[CoreTriplesFactory],
+    training_kwargs: Dict[str, Any],
+    evaluation_kwargs: Dict[str, Any],
+    # Misc
+    use_testing_data: bool = True,
+    evaluation_fallback: bool = False,
+    filter_validation_when_testing: bool = True,
+    use_tqdm: Optional[bool] = None,
+) -> Tuple[MetricResults, float]:
+    if use_testing_data:
+        mapped_triples = testing.mapped_triples
+    elif validation is None:
+        raise ValueError("no validation triples available")
+    else:
+        mapped_triples = validation.mapped_triples
+
+    # Build up a list of triples if we want to be in the filtered setting
+    additional_filter_triples_names = dict()
+    if evaluator_instance.filtered:
+        additional_filter_triples: List[MappedTriples] = [
+            training.mapped_triples,
+        ]
+        additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
+
+        # If the user gave custom "additional_filter_triples"
+        popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
+        if popped_additional_filter_triples:
+            additional_filter_triples_names["custom"] = triple_hash(*popped_additional_filter_triples)
+        if isinstance(popped_additional_filter_triples, (list, tuple)):
+            additional_filter_triples.extend(popped_additional_filter_triples)
+        elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
+            additional_filter_triples.append(popped_additional_filter_triples)
+        else:
+            raise TypeError(
+                f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
+                f" {type(popped_additional_filter_triples)}",
+            )
+
+        # Determine whether the validation triples should also be filtered while performing test evaluation
+        if use_testing_data and filter_validation_when_testing and validation is not None:
+            if isinstance(stopper_instance, EarlyStopper):
+                logging.info(
+                    "When evaluating the test dataset after running the pipeline with early stopping, the validation"
+                    " triples are added to the set of known positive triples which are filtered out when performing"
+                    " filtered evaluation following the approach described by (Bordes et al., 2013).",
+                )
+            else:
+                logging.info(
+                    "When evaluating the test dataset, validation triples are added to the set of known positive"
+                    " triples which are filtered out when performing filtered evaluation following the approach"
+                    " described by (Bordes et al., 2013).",
+                )
+            additional_filter_triples.append(validation.mapped_triples)
+            additional_filter_triples_names["validation"] = triple_hash(validation.mapped_triples)
+
+        # TODO consider implications of duplicates
+        evaluation_kwargs["additional_filter_triples"] = additional_filter_triples
+
+    # Evaluate
+    # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
+    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
+        evaluation_kwargs["batch_size"] = evaluator_instance.batch_size
+        evaluation_kwargs["slice_size"] = evaluator_instance.slice_size
+    if use_tqdm is not None:
+        evaluation_kwargs["use_tqdm"] = use_tqdm
+    # Add logging about evaluator for debugging
+    _result_tracker.log_params(
+        params=dict(
+            evaluation_kwargs={
+                k: (additional_filter_triples_names if k == "additional_filter_triples" else v)
+                for k, v in evaluation_kwargs.items()
+            }
+        )
+    )
+    evaluate_start_time = time.time()
+    metric_results: MetricResults = _safe_evaluate(
+        model=model_instance,
+        mapped_triples=mapped_triples,
+        evaluator=evaluator_instance,
+        evaluation_kwargs=evaluation_kwargs,
+        evaluation_fallback=evaluation_fallback,
+    )
+    evaluate_end_time = time.time() - evaluate_start_time
+    step = training_kwargs.get("num_epochs")
+    _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
+    _result_tracker.log_metrics(
+        metrics=metric_results.to_dict(),
+        step=step,
+        prefix="testing" if use_testing_data else "validation",
+    )
+
+    return metric_results, evaluate_end_time
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -1025,41 +1471,14 @@ def pipeline(  # noqa: C901
         loop and evaluation have it turned on by default.
 
     :returns: A pipeline result package.
-
-    :raises ValueError:
-        If a negative sampler is specified with LCWA
-    :raises TypeError:
-        If an invalid argument type is given for ``evaluation_kwargs["additional_filter_triples"]``
     """
     if training_kwargs is None:
         training_kwargs = {}
     training_kwargs = dict(training_kwargs)
 
-    # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
-    # used random_seed to ensure reproducible results
-    checkpoint_name = training_kwargs.get("checkpoint_name")
-    if checkpoint_name is not None:
-        checkpoint_directory = pathlib.Path(training_kwargs.get("checkpoint_directory", PYKEEN_CHECKPOINTS))
-        checkpoint_directory.mkdir(parents=True, exist_ok=True)
-        checkpoint_path = checkpoint_directory / checkpoint_name
-        if checkpoint_path.is_file():
-            checkpoint_dict = torch.load(checkpoint_path)
-            _random_seed = checkpoint_dict["random_seed"]
-            logger.info("loaded random seed %s from checkpoint.", _random_seed)
-            # We have to set clear optimizer to False since training should be continued
-            clear_optimizer = False
-        else:
-            logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
-            if random_seed is None:
-                _random_seed = random_non_negative_int()
-                logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
-            else:
-                _random_seed = random_seed
-    elif random_seed is None:
-        _random_seed = random_non_negative_int()
-        logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
-    else:
-        _random_seed = random_seed  # random seed given successfully
+    _random_seed, clear_optimizer = _handle_random_seed(
+        training_kwargs=training_kwargs, random_seed=random_seed, clear_optimizer=clear_optimizer
+    )
     set_random_seed(_random_seed)
 
     _result_tracker = resolve_result_trackers(result_tracker, result_tracker_kwargs)
@@ -1071,312 +1490,84 @@ def pipeline(  # noqa: C901
     # Start tracking
     _result_tracker.start_run(run_name=title)
 
-    _device: torch.device = resolve_device(device)
-    logger.info(f"Using device: {device}")
-
-    dataset_instance: Dataset = get_dataset(
+    training, testing, validation = _handle_dataset(
+        _result_tracker=_result_tracker,
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
         training=training,
         testing=testing,
         validation=validation,
-    )
-    if dataset is not None:
-        _result_tracker.log_params(
-            dict(
-                dataset=dataset_instance.get_normalized_name(),
-                dataset_kwargs=dataset_kwargs,
-            )
-        )
-    else:  # means that dataset was defined by triples factories
-        _result_tracker.log_params(
-            dict(
-                dataset=USER_DEFINED_CODE,
-                training=training if isinstance(training, str) else USER_DEFINED_CODE,
-                testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
-                validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
-            )
-        )
-
-    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
-    # evaluation restriction to a subset of entities/relations
-    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
-        testing = testing.new_with_restriction(
-            entities=evaluation_entity_whitelist,
-            relations=evaluation_relation_whitelist,
-        )
-        if validation is not None:
-            validation = validation.new_with_restriction(
-                entities=evaluation_entity_whitelist,
-                relations=evaluation_relation_whitelist,
-            )
-
-    model_instance: Model
-    if model is not None and interaction is not None:
-        raise ValueError("can not pass both a model and interaction")
-    elif model is None and interaction is None:
-        raise ValueError("must pass one of model or interaction")
-    elif interaction is not None:
-        if dimensions is None:
-            raise ValueError("missing dimensions")
-        model = make_model_cls(
-            interaction=interaction,
-            dimensions=dimensions,
-            interaction_kwargs=interaction_kwargs,
-        )
-
-    if isinstance(model, Model):
-        model_instance = cast(Model, model)
-        # TODO should training be reset?
-        # TODO should kwargs for loss and regularizer be checked and raised for?
-    else:
-        model_instance, model_kwargs = _build_model_helper(
-            model=model,
-            model_kwargs=model_kwargs,
-            loss=loss,
-            loss_kwargs=loss_kwargs,
-            regularizer=regularizer,
-            regularizer_kwargs=regularizer_kwargs,
-            _device=_device,
-            _random_seed=_random_seed,
-            training_triples_factory=training,
-        )
-
-    model_instance = model_instance.to(_device)
-
-    # Log model parameters
-    _result_tracker.log_params(
-        params=dict(
-            model=model_instance.__class__.__name__,
-            model_kwargs=model_kwargs,
-        ),
+        evaluation_entity_whitelist=evaluation_entity_whitelist,
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
     )
 
-    # Log loss parameters
-    _result_tracker.log_params(
-        params=dict(
-            # the loss was already logged as part of the model kwargs
-            # loss=loss_resolver.normalize_inst(model_instance.loss),
-            loss_kwargs=loss_kwargs
-        ),
+    model_instance = _handle_model(
+        device=device,
+        _result_tracker=_result_tracker,
+        _random_seed=_random_seed,
+        training=training,
+        model=model,
+        model_kwargs=model_kwargs,
+        interaction=interaction,
+        interaction_kwargs=interaction_kwargs,
+        dimensions=dimensions,
+        loss=loss,
+        loss_kwargs=loss_kwargs,
+        regularizer=regularizer,
+        regularizer_kwargs=regularizer_kwargs,
     )
 
-    # Log regularizer parameters
-    _result_tracker.log_params(
-        params=dict(regularizer_kwargs=regularizer_kwargs),
+    training_loop_instance = _handle_training_loop(
+        _result_tracker=_result_tracker,
+        model_instance=model_instance,
+        training=training,
+        optimizer=optimizer,
+        optimizer_kwargs=optimizer_kwargs,
+        lr_scheduler=lr_scheduler,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
+        training_loop=training_loop,
+        training_loop_kwargs=training_loop_kwargs,
+        negative_sampler=negative_sampler,
+        negative_sampler_kwargs=negative_sampler_kwargs,
     )
 
-    optimizer_kwargs = dict(optimizer_kwargs or {})
-    optimizer_instance = optimizer_resolver.make(
-        optimizer,
-        optimizer_kwargs,
-        params=model_instance.get_grad_params(),
-    )
-    for key, value in optimizer_instance.defaults.items():
-        optimizer_kwargs.setdefault(key, value)
-    _result_tracker.log_params(
-        params=dict(
-            optimizer=optimizer_instance.__class__.__name__,
-            optimizer_kwargs=optimizer_kwargs,
-        ),
-    )
-
-    lr_scheduler_instance: Optional[LRScheduler]
-    if lr_scheduler is None:
-        lr_scheduler_instance = None
-    else:
-        lr_scheduler_instance = lr_scheduler_resolver.make(
-            lr_scheduler,
-            lr_scheduler_kwargs,
-            optimizer=optimizer_instance,
-        )
-        _result_tracker.log_params(
-            params=dict(
-                lr_scheduler=lr_scheduler_instance.__class__.__name__,
-                lr_scheduler_kwargs=lr_scheduler_kwargs,
-            ),
-        )
-
-    training_loop_cls = training_loop_resolver.lookup(training_loop)
-    if training_loop_kwargs is None:
-        training_loop_kwargs = {}
-
-    if negative_sampler is None:
-        negative_sampler_cls = None
-    elif not issubclass(training_loop_cls, SLCWATrainingLoop):
-        raise ValueError("Can not specify negative sampler with LCWA")
-    else:
-        negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
-        training_loop_kwargs = dict(training_loop_kwargs)
-        training_loop_kwargs.update(
-            negative_sampler=negative_sampler_cls,
-            negative_sampler_kwargs=negative_sampler_kwargs,
-        )
-        _result_tracker.log_params(
-            params=dict(
-                negative_sampler=negative_sampler_cls.__name__,
-                negative_sampler_kwargs=negative_sampler_kwargs,
-            ),
-        )
-    training_loop_instance = training_loop_cls(
-        model=model_instance,
-        triples_factory=training,
-        optimizer=optimizer_instance,
-        lr_scheduler=lr_scheduler_instance,
-        result_tracker=_result_tracker,
-        **training_loop_kwargs,
-    )
-    _result_tracker.log_params(
-        params=dict(
-            training_loop=training_loop_instance.__class__.__name__,
-            training_loop_kwargs=training_loop_kwargs,
-        ),
-    )
-
-    if evaluator_kwargs is None:
-        evaluator_kwargs = {}
-    evaluator_kwargs = dict(evaluator_kwargs)
-    evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
-    _result_tracker.log_params(
-        params=dict(
-            evaluator=evaluator_instance.__class__.__name__,
-            evaluator_kwargs=evaluator_kwargs,
-        ),
-    )
-
-    if evaluation_kwargs is None:
-        evaluation_kwargs = {}
-    evaluation_kwargs = dict(evaluation_kwargs)
-
-    # Stopping
-    if "stopper" in training_kwargs and stopper is not None:
-        raise ValueError("Specified stopper in training_kwargs and as stopper")
-    if "stopper" in training_kwargs:
-        stopper = training_kwargs.pop("stopper")
-    if stopper_kwargs is None:
-        stopper_kwargs = {}
-    stopper_kwargs = dict(stopper_kwargs)
-
-    # Load the evaluation batch size for the stopper, if it has been set
-    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
-    if _evaluation_batch_size is not None:
-        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
-
-    stopper_instance: Stopper = stopper_resolver.make(
-        stopper,
-        model=model_instance,
-        evaluator=evaluator_instance,
-        training_triples_factory=training,
-        evaluation_triples_factory=validation,
-        result_tracker=_result_tracker,
-        **stopper_kwargs,
-    )
-
-    if epochs is not None:
-        training_kwargs["num_epochs"] = epochs
-    if use_tqdm is not None:
-        training_kwargs["use_tqdm"] = use_tqdm
-    training_kwargs.setdefault("num_epochs", 5)
-    training_kwargs.setdefault("batch_size", 256)
-    _result_tracker.log_params(params=training_kwargs)
-
-    # Add logging for debugging
-    configuration = _result_tracker.get_configuration()
-    logging.debug("Run Pipeline based on following config:")
-    for key, value in configuration.items():
-        logging.debug(f"{key}: {value}")
-
-    # Train like Cristiano Ronaldo
-    training_start_time = time.time()
-    losses = training_loop_instance.train(
-        triples_factory=training,
-        stopper=stopper_instance,
-        clear_optimizer=clear_optimizer,
-        **training_kwargs,
-    )
-    assert losses is not None  # losses is only none if it's doing search mode
-    training_end_time = time.time() - training_start_time
-    step = training_kwargs.get("num_epochs")
-    _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
-
-    if use_testing_data:
-        mapped_triples = testing.mapped_triples
-    elif validation is None:
-        raise ValueError("no validation triples available")
-    else:
-        mapped_triples = validation.mapped_triples
-
-    # Build up a list of triples if we want to be in the filtered setting
-    additional_filter_triples_names = dict()
-    if evaluator_instance.filtered:
-        additional_filter_triples: List[MappedTriples] = [
-            training.mapped_triples,
-        ]
-        additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
-
-        # If the user gave custom "additional_filter_triples"
-        popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
-        if popped_additional_filter_triples:
-            additional_filter_triples_names["custom"] = triple_hash(*popped_additional_filter_triples)
-        if isinstance(popped_additional_filter_triples, (list, tuple)):
-            additional_filter_triples.extend(popped_additional_filter_triples)
-        elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
-            additional_filter_triples.append(popped_additional_filter_triples)
-        else:
-            raise TypeError(
-                f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
-                f" {type(popped_additional_filter_triples)}",
-            )
-
-        # Determine whether the validation triples should also be filtered while performing test evaluation
-        if use_testing_data and filter_validation_when_testing and validation is not None:
-            if isinstance(stopper, EarlyStopper):
-                logging.info(
-                    "When evaluating the test dataset after running the pipeline with early stopping, the validation"
-                    " triples are added to the set of known positive triples which are filtered out when performing"
-                    " filtered evaluation following the approach described by (Bordes et al., 2013).",
-                )
-            else:
-                logging.info(
-                    "When evaluating the test dataset, validation triples are added to the set of known positive"
-                    " triples which are filtered out when performing filtered evaluation following the approach"
-                    " described by (Bordes et al., 2013).",
-                )
-            additional_filter_triples.append(validation.mapped_triples)
-            additional_filter_triples_names["validation"] = triple_hash(validation.mapped_triples)
-
-        # TODO consider implications of duplicates
-        evaluation_kwargs["additional_filter_triples"] = additional_filter_triples
-
-    # Evaluate
-    # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
-    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
-        evaluation_kwargs["batch_size"] = evaluator_instance.batch_size
-        evaluation_kwargs["slice_size"] = evaluator_instance.slice_size
-    if use_tqdm is not None:
-        evaluation_kwargs["use_tqdm"] = use_tqdm
-    # Add logging about evaluator for debugging
-    _result_tracker.log_params(
-        params=dict(
-            evaluation_kwargs={
-                k: (additional_filter_triples_names if k == "additional_filter_triples" else v)
-                for k, v in evaluation_kwargs.items()
-            }
-        )
-    )
-    evaluate_start_time = time.time()
-    metric_results: MetricResults = _safe_evaluate(
-        model=model_instance,
-        mapped_triples=mapped_triples,
-        evaluator=evaluator_instance,
+    evaluator_instance, evaluation_kwargs = _handle_evaluator(
+        _result_tracker=_result_tracker,
+        evaluator=evaluator,
+        evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
-        evaluation_fallback=evaluation_fallback,
     )
-    evaluate_end_time = time.time() - evaluate_start_time
-    _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
-    _result_tracker.log_metrics(
-        metrics=metric_results.to_dict(),
-        step=step,
+
+    stopper_instance, configuration, losses, train_seconds = _handle_training(
+        _result_tracker=_result_tracker,
+        training=training,
+        validation=validation,
+        model_instance=model_instance,
+        evaluator_instance=evaluator_instance,
+        training_loop_instance=training_loop_instance,
+        clear_optimizer=clear_optimizer,
+        evaluation_kwargs=evaluation_kwargs,
+        epochs=epochs,
+        training_kwargs=training_kwargs,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
+        use_tqdm=use_tqdm,
+    )
+
+    metric_results, evaluate_seconds = _handle_evaluation(
+        _result_tracker=_result_tracker,
+        model_instance=model_instance,
+        evaluator_instance=evaluator_instance,
+        stopper_instance=stopper_instance,
+        training=training,
+        testing=testing,
+        validation=validation,
+        training_kwargs=training_kwargs,
+        evaluation_kwargs=evaluation_kwargs,
+        use_testing_data=use_testing_data,
+        evaluation_fallback=evaluation_fallback,
+        filter_validation_when_testing=filter_validation_when_testing,
+        use_tqdm=use_tqdm,
     )
     _result_tracker.end_run()
 
@@ -1390,8 +1581,8 @@ def pipeline(  # noqa: C901
         configuration=configuration,
         metric_results=metric_results,
         metadata=metadata,
-        train_seconds=training_end_time,
-        evaluate_seconds=evaluate_end_time,
+        train_seconds=train_seconds,
+        evaluate_seconds=evaluate_seconds,
     )
 
 
@@ -1455,7 +1646,7 @@ def _safe_evaluate(
                     "Will revert to using the CPU for evaluation, which will increase the evaluation time "
                     "significantly.",
                 )
-                model.to_cpu_()
+                model.cpu()
         else:
             break  # evaluation was successful, don't continue the ``while True`` loop
 

@@ -13,7 +13,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from . import TriplesFactory
-from ..constants import TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
 
 logger = logging.getLogger(__name__)
@@ -404,7 +404,7 @@ def iter_relation_cardinality_types(
 def _help_iter_relation_cardinality_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> Iterable[Tuple[int, int, float, float]]:
-    df = pd.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    df = pd.DataFrame(data=mapped_triples, columns=COLUMN_LABELS)
     for relation, group in df.groupby(by=LABEL_RELATION):
         n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source=LABEL_HEAD, target=LABEL_TAIL)
         n_unique_tails, tail_injective_conf = _is_injective_mapping(df=group, source=LABEL_TAIL, target=LABEL_HEAD)
@@ -531,6 +531,11 @@ def relation_pattern_types(
     where $X_i$ is of the form $r_i(h_i, t_i)$, and some of the $h_i / t_i$ might re-occur in other atoms.
     The *support* of a pattern is the number of distinct instantiations of all variables for the left hand side.
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
+
+    :param mapped_triples:
+        A collection of ID-based triples.
+    :returns:
+        A dataframe of relation categorization
     """
     # determine patterns from triples
     base = iter_patterns(mapped_triples=mapped_triples)
@@ -561,7 +566,7 @@ def relation_injectivity(
     :param add_labels:
         Whether to add labels.
     :param label_to_id:
-        The label to Id mapping.
+        The label to index mapping.
 
     :return:
         A dataframe with one row per relation, its number of occurrences and head / tail injectivity scores.
@@ -599,6 +604,8 @@ def relation_cardinality_types(
         The ID-based triples.
     :param add_labels:
         Whether to add relation labels (if available).
+    :param label_to_id:
+        The label to index mapping.
 
     :return:
         A dataframe with columns ( relation_id | relation_type )
@@ -668,11 +675,15 @@ def get_relation_functionality(
 
     :param mapped_triples:
         The ID-based triples.
+    :param add_labels:
+        Should the labels be added to the dataframe?
+    :param label_to_id:
+        The label to index mapping.
 
     :return:
         A dataframe with columns ( functionality | inverse_functionality )
     """
-    df = pd.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    df = pd.DataFrame(data=mapped_triples, columns=COLUMN_LABELS)
     df = df.groupby(by=LABEL_RELATION).agg({LABEL_HEAD: ["nunique", COUNT_COLUMN_NAME], LABEL_TAIL: "nunique"})
     df[FUNCTIONALITY_COLUMN_NAME] = df[(LABEL_HEAD, "nunique")] / df[(LABEL_HEAD, COUNT_COLUMN_NAME)]
     df[INVERSE_FUNCTIONALITY_COLUMN_NAME] = df[(LABEL_TAIL, "nunique")] / df[(LABEL_HEAD, COUNT_COLUMN_NAME)]

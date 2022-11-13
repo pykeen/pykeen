@@ -2,17 +2,12 @@
 
 """Tests for result trackers."""
 
-import unittest
-
 from pykeen.trackers import TensorBoardResultTracker
 from pykeen.trackers.base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker
 from pykeen.trackers.file import CSVResultTracker, JSONResultTracker
 from tests import cases
 
-try:
-    import tensorboard
-except ImportError:
-    tensorboard = None
+from .utils import needs_packages
 
 
 class PythonResultTrackerTests(cases.ResultTrackerTests):
@@ -51,7 +46,7 @@ class MultiResultTrackerTests(cases.ResultTrackerTests):
     )
 
 
-@unittest.skipIf(tensorboard is None, reason="TensorBoard is not installed")
+@needs_packages("tensorboard")
 class TensorboardTrackerTests(cases.ResultTrackerTests):
     """Tests for TensorBoard tracker."""
 

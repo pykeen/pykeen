@@ -34,7 +34,6 @@ __all__ = [
     "TailRepresentation",
     # Dataclasses
     "GaussianDistribution",
-    "ScorePack",
     # prediction targets
     "Target",
     "LABEL_HEAD",
@@ -102,13 +101,6 @@ class GaussianDistribution(NamedTuple):
 
     mean: torch.FloatTensor
     diagonal_covariance: torch.FloatTensor
-
-
-class ScorePack(NamedTuple):
-    """A pair of result triples and scores."""
-
-    result: torch.LongTensor
-    scores: torch.FloatTensor
 
 
 Sign = Literal[-1, 1]

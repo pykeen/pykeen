@@ -9,12 +9,12 @@ PyKEEN
 
    installation
    tutorial/first_steps
+   tutorial/models
    tutorial/trackers/index
    tutorial/checkpoints
    tutorial/translational_toy_example
    tutorial/understanding_evaluation
    tutorial/running_hpo
-   tutorial/making_predictions
    tutorial/running_ablation
    tutorial/performance
    tutorial/representations
@@ -38,7 +38,6 @@ PyKEEN
    :maxdepth: 2
 
    extending/datasets
-   extending/models_new
    extending/models
 
 .. toctree::

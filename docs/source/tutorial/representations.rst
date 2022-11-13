@@ -1,3 +1,5 @@
+.. _representations:
+
 Representations
 ===============
 In PyKEEN, a :class:`pykeen.nn.representation.Representation` is used to map
@@ -47,11 +49,16 @@ relations (including inverse relations) as tokens.
 
 .. seealso:: https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
 
-Label-based
------------
-Label-based representations use the entities' (or relations') labels to
-derive representations. To this end,
-:class:`pykeen.nn.representation.LabelBasedTransformerRepresentation` uses a
+Text-based
+----------
+Text-based representations use, e.g., the entities' (or relations') labels to
+derive representations. To this end, PyKEEN provides a base class
+:class:`pykeen.nn.representation.TextRepresentation` with a configurable
+:class:`pykeen.nn.text.TextEncoder`. As a baseline without external dependencies,
+:class:`pykeen.nn.text.CharacterEmbeddingTextEncoder` encodes the label character-wise,
+with trainable representations for individual characters.
+A more advanced text encoder is given by
+:class:`pykeen.nn.text.TransformerTextEncoder`, which utilizes a
 (pre-trained) transformer model from the :mod:`transformers` library to encode
 the labels. Since the transformer models have been trained on huge corpora
 of text, their text encodings often contain semantic information, i.e.,
@@ -59,8 +66,8 @@ labels with similar semantic meaning get similar representations. While we
 can also benefit from these strong features by just initializing an
 :class:`pykeen.nn.representation.Embedding` with the vectors, e.g., using
 :class:`pykeen.nn.init.LabelBasedInitializer`, the
-:class:`pykeen.nn.representation.LabelBasedTransformerRepresentation` include the
-transformer model as part of the KGE model, and thus allow fine-tuning
+:class:`pykeen.nn.representation.TextEncoder` include the
+text encoder model as part of the KGE model, and thus allow fine-tuning
 the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
 predictions for entities not seen during training.
@@ -69,12 +76,13 @@ predictions for entities not seen during training.
 
     from pykeen.pipeline import pipeline
     from pykeen.datasets import get_dataset
-    from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
+    from pykeen.nn import TextRepresentation
     from pykeen.models import ERModel
 
     dataset = get_dataset(dataset="nations")
-    entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
-        triples_factory=dataset.training,
+    entity_representations = TextRepresentation.from_dataset(
+        triples_factory=dataset,
+        encoder="transformer",
     )
     result = pipeline(
         dataset=dataset,
@@ -82,10 +90,10 @@ predictions for entities not seen during training.
         model_kwargs=dict(
             interaction="ermlpe",
             interaction_kwargs=dict(
-                embedding_dim=entity_representations.embedding_dim,
+                embedding_dim=entity_representations.shape[0],
             ),
             entity_representations=entity_representations,
-            relation_representations=EmbeddingSpecification(
+            relation_representations_kwargs=dict(
                 shape=entity_representations.shape,
             ),
         ),
