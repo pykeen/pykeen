@@ -111,10 +111,8 @@ def test_lit_training(model, model_kwargs, training_loop):
 @needs_packages("pytorch_lightning")
 def test_lit_pipeline_with_dataset_without_validation():
     """Test training on a dataset without validation triples."""
-
     dataset = get_dataset(dataset="nations")
     dataset = EagerDataset(training=dataset.training, testing=dataset.testing, metadata=dataset.metadata)
-
     lit_pipeline(
         training_loop="slcwa",
         training_loop_kwargs=dict(
