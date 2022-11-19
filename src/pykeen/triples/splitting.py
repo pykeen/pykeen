@@ -26,7 +26,7 @@ __all__ = [
 def _split_triples(
     mapped_triples: MappedTriples,
     sizes: Sequence[int],
-    random_state: Optional[TorchRandomHint] = None,
+    random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
     """
     Randomly split triples into groups of given sizes.
@@ -354,7 +354,7 @@ class Splitter:
         *,
         mapped_triples: MappedTriples,
         ratios: Union[float, Sequence[float]] = 0.8,
-        random_state: Optional[TorchRandomHint] = None,
+        random_state: TorchRandomHint = None,
     ) -> Sequence[MappedTriples]:
         """Split triples into clean groups.
 
@@ -403,7 +403,7 @@ class CleanupSplitter(Splitter):
     The splitter supports two variants of cleanup, cf. ``cleaner_resolver``.
     """
 
-    def __init__(self, cleaner: Optional[HintOrType[Cleaner]] = None) -> None:
+    def __init__(self, cleaner: HintOrType[Cleaner] = None) -> None:
         """
         Initialize the splitter.
 
@@ -462,7 +462,7 @@ splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=
 def split(
     mapped_triples: MappedTriples,
     ratios: Union[float, Sequence[float]] = 0.8,
-    random_state: Optional[TorchRandomHint] = None,
+    random_state: TorchRandomHint = None,
     randomize_cleanup: bool = False,
     method: Optional[str] = None,
 ) -> Sequence[MappedTriples]:

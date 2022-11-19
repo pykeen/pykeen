@@ -33,7 +33,7 @@ class EADataset(EagerDataset):
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
-        combination: Optional[HintOrType[GraphPairCombinator]] = None,
+        combination: HintOrType[GraphPairCombinator] = None,
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

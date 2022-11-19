@@ -2,7 +2,7 @@
 
 """Implementation of RESCAL."""
 
-from typing import Optional, Any, ClassVar, Mapping, Type
+from typing import Any, ClassVar, Mapping, Type
 
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.init import uniform_
@@ -62,7 +62,7 @@ class RESCAL(ERModel):
         embedding_dim: int = 50,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
-        regularizer: Optional[HintOrType[Regularizer]] = None,
+        regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

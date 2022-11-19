@@ -889,9 +889,9 @@ def _handle_dataset(
     _result_tracker: ResultTracker,
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Optional[Hint[CoreTriplesFactory]] = None,
-    testing: Optional[Hint[CoreTriplesFactory]] = None,
-    validation: Optional[Hint[CoreTriplesFactory]] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
 ) -> Tuple[CoreTriplesFactory, CoreTriplesFactory, Optional[CoreTriplesFactory]]:
@@ -948,10 +948,10 @@ def _handle_model(
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
     dimensions: Union[None, int, Mapping[str, int]] = None,
     # 3. Loss
-    loss: Optional[HintType[Loss]] = None,
+    loss: HintType[Loss] = None,
     loss_kwargs: Optional[Mapping[str, Any]] = None,
     # 4. Regularizer
-    regularizer: Optional[HintType[Regularizer]] = None,
+    regularizer: HintType[Regularizer] = None,
     regularizer_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Model:
     _device: torch.device = resolve_device(device)
@@ -1020,15 +1020,15 @@ def _handle_training_loop(
     model_instance: Model,
     training: CoreTriplesFactory,
     # 5. Optimizer
-    optimizer: Optional[HintType[Optimizer]] = None,
+    optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     # 5.1 Learning Rate Scheduler
-    lr_scheduler: Optional[HintType[LRScheduler]] = None,
+    lr_scheduler: HintType[LRScheduler] = None,
     lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
-    training_loop: Optional[HintType[TrainingLoop]] = None,
+    training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
-    negative_sampler: Optional[HintType[NegativeSampler]] = None,
+    negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> TrainingLoop:
     optimizer_kwargs = dict(optimizer_kwargs or {})
@@ -1103,7 +1103,7 @@ def _handle_training_loop(
 def _handle_evaluator(
     _result_tracker: ResultTracker,
     # 8. Evaluation
-    evaluator: Optional[HintType[Evaluator]] = None,
+    evaluator: HintType[Evaluator] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[Evaluator, Dict[str, Any]]:
@@ -1137,7 +1137,7 @@ def _handle_training(
     # 7. Training (ronaldo style)
     epochs: Optional[int] = None,
     training_kwargs: Dict[str, Any],
-    stopper: Optional[HintType[Stopper]] = None,
+    stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
     use_tqdm: Optional[bool] = None,
@@ -1302,9 +1302,9 @@ def pipeline(  # noqa: C901
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Optional[Hint[CoreTriplesFactory]] = None,
-    testing: Optional[Hint[CoreTriplesFactory]] = None,
-    validation: Optional[Hint[CoreTriplesFactory]] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -1314,38 +1314,38 @@ def pipeline(  # noqa: C901
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
     dimensions: Union[None, int, Mapping[str, int]] = None,
     # 3. Loss
-    loss: Optional[HintType[Loss]] = None,
+    loss: HintType[Loss] = None,
     loss_kwargs: Optional[Mapping[str, Any]] = None,
     # 4. Regularizer
-    regularizer: Optional[HintType[Regularizer]] = None,
+    regularizer: HintType[Regularizer] = None,
     regularizer_kwargs: Optional[Mapping[str, Any]] = None,
     # 5. Optimizer
-    optimizer: Optional[HintType[Optimizer]] = None,
+    optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
     # 5.1 Learning Rate Scheduler
-    lr_scheduler: Optional[HintType[LRScheduler]] = None,
+    lr_scheduler: HintType[LRScheduler] = None,
     lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
-    training_loop: Optional[HintType[TrainingLoop]] = None,
+    training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
-    negative_sampler: Optional[HintType[NegativeSampler]] = None,
+    negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
     epochs: Optional[int] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
-    stopper: Optional[HintType[Stopper]] = None,
+    stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
     # 8. Evaluation
-    evaluator: Optional[HintType[Evaluator]] = None,
+    evaluator: HintType[Evaluator] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     # 9. Tracking
-    result_tracker: Optional[OneOrManyHintOrType[ResultTracker]] = None,
-    result_tracker_kwargs: Optional[OneOrManyOptionalKwargs] = None,
+    result_tracker: OneOrManyHintOrType[ResultTracker] = None,
+    result_tracker_kwargs: OneOrManyOptionalKwargs = None,
     # Misc
     metadata: Optional[Dict[str, Any]] = None,
-    device: Optional[Hint[torch.device]] = None,
+    device: Hint[torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
     evaluation_fallback: bool = False,

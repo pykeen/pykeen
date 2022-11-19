@@ -617,7 +617,7 @@ class CoreTriplesFactory(KGInfo):
         self,
         ratios: Union[float, Sequence[float]] = 0.8,
         *,
-        random_state: Optional[TorchRandomHint] = None,
+        random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
         method: Optional[str] = None,
     ) -> List["CoreTriplesFactory"]:

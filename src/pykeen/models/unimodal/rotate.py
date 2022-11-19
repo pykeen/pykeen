@@ -2,7 +2,7 @@
 
 """Implementation of the RotatE model."""
 
-from typing import Optional, Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -62,7 +62,7 @@ class RotatE(ERModel):
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         relation_initializer: Hint[Initializer] = init_phases,
         relation_constrainer: Hint[Constrainer] = complex_normalize,
-        regularizer: Optional[HintOrType[Regularizer]] = None,
+        regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

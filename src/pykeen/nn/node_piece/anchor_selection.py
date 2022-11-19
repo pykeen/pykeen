@@ -225,7 +225,7 @@ class MixtureAnchorSelection(AnchorSelection):
         self,
         selections: Sequence[HintOrType[AnchorSelection]],
         ratios: Union[None, float, Sequence[float]] = None,
-        selections_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
+        selections_kwargs: OneOrSequence[OptionalKwargs] = None,
         **kwargs,
     ) -> None:
         """

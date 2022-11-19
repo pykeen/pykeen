@@ -234,7 +234,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 class SparseBFSSearcher(AnchorSearcher):
     """Find closest anchors using :mod:`torch_sparse` on a GPU."""
 
-    def __init__(self, max_iter: int = 5, device: Optional[DeviceHint] = None):
+    def __init__(self, max_iter: int = 5, device: DeviceHint = None):
         """Initialize the tokenizer.
 
         :param max_iter:

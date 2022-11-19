@@ -32,11 +32,11 @@ class TransF(ERModel):
     def __init__(
         self,
         embedding_dim: int = 128,
-        entity_initializer: Optional[Hint[Initializer]] = None,
+        entity_initializer: Hint[Initializer] = None,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Hint[Normalizer]] = None,
+        entity_normalizer: Hint[Normalizer] = None,
         entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Optional[Hint[Initializer]] = None,
+        relation_initializer: Hint[Initializer] = None,
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:

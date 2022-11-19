@@ -133,7 +133,7 @@ class ConcatAggregationCombination(ConcatCombination):
 
     def __init__(
         self,
-        aggregation: Optional[Hint[Callable[[torch.FloatTensor], torch.FloatTensor]]] = None,
+        aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
         dim: int = -1,
     ) -> None:
         """
@@ -163,9 +163,9 @@ class ComplexSeparatedCombination(Combination):
 
     def __init__(
         self,
-        combination: Optional[HintOrType[Combination]] = None,
+        combination: HintOrType[Combination] = None,
         combination_kwargs: OptionalKwargs = None,
-        imag_combination: Optional[HintOrType[Combination]] = None,
+        imag_combination: HintOrType[Combination] = None,
         imag_combination_kwargs: OptionalKwargs = None,
     ):
         """

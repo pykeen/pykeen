@@ -379,7 +379,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        evaluator: Optional[HintOrType[Evaluator]] = None,
+        evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
         mode: Optional[InductiveMode] = None,

@@ -144,7 +144,7 @@ def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
     return x.clamp(min=eps)
 
 
-def resolve_device(device: Optional[DeviceHint] = None) -> torch.device:
+def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
     if device is None or device == "gpu":
         device = "cuda"

@@ -249,7 +249,7 @@ class Dataset(ExtraReprMixin):
         """Get the normalized name of the dataset."""
         return normalize_string((self.metadata or {}).get("name") or self.__class__.__name__)
 
-    def remix(self, random_state: Optional[TorchRandomHint] = None, **kwargs) -> Dataset:
+    def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
         """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
         return EagerDataset(
             *remix(
@@ -259,7 +259,7 @@ class Dataset(ExtraReprMixin):
             ),
         )
 
-    def deteriorate(self, n: Union[int, float], random_state: Optional[TorchRandomHint] = None) -> Dataset:
+    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
         """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
         return EagerDataset(
             *deteriorate(
@@ -716,7 +716,7 @@ class CompressedSingleDataset(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         delimiter: Optional[str] = None,
-        random_state: Optional[TorchRandomHint] = None,
+        random_state: TorchRandomHint = None,
     ):
         """Initialize dataset.
 
@@ -823,7 +823,7 @@ class TabbedDataset(LazyDataset):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        random_state: Optional[TorchRandomHint] = None,
+        random_state: TorchRandomHint = None,
     ):
         """Initialize dataset.
 
@@ -888,7 +888,7 @@ class SingleTabbedDataset(TabbedDataset):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        random_state: Optional[TorchRandomHint] = None,
+        random_state: TorchRandomHint = None,
         download_kwargs: Optional[Dict[str, Any]] = None,
         read_csv_kwargs: Optional[Dict[str, Any]] = None,
     ):
