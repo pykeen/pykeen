@@ -27,7 +27,7 @@ class InductiveERModel(ERModel):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        entity_representations: OneOrManyHintOrType[Representation] = None,
+        entity_representations: Optional[OneOrManyHintOrType[Representation]] = None,
         entity_representations_kwargs: Optional[OneOrManyOptionalKwargs] = None,
         # inductive factories
         validation_factory: CoreTriplesFactory,

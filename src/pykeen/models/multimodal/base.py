@@ -35,9 +35,9 @@ class LiteralModel(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         interaction: HintOrType[Interaction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]],
-        entity_representations: OneOrManyHintOrType[Representation] = None,
+        entity_representations: Optional[OneOrManyHintOrType[Representation]] = None,
         entity_representations_kwargs: Optional[OneOrManyOptionalKwargs] = None,
-        combination: HintOrType[Combination] = None,
+        combination: Optional[HintOrType[Combination]] = None,
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
     ):

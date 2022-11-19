@@ -62,7 +62,7 @@ class RotatE(ERModel):
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         relation_initializer: Hint[Initializer] = init_phases,
         relation_constrainer: Hint[Constrainer] = complex_normalize,
-        regularizer: HintOrType[Regularizer] = None,
+        regularizer: Optional[HintOrType[Regularizer]] = None,
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

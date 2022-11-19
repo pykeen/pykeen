@@ -41,7 +41,7 @@ tracker_resolver: ClassResolver[ResultTracker] = ClassResolver.from_subclasses(
 
 
 def resolve_result_trackers(
-    result_tracker: OneOrManyHintOrType[ResultTracker] = None,
+    result_tracker: Optional[OneOrManyHintOrType[ResultTracker]] = None,
     result_tracker_kwargs: Optional[OneOrManyOptionalKwargs] = None,
 ) -> MultiResultTracker:
     """Resolve and compose result trackers.

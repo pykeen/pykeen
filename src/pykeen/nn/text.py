@@ -137,9 +137,9 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
     def __init__(
         self,
         dim: int = 32,
-        character_representation: HintOrType["Representation"] = None,
+        character_representation: Optional[HintOrType["Representation"]] = None,
         vocabulary: str = string.printable,
-        aggregation: Hint[Callable[..., torch.FloatTensor]] = None,
+        aggregation: Optional[Hint[Callable[..., torch.FloatTensor]]] = None,
     ) -> None:
         """Initialize the encoder.
 

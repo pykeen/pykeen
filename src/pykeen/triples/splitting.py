@@ -403,7 +403,7 @@ class CleanupSplitter(Splitter):
     The splitter supports two variants of cleanup, cf. ``cleaner_resolver``.
     """
 
-    def __init__(self, cleaner: HintOrType[Cleaner] = None) -> None:
+    def __init__(self, cleaner: Optional[HintOrType[Cleaner]] = None) -> None:
         """
         Initialize the splitter.
 

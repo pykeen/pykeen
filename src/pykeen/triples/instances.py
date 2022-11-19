@@ -92,7 +92,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
         mapped_triples: MappedTriples,
         num_entities: Optional[int] = None,
         num_relations: Optional[int] = None,
-        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler: Optional[HintOrType[NegativeSampler]] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
     ):
         """Initialize the sLCWA instances.
@@ -174,7 +174,7 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         drop_last: bool = True,
         num_entities: Optional[int] = None,
         num_relations: Optional[int] = None,
-        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler: Optional[HintOrType[NegativeSampler]] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
     ):
         """

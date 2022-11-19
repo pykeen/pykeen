@@ -62,7 +62,7 @@ class RESCAL(ERModel):
         embedding_dim: int = 50,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
-        regularizer: HintOrType[Regularizer] = None,
+        regularizer: Optional[HintOrType[Regularizer]] = None,
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

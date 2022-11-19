@@ -77,7 +77,7 @@ class LitModule(pytorch_lightning.LightningModule):
         learning_rate: float = 1.0e-03,
         label_smoothing: float = 0.0,
         # optimizer
-        optimizer: HintOrType[torch.optim.Optimizer] = None,
+        optimizer: Optional[HintOrType[torch.optim.Optimizer]] = None,
         optimizer_kwargs: OptionalKwargs = None,
     ):
         """
@@ -177,7 +177,7 @@ class SLCWALitModule(LitModule):
     def __init__(
         self,
         *,
-        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler: Optional[HintOrType[NegativeSampler]] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
@@ -279,7 +279,7 @@ lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
 
 
 def lit_pipeline(
-    training_loop: HintOrType[LitModule] = None,
+    training_loop: Optional[HintOrType[LitModule]] = None,
     training_loop_kwargs: OptionalKwargs = None,
     trainer_kwargs: OptionalKwargs = None,
 ) -> None:

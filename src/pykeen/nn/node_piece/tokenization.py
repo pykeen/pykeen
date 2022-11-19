@@ -113,9 +113,9 @@ class AnchorTokenizer(Tokenizer):
     def __init__(
         self,
         # TODO: expose num_anchors?
-        selection: HintOrType[AnchorSelection] = None,
+        selection: Optional[HintOrType[AnchorSelection]] = None,
         selection_kwargs: OptionalKwargs = None,
-        searcher: HintOrType[AnchorSearcher] = None,
+        searcher: Optional[HintOrType[AnchorSearcher]] = None,
         searcher_kwargs: OptionalKwargs = None,
     ) -> None:
         """
@@ -272,7 +272,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         url: Optional[str] = None,
         download_kwargs: OptionalKwargs = None,
         pool: Optional[Mapping[int, Collection[int]]] = None,
-        loader: HintOrType[PrecomputedTokenizerLoader] = None,
+        loader: Optional[HintOrType[PrecomputedTokenizerLoader]] = None,
     ) -> Tuple[Mapping[int, Collection[int]], int]:
         """Load a precomputed pool via one of the supported ways."""
         if pool is not None:
@@ -296,7 +296,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         download_kwargs: OptionalKwargs = None,
         pool: Optional[Mapping[int, Collection[int]]] = None,
         randomize_selection: bool = False,
-        loader: HintOrType[PrecomputedTokenizerLoader] = None,
+        loader: Optional[HintOrType[PrecomputedTokenizerLoader]] = None,
     ):
         r"""
         Initialize the tokenizer.

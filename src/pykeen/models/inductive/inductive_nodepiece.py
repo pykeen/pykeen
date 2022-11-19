@@ -55,7 +55,7 @@ class InductiveNodePiece(InductiveERModel):
         embedding_dim: int = 64,
         relation_representations_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
-        aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
+        aggregation: Optional[Hint[Callable[[torch.Tensor, int], torch.Tensor]]] = None,
         validation_factory: Optional[CoreTriplesFactory] = None,
         test_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,

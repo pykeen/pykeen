@@ -89,7 +89,7 @@ class TuckER(ERModel):
         apply_batch_normalization: bool = True,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
-        core_tensor_initializer: Hint[Initializer] = None,
+        core_tensor_initializer: Optional[Hint[Initializer]] = None,
         core_tensor_initializer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

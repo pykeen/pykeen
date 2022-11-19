@@ -164,7 +164,7 @@ def _prepare_representation_module_list(
     max_id: int,
     shapes: Sequence[str],
     label: str,
-    representations: OneOrManyHintOrType[Representation] = None,
+    representations: Optional[OneOrManyHintOrType[Representation]] = None,
     representations_kwargs: Optional[OneOrManyOptionalKwargs] = None,
     skip_checks: bool = False,
 ) -> Sequence[Representation]:
@@ -296,9 +296,9 @@ class ERModel(
         triples_factory: KGInfo,
         interaction: HintOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         interaction_kwargs: OptionalKwargs = None,
-        entity_representations: OneOrManyHintOrType[Representation] = None,
+        entity_representations: Optional[OneOrManyHintOrType[Representation]] = None,
         entity_representations_kwargs: Optional[OneOrManyOptionalKwargs] = None,
-        relation_representations: OneOrManyHintOrType[Representation] = None,
+        relation_representations: Optional[OneOrManyHintOrType[Representation]] = None,
         relation_representations_kwargs: Optional[OneOrManyOptionalKwargs] = None,
         skip_checks: bool = False,
         **kwargs,
@@ -351,7 +351,7 @@ class ERModel(
     def _build_representations(
         self,
         triples_factory: KGInfo,
-        representations: OneOrManyHintOrType[Representation] = None,
+        representations: Optional[OneOrManyHintOrType[Representation]] = None,
         representations_kwargs: Optional[OneOrManyOptionalKwargs] = None,
         label: Literal["entity", "relation"] = "entity",
         **kwargs,
@@ -371,7 +371,7 @@ class ERModel(
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
         regularizer: HintOrType[Regularizer],
         regularizer_kwargs: OptionalKwargs = None,
-        default_regularizer: HintOrType[Regularizer] = None,
+        default_regularizer: Optional[HintOrType[Regularizer]] = None,
         default_regularizer_kwargs: OptionalKwargs = None,
     ) -> None:
         """

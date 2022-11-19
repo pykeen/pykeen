@@ -66,7 +66,7 @@ class ERMLPE(ERModel):
         input_dropout: float = 0.2,
         hidden_dropout: Optional[float] = None,
         entity_initializer: Hint[Initializer] = uniform_,
-        relation_initializer: Hint[Initializer] = None,
+        relation_initializer: Optional[Hint[Initializer]] = None,
         **kwargs,
     ) -> None:
         """
