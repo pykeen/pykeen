@@ -150,7 +150,7 @@ class LitModule(pytorch_lightning.LightningModule):
         """Create a data loader."""
         raise NotImplementedError
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> torch.utils.data.DataLoader:
         """Create the training data loader."""
         return self._dataloader(triples_factory=self.dataset.training, shuffle=True)
 
