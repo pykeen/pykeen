@@ -26,7 +26,9 @@ from tqdm.autonotebook import tqdm, trange
 from .callbacks import (
     GradientAbsClippingTrainingCallback,
     GradientNormClippingTrainingCallback,
+    LearningRateSchedulerTrainingCallback,
     MultiTrainingCallback,
+    OptimizerTrainingCallback,
     StopperTrainingCallback,
     TrackerTrainingCallback,
     TrainingCallbackHint,
@@ -415,6 +417,90 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         return result
 
+    def _train_epoch(
+        self, 
+        batches: DataLoader, 
+        callbacks: MultiTrainingCallback, 
+        sub_batch_size: Optional[int],
+        label_smoothing: float,
+        slice_size: Optional[int],
+        epoch: int,
+        only_size_probing: bool,
+    ) -> float:
+        """
+        Run one epoch.
+        
+        :param batches:
+            the batches to process
+        :param callbacks:
+            the callbacks to apply (wrapped into a single object)
+        :param sub_batch_size:
+            the sub-batch size to use
+        :param label_smoothing:
+            the label-smoothing to apply
+        :param slice_size:
+            the optional slice size
+        :param epoch:
+            the current epoch (only used to forward to callbacks)
+        :param only_size_probing:
+            whether to stop after the second batch
+        
+        :return:
+            the epoch loss
+        """
+        # Accumulate loss over epoch
+        current_epoch_loss = 0.0
+
+        # Flag to check when to quit the size probing
+        evaluated_once = False
+
+        for batch in batches:
+            # apply callbacks before starting with batch
+            callbacks.pre_batch()
+
+            # Get batch size of current batch (last batch may be incomplete)
+            current_batch_size = self._get_batch_size(batch)
+            _sub_batch_size = sub_batch_size or current_batch_size
+
+            # accumulate gradients for whole batch
+            for start in range(0, current_batch_size, _sub_batch_size):
+                stop = min(start + _sub_batch_size, current_batch_size)
+
+                # forward pass call
+                batch_loss = self._forward_pass(
+                    batch,
+                    start,
+                    stop,
+                    current_batch_size,
+                    label_smoothing,
+                    slice_size,
+                )
+                current_epoch_loss += batch_loss
+                callbacks.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
+
+            callbacks.pre_step()
+            callbacks.post_batch()
+
+            # For testing purposes we're only interested in processing one batch
+            if only_size_probing and evaluated_once:
+                break
+            evaluated_once = True
+        
+        # note: this epoch loss can be slightly biased towards the last batch, if this is smaller than the rest
+        #        in practice, this should have a minor effect, since typically batch_size << num_instances
+        current_epoch_loss = current_epoch_loss / len(batches)
+
+        # TODO: is this necessary?
+        del batch
+        del batches
+        gc.collect()
+        self.optimizer.zero_grad()
+        self._free_graph_and_cache()
+
+        return current_epoch_loss
+
+        
+    
     def _train(  # noqa: C901
         self,
         triples_factory: CoreTriplesFactory,
@@ -597,6 +683,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 format_relative_comparison(part=1, total=len(train_data_loader)),
             )
 
+        # training more callbacks
+        callback.register_callback(OptimizerTrainingCallback(step=not only_size_probing))
+        callback.register_callback(LearningRateSchedulerTrainingCallback())
+
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
 
@@ -606,9 +696,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             try:
                 # Enforce training mode
                 self.model.train()
-
-                # Accumulate loss over epoch
-                current_epoch_loss = 0.0
 
                 # Batching
                 # Only create a progress bar when not in size probing mode
@@ -621,74 +708,22 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     )
                 else:
                     batches = train_data_loader
-
-                # Flag to check when to quit the size probing
-                evaluated_once = False
-
-                num_training_instances = 0
-                for batch in batches:
-                    # Recall that torch *accumulates* gradients. Before passing in a
-                    # new instance, you need to zero out the gradients from the old instance
-                    self.optimizer.zero_grad()
-
-                    # Get batch size of current batch (last batch may be incomplete)
-                    current_batch_size = self._get_batch_size(batch)
-                    _sub_batch_size = sub_batch_size or current_batch_size
-
-                    # accumulate gradients for whole batch
-                    for start in range(0, current_batch_size, _sub_batch_size):
-                        stop = min(start + _sub_batch_size, current_batch_size)
-
-                        # forward pass call
-                        batch_loss = self._forward_pass(
-                            batch,
-                            start,
-                            stop,
-                            current_batch_size,
-                            label_smoothing,
-                            slice_size,
-                        )
-                        current_epoch_loss += batch_loss
-                        num_training_instances += stop - start
-                        callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
-
-                    # when called by batch_size_search(), the parameter update should not be applied.
-                    if not only_size_probing:
-                        callback.pre_step()
-
-                        # update parameters according to optimizer
-                        self.optimizer.step()
-
-                    # After changing applying the gradients to the embeddings, the model is notified that the forward
-                    # constraints are no longer applied
-                    self.model.post_parameter_update()
-
-                    # For testing purposes we're only interested in processing one batch
-                    if only_size_probing and evaluated_once:
-                        break
-
-                    callback.post_batch(epoch=epoch, batch=batch)
-
-                    evaluated_once = True
-
-                del batch
-                del batches
-                gc.collect()
-                self.optimizer.zero_grad()
-                self._free_graph_and_cache()
+                
+                epoch_loss = self._train_epoch(
+                    batches=batches,
+                    callbacks=callback,
+                    sub_batch_size=sub_batch_size,
+                    label_smoothing=label_smoothing,
+                    slice_size=slice_size,
+                    epoch=epoch,
+                    only_size_probing=only_size_probing,
+                )
 
                 # When size probing we don't need the losses
                 if only_size_probing:
                     return None
 
-                # Update learning rate scheduler
-                if self.lr_scheduler is not None:
-                    self.lr_scheduler.step(epoch=epoch)
-
                 # Track epoch loss
-                # note: this epoch loss can be slightly biased towards the last batch, if this is smaller than the rest
-                #        in practice, this should have a minor effect, since typically batch_size << num_instances
-                epoch_loss = current_epoch_loss / len(train_data_loader)
                 self.losses_per_epochs.append(epoch_loss)
 
                 # Print loss information to console

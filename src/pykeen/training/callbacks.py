@@ -119,6 +119,9 @@ class TrainingCallback:
         """Register the training loop."""
         self._training_loop = training_loop
 
+    def pre_batch(self, **kwargs: Any) -> None:
+        """Call before training batch."""
+
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:
         """Call for training batches."""
 
@@ -418,6 +421,11 @@ class MultiTrainingCallback(TrainingCallback):
             callback.register_training_loop(self._training_loop)
 
     # docstr-coverage: inherited
+    def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.pre_batch(**kwargs)
+
+    # docstr-coverage: inherited
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss, **kwargs)
@@ -441,3 +449,43 @@ class MultiTrainingCallback(TrainingCallback):
     def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses, **kwargs)
+
+
+class OptimizerTrainingCallback(TrainingCallback):
+    """Use optimizer to update parameters."""
+
+    def __init__(self, step: bool = True):
+        """Initialize the callback.
+        
+        :param step:
+            whether to apply the parameter update step
+        """
+        super().__init__()
+        self.step = step
+
+    # docstr-coverage: inherited
+    def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
+        # Recall that torch *accumulates* gradients. Before passing in a
+        # new instance, you need to zero out the gradients from the old instance
+        self.optimizer.zero_grad(set_to_none=True)
+
+    # docstr-coverage: inherited
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
+        # when called by batch_size_search(), the parameter update should not be applied.
+        if self.step:
+            # TODO: callback pre_step
+            # update parameters according to optimizer
+            self.optimizer.step()
+
+        # After changing applying the gradients to the embeddings, the model is notified that the forward
+        # constraints are no longer applied
+        self.model.post_parameter_update()
+
+
+class LearningRateSchedulerTrainingCallback(TrainingCallback):
+    """Update learning rate scheduler."""
+
+    # docstr-coverage: inherited
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        if self.training_loop.lr_scheduler is not None:
+            self.training_loop.lr_scheduler.step(epoch=epoch)
