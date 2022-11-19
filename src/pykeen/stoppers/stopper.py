@@ -48,7 +48,7 @@ class Stopper(ABC):
         """Get a summary dict."""
         raise NotImplementedError
 
-    def _write_from_summary_dict(
+    def _write_from_summary_dict(  # noqa: B027
         self,
         *,
         frequency: int,
