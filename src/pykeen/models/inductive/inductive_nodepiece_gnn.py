@@ -106,7 +106,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         h: Optional[torch.LongTensor],
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
-        mode: InductiveMode = None,
+        mode: Optional[InductiveMode] = None,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape with a GNN encoder."""
         entity_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
