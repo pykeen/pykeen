@@ -4,15 +4,19 @@ import itertools
 
 import pytest
 
+from pykeen import models
+from pykeen.datasets import EagerDataset, get_dataset
+from pykeen.typing import TRAINING
+from tests.utils import needs_packages
+
 try:
-    from pykeen.contrib.lightning import lit_module_resolver
+    from pykeen.contrib.lightning import lit_module_resolver, lit_pipeline
 
     LIT_MODULES = lit_module_resolver.lookup_dict.keys()
 except ImportError:
     LIT_MODULES = []
-from pykeen import models
-from pykeen.datasets import EagerDataset, get_dataset
-from pykeen.typing import TRAINING
+    lit_pipeline = None
+
 
 EMBEDDING_DIM = 8
 # TODO: this could be shared with the model tests
@@ -61,12 +65,11 @@ TEST_CONFIGURATIONS = (
 
 
 # test combinations of models with training loops
+@needs_packages("pytorch_lightning")
 @pytest.mark.skipif(True, reason="instability related to https://github.com/Lightning-AI/lightning/pull/14117")
 @pytest.mark.parametrize(("model", "model_kwargs", "training_loop"), TEST_CONFIGURATIONS)
 def test_lit_training(model, model_kwargs, training_loop):
     """Test training models with PyTorch Lightning."""
-    from pykeen.contrib.lightning import lit_pipeline
-
     # some models require inverse relations
     create_inverse_triples = model is not models.RGCN
     dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=create_inverse_triples))
@@ -105,9 +108,9 @@ def test_lit_training(model, model_kwargs, training_loop):
     )
 
 
+@needs_packages("pytorch_lightning")
 def test_lit_pipeline_with_dataset_without_validation():
     """Test training on a dataset without validation triples."""
-    from pykeen.contrib.lightning import lit_pipeline
 
     dataset = get_dataset(dataset="nations")
     dataset = EagerDataset(training=dataset.training, testing=dataset.testing, metadata=dataset.metadata)
