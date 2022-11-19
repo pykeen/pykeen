@@ -8,6 +8,7 @@ from .triples_factory import CoreTriplesFactory
 from .utils import get_entities, get_relations
 from ..typing import TorchRandomHint
 from ..utils import ensure_torch_random_state
+from typing import Optional
 
 __all__ = [
     "generate_triples",
@@ -20,7 +21,7 @@ def generate_triples(
     num_relations: int = 7,
     num_triples: int = 101,
     compact: bool = True,
-    random_state: TorchRandomHint = None,
+    random_state: Optional[TorchRandomHint] = None,
 ) -> torch.LongTensor:
     """Generate random triples in a torch tensor."""
     random_state = ensure_torch_random_state(random_state)
@@ -49,7 +50,7 @@ def generate_triples_factory(
     num_entities: int = 33,
     num_relations: int = 7,
     num_triples: int = 101,
-    random_state: TorchRandomHint = None,
+    random_state: Optional[TorchRandomHint] = None,
     create_inverse_triples: bool = False,
 ) -> CoreTriplesFactory:
     """Generate a triples factory with random triples."""

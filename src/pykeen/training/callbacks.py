@@ -226,7 +226,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         *,
         evaluation_triples: MappedTriples,
         frequency: int = 1,
-        evaluator: HintOrType[Evaluator] = None,
+        evaluator: Optional[HintOrType[Evaluator]] = None,
         evaluator_kwargs: OptionalKwargs = None,
         prefix: Optional[str] = None,
         **kwargs,
@@ -277,7 +277,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         factory: CoreTriplesFactory,
         frequency: int = 1,
         prefix: Optional[str] = None,
-        evaluator: HintOrType[Evaluator] = None,
+        evaluator: Optional[HintOrType[Evaluator]] = None,
         evaluator_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
@@ -386,8 +386,8 @@ class MultiTrainingCallback(TrainingCallback):
 
     def __init__(
         self,
-        callbacks: TrainingCallbackHint = None,
-        callback_kwargs: TrainingCallbackKwargsHint = None,
+        callbacks: Optional[TrainingCallbackHint] = None,
+        callback_kwargs: Optional[TrainingCallbackKwargsHint] = None,
     ) -> None:
         """
         Initialize the callback.

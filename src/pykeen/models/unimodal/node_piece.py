@@ -3,7 +3,7 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, List, Mapping
+from typing import Optional, Any, Callable, ClassVar, List, Mapping
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
@@ -47,19 +47,19 @@ class NodePiece(ERModel):
         *,
         triples_factory: CoreTriplesFactory,
         num_tokens: OneOrSequence[int] = 2,
-        tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
-        tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
+        tokenizers: Optional[OneOrSequence[HintOrType[Tokenizer]]] = None,
+        tokenizers_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
         embedding_dim: int = 64,
         interaction: HintOrType[Interaction] = DistMultInteraction,
-        aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        entity_initializer: Hint[Initializer] = None,
-        entity_normalizer: Hint[Normalizer] = None,
-        entity_constrainer: Hint[Constrainer] = None,
-        entity_regularizer: Hint[Regularizer] = None,
-        relation_initializer: Hint[Initializer] = None,
-        relation_normalizer: Hint[Normalizer] = None,
-        relation_constrainer: Hint[Constrainer] = None,
-        relation_regularizer: Hint[Regularizer] = None,
+        aggregation: Optional[Hint[Callable[[torch.Tensor, int], torch.Tensor]]] = None,
+        entity_initializer: Optional[Hint[Initializer]] = None,
+        entity_normalizer: Optional[Hint[Normalizer]] = None,
+        entity_constrainer: Optional[Hint[Constrainer]] = None,
+        entity_regularizer: Optional[Hint[Regularizer]] = None,
+        relation_initializer: Optional[Hint[Initializer]] = None,
+        relation_normalizer: Optional[Hint[Normalizer]] = None,
+        relation_constrainer: Optional[Hint[Constrainer]] = None,
+        relation_regularizer: Optional[Hint[Regularizer]] = None,
         **kwargs,
     ) -> None:
         """

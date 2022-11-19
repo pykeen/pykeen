@@ -929,7 +929,7 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
     def __init__(
         self,
         embedding_dim: int = 50,
-        inner_non_linearity: HintOrType[nn.Module] = None,
+        inner_non_linearity: Optional[HintOrType[nn.Module]] = None,
     ):
         """
         Initialize the interaction module.
@@ -1025,7 +1025,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         relation_dropout: float = 0.4,
         head_relation_dropout: float = 0.5,
         apply_batch_normalization: bool = True,
-        core_initializer: Hint[Initializer] = None,
+        core_initializer: Optional[Hint[Initializer]] = None,
         core_initializer_kwargs: OptionalKwargs = None,
     ):
         """Initialize the Tucker interaction function.
@@ -1210,7 +1210,7 @@ class NTNInteraction(
 
     def __init__(
         self,
-        activation: HintOrType[nn.Module] = None,
+        activation: Optional[HintOrType[nn.Module]] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize NTN with the given non-linear activation function.

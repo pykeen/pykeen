@@ -11,6 +11,7 @@ from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
 from .tensorboard import TensorBoardResultTracker
 from .wandb import WANDBResultTracker
+from typing import Optional
 
 __all__ = [
     # Base classes
@@ -40,8 +41,8 @@ tracker_resolver: ClassResolver[ResultTracker] = ClassResolver.from_subclasses(
 
 
 def resolve_result_trackers(
-    result_tracker: OneOrManyHintOrType[ResultTracker] = None,
-    result_tracker_kwargs: OneOrManyOptionalKwargs = None,
+    result_tracker: Optional[OneOrManyHintOrType[ResultTracker]] = None,
+    result_tracker_kwargs: Optional[OneOrManyOptionalKwargs] = None,
 ) -> MultiResultTracker:
     """Resolve and compose result trackers.
 

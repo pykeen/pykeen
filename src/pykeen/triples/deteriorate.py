@@ -5,7 +5,7 @@
 import logging
 import math
 from itertools import zip_longest
-from typing import List, Union
+from typing import Optional, List, Union
 
 import click
 import more_click
@@ -26,7 +26,7 @@ def deteriorate(
     reference: TriplesFactory,
     *others: TriplesFactory,
     n: Union[int, float],
-    random_state: TorchRandomHint = None,
+    random_state: Optional[TorchRandomHint] = None,
 ) -> List[TriplesFactory]:
     """Remove n triples from the reference set.
 

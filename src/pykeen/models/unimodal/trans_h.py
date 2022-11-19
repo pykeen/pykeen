@@ -3,7 +3,7 @@
 """An implementation of TransH."""
 
 import itertools
-from typing import Any, ClassVar, Mapping, Type
+from typing import Optional, Any, ClassVar, Mapping, Type
 
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn import functional, init
@@ -80,10 +80,10 @@ class TransH(ERModel):
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
         entity_initializer: Hint[Initializer] = init.xavier_normal_,
-        entity_regularizer: HintOrType[Regularizer] = None,
+        entity_regularizer: Optional[HintOrType[Regularizer]] = None,
         entity_regularizer_kwargs: OptionalKwargs = None,
         relation_initializer: Hint[Initializer] = init.xavier_normal_,
-        relation_regularizer: HintOrType[Regularizer] = None,
+        relation_regularizer: Optional[HintOrType[Regularizer]] = None,
         relation_regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

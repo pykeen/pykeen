@@ -2,7 +2,7 @@
 
 """Base classes for multi-modal models."""
 
-from typing import ClassVar, Tuple, Type
+from typing import Optional, ClassVar, Tuple, Type
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -35,9 +35,9 @@ class LiteralModel(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         interaction: HintOrType[Interaction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]],
-        entity_representations: OneOrManyHintOrType[Representation] = None,
-        entity_representations_kwargs: OneOrManyOptionalKwargs = None,
-        combination: HintOrType[Combination] = None,
+        entity_representations: Optional[OneOrManyHintOrType[Representation]] = None,
+        entity_representations_kwargs: Optional[OneOrManyOptionalKwargs] = None,
+        combination: Optional[HintOrType[Combination]] = None,
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
     ):

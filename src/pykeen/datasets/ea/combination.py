@@ -79,8 +79,8 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tup
 
 def merge_label_to_id_mapping(
     *pairs: Tuple[str, Mapping[str, int]],
-    offsets: torch.LongTensor = None,
-    mappings: Sequence[Mapping[int, int]] = None,
+    offsets: Optional[torch.LongTensor] = None,
+    mappings: Optional[Sequence[Mapping[int, int]]] = None,
     extra: Optional[Mapping[str, int]] = None,
 ) -> Dict[str, int]:
     """
@@ -136,7 +136,7 @@ def merge_label_to_id_mappings(
     relation_offsets: torch.LongTensor,
     # optional
     entity_offsets: Optional[torch.LongTensor] = None,
-    entity_mappings: Sequence[Mapping[int, int]] = None,
+    entity_mappings: Optional[Sequence[Mapping[int, int]]] = None,
     extra_relations: Optional[Mapping[str, int]] = None,
 ) -> Tuple[Mapping[str, int], Mapping[str, int]]:
     """

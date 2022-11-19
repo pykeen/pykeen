@@ -614,7 +614,7 @@ class TopKScoreConsumer(ScoreConsumer):
 
     flatten = False
 
-    def __init__(self, k: int = 3, device: DeviceHint = None) -> None:
+    def __init__(self, k: int = 3, device: Optional[DeviceHint] = None) -> None:
         """
         Initialize the consumer.
 

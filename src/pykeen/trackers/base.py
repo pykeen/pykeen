@@ -211,7 +211,7 @@ class MultiResultTracker(ResultTracker):
 
     trackers: List[ResultTracker]
 
-    def __init__(self, trackers: TrackerHint = None) -> None:
+    def __init__(self, trackers: Optional[TrackerHint] = None) -> None:
         """
         Initialize the tracker.
 

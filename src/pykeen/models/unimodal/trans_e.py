@@ -2,7 +2,7 @@
 
 """TransE."""
 
-from typing import Any, ClassVar, Mapping
+from typing import Optional, Any, ClassVar, Mapping
 
 from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch.nn import functional
@@ -60,8 +60,8 @@ class TransE(ERModel):
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = functional.normalize,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
-        relation_constrainer: Hint[Constrainer] = None,
-        regularizer: HintOrType[Regularizer] = None,
+        relation_constrainer: Optional[Hint[Constrainer]] = None,
+        regularizer: Optional[HintOrType[Regularizer]] = None,
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

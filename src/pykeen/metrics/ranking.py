@@ -524,7 +524,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
 
     def __init__(
         self,
-        base_cls: HintOrType[RankBasedMetric] = None,
+        base_cls: Optional[HintOrType[RankBasedMetric]] = None,
         **kwargs,
     ):
         """
