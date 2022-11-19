@@ -380,4 +380,4 @@ def test_partially_restricted_prediction_dataset(heads, relations, tails, target
     )
     # try accessing each element
     for i in range(len(ds)):
-        _item = ds[i]
+        _ = ds[i]
