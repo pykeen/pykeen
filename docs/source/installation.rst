@@ -53,12 +53,6 @@ However, be warned, it's much less straightforward to install PyTorch and theref
 
 First, to install PyTorch, you must install `Anaconda <https://www.anaconda.com/>`_ and follow
 the instructions on the `PyTorch website <https://pytorch.org/get-started/locally/>`_.
-For example, if you're using CUDA version 11.7, use the following command:
-
-.. code-block:: bash
-
-    $ conda install pytorch torchvision pytorch-cuda=11.7 -c pytorch -c nvidia
-
 Then, assuming your `python` and `pip` command are linked to the same place where conda is installing,
 you can proceed with the normal installation (or the installation from GitHub as shown above):
 
