@@ -138,13 +138,13 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         model: Model,
         triples_factory: CoreTriplesFactory,
-        optimizer: Optional[HintOrType[Optimizer]] = None,
+        optimizer: HintOrType[Optimizer] = None,
         optimizer_kwargs: OptionalKwargs = None,
-        lr_scheduler: Optional[HintOrType[LRScheduler]] = None,
+        lr_scheduler: HintOrType[LRScheduler] = None,
         lr_scheduler_kwargs: OptionalKwargs = None,
         automatic_memory_optimization: bool = True,
         mode: Optional[InductiveMode] = None,
-        result_tracker: Optional[HintOrType[ResultTracker]] = None,
+        result_tracker: HintOrType[ResultTracker] = None,
         result_tracker_kwargs: OptionalKwargs = None,
     ) -> None:
         """Initialize the training loop.

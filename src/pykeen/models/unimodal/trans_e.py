@@ -60,8 +60,8 @@ class TransE(ERModel):
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = functional.normalize,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
-        relation_constrainer: Optional[Hint[Constrainer]] = None,
-        regularizer: Optional[HintOrType[Regularizer]] = None,
+        relation_constrainer: Hint[Constrainer] = None,
+        regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

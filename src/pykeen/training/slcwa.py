@@ -32,7 +32,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
 
     def __init__(
         self,
-        negative_sampler: Optional[HintOrType[NegativeSampler]] = None,
+        negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
         **kwargs,
     ):

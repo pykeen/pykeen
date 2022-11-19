@@ -40,7 +40,7 @@ class NegativeSampler(nn.Module):
         num_relations: Optional[int] = None,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
-        filterer: Optional[HintOrType[Filterer]] = None,
+        filterer: HintOrType[Filterer] = None,
         filterer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.

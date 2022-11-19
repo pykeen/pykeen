@@ -61,7 +61,7 @@ class Model(nn.Module, ABC):
         self,
         *,
         triples_factory: KGInfo,
-        loss: Optional[HintOrType[Loss]] = None,
+        loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
         random_seed: Optional[int] = None,

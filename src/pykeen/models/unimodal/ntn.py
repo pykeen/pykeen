@@ -67,9 +67,9 @@ class NTN(ERModel):
         *,
         embedding_dim: int = 100,
         num_slices: int = 4,
-        non_linearity: Optional[HintOrType[nn.Module]] = None,
+        non_linearity: HintOrType[nn.Module] = None,
         non_linearity_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_initializer: Optional[Hint[Initializer]] = None,
+        entity_initializer: Hint[Initializer] = None,
         **kwargs,
     ) -> None:
         r"""Initialize NTN.

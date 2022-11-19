@@ -282,7 +282,7 @@ class LabelBasedInitializer(PretrainedInitializer):
     def __init__(
         self,
         labels: Sequence[str],
-        encoder: Optional[HintOrType[TextEncoder]] = None,
+        encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
         batch_size: Optional[int] = None,
     ):
@@ -344,7 +344,7 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         self,
         *,
         # the color initializer
-        color_initializer: Optional[Hint[Initializer]] = None,
+        color_initializer: Hint[Initializer] = None,
         color_initializer_kwargs: OptionalKwargs = None,
         shape: OneOrSequence[int] = 32,
         # variants for the edge index

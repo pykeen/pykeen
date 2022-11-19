@@ -73,9 +73,9 @@ class SimplE(ERModel):
         *,
         embedding_dim: int = 200,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
-        entity_initializer: Optional[Hint[Initializer]] = None,
-        relation_initializer: Optional[Hint[Initializer]] = None,
-        regularizer: Optional[Hint[Regularizer]] = None,
+        entity_initializer: Hint[Initializer] = None,
+        relation_initializer: Hint[Initializer] = None,
+        regularizer: Hint[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:

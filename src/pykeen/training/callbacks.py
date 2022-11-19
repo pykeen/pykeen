@@ -226,7 +226,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         *,
         evaluation_triples: MappedTriples,
         frequency: int = 1,
-        evaluator: Optional[HintOrType[Evaluator]] = None,
+        evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         prefix: Optional[str] = None,
         **kwargs,
@@ -277,7 +277,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         factory: CoreTriplesFactory,
         frequency: int = 1,
         prefix: Optional[str] = None,
-        evaluator: Optional[HintOrType[Evaluator]] = None,
+        evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         **kwargs,
     ):

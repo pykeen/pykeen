@@ -42,7 +42,7 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         triples_factory: CoreTriplesFactory,
         embedding_dim: int = 64,
         encoder_kwargs: Optional[Mapping[str, Any]] = None,
-        interaction: Optional[Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]]] = None,
+        interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = None,
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
