@@ -36,7 +36,6 @@ from ..utils import (
 
 __all__ = [
     "boxe_interaction",
-    "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
     "cp_interaction",
@@ -100,35 +99,6 @@ def _add_cuda_warning(func):
             ) from e
 
     return wrapped
-
-
-def complex_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    r"""Evaluate the ComplEx interaction function.
-
-    .. math ::
-        Re(\langle h, r, conj(t) \rangle)
-
-    .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The complex head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The complex relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The complex tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    h, r, t = ensure_complex(h, r, t)
-    # TODO: switch to einsum ?
-    # return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
-    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
