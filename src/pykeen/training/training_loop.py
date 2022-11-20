@@ -426,6 +426,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         slice_size: Optional[int],
         epoch: int,
         only_size_probing: bool,
+        backward: bool = True,
     ) -> float:
         """
         Run one epoch.
@@ -444,6 +445,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             the current epoch (only used to forward to callbacks)
         :param only_size_probing:
             whether to stop after the second batch
+        :param backward:
+            whether to calculate gradients via backward
         
         :return:
             the epoch loss
@@ -474,12 +477,13 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     current_batch_size,
                     label_smoothing,
                     slice_size,
+                    backward=backward,
                 )
                 current_epoch_loss += batch_loss
                 callbacks.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
 
             callbacks.pre_step()
-            callbacks.post_batch()
+            callbacks.post_batch(epoch=epoch, batch=batch)
 
             # For testing purposes we're only interested in processing one batch
             if only_size_probing and evaluated_once:
@@ -840,6 +844,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         current_batch_size: int,
         label_smoothing: float,
         slice_size: Optional[int],
+        backward: bool = True,
     ) -> float:
         # forward pass
         loss = self._process_batch(
@@ -860,7 +865,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             loss *= this_sub_batch_size / current_batch_size
 
         # backward pass
-        loss.backward()
+        if backward:
+            loss.backward()
         current_epoch_loss = loss.item()
 
         self.model.post_forward_pass()
