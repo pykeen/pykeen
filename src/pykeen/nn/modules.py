@@ -39,6 +39,7 @@ from torch.nn.init import xavier_normal_
 from . import functional as pkf
 from .algebra import quaterion_multiplication_table
 from .init import initializer_resolver
+from ..metrics.utils import ValueRange
 from ..typing import (
     HeadRepresentation,
     HintOrType,
@@ -48,7 +49,7 @@ from ..typing import (
     Sign,
     TailRepresentation,
 )
-from ..utils import ensure_tuple, unpack_singletons, upgrade_to_sequence
+from ..utils import einsum, ensure_complex, ensure_tuple, unpack_singletons, upgrade_to_sequence
 
 __all__ = [
     "interaction_resolver",
@@ -158,6 +159,13 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     # if the interaction function's tail parameter should only receive a subset of entity representations
     _tail_indices: Optional[Sequence[int]] = None
+
+    #: the interaction's value range (for unrestricted input)
+    value_range: ClassVar[ValueRange] = ValueRange()
+
+    # TODO: annotate modelling capabilities? cf., e.g., https://arxiv.org/abs/1902.10197, Table 2
+    # TODO: annotate properties, e.g., symmetry, and use them for testing?
+    # TODO: annotate complexity?
 
     @property
     def tail_entity_shape(self) -> Sequence[str]:
@@ -472,13 +480,67 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.transf_interaction
 
 
+@parse_docdata
 class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless ComplEx interaction function.
+    r"""The ComplEx interaction proposed by [trouillon2016]_.
 
-    .. seealso:: :func:`pykeen.nn.functional.complex_interaction`
+    ComplEx operates on complex-valued entity and relation representations, i.e.,
+    $\textbf{e}_i, \textbf{r}_i \in \mathbb{C}^d$ and calculates the plausibility score via the Hadamard product:
+
+    .. math::
+
+        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\bar{\mathbf{e}}_t)
+
+    Which expands to:
+
+    .. math::
+
+        f(h,r,t) = \left\langle Re(\mathbf{e}_h),Re(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
+        + \left\langle Im(\mathbf{e}_h),Re(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        + \left\langle Re(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
+
+    where $Re(\textbf{x})$ and $Im(\textbf{x})$ denote the real and imaginary parts of the complex valued vector
+    $\textbf{x}$. Because the Hadamard product is not commutative in the complex space, ComplEx can model
+    anti-symmetric relations in contrast to DistMult.
+
+    .. seealso ::
+
+        Official implementation: https://github.com/ttrouill/complex/
+
+    .. note::
+        this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
+        `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
+        is compliant with :func:`torch.view_as_complex`, cf. :func:`pykeen.utils.ensure_complex`.
+
+    ---
+    citation:
+        arxiv: 1606.06357
+        author: Trouillon
+        github: ttrouill/complex
+        link: https://arxiv.org/abs/1606.06357
+        year: 2016
     """
 
-    func = pkf.complex_interaction
+    # TODO: update class docstring
+
+    # TODO: give this a better name?
+    @staticmethod
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""Evaluate the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The complex head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The complex relation representations.
+        :param t: shape: (`*batch_dims`, dim)
+            The complex tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        h, r, t = ensure_complex(h, r, t)
+        return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
 
 
 def _calculate_missing_shape_information(
