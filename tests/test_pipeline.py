@@ -19,7 +19,6 @@ from pykeen.nn.representation import Embedding
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
-from pykeen.sampling.basic_negative_sampler import BasicNegativeSampler
 from pykeen.sampling.negative_sampler import NegativeSampler
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
