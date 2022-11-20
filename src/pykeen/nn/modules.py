@@ -13,14 +13,13 @@ from operator import itemgetter
 from typing import (
     Any,
     Callable,
-    Collection,
     ClassVar,
+    Collection,
     Generic,
     Iterable,
     List,
     Mapping,
     MutableMapping,
-    NamedTuple,
     Optional,
     Sequence,
     Set,
@@ -1966,7 +1965,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         two blocks, $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
     - :class:`pykeen.nn.SimplEInteraction`:
         two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
-    
+
     While in theory, we can have up to `num_blocks**3` unique triples, usually, a smaller number is preferable to have
     some sparsity.
     """
@@ -1995,7 +1994,9 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         if duplicates:
             raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
         for entities, num_blocks in ((True, num_entity_representations), (False, num_relation_representations)):
-            missing_ids = set(range(num_blocks)).difference(self._iter_ids(coefficients, entities=entities))
+            missing_ids = set(range(num_blocks)).difference(
+                AutoSFInteraction._iter_ids(coefficients, entities=entities)
+            )
             if missing_ids:
                 label = "entity" if entities else "relation"
                 logger.warning(f"Unused {label} blocks: {missing_ids}. This may indicate an error.")
@@ -2008,15 +2009,13 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             the block coefficients
         :param entities:
             whether to select entity or relation ids, i.e., components `(0, 2)` for entities, or `(1,)` for relations.
-        
-        :yield:
-            the used indices
+
+        :yields: the used indices
         """
         indices = (0, 2) if entities else (1,)
         yield from itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in indices))
 
-    
-    @classmethod
+    @staticmethod
     def _infer_number(coefficients: Collection[AutoSFBlock], entities: bool) -> int:
         """Infer the number of blocks from the given coefficients.
 
@@ -2024,14 +2023,14 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             the block coefficients
         :param entities:
             whether to select entity or relation ids, i.e., components `(0, 2)` for entities, or `(1,)` for relations.
-        
+
         :return:
             the inferred number of blocks
         """
-        return 1 + max(cls._iter_ids(coefficients, *indices))
+        return 1 + max(AutoSFInteraction._iter_ids(coefficients, entities=entities))
 
     def __init__(
-        self, 
+        self,
         coefficients: Iterable[AutoSFBlock],
         *,
         num_blocks: Optional[int] = None,
@@ -2043,7 +2042,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
         :param coefficients:
             the coefficients for the individual blocks, cf. :class:`pykeen.nn.AutoSFInteraction`
-        
+
         :param num_blocks:
             the number of blocks. If given, will be used for both, entity and relation representations.
         :param num_entity_representations:
