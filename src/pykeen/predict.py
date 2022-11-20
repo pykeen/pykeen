@@ -850,7 +850,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
             the prediction target
 
         :raises NotImplementedError:
-            if the target position restricted, or any non-target position is not restricted
+            if the target position is restricted, or any non-target position is not restricted
         """
         super().__init__(target=target)
         parts: List[torch.LongTensor] = []
@@ -874,7 +874,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
 
     # docstr-coverage: inherited
     def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D105
-        quotient, remainder = divmod(item, len(self.parts[0]))
+        remainder, quotient = divmod(item, len(self.parts[0]))
         return torch.as_tensor([self.parts[0][quotient], self.parts[1][remainder]])
 
 

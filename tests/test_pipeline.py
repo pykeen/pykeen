@@ -153,7 +153,7 @@ class TestPipelineTriples(unittest.TestCase):
         # empty lists are falsy
         self.assertTrue(losses)
 
-    @needs_packages("matplotlib")
+    @needs_packages("matplotlib", "seaborn")
     def test_plot(self):
         """Test plotting."""
         result = pipeline(dataset="nations", model="transe", training_kwargs=dict(num_epochs=0))
