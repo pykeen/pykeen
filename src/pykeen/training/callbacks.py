@@ -56,6 +56,7 @@ from typing import Any, List, Optional
 import typing
 
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+import torch
 from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
@@ -461,7 +462,7 @@ class OptimizerTrainingCallback(TrainingCallback):
 
     def __init__(self, step: bool = True):
         """Initialize the callback.
-        
+
         :param step:
             whether to apply the parameter update step
         """
@@ -494,3 +495,37 @@ class LearningRateSchedulerTrainingCallback(TrainingCallback):
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if self.training_loop.lr_scheduler is not None:
             self.training_loop.lr_scheduler.step(epoch=epoch)
+
+
+class ValidationLossTrainingCallback(TrainingCallback):
+    """Calculate loss on a development set."""
+
+    def __init__(self, triples_factory: CoreTriplesFactory, prefix: str = "validation"):
+        super().__init__()
+        self.triples_factory = triples_factory
+        self.prefix = prefix
+
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+        # TODO: where to get these numbers from?
+        label_smoothing = ...
+        # TODO: these could be determined by separate AMO
+        batch_size = ...
+        sub_batch_size = ...
+        slice_size = ...
+        # set to evaluation mode
+        self.model.eval()
+        # no gradient tracking
+        with torch.inference_mode():
+            # TODO: we may want to have AMO here, too
+            loss = self.training_loop._train_epoch(
+                batches=self.training_loop._create_training_data_loader(
+                    triples_factory=self.triples_factory, batch_size=batch_size, drop_last=False, **kwargs
+                ),
+                callbacks=MultiTrainingCallback(),
+                sub_batch_size=sub_batch_size,
+                label_smoothing=label_smoothing,
+                slice_size=slice_size,
+                epoch=epoch,
+                only_size_probing=False,
+            )
+        self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
