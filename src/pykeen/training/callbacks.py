@@ -53,6 +53,7 @@ to implement a gradient clipping callback:
 
 import pathlib
 from typing import Any, List, Optional
+import typing
 
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch import optim
@@ -66,6 +67,10 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
+
+if typing.TYPE_CHECKING:
+    from pykeen.training import TrainingLoop
+
 
 __all__ = [
     "TrainingCallbackHint",
@@ -88,7 +93,7 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self):  # noqa:D401
+    def training_loop(self) -> TrainingLoop:  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
