@@ -498,13 +498,14 @@ class LearningRateSchedulerTrainingCallback(TrainingCallback):
             self.training_loop.lr_scheduler.step(epoch=epoch)
 
 
-@maximize_memory_utilization(keys=("training_loop", "triples_factory", "batch_size"))
+@maximize_memory_utilization(keys=("training_loop", "id_triples_factory", "batch_size"))
 @torch.inference_mode()
 def _validation_loss_amo_wrapper(
-    training_loop: TrainingLoop,
+    training_loop: "TrainingLoop",
     triples_factory: CoreTriplesFactory,
     batch_size: int,
     label_smoothing: float,
+    id_triples_factory: int,  # TODO: only used for hashing (cf. 'keys' above)
     **kwargs,
 ) -> float:
     """Calculate validation loss with automatic batch size optimization."""
@@ -522,6 +523,8 @@ def _validation_loss_amo_wrapper(
         slice_size=None,
         # this is handled by the AMO wrapper
         only_size_probing=False,
+        # no backward passes
+        backward=False,
     )
 
 
@@ -536,14 +539,17 @@ class ValidationLossTrainingCallback(TrainingCallback):
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         # TODO: where to get these from?
         label_smoothing = 0.0
-        training_data_loader_kwargs = dict()
+        training_data_loader_kwargs = dict(sampler=None)
         # set to evaluation mode
         self.model.eval()
         loss = _validation_loss_amo_wrapper(
             training_loop=self.training_loop,
             triples_factory=self.triples_factory,
-            batch_size=len(self.triples_factory),
+            # TODO: this should be num_instances rather than num_triples; also for cpu, we may want to reduce this
+            batch_size=self.triples_factory.num_triples,
             label_smoothing=label_smoothing,
             **training_data_loader_kwargs,
+            # only used for hashing
+            id_triples_factory=id(self.triples_factory),
         )
         self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
