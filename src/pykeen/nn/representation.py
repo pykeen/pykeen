@@ -472,6 +472,37 @@ class LowRankRepresentation(Representation):
         self.weight = nn.Parameter(torch.empty(max_id, num_bases))
         self.reset_parameters()
 
+    @classmethod
+    def approximate(cls, other: Representation, **kwargs) -> "LowRankRepresentation":
+        """
+        Construct a low-rank approximation of another representation.
+
+        .. note ::
+
+            While this method tries to find a good approximation of the base representation, you may lose all (useful)
+            inductive biases you had with the original one, e.g., from shared tokens in
+            :class:`pykeen.representation.NodePieceRepresentation`.
+
+        :param other:
+            the other representation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`LowRankRepresentation.__init__`. Must not contain
+            `max_id` nor `shape`, which are determined by `other`
+
+        :return:
+            a low-rank approximation obtained via (truncated) SVD
+        """
+        # create low-rank approximation object
+        r = cls(max_id=other.max_id, shape=other.shape, **kwargs)
+        # get base representations, shape: (n, *ds)
+        x = other(indices=None)
+        # calculate SVD, U.shape: (n, k), s.shape: (k,), u.shape: (k, prod(ds))
+        u, s, vh = torch.svd_lowrank(x.view(x.shape[0], -1), q=r.num_bases)
+        # overwrite bases and weights
+        r.bases._embeddings.weight.data = vh
+        r.weight.data = torch.einsum("nk, k -> nk", u, s)
+        return r
+
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         self.bases.reset_parameters()
@@ -590,7 +621,7 @@ class CompGCNLayer(nn.Module):
 
         # edge weighting
         self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(
-            edge_weighting, output_dim=output_dim, attn_drop=attention_dropout, num_heads=attention_heads
+            edge_weighting, message_dim=output_dim, dropout=attention_dropout, num_heads=attention_heads
         )
 
         # message passing weights

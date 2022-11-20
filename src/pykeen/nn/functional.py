@@ -37,7 +37,6 @@ from ..utils import (
 __all__ = [
     "auto_sf_interaction",
     "boxe_interaction",
-    "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
     "cp_interaction",
@@ -68,18 +67,6 @@ __all__ = [
     "um_interaction",
     "linea_re_interaction",
 ]
-
-
-def _extract_sizes(
-    h: torch.Tensor,
-    r: torch.Tensor,
-    t: torch.Tensor,
-) -> Tuple[int, int, int, int, int]:
-    """Extract size dimensions from head/relation/tail representations."""
-    num_heads, num_relations, num_tails = [xx.shape[i] for i, xx in enumerate((h, r, t), start=1)]
-    d_e = h.shape[-1]
-    d_r = r.shape[-1]
-    return num_heads, num_relations, num_tails, d_e, d_r
 
 
 def _apply_optional_bn_to_tensor(
@@ -113,35 +100,6 @@ def _add_cuda_warning(func):
             ) from e
 
     return wrapped
-
-
-def complex_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    r"""Evaluate the ComplEx interaction function.
-
-    .. math ::
-        Re(\langle h, r, conj(t) \rangle)
-
-    .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The complex head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The complex relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The complex tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    h, r, t = ensure_complex(h, r, t)
-    # TODO: switch to einsum ?
-    # return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
-    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning

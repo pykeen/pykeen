@@ -58,14 +58,14 @@ The latest stable version of PyKEEN requires Python 3.8+. It can be downloaded
 and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
-$ pip install pykeen
+pip install pykeen
 ```
 
 The latest version of PyKEEN can be installed directly from the
 source code on [GitHub](https://github.com/pykeen/pykeen) with:
 
 ```shell
-$ pip install git+https://github.com/pykeen/pykeen.git
+pip install git+https://github.com/pykeen/pykeen.git
 ```
 
 More information about installation (e.g., development mode, Windows installation, Colab, Kaggle, extras)
@@ -258,12 +258,13 @@ The following 6 regularizers are implemented by PyKEEN.
 
 ### Training Loops
 
-The following 2 training loops are implemented in PyKEEN.
+The following 3 training loops are implemented in PyKEEN.
 
-| Name   | Reference                                                                                                                                | Description                                                                               |
-|--------|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that is based upon the local closed world assumption (LCWA).              |
-| slcwa  | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop) | A training loop that uses the stochastic local closed world assumption training approach. |
+| Name          | Reference                                                                                                                                                | Description                                                                               |
+|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| lcwa          | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)                   | A training loop that is based upon the local closed world assumption (LCWA).              |
+| slcwa         | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop)                 | A training loop that uses the stochastic local closed world assumption training approach. |
+| symmetriclcwa | [`pykeen.training.SymmetricLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SymmetricLCWATrainingLoop) |                                                                                           |
 
 ### Negative Samplers
 
@@ -366,7 +367,7 @@ PyKEEN includes a set of curated experimental settings for reproducing past land
 experiments. They can be accessed and run like:
 
 ```shell
-$ pykeen experiments reproduce tucker balazevic2019 fb15k
+pykeen experiments reproduce tucker balazevic2019 fb15k
 ```
 
 Where the three arguments are the model name, the reference, and the dataset.
@@ -378,7 +379,7 @@ PyKEEN includes the ability to specify ablation studies using the
 hyper-parameter optimization module. They can be run like:
 
 ```shell
-$ pykeen experiments ablation ~/path/to/config.json
+pykeen experiments ablation ~/path/to/config.json
 ```
 
 ### Large-scale Reproducibility and Benchmarking Study
