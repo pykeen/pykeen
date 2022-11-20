@@ -95,7 +95,7 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self) -> TrainingLoop:  # noqa:D401
+    def training_loop(self) -> "TrainingLoop":  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
