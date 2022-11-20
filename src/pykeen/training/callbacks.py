@@ -59,6 +59,7 @@ from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 import torch
 from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
+from torch_max_mem import maximize_memory_utilization
 
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import LCWAEvaluationLoop
@@ -497,6 +498,33 @@ class LearningRateSchedulerTrainingCallback(TrainingCallback):
             self.training_loop.lr_scheduler.step(epoch=epoch)
 
 
+@maximize_memory_utilization(keys=("training_loop", "triples_factory", "batch_size"))
+@torch.inference_mode()
+def _validation_loss_amo_wrapper(
+    training_loop: TrainingLoop,
+    triples_factory: CoreTriplesFactory,
+    batch_size: int,
+    label_smoothing: float,
+    **kwargs,
+) -> float:
+    """Calculate validation loss with automatic batch size optimization."""
+    return training_loop._train_epoch(
+        batches=training_loop._create_training_data_loader(
+            triples_factory=triples_factory, batch_size=batch_size, drop_last=False, **kwargs
+        ),
+        label_smoothing=label_smoothing,
+        # no callbacks, no epoch
+        callbacks=MultiTrainingCallback(),
+        epoch=-1,
+        # no sub-batching (for evaluation, we can just reduce batch size without any effect)
+        sub_batch_size=None,
+        # TODO: optimize slice size?
+        slice_size=None,
+        # this is handled by the AMO wrapper
+        only_size_probing=False,
+    )
+
+
 class ValidationLossTrainingCallback(TrainingCallback):
     """Calculate loss on a development set."""
 
@@ -506,26 +534,16 @@ class ValidationLossTrainingCallback(TrainingCallback):
         self.prefix = prefix
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
-        # TODO: where to get these numbers from?
-        label_smoothing = ...
-        # TODO: these could be determined by separate AMO
-        batch_size = ...
-        sub_batch_size = ...
-        slice_size = ...
+        # TODO: where to get these from?
+        label_smoothing = 0.0
+        training_data_loader_kwargs = dict()
         # set to evaluation mode
         self.model.eval()
-        # no gradient tracking
-        with torch.inference_mode():
-            # TODO: we may want to have AMO here, too
-            loss = self.training_loop._train_epoch(
-                batches=self.training_loop._create_training_data_loader(
-                    triples_factory=self.triples_factory, batch_size=batch_size, drop_last=False, **kwargs
-                ),
-                callbacks=MultiTrainingCallback(),
-                sub_batch_size=sub_batch_size,
-                label_smoothing=label_smoothing,
-                slice_size=slice_size,
-                epoch=epoch,
-                only_size_probing=False,
-            )
+        loss = _validation_loss_amo_wrapper(
+            training_loop=self.training_loop,
+            triples_factory=self.triples_factory,
+            batch_size=len(self.triples_factory),
+            label_smoothing=label_smoothing,
+            **training_data_loader_kwargs,
+        )
         self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
