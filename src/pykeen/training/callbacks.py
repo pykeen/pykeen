@@ -379,85 +379,6 @@ class StopperTrainingCallback(TrainingCallback):
             self.last_best_epoch = epoch
 
 
-callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
-    base=TrainingCallback,
-)
-
-#: A hint for constructing a :class:`MultiTrainingCallback`
-TrainingCallbackHint = OneOrSequence[HintOrType[TrainingCallback]]
-TrainingCallbackKwargsHint = OneOrSequence[OptionalKwargs]
-
-
-class MultiTrainingCallback(TrainingCallback):
-    """A wrapper for calling multiple training callbacks together."""
-
-    #: A collection of callbacks
-    callbacks: List[TrainingCallback]
-
-    def __init__(
-        self,
-        callbacks: TrainingCallbackHint = None,
-        callback_kwargs: TrainingCallbackKwargsHint = None,
-    ) -> None:
-        """
-        Initialize the callback.
-
-        .. note ::
-            the constructor allows "broadcasting" of callbacks, i.e., proving a single callback,
-            but a list of callback kwargs. In this case, for each element of this list the given
-            callback is instantiated.
-
-        :param callbacks:
-            the callbacks
-        :param callback_kwargs:
-            additional keyword-based parameters for instantiating the callbacks
-        """
-        super().__init__()
-        self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs) if callbacks else []
-
-    # docstr-coverage: inherited
-    def register_training_loop(self, loop) -> None:  # noqa: D102
-        super().register_training_loop(training_loop=loop)
-        for callback in self.callbacks:
-            callback.register_training_loop(training_loop=loop)
-
-    def register_callback(self, callback: TrainingCallback) -> None:
-        """Register a callback."""
-        self.callbacks.append(callback)
-        if self._training_loop is not None:
-            callback.register_training_loop(self._training_loop)
-
-    # docstr-coverage: inherited
-    def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
-        for callback in self.callbacks:
-            callback.pre_batch(**kwargs)
-
-    # docstr-coverage: inherited
-    def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
-        for callback in self.callbacks:
-            callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss, **kwargs)
-
-    # docstr-coverage: inherited
-    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
-        for callback in self.callbacks:
-            callback.post_batch(epoch=epoch, batch=batch, **kwargs)
-
-    # docstr-coverage: inherited
-    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
-        for callback in self.callbacks:
-            callback.pre_step(**kwargs)
-
-    # docstr-coverage: inherited
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
-        for callback in self.callbacks:
-            callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
-
-    # docstr-coverage: inherited
-    def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
-        for callback in self.callbacks:
-            callback.post_train(losses=losses, **kwargs)
-
-
 class OptimizerTrainingCallback(TrainingCallback):
     """Use optimizer to update parameters."""
 
@@ -553,3 +474,84 @@ class ValidationLossTrainingCallback(TrainingCallback):
             id_triples_factory=id(self.triples_factory),
         )
         self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
+
+
+#: A hint for constructing a :class:`MultiTrainingCallback`
+TrainingCallbackHint = OneOrSequence[HintOrType[TrainingCallback]]
+TrainingCallbackKwargsHint = OneOrSequence[OptionalKwargs]
+
+
+class MultiTrainingCallback(TrainingCallback):
+    """A wrapper for calling multiple training callbacks together."""
+
+    #: A collection of callbacks
+    callbacks: List[TrainingCallback]
+
+    def __init__(
+        self,
+        callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
+    ) -> None:
+        """
+        Initialize the callback.
+
+        .. note ::
+            the constructor allows "broadcasting" of callbacks, i.e., proving a single callback,
+            but a list of callback kwargs. In this case, for each element of this list the given
+            callback is instantiated.
+
+        :param callbacks:
+            the callbacks
+        :param callback_kwargs:
+            additional keyword-based parameters for instantiating the callbacks
+        """
+        super().__init__()
+        self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs) if callbacks else []
+
+    # docstr-coverage: inherited
+    def register_training_loop(self, loop) -> None:  # noqa: D102
+        super().register_training_loop(training_loop=loop)
+        for callback in self.callbacks:
+            callback.register_training_loop(training_loop=loop)
+
+    def register_callback(self, callback: TrainingCallback) -> None:
+        """Register a callback."""
+        self.callbacks.append(callback)
+        if self._training_loop is not None:
+            callback.register_training_loop(self._training_loop)
+
+    # docstr-coverage: inherited
+    def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.pre_batch(**kwargs)
+
+    # docstr-coverage: inherited
+    def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss, **kwargs)
+
+    # docstr-coverage: inherited
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.post_batch(epoch=epoch, batch=batch, **kwargs)
+
+    # docstr-coverage: inherited
+    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.pre_step(**kwargs)
+
+    # docstr-coverage: inherited
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
+
+    # docstr-coverage: inherited
+    def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.post_train(losses=losses, **kwargs)
+
+
+callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
+    base=TrainingCallback,
+    skip={MultiTrainingCallback},
+)
