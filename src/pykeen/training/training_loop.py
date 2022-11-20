@@ -233,6 +233,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        # TODO: inconsistency: should be callbacks_kwargs
         callback_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
