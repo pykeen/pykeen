@@ -52,11 +52,11 @@ to implement a gradient clipping callback:
 """
 
 import pathlib
-from typing import Any, List, Optional
 import typing
+from typing import Any, List, Optional
 
-from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 import torch
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from torch_max_mem import maximize_memory_utilization

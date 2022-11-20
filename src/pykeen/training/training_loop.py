@@ -418,9 +418,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         return result
 
     def _train_epoch(
-        self, 
-        batches: DataLoader, 
-        callbacks: MultiTrainingCallback, 
+        self,
+        batches: DataLoader,
+        callbacks: MultiTrainingCallback,
         sub_batch_size: Optional[int],
         label_smoothing: float,
         slice_size: Optional[int],
@@ -430,7 +430,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     ) -> float:
         """
         Run one epoch.
-        
+
         :param batches:
             the batches to process
         :param callbacks:
@@ -447,7 +447,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             whether to stop after the second batch
         :param backward:
             whether to calculate gradients via backward
-        
+
         :return:
             the epoch loss
         """
@@ -489,7 +489,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             if only_size_probing and evaluated_once:
                 break
             evaluated_once = True
-        
+
         # note: this epoch loss can be slightly biased towards the last batch, if this is smaller than the rest
         #        in practice, this should have a minor effect, since typically batch_size << num_instances
         current_epoch_loss = current_epoch_loss / len(batches)
@@ -503,8 +503,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         return current_epoch_loss
 
-        
-    
     def _train(  # noqa: C901
         self,
         triples_factory: CoreTriplesFactory,
@@ -712,7 +710,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     )
                 else:
                     batches = train_data_loader
-                
+
                 epoch_loss = self._train_epoch(
                     batches=batches,
                     callbacks=callback,
