@@ -419,12 +419,12 @@ class PathDataset(LazyDataset):
             self._load_validation()
 
     def _load(self) -> None:
-        self._training = TriplesFactory.from_path(
+        self._training = self.triples_factory_cls.from_path(
             path=self.training_path,
             create_inverse_triples=self._create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
-        self._testing = TriplesFactory.from_path(
+        self._testing = self.triples_factory_cls.from_path(
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
@@ -440,7 +440,7 @@ class PathDataset(LazyDataset):
         if self.validation_path is None:
             self._validation = None
         else:
-            self._validation = TriplesFactory.from_path(
+            self._validation = self.triples_factory_cls.from_path(
                 path=self.validation_path,
                 entity_to_id=self._training.entity_to_id,  # share entity index with training
                 relation_to_id=self._training.relation_to_id,  # share relation index with training

@@ -40,6 +40,7 @@ from .ea import CN3l, EADataset, MTransEDataset, OpenEA, WK3l15k, WK3l120k
 from .freebase import FB15k, FB15k237
 from .globi import Globi
 from .hetionet import Hetionet
+from .hyper.base import HyperRelationalUnpackedRemoteDataset
 from .kinships import Kinships
 from .literal_base import NumericPathDataset
 from .nations import Nations
@@ -49,7 +50,7 @@ from .pharmkg import PharmKG, PharmKG8k
 from .primekg import PrimeKG
 from .umls import UMLS
 from .utils import get_dataset
-from .wd50k import WD50KT
+from .wd50k import WD50K, WD50K_33, WD50K_66, WD50K_100, WD50KT
 from .wikidata5m import Wikidata5M
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
@@ -92,6 +93,10 @@ __all__ = [
     "OpenEA",
     "Countries",
     "WD50KT",
+    "WD50K",
+    "WD50K_33",
+    "WD50K_66",
+    "WD50K_100",
     "Wikidata5M",
     "PharmKG8k",
     "PharmKG",
@@ -120,6 +125,7 @@ dataset_resolver: ClassResolver[Dataset] = ClassResolver.from_subclasses(
         MTransEDataset,
         OGBLoader,
         EADataset,
+        HyperRelationalUnpackedRemoteDataset,
     },
 )
 dataset_resolver.register_entrypoint("pykeen.datasets")

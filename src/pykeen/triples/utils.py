@@ -21,6 +21,7 @@ __all__ = [
 ]
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
+STATEMENT_PADDING = "__padding__"
 
 
 def _load_importers(group_subname: str) -> Mapping[str, Callable[[str], LabeledTriples]]:
@@ -87,6 +88,70 @@ def load_triples(
     if column_remapping is not None:
         df = df[[df.columns[c] for c in column_remapping]]
     return df.to_numpy()
+
+
+def load_rdf_star_statements(
+    path: Union[str, pathlib.Path, TextIO],
+    max_num_qualifier_pairs: Optional[int] = 0,
+    delimiter: str = ",",
+    encoding: Optional[str] = None,
+    column_remapping: Optional[Sequence[int]] = None,
+) -> np.ndarray:
+    """
+    Load statements from a file, expected a comma-separated h,r,t,qr1,qv1,qr2,qv2,...
+    :param path:
+        The path to the file.
+    :param max_num_qualifier_pairs:
+        If given, trim statements to maximum length of 2 * max_num_qualifier_pairs + 3
+    :param delimiter: The delimiter between the columns in the file
+    :param encoding: The encoding for the file. Defaults to utf-8.
+    :param column_remapping: A remapping if the three columns do not follow the order head-relation-tail.
+        For example, if the order is head-tail-relation, pass ``(0, 2, 1)``
+    :return:
+        A list of statements in the format (h, r, t, *q), where q are qualifiers.
+    """
+    if isinstance(path, (str, pathlib.Path)):
+        path = str(path)
+        for extension, handler in EXTENSION_IMPORTERS.items():
+            if path.endswith(f".{extension}"):
+                return handler(path)
+
+        for prefix, handler in PREFIX_IMPORTERS.items():
+            if path.startswith(f"{prefix}:"):
+                return handler(path[len(f"{prefix}:") :])
+
+    if encoding is None:
+        encoding = "utf-8"
+    max_len = 2 * max_num_qualifier_pairs + 3  # max statement length
+    if column_remapping is not None:
+        if len(column_remapping) > max_len:
+            raise ValueError("remapping must have length not more than the max statement length")
+
+    # TODO find a way to load files w/o knowing max_len in advance
+    # TODO find more memory-efficient loading procedure - this one will create an array of size
+    # TODO (num_statements, max_len) padding by max_len
+    df = pandas.read_csv(
+        path,
+        sep=delimiter,
+        encoding=encoding,
+        dtype=str,
+        header=None,
+        usecols=column_remapping,
+        na_filter=False,
+        names=list(range(max_len)),  # instruct pandas to load a fixed number of columns
+    ).replace("", STATEMENT_PADDING)
+    if column_remapping is not None:
+        df = df[[df.columns[c] for c in column_remapping]]
+    return df.to_numpy()
+
+    # path = pathlib.Path(path).expanduser().resolve()
+    # statements = []
+    # with path.open('r') as f:
+    #     for line in f.readlines():
+    #         # list[:None] returns the full list
+    #         statements.append(line.strip("\n").split(",")[:max_len])
+    # logger.info(f"Loaded {len(statements)} statements from {path.as_uri()}.")
+    # return statements
 
 
 def get_entities(triples: torch.LongTensor) -> Set[int]:

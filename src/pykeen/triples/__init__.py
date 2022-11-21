@@ -3,6 +3,7 @@
 """Classes for creating and storing training data from triples."""
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
+from .statement_factory import StatementFactory
 from .triples_factory import (
     AnyTriples,
     CoreTriplesFactory,
@@ -26,4 +27,5 @@ __all__ = [
     "TriplesNumericLiteralsFactory",
     "get_mapped_triples",
     "AnyTriples",
+    "StatementFactory",
 ]
