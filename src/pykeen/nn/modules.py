@@ -50,7 +50,17 @@ from ..typing import (
     Sign,
     TailRepresentation,
 )
-from ..utils import einsum, ensure_complex, ensure_tuple, unpack_singletons, upgrade_to_sequence
+from ..utils import (
+    at_least_eps,
+    einsum,
+    ensure_complex,
+    ensure_tuple,
+    negative_norm,
+    unpack_singletons,
+    upgrade_to_sequence,
+)
+
+# TODO: split file into multiple smaller ones?
 
 __all__ = [
     "interaction_resolver",
@@ -1652,8 +1662,6 @@ class BoxEInteraction(
 ):
     """An implementation of the BoxE interaction from [abboud2020]_."""
 
-    func = pkf.boxe_interaction
-
     relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
     entity_shape = ("d", "d")  # Base position and bump
 
@@ -1703,6 +1711,248 @@ class BoxEInteraction(
         state = super()._prepare_state_for_functional()
         state["tanh_map"] = self.tanh_map
         return state
+
+    @staticmethod
+    def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
+        r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
+
+        :param x: shape: s
+            An input tensor
+        :param dim:
+            the dimension along which to normalize the tensor
+
+        :return: shape: s
+            An output tensor where the given dimension is normalized to have a geometric mean of 1.0.
+        """
+        return x / at_least_eps(at_least_eps(x.abs()).log().mean(dim=dim, keepdim=True).exp())
+
+    @staticmethod
+    def point_to_box_distance(
+        points: torch.FloatTensor,
+        box_lows: torch.FloatTensor,
+        box_highs: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
+
+        :param points: shape: ``(*, d)``
+            the positions of the points being scored against boxes
+        :param box_lows: shape: ``(*, d)``
+            the lower corners of the boxes
+        :param box_highs: shape: ``(*, d)``
+            the upper corners of the boxes
+
+        :returns:
+            Element-wise distance function scores as per the definition above
+
+            Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
+            defined:
+
+            - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
+            - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
+
+            Finally, the point to box distance $dist(p,l,h)$ is defined as
+            the following piecewise function:
+
+            .. math::
+
+                dist(p,l,h) = \begin{cases}
+                    |p-c|/(w+1) & l <= p <+ h \\
+                    |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
+                \end{cases}
+        """
+        widths = box_highs - box_lows
+
+        # compute width plus 1
+        widths_p1 = widths + 1
+
+        # compute box midpoints
+        # TODO: we already had this before, as `base`
+        centres = 0.5 * (box_lows + box_highs)
+
+        return torch.where(
+            # inside box?
+            torch.logical_and(points >= box_lows, points <= box_highs),
+            # yes: |p - c| / (w + 1)
+            torch.abs(points - centres) / widths_p1,
+            # no: (w + 1) * |p - c| - 0.5 * w * (w - 1/(w + 1))
+            widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
+        )
+
+    @staticmethod
+    def boxe_kg_arity_position_score(
+        entity_pos: torch.FloatTensor,
+        other_entity_bump: torch.FloatTensor,
+        relation_box: Tuple[torch.FloatTensor, torch.FloatTensor],
+        tanh_map: bool,
+        p: int,
+        power_norm: bool,
+    ) -> torch.FloatTensor:
+        r"""Perform the BoxE computation at a single arity position.
+
+        .. note::
+            this computation is parallelizable across all positions
+
+        .. note ::
+            `entity_pos`, `other_entity_bump`, `relation_box_low` and `relation_box_high` have to be in broadcastable
+            shape.
+
+        :param entity_pos: shape: (*s_p, d)
+            This is the base entity position of the entity appearing in the target position. For example,
+            for a fact $r(h, t)$ and the head arity position, `entity_pos` is the base position of $h$.
+        :param other_entity_bump: shape: (*s_b, d)
+            This is the bump of the entity at the other position in the fact. For example, given a
+            fact $r(h, t)$ and the head arity position, `other_entity_bump` is the bump of $t$.
+        :param relation_box: shape: (*s_r, d)
+            The lower/upper corner of the relation box at the target arity position.
+        :param tanh_map:
+            whether to apply the tanh map regularizer
+        :param p:
+            The norm order to apply across dimensions to compute overall position score.
+        :param power_norm:
+            whether to use the powered norm instead
+
+        :return: shape: s
+            Arity-position score for the entity relative to the target relation box. Larger is better. the shape is the
+            broadcasted shape from position, bump and box, where the last dimension has been removed.
+        """
+        # Step 1: Apply the other entity bump
+        bumped_representation = entity_pos + other_entity_bump
+
+        relation_box_low, relation_box_high = relation_box
+
+        # Step 2: Apply tanh if tanh_map is set to True.
+        if tanh_map:
+            relation_box_low = torch.tanh(relation_box_low)
+            relation_box_high = torch.tanh(relation_box_high)
+            bumped_representation = torch.tanh(bumped_representation)
+
+        # Compute the distance function output element-wise
+        element_wise_distance = BoxEInteraction.point_to_box_distance(
+            points=bumped_representation,
+            box_lows=relation_box_low,
+            box_highs=relation_box_high,
+        )
+
+        # Finally, compute the norm
+        return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+    @staticmethod
+    def compute_box(
+        base: torch.FloatTensor,
+        delta: torch.FloatTensor,
+        size: torch.FloatTensor,
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+        r"""Compute the lower and upper corners of a resulting box.
+
+        :param base: shape: ``(*, d)``
+            the base position (box center) of the input relation embeddings
+        :param delta:  shape: ``(*, d)``
+            the base shape of the input relation embeddings
+        :param size: shape: ``(*, d)``
+            the size scalar vectors of the input relation embeddings
+
+        :return: shape: ``(*, d)`` each
+            lower and upper bounds of the box whose embeddings are provided as input.
+        """
+        # Enforce that sizes are strictly positive by passing through ELU
+        size_pos = torch.nn.functional.elu(size) + 1
+
+        # Shape vector is normalized using the above helper function
+        delta_norm = BoxEInteraction.product_normalize(delta)
+
+        # Size is learned separately and applied to normalized shape
+        delta_final = size_pos * delta_norm
+
+        # Compute potential boundaries by applying the shape in substraction
+        first_bound = base - 0.5 * delta_final
+
+        # and in addition
+        second_bound = base + 0.5 * delta_final
+
+        # Compute box upper bounds using min and max respectively
+        box_low = torch.minimum(first_bound, second_bound)
+        box_high = torch.maximum(first_bound, second_bound)
+
+        return box_low, box_high
+
+    @staticmethod
+    def func(
+        # head
+        h_pos: torch.FloatTensor,
+        h_bump: torch.FloatTensor,
+        # relation box: head
+        rh_base: torch.FloatTensor,
+        rh_delta: torch.FloatTensor,
+        rh_size: torch.FloatTensor,
+        # relation box: tail
+        rt_base: torch.FloatTensor,
+        rt_delta: torch.FloatTensor,
+        rt_size: torch.FloatTensor,
+        # tail
+        t_pos: torch.FloatTensor,
+        t_bump: torch.FloatTensor,
+        # power norm
+        tanh_map: bool = True,
+        p: int = 2,
+        power_norm: bool = False,
+    ) -> FloatTensor:
+        """
+        Evalute the BoxE interaction function from [abboud2020]_.
+
+        Entities are described via position and bump. Relations are described as a pair of boxes, where each box is
+        parametrized as triple (base, delta, size), where # TODO
+
+        .. note ::
+            this interaction relies on Abboud's point-to-box distance
+            :func:`pykeen.utils.point_to_box_distance`.
+
+        :param h_pos: shape: (`*batch_dims`, d)
+            the head entity position
+        :param h_bump: shape: (`*batch_dims`, d)
+            the head entity bump
+
+        :param rh_base: shape: (`*batch_dims`, d)
+            the relation-specific head box base position
+        :param rh_delta: shape: (`*batch_dims`, d)
+            # the relation-specific head box base shape (normalized to have a volume of 1):
+        :param rh_size: shape: (`*batch_dims`, 1)
+            the relation-specific head box size (a scalar)
+        :param rt_base: shape: (`*batch_dims`, d)
+            the relation-specific tail box base position
+        :param rt_delta: shape: (`*batch_dims`, d)
+            # the relation-specific tail box base shape (normalized to have a volume of 1):
+        :param rt_size: shape: (`*batch_dims`, d)
+            the relation-specific tail box size
+
+        :param t_pos: shape: (`*batch_dims`, d)
+            the tail entity position
+        :param t_bump: shape: (`*batch_dims`, d)
+            the tail entity bump
+
+        :param tanh_map:
+            whether to apply the tanh mapping
+        :param p:
+            the order of the norm to apply
+        :param power_norm:
+            whether to use the p-th power of the p-norm instead
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        return sum(
+            BoxEInteraction.boxe_kg_arity_position_score(
+                entity_pos=entity_pos,
+                other_entity_bump=other_entity_pos,
+                relation_box=BoxEInteraction.compute_box(base=base, delta=delta, size=size),
+                tanh_map=tanh_map,
+                p=p,
+                power_norm=power_norm,
+            )
+            for entity_pos, other_entity_pos, base, delta, size in (
+                (h_pos, t_bump, rh_base, rh_delta, rh_size),
+                (t_pos, h_bump, rt_base, rt_delta, rt_size),
+            )
+        )
 
 
 class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
