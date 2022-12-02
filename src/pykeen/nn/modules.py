@@ -1902,10 +1902,6 @@ class BoxEInteraction(
         Entities are described via position and bump. Relations are described as a pair of boxes, where each box is
         parametrized as triple (base, delta, size), where # TODO
 
-        .. note ::
-            this interaction relies on Abboud's point-to-box distance
-            :func:`pykeen.utils.point_to_box_distance`.
-
         :param h_pos: shape: (`*batch_dims`, d)
             the head entity position
         :param h_bump: shape: (`*batch_dims`, d)
