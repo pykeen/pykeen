@@ -1660,7 +1660,31 @@ class BoxEInteraction(
         Tuple[FloatTensor, FloatTensor],
     ]
 ):
-    """An implementation of the BoxE interaction from [abboud2020]_."""
+    """
+    The BoxE interaction.
+
+    Entities are represented by two $d$-dimensional vectors describing the *base position* as well
+    as the translational bump, which translates all the entities co-occuring in a fact with this entity
+    from their base positions to their final embeddings, called "bumping".
+
+    Relations are represented as a fixed number of hyper-rectangles corresponding to the relation's arity.
+    Since we are only considering single-hop link predition here, the arity is always two, i.e., one box
+    for the head position and another one for the tail position. There are different possibilities to
+    parametrize a hyper-rectangle, where the most common may be its description as the coordinate of to
+    opposing vertices. BoxE suggests a different parametrization:
+
+    - each box has a base position given by its center
+    - each box has an extent in each dimension. This size is further factored in
+        - a scalar global scaling factor
+        - a normalized extent in each dimension, i.e., the extents sum to one
+
+    ---
+    citation:
+        author: Abboud
+        year: 2020
+        link: https://arxiv.org/abs/2007.06267
+        github: ralphabb/BoxE
+    """
 
     relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
     entity_shape = ("d", "d")  # Base position and bump
@@ -1900,10 +1924,7 @@ class BoxEInteraction(
         power_norm: bool = False,
     ) -> FloatTensor:
         """
-        Evalute the BoxE interaction function from [abboud2020]_.
-
-        Entities are described via position and bump. Relations are described as a pair of boxes, where each box is
-        parametrized as triple (base, delta, size), where # TODO
+        Evaluate the BoxE interaction function from [abboud2020]_.
 
         :param h_pos: shape: (`*batch_dims`, d)
             the head entity position
@@ -1916,6 +1937,7 @@ class BoxEInteraction(
             # the relation-specific head box base shape (normalized to have a volume of 1):
         :param rh_size: shape: (`*batch_dims`, 1)
             the relation-specific head box size (a scalar)
+
         :param rt_base: shape: (`*batch_dims`, d)
             the relation-specific tail box base position
         :param rt_delta: shape: (`*batch_dims`, d)

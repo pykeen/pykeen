@@ -21,6 +21,9 @@ __all__ = [
 class BoxE(ERModel):
     r"""An implementation of BoxE from [abboud2020]_.
 
+    It combines a number of :class:`pykeen.nn.Embedding` for both entities and relation representations
+    with the `pykeen.nn.BoxEInteraction` interaction function.
+
     .. note::
 
         This implementation only currently supports unimodal knowledge graphs consisting only of binary facts,
