@@ -5,8 +5,8 @@
 import itertools
 import pathlib
 import tempfile
-from typing import Type
 import unittest
+from typing import Type
 from unittest import mock
 
 import pytest
@@ -387,6 +387,7 @@ def test_negative_sampler_kwargs():
             model="distmult",
             epochs=0,
         )
+
 
 @pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])
 def test_loading_training_triples_factory(tf_cls: Type[CoreTriplesFactory]):
