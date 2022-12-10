@@ -22,6 +22,7 @@ from pykeen.regularizers import NoRegularizer
 from pykeen.sampling.negative_sampler import NegativeSampler
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
+from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.utils import resolve_device
 
 from .utils import needs_packages
@@ -384,3 +385,10 @@ def test_negative_sampler_kwargs():
             model="distmult",
             epochs=0,
         )
+
+def test_loading_training_triples_factory():
+    """Test re-loading the training triples factory."""
+    result = pipeline(model="rescal", dataset="nations", training_kwargs=dict(num_epochs=0))
+    with tempfile.TemporaryDirectory() as directory:
+        result.save_to_directory(directory)
+        tf = CoreTriplesFactory.from_path_binary(pathlib.Path(directory, "training_triples"))
