@@ -1712,8 +1712,8 @@ class BoxEInteraction(
         state["tanh_map"] = self.tanh_map
         return state
 
-    @staticmethod
-    def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
+    @classmethod
+    def product_normalize(cls, x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
         r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
 
         :param x: shape: s
@@ -1726,8 +1726,9 @@ class BoxEInteraction(
         """
         return x / at_least_eps(at_least_eps(x.abs()).log().mean(dim=dim, keepdim=True).exp())
 
-    @staticmethod
+    @classmethod
     def point_to_box_distance(
+        cls,
         points: torch.FloatTensor,
         box_lows: torch.FloatTensor,
         box_highs: torch.FloatTensor,
@@ -1778,8 +1779,9 @@ class BoxEInteraction(
             widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
         )
 
-    @staticmethod
+    @classmethod
     def boxe_kg_arity_position_score(
+        cls,
         entity_pos: torch.FloatTensor,
         other_entity_bump: torch.FloatTensor,
         relation_box: Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1827,7 +1829,7 @@ class BoxEInteraction(
             bumped_representation = torch.tanh(bumped_representation)
 
         # Compute the distance function output element-wise
-        element_wise_distance = BoxEInteraction.point_to_box_distance(
+        element_wise_distance = cls.point_to_box_distance(
             points=bumped_representation,
             box_lows=relation_box_low,
             box_highs=relation_box_high,
@@ -1836,8 +1838,9 @@ class BoxEInteraction(
         # Finally, compute the norm
         return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
 
-    @staticmethod
+    @classmethod
     def compute_box(
+        cls,
         base: torch.FloatTensor,
         delta: torch.FloatTensor,
         size: torch.FloatTensor,
@@ -1858,7 +1861,7 @@ class BoxEInteraction(
         size_pos = torch.nn.functional.elu(size) + 1
 
         # Shape vector is normalized using the above helper function
-        delta_norm = BoxEInteraction.product_normalize(delta)
+        delta_norm = cls.product_normalize(delta)
 
         # Size is learned separately and applied to normalized shape
         delta_final = size_pos * delta_norm
