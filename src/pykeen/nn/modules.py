@@ -14,6 +14,7 @@ from typing import (
     Any,
     Callable,
     ClassVar,
+    Collection,
     Generic,
     Iterable,
     List,
@@ -39,6 +40,7 @@ from torch.nn.init import xavier_normal_
 from . import functional as pkf
 from .algebra import quaterion_multiplication_table
 from .init import initializer_resolver
+from ..metrics.utils import ValueRange
 from ..typing import (
     HeadRepresentation,
     HintOrType,
@@ -48,7 +50,7 @@ from ..typing import (
     Sign,
     TailRepresentation,
 )
-from ..utils import ensure_tuple, unpack_singletons, upgrade_to_sequence
+from ..utils import einsum, ensure_complex, ensure_tuple, unpack_singletons, upgrade_to_sequence
 
 __all__ = [
     "interaction_resolver",
@@ -158,6 +160,13 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     # if the interaction function's tail parameter should only receive a subset of entity representations
     _tail_indices: Optional[Sequence[int]] = None
+
+    #: the interaction's value range (for unrestricted input)
+    value_range: ClassVar[ValueRange] = ValueRange()
+
+    # TODO: annotate modelling capabilities? cf., e.g., https://arxiv.org/abs/1902.10197, Table 2
+    # TODO: annotate properties, e.g., symmetry, and use them for testing?
+    # TODO: annotate complexity?
 
     @property
     def tail_entity_shape(self) -> Sequence[str]:
@@ -472,13 +481,67 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.transf_interaction
 
 
+@parse_docdata
 class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless ComplEx interaction function.
+    r"""The ComplEx interaction proposed by [trouillon2016]_.
 
-    .. seealso:: :func:`pykeen.nn.functional.complex_interaction`
+    ComplEx operates on complex-valued entity and relation representations, i.e.,
+    $\textbf{e}_i, \textbf{r}_i \in \mathbb{C}^d$ and calculates the plausibility score via the Hadamard product:
+
+    .. math::
+
+        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\bar{\mathbf{e}}_t)
+
+    Which expands to:
+
+    .. math::
+
+        f(h,r,t) = \left\langle Re(\mathbf{e}_h),Re(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
+        + \left\langle Im(\mathbf{e}_h),Re(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        + \left\langle Re(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
+
+    where $Re(\textbf{x})$ and $Im(\textbf{x})$ denote the real and imaginary parts of the complex valued vector
+    $\textbf{x}$. Because the Hadamard product is not commutative in the complex space, ComplEx can model
+    anti-symmetric relations in contrast to DistMult.
+
+    .. seealso ::
+
+        Official implementation: https://github.com/ttrouill/complex/
+
+    .. note::
+        this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
+        `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
+        is compliant with :func:`torch.view_as_complex`, cf. :func:`pykeen.utils.ensure_complex`.
+
+    ---
+    citation:
+        arxiv: 1606.06357
+        author: Trouillon
+        github: ttrouill/complex
+        link: https://arxiv.org/abs/1606.06357
+        year: 2016
     """
 
-    func = pkf.complex_interaction
+    # TODO: update class docstring
+
+    # TODO: give this a better name?
+    @staticmethod
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""Evaluate the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The complex head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The complex relation representations.
+        :param t: shape: (`*batch_dims`, dim)
+            The complex tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        h, r, t = ensure_complex(h, r, t)
+        return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
 
 
 def _calculate_missing_shape_information(
@@ -1872,41 +1935,150 @@ class TripleREInteraction(
         )
 
 
+# type alias for AutoSF block description
+# head_index, relation_index, tail_index, sign
+AutoSFBlock = Tuple[int, int, int, Sign]
+
+
 class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
-    """An implementation of the AutoSF interaction as described by [zhang2020]_."""
+    r"""
+    The AutoSF interaction as described by [zhang2020]_.
 
-    func = pkf.auto_sf_interaction
-    coefficients: Tuple[Tuple[int, int, int, Sign], ...]
+    This interaction function is a parametrized way to express bi-linear models
+    with block structure. It divides the entity and relation representations into blocks,
+    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
+    and $s \in {-1, 1}$ is the sign.
 
-    def __init__(self, coefficients: Sequence[Tuple[int, int, int, Sign]]) -> None:
-        """
-        Initialize the interaction function.
+    The interaction function is then given as
+
+    .. math::
+        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
+
+    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
+
+    This parametrization allows to express several well-known interaction functions, e.g.
+
+    - :class:`pykeen.nn.DistMultInteraction`:
+        one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+    - :class:`pykeen.nn.ComplExInteraction`:
+        two blocks, $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+    - :class:`pykeen.nn.SimplEInteraction`:
+        two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+
+    While in theory, we can have up to `num_blocks**3` unique triples, usually, a smaller number is preferable to have
+    some sparsity.
+    """
+
+    #: a description of the block structure
+    coefficients: Tuple[AutoSFBlock, ...]
+
+    @staticmethod
+    def _check_coefficients(
+        coefficients: Collection[AutoSFBlock], num_entity_representations: int, num_relation_representations: int
+    ):
+        """Check coefficients.
 
         :param coefficients:
-            the coefficients, in order:
-                1. head_representation_index,
-                2. relation_representation_index,
-                3. tail_representation_index,
-                4. sign
+            the block description
+        :param num_entity_representations:
+            the number of entity representations / blocks
+        :param num_relation_representations:
+            the number of relation representations / blocks
 
         :raises ValueError:
             if there are duplicate coefficients
         """
-        super().__init__()
-        counter = Counter((hi, ri, ti) for hi, ri, ti, _ in coefficients)
+        counter = Counter(coef[:3] for coef in coefficients)
         duplicates = {k for k, v in counter.items() if v > 1}
         if duplicates:
             raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
-        self.coefficients = tuple(coefficients)
-        num_entity_representations = 1 + max(
-            itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
+        for entities, num_blocks in ((True, num_entity_representations), (False, num_relation_representations)):
+            missing_ids = set(range(num_blocks)).difference(
+                AutoSFInteraction._iter_ids(coefficients, entities=entities)
+            )
+            if missing_ids:
+                label = "entity" if entities else "relation"
+                logger.warning(f"Unused {label} blocks: {missing_ids}. This may indicate an error.")
+
+    @staticmethod
+    def _iter_ids(coefficients: Collection[AutoSFBlock], entities: bool) -> Iterable[int]:
+        """Iterate over selected parts of the blocks.
+
+        :param coefficients:
+            the block coefficients
+        :param entities:
+            whether to select entity or relation ids, i.e., components `(0, 2)` for entities, or `(1,)` for relations.
+
+        :yields: the used indices
+        """
+        indices = (0, 2) if entities else (1,)
+        yield from itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in indices))
+
+    @staticmethod
+    def _infer_number(coefficients: Collection[AutoSFBlock], entities: bool) -> int:
+        """Infer the number of blocks from the given coefficients.
+
+        :param coefficients:
+            the block coefficients
+        :param entities:
+            whether to select entity or relation ids, i.e., components `(0, 2)` for entities, or `(1,)` for relations.
+
+        :return:
+            the inferred number of blocks
+        """
+        return 1 + max(AutoSFInteraction._iter_ids(coefficients, entities=entities))
+
+    def __init__(
+        self,
+        coefficients: Iterable[AutoSFBlock],
+        *,
+        num_blocks: Optional[int] = None,
+        num_entity_representations: Optional[int] = None,
+        num_relation_representations: Optional[int] = None,
+    ) -> None:
+        """
+        Initialize the interaction function.
+
+        :param coefficients:
+            the coefficients for the individual blocks, cf. :class:`pykeen.nn.AutoSFInteraction`
+
+        :param num_blocks:
+            the number of blocks. If given, will be used for both, entity and relation representations.
+        :param num_entity_representations:
+            an explicit number of entity representations / blocks. Only used if `num_blocks` is `None`.
+            If `num_entity_representations` is `None`, too, this number if inferred from `coefficients`.
+        :param num_relation_representations:
+            an explicit number of relation representations / blocks. Only used if `num_blocks` is `None`.
+            If `num_relation_representations` is `None`, too, this number if inferred from `coefficients`.
+        """
+        super().__init__()
+
+        # convert to tuple
+        coefficients = tuple(coefficients)
+
+        # infer the number of entity and relation representations
+        num_entity_representations = (
+            num_blocks or num_entity_representations or self._infer_number(coefficients, entities=True)
         )
-        num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
+        num_relation_representations = (
+            num_blocks or num_relation_representations or self._infer_number(coefficients, entities=False)
+        )
+
+        # verify coefficients
+        self._check_coefficients(
+            coefficients=coefficients,
+            num_entity_representations=num_entity_representations,
+            num_relation_representations=num_relation_representations,
+        )
+
+        self.coefficients = coefficients
+        # dynamic entity / relation shapes
         self.entity_shape = tuple(["d"] * num_entity_representations)
         self.relation_shape = tuple(["d"] * num_relation_representations)
 
     @classmethod
-    def from_searched_sf(cls, coefficients: Sequence[int]) -> "AutoSFInteraction":
+    def from_searched_sf(cls, coefficients: Sequence[int], **kwargs) -> "AutoSFInteraction":
         """
         Instantiate AutoSF interaction from the "official" serialization format.
 
@@ -1915,7 +2087,10 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
         :param coefficients:
             the coefficients in the "official" serialization format.
-        :returns:
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`pykeen.nn.AutoSFInteraction.__init__`
+
+        :return:
             An AutoSF interaction module
 
         .. seealso::
@@ -1923,8 +2098,32 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         """
         return cls(
             coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
-            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
+            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)],
+            **kwargs,
         )
+
+    @staticmethod
+    def func(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+        coefficients: Collection[AutoSFBlock],
+    ) -> FloatTensor:
+        r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
+
+        :param h: each shape: (`*batch_dims`, dim)
+            The list of head representations.
+        :param r: each shape: (`*batch_dims`, dim)
+            The list of relation representations.
+        :param t: each shape: (`*batch_dims`, dim)
+            The list of tail representations.
+        :param coefficients:
+            the coefficients, cf. :class:`pykeen.nn.AutoSFInteraction`
+
+        :return: shape: `batch_dims`
+            The scores
+        """
+        return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(coefficients=self.coefficients)
