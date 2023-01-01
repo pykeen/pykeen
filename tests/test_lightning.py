@@ -66,7 +66,6 @@ TEST_CONFIGURATIONS = (
 
 # test combinations of models with training loops
 @needs_packages("pytorch_lightning")
-@pytest.mark.skipif(True, reason="instability related to https://github.com/Lightning-AI/lightning/pull/14117")
 @pytest.mark.parametrize(("model", "model_kwargs", "training_loop"), TEST_CONFIGURATIONS)
 def test_lit_training(model, model_kwargs, training_loop):
     """Test training models with PyTorch Lightning."""
