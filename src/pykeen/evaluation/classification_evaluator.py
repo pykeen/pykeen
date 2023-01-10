@@ -40,6 +40,8 @@ class ClassificationMetricResults(MetricResults):
 
     # docstr-coverage: inherited
     def get_metric(self, name: str) -> float:  # noqa: D102
+        if name not in self.data:
+            raise KeyError(f"Unknown metric: '{name}'. Possible options are: {sorted(self.data.keys())}")
         return self.data[name]
 
 
