@@ -2,6 +2,7 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
+import logging
 from typing import Mapping, MutableMapping, Optional, Tuple, Type, cast
 
 import numpy as np
@@ -19,6 +20,7 @@ __all__ = [
 ]
 
 CLASSIFICATION_METRICS: Mapping[str, Type[Metric]] = {cls().key: cls for cls in classification_metric_resolver}
+logger = logging.getLogger(__name__)
 
 
 class ClassificationMetricResults(MetricResults):
@@ -99,8 +101,13 @@ class ClassificationEvaluator(Evaluator):
         # Because the order of the values of an dictionary is not guaranteed,
         # we need to retrieve scores and masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
-        y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
-        y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
+        # special case if no keys; this should only happen during size probing
+        if all_keys:
+            y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
+            y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
+        else:
+            logger.debug("Empty scores. This should only happen during size probing.")
+            y_score = y_true = np.empty(shape=(0,), dtype=np.float32)
 
         # Clear buffers
         self.all_positives.clear()
