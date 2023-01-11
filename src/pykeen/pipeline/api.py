@@ -268,12 +268,6 @@ def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
 class PipelineResult(Result):
     """A dataclass containing the results of running :func:`pykeen.pipeline.pipeline`."""
 
-    #: The model trained by the pipeline
-    model: Model
-
-    #: The training triples
-    training: CoreTriplesFactory
-
     #: The losses during training
     losses: List[float]
 
@@ -285,6 +279,12 @@ class PipelineResult(Result):
 
     #: How long in seconds did evaluation take?
     evaluate_seconds: float
+
+    #: The model trained by the pipeline
+    model: Optional[Model] = None
+
+    #: The training triples
+    training: Optional[CoreTriplesFactory] = None
 
     #: The random seed used at the beginning of the pipeline
     random_seed: Optional[int] = None
@@ -468,7 +468,7 @@ class PipelineResult(Result):
             The returned :class:`PipelineResult` is different from the one that has been
             saved, since it has `None` :attr:`random_state`, :attr:`training_loop` and :attr:`stopper`
             and its :attr:`configuration`, :attr:`version` and :attr:`git_hash` will be reinitialized.
-            
+
         """
         pipeline_kwargs = {}
         directory = normalize_path(path=directory)
