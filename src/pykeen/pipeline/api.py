@@ -453,6 +453,23 @@ class PipelineResult(Result):
 
     @classmethod
     def load_from_directory(cls, directory: Union[str, pathlib.Path]) -> "PipelineResult":
+        """
+        Load the artifacts saved in the directory previously given to :func:`save_to_directory`.
+
+        It is mandatory to have at least the results file inside the directory.
+        Optional artifacts such as the model, the metadata and the training triples factory
+        will be reloaded if they are found inside the directory.
+
+        :param directory:
+            the directory path. It should coincide with the directory given to :func:`save_to_directory`
+        :return: The reloaded pipeline results.
+
+        .. note:: 
+            The returned :class:`PipelineResult` is different from the one that has been
+            saved, since it has `None` :attr:`random_state`, :attr:`training_loop` and :attr:`stopper`
+            and its :attr:`configuration`, :attr:`version` and :attr:`git_hash` will be reinitialized.
+            
+        """
         pipeline_kwargs = {}
         directory = normalize_path(path=directory)
 
