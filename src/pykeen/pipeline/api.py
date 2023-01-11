@@ -502,7 +502,7 @@ class PipelineResult(Result):
 
         # load training triples
         training_triples_file_path = directory.joinpath(cls.TRAINING_TRIPLES_FILE_NAME)
-        if training_triples_file_path.exists():
+        if training_triples_file_path.is_dir():
             pipeline_kwargs["training"] = CoreTriplesFactory.from_path_binary(training_triples_file_path)
 
         return PipelineResult(**pipeline_kwargs)
