@@ -478,7 +478,7 @@ class PipelineResult(Result):
         
         # load results (mandatory)
         result_file_path = directory.joinpath(cls.RESULT_FILE_NAME)
-        if not result_file_path.exists():
+        if not result_file_path.is_file():
             raise FileNotFoundError(f"The results file {result_file_path} doesn't exist.")
         
         with result_file_path.open("r") as result_file:
