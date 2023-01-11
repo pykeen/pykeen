@@ -491,13 +491,13 @@ class PipelineResult(Result):
 
         # load metadata
         metadata_file_path = directory.joinpath(cls.METADATA_FILE_NAME)
-        if metadata_file_path.exists():
+        if metadata_file_path.is_file():
             with metadata_file_path.open("r") as metadata_file:
                 pipeline_kwargs["metadata"] = json.load(metadata_file)
 
         # load model
         model_file_path = directory.joinpath(cls.MODEL_FILE_NAME)
-        if model_file_path.exists():
+        if model_file_path.is_file():
             pipeline_kwargs["model"] = torch.load(model_file_path)
 
         # load training triples
