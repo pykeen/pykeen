@@ -268,17 +268,11 @@ def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
 class PipelineResult(Result):
     """A dataclass containing the results of running :func:`pykeen.pipeline.pipeline`."""
 
-    #: The random seed used at the beginning of the pipeline
-    random_seed: int
-
     #: The model trained by the pipeline
     model: Model
 
     #: The training triples
     training: CoreTriplesFactory
-
-    #: The training loop used by the pipeline
-    training_loop: TrainingLoop
 
     #: The losses during training
     losses: List[float]
@@ -291,6 +285,12 @@ class PipelineResult(Result):
 
     #: How long in seconds did evaluation take?
     evaluate_seconds: float
+
+    #: The random seed used at the beginning of the pipeline
+    random_seed: Optional[int] = None
+
+    #: The training loop used by the pipeline
+    training_loop: Optional[TrainingLoop] = None
 
     #: An early stopper
     stopper: Optional[Stopper] = None
@@ -450,6 +450,45 @@ class PipelineResult(Result):
             self.training.to_path_binary(directory.joinpath(self.TRAINING_TRIPLES_FILE_NAME))
 
         logger.info(f"Saved to directory: {directory.as_uri()}")
+
+    @classmethod
+    def load_from_directory(cls, directory: Union[str, pathlib.Path]) -> "PipelineResult":
+        pipeline_kwargs = {}
+        directory = normalize_path(path=directory)
+
+        if not directory.is_dir():
+            raise FileNotFoundError(f"The results directory {directory} doesn't exist.")
+        
+        # load results (mandatory)
+        result_file_path = directory.joinpath(cls.RESULT_FILE_NAME)
+        if not result_file_path.exists():
+            raise FileNotFoundError(f"The results file {result_file_path} doesn't exist.")
+        
+        with result_file_path.open("r") as result_file:
+            results = json.load(result_file)
+            times = results["times"]
+            pipeline_kwargs["train_seconds"] = times["training"]
+            pipeline_kwargs["evaluate_seconds"] = times["evaluation"]
+            pipeline_kwargs["metric_results"] = MetricResults(results["metrics"])
+            pipeline_kwargs["losses"] = results["losses"]
+
+        # load metadata
+        metadata_file_path = directory.joinpath(cls.METADATA_FILE_NAME)
+        if metadata_file_path.exists():
+            with metadata_file_path.open("r") as metadata_file:
+                pipeline_kwargs["metadata"] = json.load(metadata_file)
+
+        # load model
+        model_file_path = directory.joinpath(cls.MODEL_FILE_NAME)
+        if model_file_path.exists():
+            pipeline_kwargs["model"] = torch.load(model_file_path)
+
+        # load training triples
+        training_triples_file_path = directory.joinpath(cls.TRAINING_TRIPLES_FILE_NAME)
+        if training_triples_file_path.exists():
+            pipeline_kwargs["training"] = CoreTriplesFactory.from_path_binary(training_triples_file_path)
+
+        return PipelineResult(**pipeline_kwargs)
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
