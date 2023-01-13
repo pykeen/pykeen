@@ -43,7 +43,7 @@ class ClassificationMetricResults(MetricResults):
                 value = value.item()
             data[key] = value
         data["num_scores"] = y_score.size
-        return ClassificationMetricResults(data=data)
+        return cls(data=data)
 
     # docstr-coverage: inherited
     def get_metric(self, name: str) -> float:  # noqa: D102
@@ -106,13 +106,12 @@ class ClassificationEvaluator(Evaluator):
         # Because the order of the values of an dictionary is not guaranteed,
         # we need to retrieve scores and masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
-        # special case if no keys; this should only happen during size probing
-        if all_keys:
-            y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
-            y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
-        else:
-            logger.debug("Empty scores. This should only happen during size probing.")
+        if not all_keys:
+            logger.debug("Empty scores. This special case should only happen during size probing.")
             return ClassificationMetricResults(data=dict())
+
+        y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
+        y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
 
         # Clear buffers
         self.all_positives.clear()
