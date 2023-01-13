@@ -10,8 +10,7 @@ import torch
 
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
-from ..metrics.classification import classification_metric_resolver
-from ..metrics.utils import Metric
+from ..metrics.classification import ClassificationMetric, classification_metric_resolver
 from ..typing import MappedTriples, Target
 
 __all__ = [
@@ -19,7 +18,9 @@ __all__ = [
     "ClassificationMetricResults",
 ]
 
-CLASSIFICATION_METRICS: Mapping[str, Type[Metric]] = {cls().key: cls for cls in classification_metric_resolver}
+CLASSIFICATION_METRICS: Mapping[str, Type[ClassificationMetric]] = {
+    cls().key: cls for cls in classification_metric_resolver
+}
 logger = logging.getLogger(__name__)
 
 
