@@ -35,7 +35,7 @@ class ClassificationMetricResults(MetricResults):
         data = dict()
         for key, metric in CLASSIFICATION_METRICS.items():
             if y_true.size == 0:
-                logger.warning("Empty y_true?!")
+                logger.warning("Empty y_true for %s?!", key)
                 continue
             value = metric.score(y_true, y_score)
             if isinstance(value, np.number):
