@@ -29,15 +29,19 @@ class ClassificationMetricResults(MetricResults):
     metrics = CLASSIFICATION_METRICS
 
     @classmethod
-    def from_scores(cls, y_true, y_score):
+    def from_scores(cls, y_true: np.ndarray, y_score: np.ndarray):
         """Return an instance of these metrics from a given set of true and scores."""
         data = dict()
         for key, metric in CLASSIFICATION_METRICS.items():
+            if y_true.size == 0:
+                logger.warning("Empty y_true?!")
+                continue
             value = metric.score(y_true, y_score)
             if isinstance(value, np.number):
                 # TODO: fix this upstream / make metric.score comply to signature
                 value = value.item()
             data[key] = value
+        data["num_scores"] = y_score.size
         return ClassificationMetricResults(data=data)
 
     # docstr-coverage: inherited
@@ -107,7 +111,7 @@ class ClassificationEvaluator(Evaluator):
             y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
         else:
             logger.debug("Empty scores. This should only happen during size probing.")
-            y_score = y_true = np.empty(shape=(0,), dtype=np.float32)
+            return ClassificationMetricResults(data=dict())
 
         # Clear buffers
         self.all_positives.clear()
