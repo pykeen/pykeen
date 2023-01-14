@@ -87,13 +87,13 @@ Note that $L$ is often used interchangbly with $L^{*}$.
 
 Delta Pairwise Loss Functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Delta pairwise losses are computed on the differences between the scores of the positive and negative
-triples (e.g., $\Delta := f(k) - f(\bar{k})$) with transfer function $g: \mathbb{R} \rightarrow \mathbb{R}$ that take
+Delta pairwise losses are computed on the differences between the scores of the negative and positive
+triples (e.g., $\Delta := f(\bar{k}) - f(k)$) with transfer function $g: \mathbb{R} \rightarrow \mathbb{R}$ that take
 the form of:
 
 .. math::
 
-    L^{*}(f(k), f(\bar{k})) = g(f(k) - f(\bar{k})) := g(\Delta)
+    L^{*}(f(k), f(\bar{k})) = g(f(\bar{k}) - f(k)) := g(\Delta)
 
 The following table shows delta pairwise loss functions:
 
@@ -451,7 +451,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         L(k, \bar{k}) = g(f(\bar{k}) - f(k) + \lambda)
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)$ is an activation
+    :class:`pykeen.models.TransE` has $f(h,r,t)=-||\mathbf{e}_h+\mathbf{e}_r-\mathbf{e}_t||_p$), $g(x)$ is an activation
     function like the ReLU or softmax, and $\lambda$ is the margin.
     """
 
@@ -559,11 +559,11 @@ class MarginRankingLoss(MarginPairwiseLoss):
     r"""The pairwise hinge loss (i.e., margin ranking loss).
 
     .. math ::
-        L(k, \bar{k}) = \max(0, f(k) - f(\bar{k}) + \lambda)
+        L(k, \bar{k}) = \max(0, f(\bar{k}) - f(k) + \lambda)
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    TransE has $f(h,r,t)=h+r-t$), $g(x)=\max(0,x)$ is the ReLU activation function,
-    and $\lambda$ is the margin.
+    TransE has $f(h,r,t)=-||\mathbf{e}_h+\mathbf{e}_r-\mathbf{e}_t||_p$), $g(x)=\max(0,x)$ is the ReLU
+    activation function, and $\lambda$ is the margin.
 
     .. seealso::
 
@@ -603,11 +603,11 @@ class SoftMarginRankingLoss(MarginPairwiseLoss):
     r"""The soft pairwise hinge loss (i.e., soft margin ranking loss).
 
     .. math ::
-        L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k}) + \lambda))
+        L(k, \bar{k}) = \log(1 + \exp(f(\bar{k}) - f(k) + \lambda))
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)=\log(1 + \exp(x))$
-    is the softmax activation function, and $\lambda$ is the margin.
+    :class:`pykeen.models.TransE` has $f(h,r,t)=-||\mathbf{e}_h+\mathbf{e}_r-\mathbf{e}_t||_p$),
+    $g(x)=\log(1 + \exp(x))$ is the softmax activation function, and $\lambda$ is the margin.
 
     .. seealso::
 
@@ -639,11 +639,11 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     r"""The pairwise logistic loss.
 
     .. math ::
-        L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k})))
+        L(k, \bar{k}) = \log(1 + \exp(f(\bar{k}) - f(k)))
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)=\log(1 + \exp(x))$
-    is the softmax activation function.
+    :class:`pykeen.models.TransE` has $f(h,r,t)=-||\mathbf{e}_h+\mathbf{e}_r-\mathbf{e}_t||_p$),
+    $g(x)=\log(1 + \exp(x))$ is the softmax activation function.
 
     .. seealso::
 
