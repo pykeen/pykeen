@@ -1675,8 +1675,9 @@ class BoxEInteraction(
 
     - each box has a base position given by its center
     - each box has an extent in each dimension. This size is further factored in
-        - a scalar global scaling factor
-        - a normalized extent in each dimension, i.e., the extents sum to one
+
+      - a scalar global scaling factor
+      - a normalized extent in each dimension, i.e., the extents sum to one
 
     ---
     citation:
