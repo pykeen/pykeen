@@ -562,7 +562,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
         L(k, \bar{k}) = \max(0, f(\bar{k}) - f(k) + \lambda)
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    TransE has $f(h,r,t)=-||\mathbf{e}_h+\mathbf{e}_r-\mathbf{e}_t||_p$), $g(x)=\max(0,x)$ is the ReLU 
+    TransE has $f(h,r,t)=-||\mathbf{e}_h+\mathbf{e}_r-\mathbf{e}_t||_p$), $g(x)=\max(0,x)$ is the ReLU
     activation function, and $\lambda$ is the margin.
 
     .. seealso::
