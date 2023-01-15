@@ -32,11 +32,10 @@ class ClassificationMetricResults(MetricResults):
     @classmethod
     def from_scores(cls, y_true: np.ndarray, y_score: np.ndarray):
         """Return an instance of these metrics from a given set of true and scores."""
+        if y_true.size == 0:
+            raise ValueError(f"Cannot calculate scores from empty array (y_true.shape={y_true.shape}).")
         data = dict()
         for key, metric in CLASSIFICATION_METRICS.items():
-            if y_true.size == 0:
-                logger.warning("Empty y_true for %s?!", key)
-                continue
             value = metric.score(y_true, y_score)
             if isinstance(value, np.number):
                 # TODO: fix this upstream / make metric.score comply to signature
