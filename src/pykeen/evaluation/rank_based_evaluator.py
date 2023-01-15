@@ -342,7 +342,7 @@ class RankBasedEvaluator(Evaluator):
     def clear(self) -> None:  # noqa: D102
         self.ranks.clear()
         self.num_candidates.clear()
-    
+
     # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
@@ -724,7 +724,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
     def clear(self) -> None:  # noqa: D102
         super().clear()
         self.keys.clear()
-    
+
     # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
@@ -738,6 +738,6 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights),
         )
         # Clear buffers
-        self.clear()        
+        self.clear()
 
         return result

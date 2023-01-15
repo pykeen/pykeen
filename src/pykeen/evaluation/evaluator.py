@@ -145,7 +145,7 @@ class Evaluator(ABC):
             An optional binary (0/1) tensor indicating other true entities.
         """
         raise NotImplementedError
-    
+
     @abstractmethod
     def clear(self) -> None:
         """Clear buffers and intermediate results."""

@@ -104,7 +104,7 @@ class ClassificationEvaluator(Evaluator):
     def clear(self) -> None:  # noqa: D102
         self.all_positives.clear()
         self.all_scores.clear()
-    
+
     # docstr-coverage: inherited
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Because the order of the values of an dictionary is not guaranteed,
