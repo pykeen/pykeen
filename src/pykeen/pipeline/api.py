@@ -191,7 +191,7 @@ import os
 import pathlib
 import pickle
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import (
     Any,
     ClassVar,
@@ -312,6 +312,7 @@ class PipelineResult(Result):
     METADATA_FILE_NAME: ClassVar[str] = "metadata.json"
     MODEL_FILE_NAME: ClassVar[str] = "trained_model.pkl"
     TRAINING_TRIPLES_FILE_NAME: ClassVar[str] = "training_triples"
+    PIPELINE_INFO_FILE_NAME: ClassVar[str] = "pipeline_info.json"
 
     @property
     def title(self) -> Optional[str]:  # noqa:D401
@@ -392,6 +393,14 @@ class PipelineResult(Result):
             results["stopper"] = self.stopper.get_summary_dict()
         return results
 
+    def _get_pipeline_info(self) -> Mapping[str, Any]:
+        pipeline_info = dict(
+            random_seed=self.random_seed,
+            version=self.version,
+            git_hash=self.git_hash
+        )
+        return pipeline_info
+
     def save_to_directory(
         self,
         directory: Union[str, pathlib.Path],
@@ -399,6 +408,7 @@ class PipelineResult(Result):
         save_metadata: bool = True,
         save_replicates: bool = True,
         save_training: bool = True,
+        save_pipeline_info: bool = True,
         **_kwargs,
     ) -> None:
         """
@@ -448,6 +458,9 @@ class PipelineResult(Result):
             self.save_model(directory.joinpath(self.MODEL_FILE_NAME))
         if save_training:
             self.training.to_path_binary(directory.joinpath(self.TRAINING_TRIPLES_FILE_NAME))
+        if save_pipeline_info:
+            with directory.joinpath(self.PIPELINE_INFO_FILE_NAME).open("w") as file:
+                json.dump(self._get_pipeline_info(), file, indent=2, sort_keys=True)
 
         logger.info(f"Saved to directory: {directory.as_uri()}")
 
@@ -504,6 +517,20 @@ class PipelineResult(Result):
         training_triples_file_path = directory.joinpath(cls.TRAINING_TRIPLES_FILE_NAME)
         if training_triples_file_path.is_dir():
             pipeline_kwargs["training"] = CoreTriplesFactory.from_path_binary(training_triples_file_path)
+
+        # load pipeline info
+        pipeline_info_file_path = directory.joinpath(cls.PIPELINE_INFO_FILE_NAME)
+        if pipeline_info_file_path.is_file():
+            with pipeline_info_file_path.open("r") as pipeline_info_file:
+                pipeline_info = json.load(pipeline_info_file)
+                pipeline_kwargs["random_seed"] = pipeline_info["random_seed"]
+                pipeline_kwargs["version"] = pipeline_info["version"]
+                pipeline_kwargs["git_hash"] = pipeline_info["git_hash"]
+
+        # warn users about default attributes
+        pipeline_res_fields = [field.name for field in fields(PipelineResult)]
+        pipeline_res_missing_fields = [f"`{field}`" for field in pipeline_res_fields if field not in pipeline_kwargs.keys()]
+        logging.warn(f"The restored `PipelineResult` will have default values for the attributes: {', '.join(pipeline_res_missing_fields)}.")
 
         return PipelineResult(**pipeline_kwargs)
 
