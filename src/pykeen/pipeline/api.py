@@ -473,11 +473,16 @@ class PipelineResult(Result):
             the directory path. It should coincide with the directory given to :func:`save_to_directory`
         :return: The reloaded pipeline results.
 
+        :raises FileNotFoundError:
+            If the directory or the results file stored with :func:`save_to_directory` are not found.
+        :raises KeyError:
+            If one of the files stored in the directory have been damaged and don't contain the JSON keys
+            saved by :func:`save_to_directory`.
+
         .. note::
             The returned :class:`PipelineResult` is different from the one that has been
-            saved, since it has `None` :attr:`random_state`, :attr:`training_loop` and :attr:`stopper`
-            and its :attr:`configuration`, :attr:`version` and :attr:`git_hash` will be reinitialized.
-
+            saved, since it could have default values for some of the attributes that this function
+            has not been able to restore.
         """
         pipeline_kwargs = {}
         directory = normalize_path(path=directory)
