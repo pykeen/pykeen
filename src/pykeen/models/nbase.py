@@ -444,6 +444,8 @@ class ERModel(
             The slice size.
         :param slice_dim:
             The dimension along which to slice
+        :param invert_relation:
+            Whether to invert relations
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.

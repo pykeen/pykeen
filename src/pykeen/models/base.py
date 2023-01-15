@@ -415,9 +415,12 @@ class Model(nn.Module, ABC):
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
+
+        :raises NotImplementedError: if inverse relations are requested. This is punted from
+            https://github.com/pykeen/pykeen/pull/752 to https://github.com/pykeen/pykeen/pull/728
         """
         if invert_relation:
-            raise NotImplementedError  # fixme
+            raise NotImplementedError  # FIXME in follow-up to https://github.com/pykeen/pykeen/pull/752
         return self.score_r(ht_batch=ht_batch, **kwargs)
 
     def score_t_extended(
