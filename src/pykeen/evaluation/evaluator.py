@@ -147,6 +147,11 @@ class Evaluator(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def clear(self) -> None:
+        """Clear buffers and intermediate results."""
+        raise NotImplementedError
+
+    @abstractmethod
     def finalize(self) -> MetricResults:
         """Compute the final results, and clear buffers."""
         raise NotImplementedError
@@ -203,7 +208,7 @@ class Evaluator(ABC):
                 self.slice_size = slice_size
 
                 # Clear the ranks from the current evaluator
-                self.finalize()
+                self.clear()
 
         rv = evaluate(
             model=model,
