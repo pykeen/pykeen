@@ -931,7 +931,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     embedding_dim: int = 3
 
     #: Whether to create inverse triples (needed e.g. by ConvE)
-    create_inverse_triples: bool = False
+    use_inverse_relations: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
     sampler: Optional[str] = None
@@ -970,7 +970,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         # insert shared parameters
         kwargs["triples_factory"] = self.factory
         kwargs["embedding_dim"] = self.embedding_dim
-        kwargs["use_inverse_relations"] = self.create_inverse_triples
+        kwargs["use_inverse_relations"] = self.use_inverse_relations
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
@@ -1039,7 +1039,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 self.skipTest(str(e))
             else:
                 raise e
-        if score is self.instance.score_r and self.create_inverse_triples:
+        if score is self.instance.score_r and self.use_inverse_relations:
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
@@ -1202,9 +1202,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         ]
         extras.extend(self.cli_extras)
 
-        # Make sure that inverse triples are created if create_inverse_triples=True
-        if self.create_inverse_triples:
-            extras.append("--create-inverse-triples")
+        # Make sure that inverse triples are created if flagged
+        if self.use_inverse_relations:
+            extras.append("--use-inverse-relations")
 
         extras = [str(e) for e in extras]
         return extras
@@ -1220,11 +1220,11 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         model_kwargs = dict(self.instance_kwargs)
         # triples factory is added by the pipeline
         model_kwargs.pop("triples_factory")
+        model_kwargs.setdefault("use_inverse_relations", self.use_inverse_relations)
         pipeline(
             model=self.cls,
             model_kwargs=model_kwargs,
             dataset="nations",
-            dataset_kwargs=dict(create_inverse_triples=self.create_inverse_triples),
             stopper="early",
             training_loop_kwargs=self.training_loop_kwargs,
             stopper_kwargs=dict(frequency=1),
@@ -1422,7 +1422,7 @@ class BaseNodePieceTest(ModelTestCase):
     """Test the NodePiece model."""
 
     cls = pykeen.models.NodePiece
-    create_inverse_triples = True
+    use_inverse_relations = True
 
     def _help_test_cli(self, args):  # noqa: D102
         if self.instance_kwargs.get("tokenizers_kwargs"):
@@ -1453,7 +1453,7 @@ class InductiveModelTestCase(ModelTestCase):
         training_loop_kwargs = dict(self.training_loop_kwargs or dict())
         training_loop_kwargs["mode"] = self.mode
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
-        # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
+        # dataset = InductiveFB15k237()
         kwargs["triples_factory"] = self.factory = dataset.transductive_training
         kwargs["inference_factory"] = dataset.inductive_inference
         return kwargs
@@ -1540,10 +1540,9 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     """Tests for representations requiring triples factories."""
 
-    num_entities: ClassVar[int]
+    num_entities: int
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
-    create_inverse_triples: bool = False
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         self.num_entities = self.max_id
@@ -1552,7 +1551,6 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
             num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
-            create_inverse_triples=self.create_inverse_triples,
         )
         return kwargs
 
@@ -2063,7 +2061,6 @@ class NodePieceTestCase(RepresentationTestCase):
             num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
-            create_inverse_triples=False,
         )
         # inferred from triples factory
         kwargs.pop("max_id")

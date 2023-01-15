@@ -48,7 +48,7 @@ class TestCompGCN(cases.ModelTestCase):
     """Test the CompGCN model."""
 
     cls = pykeen.models.CompGCN
-    create_inverse_triples = True
+    use_inverse_relations = True
     num_constant_init = 3  # BN(2) + Bias
     cli_extras = ["--create-inverse-triples"]
 
@@ -77,7 +77,7 @@ class TestConvE(cases.ModelTestCase):
 
     cls = pykeen.models.ConvE
     embedding_dim = 12
-    create_inverse_triples = True
+    use_inverse_relations = True
     kwargs = {
         "output_channels": 2,
         "embedding_height": 3,
@@ -270,7 +270,7 @@ class TestInductiveNodePiece(cases.InductiveModelTestCase):
     """Test the InductiveNodePiece model."""
 
     cls = pykeen.models.InductiveNodePiece
-    create_inverse_triples = True
+    use_inverse_relations = True
 
 
 class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
@@ -278,7 +278,7 @@ class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
 
     cls = pykeen.models.InductiveNodePieceGNN
     num_constant_init = 6
-    create_inverse_triples = True
+    use_inverse_relations = True
     train_batch_size = 8
 
 

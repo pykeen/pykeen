@@ -413,11 +413,6 @@ class TestUtils(unittest.TestCase):
         tf1 = Nations().training.to_core_triples_factory()
         self.assert_binary_io(tf1, CoreTriplesFactory)
 
-    def test_core_binary_inverse_relations(self):
-        """Test binary i/o on core triples factory with inverse relations."""
-        tf1 = Nations(create_inverse_triples=True).training.to_core_triples_factory()
-        self.assert_binary_io(tf1, CoreTriplesFactory)
-
     def assert_binary_io(self, tf, tf_cls):
         """Check the triples factory can be written and reloaded properly."""
         self.assertIsInstance(tf, tf_cls)
@@ -440,7 +435,6 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(tf1.metadata, tf2.metadata)
         self.assertEqual(tf1.num_entities, tf2.num_entities)
         self.assertEqual(tf1.num_relations, tf2.num_relations)
-        self.assertEqual(tf1.create_inverse_triples, tf2.create_inverse_triples)
         self.assertEqual(
             tf1.mapped_triples.detach().cpu().numpy().tolist(),
             tf2.mapped_triples.detach().cpu().numpy().tolist(),

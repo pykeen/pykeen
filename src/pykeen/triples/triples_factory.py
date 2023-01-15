@@ -735,9 +735,7 @@ class CoreTriplesFactory(KGInfo):
     def _get_binary_state(self):
         return dict(
             num_entities=self.num_entities,
-            # note: num_relations will be doubled again when instantiating with create_inverse_triples=True
-            num_relations=self.real_num_relations,
-            create_inverse_triples=self.create_inverse_triples,
+            num_relations=self.real_num_relations,  # FIXME check this before merge, should be self.num_relations?
             metadata=self.metadata,
         )
 
