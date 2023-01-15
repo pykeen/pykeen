@@ -2,7 +2,6 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-import logging
 from typing import Mapping, MutableMapping, Optional, Tuple, Type, cast
 
 import numpy as np
@@ -21,7 +20,6 @@ __all__ = [
 CLASSIFICATION_METRICS: Mapping[str, Type[ClassificationMetric]] = {
     cls().key: cls for cls in classification_metric_resolver
 }
-logger = logging.getLogger(__name__)
 
 
 class ClassificationMetricResults(MetricResults):
