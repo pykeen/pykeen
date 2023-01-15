@@ -394,11 +394,7 @@ class PipelineResult(Result):
         return results
 
     def _get_pipeline_info(self) -> Mapping[str, Any]:
-        pipeline_info = dict(
-            random_seed=self.random_seed,
-            version=self.version,
-            git_hash=self.git_hash
-        )
+        pipeline_info = dict(random_seed=self.random_seed, version=self.version, git_hash=self.git_hash)
         return pipeline_info
 
     def save_to_directory(
@@ -477,7 +473,7 @@ class PipelineResult(Result):
             the directory path. It should coincide with the directory given to :func:`save_to_directory`
         :return: The reloaded pipeline results.
 
-        .. note:: 
+        .. note::
             The returned :class:`PipelineResult` is different from the one that has been
             saved, since it has `None` :attr:`random_state`, :attr:`training_loop` and :attr:`stopper`
             and its :attr:`configuration`, :attr:`version` and :attr:`git_hash` will be reinitialized.
@@ -488,12 +484,12 @@ class PipelineResult(Result):
 
         if not directory.is_dir():
             raise FileNotFoundError(f"The results directory {directory} doesn't exist.")
-        
+
         # load results (mandatory)
         result_file_path = directory.joinpath(cls.RESULT_FILE_NAME)
         if not result_file_path.is_file():
             raise FileNotFoundError(f"The results file {result_file_path} doesn't exist.")
-        
+
         with result_file_path.open("r") as result_file:
             results = json.load(result_file)
             times = results["times"]
@@ -529,8 +525,12 @@ class PipelineResult(Result):
 
         # warn users about default attributes
         pipeline_res_fields = [field.name for field in fields(PipelineResult)]
-        pipeline_res_missing_fields = [f"`{field}`" for field in pipeline_res_fields if field not in pipeline_kwargs.keys()]
-        logging.warn(f"The restored `PipelineResult` will have default values for the attributes: {', '.join(pipeline_res_missing_fields)}.")
+        pipeline_res_missing_fields = [
+            f"`{field}`" for field in pipeline_res_fields if field not in pipeline_kwargs.keys()
+        ]
+        logging.warn(
+            f"The restored `PipelineResult` will have default values for the attributes: {', '.join(pipeline_res_missing_fields)}."
+        )
 
         return PipelineResult(**pipeline_kwargs)
 
