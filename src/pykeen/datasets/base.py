@@ -90,7 +90,6 @@ class Dataset(ExtraReprMixin):
             and (self.training == __o.training)
             and (self.testing == __o.testing)
             and ((self.validation is None and __o.validation is None) or (self.validation == __o.validation))
-            and (self.create_inverse_triples == __o.create_inverse_triples)
         )
 
     @property
@@ -127,11 +126,6 @@ class Dataset(ExtraReprMixin):
     def num_relations(self):  # noqa: D401
         """The number of relations."""
         return self.training.num_relations
-
-    @property
-    def create_inverse_triples(self):
-        """Return whether inverse triples are created *for the training factory*."""
-        return self.training.create_inverse_triples
 
     @classmethod
     def docdata(cls, *parts: str) -> Any:
@@ -184,7 +178,6 @@ class Dataset(ExtraReprMixin):
         """Yield extra entries for the instance's string representation."""
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
-        yield f"create_inverse_triples={self.create_inverse_triples}"
 
     @classmethod
     def from_path(cls, path: Union[str, pathlib.Path], ratios: Optional[List[float]] = None) -> "Dataset":
