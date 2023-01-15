@@ -287,7 +287,7 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         use_inverse_relations: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
         download_kwargs: Optional[Mapping[str, Any]] = None,
-        version: str = None,
+        version: Optional[str] = None,
     ):
         """Initialize dataset.
 

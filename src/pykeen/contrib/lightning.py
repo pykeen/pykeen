@@ -45,7 +45,7 @@ from pykeen.optimizers import optimizer_resolver
 from pykeen.sampling import NegativeSampler
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from pykeen.triples.triples_factory import CoreTriplesFactory
-from pykeen.typing import InductiveMode
+from pykeen.typing import InductiveMode, OneOrSequence
 
 __all__ = [
     "LitModule",
@@ -150,13 +150,15 @@ class LitModule(pytorch_lightning.LightningModule):
         """Create a data loader."""
         raise NotImplementedError
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> torch.utils.data.DataLoader:
         """Create the training data loader."""
         return self._dataloader(triples_factory=self.dataset.training, shuffle=True)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> OneOrSequence[torch.utils.data.DataLoader]:
         """Create the validation data loader."""
         # TODO: In sLCWA, we still want to calculate validation *metrics* in LCWA
+        if self.dataset.validation is None:
+            return []
         return self._dataloader(triples_factory=self.dataset.validation, shuffle=False)
 
     def configure_optimizers(self):

@@ -75,7 +75,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         cls,
         path: Union[str, pathlib.Path, TextIO],
         *,
-        path_to_numeric_triples: Union[str, pathlib.Path, TextIO] = None,
+        path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if path_to_numeric_triples is None:
