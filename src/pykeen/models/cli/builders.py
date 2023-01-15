@@ -178,9 +178,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         testing = _triples_factory(testing_triples_factory)
         validation = _triples_factory(validation_triples_factory)
 
-        if use_inverse_relations:
-            model_kwargs = model_kwargs or {}
-            model_kwargs["use_inverse_relations"] = True
+        model_kwargs["use_inverse_relations"] = use_inverse_relations
 
         pipeline_result = pipeline(
             device=device,
