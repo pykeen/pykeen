@@ -108,7 +108,6 @@ class ClassificationEvaluator(Evaluator):
         # Because the order of the values of an dictionary is not guaranteed,
         # we need to retrieve scores and masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
-
         y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
         y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
 
