@@ -1,5 +1,8 @@
-"""Inverse Relation Logic."""
-from abc import abstractmethod
+# -*- coding: utf-8 -*-
+
+"""Relation inversion logic."""
+
+from abc import ABC, abstractmethod
 from typing import TypeVar
 
 import torch
@@ -13,7 +16,7 @@ __all__ = [
 RelationID = TypeVar("RelationID", int, torch.LongTensor)
 
 
-class RelationInverter:
+class RelationInverter(ABC):
     """An interface for inverse-relation ID mapping."""
 
     def __init__(self, num_relations: int):
@@ -31,11 +34,10 @@ class RelationInverter:
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:
         """Get the inverse ID for a given relation."""
         # TODO: inverse of inverse?
-        raise NotImplementedError
 
     @abstractmethod
     def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
-        raise NotImplementedError
+        """Map relations in a batch."""
 
     @abstractmethod
     def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
@@ -43,7 +45,7 @@ class RelationInverter:
         raise NotImplementedError
 
     def map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:
-        """Map relations of batch, optionally also inverting them."""
+        """Map relations in a batch, optionally also inverting them."""
         batch = self._map(batch=batch, index=index)
         return self.invert_(batch=batch, index=index) if invert else batch
 

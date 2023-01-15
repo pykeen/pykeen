@@ -16,7 +16,7 @@ from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
-from .inverse import RelationInverter, relation_inverter_resolver
+from ..inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..triples import KGInfo
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
