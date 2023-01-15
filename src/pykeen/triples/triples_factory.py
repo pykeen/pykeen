@@ -34,6 +34,7 @@ from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstan
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
+from ..inverse import relation_inverter_resolver
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import (
     ExtraReprMixin,
@@ -341,6 +342,7 @@ class CoreTriplesFactory(KGInfo):
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
+        self.relation_inverter = relation_inverter_resolver.make(query=None)
 
     @classmethod
     def create(
