@@ -100,11 +100,6 @@ def _iter_ranks(
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
     weights: Optional[Mapping[Target, Sequence[np.ndarray]]] = None,
 ) -> Iterable[RankPack]:
-    # terminate early if there are no ranks
-    if not ranks:
-        logger.debug("Empty ranks. This should only happen during size probing.")
-        return
-
     sides = sorted(num_candidates.keys())
     # flatten dictionaries
     ranks_flat = _flatten(ranks)
@@ -726,6 +721,11 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().cpu().numpy())
 
     # docstr-coverage: inherited
+    def clear(self) -> None:  # noqa: D102
+        super().clear()
+        self.keys.clear()
+    
+    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -738,8 +738,6 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights),
         )
         # Clear buffers
-        self.keys.clear()
-        self.ranks.clear()
-        self.num_candidates.clear()
+        self.clear()        
 
         return result
