@@ -754,6 +754,8 @@ class TriplesFactory(CoreTriplesFactory):
         entity_to_id: EntityMapping,
         relation_to_id: RelationMapping,
         metadata: Optional[Mapping[str, Any]] = None,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
     ):
         """
         Create the triples factory.
@@ -766,9 +768,31 @@ class TriplesFactory(CoreTriplesFactory):
             The mapping from relations' labels to their indices.
         :param metadata:
             Arbitrary metadata to go with the graph
+        :param num_entities:
+            the number of entities. May be None, in which case this number is inferred by the label mapping
+        :param num_relations:
+            the number of relations. May be None, in which case this number is inferred by the label mapping
+
+        :raises ValueError:
+            if the explicitly provided number of entities or relations does not match with the one given
+            by the label mapping
         """
         self.entity_labeling = Labeling(label_to_id=entity_to_id)
+        if num_entities is None:
+            num_entities = self.entity_labeling.max_id
+        elif num_entities != self.entity_labeling.max_id:
+            raise ValueError(
+                f"Mismatch between the number of entities in labeling ({self.entity_labeling.max_id}) "
+                f"vs. explicitly provided num_entities={num_entities}",
+            )
         self.relation_labeling = Labeling(label_to_id=relation_to_id)
+        if num_relations is None:
+            num_relations = self.relation_labeling.max_id
+        elif num_relations != self.relation_labeling.max_id:
+            raise ValueError(
+                f"Mismatch between the number of relations in labeling ({self.relation_labeling.max_id}) "
+                f"vs. explicitly provided num_relations={num_relations}",
+            )
         super().__init__(
             mapped_triples=mapped_triples,
             num_entities=self.entity_labeling.max_id,

@@ -6,7 +6,10 @@ import itertools
 import pathlib
 import tempfile
 import unittest
+from typing import Type
+from unittest import mock
 
+import pytest
 import torch
 
 import pykeen.regularizers
@@ -18,8 +21,10 @@ from pykeen.nn.representation import Embedding
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
+from pykeen.sampling.negative_sampler import NegativeSampler
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
+from pykeen.triples.triples_factory import CoreTriplesFactory, TriplesFactory
 from pykeen.utils import resolve_device
 
 from .utils import needs_packages
@@ -150,7 +155,7 @@ class TestPipelineTriples(unittest.TestCase):
         # empty lists are falsy
         self.assertTrue(losses)
 
-    @needs_packages("matplotlib")
+    @needs_packages("matplotlib", "seaborn")
     def test_plot(self):
         """Test plotting."""
         result = pipeline(dataset="nations", model="transe", training_kwargs=dict(num_epochs=0))
@@ -352,3 +357,42 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
             filter_validation_when_testing=True,
         )
         assert results.metric_results.get_metric("mr") == 1, "The rank should equal 1"
+
+
+def test_negative_sampler_kwargs():
+    """Test whether negative sampler kwargs are correctly passed through."""
+    # cf. https://github.com/pykeen/pykeen/issues/1118
+
+    _num_neg_per_pos = 100
+
+    # save a reference to the old init *before* mocking
+    old_init = NegativeSampler.__init__
+
+    def mock_init(*args, **kwargs):
+        """Mock init method to check if kwarg arrives."""
+        assert kwargs.get("num_negs_per_pos") == _num_neg_per_pos
+        old_init(*args, **kwargs)
+
+    # run a small pipline
+    with mock.patch.object(NegativeSampler, "__init__", mock_init):
+        pipeline(
+            # use sampled training loop ...
+            training_loop="slcwa",
+            # ... without explicitly selecting a negative sampler ...
+            negative_sampler=None,
+            # ... but providing custom kwargs
+            negative_sampler_kwargs=dict(num_negs_per_pos=_num_neg_per_pos),
+            # other parameters for fast test
+            dataset="nations",
+            model="distmult",
+            epochs=0,
+        )
+
+
+@pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])
+def test_loading_training_triples_factory(tf_cls: Type[CoreTriplesFactory]):
+    """Test re-loading the training triples factory."""
+    result = pipeline(model="rescal", dataset="nations", training_kwargs=dict(num_epochs=0))
+    with tempfile.TemporaryDirectory() as directory:
+        result.save_to_directory(directory)
+        tf_cls.from_path_binary(pathlib.Path(directory, "training_triples"))
