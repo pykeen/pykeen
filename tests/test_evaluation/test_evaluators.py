@@ -419,6 +419,9 @@ class DummyEvaluator(Evaluator):
         elif target == LABEL_HEAD:
             self.counter -= 1
 
+    def clear(self):  # noqa: D102
+        pass
+
     def finalize(self) -> MetricResults:  # noqa: D102
         return RankBasedMetricResults(
             dict(
