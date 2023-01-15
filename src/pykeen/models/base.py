@@ -16,8 +16,9 @@ from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
+from ..inverse import relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..triples import KGInfo, relation_inverter
+from ..triples import KGInfo
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 from ..utils import NoRandomSeedNecessary, get_preferred_device, set_random_seed
 
@@ -100,6 +101,7 @@ class Model(nn.Module, ABC):
         self.use_inverse_triples = triples_factory.create_inverse_triples
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
+        self.relation_inverter = relation_inverter_resolver.make(query=None)
 
         """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
@@ -310,7 +312,7 @@ class Model(nn.Module, ABC):
             return batch
 
         # when trained on inverse relations, the internal relation ID is twice the original relation ID
-        return relation_inverter.map(batch=batch, index=index_relation, invert=False)
+        return self.relation_inverter.map(batch=batch, index=index_relation, invert=False)
 
     def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -483,7 +485,7 @@ class Model(nn.Module, ABC):
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
                 " or using the pipeline().",
             )
-        return relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
+        return self.relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
 
     def score_hrt_inverse(
         self,
