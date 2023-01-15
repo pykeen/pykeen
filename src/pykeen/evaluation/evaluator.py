@@ -145,6 +145,11 @@ class Evaluator(ABC):
             An optional binary (0/1) tensor indicating other true entities.
         """
         raise NotImplementedError
+    
+    @abstractmethod
+    def clear(self) -> None:
+        """Clear buffers and intermediate results."""
+        raise NotImplementedError
 
     @abstractmethod
     def finalize(self) -> MetricResults:
@@ -203,7 +208,7 @@ class Evaluator(ABC):
                 self.slice_size = slice_size
 
                 # Clear the ranks from the current evaluator
-                self.finalize()
+                self.clear()
 
         rv = evaluate(
             model=model,

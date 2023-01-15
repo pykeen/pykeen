@@ -344,6 +344,11 @@ class RankBasedEvaluator(Evaluator):
         self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
     # docstr-coverage: inherited
+    def clear(self) -> None:  # noqa: D102
+        self.ranks.clear()
+        self.num_candidates.clear()
+    
+    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -351,13 +356,8 @@ class RankBasedEvaluator(Evaluator):
             metrics=self.metrics,
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates),
         )
-        if not self.clear_on_finalize:
-            return result
-
-        # Clear buffers
-        self.ranks.clear()
-        self.num_candidates.clear()
-
+        if self.clear_on_finalize:
+            self.clear()
         return result
 
     def finalize_multi(self, n_boot: int = 1_000, seed: int = 42) -> Mapping[str, Sequence[float]]:

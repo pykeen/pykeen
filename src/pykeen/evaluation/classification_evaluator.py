@@ -101,6 +101,11 @@ class ClassificationEvaluator(Evaluator):
             self.all_positives[key] = dense_positive_mask[i]
 
     # docstr-coverage: inherited
+    def clear(self) -> None:  # noqa: D102
+        self.all_positives.clear()
+        self.all_scores.clear()
+    
+    # docstr-coverage: inherited
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Because the order of the values of an dictionary is not guaranteed,
         # we need to retrieve scores and masks using the exact same key order.
@@ -113,7 +118,6 @@ class ClassificationEvaluator(Evaluator):
         y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
 
         # Clear buffers
-        self.all_positives.clear()
-        self.all_scores.clear()
+        self.clear()
 
         return ClassificationMetricResults.from_scores(y_true, y_score)
