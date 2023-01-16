@@ -176,9 +176,7 @@ def test_predict_all(model: pykeen.models.Model, k: Optional[int], target: pykee
 def test_predict_top_k_consistency():
     """Test consistency of top-k scoring."""
     ks = [5, 10]
-    model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=3, num_relations=5)
-    )
+    model = pykeen.models.mocks.FixedModel(triples_factory=KGInfo(num_entities=3, num_relations=5))
     dfs = [
         pykeen.predict.predict_all(model=model, k=k)
         .process()
