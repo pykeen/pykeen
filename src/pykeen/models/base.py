@@ -111,9 +111,7 @@ class Model(nn.Module, ABC):
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
         self.use_inverse_relations = use_inverse_relations
-        self.relation_inverter = relation_inverter_resolver.make(
-            query=None, num_relations=triples_factory.num_relations
-        )
+        self.relation_inverter = relation_inverter_resolver.make(query=None, num_relations=self.num_relations)
 
         """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
