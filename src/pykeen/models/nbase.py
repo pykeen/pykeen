@@ -329,12 +329,14 @@ class ERModel(
         super().__init__(triples_factory=triples_factory, **kwargs)
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = self._build_representations(
+            triples_factory=triples_factory,
             representations=entity_representations,
             representations_kwargs=entity_representations_kwargs,
             label="entity",
             skip_checks=skip_checks,
         )
         self.relation_representations = self._build_representations(
+            triples_factory=triples_factory,
             representations=relation_representations,
             representations_kwargs=relation_representations_kwargs,
             label="relation",
@@ -348,16 +350,19 @@ class ERModel(
 
     def _build_representations(
         self,
+        triples_factory: KGInfo,
         representations: OneOrManyHintOrType[Representation] = None,
         representations_kwargs: OneOrManyOptionalKwargs = None,
         label: Literal["entity", "relation"] = "entity",
         **kwargs,
     ) -> Sequence[Representation]:
         """Build representations for the given factory."""
+        # note, triples_factory is required instead of just using self.num_entities
+        # and self.num_relations for the inductive case when this is different
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
-            max_id=self.num_entities if label == "entity" else self.num_relations,
+            max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
             shapes=self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape,
             label=label,
             **kwargs,
