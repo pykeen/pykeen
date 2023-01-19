@@ -353,10 +353,7 @@ class HpoPipelineResult(Result):
             if field.name.endswith("_kwargs"):
                 logger.debug(f"saving pre-specified field in pipeline config: {field.name}={field_value}")
                 pipeline_config[field.name] = field_value
-            elif field.name == "result_tracker" and field_value:
-                if isinstance(field_value, str):
-                    pipeline_config[field.name] = field_value
-                elif issubclass(field_value, ResultTracker):
+                if issubclass(field_value, ResultTracker):
                     tracker_subclass = tracker_resolver.normalize_cls(field_value)
                     if not tracker_subclass:  # field_value is base class
                         continue
