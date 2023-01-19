@@ -356,11 +356,13 @@ class HpoPipelineResult(Result):
             elif field.name == "result_tracker" and field_value:
                 if isinstance(field_value, str):
                     pipeline_config[field.name] = field_value
-                else:
+                elif issubclass(field_value, ResultTracker):
                     tracker_subclass = tracker_resolver.normalize_cls(field_value)
-                    if len(tracker_subclass) == 0:  # field_value is base class
+                    if not tracker_subclass:  # field_value is base class
                         continue
                     pipeline_config[field.name] = tracker_subclass
+                else:
+                    logger.error(f"Invalid value for field {field.name}: {field_value!r}")
             elif field.name in {"training", "testing", "validation"}:
                 pipeline_config[field.name] = field_value if isinstance(field_value, str) else USER_DEFINED_CODE
 
