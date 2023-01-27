@@ -9,7 +9,7 @@ as well as broadcasting and thus naturally support slicing and 1:n scoring.
 from __future__ import annotations
 
 import functools
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy
 import torch
@@ -17,7 +17,7 @@ from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
-from ..typing import GaussianDistribution, Sign
+from ..typing import GaussianDistribution
 from ..utils import (
     boxe_kg_arity_position_score,
     clamp_norm,
@@ -35,9 +35,7 @@ from ..utils import (
 )
 
 __all__ = [
-    "auto_sf_interaction",
     "boxe_interaction",
-    "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
     "cp_interaction",
@@ -101,35 +99,6 @@ def _add_cuda_warning(func):
             ) from e
 
     return wrapped
-
-
-def complex_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    r"""Evaluate the ComplEx interaction function.
-
-    .. math ::
-        Re(\langle h, r, conj(t) \rangle)
-
-    .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The complex head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The complex relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The complex tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    h, r, t = ensure_complex(h, r, t)
-    # TODO: switch to einsum ?
-    # return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
-    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
@@ -1299,54 +1268,6 @@ def triple_re_interaction(
         p=p,
         power_norm=power_norm,
     )
-
-
-def auto_sf_interaction(
-    h: Sequence[torch.FloatTensor],
-    r: Sequence[torch.FloatTensor],
-    t: Sequence[torch.FloatTensor],
-    coefficients: Sequence[Tuple[int, int, int, Sign]],
-) -> torch.FloatTensor:
-    r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
-
-    This interaction function is a parametrized way to express bi-linear models
-    with block structure. It divides the entity and relation representations into blocks,
-    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
-    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
-    and $s \in {-1, 1}$ is the sign.
-
-    The interaction function is then given as
-
-    .. math::
-        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
-
-    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
-
-    This parametrization allows to express several well-known interaction functions, e.g.
-
-    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
-    - :class:`pykeen.models.ComplEx`: two blocks,
-      $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
-    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
-
-    :param h: each shape: (`*batch_dims`, rank, dim)
-        The list of head representations.
-    :param r: each shape: (`*batch_dims`, rank, dim)
-        The list of relation representations.
-    :param t: each shape: (`*batch_dims`, rank, dim)
-        The list of tail representations.
-    :param coefficients:
-        the coefficients, in order:
-
-        1. head_representation_index,
-        2. relation_representation_index,
-        3. tail_representation_index,
-        4. sign
-
-    :return:
-        The scores
-    """
-    return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
 
 def transformer_interaction(
