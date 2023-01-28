@@ -52,7 +52,7 @@ to implement a gradient clipping callback:
 """
 
 import pathlib
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch import optim
