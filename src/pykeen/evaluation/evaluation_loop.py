@@ -6,11 +6,11 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Collection, DefaultDict, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
-import typing_extensions
 
 import numpy
 import pandas
 import torch
+import typing_extensions
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
