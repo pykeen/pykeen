@@ -6,6 +6,7 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Collection, DefaultDict, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
+import typing
 
 import numpy
 import pandas
@@ -23,9 +24,16 @@ from ..triples import CoreTriplesFactory, get_mapped_triples
 from ..typing import LABEL_HEAD, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
 from ..utils import upgrade_to_sequence
 
+__all__ = [
+    "AdditionalFilterTriplesHint",
+    "EvaluationLoop",
+    "LCWAEvaluationLoop",
+]
+
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
+AdditionalFilterTriplesHint: typing.TypeAlias = Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]]
 
 
 def _hasher(d: Mapping[str, Any]) -> int:
@@ -273,7 +281,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         factory: Optional[CoreTriplesFactory] = None,
         targets: Optional[Collection[Target]] = None,
         filtered: bool = True,
-        additional_filter_triples: Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]] = None,
+        additional_filter_triples: AdditionalFilterTriplesHint = None,
     ) -> None:
         """
         Create a PyTorch dataset for link prediction evaluation.
@@ -383,7 +391,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         evaluator_kwargs: OptionalKwargs = None,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
         mode: Optional[InductiveMode] = None,
-        additional_filter_triples: Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]] = None,
+        additional_filter_triples: AdditionalFilterTriplesHint = None,
         **kwargs,
     ) -> None:
         """
