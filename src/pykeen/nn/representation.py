@@ -580,7 +580,7 @@ class CompGCNLayer(nn.Module):
         composition: Hint[CompositionModule] = None,
         attention_heads: int = 4,
         attention_dropout: float = 0.1,
-        activation: Hint[nn.Module] = nn.Identity,
+        activation: HintOrType[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_weighting: HintType[EdgeWeighting] = SymmetricEdgeWeighting,
     ):
