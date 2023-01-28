@@ -33,7 +33,9 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
-AdditionalFilterTriplesHint: typing_extensions.TypeAlias = Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]]
+AdditionalFilterTriplesHint: typing_extensions.TypeAlias = Optional[
+    OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]
+]
 
 
 def _hasher(d: Mapping[str, Any]) -> int:
