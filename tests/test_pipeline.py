@@ -162,6 +162,25 @@ class TestPipelineTriples(unittest.TestCase):
         fig, axes = result.plot()
         assert fig is not None and axes is not None
 
+    def test_with_evaluation_loop_callback():
+        """Smoke-Test for running pipeline with evaluation loop callback."""
+        dataset = Nations()
+        result = pipeline(
+            dataset=dataset,
+            model="mure",
+            training_kwargs=dict(
+                num_epochs=5,
+                callbacks="evaluation-loop",
+                callback_kwargs=dict(
+                    frequency=1,
+                    prefix="validation",
+                    factory=dataset.validation,
+                    additional_filter_triples=dataset.training,
+                ),
+            ),
+        )
+        assert result is not None
+
 
 class TestPipelineReplicate(unittest.TestCase):
     """Test the replication with pipeline."""
