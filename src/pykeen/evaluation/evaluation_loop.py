@@ -6,7 +6,7 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Collection, DefaultDict, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
-import typing
+import typing_extensions
 
 import numpy
 import pandas
@@ -33,7 +33,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
-AdditionalFilterTriplesHint: typing.TypeAlias = Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]]
+AdditionalFilterTriplesHint: typing_extensions.TypeAlias = Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]]
 
 
 def _hasher(d: Mapping[str, Any]) -> int:
