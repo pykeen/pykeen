@@ -979,6 +979,8 @@ class TextRepresentation(Representation):
         )
     """
 
+    labels: List[str]
+
     def __init__(
         self,
         labels: Sequence[str],
@@ -992,7 +994,7 @@ class TextRepresentation(Representation):
         Initialize the representation.
 
         :param labels:
-            the labels
+            an ordered, finite collection of labels
         :param max_id:
             the number of representations. If provided, has to match the number of labels
         :param shape:
@@ -1015,7 +1017,7 @@ class TextRepresentation(Representation):
         # infer shape
         shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
         super().__init__(max_id=max_id, shape=shape, **kwargs)
-        self.labels = labels
+        self.labels = list(labels)
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
 
