@@ -11,12 +11,12 @@ from typing import Any, Collection, DefaultDict, Generic, Iterable, List, Mappin
 import numpy
 import pandas
 import torch
-import typing_extensions
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
+from typing_extensions import TypeAlias
 
 from .evaluator import Evaluator, MetricResults, filter_scores_
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
@@ -37,9 +37,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
-AdditionalFilterTriplesHint: typing_extensions.TypeAlias = Optional[
-    OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]
-]
+AdditionalFilterTriplesHint: TypeAlias = Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]]
 
 
 def _hasher(d: Mapping[str, Any]) -> int:
