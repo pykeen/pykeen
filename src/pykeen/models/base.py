@@ -16,7 +16,7 @@ from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
-from ..inverse import relation_inverter_resolver
+from ..inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..triples import KGInfo
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
@@ -50,9 +50,19 @@ class Model(nn.Module, ABC):
     #: The instance of the loss
     loss: Loss
 
+    #: the number of entities
     num_entities: int
+    #: the number of relations
     num_relations: int
+    #: whether to use inverse relations
     use_inverse_triples: bool
+    #: utility for generating inverse relations
+    relation_inverter: RelationInverter
+
+    #: When predict_with_sigmoid is set to True, the sigmoid function is
+    #: applied to the logits during evaluation and also for predictions
+    #: after training, but has no effect on the training.
+    predict_with_sigmoid: bool
 
     can_slice_h: ClassVar[bool]
     can_slice_r: ClassVar[bool]
@@ -103,10 +113,6 @@ class Model(nn.Module, ABC):
         self.num_relations = triples_factory.num_relations
         self.relation_inverter = relation_inverter_resolver.make(query=None)
 
-        """
-        When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
-        also for predictions after training, but has no effect on the training.
-        """
         self.predict_with_sigmoid = predict_with_sigmoid
 
     @property
