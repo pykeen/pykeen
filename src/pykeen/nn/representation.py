@@ -979,6 +979,8 @@ class TextRepresentation(Representation):
         )
     """
 
+    labels: List[str]
+
     def __init__(
         self,
         labels: Sequence[str],
@@ -992,7 +994,7 @@ class TextRepresentation(Representation):
         Initialize the representation.
 
         :param labels:
-            the labels
+            an ordered, finite collection of labels
         :param max_id:
             the number of representations. If provided, has to match the number of labels
         :param shape:
