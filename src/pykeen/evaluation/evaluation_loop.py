@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Evaluation loops for KGE models."""
+
 import dataclasses
 import logging
 from abc import abstractmethod
@@ -26,8 +27,11 @@ from ..utils import upgrade_to_sequence
 
 __all__ = [
     "AdditionalFilterTriplesHint",
+    # Evaluation loops
     "EvaluationLoop",
     "LCWAEvaluationLoop",
+    # Evaluation datasets
+    "LCWAEvaluationDataset",
 ]
 
 logger = logging.getLogger(__name__)
