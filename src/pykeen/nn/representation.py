@@ -10,7 +10,7 @@ import math
 import string
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, List, Literal, Mapping, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Any, ClassVar, Iterable, List, Literal, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import more_itertools
 import numpy
@@ -1195,7 +1195,7 @@ class CombinedRepresentation(Representation):
 class CachedTextRepresentation(TextRepresentation):
     """Textual representations for datasets with identifiers that can be looked up with a :class:`TextCache`."""
 
-    cache_cls: Type[TextCache]
+    cache_cls: ClassVar[Type[TextCache]]
 
     def __init__(self, identifiers: Sequence[str], **kwargs):
         """
