@@ -1273,7 +1273,6 @@ def _handle_evaluation(
         evaluation_kwargs["slice_size"] = evaluator_instance.slice_size
     if use_tqdm is not None:
         evaluation_kwargs["use_tqdm"] = use_tqdm
-
     # Add logging about evaluator for debugging
     _result_tracker.log_params(
         params=dict(
