@@ -1,7 +1,7 @@
 """OGB tools."""
 
 import logging
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import torch
 
@@ -93,11 +93,9 @@ def evaluate_ogb(
 
     additional_filter_triples = kwargs.pop("additional_filter_triples", None)
     if additional_filter_triples is not None:
-        # fixme: this is not an elegant solution; it would be better to encapsulate filter triples in the evaluator instance
-        logger.warning(
+        raise ValueError(
             f"evaluate_ogb received additional_filter_triples={additional_filter_triples}. However, it uses "
-            f"explicitly given filtered negative triples. It ignores these instead of throwing an error to ensure "
-            f"compliance with the current way the pipeline calls evaluators. This may change in the future."
+            f"explicitly given filtered negative triples, and therefore shouldn't be passed any additional ones"
         )
 
     class _OGBEvaluatorBridge(ogb.linkproppred.Evaluator):
