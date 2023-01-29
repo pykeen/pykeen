@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 class OGBEvaluator(SampledRankBasedEvaluator):
     """A sampled, rank-based evaluator that applies a custom OGB evaluation."""
 
+    # docstr-coverage: inherited
     def __init__(self, filtered: bool = False, **kwargs):
         if filtered:
             raise ValueError(
