@@ -474,6 +474,37 @@ class LowRankRepresentation(Representation):
         self.weight = nn.Parameter(torch.empty(max_id, num_bases))
         self.reset_parameters()
 
+    @classmethod
+    def approximate(cls, other: Representation, **kwargs) -> "LowRankRepresentation":
+        """
+        Construct a low-rank approximation of another representation.
+
+        .. note ::
+
+            While this method tries to find a good approximation of the base representation, you may lose all (useful)
+            inductive biases you had with the original one, e.g., from shared tokens in
+            :class:`pykeen.representation.NodePieceRepresentation`.
+
+        :param other:
+            the other representation
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`LowRankRepresentation.__init__`. Must not contain
+            `max_id` nor `shape`, which are determined by `other`
+
+        :return:
+            a low-rank approximation obtained via (truncated) SVD
+        """
+        # create low-rank approximation object
+        r = cls(max_id=other.max_id, shape=other.shape, **kwargs)
+        # get base representations, shape: (n, *ds)
+        x = other(indices=None)
+        # calculate SVD, U.shape: (n, k), s.shape: (k,), u.shape: (k, prod(ds))
+        u, s, vh = torch.svd_lowrank(x.view(x.shape[0], -1), q=r.num_bases)
+        # overwrite bases and weights
+        r.bases._embeddings.weight.data = vh
+        r.weight.data = torch.einsum("nk, k -> nk", u, s)
+        return r
+
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         self.bases.reset_parameters()
@@ -551,7 +582,7 @@ class CompGCNLayer(nn.Module):
         composition: Hint[CompositionModule] = None,
         attention_heads: int = 4,
         attention_dropout: float = 0.1,
-        activation: Hint[nn.Module] = nn.Identity,
+        activation: HintOrType[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_weighting: HintType[EdgeWeighting] = SymmetricEdgeWeighting,
     ):
@@ -592,7 +623,7 @@ class CompGCNLayer(nn.Module):
 
         # edge weighting
         self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(
-            edge_weighting, output_dim=output_dim, attn_drop=attention_dropout, num_heads=attention_heads
+            edge_weighting, message_dim=output_dim, dropout=attention_dropout, num_heads=attention_heads
         )
 
         # message passing weights
@@ -965,6 +996,8 @@ class TextRepresentation(Representation):
         )
     """
 
+    labels: List[str]
+
     def __init__(
         self,
         labels: Sequence[Optional[str]],
@@ -979,7 +1012,7 @@ class TextRepresentation(Representation):
         Initialize the representation.
 
         :param labels:
-            the labels
+            an ordered, finite collection of labels
         :param max_id:
             the number of representations. If provided, has to match the number of labels
         :param shape:
@@ -1006,7 +1039,7 @@ class TextRepresentation(Representation):
         shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
         super().__init__(max_id=max_id, shape=shape, **kwargs)
         # FIXME pre-process to handle Nones
-        self.labels = labels
+        self.labels = list(labels)
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
 

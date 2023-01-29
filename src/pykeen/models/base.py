@@ -8,19 +8,18 @@ import inspect
 import logging
 import os
 import pickle
-import warnings
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
 
-import pandas as pd
 import torch
 from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
+from ..inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..triples import KGInfo, relation_inverter
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
+from ..triples import KGInfo
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 from ..utils import NoRandomSeedNecessary, get_preferred_device, set_random_seed
 
 __all__ = [
@@ -51,9 +50,19 @@ class Model(nn.Module, ABC):
     #: The instance of the loss
     loss: Loss
 
+    #: the number of entities
     num_entities: int
+    #: the number of relations
     num_relations: int
+    #: whether to use inverse relations
     use_inverse_triples: bool
+    #: utility for generating inverse relations
+    relation_inverter: RelationInverter
+
+    #: When predict_with_sigmoid is set to True, the sigmoid function is
+    #: applied to the logits during evaluation and also for predictions
+    #: after training, but has no effect on the training.
+    predict_with_sigmoid: bool
 
     can_slice_h: ClassVar[bool]
     can_slice_r: ClassVar[bool]
@@ -102,11 +111,8 @@ class Model(nn.Module, ABC):
         self.use_inverse_triples = triples_factory.create_inverse_triples
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
+        self.relation_inverter = relation_inverter_resolver.make(query=None)
 
-        """
-        When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
-        also for predictions after training, but has no effect on the training.
-        """
         self.predict_with_sigmoid = predict_with_sigmoid
 
     @property
@@ -312,7 +318,7 @@ class Model(nn.Module, ABC):
             return batch
 
         # when trained on inverse relations, the internal relation ID is twice the original relation ID
-        return relation_inverter.map(batch=batch, index=index_relation, invert=False)
+        return self.relation_inverter.map(batch=batch, index=index_relation, invert=False)
 
     def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -476,129 +482,6 @@ class Model(nn.Module, ABC):
 
         raise ValueError(f"Unknown target={target}")
 
-    def get_all_prediction_df(
-        self,
-        *,
-        k: Optional[int] = None,
-        batch_size: int = 1,
-        **kwargs,
-    ) -> Union[ScorePack, pd.DataFrame]:
-        """Compute scores for all triples, optionally returning only the k highest scoring.
-
-        .. note:: This operation is computationally very expensive for reasonably-sized knowledge graphs.
-        .. warning:: Setting k=None may lead to huge memory requirements.
-
-        :param k:
-            The number of triples to return. Set to None, to keep all.
-        :param batch_size:
-            The batch size to use for calculating scores.
-        :param kwargs: Additional kwargs to pass to :func:`pykeen.models.predict.get_all_prediction_df`.
-        :return: shape: (k, 3)
-            A tensor containing the k highest scoring triples, or all possible triples if k=None.
-        """
-        from .predict import get_all_prediction_df
-
-        warnings.warn("Use pykeen.models.predict.get_all_prediction_df", DeprecationWarning)
-        return get_all_prediction_df(model=self, k=k, batch_size=batch_size, **kwargs)
-
-    def get_prediction_df(
-        self,
-        *args,
-        **kwargs,
-    ) -> Union[ScorePack, pd.DataFrame]:
-        """Get predictions for the head, relation, and/or tail combination.
-
-        :param args: Positional arguments to pass to :func:`pykeen.models.predict.get_prediction_df`.
-        :param kwargs: Keyword arguments to pass to :func:`pykeen.models.predict.get_prediction_df`.
-        :return: shape: (k, 3)
-            A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
-            or all possible triples if k is None
-        """
-        from .predict import get_prediction_df
-
-        warnings.warn("Use pykeen.models.predict.get_prediction_df", DeprecationWarning)
-        return get_prediction_df(self, *args, **kwargs)
-
-    def get_head_prediction_df(
-        self,
-        relation_label: str,
-        tail_label: str,
-        **kwargs,
-    ) -> pd.DataFrame:
-        """Predict heads for the given relation and tail (given by label).
-
-        :param relation_label: The string label for the relation
-        :param tail_label: The string label for the tail entity
-        :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_head_prediction_df`
-
-        The following example shows that after you train a model on the Nations dataset,
-        you can score all entities w.r.t a given relation and tail entity.
-
-        >>> from pykeen.pipeline import pipeline
-        >>> result = pipeline(
-        ...     dataset='Nations',
-        ...     model='RotatE',
-        ... )
-        >>> df = result.model.get_head_prediction_df('accusation', 'brazil', triples_factory=result.training)
-
-        :return:
-            a dataframe of predicted heads
-        """
-        from .predict import get_head_prediction_df
-
-        warnings.warn("Use pykeen.models.predict.get_head_prediction_df", DeprecationWarning)
-        return get_head_prediction_df(self, relation_label=relation_label, tail_label=tail_label, **kwargs)
-
-    def get_relation_prediction_df(
-        self,
-        head_label: str,
-        tail_label: str,
-        **kwargs,
-    ) -> pd.DataFrame:
-        """Predict relations for the given head and tail (given by label).
-
-        :param head_label: The string label for the head entity
-        :param tail_label: The string label for the tail entity
-        :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_relation_prediction_df`
-
-        :return:
-            a dataframe of predicted relations
-        """
-        from .predict import get_relation_prediction_df
-
-        warnings.warn("Use pykeen.models.predict.get_relation_prediction_df", DeprecationWarning)
-        return get_relation_prediction_df(self, head_label=head_label, tail_label=tail_label, **kwargs)
-
-    def get_tail_prediction_df(
-        self,
-        head_label: str,
-        relation_label: str,
-        **kwargs,
-    ) -> pd.DataFrame:
-        """Predict tails for the given head and relation (given by label).
-
-        :param head_label: The string label for the head entity
-        :param relation_label: The string label for the relation
-        :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_tail_prediction_df`
-
-        The following example shows that after you train a model on the Nations dataset,
-        you can score all entities w.r.t a given head entity and relation.
-
-        >>> from pykeen.pipeline import pipeline
-        >>> result = pipeline(
-        ...     dataset='Nations',
-        ...     model='RotatE',
-        ... )
-        >>> df = result.model.get_tail_prediction_df('brazil', 'accusation', triples_factory=result.training)
-
-        :return:
-            a dataframe of predicted tails
-        """
-        from .predict import get_tail_prediction_df
-
-        warnings.warn("Use pykeen.models.predict.get_tail_prediction_df", DeprecationWarning)
-        return get_tail_prediction_df(self, head_label=head_label, relation_label=relation_label, **kwargs)
-
     """Inverse scoring"""
 
     def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
@@ -608,7 +491,7 @@ class Model(nn.Module, ABC):
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
                 " or using the pipeline().",
             )
-        return relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
+        return self.relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
 
     def score_hrt_inverse(
         self,

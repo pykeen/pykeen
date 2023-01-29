@@ -18,6 +18,8 @@ __all__ = [
     "classification_metric_resolver",
 ]
 
+ClassificationFunc = Callable[[np.array, np.array], float]
+
 
 def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     """Construct binary indicators from a list of scores.
@@ -59,7 +61,7 @@ class ClassificationMetric(Metric):
     #: A description of the metric
     description: ClassVar[str]
     #: The function that runs the metric
-    func: ClassVar[Callable[[np.array, np.array], float]]
+    func: ClassVar[ClassificationFunc]
 
     # docstr-coverage: inherited
     @classmethod
@@ -104,17 +106,17 @@ class MetricAnnotator:
         """Initialize the annotator."""
         self.metrics = {}
 
-    def higher(self, func, **kwargs):
+    def higher(self, func: ClassificationFunc, **kwargs) -> None:
         """Annotate a function where higher values are better."""
-        return self.add(func, increasing=True, **kwargs)
+        self.add(func, increasing=True, **kwargs)
 
-    def lower(self, func, **kwargs):
+    def lower(self, func: ClassificationFunc, **kwargs) -> None:
         """Annotate a function where lower values are better."""
-        return self.add(func, increasing=False, **kwargs)
+        self.add(func, increasing=False, **kwargs)
 
     def add(
         self,
-        func,
+        func: ClassificationFunc,
         *,
         increasing: bool,
         description: str,
@@ -125,7 +127,7 @@ class MetricAnnotator:
         upper: Optional[float] = 1.0,
         upper_inclusive: bool = True,
         binarize: bool = False,
-    ):
+    ) -> None:
         """Annotate a function."""
         title = func.__name__.replace("_", " ").title()
         metric_cls = type(

@@ -2,9 +2,9 @@
 
 """Test for sLCWA and LCWA."""
 
-from pykeen.losses import MarginRankingLoss, NSSALoss, SoftplusLoss
+from pykeen.losses import CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
-from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
+from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, SymmetricLCWATrainingLoop
 from tests.test_training import cases
 
 
@@ -85,3 +85,10 @@ class SoftPlusLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
 
     cls = LCWATrainingLoop
     loss_cls = SoftplusLoss
+
+
+class SymmetricLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test for symmetric LCWA with cross-entropy."""
+
+    cls = SymmetricLCWATrainingLoop
+    loss_cls = CrossEntropyLoss

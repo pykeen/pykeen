@@ -42,7 +42,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         Initialize the model.
 
         :param gnn_encoder:
-            an interable of message passing layers. Defaults to 2-layer CompGCN with Hadamard composition.
+            an iterable of message passing layers. Defaults to 2-layer CompGCN with Hadamard composition.
         :param kwargs:
             additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
         """
@@ -106,7 +106,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         h: Optional[torch.LongTensor],
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
-        mode: InductiveMode = None,
+        mode: Optional[InductiveMode] = None,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape with a GNN encoder."""
         entity_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
