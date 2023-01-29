@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 class OGBEvaluator(SampledRankBasedEvaluator):
     """A sampled, rank-based evaluator that applies a custom OGB evaluation."""
 
+    def __init__(self, filtered: bool = False, **kwargs):
+        if filtered:
+            raise ValueError(
+                "OGB evaluator is kind of filtered, but not dynamically, but rather "
+                "through its precalculated filtered negative triples."
+            )
+        super().__init__(**kwargs, filtered=filtered)
+
     def evaluate(
         self,
         model: Model,
