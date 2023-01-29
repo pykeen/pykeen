@@ -139,14 +139,6 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
 
-    @needs_packages("ogb")
-    def test_ogb_evaluate(self):
-        """Test OGB evaluation."""
-        self.instance: SampledRankBasedEvaluator
-        model = FixedModel(triples_factory=self.factory)
-        result = self.instance.evaluate_ogb(model=model, mapped_triples=self.factory.mapped_triples, batch_size=1)
-        assert isinstance(result, MetricResults)
-
 
 @needs_packages("ogb")
 class OGBEvaluatorTests(RankBasedEvaluatorTests):
@@ -160,6 +152,13 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["evaluation_factory"] = self.factory
         kwargs["batch_size"] = 1
         return kwargs
+
+    def test_ogb_evaluate_alternate(self):
+        """Test OGB evaluation."""
+        self.instance: SampledRankBasedEvaluator
+        model = FixedModel(triples_factory=self.factory)
+        result = self.instance.evaluate(model=model, mapped_triples=self.factory.mapped_triples, batch_size=1)
+        assert isinstance(result, MetricResults)
 
 
 class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
