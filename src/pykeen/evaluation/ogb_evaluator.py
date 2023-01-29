@@ -47,7 +47,6 @@ def evaluate_ogb(
     model: Model,
     mapped_triples: MappedTriples,
     batch_size: Optional[int] = None,
-    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     **kwargs,
 ) -> MetricResults:
     """
@@ -80,9 +79,6 @@ def evaluate_ogb(
         import ogb.linkproppred
     except ImportError as error:
         raise ImportError("OGB evaluation requires `ogb` to be installed.") from error
-    
-    if additional_filter_triples is not None:
-        raise ValueError(f"OGBEvaluator uses a explicit set of precomputed negatives, but got additional_filter_triples={additional_filter_triples}")
 
     if batch_size is None:
         raise NotImplementedError("Automatic batch size selection not available for OGB evaluation.")
