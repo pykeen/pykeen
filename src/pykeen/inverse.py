@@ -49,7 +49,7 @@ class DefaultRelationInverter(RelationInverter):
         return relation_id + 1
 
     # docstr-coverage: inherited
-    def _map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:  # noqa: D102
+    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
         batch = batch.clone()
         batch[:, index] *= 2
         return batch
