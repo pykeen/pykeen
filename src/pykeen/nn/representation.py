@@ -1038,7 +1038,6 @@ class TextRepresentation(Representation):
         # infer shape
         shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
         super().__init__(max_id=max_id, shape=shape, **kwargs)
-        # FIXME pre-process to handle Nones
         self.labels = list(labels)
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
