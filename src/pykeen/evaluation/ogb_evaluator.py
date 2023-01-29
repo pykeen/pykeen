@@ -83,6 +83,10 @@ def evaluate_ogb(
     if batch_size is None:
         raise NotImplementedError("Automatic batch size selection not available for OGB evaluation.")
 
+    additional_filter_triples = kwargs.pop("additional_filter_triples", None)
+    if additional_filter_triples is not None:
+        raise ValueError(f"additional_filter_triples not supported in OGB evaluation")
+
     class _OGBEvaluatorBridge(ogb.linkproppred.Evaluator):
         """A wrapper around OGB's evaluator to support evaluation on non-OGB datasets."""
 
