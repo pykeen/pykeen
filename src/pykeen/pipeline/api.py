@@ -217,7 +217,7 @@ from torch.optim.optimizer import Optimizer
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
-from ..evaluation import Evaluator, MetricResults, OGBEvaluator, evaluator_resolver
+from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..evaluation.ranking_metric_lookup import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
@@ -1273,9 +1273,6 @@ def _handle_evaluation(
         evaluation_kwargs["slice_size"] = evaluator_instance.slice_size
     if use_tqdm is not None:
         evaluation_kwargs["use_tqdm"] = use_tqdm
-
-    if isinstance(evaluator_instance, OGBEvaluator) and "additional_filter_triples" in evaluation_kwargs:
-        raise ValueError("can not use additional_filter_triples with OGB evaluator, dropping")
 
     # Add logging about evaluator for debugging
     _result_tracker.log_params(
