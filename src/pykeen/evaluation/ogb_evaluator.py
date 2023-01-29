@@ -27,8 +27,9 @@ class OGBEvaluator(SampledRankBasedEvaluator):
     def __init__(self, filtered: bool = False, **kwargs):
         if filtered:
             raise ValueError(
-                "OGB evaluator is kind of filtered, but not dynamically, but rather "
-                "through its precalculated filtered negative triples."
+                "OGB evaluator is already filtered, but not dynamically like other evaluators because "
+                "it requires pre-calculated filtered negative triples. Therefore, it is not allowed to "
+                "accept filtered=True"
             )
         super().__init__(**kwargs, filtered=filtered)
 
