@@ -82,6 +82,8 @@ def evaluate_ogb(
         if ogb is not installed
     :raises NotImplementedError:
         if `batch_size` is None, i.e., automatic batch size selection is selected
+    :raises ValueError:
+        if illegal ``additional_filter_triples`` argument is given in the kwargs
     """
     try:
         import ogb.linkproppred
