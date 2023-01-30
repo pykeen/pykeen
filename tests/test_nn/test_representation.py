@@ -303,7 +303,7 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.WikidataTextRepresentation
     kwargs = dict(
-        labels=["Q100", "Q1000"],
+        identifiers=["Q100", "Q1000"],
         encoder="character-embedding",
     )
 
@@ -312,7 +312,29 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs)
         # the representation module infers the max_id from the provided labels
         kwargs.pop("max_id")
-        self.max_id = len(kwargs["labels"])
+        self.max_id = len(kwargs["identifiers"])
+        return kwargs
+
+
+@needs_packages("pyobo")
+class BiomedicalCURIERepresentationTests(cases.RepresentationTestCase):
+    """Tests for biomedical CURIE representations."""
+
+    cls = pykeen.nn.representation.BiomedicalCURIERepresentation
+    kwargs = dict(
+        identifiers=[
+            "hgnc:12929",  # PCGF2
+            "hgnc:391",  # AKT1
+        ],
+        encoder="character-embedding",
+    )
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # the representation module infers the max_id from the provided labels
+        kwargs.pop("max_id")
+        self.max_id = len(kwargs["identifiers"])
         return kwargs
 
 
@@ -416,4 +438,8 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
 
     base_cls = pykeen.nn.representation.Representation
     base_test = cases.RepresentationTestCase
-    skip_cls = {mocks.CustomRepresentation, pykeen.nn.pyg.MessagePassingRepresentation}
+    skip_cls = {
+        mocks.CustomRepresentation,
+        pykeen.nn.pyg.MessagePassingRepresentation,
+        pykeen.nn.CachedTextRepresentation,
+    }
