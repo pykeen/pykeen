@@ -61,7 +61,7 @@ __all__ = [
     "TextRepresentation",
     "CachedTextRepresentation",
     "WikidataTextRepresentation",
-    "CURIETextRepresentation",
+    "BiomedicalCURIERepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -1197,17 +1197,17 @@ class CachedTextRepresentation(TextRepresentation):
 
     cache_cls: ClassVar[Type[TextCache]]
 
-    def __init__(self, identifiers: Sequence[str], **kwargs):
+    def __init__(self, identifiers: Sequence[str], cache_kwargs: Optional[Mapping[str, Any]] = None, **kwargs):
         """
         Initialize the representation.
 
         :param identifiers:
             the IDs to be resolved by the class, e.g., wikidata IDs. for :class:`WikidataTextRepresentation`,
-            compact URIs (CURIEs) for :class:`CURIETextRepresentation`
+            biomedical entities represented as compact URIs (CURIEs) for :class:`BiomedicalCURIERepresentation`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
-        cache = self.cache_cls()
+        cache = self.cache_cls(**(cache_kwargs or {}))
         labels = cache.get_texts(identifiers=identifiers)
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
@@ -1247,7 +1247,7 @@ class WikidataTextRepresentation(CachedTextRepresentation):
     cache_cls = WikidataCache
 
 
-class CURIETextRepresentation(CachedTextRepresentation):
+class BiomedicalCURIERepresentation(CachedTextRepresentation):
     """
     Textual representations for datasets grounded with biomedical CURIEs.
 

@@ -61,9 +61,9 @@ from .pyg import (
 )
 from .representation import (
     BackfillRepresentation,
+    BiomedicalCURIERepresentation,
     CachedTextRepresentation,
     CombinedRepresentation,
-    CURIETextRepresentation,
     Embedding,
     LowRankRepresentation,
     PartitionRepresentation,
@@ -98,7 +98,7 @@ __all__ = [
     "TextRepresentation",
     "TransformedRepresentation",
     "WikidataTextRepresentation",
-    "CURIETextRepresentation",
+    "BiomedicalCURIERepresentation",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
     "tokenizer_resolver",

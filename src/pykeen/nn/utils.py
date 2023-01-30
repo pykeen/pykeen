@@ -189,7 +189,6 @@ class TextCache(ABC):
     @abstractmethod
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:
         """Get text for the given identifiers for the cache."""
-        raise NotImplementedError
 
 
 class WikidataCache(TextCache):

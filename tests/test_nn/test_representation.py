@@ -315,11 +315,12 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
         self.max_id = len(kwargs["identifiers"])
         return kwargs
 
-@needs_packages("pyobo")
-class CURITextRepresentationTests(cases.RepresentationTestCase):
-    """Tests for CURIE text representations."""
 
-    cls = pykeen.nn.representation.CURIETextRepresentation
+@needs_packages("pyobo")
+class BiomedicalCURIERepresentationTests(cases.RepresentationTestCase):
+    """Tests for biomedical CURIE representations."""
+
+    cls = pykeen.nn.representation.BiomedicalCURIERepresentation
     kwargs = dict(
         identifiers=[
             "hgnc:12929",  # PCGF2
