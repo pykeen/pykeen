@@ -138,7 +138,7 @@ Biomedical Entities
 ~~~~~~~~~~~~~~~~~~~
 If your dataset is labeled with compact uniform resource identifiers (e.g., CURIEs)
 for biomedical entities like chemicals, proteins, diseases, and pathways, then
-the :class:`pykeen.nn.BiomedicalCURIERepresentation`
+the :class:`pykeen.nn.representation.BiomedicalCURIERepresentation`
 representation can make use of :mod:`pyobo` to look up names (via CURIE) via the
 :func:`pyobo.get_name` function, then encode them using the text encoder.
 
