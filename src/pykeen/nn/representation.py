@@ -1022,7 +1022,8 @@ class TextRepresentation(Representation):
         :param encoder_kwargs:
             keyword-based parameters used to instantiate the text encoder
         :param missing_action:
-            Which policy for handling nones in the given labels
+            Which policy for handling nones in the given labels. If "error", raises an error
+            on any nones. If "blank", replaces nones with an empty string.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
 

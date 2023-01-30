@@ -33,7 +33,6 @@ __all__ = [
     "TextCache",
     "WikidataCache",
     "PyOBOCache",
-
 ]
 
 logger = logging.getLogger(__name__)
