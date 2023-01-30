@@ -1197,7 +1197,7 @@ class CachedTextRepresentation(TextRepresentation):
 
     cache_cls: ClassVar[Type[TextCache]]
 
-    def __init__(self, identifiers: Sequence[str], cache_kwargs: Optional[Mapping[str, Any]] = None, **kwargs):
+    def __init__(self, identifiers: Sequence[str], **kwargs):
         """
         Initialize the representation.
 
@@ -1207,7 +1207,7 @@ class CachedTextRepresentation(TextRepresentation):
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
-        cache = self.cache_cls(**(cache_kwargs or {}))
+        cache = self.cache_cls()
         labels = cache.get_texts(identifiers=identifiers)
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
