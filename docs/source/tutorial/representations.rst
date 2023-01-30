@@ -49,9 +49,9 @@ relations (including inverse relations) as tokens.
 
 .. seealso:: https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
 
-Label-based
------------
-Label-based representations use the entities' (or relations') labels to
+Text-based
+----------
+Text-based representations use the entities' (or relations') labels to
 derive representations. To this end,
 :class:`pykeen.nn.representation.TextRepresentation` uses a
 (pre-trained) transformer model from the :mod:`transformers` library to encode
@@ -75,8 +75,9 @@ predictions for entities not seen during training.
     from pykeen.models import ERModel
 
     dataset = get_dataset(dataset="nations")
-    entity_representations = TextRepresentation.from_triples_factory(
-        triples_factory=dataset.training,
+    entity_representations = TextRepresentation.from_dataset(
+        triples_factory=dataset,
+        encoder="transformer",
     )
     result = pipeline(
         dataset=dataset,
