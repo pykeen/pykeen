@@ -303,7 +303,7 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.WikidataTextRepresentation
     kwargs = dict(
-        labels=["Q100", "Q1000"],
+        identifiers=["Q100", "Q1000"],
         encoder="character-embedding",
     )
 
@@ -312,7 +312,28 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs)
         # the representation module infers the max_id from the provided labels
         kwargs.pop("max_id")
-        self.max_id = len(kwargs["labels"])
+        self.max_id = len(kwargs["identifiers"])
+        return kwargs
+
+@needs_packages("pyobo")
+class CURITextRepresentationTests(cases.RepresentationTestCase):
+    """Tests for CURIE text representations."""
+
+    cls = pykeen.nn.representation.CURIETextRepresentation
+    kwargs = dict(
+        identifiers=[
+            "hgnc:12929",  # PCGF2
+            "hgnc:391",  # AKT1
+        ],
+        encoder="character-embedding",
+    )
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # the representation module infers the max_id from the provided labels
+        kwargs.pop("max_id")
+        self.max_id = len(kwargs["identifiers"])
         return kwargs
 
 
