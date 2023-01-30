@@ -527,6 +527,8 @@ class PyOBOCache(TextCache):
             the label for each entity, looked up via :func:`pyobo.get_name`.
             Might be none if no label is available.
         """
+        # This import doesn't need a wrapper since it's a transitive
+        # requirement of PyOBO
         import bioregistry
 
         res: List[Optional[str]] = []
