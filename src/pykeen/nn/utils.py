@@ -28,8 +28,12 @@ __all__ = [
     "safe_diagonal",
     "adjacency_tensor_to_stacked_matrix",
     "use_horizontal_stacking",
-    "WikidataCache",
     "ShapeError",
+    # Caches
+    "TextCache",
+    "WikidataCache",
+    "PyOBOCache",
+
 ]
 
 logger = logging.getLogger(__name__)
@@ -508,6 +512,7 @@ class PyOBOCache(TextCache):
     """A cache that looks up labels of biomedical entities based on their CURIEs."""
 
     def __init__(self, *args, **kwargs):
+        """Instantiate the PyOBO cache, ensuring PyOBO is installed."""
         try:
             import pyobo
         except ImportError:
