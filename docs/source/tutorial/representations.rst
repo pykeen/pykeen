@@ -133,3 +133,18 @@ function, we would get similar scores
 
 As a downside, this will usually substantially increase the
 computational cost of computing triple scores.
+
+Biomedical Entities
+~~~~~~~~~~~~~~~~~~~
+If your dataset is labeled with compact uniform resource identifiers (e.g., CURIEs)
+for biomedical entities like chemicals, proteins, diseases, and pathways, then
+the :class:`pykeen.nn.BiomedicalCURIERepresentation`
+representation can make use of :mod:`pyobo` to look up names (via CURIE) via the
+:func:`pyobo.get_name` function, then encode them using the text encoder.
+
+All biomedical knowledge graphs in PyKEEN (at the time of adding this representation),
+unfortunately do not use CURIEs for referencing biomedical entities. In the future, we hope
+this will change.
+
+To learn more about CURIEs, please take a look at the `Bioregistry <https://bioregistry.io>`_
+and `this blog post on CURIEs <https://cthoyt.com/2021/09/14/curies.html>`_.

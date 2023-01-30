@@ -1261,7 +1261,7 @@ class BiomedicalCURIERepresentation(CachedTextRepresentation):
 
         from pykeen.datasets import get_dataset
         from pykeen.models import ERModel
-        from pykeen.nn import CURIETextRepresentation
+        from pykeen.nn import BiomedicalCURIERepresentation
         from pykeen.pipeline import pipeline
         import bioontologies
 
@@ -1272,7 +1272,9 @@ class BiomedicalCURIERepresentation(CachedTextRepresentation):
         triples = TriplesFactory.from_labeled_triples(np.array(triples))
         dataset = Dataset.from_tf(triples)
 
-        entity_representations = CURIETextRepresentation.from_dataset(dataset=dataset, encoder="transformer")
+        entity_representations = BiomedicalCURIERepresentation.from_dataset(
+            dataset=dataset, encoder="transformer",
+        )
         result = pipeline(
             dataset=dataset,
             model=ERModel,
