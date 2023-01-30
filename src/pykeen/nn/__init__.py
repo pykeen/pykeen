@@ -61,6 +61,8 @@ from .pyg import (
 )
 from .representation import (
     BackfillRepresentation,
+    BiomedicalCURIERepresentation,
+    CachedTextRepresentation,
     CombinedRepresentation,
     Embedding,
     LowRankRepresentation,
@@ -96,6 +98,7 @@ __all__ = [
     "TextRepresentation",
     "TransformedRepresentation",
     "WikidataTextRepresentation",
+    "BiomedicalCURIERepresentation",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
     "tokenizer_resolver",
@@ -154,4 +157,7 @@ __all__ = [
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(
     base=Representation,
     default=Embedding,
+    skip={
+        CachedTextRepresentation,
+    },
 )
