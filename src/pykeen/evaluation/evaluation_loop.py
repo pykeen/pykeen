@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Evaluation loops for KGE models."""
+
 import dataclasses
 import logging
 from abc import abstractmethod
@@ -15,6 +16,7 @@ from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 from torch_max_mem import MemoryUtilizationMaximizer
 from tqdm.auto import tqdm
+from typing_extensions import TypeAlias
 
 from .evaluator import Evaluator, MetricResults, filter_scores_
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
@@ -23,9 +25,19 @@ from ..triples import CoreTriplesFactory, get_mapped_triples
 from ..typing import LABEL_HEAD, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
 from ..utils import upgrade_to_sequence
 
+__all__ = [
+    "AdditionalFilterTriplesHint",
+    # Evaluation loops
+    "EvaluationLoop",
+    "LCWAEvaluationLoop",
+    # Evaluation datasets
+    "LCWAEvaluationDataset",
+]
+
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
+AdditionalFilterTriplesHint: TypeAlias = Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]]
 
 
 def _hasher(d: Mapping[str, Any]) -> int:
@@ -273,7 +285,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
         factory: Optional[CoreTriplesFactory] = None,
         targets: Optional[Collection[Target]] = None,
         filtered: bool = True,
-        additional_filter_triples: Optional[OneOrSequence[Union[MappedTriples, CoreTriplesFactory]]] = None,
+        additional_filter_triples: AdditionalFilterTriplesHint = None,
     ) -> None:
         """
         Create a PyTorch dataset for link prediction evaluation.
@@ -383,6 +395,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         evaluator_kwargs: OptionalKwargs = None,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
         mode: Optional[InductiveMode] = None,
+        additional_filter_triples: AdditionalFilterTriplesHint = None,
         **kwargs,
     ) -> None:
         """
@@ -398,6 +411,8 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             the prediction targets.
         :param mode:
             the inductive mode, or None for transductive evaluation
+        :param additional_filter_triples:
+            additional filter triples to use for creating the filter
         :param kwargs:
             additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain the keys
             `dataset` or `evaluator`.
@@ -412,6 +427,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
                 factory=triples_factory,
                 targets=targets,
                 filtered=evaluator.filtered or evaluator.requires_positive_mask,
+                additional_filter_triples=additional_filter_triples,
             ),
             evaluator=evaluator,
             **kwargs,
