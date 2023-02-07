@@ -3,7 +3,9 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from typing import TextIO, Union
+from typing import TextIO, Union, Callable
+
+import numpy as np
 
 from .base import LazyDataset
 from ..triples import TriplesNumericLiteralsFactory
@@ -26,6 +28,7 @@ class NumericPathDataset(LazyDataset):
         literals_path: Union[str, pathlib.Path, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
+        numeric_literals_preprocessing: Callable[[np.ndarray], np.ndarray] = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -42,6 +45,7 @@ class NumericPathDataset(LazyDataset):
         self.literals_path = literals_path
 
         self._create_inverse_triples = create_inverse_triples
+        self.numeric_literals_preprocessing = numeric_literals_preprocessing
 
         if eager:
             self._load()
@@ -52,12 +56,14 @@ class NumericPathDataset(LazyDataset):
             path=self.training_path,
             path_to_numeric_triples=self.literals_path,
             create_inverse_triples=self._create_inverse_triples,
+            numeric_literals_preprocessing=self.numeric_literals_preprocessing,
         )
         self._testing = self.triples_factory_cls.from_path(
             path=self.testing_path,
             path_to_numeric_triples=self.literals_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            numeric_literals_preprocessing=self.numeric_literals_preprocessing,
         )
 
     def _load_validation(self) -> None:
@@ -69,6 +75,7 @@ class NumericPathDataset(LazyDataset):
             path_to_numeric_triples=self.literals_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            numeric_literals_preprocessing=self.numeric_literals_preprocessing,
         )
 
     def __repr__(self) -> str:  # noqa: D105

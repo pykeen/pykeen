@@ -4,7 +4,7 @@
 
 import logging
 import pathlib
-from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
+from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union, Callable
 
 import numpy as np
 import pandas
@@ -76,13 +76,14 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         path: Union[str, pathlib.Path, TextIO],
         *,
         path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
+        numeric_literals_preprocessing: Callable[[np.ndarray], np.ndarray] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if path_to_numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires path_to_numeric_triples.")
         numeric_triples = load_triples(path_to_numeric_triples)
         triples = load_triples(path)
-        return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
+        return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, numeric_literals_preprocessing=numeric_literals_preprocessing, **kwargs)
 
     # docstr-coverage: inherited
     @classmethod
@@ -91,6 +92,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples: LabeledTriples,
         *,
         numeric_triples: LabeledTriples = None,
+        numeric_literals_preprocessing: Callable[[np.ndarray], np.ndarray] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if numeric_triples is None:
@@ -99,6 +101,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         numeric_literals, literals_to_id = create_matrix_of_literals(
             numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
         )
+        if numeric_literals_preprocessing is not None:
+            numeric_literals = numeric_literals_preprocessing(numeric_literals)
         return cls(
             entity_to_id=base.entity_to_id,
             relation_to_id=base.relation_to_id,
