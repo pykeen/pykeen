@@ -12,11 +12,13 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
+from pykeen.datasets.remote_literal_base import ZipRemoteDatasetWithRemoteLiterals
 from .base import PackedZipRemoteDataset, TarFileRemoteDataset
 
 __all__ = [
     "FB15k",
     "FB15k237",
+    "FB15k237WithLiterals",
 ]
 
 
@@ -88,10 +90,50 @@ class FB15k237(PackedZipRemoteDataset):
         )
 
 
+class FB15k237WithLiterals(ZipRemoteDatasetWithRemoteLiterals):
+    """The FB15k-237 dataset with literals.
+
+    ---
+    name: FB15k-237
+    statistics:
+        entities: 14505
+        relations: 237
+        training: 272115
+        testing: 20438
+        validation: 17526
+        triples: 310079
+        literal relations: 121
+    citations:
+        train, validation and test triples:
+            authors: Toutanova
+            year: 2015
+            link: https://www.aclweb.org/anthology/W15-4007/
+        literal triples:
+            authors: Agustinus Kristiadi, Mohammad Asif Khan, Denis Lukovnikov, Jens Lehmann, Asja Fischer
+            year: 2018
+            link: https://arxiv.org/abs/1802.00934
+            license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE
+    """
+
+    def __init__(self, **kwargs):
+        """Initialize the FB15k-237 dataset with literals.
+
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
+        """
+        super().__init__(
+            url="https://download.microsoft.com/download/8/7/0/8700516A-AB3D-4850-B4BB-805C515AECE1/FB15K-237.2.zip",
+            relative_training_path=os.path.join("Release", "train.txt"),
+            relative_testing_path=os.path.join("Release", "test.txt"),
+            relative_validation_path=os.path.join("Release", "valid.txt"),
+            numeric_triples_url="https://raw.githubusercontent.com/SmartDataAnalytics/LiteralE/0b0c48fd9b74bf000400199610275ea5c159a44c/data/FB15k-237/literals/numerical_literals.txt",
+            **kwargs,
+        )
+
+
 @click.command()
 @verbose_option
 def _main():
-    for cls in [FB15k, FB15k237]:
+    for cls in [FB15k, FB15k237, FB15k237WithLiterals]:
         cls().summarize()
 
 

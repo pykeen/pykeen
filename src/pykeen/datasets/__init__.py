@@ -37,7 +37,7 @@ from .db100k import DB100K
 from .dbpedia import DBpedia50
 from .drkg import DRKG
 from .ea import CN3l, EADataset, MTransEDataset, OpenEA, WK3l15k, WK3l120k
-from .freebase import FB15k, FB15k237
+from .freebase import FB15k, FB15k237, FB15k237WithLiterals
 from .globi import Globi
 from .hetionet import Hetionet
 from .kinships import Kinships
@@ -47,12 +47,13 @@ from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .pharmkg import PharmKG, PharmKG8k
 from .primekg import PrimeKG
+from .remote_literal_base import ZipRemoteDatasetWithRemoteLiterals, TarRemoteDatasetWithRemoteLiterals
 from .umls import UMLS
 from .utils import get_dataset
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
 from .wordnet import WN18, WN18RR
-from .yago import YAGO310
+from .yago import YAGO310, YAGO310WithLiterals
 
 __all__ = [
     # Utilities
@@ -77,11 +78,13 @@ __all__ = [
     "UMLS",
     "FB15k",
     "FB15k237",
+    "FB15k237WithLiterals",
     "WK3l15k",
     "WK3l120k",
     "WN18",
     "WN18RR",
     "YAGO310",
+    "YAGO310WithLiterals",
     "DRKG",
     "BioKG",
     "ConceptNet",
@@ -111,6 +114,8 @@ dataset_resolver: ClassResolver[Dataset] = ClassResolver.from_subclasses(
         UnpackedRemoteDataset,
         TarFileRemoteDataset,
         PackedZipRemoteDataset,
+        ZipRemoteDatasetWithRemoteLiterals,
+        TarRemoteDatasetWithRemoteLiterals,
         CompressedSingleDataset,
         TarFileSingleDataset,
         ZipSingleDataset,
