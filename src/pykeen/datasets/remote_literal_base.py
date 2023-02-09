@@ -1,7 +1,7 @@
 import logging
 import pathlib
 import zipfile
-from typing import Callable, Optional, Mapping, Any
+from typing import Callable, Optional, Mapping, Any, Union
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_literals_preprocessing: Callable[[np.ndarray], np.ndarray] = None,
+        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -81,7 +81,7 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_literals_preprocessing: Callable[[np.ndarray], np.ndarray] = None,
+        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)

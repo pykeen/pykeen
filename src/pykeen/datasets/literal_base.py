@@ -28,7 +28,7 @@ class NumericPathDataset(LazyDataset):
         literals_path: Union[str, pathlib.Path, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
-        numeric_literals_preprocessing: Callable[[np.ndarray], np.ndarray] = None,
+        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
     ) -> None:
         """Initialize the dataset.
 

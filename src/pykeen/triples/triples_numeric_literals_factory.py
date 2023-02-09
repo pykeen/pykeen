@@ -18,6 +18,8 @@ __all__ = [
     "TriplesNumericLiteralsFactory",
 ]
 
+from ..utils import minmax_normalize
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,6 +43,11 @@ def create_matrix_of_literals(
             continue
 
     return num_literals, data_rel_to_id
+
+
+_NUM_LITERALS_PREPROCESSING_FUNCTIONS = dict(
+    minmax=minmax_normalize,
+)
 
 
 class TriplesNumericLiteralsFactory(TriplesFactory):
@@ -76,14 +83,19 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         path: Union[str, pathlib.Path, TextIO],
         *,
         path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
-        numeric_literals_preprocessing: Callable[[np.ndarray], np.ndarray] = None,
+        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if path_to_numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires path_to_numeric_triples.")
         numeric_triples = load_triples(path_to_numeric_triples)
         triples = load_triples(path)
-        return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, numeric_literals_preprocessing=numeric_literals_preprocessing, **kwargs)
+        return cls.from_labeled_triples(
+            triples=triples,
+            numeric_triples=numeric_triples,
+            numeric_literals_preprocessing=numeric_literals_preprocessing,
+            **kwargs,
+        )
 
     # docstr-coverage: inherited
     @classmethod
@@ -92,7 +104,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples: LabeledTriples,
         *,
         numeric_triples: LabeledTriples = None,
-        numeric_literals_preprocessing: Callable[[np.ndarray], np.ndarray] = None,
+        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if numeric_triples is None:
@@ -102,7 +114,11 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
         )
         if numeric_literals_preprocessing is not None:
-            numeric_literals = numeric_literals_preprocessing(numeric_literals)
+            if isinstance(numeric_literals_preprocessing, str):
+                preprocessing_function = _NUM_LITERALS_PREPROCESSING_FUNCTIONS[numeric_literals_preprocessing]
+            elif isinstance(numeric_literals_preprocessing, Callable):
+                preprocessing_function = numeric_literals_preprocessing
+            numeric_literals = preprocessing_function(numeric_literals)
         return cls(
             entity_to_id=base.entity_to_id,
             relation_to_id=base.relation_to_id,
@@ -153,9 +169,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping
-        pandas.DataFrame(data=self.literals_to_id.items(), columns=["label", "id"],).sort_values(by="id").set_index(
-            "id"
-        ).to_csv(
+        pandas.DataFrame(
+            data=self.literals_to_id.items(),
+            columns=["label", "id"],
+        ).sort_values(
+            by="id"
+        ).set_index("id").to_csv(
             path.joinpath(f"{self.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )
