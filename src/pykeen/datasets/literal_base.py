@@ -3,7 +3,7 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from typing import TextIO, Union, Callable
+from typing import TextIO, Union, Callable, Optional
 
 import numpy as np
 
@@ -13,6 +13,8 @@ from ..triples import TriplesNumericLiteralsFactory
 __all__ = [
     "NumericPathDataset",
 ]
+
+from ..typing import LabeledTriples
 
 
 class NumericPathDataset(LazyDataset):
@@ -28,7 +30,8 @@ class NumericPathDataset(LazyDataset):
         literals_path: Union[str, pathlib.Path, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
-        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -45,6 +48,7 @@ class NumericPathDataset(LazyDataset):
         self.literals_path = literals_path
 
         self._create_inverse_triples = create_inverse_triples
+        self.numeric_triples_preprocessing = numeric_triples_preprocessing
         self.numeric_literals_preprocessing = numeric_literals_preprocessing
 
         if eager:
@@ -56,6 +60,7 @@ class NumericPathDataset(LazyDataset):
             path=self.training_path,
             path_to_numeric_triples=self.literals_path,
             create_inverse_triples=self._create_inverse_triples,
+            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
         )
         self._testing = self.triples_factory_cls.from_path(
@@ -63,6 +68,7 @@ class NumericPathDataset(LazyDataset):
             path_to_numeric_triples=self.literals_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
         )
 
@@ -75,6 +81,7 @@ class NumericPathDataset(LazyDataset):
             path_to_numeric_triples=self.literals_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
         )
 

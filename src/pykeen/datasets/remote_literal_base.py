@@ -10,6 +10,7 @@ from pystow.utils import name_from_url, download
 from pykeen.datasets import PackedZipRemoteDataset, TarFileRemoteDataset
 from pykeen.triples import TriplesNumericLiteralsFactory, TriplesFactory
 from pykeen.triples.utils import load_triples
+from pykeen.typing import LabeledTriples
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +21,14 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.numeric_triples_url = numeric_triples_url
+        self.numeric_triples_preprocessing = numeric_triples_preprocessing
         self.numeric_literals_preprocessing = numeric_literals_preprocessing
 
         self.numeric_triples_file_name = name_from_url(self.numeric_triples_url)
@@ -62,6 +65,7 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
                     entity_to_id=entity_to_id,
                     relation_to_id=relation_to_id,
                     numeric_triples=numeric_triples,
+                    numeric_triples_preprocessing=self.numeric_triples_preprocessing,
                     numeric_literals_preprocessing=self.numeric_literals_preprocessing,
                 )
 
@@ -81,12 +85,14 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.numeric_triples_url = numeric_triples_url
+        self.numeric_triples_preprocessing = numeric_triples_preprocessing
         self.numeric_literals_preprocessing = numeric_literals_preprocessing
 
         self.numeric_triples_file_name = name_from_url(self.numeric_triples_url)
@@ -107,6 +113,7 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
             path=self.training_path,
             create_inverse_triples=self._create_inverse_triples,
             path_to_numeric_triples=self.path_to_numeric_triples,
+            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
         )
         self._testing = self.triples_factory_cls.from_path(
@@ -115,6 +122,7 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
             relation_to_id=self._training.relation_to_id,  # share relation index with training
             create_inverse_triples=self._create_inverse_triples,
             path_to_numeric_triples=self.path_to_numeric_triples,
+            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
         )
 
@@ -131,5 +139,6 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
                 relation_to_id=self._training.relation_to_id,  # share relation index with training
                 create_inverse_triples=self._create_inverse_triples,
                 path_to_numeric_triples=self.path_to_numeric_triples,
+                numeric_triples_preprocessing=self.numeric_triples_preprocessing,
                 numeric_literals_preprocessing=self.numeric_literals_preprocessing,
             )

@@ -18,7 +18,7 @@ __all__ = [
     "TriplesNumericLiteralsFactory",
 ]
 
-from ..utils import minmax_normalize
+from ..utils import minmax_normalize, filter_relations
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,21 @@ def create_matrix_of_literals(
     return num_literals, data_rel_to_id
 
 
+def resolve_function(function: Union[str, Callable], function_dict: Dict[str, Callable]) -> Callable:
+    if isinstance(function, str):
+        return function_dict[function]
+    elif isinstance(function, Callable):
+        return function
+    else:
+        raise ValueError(f"Invalid type of {function}: {type(function)}")
+
+
 _NUM_LITERALS_PREPROCESSING_FUNCTIONS = dict(
     minmax=minmax_normalize,
+)
+
+_NUM_TRIPLES_PREPROCESSING_FUNCTIONS = dict(
+    filter_relations=filter_relations,
 )
 
 
@@ -83,7 +96,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         path: Union[str, pathlib.Path, TextIO],
         *,
         path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
-        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if path_to_numeric_triples is None:
@@ -93,6 +107,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         return cls.from_labeled_triples(
             triples=triples,
             numeric_triples=numeric_triples,
+            numeric_triples_preprocessing=numeric_triples_preprocessing,
             numeric_literals_preprocessing=numeric_literals_preprocessing,
             **kwargs,
         )
@@ -104,20 +119,25 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples: LabeledTriples,
         *,
         numeric_triples: LabeledTriples = None,
-        numeric_literals_preprocessing: Union[str, Callable[[np.ndarray], np.ndarray]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
+        if numeric_triples_preprocessing is not None:
+            preprocessing_function = resolve_function(
+                numeric_triples_preprocessing, _NUM_TRIPLES_PREPROCESSING_FUNCTIONS
+            )
+            numeric_triples = preprocessing_function(numeric_triples)
         numeric_literals, literals_to_id = create_matrix_of_literals(
             numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
         )
         if numeric_literals_preprocessing is not None:
-            if isinstance(numeric_literals_preprocessing, str):
-                preprocessing_function = _NUM_LITERALS_PREPROCESSING_FUNCTIONS[numeric_literals_preprocessing]
-            elif isinstance(numeric_literals_preprocessing, Callable):
-                preprocessing_function = numeric_literals_preprocessing
+            preprocessing_function = resolve_function(
+                numeric_literals_preprocessing, _NUM_LITERALS_PREPROCESSING_FUNCTIONS
+            )
             numeric_literals = preprocessing_function(numeric_literals)
         return cls(
             entity_to_id=base.entity_to_id,

@@ -50,7 +50,7 @@ from docdata import get_docdata
 from torch import nn
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, MappedTriples, TorchRandomHint
+from .typing import DeviceHint, MappedTriples, TorchRandomHint, LabeledTriples
 from .version import get_git_hash
 
 __all__ = [
@@ -125,6 +125,7 @@ __all__ = [
     "einsum",
     "isin_many_dim",
     "minmax_normalize",
+    "filter_relations",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1787,6 +1788,24 @@ def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int 
 def minmax_normalize(array: np.ndarray) -> np.ndarray:
     max_lit, min_lit = np.max(array, axis=0), np.min(array, axis=0)
     return (array - min_lit) / (max_lit - min_lit + 1e-8)
+
+
+def filter_relations(
+    triples: LabeledTriples, min_occurrences: int = 5, regex: str = r"^(?!.*http://rdf.freebase.com/key/).*$"
+) -> LabeledTriples:
+    relations = triples[:, 1]
+    relation_counts = np.unique(relations, return_counts=True)
+    relation_counts = dict(zip(relation_counts[0], relation_counts[1]))
+
+    filtered_triples = []
+    for h, r, t in triples:
+        if relation_counts[r] < min_occurrences or not re.search(regex, str(r)):
+            continue
+        filtered_triples.append((h, r, t))
+
+    filtered_triples = np.array(filtered_triples, dtype=np.dtype("O"))
+
+    return filtered_triples
 
 
 if __name__ == "__main__":
