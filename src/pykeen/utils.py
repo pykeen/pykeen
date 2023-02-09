@@ -124,6 +124,7 @@ __all__ = [
     "ExtraReprMixin",
     "einsum",
     "isin_many_dim",
+    "minmax_normalize",
 ]
 
 logger = logging.getLogger(__name__)
