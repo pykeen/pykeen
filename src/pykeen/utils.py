@@ -1783,6 +1783,11 @@ def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int 
     return counts[inverse[: elements.shape[dim]]] > 1
 
 
+def minmax_normalize(array: np.ndarray) -> np.ndarray:
+    max_lit, min_lit = np.max(array, axis=0), np.min(array, axis=0)
+    return (array - min_lit) / (max_lit - min_lit + 1e-8)
+
+
 if __name__ == "__main__":
     import doctest
 
