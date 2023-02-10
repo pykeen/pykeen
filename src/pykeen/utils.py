@@ -125,7 +125,7 @@ __all__ = [
     "einsum",
     "isin_many_dim",
     "minmax_normalize",
-    "filter_relations",
+    "filter_triples_by_relations",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1786,13 +1786,35 @@ def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int 
 
 
 def minmax_normalize(array: np.ndarray) -> np.ndarray:
+    """
+    Normalizes the given array using min-max normalization
+
+    :param array:
+        array to normalize
+
+    :return:
+        normalized array
+    """
     max_lit, min_lit = np.max(array, axis=0), np.min(array, axis=0)
     return (array - min_lit) / (max_lit - min_lit + 1e-8)
 
 
-def filter_relations(
+def filter_triples_by_relations(
     triples: LabeledTriples, min_occurrences: int = 5, regex: str = r"^(?!.*http://rdf.freebase.com/key/).*$"
 ) -> LabeledTriples:
+    """
+    Filters triples based on their relations' occurrences and labels
+
+    :param triples:
+        triples to filter
+    :param min_occurrences:
+        minimum number of occurrences for a relation to be kept
+    :param regex:
+        regex to match with relation's label for the relation to be kept
+
+    :return:
+        filtered triples
+    """
     relations = triples[:, 1]
     relation_counts = np.unique(relations, return_counts=True)
     relation_counts = dict(zip(relation_counts[0], relation_counts[1]))

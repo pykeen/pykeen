@@ -18,7 +18,7 @@ __all__ = [
     "TriplesNumericLiteralsFactory",
 ]
 
-from ..utils import minmax_normalize, filter_relations
+from ..utils import minmax_normalize, filter_triples_by_relations
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ _NUM_LITERALS_PREPROCESSING_FUNCTIONS = dict(
 )
 
 _NUM_TRIPLES_PREPROCESSING_FUNCTIONS = dict(
-    filter_relations=filter_relations,
+    filter_by_relations=filter_triples_by_relations,
 )
 
 
