@@ -10,7 +10,7 @@ from pystow.utils import name_from_url, download
 from pykeen.datasets import PackedZipRemoteDataset, TarFileRemoteDataset
 from pykeen.triples import TriplesNumericLiteralsFactory, TriplesFactory
 from pykeen.triples.utils import load_triples
-from pykeen.typing import LabeledTriples
+from pykeen.typing import NdArrayInOutCallable, TriplesInOutCallable
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +33,8 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
-        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, TriplesInOutCallable]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, NdArrayInOutCallable]] = None,
         **kwargs,
     ):
         """Initializes fields regarding numeric attributive triples and lets the parent class handle the rest of the args
@@ -106,8 +106,8 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
-        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, TriplesInOutCallable]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, NdArrayInOutCallable]] = None,
         **kwargs,
     ):
         """Initializes fields regarding numeric attributive triples and lets the parent class handle the rest of the args

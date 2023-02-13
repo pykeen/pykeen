@@ -14,7 +14,7 @@ __all__ = [
     "NumericPathDataset",
 ]
 
-from ..typing import LabeledTriples
+from ..typing import NdArrayInOutCallable, TriplesInOutCallable
 
 
 class NumericPathDataset(LazyDataset):
@@ -30,8 +30,8 @@ class NumericPathDataset(LazyDataset):
         literals_path: Union[str, pathlib.Path, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
-        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
-        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, TriplesInOutCallable]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, NdArrayInOutCallable]] = None,
     ) -> None:
         """Initialize the dataset.
 

@@ -12,7 +12,7 @@ import torch
 
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, NdArrayInOutCallable, TriplesInOutCallable
 
 __all__ = [
     "TriplesNumericLiteralsFactory",
@@ -96,8 +96,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         path: Union[str, pathlib.Path, TextIO],
         *,
         path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
-        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
-        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, TriplesInOutCallable]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, NdArrayInOutCallable]] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if path_to_numeric_triples is None:
@@ -119,8 +119,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples: LabeledTriples,
         *,
         numeric_triples: LabeledTriples = None,
-        numeric_triples_preprocessing: Optional[Union[str, Callable[[LabeledTriples], LabeledTriples]]] = None,
-        numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
+        numeric_triples_preprocessing: Optional[Union[str, TriplesInOutCallable]] = None,
+        numeric_literals_preprocessing: Optional[Union[str, NdArrayInOutCallable]] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if numeric_triples is None:

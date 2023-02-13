@@ -86,7 +86,7 @@ density function of the standard Gaussian distribution to retrieve a *p*-value. 
 """
 import math
 from abc import ABC, abstractmethod
-from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
+from typing import ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
 
 import numpy as np
 from class_resolver import ClassResolver, HintOrType
@@ -102,7 +102,7 @@ from .utils import (
     weighted_mean_variance,
     weighted_median,
 )
-from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
+from ..typing import RANK_REALISTIC, RANK_TYPES, NdArrayInOutCallable, RankType
 from ..utils import logcumsumexp
 
 __all__ = [
@@ -286,7 +286,7 @@ class RankBasedMetric(Metric):
 
     def _bootstrap(
         self,
-        func: Callable[[np.ndarray], np.ndarray],
+        func: NdArrayInOutCallable,
         num_candidates: np.ndarray,
         num_samples: int,
         confidence_level: float = 95.0,
