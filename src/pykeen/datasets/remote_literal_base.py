@@ -37,6 +37,12 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
         numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
         **kwargs,
     ):
+        """Initializes fields regarding numeric attributive triples and lets the parent class handle the rest of the args
+
+        :param numeric_triples_url: URL of the text file with the numeric attributive triples
+        :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
+        :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
+        """
         super().__init__(**kwargs)
 
         self.numeric_triples_url = numeric_triples_url
@@ -52,6 +58,8 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
         entity_to_id: Optional[Mapping[str, Any]] = None,
         relation_to_id: Optional[Mapping[str, Any]] = None,
     ) -> TriplesFactory:
+        """Loads relation triples from remote zip file and numeric attributive triples from remote text file"""
+
         if not self.path.is_file():
             if self.url is None:
                 raise ValueError("url should be set")
@@ -82,6 +90,10 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
                 )
 
     def _summary_rows(self):
+        """Enhances dataset's summary with information about numeric literals
+
+        :return: enhanced summary
+        """
         rv = super()._summary_rows()
         tf = self.training
         add_literals_to_summary(rv, tf)
@@ -98,6 +110,12 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
         numeric_literals_preprocessing: Optional[Union[str, Callable[[np.ndarray], np.ndarray]]] = None,
         **kwargs,
     ):
+        """Initializes fields regarding numeric attributive triples and lets the parent class handle the rest of the args
+
+        :param numeric_triples_url: URL of the text file with the numeric attributive triples
+        :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
+        :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
+        """
         super().__init__(**kwargs)
 
         self.numeric_triples_url = numeric_triples_url
@@ -109,6 +127,7 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
 
     # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
+        """Loads train and test relation triples from remote zip file and numeric attributive triples from remote text file"""
         all_unpacked = all(path.is_file() for path in self._get_paths())
 
         if not all_unpacked:
@@ -136,6 +155,7 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
         )
 
     def _load_validation(self) -> None:
+        """Loads validation relation triples from remote zip file and numeric attributive triples from remote text file"""
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
         assert self._training is not None
