@@ -15,6 +15,18 @@ from pykeen.typing import LabeledTriples
 logger = logging.getLogger(__name__)
 
 
+def add_literals_to_summary(summary_rows: list, triples_factory: TriplesNumericLiteralsFactory):
+    """Adds to summary a row with information about numeric literals
+
+    :param summary_rows: summary to append to
+    :param triples_factory: triples factory including numeric attributive triples
+    """
+    assert isinstance(triples_factory, TriplesNumericLiteralsFactory)
+    n_relations = len(triples_factory.literals_to_id)
+    n_triples = n_relations * triples_factory.num_entities
+    summary_rows.append(("Literals", "-", n_relations, n_triples))
+
+
 class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
     triples_factory_cls = TriplesNumericLiteralsFactory
 
@@ -72,10 +84,7 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
     def _summary_rows(self):
         rv = super()._summary_rows()
         tf = self.training
-        assert isinstance(tf, TriplesNumericLiteralsFactory)
-        n_relations = len(tf.literals_to_id)
-        n_triples = n_relations * tf.num_entities
-        rv.append(("Literals", "-", n_relations, n_triples))
+        add_literals_to_summary(rv, tf)
         return rv
 
 
@@ -142,3 +151,13 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
                 numeric_triples_preprocessing=self.numeric_triples_preprocessing,
                 numeric_literals_preprocessing=self.numeric_literals_preprocessing,
             )
+
+    def _summary_rows(self):
+        """Enhances dataset's summary with information about numeric literals
+
+        :return: enhanced summary
+        """
+        rv = super()._summary_rows()
+        tf = self.training
+        add_literals_to_summary(rv, tf)
+        return rv
