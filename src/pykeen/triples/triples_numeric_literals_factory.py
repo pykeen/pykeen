@@ -9,7 +9,7 @@ from typing import Any, Callable, ClassVar, Dict, Iterable, Mapping, MutableMapp
 import numpy as np
 import pandas
 import torch
-from class_resolver import FunctionResolver, Hint
+from class_resolver import FunctionResolver, Hint, OptionalKwargs
 
 from .triples_factory import TriplesFactory
 from .utils import load_triples
@@ -86,7 +86,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         *,
         path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
         numeric_triples_preprocessing: Hint[TriplesInOutCallable] = None,
+        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
+        numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         """Loads relation triples and numeric attributive triples from files and calls from_labeled_triples() for further processing
@@ -95,8 +97,10 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         :param path_to_numeric_triples:  file path for numeric attributive triples, defaults to None
         :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
                                               e.g. ..utils.filter_triples_by_relations() can be used or a custom function can be developed to add/remove/edit triples as desired
+        :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
         :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
                                               e.g. ..utils.minmax_normalize() can be used or a custom function can be developed to modify literals as desired
+        :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
         :raises ValueError: if path_to_numeric_triples was not provided
         :return: an object of this class
         """
@@ -108,7 +112,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             triples=triples,
             numeric_triples=numeric_triples,
             numeric_triples_preprocessing=numeric_triples_preprocessing,
+            numeric_triples_preprocessing_kwargs=numeric_triples_preprocessing_kwargs,
             numeric_literals_preprocessing=numeric_literals_preprocessing,
+            numeric_literals_preprocessing_kwargs=numeric_literals_preprocessing_kwargs,
             **kwargs,
         )
 
@@ -120,7 +126,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         *,
         numeric_triples: LabeledTriples = None,
         numeric_triples_preprocessing: Hint[TriplesInOutCallable] = None,
+        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
+        numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         """Preprocesses numeric attributive triples and their literals, if specified so. Also creates matrix of literals and creates an object of this class
@@ -129,8 +137,10 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         :param numeric_triples: already loaded numeric attributive triples, defaults to None
         :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
                                               e.g. ..utils.filter_triples_by_relations() can be used or a custom function can be developed to add/remove/edit triples as desired
+        :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
         :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
                                               e.g. ..utils.minmax_normalize() can be used or a custom function can be developed to modify literals as desired
+        :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
         :raises ValueError: if numeric_triples was not provided
         :return: an object of this class
         """
@@ -138,13 +148,17 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
         if numeric_triples_preprocessing is not None:
-            preprocessing_function = num_triples_preproc_resolver.make(numeric_triples_preprocessing)
+            preprocessing_function = num_triples_preproc_resolver.make(
+                numeric_triples_preprocessing, numeric_triples_preprocessing_kwargs
+            )
             numeric_triples = preprocessing_function(numeric_triples)
         numeric_literals, literals_to_id = create_matrix_of_literals(
             numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
         )
         if numeric_literals_preprocessing is not None:
-            preprocessing_function = num_literals_preproc_resolver.make(numeric_literals_preprocessing)
+            preprocessing_function = num_literals_preproc_resolver.make(
+                numeric_literals_preprocessing, numeric_literals_preprocessing_kwargs
+            )
             numeric_literals = preprocessing_function(numeric_literals)
         return cls(
             entity_to_id=base.entity_to_id,

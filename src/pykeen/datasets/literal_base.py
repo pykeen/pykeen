@@ -6,7 +6,7 @@ import pathlib
 from typing import Callable, Optional, TextIO, Union
 
 import numpy as np
-from class_resolver import Hint
+from class_resolver import Hint, OptionalKwargs
 
 from .base import LazyDataset
 from ..triples import TriplesNumericLiteralsFactory
@@ -32,7 +32,9 @@ class NumericPathDataset(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         numeric_triples_preprocessing: Hint[TriplesInOutCallable] = None,
+        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
+        numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -50,7 +52,9 @@ class NumericPathDataset(LazyDataset):
 
         self._create_inverse_triples = create_inverse_triples
         self.numeric_triples_preprocessing = numeric_triples_preprocessing
+        self.numeric_triples_preprocessing_kwargs = numeric_triples_preprocessing_kwargs
         self.numeric_literals_preprocessing = numeric_literals_preprocessing
+        self.numeric_literals_preprocessing_kwargs = numeric_literals_preprocessing_kwargs
 
         if eager:
             self._load()
@@ -62,7 +66,9 @@ class NumericPathDataset(LazyDataset):
             path_to_numeric_triples=self.literals_path,
             create_inverse_triples=self._create_inverse_triples,
             numeric_triples_preprocessing=self.numeric_triples_preprocessing,
+            numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
+            numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
         )
         self._testing = self.triples_factory_cls.from_path(
             path=self.testing_path,
@@ -70,7 +76,9 @@ class NumericPathDataset(LazyDataset):
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
             numeric_triples_preprocessing=self.numeric_triples_preprocessing,
+            numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
+            numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
         )
 
     def _load_validation(self) -> None:
@@ -83,7 +91,9 @@ class NumericPathDataset(LazyDataset):
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
             numeric_triples_preprocessing=self.numeric_triples_preprocessing,
+            numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
+            numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
         )
 
     def __repr__(self) -> str:  # noqa: D105
