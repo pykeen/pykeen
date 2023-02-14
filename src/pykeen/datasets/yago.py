@@ -9,6 +9,7 @@ from docdata import parse_docdata
 from more_click import verbose_option
 
 from pykeen.datasets.remote_literal_base import TarRemoteDatasetWithRemoteLiterals
+
 from .base import TarFileRemoteDataset
 
 __all__ = [

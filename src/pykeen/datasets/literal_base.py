@@ -3,14 +3,13 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from typing import TextIO, Union, Callable, Optional
+from typing import Callable, Optional, TextIO, Union
 
 import numpy as np
+from class_resolver import Hint
 
 from .base import LazyDataset
 from ..triples import TriplesNumericLiteralsFactory
-
-from class_resolver import Hint
 
 __all__ = [
     "NumericPathDataset",

@@ -4,17 +4,17 @@
 
 import logging
 import pathlib
-from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union, Callable
+from typing import Any, Callable, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
 import torch
+from class_resolver import FunctionResolver, Hint
 
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..utils import minmax_normalize, filter_triples_by_relations
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, NdArrayInOutCallable, TriplesInOutCallable
-from class_resolver import Hint, FunctionResolver
+from ..utils import filter_triples_by_relations, minmax_normalize
 
 __all__ = [
     "TriplesNumericLiteralsFactory",
@@ -89,6 +89,17 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+        """Loads relation triples and numeric attributive triples from files and calls from_labeled_triples() for further processing
+
+        :param path: file path for relation triples
+        :param path_to_numeric_triples:  file path for numeric attributive triples, defaults to None
+        :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
+                                              e.g. ..utils.filter_triples_by_relations() can be used or a custom function can be developed to add/remove/edit triples as desired
+        :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
+                                              e.g. ..utils.minmax_normalize() can be used or a custom function can be developed to modify literals as desired
+        :raises ValueError: if path_to_numeric_triples was not provided
+        :return: an object of this class
+        """
         if path_to_numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires path_to_numeric_triples.")
         numeric_triples = load_triples(path_to_numeric_triples)
@@ -112,6 +123,17 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+        """Preprocesses numeric attributive triples and their literals, if specified so. Also creates matrix of literals and creates an object of this class
+
+        :param triples: already loaded relation triples
+        :param numeric_triples: already loaded numeric attributive triples, defaults to None
+        :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
+                                              e.g. ..utils.filter_triples_by_relations() can be used or a custom function can be developed to add/remove/edit triples as desired
+        :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
+                                              e.g. ..utils.minmax_normalize() can be used or a custom function can be developed to modify literals as desired
+        :raises ValueError: if numeric_triples was not provided
+        :return: an object of this class
+        """
         if numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)

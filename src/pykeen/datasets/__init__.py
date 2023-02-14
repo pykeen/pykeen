@@ -47,7 +47,7 @@ from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .pharmkg import PharmKG, PharmKG8k
 from .primekg import PrimeKG
-from .remote_literal_base import ZipRemoteDatasetWithRemoteLiterals, TarRemoteDatasetWithRemoteLiterals
+from .remote_literal_base import TarRemoteDatasetWithRemoteLiterals, ZipRemoteDatasetWithRemoteLiterals
 from .umls import UMLS
 from .utils import get_dataset
 from .wd50k import WD50KT

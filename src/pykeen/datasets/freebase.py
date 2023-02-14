@@ -13,6 +13,7 @@ from docdata import parse_docdata
 from more_click import verbose_option
 
 from pykeen.datasets.remote_literal_base import ZipRemoteDatasetWithRemoteLiterals
+
 from .base import PackedZipRemoteDataset, TarFileRemoteDataset
 
 __all__ = [

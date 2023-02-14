@@ -1,17 +1,17 @@
 import logging
 import pathlib
 import zipfile
-from typing import Callable, Optional, Mapping, Any, Union
+from typing import Any, Callable, Mapping, Optional, Union
 
 import numpy as np
 import pandas as pd
-from pystow.utils import name_from_url, download
+from class_resolver import Hint
+from pystow.utils import download, name_from_url
 
 from pykeen.datasets import PackedZipRemoteDataset, TarFileRemoteDataset
-from pykeen.triples import TriplesNumericLiteralsFactory, TriplesFactory
+from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.utils import load_triples
 from pykeen.typing import NdArrayInOutCallable, TriplesInOutCallable
-from class_resolver import Hint
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,9 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
 
         :param numeric_triples_url: URL of the text file with the numeric attributive triples
         :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
+                                              e.g. ..utils.filter_triples_by_relations() can be used or a custom function can be developed to add/remove/edit triples as desired
         :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
+                                              e.g. ..utils.minmax_normalize() can be used or a custom function can be developed to modify literals as desired
         """
         super().__init__(**kwargs)
 
@@ -115,7 +117,9 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
 
         :param numeric_triples_url: URL of the text file with the numeric attributive triples
         :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
+                                              e.g. ..utils.filter_triples_by_relations() can be used or a custom function can be developed to add/remove/edit triples as desired
         :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
+                                              e.g. ..utils.minmax_normalize() can be used or a custom function can be developed to modify literals as desired
         """
         super().__init__(**kwargs)
 

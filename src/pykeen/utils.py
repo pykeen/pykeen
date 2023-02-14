@@ -50,7 +50,7 @@ from docdata import get_docdata
 from torch import nn
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, MappedTriples, TorchRandomHint, LabeledTriples
+from .typing import DeviceHint, LabeledTriples, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
