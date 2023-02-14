@@ -12,14 +12,14 @@ import torch
 
 from .triples_factory import TriplesFactory
 from .utils import load_triples
+from ..utils import minmax_normalize, filter_triples_by_relations
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, NdArrayInOutCallable, TriplesInOutCallable
-from class_resolver import Hint
+from class_resolver import Hint, FunctionResolver
 
 __all__ = [
     "TriplesNumericLiteralsFactory",
 ]
 
-from ..utils import minmax_normalize, filter_triples_by_relations
 
 logger = logging.getLogger(__name__)
 
@@ -46,21 +46,9 @@ def create_matrix_of_literals(
     return num_literals, data_rel_to_id
 
 
-def resolve_function(function: Union[str, Callable], function_dict: Dict[str, Callable]) -> Callable:
-    if isinstance(function, str):
-        return function_dict[function]
-    elif isinstance(function, Callable):
-        return function
-    else:
-        raise ValueError(f"Invalid type of {function}: {type(function)}")
-
-
-_NUM_LITERALS_PREPROCESSING_FUNCTIONS = dict(
-    minmax=minmax_normalize,
-)
-
-_NUM_TRIPLES_PREPROCESSING_FUNCTIONS = dict(
-    filter_by_relations=filter_triples_by_relations,
+num_literals_preproc_resolver = FunctionResolver(elements=[minmax_normalize], synonyms=dict(minmax=minmax_normalize))
+num_triples_preproc_resolver = FunctionResolver(
+    elements=[filter_triples_by_relations], synonyms=dict(filterbyrelations=filter_triples_by_relations)
 )
 
 
@@ -128,17 +116,13 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
         if numeric_triples_preprocessing is not None:
-            preprocessing_function = resolve_function(
-                numeric_triples_preprocessing, _NUM_TRIPLES_PREPROCESSING_FUNCTIONS
-            )
+            preprocessing_function = num_triples_preproc_resolver.make(numeric_triples_preprocessing)
             numeric_triples = preprocessing_function(numeric_triples)
         numeric_literals, literals_to_id = create_matrix_of_literals(
             numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
         )
         if numeric_literals_preprocessing is not None:
-            preprocessing_function = resolve_function(
-                numeric_literals_preprocessing, _NUM_LITERALS_PREPROCESSING_FUNCTIONS
-            )
+            preprocessing_function = num_literals_preproc_resolver.make(numeric_literals_preprocessing)
             numeric_literals = preprocessing_function(numeric_literals)
         return cls(
             entity_to_id=base.entity_to_id,
