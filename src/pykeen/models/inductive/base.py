@@ -98,7 +98,7 @@ class InductiveERModel(ERModel):
                 f"{self.__class__.__name__} does not support the transductive setting (i.e., when mode is None)"
             )
         if mode in self._mode_to_representations:
-            return self._mode_to_representations[mode]
+            return self._mode_to_representations[mode].to(self.device)
         raise ValueError(f"{self.__class__.__name__} does not support mode={mode}")
 
     # docstr-coverage: inherited
