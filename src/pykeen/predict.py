@@ -184,7 +184,26 @@ In the `pykeen.models.predict` module, the prediction methods were organized dif
 * `predict_triples_df`
 
 where `get_head_prediction_df`, `get_relation_prediction_df` and `get_tail_prediction_df` were deprecated in favour
-of directly using `get_prediction_df` with all but the prediction target being provided.
+of directly using `get_prediction_df` with all but the prediction target being provided, i.e., e.g.,
+
+>>> from pykeen.models import predict
+>>> prediction.get_tail_prediction_df(
+...     model=model,
+...     head_label="belgium",
+...     relation_label="locatedin",
+...     triples_factory=result.training,
+... )
+
+was deprecated in favour of
+
+>>> from pykeen.models import predict
+>>> predict.get_prediction_df(
+...     model=model,
+...     head_label="brazil",
+...     relation_label="intergovorgs",
+...     triples_factory=result.training,
+... )
+
 
 `get_prediction_df`
 -------------------
