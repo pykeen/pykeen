@@ -3,6 +3,7 @@ from collections import ChainMap
 from typing import Mapping, Optional, Sequence
 
 from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
+from torch import nn
 
 from ..nbase import ERModel
 from ...nn import Representation
@@ -60,12 +61,12 @@ class InductiveERModel(ERModel):
         entity_representations_kwargs = entity_representations_kwargs or {}
         # entity_representations_kwargs.pop("triples_factory", None)
         # note: this is *not* a nn.ModuleDict; the modules have to be registered elsewhere
-        self._mode_to_representations = {TRAINING: self.entity_representations}
+        _mode_to_representations = {TRAINING: self.entity_representations}
         if "triples_factory" in entity_representations_kwargs:
             entity_representations_kwargs = ChainMap(
                 dict(triples_factory=validation_factory), entity_representations_kwargs
             )
-        self._mode_to_representations[VALIDATION] = validation_entity_representations = self._build_representations(
+        _mode_to_representations[VALIDATION] = validation_entity_representations = self._build_representations(
             triples_factory=validation_factory,
             representations=entity_representations,
             representations_kwargs=entity_representations_kwargs,
@@ -87,7 +88,8 @@ class InductiveERModel(ERModel):
                 representations_kwargs=entity_representations_kwargs,
                 label="entity",
             )
-        self._mode_to_representations[TESTING] = testing_entity_representations
+        _mode_to_representations[TESTING] = testing_entity_representations
+        self._mode_to_representations = nn.ModuleDict(_mode_to_representations)
 
     # docstr-coverage: inherited
     def _get_entity_representations_from_inductive_mode(
@@ -98,7 +100,7 @@ class InductiveERModel(ERModel):
                 f"{self.__class__.__name__} does not support the transductive setting (i.e., when mode is None)"
             )
         if mode in self._mode_to_representations:
-            return self._mode_to_representations[mode].to(self.device)
+            return self._mode_to_representations[mode]
         raise ValueError(f"{self.__class__.__name__} does not support mode={mode}")
 
     # docstr-coverage: inherited
