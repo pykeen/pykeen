@@ -191,9 +191,9 @@ def test_predict_top_k_consistency():
         numpy.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
 
 
-def _iter_predict_triples_inputs() -> Iterable[
-    Tuple[pykeen.models.Model, AnyTriples, Optional[CoreTriplesFactory], Optional[int]]
-]:
+def _iter_predict_triples_inputs() -> (
+    Iterable[Tuple[pykeen.models.Model, AnyTriples, Optional[CoreTriplesFactory], Optional[int]]]
+):
     """Iterate over test inputs for predict_triples."""
     dataset = Nations()
     factory = dataset.training
@@ -236,15 +236,17 @@ def test_predict_triples(
     _check_score_pack(pack=pack, model=model, num_triples=num_triples)
 
 
-def _iter_get_input_batch_inputs() -> Iterable[
-    Tuple[
-        Optional[CoreTriplesFactory],
-        Union[None, int, str],
-        Union[None, int, str],
-        Union[None, int, str],
-        pykeen.typing.Target,
+def _iter_get_input_batch_inputs() -> (
+    Iterable[
+        Tuple[
+            Optional[CoreTriplesFactory],
+            Union[None, int, str],
+            Union[None, int, str],
+            Union[None, int, str],
+            pykeen.typing.Target,
+        ]
     ]
-]:
+):
     """Iterate over test inputs for _get_input_batch."""
     factory = Nations().training
     # ID-based, no factory
@@ -281,9 +283,9 @@ def test_get_input_batch(
     assert batch.flatten().tolist() == list(batch_tuple)
 
 
-def _iter_get_targets_inputs() -> Iterable[
-    Tuple[Union[None, torch.Tensor, Collection[Union[str, int]]], Optional[CoreTriplesFactory], bool]
-]:
+def _iter_get_targets_inputs() -> (
+    Iterable[Tuple[Union[None, torch.Tensor, Collection[Union[str, int]]], Optional[CoreTriplesFactory], bool]]
+):
     """Iterate over test inputs for _get_targets."""
     factory = Nations().training
     for entity, id_to_label in ((True, factory.entity_id_to_label), (False, factory.relation_id_to_label)):
@@ -333,9 +335,9 @@ def test_get_targets(
         assert (ids_tensor == exp_tensor).all()
 
 
-def _iter_predict_target_inputs() -> Iterable[
-    Tuple[pykeen.models.Model, int, int, int, Optional[CoreTriplesFactory], Optional[Sequence[int]]]
-]:
+def _iter_predict_target_inputs() -> (
+    Iterable[Tuple[pykeen.models.Model, int, int, int, Optional[CoreTriplesFactory], Optional[Sequence[int]]]]
+):
     # comment: we only use id-based input, since the normalization has already been tested
     # create model
     factory = Nations().training
