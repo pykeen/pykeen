@@ -22,7 +22,7 @@ class InductiveERModel(ERModel):
 
     #: a mapping from inductive mode to corresponding entity representations
     #: note: there may be duplicate values, if entity representations are shared between validation and testing
-    _mode_to_representations: Mapping[InductiveMode, Sequence[Representation]]
+    _mode_to_representations: Mapping[str, Sequence[Representation]]
 
     def __init__(
         self,
