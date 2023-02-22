@@ -89,7 +89,8 @@ class InductiveERModel(ERModel):
                 label="entity",
             )
         _mode_to_representations[TESTING] = testing_entity_representations
-        self._mode_to_representations = nn.ModuleDict(_mode_to_representations)
+        # note: "training" is an attribute of nn.Module -> need to rename to avoid name collision
+        self._mode_to_representations = nn.ModuleDict({f"{k}_factory": v for k, v in _mode_to_representations.items()})
 
     # docstr-coverage: inherited
     def _get_entity_representations_from_inductive_mode(
@@ -99,8 +100,9 @@ class InductiveERModel(ERModel):
             raise ValueError(
                 f"{self.__class__.__name__} does not support the transductive setting (i.e., when mode is None)"
             )
-        if mode in self._mode_to_representations:
-            return self._mode_to_representations[mode]
+        key = f"{mode}_factory"
+        if key in self._mode_to_representations:
+            return self._mode_to_representations[key]
         raise ValueError(f"{self.__class__.__name__} does not support mode={mode}")
 
     # docstr-coverage: inherited
