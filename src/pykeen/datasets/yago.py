@@ -51,8 +51,9 @@ class YAGO310(TarFileRemoteDataset):
         )
 
 
+@parse_docdata
 class YAGO310WithLiterals(TarRemoteDatasetWithRemoteLiterals):
-    """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations. This one also contains literals.
+    """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations.
 
     ---
     name: YAGO3-10
@@ -72,7 +73,7 @@ class YAGO310WithLiterals(TarRemoteDatasetWithRemoteLiterals):
             authors: Agustinus Kristiadi, Mohammad Asif Khan, Denis Lukovnikov, Jens Lehmann, Asja Fischer
             year: 2018
             link: https://arxiv.org/abs/1802.00934
-            license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE
+            license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE   # noqa
     """
 
     def __init__(self, **kwargs):
@@ -85,7 +86,7 @@ class YAGO310WithLiterals(TarRemoteDatasetWithRemoteLiterals):
             relative_training_path=pathlib.PurePath("train.txt"),
             relative_testing_path=pathlib.PurePath("test.txt"),
             relative_validation_path=pathlib.PurePath("valid.txt"),
-            numeric_triples_url="https://raw.githubusercontent.com/SmartDataAnalytics/LiteralE/master/data/YAGO3-10/literals/numerical_literals.txt",
+            numeric_triples_url="https://raw.githubusercontent.com/SmartDataAnalytics/LiteralE/master/data/YAGO3-10/literals/numerical_literals.txt",  # noqa
             **kwargs,
         )
 

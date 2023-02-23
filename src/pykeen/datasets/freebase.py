@@ -91,6 +91,7 @@ class FB15k237(PackedZipRemoteDataset):
         )
 
 
+@parse_docdata
 class FB15k237WithLiterals(ZipRemoteDatasetWithRemoteLiterals):
     """The FB15k-237 dataset with literals.
 
@@ -113,7 +114,7 @@ class FB15k237WithLiterals(ZipRemoteDatasetWithRemoteLiterals):
             authors: Agustinus Kristiadi, Mohammad Asif Khan, Denis Lukovnikov, Jens Lehmann, Asja Fischer
             year: 2018
             link: https://arxiv.org/abs/1802.00934
-            license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE
+            license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE # noqa
     """
 
     def __init__(self, **kwargs):
@@ -126,7 +127,7 @@ class FB15k237WithLiterals(ZipRemoteDatasetWithRemoteLiterals):
             relative_training_path=os.path.join("Release", "train.txt"),
             relative_testing_path=os.path.join("Release", "test.txt"),
             relative_validation_path=os.path.join("Release", "valid.txt"),
-            numeric_triples_url="https://raw.githubusercontent.com/SmartDataAnalytics/LiteralE/0b0c48fd9b74bf000400199610275ea5c159a44c/data/FB15k-237/literals/numerical_literals.txt",
+            numeric_triples_url="https://raw.githubusercontent.com/SmartDataAnalytics/LiteralE/master/data/FB15k-237/literals/numerical_literals.txt",  # noqa
             **kwargs,
         )
 

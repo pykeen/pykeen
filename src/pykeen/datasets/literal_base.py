@@ -3,9 +3,8 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from typing import Callable, Optional, TextIO, Union
+from typing import TextIO, Union
 
-import numpy as np
 from class_resolver import Hint, OptionalKwargs
 
 from .base import LazyDataset
@@ -15,7 +14,7 @@ __all__ = [
     "NumericPathDataset",
 ]
 
-from ..typing import NdArrayInOutCallable, TriplesInOutCallable
+from ..typing import NdArrayInOutCallable
 
 
 class NumericPathDataset(LazyDataset):
@@ -31,7 +30,7 @@ class NumericPathDataset(LazyDataset):
         literals_path: Union[str, pathlib.Path, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
-        numeric_triples_preprocessing: Hint[TriplesInOutCallable] = None,
+        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
         numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
         numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
@@ -44,6 +43,12 @@ class NumericPathDataset(LazyDataset):
         :param literals_path: Path to the literals triples file or literal triples file
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param numeric_triples_preprocessing: function for preprocessing numeric attributive triples, defaults to None
+               e.g. ..utils.filter_triples_by_relations() can be used or a custom function to add/remove/edit triples
+        :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
+        :param numeric_literals_preprocessing: function for preprocessing numeric literals, defaults to None
+               e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
+        :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
         """
         self.training_path = training_path
         self.testing_path = testing_path

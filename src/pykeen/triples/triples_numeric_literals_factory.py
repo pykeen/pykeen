@@ -4,7 +4,7 @@
 
 import logging
 import pathlib
-from typing import Any, Callable, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
+from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
@@ -13,7 +13,7 @@ from class_resolver import FunctionResolver, Hint, OptionalKwargs
 
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, NdArrayInOutCallable, TriplesInOutCallable
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, NdArrayInOutCallable
 from ..utils import filter_triples_by_relations, minmax_normalize
 
 __all__ = [
@@ -85,22 +85,24 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         path: Union[str, pathlib.Path, TextIO],
         *,
         path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
-        numeric_triples_preprocessing: Hint[TriplesInOutCallable] = None,
+        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
         numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
         numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
-        """Loads relation triples and numeric attributive triples from files and calls from_labeled_triples() for further processing
+        """Load relation triples and numeric attributive triples and call from_labeled_triples() for preprocessing.
 
         :param path: file path for relation triples
         :param path_to_numeric_triples:  file path for numeric attributive triples, defaults to None
-        :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
-                                              e.g. ..utils.filter_triples_by_relations() can be used or a custom function can be developed to add/remove/edit triples as desired
+        :param numeric_triples_preprocessing: function for preprocessing numeric attributive triples, defaults to None
+               e.g. ..utils.filter_triples_by_relations() can be used or a custom function to add/remove/edit triples
         :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
-        :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
-                                              e.g. ..utils.minmax_normalize() can be used or a custom function can be developed to modify literals as desired
+        :param numeric_literals_preprocessing: function for preprocessing numeric literals, defaults to None
+               e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
         :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
+        :param kwargs: Passed to the superclass
+
         :raises ValueError: if path_to_numeric_triples was not provided
         :return: an object of this class
         """
@@ -125,22 +127,24 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples: LabeledTriples,
         *,
         numeric_triples: LabeledTriples = None,
-        numeric_triples_preprocessing: Hint[TriplesInOutCallable] = None,
+        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
         numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
         numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
-        """Preprocesses numeric attributive triples and their literals, if specified so. Also creates matrix of literals and creates an object of this class
+        """Handle preprocessing of numeric attributive triples and their literals before creating an object of this class.
 
         :param triples: already loaded relation triples
         :param numeric_triples: already loaded numeric attributive triples, defaults to None
-        :param numeric_triples_preprocessing: string or callable for preprocessing numeric attributive triples, defaults to None
-                                              e.g. ..utils.filter_triples_by_relations() can be used or a custom function can be developed to add/remove/edit triples as desired
+        :param numeric_triples_preprocessing: function for preprocessing numeric attributive triples, defaults to None
+               e.g. ..utils.filter_triples_by_relations() can be used or a custom function to add/remove/edit triples
         :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
-        :param numeric_literals_preprocessing: string or callable for preprocessing numeric literals, defaults to None
-                                              e.g. ..utils.minmax_normalize() can be used or a custom function can be developed to modify literals as desired
+        :param numeric_literals_preprocessing: function for preprocessing numeric literals, defaults to None
+               e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
         :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
+        :param kwargs: Passed to the superclass
+
         :raises ValueError: if numeric_triples was not provided
         :return: an object of this class
         """
