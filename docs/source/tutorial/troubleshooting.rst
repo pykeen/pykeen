@@ -1,8 +1,8 @@
 .. _troubleshooting:
 
-################
- Trobleshooting
-################
+#################
+ Troubleshooting
+#################
 
 ***********************************************
  Loading a Model from an Old Version of PyKEEN
