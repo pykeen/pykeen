@@ -151,3 +151,6 @@ EA_SIDES: Tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)
 
 # simple ndarray callable
 NdArrayInOutCallable = Callable[[np.ndarray], np.ndarray]
+
+# worker init function callable
+WorkerInitCallable = Callable[[int], None]

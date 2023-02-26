@@ -20,7 +20,10 @@ pipeline:
   training_kwargs:
     batch_size: 128
     label_smoothing: 0.1
+    num_workers: 4 # https://github.com/TimDettmers/spodernet/blob/afa1c4cee8b168fd2938067b37ca4795a022d91f/spodernet/preprocessing/batching.py#L214
+    worker_init_fn: "literale_worker_init" # for references see literale_worker_init() function in pykeen/utils.py
   stopper: "early"
   stopper_kwargs:
     metric: "inverse_harmonic_mean_rank"
     frequency: 3
+  random_seed: 1677423275 # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/main_literal.py#L43-L49
