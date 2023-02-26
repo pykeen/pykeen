@@ -4,6 +4,7 @@
 
 * FB15k
 * FB15k-237
+* FB15k-237 with numeric literals
 """
 
 import os
@@ -93,10 +94,10 @@ class FB15k237(PackedZipRemoteDataset):
 
 @parse_docdata
 class FB15k237WithLiterals(ZipRemoteDatasetWithRemoteLiterals):
-    """The FB15k-237 dataset with literals.
+    """The FB15k-237 dataset with numeric literals.
 
     ---
-    name: FB15k-237
+    name: FB15k-237 with numeric literals
     statistics:
         entities: 14505
         relations: 237
@@ -105,16 +106,11 @@ class FB15k237WithLiterals(ZipRemoteDatasetWithRemoteLiterals):
         validation: 17526
         triples: 310079
         literal relations: 121
-    citations:
-        train, validation and test triples:
-            authors: Toutanova
-            year: 2015
-            link: https://www.aclweb.org/anthology/W15-4007/
-        literal triples:
-            authors: Agustinus Kristiadi, Mohammad Asif Khan, Denis Lukovnikov, Jens Lehmann, Asja Fischer
-            year: 2018
-            link: https://arxiv.org/abs/1802.00934
-            license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE # noqa
+    citation:
+        author: Agustinus Kristiadi et al.
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
+        license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE # noqa
     """
 
     def __init__(self, **kwargs):

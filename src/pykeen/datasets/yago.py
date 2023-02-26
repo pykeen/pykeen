@@ -56,7 +56,7 @@ class YAGO310WithLiterals(TarRemoteDatasetWithRemoteLiterals):
     """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations.
 
     ---
-    name: YAGO3-10
+    name: YAGO3-10 with numeric literals
     statistics:
         entities: 123143
         relations: 37
@@ -64,16 +64,11 @@ class YAGO310WithLiterals(TarRemoteDatasetWithRemoteLiterals):
         testing: 4982
         validation: 4978
         triples: 1089000
-    citations:
-        train, validation and test triples:
-            author: Mahdisoltani
-            year: 2015
-            link: http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284
-        literal triples:
-            authors: Agustinus Kristiadi, Mohammad Asif Khan, Denis Lukovnikov, Jens Lehmann, Asja Fischer
-            year: 2018
-            link: https://arxiv.org/abs/1802.00934
-            license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE   # noqa
+    citation:
+        author: Agustinus Kristiadi et al.
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
+        license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE # noqa
     """
 
     def __init__(self, **kwargs):
