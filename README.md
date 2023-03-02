@@ -112,7 +112,7 @@ in ``pykeen``.
 
 ### Datasets 
 
-The following 36 datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
+The following 38 datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
 or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
 see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
@@ -136,6 +136,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | Drug Repositioning Knowledge Graph | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                     | [`gnn4dr/DRKG`](https://github.com/gnn4dr/DRKG)                                                                         |      97238 |         107 |   5874257 |
 | FB15k                              | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                   | [Bordes *et al*., 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |      14951 |        1345 |    592213 |
 | FB15k-237                          | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)             | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      14505 |         237 |    310079 |
+| FB15k-237 + numeric literals       | [`pykeen.datasets.FB15k237WithLiterals`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237WithLiterals.html)             | [Kristiadi *et al*., 2019](https://arxiv.org/pdf/1802.00934.pdf)                                |      14505 |         237 |    310079 |
 | Global Biotic Interactions         | [`pykeen.datasets.Globi`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Globi.html)                   | [Poelen *et al*., 2014](https://doi.org/10.1016/j.ecoinf.2014.08.005)                                                   |     404207 |          39 |   1966385 |
 | Hetionet                           | [`pykeen.datasets.Hetionet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Hetionet.html)             | [Himmelstein *et al*., 2017](https://doi.org/10.7554/eLife.26726)                                                       |      45158 |          24 |   2250197 |
 | Kinships                           | [`pykeen.datasets.Kinships`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Kinships.html)             | [Kemp *et al*., 2006](https://www.aaai.org/Papers/AAAI/2006/AAAI06-061.pdf)                                             |        104 |          25 |     10686 |
@@ -157,6 +158,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18                         | [`pykeen.datasets.WN18`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18.html)                     | [Bordes *et al*., 2014](https://arxiv.org/abs/1301.3485)                                                                |      40943 |          18 |    151442 |
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)                 | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)               | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
+| YAGO3-10 + numeric literals        | [`pykeen.datasets.YAGO310WithLiterals`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310WithLiterals.html)               | [Kristiadi *et al*., 2019](https://arxiv.org/pdf/1802.00934.pdf)            |     123143 |          37 |   1089000 |
 
 ### Inductive Datasets
 
