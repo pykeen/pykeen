@@ -13,6 +13,7 @@ from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional,
 import numpy as np
 import pandas
 import torch
+from class_resolver import ClassResolver
 from tqdm.autonotebook import tqdm
 
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEY_LABELS
@@ -124,6 +125,11 @@ class Evaluator(ABC):
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the evaluator."""
         return normalize_string(cls.__name__, suffix=Evaluator.__name__)
+
+    @classmethod
+    def get_metric_resolver(cls) -> ClassResolver[Metric]:
+        """Return the resolver for metrics supported by this evaluator class."""
+        raise NotImplementedError
 
     @abstractmethod
     def process_scores_(

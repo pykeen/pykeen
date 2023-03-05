@@ -796,7 +796,7 @@ def hpo_pipeline(
     evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
-    metric = MetricKey.normalize(metric)
+    metric = MetricKey.normalize(metric, resolver=evaluator_cls.get_metric_resolver())
     study.set_user_attr("metric", metric)
     logger.info(f"Attempting to {direction} {metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)
