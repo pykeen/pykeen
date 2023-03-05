@@ -2,6 +2,8 @@
 
 """Implementation of ranked based evaluator."""
 
+from __future__ import annotations
+
 import functools
 import itertools
 import logging
@@ -172,24 +174,31 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
 
         Get the average MR
 
-        >>> metric_results.key_from_string('both.realistic.mean_rank')
+        >>> RankBasedMetricResults.key_from_string('both.realistic.mean_rank')
+        RankBasedMetricKey(side='both', rank_type='realistic', metric='arithmetic_mean_rank')
 
-        If you only give a metric name, it assumes that it's for "both" sides and "realistic" type.
+        If you only give a metric name, it assumes that it's for 'both' sides and 'realistic' type.
 
-        >>> metric_results.key_from_string('adjusted_mean_rank_index')
+        >>> RankBasedMetricResults.key_from_string('adjusted_mean_rank_index')
+        RankBasedMetricKey(side='both', rank_type='realistic', metric='adjusted_arithmetic_mean_rank_index')
 
         This function will do its best to infer what's going on if you only specify one part.
 
-        >>> metric_results.key_from_string('left.mean_rank')
-        >>> metric_results.key_from_string('optimistic.mean_rank')
+        >>> RankBasedMetricResults.key_from_string('head.mean_rank')
+        RankBasedMetricKey(side='head', rank_type='realistic', metric='arithmetic_mean_rank')
+
+        >>> RankBasedMetricResults.key_from_string('optimistic.mean_rank')
+        RankBasedMetricKey(side='both', rank_type='optimistic', metric='arithmetic_mean_rank')
 
         Get the default Hits @ K (where $k=10$)
 
-        >>> metric_results.key_from_string('hits@k')
+        >>> RankBasedMetricResults.key_from_string('hits@k')
+        RankBasedMetricKey(side='both', rank_type='realistic', metric='hits_at_10')
 
         Get a given Hits @ K
 
-        >>> metric_results.get('hits@5')
+        >>> RankBasedMetricResults.key_from_string('hits@5')
+        RankBasedMetricKey(side='both', rank_type='realistic', metric='hits_at_5')
         """
         if s is None:
             return RankBasedMetricKey(
