@@ -2,7 +2,7 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from typing import Mapping, MutableMapping, Optional, Tuple, Type, cast, NamedTuple
+from typing import Mapping, MutableMapping, NamedTuple, Optional, Tuple, Type, cast
 
 import numpy as np
 import torch
@@ -10,7 +10,7 @@ import torch
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
 from ..metrics.classification import ClassificationMetric, classification_metric_resolver
-from ..typing import MappedTriples, Target, ExtendedTarget, SIDE_BOTH, SIDES
+from ..typing import SIDE_BOTH, SIDES, ExtendedTarget, MappedTriples, Target
 
 __all__ = [
     "ClassificationEvaluator",
@@ -65,7 +65,7 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
         return cls(data=data)
 
 
-class ClassificationEvaluator(Evaluator):
+class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
     """An evaluator that uses a classification metrics."""
 
     all_scores: MutableMapping[Tuple[Target, int, int], np.ndarray]
@@ -85,11 +85,6 @@ class ClassificationEvaluator(Evaluator):
         )
         self.all_scores = {}
         self.all_positives = {}
-
-    # docstr-coverage: inherited
-    @classmethod
-    def get_metric_resolver(cls) -> ClassResolver[Metric]:  # noqa: D102
-        return classification_metric_resolver
 
     # docstr-coverage: inherited
     def process_scores_(
