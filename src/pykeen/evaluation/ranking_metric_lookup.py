@@ -11,7 +11,7 @@ from typing import Any, Mapping, NamedTuple, Optional, Tuple, Union, cast
 from class_resolver import ClassResolver
 
 from ..metrics import Metric
-from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
+from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, RankBasedMetric, rank_based_metric_resolver
 from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedTarget, RankType
 from ..utils import flatten_dictionary
 
@@ -73,7 +73,7 @@ class MetricKey(NamedTuple):
             raise ValueError("A metric name must be provided.")
         if resolver is None:
             warnings.warn(
-                f"Using {self.__class__.__name__}.lookup without providing a `resolver` is deprecated.",
+                f"Using {cls.__name__}.lookup without providing a `resolver` is deprecated.",
                 category=DeprecationWarning,
             )
             resolver = rank_based_metric_resolver
@@ -93,23 +93,27 @@ class MetricKey(NamedTuple):
         if side not in SIDES:
             raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
 
-        # normalize rank type
-        rank_type = rank_type or RANK_REALISTIC
-        rank_type = rank_type.lower()
-        rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
-        if rank_type not in RANK_TYPES:
-            raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-        elif rank_type not in metric.supported_rank_types:
-            raise ValueError(
-                f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
-            )
+        # fixme: non-rank-based metrics do not have a rank-type
+        if isinstance(metric, RankBasedMetric):
+            # normalize rank type
+            rank_type = rank_type or RANK_REALISTIC
+            rank_type = rank_type.lower()
+            rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
+            if rank_type not in RANK_TYPES:
+                raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
+            elif rank_type not in metric.supported_rank_types:
+                raise ValueError(
+                    f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
+                )
+        else:
+            rank_type = RANK_REALISTIC
 
         return cls(metric.key, cast(ExtendedTarget, side), cast(RankType, rank_type))
 
     @classmethod
     def normalize(cls, s: Optional[str], resolver: Optional[ClassResolver[Metric]] = None) -> str:
         """Normalize a metric key string."""
-        return str(cls.lookup(s))
+        return str(cls.lookup(s, resolver=resolver))
 
 
 def normalize_flattened_metric_results(result: Mapping[str, Any]) -> Mapping[str, Any]:
