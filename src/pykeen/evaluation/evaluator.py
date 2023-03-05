@@ -2,13 +2,30 @@
 
 """Basic structure of a evaluator."""
 
+from __future__ import annotations
+
 import gc
 import logging
 import timeit
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractclassmethod
 from contextlib import contextmanager
 from math import ceil
-from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Type, Union, cast
+from typing import (
+    Any,
+    ClassVar,
+    Collection,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+    TypeVar,
+    Generic,
+    NamedTuple,
+)
 
 import numpy as np
 import pandas
@@ -53,40 +70,52 @@ def optional_context_manager(condition, context_manager):
         yield
 
 
-class MetricResults:
+# TODO: maybe move into separate module?
+MetricKeyType = TypeVar("MetricKeyType", bound=NamedTuple)
+
+
+class MetricResults(Generic[MetricKeyType]):
     """Results from computing metrics."""
 
     metrics: ClassVar[Mapping[str, Type[Metric]]]
+    data: Mapping[MetricKeyType, float]
 
-    def __init__(self, data: Mapping):
+    def __init__(self, data: Mapping[MetricKeyType | str, float]):
         """Initialize the result wrapper."""
-        self.data = data
+        self.data = {self.from_string(key) if isinstance(key, str) else key: value for key, value in data.items()}
 
-    def __getattr__(self, item):  # noqa:D105
-        # TODO remove this, it makes code much harder to reason about
-        if item not in self.data:
-            raise AttributeError
-        return self.data[item]
+    @abstractclassmethod
+    def from_string(cls, s: str) -> MetricKeyType:
+        """Parse the metric key from a (un-normalized) string."""
+        raise NotImplementedError
+
+    @classmethod
+    def key_to_string(cls, s: str | MetricKeyType) -> str:
+        """Convert a key to a normalized key."""
+        return ".".join(cls.to_key(s))
+
+    @classmethod
+    def to_key(cls, s: str | MetricKeyType) -> MetricKeyType:
+        """Convert a key to a named tuple."""
+        if isinstance(s, str):
+            s = cls.from_string(s)
+        return s
 
     @abstractmethod
-    def get_metric(self, name: str) -> float:
+    def get_metric(self, name: str | MetricKeyType) -> float:
         """Get the given metric from the results.
 
         :param name: The name of the metric
         :returns: The value for the metric
         """
-        raise NotImplementedError
-
-    def to_dict(self):
-        """Get the results as a dictionary."""
-        return self.data
+        raise self.data[self.to_key(name)]
 
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
-        return self.to_dict()
+        return {self.key_to_string(key): value for key, value in self.data.items()}
 
 
-class Evaluator(ABC):
+class Evaluator(ABC, Generic[MetricKeyType]):
     """An abstract evaluator for KGE models.
 
     The evaluator encapsulates the computation of evaluation metrics based on head and tail scores. To this end, it
@@ -126,11 +155,6 @@ class Evaluator(ABC):
         """Get the normalized name of the evaluator."""
         return normalize_string(cls.__name__, suffix=Evaluator.__name__)
 
-    @classmethod
-    def get_metric_resolver(cls) -> ClassResolver[Metric]:
-        """Return the resolver for metrics supported by this evaluator class."""
-        raise NotImplementedError
-
     @abstractmethod
     def process_scores_(
         self,
@@ -158,7 +182,7 @@ class Evaluator(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def finalize(self) -> MetricResults:
+    def finalize(self) -> MetricResults[MetricKeyType]:
         """Compute the final results, and clear buffers."""
         raise NotImplementedError
 
@@ -169,7 +193,7 @@ class Evaluator(ABC):
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         **kwargs,
-    ) -> MetricResults:
+    ) -> MetricResults[MetricKeyType]:
         """
         Run :func:`pykeen.evaluation.evaluate` with this evaluator.
 
@@ -529,7 +553,7 @@ def filter_scores_(
 def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
-    evaluator: Evaluator,
+    evaluator: Evaluator[MetricKeyType],
     only_size_probing: bool = False,
     batch_size: Optional[int] = None,
     slice_size: Optional[int] = None,
@@ -544,7 +568,7 @@ def evaluate(
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     *,
     mode: Optional[InductiveMode],
-) -> MetricResults:
+) -> MetricResults[MetricKeyType]:
     """Evaluate metrics for model on mapped triples.
 
     The model is used to predict scores for all tails and all heads for each triple. Subsequently, each abstract
