@@ -7,6 +7,7 @@ import itertools
 import logging
 import math
 import random
+import re
 from collections import defaultdict
 from typing import (
     Callable,
@@ -32,7 +33,6 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
 from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
@@ -44,12 +44,16 @@ from ..typing import (
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
+    RANK_TYPE_SYNONYMS,
     RANK_TYPES,
     SIDE_BOTH,
+    SIDES,
     ExtendedTarget,
     MappedTriples,
     RankType,
     Target,
+    normalize_rank_type,
+    normalize_target,
 )
 
 __all__ = [
@@ -123,12 +127,109 @@ def _iter_ranks(
         yield RankPack(SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights)
 
 
-class RankBasedMetricResults(MetricResults):
+class RankBasedMetricKey(NamedTuple):
+    side: ExtendedTarget
+    rank: RankType
+    metric: str
+
+
+# parsing metrics
+# metric pattern = side?.type?.metric.k?
+_SIDE_PATTERN = "|".join(SIDES)
+_TYPE_PATTERN = "|".join(itertools.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
+METRIC_PATTERN = re.compile(
+    rf"^((?P<side>{_SIDE_PATTERN})\.)?((?P<type>{_TYPE_PATTERN})\.)?(?P<name>[\w@]+)(\.(?P<k>\d+))?$",
+)
+HITS_PATTERN = re.compile(r"(?P<name>h@|hits@|hits_at_)(?P<k>\d+)")
+
+
+class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
     """Results from computing metrics."""
 
-    data: MutableMapping[Tuple[str, ExtendedTarget, RankType], float]
-
     metrics = RANKING_METRICS
+
+    @classmethod
+    def key_from_string(cls, s: str) -> RankBasedMetricKey:
+        """Get the rank-based metric key.
+
+        The key input is understood as a dot-separated composition of
+
+        1. The side (one of "head", "tail", or "both"). Most publications exclusively report "both".
+           If not given "both" is assumed.
+        2. The rank type (one of "optimistic", "pessimistic", "realistic"). If not given, "realistic" is assumed.
+        3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
+            "inverse_geometric_mean_rank", or "hits@k" where k defaults to 10 but can be substituted for an integer.
+            By default, 1, 3, 5, and 10 are available. Other K's can be calculated by setting the appropriate
+            variable in the ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
+            :class:`pykeen.evaluation.RankBasedEvaluator`.
+
+        In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
+        are only calculated for the average type. This is because the calculation of the expected MR in the
+        optimistic and pessimistic case scenarios is still an active area of research and therefore has no
+        implementation yet.
+
+        :return: The resolved key.
+
+        Get the average MR
+
+        >>> metric_results.key_from_string('both.realistic.mean_rank')
+
+        If you only give a metric name, it assumes that it's for "both" sides and "realistic" type.
+
+        >>> metric_results.key_from_string('adjusted_mean_rank_index')
+
+        This function will do its best to infer what's going on if you only specify one part.
+
+        >>> metric_results.key_from_string('left.mean_rank')
+        >>> metric_results.key_from_string('optimistic.mean_rank')
+
+        Get the default Hits @ K (where $k=10$)
+
+        >>> metric_results.key_from_string('hits@k')
+
+        Get a given Hits @ K
+
+        >>> metric_results.get('hits@5')
+        """
+        if s is None:
+            return RankBasedMetricKey(
+                side=SIDE_BOTH, rank=RANK_REALISTIC, metric=rank_based_metric_resolver.make(query=None).key
+            )
+
+        match = METRIC_PATTERN.match(s)
+        if not match:
+            raise ValueError(f"Invalid metric name: {s}")
+        k: Union[None, str, int]
+        name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
+        name = name.lower()
+        match = HITS_PATTERN.match(name)
+        if match:
+            name, k = match.groups()
+
+        # normalize metric name
+        if not name:
+            raise ValueError("A metric name must be provided.")
+        metric_cls = rank_based_metric_resolver.lookup(name)
+
+        kwargs = {}
+        if issubclass(metric_cls, HITS_METRICS):
+            k = int(k or 10)
+            assert k > 0
+            kwargs["k"] = k
+
+        metric = rank_based_metric_resolver.make(metric_cls, kwargs)
+
+        # normalize side
+        side = normalize_target(side)
+
+        # normalize rank type
+        rank_type = normalize_rank_type(rank_type)
+        if rank_type not in metric.supported_rank_types:
+            raise ValueError(
+                f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
+            )
+
+        return RankBasedMetricKey(side=side, rank=rank_type, metric=metric.key)
 
     @classmethod
     def from_ranks(
@@ -171,91 +272,6 @@ class RankBasedMetricResults(MetricResults):
                     this_ranks = ranks[i, j].mean(axis=0).flatten()
                     data[metric.key, target, rank_type] = metric(ranks=this_ranks, num_candidates=num_candidates[i])
         return cls(data=data)
-
-    def get_metric(self, name: str) -> float:
-        """Get the rank-based metric.
-
-        :param name: The name of the metric, created by concatenating three parts:
-
-            1. The side (one of "head", "tail", or "both"). Most publications exclusively report "both".
-            2. The type (one of "optimistic", "pessimistic", "realistic")
-            3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
-               "inverse_geometric_mean_rank",
-               or "hits@k" where k defaults to 10 but can be substituted for an integer. By default, 1, 3, 5, and 10
-               are available. Other K's can be calculated by setting the appropriate variable in the
-               ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
-               :class:`pykeen.evaluation.RankBasedEvaluator`.
-
-            In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
-            are only calculated for the average type. This is because the calculation of the expected MR in the
-            optimistic and pessimistic case scenarios is still an active area of research and therefore has no
-            implementation yet.
-        :return: The value for the metric
-
-        :raises: ValueError
-            if an invalid name is given.
-
-        Get the average MR
-
-        >>> metric_results.get('both.realistic.mean_rank')
-
-        If you only give a metric name, it assumes that it's for "both" sides and "realistic" type.
-
-        >>> metric_results.get('adjusted_mean_rank_index')
-
-        This function will do its best to infer what's going on if you only specify one part.
-
-        >>> metric_results.get('left.mean_rank')
-        >>> metric_results.get('optimistic.mean_rank')
-
-        Get the default Hits @ K (where $k=10$)
-
-        >>> metric_results.get('hits@k')
-
-        Get a given Hits @ K
-
-        >>> metric_results.get('hits@5')
-        """
-        return self._get_metric(MetricKey.lookup(name))
-
-    def _get_metric(self, metric_key: MetricKey) -> float:
-        """
-        Get the value of the metric corresponding to the given metric key.
-
-        :param metric_key:
-            the metric key.
-
-        :return:
-            the metric value.
-
-        :raises KeyError:
-            if no metric could be found matching the given key
-        """
-        for (metric_key_, target, rank_type), value in self.data.items():
-            if MetricKey(metric=metric_key_, side=target, rank_type=rank_type) == metric_key:
-                return value
-        raise KeyError(metric_key)
-
-    # docstr-coverage: inherited
-    def to_dict(self) -> Mapping[ExtendedTarget, Mapping[RankType, Mapping[str, float]]]:  # noqa: D102
-        result: MutableMapping[ExtendedTarget, MutableMapping[RankType, MutableMapping[str, float]]] = {}
-        for side, rank_type, metric_name, metric_value in self._iter_rows():
-            result.setdefault(side, {})
-            result[side].setdefault(rank_type, {})
-            result[side][rank_type][metric_name] = metric_value
-        return result
-
-    # docstr-coverage: inherited
-    def to_flat_dict(self):  # noqa: D102
-        return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
-
-    def to_df(self) -> pd.DataFrame:
-        """Output the metrics as a pandas dataframe."""
-        return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
-
-    def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
-        for (metric_key, side, rank_type), value in self.data.items():
-            yield side, rank_type, metric_key, value
 
 
 class RankBasedEvaluator(Evaluator):
