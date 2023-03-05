@@ -7,7 +7,6 @@ from __future__ import annotations
 import gc
 import logging
 import timeit
-import warnings
 from abc import ABC, abstractclassmethod, abstractmethod
 from contextlib import contextmanager
 from math import ceil
@@ -123,9 +122,15 @@ class MetricResults(Generic[MetricKeyType]):
         return {self.key_to_string(key): value for key, value in self.data.items()}
 
     def to_dict(self) -> Mapping:
-        """Backwards compatible wrapper to extract any dictionary."""
-        warnings.warn(message="Directly use `.data` instead", category=DeprecationWarning)
-        return self.data
+        """Extract a (potetially nested) JSON-compatible dictionary."""
+        result = {}
+        for compound_key, metric_value in self.data.items():
+            partial_result = result
+            for key_part in compound_key[:-1]:
+                partial_result.setdefault(str(key_part), {})
+                partial_result = partial_result[key_part]
+            partial_result[str(compound_key[-1])] = metric_value
+        return result
 
     def to_df(self) -> pandas.DataFrame:
         """Output the metrics as a pandas dataframe."""
