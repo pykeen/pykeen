@@ -7,7 +7,7 @@
 import itertools as itt
 import logging
 import re
-from typing import Any, Mapping, NamedTuple, Optional, Tuple, Union, cast
+from typing import Any, Mapping, NamedTuple, Tuple, Union, cast
 
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
 from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedTarget, RankType
@@ -95,11 +95,6 @@ class MetricKey(NamedTuple):
 
         return cls(metric.key, cast(ExtendedTarget, side), cast(RankType, rank_type))
 
-    @classmethod
-    def normalize(cls, s: Optional[str]) -> str:
-        """Normalize a metric key string."""
-        return str(cls.lookup(s))
-
 
 def normalize_flattened_metric_results(result: Mapping[str, Any]) -> Mapping[str, Any]:
     """
@@ -118,11 +113,13 @@ def normalize_flattened_metric_results(result: Mapping[str, Any]) -> Mapping[str
     result = {}
     for key, value in flat_result.items():
         try:
-            key = MetricKey.normalize(key)
+            key = str(MetricKey.lookup(key))
         except ValueError as error:
             logger.warning(f"Trying to fix malformed key: {error}")
-            key = MetricKey.normalize(
-                key.replace("nondeterministic", "").replace("unknown", "").strip(".").replace("..", ".")
+            key = str(
+                MetricKey.lookup(
+                    key.replace("nondeterministic", "").replace("unknown", "").strip(".").replace("..", ".")
+                )
             )
         result[key] = value
     return result
