@@ -7,24 +7,24 @@ from __future__ import annotations
 import gc
 import logging
 import timeit
-from abc import ABC, abstractmethod, abstractclassmethod
+from abc import ABC, abstractclassmethod, abstractmethod
 from contextlib import contextmanager
 from math import ceil
 from typing import (
     Any,
     ClassVar,
     Collection,
+    Generic,
     Iterable,
     List,
     Mapping,
+    NamedTuple,
     Optional,
     Tuple,
     Type,
+    TypeVar,
     Union,
     cast,
-    TypeVar,
-    Generic,
-    NamedTuple,
 )
 
 import numpy as np
