@@ -277,6 +277,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
 class RankBasedEvaluator(Evaluator):
     """A rank-based evaluator for KGE models."""
 
+    metric_result_cls = RankBasedMetricResults
     num_entities: Optional[int]
     ranks: MutableMapping[Tuple[Target, RankType], List[np.ndarray]]
     num_candidates: MutableMapping[Target, List[np.ndarray]]

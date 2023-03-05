@@ -70,6 +70,7 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
 class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
     """An evaluator that uses a classification metrics."""
 
+    metric_result_cls = ClassificationMetricResults
     all_scores: MutableMapping[Tuple[Target, int, int], np.ndarray]
     all_positives: MutableMapping[Tuple[Target, int, int], np.ndarray]
 
