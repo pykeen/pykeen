@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 
-# todo: deprecated
-
 """Lookup for metrics."""
+
+# todo: deprecated
 
 import itertools as itt
 import logging
 import re
-import warnings
 from typing import Any, Mapping, NamedTuple, Optional, Tuple, Union, cast
 
-from class_resolver import ClassResolver
-
-from ..metrics import Metric
-from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, RankBasedMetric, rank_based_metric_resolver
+from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank, rank_based_metric_resolver
 from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedTarget, RankType
 from ..utils import flatten_dictionary
 
@@ -49,11 +45,8 @@ class MetricKey(NamedTuple):
         return ".".join(map(str, (self.side, self.rank_type, self.metric)))
 
     @classmethod
-    def lookup(
-        cls, s: Union[None, str, Tuple[str, ExtendedTarget, RankType]], resolver: Optional[ClassResolver[Metric]] = None
-    ) -> "MetricKey":
+    def lookup(cls, s: Union[None, str, Tuple[str, ExtendedTarget, RankType]]) -> "MetricKey":
         """Functional metric name normalization."""
-        # TODO: the "rank-type" part does not make much sense for non-rank-based metrics
         if isinstance(s, tuple):
             return cls.lookup(str(MetricKey(*s)))
 
@@ -73,13 +66,7 @@ class MetricKey(NamedTuple):
         # normalize metric name
         if not name:
             raise ValueError("A metric name must be provided.")
-        if resolver is None:
-            warnings.warn(
-                f"Using {cls.__name__}.lookup without providing a `resolver` is deprecated.",
-                category=DeprecationWarning,
-            )
-            resolver = rank_based_metric_resolver
-        metric_cls = resolver.lookup(name)
+        metric_cls = rank_based_metric_resolver.lookup(name)
 
         kwargs = {}
         if issubclass(metric_cls, HitsAtK):
@@ -87,7 +74,7 @@ class MetricKey(NamedTuple):
             assert k > 0
             kwargs["k"] = k
 
-        metric = resolver.make(metric_cls, kwargs)
+        metric = rank_based_metric_resolver.make(metric_cls, kwargs)
 
         # normalize side
         side = side or SIDE_BOTH
@@ -95,27 +82,23 @@ class MetricKey(NamedTuple):
         if side not in SIDES:
             raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
 
-        # fixme: non-rank-based metrics do not have a rank-type
-        if isinstance(metric, RankBasedMetric):
-            # normalize rank type
-            rank_type = rank_type or RANK_REALISTIC
-            rank_type = rank_type.lower()
-            rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
-            if rank_type not in RANK_TYPES:
-                raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-            elif rank_type not in metric.supported_rank_types:
-                raise ValueError(
-                    f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
-                )
-        else:
-            rank_type = RANK_REALISTIC
+        # normalize rank type
+        rank_type = rank_type or RANK_REALISTIC
+        rank_type = rank_type.lower()
+        rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
+        if rank_type not in RANK_TYPES:
+            raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
+        elif rank_type not in metric.supported_rank_types:
+            raise ValueError(
+                f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
+            )
 
         return cls(metric.key, cast(ExtendedTarget, side), cast(RankType, rank_type))
 
     @classmethod
-    def normalize(cls, s: Optional[str], resolver: Optional[ClassResolver[Metric]] = None) -> str:
+    def normalize(cls, s: Optional[str]) -> str:
         """Normalize a metric key string."""
-        return str(cls.lookup(s, resolver=resolver))
+        return str(cls.lookup(s))
 
 
 def normalize_flattened_metric_results(result: Mapping[str, Any]) -> Mapping[str, Any]:
