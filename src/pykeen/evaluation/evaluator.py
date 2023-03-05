@@ -7,6 +7,7 @@ from __future__ import annotations
 import gc
 import logging
 import timeit
+import warnings
 from abc import ABC, abstractclassmethod, abstractmethod
 from contextlib import contextmanager
 from math import ceil
@@ -120,6 +121,11 @@ class MetricResults(Generic[MetricKeyType]):
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
         return {self.key_to_string(key): value for key, value in self.data.items()}
+
+    def to_dict(self) -> Mapping:
+        """Backwards compatible wrapper to extract any dictionary."""
+        warnings.warn(message="Directly use `.data` instead", category=DeprecationWarning)
+        return self.data
 
     def to_df(self) -> pandas.DataFrame:
         """Output the metrics as a pandas dataframe."""
