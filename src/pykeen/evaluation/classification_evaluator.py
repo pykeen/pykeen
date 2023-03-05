@@ -2,7 +2,7 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from typing import Mapping, MutableMapping, Optional, Tuple, Type, cast
+from typing import Mapping, MutableMapping, Optional, Tuple, Type, cast, NamedTuple
 
 import numpy as np
 import torch
@@ -10,22 +10,44 @@ import torch
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
 from ..metrics.classification import ClassificationMetric, classification_metric_resolver
-from ..typing import MappedTriples, Target
+from ..typing import MappedTriples, Target, ExtendedTarget, SIDE_BOTH, SIDES
 
 __all__ = [
     "ClassificationEvaluator",
     "ClassificationMetricResults",
 ]
 
+
 CLASSIFICATION_METRICS: Mapping[str, Type[ClassificationMetric]] = {
     cls().key: cls for cls in classification_metric_resolver
 }
 
 
-class ClassificationMetricResults(MetricResults):
+class ClassificationMetricKey(NamedTuple):
+    """A key for classification metrics."""
+
+    side: ExtendedTarget
+    metric: str
+
+
+class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
     """Results from computing metrics."""
 
     metrics = CLASSIFICATION_METRICS
+
+    # docstr-coverage: inherited
+    @classmethod
+    def key_from_string(cls, s: str) -> ClassificationMetricKey:  # noqa: D102
+        # side?.metric
+        parts = s.split(".")
+        side = SIDE_BOTH if len(parts) < 2 else parts[0]
+        if side not in SIDES:
+            raise ValueError(f"Invalid side={side}")
+        side = cast(ExtendedTarget, side)
+        metric = parts[-1]
+        if metric.lower() != "num_scores":
+            metric = classification_metric_resolver.normalize(metric)
+        return ClassificationMetricKey(side=side, metric=metric)
 
     @classmethod
     def from_scores(cls, y_true: np.ndarray, y_score: np.ndarray):
@@ -41,12 +63,6 @@ class ClassificationMetricResults(MetricResults):
             data[key] = value
         data["num_scores"] = y_score.size
         return cls(data=data)
-
-    # docstr-coverage: inherited
-    def get_metric(self, name: str) -> float:  # noqa: D102
-        if name not in self.data:
-            raise KeyError(f"Unknown metric: '{name}'. Possible options are: {sorted(self.data.keys())}")
-        return self.data[name]
 
 
 class ClassificationEvaluator(Evaluator):
