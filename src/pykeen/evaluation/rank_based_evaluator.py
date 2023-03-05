@@ -334,11 +334,6 @@ class RankBasedEvaluator(Evaluator):
         self.clear_on_finalize = clear_on_finalize
 
     # docstr-coverage: inherited
-    @classmethod
-    def get_metric_resolver(cls) -> ClassResolver[Metric]:  # noqa: D102
-        return rank_based_metric_resolver
-
-    # docstr-coverage: inherited
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
