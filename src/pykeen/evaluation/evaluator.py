@@ -30,7 +30,6 @@ from typing import (
 import numpy as np
 import pandas
 import torch
-from class_resolver import ClassResolver
 from tqdm.autonotebook import tqdm
 
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEY_LABELS
