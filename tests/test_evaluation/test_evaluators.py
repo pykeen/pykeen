@@ -33,11 +33,11 @@ from pykeen.evaluation.evaluator import (
 )
 from pykeen.evaluation.rank_based_evaluator import (
     MacroRankBasedEvaluator,
+    RankBasedMetricKey,
     SampledRankBasedEvaluator,
     sample_negatives,
     summarize_values,
 )
-from pykeen.evaluation.ranking_metric_lookup import MetricKey
 from pykeen.evaluation.ranks import Ranks
 from pykeen.metrics.ranking import (
     AdjustedArithmeticMeanRankIndex,
@@ -529,49 +529,39 @@ class TestEvaluationFiltering(unittest.TestCase):
         assert eval_results.get_metric(name="mr") == 1, "The rank should equal 1"
 
 
-def test_resolve_metric_name():
-    """Test metric name resolution."""
-    for s, (cls, side, rank_type, *args) in (
-        (
-            "mrr",
-            (InverseHarmonicMeanRank, SIDE_BOTH, RANK_REALISTIC),
-        ),
+@pytest.mark.parametrize(
+    "string,cls,side,rank_type,ks",
+    [
+        (None, RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)),
+        ("mrr", RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)),
         (
             "both.mean_rank",
-            (ArithmeticMeanRank, SIDE_BOTH, RANK_REALISTIC),
+            RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=ArithmeticMeanRank().key),
         ),
         (
             "avg.mean_rank",
-            (ArithmeticMeanRank, SIDE_BOTH, RANK_REALISTIC),
+            RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=ArithmeticMeanRank().key),
         ),
         (
             "tail.worst.mean_rank",
-            (ArithmeticMeanRank, LABEL_TAIL, RANK_PESSIMISTIC),
+            RankBasedMetricKey(side=LABEL_TAIL, rank_type=RANK_PESSIMISTIC, metric=ArithmeticMeanRank().key),
         ),
         (
             "avg.amri",
-            (AdjustedArithmeticMeanRankIndex, SIDE_BOTH, RANK_REALISTIC),
+            RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=AdjustedArithmeticMeanRankIndex().key),
         ),
-        (
-            "hits_at_k",
-            (HitsAtK, SIDE_BOTH, RANK_REALISTIC, 10),
-        ),
+        ("hits_at_k", RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=HitsAtK(k=10).key)),
         (
             "head.best.hits_at_k.3",
-            (HitsAtK, LABEL_HEAD, RANK_OPTIMISTIC, 3),
+            RankBasedMetricKey(side=LABEL_HEAD, rank_type=RANK_OPTIMISTIC, metric=HitsAtK(k=3).key),
         ),
-        (
-            "hits_at_1",
-            (HitsAtK, SIDE_BOTH, RANK_REALISTIC, 1),
-        ),
-        (
-            "H@10",
-            (HitsAtK, SIDE_BOTH, RANK_REALISTIC, 10),
-        ),
-    ):
-        expected = str(MetricKey(metric=cls(*args).key, side=side, rank_type=rank_type))
-        result = MetricKey.normalize(s)
-        assert result == expected, s
+        ("hits_at_1", RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=HitsAtK(k=1).key)),
+        ("H@10", RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=HitsAtK(k=10).key)),
+    ],
+)
+def test_resolve_metric_name(string, expected):
+    """Test metric name resolution."""
+    assert RankBasedMetricResults.key_from_string(string) == expected
 
 
 def test_sample_negatives():
