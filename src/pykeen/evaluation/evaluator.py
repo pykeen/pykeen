@@ -84,9 +84,16 @@ class MetricResults(Generic[MetricKeyType]):
         self.data = {self.string_or_key_to_key(key): value for key, value in data.items()}
 
     @abstractclassmethod
-    def key_from_string(cls, s: str) -> MetricKeyType:
-        """Parse the metric key from a (un-normalized) string."""
-        # TODO: allow s=None to get default
+    def key_from_string(cls, s: str | None) -> MetricKeyType:
+        """
+        Parse the metric key from a (un-normalized) string.
+
+        :param s:
+            the metric key, or `None` to get the default key.
+
+        :return:
+            the fully resolved key as a named tuple
+        """
         raise NotImplementedError
 
     @classmethod

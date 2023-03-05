@@ -149,7 +149,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
     metrics = RANKING_METRICS
 
     @classmethod
-    def key_from_string(cls, s: str) -> RankBasedMetricKey:
+    def key_from_string(cls, s: str | None) -> RankBasedMetricKey:
         """Get the rank-based metric key.
 
         The key input is understood as a dot-separated composition of

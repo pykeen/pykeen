@@ -2,6 +2,8 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
+from __future__ import annotations
+
 from typing import Mapping, MutableMapping, NamedTuple, Optional, Tuple, Type, cast
 
 import numpy as np
@@ -37,7 +39,9 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
 
     # docstr-coverage: inherited
     @classmethod
-    def key_from_string(cls, s: str) -> ClassificationMetricKey:  # noqa: D102
+    def key_from_string(cls, s: str | None) -> ClassificationMetricKey:  # noqa: D102
+        if s is None:
+            s = classification_metric_resolver.make(query=None).key
         # side?.metric
         parts = s.split(".")
         side = normalize_target(None if len(parts) < 2 else parts[0])
