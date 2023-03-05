@@ -115,7 +115,7 @@ class MetricResults(Generic[MetricKeyType]):
         :param name: The name of the metric
         :returns: The value for the metric
         """
-        raise self.data[self.string_or_key_to_key(name)]
+        return self.data[self.string_or_key_to_key(name)]
 
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
