@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# todo: deprecated
+
 """Lookup for metrics."""
 
 import itertools as itt
