@@ -81,23 +81,23 @@ class MetricResults(Generic[MetricKeyType]):
 
     def __init__(self, data: Mapping[MetricKeyType | str, float]):
         """Initialize the result wrapper."""
-        self.data = {self.from_string(key) if isinstance(key, str) else key: value for key, value in data.items()}
+        self.data = {self.string_or_key_to_key(key): value for key, value in data.items()}
 
     @abstractclassmethod
-    def from_string(cls, s: str) -> MetricKeyType:
+    def key_from_string(cls, s: str) -> MetricKeyType:
         """Parse the metric key from a (un-normalized) string."""
         raise NotImplementedError
 
     @classmethod
     def key_to_string(cls, s: str | MetricKeyType) -> str:
         """Convert a key to a normalized key."""
-        return ".".join(cls.to_key(s))
+        return ".".join(cls.string_or_key_to_key(s))
 
     @classmethod
-    def to_key(cls, s: str | MetricKeyType) -> MetricKeyType:
+    def string_or_key_to_key(cls, s: str | MetricKeyType) -> MetricKeyType:
         """Convert a key to a named tuple."""
         if isinstance(s, str):
-            s = cls.from_string(s)
+            s = cls.key_from_string(s)
         return s
 
     @abstractmethod
@@ -107,7 +107,7 @@ class MetricResults(Generic[MetricKeyType]):
         :param name: The name of the metric
         :returns: The value for the metric
         """
-        raise self.data[self.to_key(name)]
+        raise self.data[self.string_or_key_to_key(name)]
 
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
