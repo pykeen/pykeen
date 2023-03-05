@@ -86,6 +86,7 @@ class MetricResults(Generic[MetricKeyType]):
     @abstractclassmethod
     def key_from_string(cls, s: str) -> MetricKeyType:
         """Parse the metric key from a (un-normalized) string."""
+        # TODO: allow s=None to get default
         raise NotImplementedError
 
     @classmethod
@@ -112,6 +113,12 @@ class MetricResults(Generic[MetricKeyType]):
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
         return {self.key_to_string(key): value for key, value in self.data.items()}
+
+    def to_df(self) -> pandas.DataFrame:
+        """Output the metrics as a pandas dataframe."""
+        one_key = next(iter(self.data.keys()))
+        columns = [field.capitalize() for field in one_key._fields] + ["Value"]
+        return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 
 
 class Evaluator(ABC, Generic[MetricKeyType]):
