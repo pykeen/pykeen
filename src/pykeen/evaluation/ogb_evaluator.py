@@ -7,7 +7,6 @@ import torch
 
 from .evaluator import MetricResults
 from .rank_based_evaluator import RankBasedMetricResults, SampledRankBasedEvaluator
-from .ranking_metric_lookup import MetricKey
 from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
 from ..models import Model
@@ -178,7 +177,7 @@ def evaluate_ogb(
         # post-processing
         for key, value in ogb_result.items():
             # normalize name
-            key = MetricKey.lookup(key.replace("_list", "")).metric
+            key = RankBasedMetricResults.key_from_string(key.replace("_list", "")).metric
             # OGB does not aggregate values across triples
             value = value.mean().item()
             result[key, ext_target, rank_type] = value
