@@ -129,7 +129,7 @@ def _iter_ranks(
 
 class RankBasedMetricKey(NamedTuple):
     side: ExtendedTarget
-    rank: RankType
+    rank_type: RankType
     metric: str
 
 
@@ -229,7 +229,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
                 f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
             )
 
-        return RankBasedMetricKey(side=side, rank=rank_type, metric=metric.key)
+        return RankBasedMetricKey(side=side, rank_type=rank_type, metric=metric.key)
 
     @classmethod
     def from_ranks(
