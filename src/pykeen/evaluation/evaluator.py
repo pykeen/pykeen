@@ -97,14 +97,14 @@ class MetricResults(Generic[MetricKeyType]):
         raise NotImplementedError
 
     @classmethod
-    def key_to_string(cls, s: str | MetricKeyType) -> str:
+    def key_to_string(cls, s: str | MetricKeyType | None) -> str:
         """Convert a key to a normalized key."""
         return ".".join(cls.string_or_key_to_key(s))
 
     @classmethod
-    def string_or_key_to_key(cls, s: str | MetricKeyType) -> MetricKeyType:
+    def string_or_key_to_key(cls, s: str | MetricKeyType | None) -> MetricKeyType:
         """Convert a key to a named tuple."""
-        if isinstance(s, str):
+        if s is None or isinstance(s, str):
             s = cls.key_from_string(s)
         return s
 
@@ -135,6 +135,8 @@ class Evaluator(ABC, Generic[MetricKeyType]):
     offers two methods to process a batch of triples together with the scores produced by some model. It maintains
     intermediate results in its state, and offers a method to obtain the final results once finished.
     """
+
+    metric_result_cls: Type[MetricResults[MetricKeyType]]
 
     def __init__(
         self,
