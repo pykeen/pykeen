@@ -48,7 +48,7 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
         metric = parts[-1]
         # todo: make num_scores a classification metric, too, to avoid special handling here
         if metric.lower() != "num_scores":
-            metric = classification_metric_resolver.normalize(metric)
+            metric = classification_metric_resolver.make(metric).key
         return ClassificationMetricKey(side=side, metric=metric)
 
     @classmethod
