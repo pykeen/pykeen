@@ -10,7 +10,7 @@ import torch
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
 from ..metrics.classification import ClassificationMetric, classification_metric_resolver
-from ..typing import SIDE_BOTH, SIDES, ExtendedTarget, MappedTriples, Target
+from ..typing import ExtendedTarget, MappedTriples, Target, normalize_target
 
 __all__ = [
     "ClassificationEvaluator",
@@ -40,11 +40,9 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
     def key_from_string(cls, s: str) -> ClassificationMetricKey:  # noqa: D102
         # side?.metric
         parts = s.split(".")
-        side = SIDE_BOTH if len(parts) < 2 else parts[0]
-        if side not in SIDES:
-            raise ValueError(f"Invalid side={side}")
-        side = cast(ExtendedTarget, side)
+        side = normalize_target(None if len(parts) < 2 else parts[0])
         metric = parts[-1]
+        # todo: make num_scores a classification metric, too, to avoid special handling here
         if metric.lower() != "num_scores":
             metric = classification_metric_resolver.normalize(metric)
         return ClassificationMetricKey(side=side, metric=metric)
