@@ -44,10 +44,10 @@ def normalize_flattened_metric_results(
     result = {}
     for key, value in flat_result.items():
         try:
-            key = metric_result_cls.key_from_string(key)
+            normalized_key = metric_result_cls.key_from_string(key)
         except ValueError as error:
             new_key = key.replace("nondeterministic", "").replace("unknown", "").strip(".").replace("..", ".")
             logger.warning(f"Trying to fix malformed key={key} to key={new_key} (error: {error})")
-            key = metric_result_cls.key_from_string(new_key)
-        result[metric_result_cls.key_to_string(key)] = value
+            normalized_key = metric_result_cls.key_from_string(new_key)
+        result[metric_result_cls.key_to_string(normalized_key)] = value
     return result

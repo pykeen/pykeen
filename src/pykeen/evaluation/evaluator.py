@@ -121,9 +121,10 @@ class MetricResults(Generic[MetricKeyType]):
         """Get the results as a flattened dictionary."""
         return {self.key_to_string(key): value for key, value in self.data.items()}
 
-    def to_dict(self) -> Mapping:
-        """Extract a (potetially nested) JSON-compatible dictionary."""
-        result = {}
+    def to_dict(self) -> Mapping[str, Any]:
+        """Extract a (potentially nested) JSON-compatible dictionary."""
+        # actual type: nested dictionary with string keys
+        result: dict[str, Any] = {}
         for compound_key, metric_value in self.data.items():
             partial_result = result
             for key_part in compound_key[:-1]:

@@ -795,9 +795,9 @@ def hpo_pipeline(
     evaluator_cls = evaluator_resolver.lookup(evaluator)
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
-    metric = evaluator_cls.metric_result_cls.key_to_string(metric)
-    study.set_user_attr("metric", metric)
-    logger.info(f"Attempting to {direction} {metric}")
+    resolved_metric = evaluator_cls.metric_result_cls.key_to_string(metric)
+    study.set_user_attr("metric", resolved_metric)
+    logger.info(f"Attempting to {direction} {resolved_metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)
     logger.info("Filter validation triples when testing: %s", filter_validation_when_testing)
 
@@ -854,7 +854,7 @@ def hpo_pipeline(
         result_tracker=result_tracker,
         result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
-        metric=metric,
+        metric=resolved_metric,
         save_model_directory=save_model_directory,
         # Pipeline Misc.
         device=device,

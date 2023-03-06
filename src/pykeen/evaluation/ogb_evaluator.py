@@ -6,7 +6,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 import torch
 
 from .evaluator import MetricResults
-from .rank_based_evaluator import RankBasedMetricResults, SampledRankBasedEvaluator
+from .rank_based_evaluator import RankBasedMetricResults, SampledRankBasedEvaluator, RankBasedMetricKey
 from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
 from ..models import Model
@@ -166,7 +166,7 @@ def evaluate_ogb(
             torch.cat([y_pred_neg[t] for t in targets], dim=0),
         )
 
-    result: Dict[Tuple[str, ExtendedTarget, RankType], float] = {}
+    result: dict[RankBasedMetricKey, float] = {}
     # cf. https://github.com/snap-stanford/ogb/pull/357
     rank_type = RANK_REALISTIC
     for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
@@ -180,5 +180,5 @@ def evaluate_ogb(
             key = RankBasedMetricResults.key_from_string(key.replace("_list", "")).metric
             # OGB does not aggregate values across triples
             value = value.mean().item()
-            result[key, ext_target, rank_type] = value
+            result[RankBasedMetricKey(side=ext_target, rank_type=rank_type, metric=key)] = value
     return RankBasedMetricResults(data=result)

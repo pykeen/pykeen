@@ -36,7 +36,7 @@ from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranks import Ranks
-from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
+from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS, TARGET_TO_INDEX
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
@@ -208,7 +208,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         """
         if s is None:
             return RankBasedMetricKey(
-                side=SIDE_BOTH, rank=RANK_REALISTIC, metric=rank_based_metric_resolver.make(query=None).key
+                side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=rank_based_metric_resolver.make(query=None).key
             )
 
         match = METRIC_PATTERN.match(s)
@@ -255,7 +255,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         """Create rank-based metric results from the given rank/candidate sets."""
         return cls(
             data={
-                (metric.key, pack.target, pack.rank_type): metric(
+                RankBasedMetricKey(side=pack.target, rank_type=pack.rank_type, metric=metric.key): metric(
                     ranks=pack.ranks, num_candidates=pack.num_candidates, weights=pack.weights
                 )
                 for metric, pack in itertools.product(metrics, rank_and_candidates)
@@ -269,23 +269,21 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         num_candidates = generator.integers(low=2, high=1000, size=(2, 1000))
         ranks = generator.integers(low=1, high=num_candidates[None], size=(2, 2, 1000))
         ranks = numpy.maximum.accumulate(ranks, axis=1)  # increasing, since order of RANK_TYPES
-        data = {}
-        target_to_idx = {
-            LABEL_HEAD: 0,
-            LABEL_TAIL: 1,
-            SIDE_BOTH: [0, 1],
-        }
+        data: dict[RankBasedMetricKey, float] = {}
+
         rank_to_idx = {
             RANK_OPTIMISTIC: [0],
             RANK_PESSIMISTIC: [1],
             RANK_REALISTIC: [0, 1],
         }
+        # fixme: the annotation of ClassResolver.__iter__ seems to be broken (X instead of Type[X])
+        metric_cls: Type[RankBasedMetric]
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
-            for target, i in target_to_idx.items():
-                for rank_type, j in rank_to_idx.items():
-                    this_ranks = ranks[i, j].mean(axis=0).flatten()
-                    data[metric.key, target, rank_type] = metric(ranks=this_ranks, num_candidates=num_candidates[i])
+            for (target, i), (rank_type, j) in itertools.product(TARGET_TO_INDEX.items(), rank_to_idx.items()):
+                this_ranks = ranks[i, j].mean(axis=0).flatten()
+                data[RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric.key)] = metric(
+                    ranks=this_ranks, num_candidates=num_candidates[i])
         return cls(data=data)
 
 
