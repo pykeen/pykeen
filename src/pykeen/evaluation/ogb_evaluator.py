@@ -166,7 +166,7 @@ def evaluate_ogb(
             torch.cat([y_pred_neg[t] for t in targets], dim=0),
         )
 
-    result: dict[RankBasedMetricKey, float] = {}
+    result: Dict[RankBasedMetricKey, float] = {}
     # cf. https://github.com/snap-stanford/ogb/pull/357
     rank_type = RANK_REALISTIC
     for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
