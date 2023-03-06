@@ -6,11 +6,11 @@ from typing import Dict, Iterable, List, Optional, Tuple
 import torch
 
 from .evaluator import MetricResults
-from .rank_based_evaluator import RankBasedMetricResults, SampledRankBasedEvaluator, RankBasedMetricKey
+from .rank_based_evaluator import RankBasedMetricKey, RankBasedMetricResults, SampledRankBasedEvaluator
 from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
 from ..models import Model
-from ..typing import RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, RankType, Target
+from ..typing import RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, Target
 
 __all__ = [
     "OGBEvaluator",

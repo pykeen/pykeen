@@ -36,7 +36,7 @@ from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranks import Ranks
-from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS, TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
@@ -130,6 +130,8 @@ def _iter_ranks(
 
 
 class RankBasedMetricKey(NamedTuple):
+    """A key for ranking-based metrics."""
+
     side: ExtendedTarget
     rank_type: RankType
     metric: str
@@ -283,7 +285,8 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
             for (target, i), (rank_type, j) in itertools.product(TARGET_TO_INDEX.items(), rank_to_idx.items()):
                 this_ranks = ranks[i, j].mean(axis=0).flatten()
                 data[RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric.key)] = metric(
-                    ranks=this_ranks, num_candidates=num_candidates[i])
+                    ranks=this_ranks, num_candidates=num_candidates[i]
+                )
         return cls(data=data)
 
 
