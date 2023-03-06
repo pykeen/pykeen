@@ -159,7 +159,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         1. The side (one of "head", "tail", or "both"). Most publications exclusively report "both".
            If not given "both" is assumed.
         2. The rank type (one of "optimistic", "pessimistic", "realistic"). If not given, "realistic" is assumed.
-        3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
+        3. The metric name, e.g., "adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
             "inverse_geometric_mean_rank", or "hits@k" where k defaults to 10 but can be substituted for an integer.
             By default, 1, 3, 5, and 10 are available. Other K's can be calculated by setting the appropriate
             variable in the ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
@@ -170,7 +170,13 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         optimistic and pessimistic case scenarios is still an active area of research and therefore has no
         implementation yet.
 
+        :param s:
+            a string denoting a metric key
+
         :return: The resolved key.
+
+        :raises ValueError:
+            if the string cannot be resolved to a metric key
 
         Get the average MR
 
