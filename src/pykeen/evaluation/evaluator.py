@@ -109,7 +109,6 @@ class MetricResults(Generic[MetricKeyType]):
             s = cls.key_from_string(s)
         return s
 
-    @abstractmethod
     def get_metric(self, name: str | MetricKeyType) -> float:
         """Get the given metric from the results.
 
