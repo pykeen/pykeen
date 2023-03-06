@@ -7,7 +7,7 @@ from __future__ import annotations
 import gc
 import logging
 import timeit
-from abc import ABC, abstractclassmethod, abstractmethod
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from math import ceil
 from typing import (
@@ -83,7 +83,8 @@ class MetricResults(Generic[MetricKeyType]):
         """Initialize the result wrapper."""
         self.data = {self.string_or_key_to_key(key): value for key, value in data.items()}
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def key_from_string(cls, s: str | None) -> MetricKeyType:
         """
         Parse the metric key from a (un-normalized) string.
