@@ -29,6 +29,8 @@ def normalize_flattened_metric_results(
 
     :param result:
         the result dictionary.
+    :param metric_result_cls:
+        the metric result class providing metric name normalization
 
     :return:
         the flattened metric results with normalized metric names.
@@ -37,7 +39,6 @@ def normalize_flattened_metric_results(
     if metric_result_cls is None:
         warnings.warn("Please explicitly provide a metric result class.", category=DeprecationWarning)
         metric_result_cls = RankBasedMetricResults
-    # TODO: this can only normalize rank-based metrics!
     # TODO: find a better way to handle this
     flat_result = flatten_dictionary(result)
     result = {}
