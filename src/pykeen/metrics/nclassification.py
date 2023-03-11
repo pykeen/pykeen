@@ -4,6 +4,10 @@
 Classification metrics.
 
 The metrics in this module assume the link prediction setting to be a (binary) classification of individual triples.
+
+.. note ::
+    many metrics in this module use `scikit-learn` under the hood, cf.
+    https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
 """
 
 # TODO: temporary file during refactoring
