@@ -4,12 +4,15 @@
 
 # TODO: temporary file during refactoring
 
-from typing import ClassVar, Protocol
+from __future__ import annotations
 
-import numpy as np
+from typing import ClassVar, Protocol, Collection
+
+import numpy
 from class_resolver import ClassResolver
+from sklearn import metrics
 
-from .utils import Metric
+from .utils import Metric, ValueRange
 
 __all__ = [
     "ClassificationMetric",
@@ -21,7 +24,8 @@ __all__ = [
 class ClassificationFunc(Protocol):
     """A protocol for classification functions."""
 
-    def __call__(self, y_true: np.ndarray, y_score: np.ndarray, /, **kwargs) -> float:
+    # todo: check typing
+    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, /, **kwargs) -> float:
         """
         Calculate the metric.
 
@@ -37,7 +41,7 @@ class ClassificationFunc(Protocol):
         ...
 
 
-def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
+def construct_indicator(*, y_score: numpy.ndarray, y_true: numpy.ndarray) -> numpy.ndarray:
     """Construct binary indicators from a list of scores.
 
     If there are $n$ positively labeled entries in ``y_true``, this function
@@ -65,33 +69,42 @@ def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarra
         https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
     """
     # TODO: re-consider threshold
-    number_pos = np.sum(y_true, dtype=int)
-    y_sort = np.flip(np.argsort(y_score))
-    y_pred = np.zeros_like(y_true, dtype=int)
-    y_pred[y_sort[np.arange(number_pos)]] = 1
+    number_pos = numpy.sum(y_true, dtype=int)
+    y_sort = numpy.flip(numpy.argsort(y_score))
+    y_pred = numpy.zeros_like(y_true, dtype=int)
+    y_pred[y_sort[numpy.arange(number_pos)]] = 1
     return y_pred
 
 
 class ClassificationMetric(Metric):
     """A base class for classification metrics."""
 
-    #: A description of the metric
-    description: ClassVar[str]
     #: The function that runs the metric
     func: ClassVar[ClassificationFunc]
 
-    def __call__(self, y_true: np.ndarray, y_score: np.ndarray) -> float:
+    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
         """Evaluate the metric.
 
         :param y_true: shape: (num_samples,)
             the true labels, either 0 or 1.
         :param y_score: shape: (num_samples,)
             the predictions, either continuous or binarized.
+        :param weights: shape: (num_samples,)
+            weights for individual predictions
+
+            .. warning ::
+                not all metrics support sample weights - check :attr:`supports_weights` first
 
         :return:
             the scalar metric value
         """
-        return self.func(y_true, y_score)
+        if weights is None:
+            return self.func(y_true, y_score)
+        if not self.supports_weights:
+            raise ValueError(
+                f"{self.__call__.__qualname__} does not support sample weights but received" f"weights={weights}.",
+            )
+        return self.func(y_true, y_score, sample_weight=weights)
 
 
 class BinarizedClassificationMetric(ClassificationMetric):
@@ -100,11 +113,33 @@ class BinarizedClassificationMetric(ClassificationMetric):
     binarize: ClassVar[bool] = True
 
     # docstr-coverage: inherited
-    def __call__(self, y_true: np.ndarray, y_score: np.ndarray) -> float:  # noqa: D102
+    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray) -> float:  # noqa: D102
         return super().__call__(y_true=y_true, y_score=construct_indicator(y_score=y_score, y_true=y_true))
+
+
+class AveragePrecisionScore(ClassificationMetric):
+    """The average precision from prediction scores.
+
+    .. note ::
+        this metric is different from the area under the precision-recall curve, which uses
+        interpolation and can be too optimistic.
+
+    --
+    link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html
+    description: The average precision across different thresholds.
+    """
+
+    # TODO: can we directly include sklearn's docstring here?
+
+    name = "Average Precision Score (APS)"
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("aps", "ap")
+    supports_weights: ClassVar[bool] = True
+    func = metrics.average_precision_score
 
 
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
     base=ClassificationMetric,
-    # default=PRAUC,
+    default=AveragePrecisionScore,
 )
