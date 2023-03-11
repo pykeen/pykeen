@@ -31,7 +31,6 @@ class ClassificationFunc(Protocol):
             the predictions, either as continuous scores, or as binarized prediction
             (depending on the concrete metric at hand).
 
-
         :return:
             a scalar metric value
         """
@@ -82,9 +81,16 @@ class ClassificationMetric(Metric):
     func: ClassVar[ClassificationFunc]
 
     def __call__(self, y_true: np.ndarray, y_score: np.ndarray) -> float:
-        if self.binarize:
-            # TODO: re-consider threshold!
-            y_score = construct_indicator(y_score=y_score, y_true=y_true)
+        """Evaluate the metric.
+
+        :param y_true: shape: (num_samples,)
+            the true labels, either 0 or 1.
+        :param y_score: shape: (num_samples,)
+            the predictions, either continuous or binarized.
+
+        :return:
+            the scalar metric value
+        """
         return self.func(y_true, y_score)
 
 
@@ -93,7 +99,8 @@ class BinarizedClassificationMetric(ClassificationMetric):
 
     binarize: ClassVar[bool] = True
 
-    def __call__(self, y_true: np.ndarray, y_score: np.ndarray) -> float:
+    # docstr-coverage: inherited
+    def __call__(self, y_true: np.ndarray, y_score: np.ndarray) -> float:  # noqa: D102
         return super().__call__(y_true=y_true, y_score=construct_indicator(y_score=y_score, y_true=y_true))
 
 
