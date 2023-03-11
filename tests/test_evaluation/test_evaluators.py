@@ -530,7 +530,7 @@ class TestEvaluationFiltering(unittest.TestCase):
 
 
 @pytest.mark.parametrize(
-    "string,cls,side,rank_type,ks",
+    "string,expected",
     [
         (None, RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)),
         ("mrr", RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)),
