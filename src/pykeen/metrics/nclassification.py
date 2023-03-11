@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
-"""Classification metrics."""
+"""
+Classification metrics.
+
+The metrics in this module assume the link prediction setting to be a (binary) classification of individual triples.
+"""
 
 # TODO: temporary file during refactoring
 
 from __future__ import annotations
 
-from typing import ClassVar, Protocol, Collection
+import abc
+from typing import ClassVar, Collection, Protocol
 
 import numpy
 from class_resolver import ClassResolver
@@ -24,7 +29,7 @@ __all__ = [
 class ClassificationFunc(Protocol):
     """A protocol for classification functions."""
 
-    # todo: check typing
+    # TODO: check how to type properly
     def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, /, **kwargs) -> float:
         """
         Calculate the metric.
@@ -76,7 +81,7 @@ def construct_indicator(*, y_score: numpy.ndarray, y_true: numpy.ndarray) -> num
     return y_pred
 
 
-class ClassificationMetric(Metric):
+class ClassificationMetric(Metric, abc.ABC):
     """A base class for classification metrics."""
 
     #: The function that runs the metric
@@ -107,7 +112,7 @@ class ClassificationMetric(Metric):
         return self.func(y_true, y_score, sample_weight=weights)
 
 
-class BinarizedClassificationMetric(ClassificationMetric):
+class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
     """A classification metric which requires binarized predictions instead of scores."""
 
     binarize: ClassVar[bool] = True
@@ -139,7 +144,80 @@ class AveragePrecisionScore(ClassificationMetric):
     func = metrics.average_precision_score
 
 
+class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
+    """A classification metric based on the confusion matrix."""
+
+    binarize: ClassVar[bool] = True
+
+    @abc.abstractmethod
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:
+        """
+        Calculate the metric from the confusion table.
+
+        :param matrix: shape: (2, 2)
+            the confusion table
+                [[ TP, FN ]
+                 [ FP, TN ]]
+
+        :return:
+            the scalar metric
+        """
+        raise NotImplementedError
+
+    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
+        y_pred = construct_indicator(y_score=y_score, y_true=y_true)
+        matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
+        return self.extract_from_confusion_matrix(matrix=matrix)
+
+
+class TruePositiveRate(ConfusionMatrixClassificationMetric):
+    """
+    The true positive rate is the probability that the prediction is positive, given the triple is truly positive.
+
+    .. math ::
+        TPR = TP / (TP + FN)
+
+    --
+    link: https://en.wikipedia.org/wiki/Sensitivity_(test)
+    description: The probability that a truly positive triple is predicted positive.
+    """
+
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("tpr", "sensitivity")
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        # TODO: avoid division by zero?
+        return matrix[1, 1] / matrix[1, :].sum()
+
+
+class TrueNegativeRate(ConfusionMatrixClassificationMetric):
+    """
+    The true negative rate is the probability that the prediction is negative, given the triple is truly negative.
+
+    .. math ::
+        TNR = TN / (TN + FP)
+
+    .. warning ::
+        most knowledge graph datasets do not have true negatives, i.e., verified false facts, but rather are
+        collection of (mostly) true facts, where the missing ones are generally unknown rather than false.
+
+    --
+    link: https://en.wikipedia.org/wiki/Specificity_(tests)
+    description: The probability that a truly false triple is predicted negative.
+    """
+
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("tnr", "specificity")
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        # TODO: avoid division by zero?
+        return matrix[0, 0] / matrix[0, :].sum()
+
+
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
     base=ClassificationMetric,
     default=AveragePrecisionScore,
+    skip={BinarizedClassificationMetric, ConfusionMatrixClassificationMetric},
 )
