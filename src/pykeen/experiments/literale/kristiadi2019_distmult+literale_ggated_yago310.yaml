@@ -22,8 +22,11 @@ pipeline:
     label_smoothing: 0.1
     num_workers: 4 # https://github.com/TimDettmers/spodernet/blob/afa1c4cee8b168fd2938067b37ca4795a022d91f/spodernet/preprocessing/batching.py#L214
     worker_init_fn: "literale_worker_init" # for references see literale_worker_init() function in pykeen/utils.py
+    drop_last: True # https://github.com/SmartDataAnalytics/LiteralE/blob/master/README_ConvE.md#quirks
   stopper: "early"
   stopper_kwargs:
     metric: "inverse_harmonic_mean_rank"
-    frequency: 3
+    frequency: 1 # added after communication with paper's author
+    patience: 3 # added after communication with paper's author
+    relative_delta: 0.000001 # = 1e-6 | added after communication with paper's author
   random_seed: 1677423275 # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/main_literal.py#L43-L49
