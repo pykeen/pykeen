@@ -31,6 +31,9 @@ jobs:
 
       - name: Check RST conformity with doc8
         run: tox -e doc8
+      
+      # - name: Check RST format
+      #   run: tox -e doclint
 
       - name: Check README.rst
         run: tox -e readme
@@ -66,3 +69,5 @@ jobs:
         run: tox -e integration
       - name: Run doctests
         run: tox -e doctests
+      # - name: Test notebooks
+      #   run: tox -e treon
