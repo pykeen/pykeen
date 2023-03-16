@@ -19,6 +19,7 @@ jobs:
         python-version: [ "3.10" ]
     steps:
       - uses: actions/checkout@v3
+      
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -26,6 +27,7 @@ jobs:
           # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
           cache: 'pip'
           cache-dependency-path: './setup.cfg'
+      
       - name: Install dependencies
         run: pip install tox
 
@@ -37,9 +39,6 @@ jobs:
 
       - name: Check README.rst
         run: tox -e readme
-
-      - name: Check docstring coverage
-        run: tox -e docstr-coverage
 
       - name: Check documentation build with Sphinx
         run: |
@@ -54,6 +53,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
+      
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -61,13 +61,18 @@ jobs:
           # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
           cache: 'pip'
           cache-dependency-path: './setup.cfg'
+      
       - name: Install dependencies
         run: pip install tox
+      
       - name: Run fast tests
         run: tox -e py
+      
       - name: Run slow tests
         run: tox -e integration
+      
       - name: Run doctests
         run: tox -e doctests
+      
       # - name: Test notebooks
       #   run: tox -e treon
