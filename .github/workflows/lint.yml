@@ -26,9 +26,6 @@ jobs:
       - name: Install dependencies
         run: pip install tox
 
-      - name: Check manifest
-        run: tox -e manifest
-
       - name: Check package metadata with Pyroma
         run: tox -e pyroma
       
@@ -37,6 +34,9 @@ jobs:
 
       - name: Check static typing with MyPy
         run: tox -e mypy
+
+      - name: Check manifest
+        run: tox -e manifest
 
       - name: Check code quality with flake8
         run: tox -e flake8
