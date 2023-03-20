@@ -10,6 +10,7 @@ import time
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
+from ..hpo.hpo import OPTUNA_JOURNAL_FILE_STORAGE_PREFIX
 from ..training import SLCWATrainingLoop, training_loop_resolver
 from ..utils import normalize_path, normalize_string
 
@@ -477,7 +478,11 @@ def prepare_ablation(  # noqa:C901
             "sampler": sampler,
             "pruner": pruner,
         }
-        _experiment_optuna_config["storage"] = f"sqlite:///{output_directory.as_posix()}/optuna_results.db"
+        # cannot use sqlite, since more than one process is spawned
+        # https://optuna.readthedocs.io/en/stable/faq.html#how-can-i-solve-the-error-that-occurs-when-performing-parallel-optimization-with-sqlite3
+        _experiment_optuna_config["storage"] = "/".join(
+            (OPTUNA_JOURNAL_FILE_STORAGE_PREFIX, output_directory.as_posix(), "optuna_results.log")
+        )
         if save_artifacts:
             save_model_directory = output_directory.joinpath("artifacts")
             save_model_directory.mkdir(exist_ok=True, parents=True)
