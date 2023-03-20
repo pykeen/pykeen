@@ -725,7 +725,7 @@ def hpo_pipeline(
     # cannot use sqlite, since more than one process is spawned
     # https://optuna.readthedocs.io/en/stable/faq.html#how-can-i-solve-the-error-that-occurs-when-performing-parallel-optimization-with-sqlite3
     if isinstance(storage, str) and storage.startswith(OPTUNA_JOURNAL_FILE_STORAGE_PREFIX):
-        logger.info(f"Using journal file storage")
+        logger.info(f"Using journal file storage for {storage}")
         storage = JournalStorage(JournalFileStorage(file_path=storage[len(OPTUNA_JOURNAL_FILE_STORAGE_PREFIX) :]))
 
     study = create_study(
