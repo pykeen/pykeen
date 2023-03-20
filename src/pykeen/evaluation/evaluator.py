@@ -28,7 +28,6 @@ from ..utils import (
     is_nonzero_larger_than_maxint_error,
     normalize_string,
     prepare_filter_triples,
-    split_list_in_batches_iter,
 )
 
 __all__ = [
