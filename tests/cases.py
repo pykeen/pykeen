@@ -2069,6 +2069,12 @@ class NodePieceTestCase(RepresentationTestCase):
         kwargs.pop("max_id")
         return kwargs
 
+    def test_estimate_diversity(self):
+        diversity = self.instance.estimate_diversity()
+        assert len(diversity.uniques_per_representation) == len(self.instance.base)
+        assert diversity.uniques_total <= 1.0
+        assert diversity.uniques_total >= 0.0
+
 
 class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.EvaluationLoop]):
     """Tests for evaluation loops."""
