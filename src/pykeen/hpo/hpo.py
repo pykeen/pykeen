@@ -17,7 +17,7 @@ from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
 from optuna import Study, Trial, TrialPruned, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
-from optuna.storages import BaseStorage, JournalFileStorage, JournalStorage
+from optuna.storages import BaseStorage
 
 from ..constants import USER_DEFINED_CODE
 from ..datasets import dataset_resolver, has_dataset
@@ -45,10 +45,10 @@ __all__ = [
     "hpo_pipeline",
     "HpoPipelineResult",
 ]
+
 logger = logging.getLogger(__name__)
 
 STOPPED_EPOCH_KEY = "stopped_epoch"
-OPTUNA_JOURNAL_FILE_STORAGE_PREFIX = "jfs://"
 
 
 class ExtraKeysError(ValueError):
@@ -721,12 +721,6 @@ def hpo_pipeline(
     if direction is None:
         # TODO: use metric.increasing to determine default direction
         direction = "maximize"
-
-    # cannot use sqlite, since more than one process is spawned
-    # https://optuna.readthedocs.io/en/stable/faq.html#how-can-i-solve-the-error-that-occurs-when-performing-parallel-optimization-with-sqlite3
-    if isinstance(storage, str) and storage.startswith(OPTUNA_JOURNAL_FILE_STORAGE_PREFIX):
-        logger.info(f"Using journal file storage for {storage}")
-        storage = JournalStorage(JournalFileStorage(file_path=storage[len(OPTUNA_JOURNAL_FILE_STORAGE_PREFIX) :]))
 
     study = create_study(
         storage=storage,

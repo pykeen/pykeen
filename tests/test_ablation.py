@@ -20,7 +20,6 @@ class TestAblation(unittest.TestCase):
             ablation_pipeline(
                 datasets=["nations"],
                 models=["quate"],
-                model_to_model_kwargs={"quate": {"embedding_dim": 2}},
                 directory=directory,
                 training_loops=["lcwa", "slcwa"],
                 losses=["marginranking"],
