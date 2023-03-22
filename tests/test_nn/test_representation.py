@@ -191,6 +191,18 @@ class TextRepresentationTests(cases.RepresentationTestCase):
         self.max_id = dataset.num_entities
         return kwargs
 
+    def test_from_dataset(self):
+        """Test creating text-based representations from a dataset."""
+        dataset = get_dataset(dataset="nations")
+        instance = self.cls.from_dataset(dataset=dataset)
+        assert instance.max_id == dataset.num_entities
+
+
+class CachedTextRepresentationTests(TextRepresentationTests):
+    """Tests for cached text representations."""
+
+    cls = pykeen.nn.representation.CachedTextRepresentation
+
 
 class SimpleMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
     """Test for Pytorch Geometric representations using uni-relational message passing layers."""
@@ -355,7 +367,12 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
         # create random assignment
         assignment = []
         for i, max_id in enumerate(self.max_ids):
-            assignment.append(torch.stack([torch.full(size=(max_id,), fill_value=i), torch.arange(max_id)], dim=-1))
+            assignment.append(
+                torch.stack(
+                    [torch.full(size=(max_id,), fill_value=i), torch.arange(max_id)],
+                    dim=-1,
+                )
+            )
         assignment = torch.cat(assignment)
         assignment = assignment[torch.randperm(assignment.shape[0])]
 
