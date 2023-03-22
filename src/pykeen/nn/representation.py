@@ -1216,7 +1216,7 @@ class CachedTextRepresentation(TextRepresentation):
         cache = cache or self.cache_cls()
         labels = cache.get_texts(identifiers=labels)
         if None in labels:
-            raise ValueError(f"Could not retrieve labels for all identifiers.")
+            raise ValueError("Could not retrieve labels for all identifiers.")
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
 
