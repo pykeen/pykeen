@@ -13,6 +13,7 @@ import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.pyg
 import pykeen.nn.representation
+import pykeen.nn.utils
 import pykeen.nn.vision
 from pykeen.datasets import get_dataset
 from tests import cases, constants, mocks
@@ -202,6 +203,7 @@ class CachedTextRepresentationTests(TextRepresentationTests):
     """Tests for cached text representations."""
 
     cls = pykeen.nn.representation.CachedTextRepresentation
+    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.utils.IdentityCache())
 
 
 class SimpleMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
@@ -450,8 +452,4 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
 
     base_cls = pykeen.nn.representation.Representation
     base_test = cases.RepresentationTestCase
-    skip_cls = {
-        mocks.CustomRepresentation,
-        pykeen.nn.pyg.MessagePassingRepresentation,
-        pykeen.nn.CachedTextRepresentation,
-    }
+    skip_cls = {mocks.CustomRepresentation, pykeen.nn.pyg.MessagePassingRepresentation}

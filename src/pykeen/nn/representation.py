@@ -1198,18 +1198,20 @@ class CachedTextRepresentation(TextRepresentation):
 
     cache_cls: ClassVar[Type[TextCache]]
 
-    def __init__(self, identifiers: Sequence[str], **kwargs):
+    def __init__(self, labels: Sequence[str], cache: Optional[TextCache] = None, **kwargs):
         """
         Initialize the representation.
 
-        :param identifiers:
+        :param labels:
             the IDs to be resolved by the class, e.g., wikidata IDs. for :class:`WikidataTextRepresentation`,
             biomedical entities represented as compact URIs (CURIEs) for :class:`BiomedicalCURIERepresentation`
+        :param cache:
+            an explicitly provided cache will be preferred over instantiating the class-specific cache class
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
-        cache = self.cache_cls()
-        labels = cache.get_texts(identifiers=identifiers)
+        cache = cache or self.cache_cls()
+        labels = cache.get_texts(identifiers=labels)
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
 
