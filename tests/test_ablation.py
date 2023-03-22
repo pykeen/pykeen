@@ -11,6 +11,7 @@ from pykeen.ablation import ablation_pipeline
 class TestAblation(unittest.TestCase):
     """Test the ablation pipeline."""
 
+    # fixme: find reason / enforce single-thread
     @unittest.skipIf(condition=True, reason="Problems with multi-processing")
     def test_quate(self):
         """Test using a model with no regularizer argument.
