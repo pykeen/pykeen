@@ -195,7 +195,8 @@ class TextRepresentationTests(cases.RepresentationTestCase):
     def test_from_dataset(self):
         """Test creating text-based representations from a dataset."""
         dataset = get_dataset(dataset="nations")
-        instance = self.cls.from_dataset(dataset=dataset)
+        kwargs = {key: value for key, value in self.instance_kwargs.items() if key != "labels"}
+        instance = self.cls.from_dataset(dataset=dataset, **kwargs)
         assert instance.max_id == dataset.num_entities
 
 
