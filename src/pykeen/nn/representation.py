@@ -1209,9 +1209,14 @@ class CachedTextRepresentation(TextRepresentation):
             an explicitly provided cache will be preferred over instantiating the class-specific cache class
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
+
+        :raises ValueError:
+            if any identifier could not be resolved
         """
         cache = cache or self.cache_cls()
         labels = cache.get_texts(identifiers=labels)
+        if None in labels:
+            raise ValueError(f"Could not retrieve labels for all identifiers.")
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
 
