@@ -449,7 +449,7 @@ class PipelineResult(Result):
         if save_training:
             self.training.to_path_binary(directory.joinpath(self.TRAINING_TRIPLES_FILE_NAME))
 
-        logger.info(f"Saved to directory: {directory.as_uri()}")
+        logger.info(f"Saved to directory: {directory.resolve()}")
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
