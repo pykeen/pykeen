@@ -27,7 +27,6 @@ from typing import (
     cast,
 )
 
-import numpy as np
 import pandas
 import torch
 from tqdm.autonotebook import tqdm
@@ -45,7 +44,6 @@ from ..utils import (
     is_nonzero_larger_than_maxint_error,
     normalize_string,
     prepare_filter_triples,
-    split_list_in_batches_iter,
 )
 
 __all__ = [
@@ -716,8 +714,6 @@ def evaluate(
         # This should be a reasonable default size that works on most setups while being faster than batch_size=1
         batch_size = 32
         logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
-    batches = cast(Iterable[np.ndarray], split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size))
-
     # Show progressbar
     num_triples = mapped_triples.shape[0]
 
@@ -737,7 +733,7 @@ def evaluate(
         _tqdm_kwargs.update(tqdm_kwargs)
     with optional_context_manager(use_tqdm, tqdm(**_tqdm_kwargs)) as progress_bar, torch.inference_mode():
         # batch-wise processing
-        for batch in batches:
+        for batch in mapped_triples.split(split_size=batch_size):
             batch_size = batch.shape[0]
             relation_filter = None
             for target in targets:
