@@ -1214,11 +1214,12 @@ class CachedTextRepresentation(TextRepresentation):
             if any identifier could not be resolved
         """
         cache = cache or self.cache_cls()
-        labels = cache.get_texts(identifiers=labels)
-        if None in labels:
-            raise ValueError("Could not retrieve labels for all identifiers.")
+        resolved_labels = cache.get_texts(identifiers=labels)
+        missing = {identifier for identifier, label in zip(labels, resolved_labels) if label is None}
+        if missing:
+            raise ValueError(f"Could not resolve identifiers. Missing: {missing}")
         # delegate to super class
-        super().__init__(labels=labels, **kwargs)
+        super().__init__(labels=resolved_labels, **kwargs)
 
 
 class WikidataTextRepresentation(CachedTextRepresentation):
