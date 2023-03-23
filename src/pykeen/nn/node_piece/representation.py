@@ -348,9 +348,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         .. seealso:: https://github.com/pykeen/pykeen/pull/896
         """
         # unique hashes per representation
-        uniques_per_representation = [
-            tokens.assignment.unique(dim=0).shape[0] / self.max_id for tokens in self.base
-        ]
+        uniques_per_representation = [tokens.assignment.unique(dim=0).shape[0] / self.max_id for tokens in self.base]
 
         # unique hashes if we concatenate all representations together
         unnormalized_uniques_total = torch.unique(
