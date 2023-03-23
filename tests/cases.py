@@ -2070,7 +2070,7 @@ class NodePieceTestCase(RepresentationTestCase):
         return kwargs
 
     def test_estimate_diversity(self):
-        """Test estimating diversity"""
+        """Test estimating diversity."""
         diversity = self.instance.estimate_diversity()
         assert len(diversity.uniques_per_representation) == len(self.instance.base)
         assert 0.0 <= diversity.uniques_total <= 1.0
