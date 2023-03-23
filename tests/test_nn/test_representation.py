@@ -318,7 +318,7 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.WikidataTextRepresentation
     kwargs = dict(
-        identifiers=["Q100", "Q1000"],
+        labels=["Q100", "Q1000"],
         encoder="character-embedding",
     )
 
@@ -337,7 +337,7 @@ class BiomedicalCURIERepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.BiomedicalCURIERepresentation
     kwargs = dict(
-        identifiers=[
+        labels=[
             "hgnc:12929",  # PCGF2
             "hgnc:391",  # AKT1
         ],
