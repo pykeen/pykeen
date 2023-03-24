@@ -327,7 +327,7 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs)
         # the representation module infers the max_id from the provided labels
         kwargs.pop("max_id")
-        self.max_id = len(kwargs["identifiers"])
+        self.max_id = len(kwargs["labels"])
         return kwargs
 
 
@@ -349,7 +349,7 @@ class BiomedicalCURIERepresentationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs)
         # the representation module infers the max_id from the provided labels
         kwargs.pop("max_id")
-        self.max_id = len(kwargs["identifiers"])
+        self.max_id = len(kwargs["labels"])
         return kwargs
 
 
