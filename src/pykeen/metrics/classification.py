@@ -153,14 +153,6 @@ class MetricAnnotator:
 
 classifier_annotator = MetricAnnotator()
 classifier_annotator.higher(
-    rmc.true_negative_rate,
-    description="TN / (TN + FP)",
-    link="https://en.wikipedia.org/wiki/Specificity_(tests)",
-)
-classifier_annotator.higher(
-    rmc.true_positive_rate, description="TP / (TP + FN)", link="https://en.wikipedia.org/wiki/Sensitivity_(test)"
-)
-classifier_annotator.higher(
     rmc.positive_predictive_value,
     description="TP / (TP + FP)",
     link="https://en.wikipedia.org/wiki/Positive_predictive_value",
@@ -169,16 +161,6 @@ classifier_annotator.higher(
     rmc.negative_predictive_value,
     description="TN / (TN + FN)",
     link="https://en.wikipedia.org/wiki/Negative_predictive_value",
-)
-classifier_annotator.lower(
-    rmc.false_negative_rate,
-    description="FN / (FN + TP)",
-    link="https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates",
-)
-classifier_annotator.lower(
-    rmc.false_positive_rate,
-    description="FP / (FP + TN)",
-    link="https://en.wikipedia.org/wiki/False_positive_rate",
 )
 classifier_annotator.lower(
     rmc.false_discovery_rate,

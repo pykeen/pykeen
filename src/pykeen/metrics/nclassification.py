@@ -217,7 +217,7 @@ class TruePositiveRate(ConfusionMatrixClassificationMetric):
     """
 
     increasing: ClassVar[bool] = True
-    synonyms: ClassVar[Collection[str]] = ("tpr", "sensitivity")
+    synonyms: ClassVar[Collection[str]] = ("tpr", "sensitivity", "recall", "hit rate")
 
     # docstr-coverage: inherited
     def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
@@ -241,11 +241,51 @@ class TrueNegativeRate(ConfusionMatrixClassificationMetric):
     """
 
     increasing: ClassVar[bool] = True
-    synonyms: ClassVar[Collection[str]] = ("tnr", "specificity")
+    synonyms: ClassVar[Collection[str]] = ("tnr", "specificity", "selectivity")
 
     # docstr-coverage: inherited
     def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
         return safe_divide(numerator=matrix[0, 0], denominator=matrix[0, :].sum(), zero_division=self.zero_division)
+
+
+class FalsePositiveRate(ConfusionMatrixClassificationMetric):
+    """
+    The false positive rate is the probability that the prediction is positive, given the triple is truly negative.
+
+    .. math ::
+        FPR = FP / (FP + TN)
+
+    --
+    link: https://en.wikipedia.org/wiki/False_positive_rate
+    description: The probability that a truly negative triple is predicted positive.
+    """
+
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("fpr", "fall-out", "false alarm ratio")
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(numerator=matrix[1, 0], denominator=matrix[1, :].sum(), zero_division=self.zero_division)
+
+
+class FalseNegativeRate(ConfusionMatrixClassificationMetric):
+    """
+    The false negative rate is the probability that the prediction is negative, given the triple is truly positive.
+
+    .. math ::
+        FNR = FN / (FN + TP)
+
+    --
+    link: https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates
+    description: The probability that a truly positive triple is predicted negative.
+    """
+
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("fnr", "miss-rate")
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(numerator=matrix[0, 1], denominator=matrix[0, :].sum(), zero_division=self.zero_division)
 
 
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
