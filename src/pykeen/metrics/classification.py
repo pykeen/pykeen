@@ -152,21 +152,6 @@ class MetricAnnotator:
 
 
 classifier_annotator = MetricAnnotator()
-classifier_annotator.lower(
-    rmc.prevalence_threshold,
-    description="√FPR / (√TPR + √FPR)",
-    link="https://en.wikipedia.org/wiki/Prevalence_threshold",
-)
-classifier_annotator.higher(
-    rmc.threat_score,
-    description="TP / (TP + FN + FP)",
-    link="https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.threat_score",
-)
-classifier_annotator.higher(
-    rmc.fowlkes_mallows_index,
-    description="√PPV x √TPR",
-    link="https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index",
-)
 classifier_annotator.higher(
     rmc.informedness, description="TPR + TNR - 1", link="https://en.wikipedia.org/wiki/Informedness"
 )

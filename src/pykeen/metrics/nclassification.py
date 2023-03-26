@@ -12,9 +12,12 @@ The metrics in this module assume the link prediction setting to be a (binary) c
 
 # TODO: temporary file during refactoring
 
+# see also: https://cran.r-project.org/web/packages/metrica/vignettes/available_metrics_classification.html
+
 from __future__ import annotations
 
 import abc
+import math
 import warnings
 from typing import ClassVar, Collection, Literal, Protocol
 
@@ -446,7 +449,7 @@ class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
     description: The ratio of positive and negative likelihood ratio.
     """
 
-    increasing: ClassVar[bool] = False
+    increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("lr-",)
 
     # todo: https://en.wikipedia.org/wiki/Diagnostic_odds_ratio#Confidence_interval
@@ -471,7 +474,7 @@ class Accuracy(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers#Single_metrics
     description: The ratio of the number of correct classifications to the total number.
     """
-    increasing: ClassVar[bool] = False
+    increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("acc", "fraction correct", "fc")
 
     # docstr-coverage: inherited
@@ -492,7 +495,7 @@ class F1Score(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/F1_score
     description: The harmonic mean of precision and recall.
     """
-    increasing: ClassVar[bool] = False
+    increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("f1",)
 
     # docstr-coverage: inherited
@@ -501,6 +504,80 @@ class F1Score(ConfusionMatrixClassificationMetric):
             numerator=2 * matrix[0, 0],
             denominator=2 * matrix[0, 0] + matrix[0, 1] + matrix[1, 0],
             zero_division=self.zero_division,
+        )
+
+
+class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
+    r"""
+    The prevalence threshold.
+
+    .. math ::
+        PT = √FPR / (√TPR + √FPR)
+
+    --
+    link: https://en.wikipedia.org/wiki/Prevalence_threshold
+    description: The prevalence threshold.
+    """
+    # todo: improve doc
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("pt",)
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        fpr = FalsePositiveRate().extract_from_confusion_matrix(matrix=matrix)
+        tpr = TruePositiveRate().extract_from_confusion_matrix(matrix=matrix)
+        return safe_divide(
+            numerator=numpy.sqrt(fpr),
+            denominator=numpy.sqrt(fpr) + numpy.sqrt(tpr),
+            zero_division=self.zero_division,
+        )
+
+
+class ThreatScore(ConfusionMatrixClassificationMetric):
+    r"""
+    The threat score.
+
+    .. math ::
+        TS = TP / (TP + FN + FP)
+
+    --
+    link: https://en.wikipedia.org/wiki/Prevalence_threshold
+    description: The harmonic mean of precision and recall.
+    """
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("ts", "critical success index", "csi", "jaccard index")
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(
+            numerator=matrix[0, 0],
+            denominator=matrix[0, 0] + matrix[0, 1] + matrix[1, 0],
+            zero_division=self.zero_division,
+        )
+
+
+class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
+    r"""
+    The Fowlkes Mallows index.
+
+    .. math ::
+        FM = \sqrt{\frac{TP^2}{(2TP + FP + FN)}}
+
+    --
+    link: https://en.wikipedia.org/wiki/Prevalence_threshold
+    description: The Fowlkes Mallows index.
+    """
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return math.sqrt(
+            safe_divide(
+                numerator=matrix[0, 0] ** 2,
+                denominator=2 * matrix[0, 0] + matrix[0, 1] + matrix[1, 0],
+                zero_division=self.zero_division,
+            )
         )
 
 
