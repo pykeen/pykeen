@@ -153,11 +153,6 @@ class MetricAnnotator:
 
 classifier_annotator = MetricAnnotator()
 classifier_annotator.lower(
-    rmc.false_discovery_rate,
-    description="FP / (FP + TP)",
-    link="https://en.wikipedia.org/wiki/False_discovery_rate",
-)
-classifier_annotator.lower(
     rmc.false_omission_rate,
     description="FN / (FN + TN)",
     link="https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values",

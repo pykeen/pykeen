@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import abc
 import warnings
-from typing import ClassVar, Collection, Protocol, Literal
+from typing import ClassVar, Collection, Literal, Protocol
 
 import numpy
 from class_resolver import ClassResolver
@@ -327,6 +327,46 @@ class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
     # docstr-coverage: inherited
     def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
         return safe_divide(numerator=matrix[1, 1], denominator=matrix[:, 1].sum(), zero_division=self.zero_division)
+
+
+class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
+    """
+    The false discovery rate is the proportion of predicted negatives which are true positive.
+
+    .. math ::
+        FDR = FP / (FP + TP)
+
+    --
+    link: https://en.wikipedia.org/wiki/False_discovery_rate
+    description: The proportion of predicted negatives which are true positive.
+    """
+
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("fdr",)
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(numerator=matrix[1, 0], denominator=matrix[:, 0].sum(), zero_division=self.zero_division)
+
+
+class FalseOmissionRate(ConfusionMatrixClassificationMetric):
+    """
+    The false omission rate is the proportion of predicted positives which are true negative.
+
+    .. math ::
+        FOR = FN / (FN + TN)
+
+    --
+    link: https://en.wikipedia.org/wiki/False_discovery_rate
+    description: The proportion of predicted positives which are true negative.
+    """
+
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("fom",)
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(numerator=matrix[0, 1], denominator=matrix[:, 1].sum(), zero_division=self.zero_division)
 
 
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
