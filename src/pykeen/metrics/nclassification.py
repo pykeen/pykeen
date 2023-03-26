@@ -196,6 +196,7 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
         :return:
             the scalar metric
         """
+        # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
         raise NotImplementedError
 
     def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
