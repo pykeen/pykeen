@@ -15,7 +15,8 @@ The metrics in this module assume the link prediction setting to be a (binary) c
 from __future__ import annotations
 
 import abc
-from typing import ClassVar, Collection, Protocol
+import warnings
+from typing import ClassVar, Collection, Protocol, Literal
 
 import numpy
 from class_resolver import ClassResolver
@@ -28,6 +29,30 @@ __all__ = [
     "construct_indicator",
     "classification_metric_resolver",
 ]
+
+ZeroDivisionPolicy = Literal["warn", 0, 1]
+
+
+def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisionPolicy = "warn") -> float:
+    """
+    Performs division and handles divide-by-zero similar to scikit-learn.
+
+    :param numerator:
+        the numerator
+    :param denominator:
+        the denominator
+    :param zero_division:
+        the zero-division policy; If "warn", act like 0, but warn about the case.
+    """
+    # todo: do we need numpy support?
+    if denominator != 0:
+        return numerator / denominator
+    if zero_division == "warn":
+        zero_division = 0
+        warnings.warn(
+            message=f"Division by zero. Result set to {zero_division} according to policy.", category=UserWarning
+        )
+    return zero_division
 
 
 class ClassificationFunc(Protocol):
@@ -122,8 +147,12 @@ class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
     binarize: ClassVar[bool] = True
 
     # docstr-coverage: inherited
-    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray) -> float:  # noqa: D102
-        return super().__call__(y_true=y_true, y_score=construct_indicator(y_score=y_score, y_true=y_true))
+    def __call__(
+        self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None
+    ) -> float:  # noqa: D102
+        return super().__call__(
+            y_true=y_true, y_score=construct_indicator(y_score=y_score, y_true=y_true), weights=weights
+        )
 
 
 class AveragePrecisionScore(ClassificationMetric):
@@ -152,6 +181,7 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     """A classification metric based on the confusion matrix."""
 
     binarize: ClassVar[bool] = True
+    zero_division: ZeroDivisionPolicy = "warn"
 
     @abc.abstractmethod
     def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:
@@ -191,8 +221,7 @@ class TruePositiveRate(ConfusionMatrixClassificationMetric):
 
     # docstr-coverage: inherited
     def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        # TODO: avoid division by zero?
-        return matrix[1, 1] / matrix[1, :].sum()
+        return safe_divide(numerator=matrix[1, 1], denominator=matrix[1, :].sum(), zero_division=self.zero_division)
 
 
 class TrueNegativeRate(ConfusionMatrixClassificationMetric):
@@ -216,8 +245,7 @@ class TrueNegativeRate(ConfusionMatrixClassificationMetric):
 
     # docstr-coverage: inherited
     def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        # TODO: avoid division by zero?
-        return matrix[0, 0] / matrix[0, :].sum()
+        return safe_divide(numerator=matrix[0, 0], denominator=matrix[0, :].sum(), zero_division=self.zero_division)
 
 
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
