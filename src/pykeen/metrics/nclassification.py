@@ -369,6 +369,54 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
         return safe_divide(numerator=matrix[0, 1], denominator=matrix[:, 1].sum(), zero_division=self.zero_division)
 
 
+class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
+    r"""
+    The positive likelihood ratio is the ratio of true positive rate to false positive rate.
+
+    .. math ::
+        LR+ = TPR / FPR = \frac{TP / (TP + FN)}{FP / (FP + TN)} = \frac{TP \cdot (FP + TN)}{FP \cdot (TP + FN)}
+
+    --
+    link: https://en.wikipedia.org/wiki/Likelihood_ratios_in_diagnostic_testing#Calculation_example
+    description: The ratio of true positive rate to false positive rate.
+    """
+
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("lr+",)
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(
+            numerator=matrix[0, 0] * matrix[1, :].sum(),
+            denominator=matrix[1, 0] * matrix[0, :].sum(),
+            zero_division=self.zero_division,
+        )
+
+
+class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
+    r"""
+    The negative likelihood ratio is the ratio of false negative rate to true negative rate.
+
+    .. math ::
+        LR- = FNR / TNR = \frac{FN / (TP + FN)}{TN / (FP + TN)} = \frac{FN \cdot (FP + TN)}{TN \cdot (TP + FN)}
+
+    --
+    link: https://en.wikipedia.org/wiki/Likelihood_ratios_in_diagnostic_testing#Calculation_example
+    description: The ratio of false positive rate to true positive rate.
+    """
+
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("lr-",)
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(
+            numerator=matrix[0, 1] * matrix[0, :].sum(),
+            denominator=matrix[1, 1] * matrix[1, :].sum(),
+            zero_division=self.zero_division,
+        )
+
+
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
     base=ClassificationMetric,
     default=AveragePrecisionScore,

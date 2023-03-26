@@ -152,20 +152,6 @@ class MetricAnnotator:
 
 
 classifier_annotator = MetricAnnotator()
-classifier_annotator.higher(
-    rmc.positive_likelihood_ratio,
-    lower=0.0,
-    upper=None,
-    description="TPR / FPR",
-    link="https://en.wikipedia.org/wiki/Positive_likelihood_ratio",
-)
-classifier_annotator.lower(
-    rmc.negative_likelihood_ratio,
-    lower=0.0,
-    upper=None,
-    description="FNR / TNR",
-    link="https://en.wikipedia.org/wiki/Negative_likelihood_ratio",
-)
 classifier_annotator.lower(
     rmc.prevalence_threshold,
     description="√FPR / (√TPR + √FPR)",
