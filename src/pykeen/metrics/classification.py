@@ -181,12 +181,6 @@ classifier_annotator.higher(
     link="https://en.wikipedia.org/wiki/Diagnostic_odds_ratio",
 )
 classifier_annotator.higher(
-    rmc.roc_auc_score,
-    name="AUC-ROC",
-    description="Area Under the ROC Curve",
-    link="https://en.wikipedia.org/wiki/Receiver_operating_characteristic",
-)
-classifier_annotator.higher(
     rmc.accuracy_score,
     binarize=True,
     name="Accuracy",
@@ -216,13 +210,6 @@ classifier_annotator.higher(
     link="https://en.wikipedia.org/wiki/Phi_coefficient",
 )
 
-# TODO there's something wrong with this, so add it later
-# classifier_annotator.higher(
-#     rmc.pr_auc_score,
-#     name="AUC-PR",
-#     description="Area Under the Precision-Recall Curve",
-#     link="https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.pr_auc_score",
-# )
 
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver(
     list(classifier_annotator.metrics.values()),

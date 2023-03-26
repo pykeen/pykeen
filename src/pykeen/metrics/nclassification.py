@@ -177,6 +177,22 @@ class AveragePrecisionScore(ClassificationMetric):
     func = metrics.average_precision_score
 
 
+class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
+    """
+    The area under the receiver operating characteristic curve.
+
+    --
+    link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html
+    description: The area under the receiver operating characteristic curve.
+    """
+    name = "Area Under The Receiver Operating Characteristic Curve (ROC AUC)"
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("roc-auc",)
+    supports_weights: ClassVar[bool] = True
+    func = metrics.roc_auc_score
+
+
 class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     """A classification metric based on the confusion matrix."""
 
