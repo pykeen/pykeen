@@ -185,6 +185,7 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html
     description: The area under the receiver operating characteristic curve.
     """
+
     name = "Area Under The Receiver Operating Characteristic Curve (ROC AUC)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
@@ -429,6 +430,76 @@ class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
         return safe_divide(
             numerator=matrix[0, 1] * matrix[0, :].sum(),
             denominator=matrix[1, 1] * matrix[1, :].sum(),
+            zero_division=self.zero_division,
+        )
+
+
+class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
+    r"""
+    The ratio of positive and negative likelihood ratio.
+
+    .. math ::
+        DOR = \frac{LR+}{LR-} = \frac{TP \cdot TN}{FP \cdot FN}
+
+    --
+    link: https://en.wikipedia.org/wiki/Diagnostic_odds_ratio
+    description: The ratio of positive and negative likelihood ratio.
+    """
+
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("lr-",)
+
+    # todo: https://en.wikipedia.org/wiki/Diagnostic_odds_ratio#Confidence_interval
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(
+            numerator=matrix[0, 0] * matrix[1, 1],
+            denominator=matrix[0, 1] * matrix[1, 0],
+            zero_division=self.zero_division,
+        )
+
+
+class Accuracy(ConfusionMatrixClassificationMetric):
+    r"""
+    The ratio of the number of correct classifications to the total number.
+
+    .. math ::
+        ACC = (TP + TN) / (TP + TN + FP + FN)
+
+    --
+    link: https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers#Single_metrics
+    description: The ratio of the number of correct classifications to the total number.
+    """
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("acc", "fraction correct", "fc")
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(
+            numerator=matrix[0, 0] * matrix[1, 1], denominator=matrix.sum(), zero_division=self.zero_division
+        )
+
+
+class F1Score(ConfusionMatrixClassificationMetric):
+    r"""
+    The harmonic mean of precision and recall.
+
+    .. math ::
+        F1 = 2TP / (2TP + FP + FN)
+
+    --
+    link: https://en.wikipedia.org/wiki/F1_score
+    description: The harmonic mean of precision and recall.
+    """
+    increasing: ClassVar[bool] = False
+    synonyms: ClassVar[Collection[str]] = ("f1",)
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(
+            numerator=2 * matrix[0, 0],
+            denominator=2 * matrix[0, 0] + matrix[0, 1] + matrix[1, 0],
             zero_division=self.zero_division,
         )
 

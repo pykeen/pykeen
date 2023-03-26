@@ -174,32 +174,11 @@ classifier_annotator.higher(
     rmc.markedness, description="PPV + NPV - 1", link="https://en.wikipedia.org/wiki/Markedness"
 )
 classifier_annotator.higher(
-    rmc.diagnostic_odds_ratio,
-    lower=0.0,
-    upper=None,
-    description="LR+/LR-",
-    link="https://en.wikipedia.org/wiki/Diagnostic_odds_ratio",
-)
-classifier_annotator.higher(
-    rmc.accuracy_score,
-    binarize=True,
-    name="Accuracy",
-    description="(TP + TN) / (TP + TN + FP + FN)",
-    link="https://en.wikipedia.org/wiki/Accuracy",
-)
-classifier_annotator.higher(
     rmc.balanced_accuracy_score,
     binarize=True,
     name="Balanced Accuracy",
     description="An adjusted version of the accuracy for imbalanced datasets",
     link="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html",
-)
-classifier_annotator.higher(
-    rmc.f1_score,
-    name="F1 Score",
-    binarize=True,
-    description="2TP / (2TP + FP + FN)",
-    link="https://en.wikipedia.org/wiki/F1_score",
 )
 classifier_annotator.higher(
     rmc.matthews_correlation_coefficient,
