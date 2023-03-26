@@ -152,9 +152,7 @@ class MetricAnnotator:
 
 
 classifier_annotator = MetricAnnotator()
-classifier_annotator.higher(
-    rmc.markedness, description="PPV + NPV - 1", link="https://en.wikipedia.org/wiki/Markedness"
-)
+
 classifier_annotator.higher(
     rmc.balanced_accuracy_score,
     binarize=True,
