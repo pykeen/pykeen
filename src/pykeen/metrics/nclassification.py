@@ -581,6 +581,29 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
         )
 
 
+class Informedness(ConfusionMatrixClassificationMetric):
+    r"""
+    The informedness metric.
+
+    .. math ::
+        YI = TPR + TNR - 1 = TP / (TP + FN) + TN / (TN + FP) - 1
+
+    --
+    link: https://en.wikipedia.org/wiki/Informedness
+    description: The informedness metric.
+    """
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("Youden's J", "Youden's Index", "yi")
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return (
+            safe_divide(numerator=matrix[1, 1], denominator=matrix[1, :].sum(), zero_division=self.zero_division)
+            + safe_divide(numerator=matrix[0, 0], denominator=matrix[0, :].sum(), zero_division=self.zero_division)
+            - 1
+        )
+
+
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
     base=ClassificationMetric,
     default=AveragePrecisionScore,
