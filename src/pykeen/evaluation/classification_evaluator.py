@@ -4,25 +4,20 @@
 
 from __future__ import annotations
 
-from typing import Mapping, MutableMapping, NamedTuple, Optional, Tuple, Type, cast
+from typing import MutableMapping, NamedTuple, Optional, Tuple, cast
 
 import numpy as np
 import torch
 
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
-from ..metrics.classification import ClassificationMetric, classification_metric_resolver
+from ..metrics.classification import classification_metric_resolver
 from ..typing import ExtendedTarget, MappedTriples, Target, normalize_target
 
 __all__ = [
     "ClassificationEvaluator",
     "ClassificationMetricResults",
 ]
-
-
-CLASSIFICATION_METRICS: Mapping[str, Type[ClassificationMetric]] = {
-    cls().key: cls for cls in classification_metric_resolver
-}
 
 
 class ClassificationMetricKey(NamedTuple):
@@ -35,7 +30,7 @@ class ClassificationMetricKey(NamedTuple):
 class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
     """Results from computing metrics."""
 
-    metrics = CLASSIFICATION_METRICS
+    metrics = classification_metric_resolver.lookup_dict
 
     # docstr-coverage: inherited
     @classmethod
@@ -46,9 +41,6 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
         parts = s.split(".")
         side = normalize_target(None if len(parts) < 2 else parts[0])
         metric = parts[-1]
-        # todo: make num_scores a classification metric, too, to avoid special handling here
-        if metric.lower() != "num_scores":
-            metric = classification_metric_resolver.make(metric).key
         return ClassificationMetricKey(side=side, metric=metric)
 
     @classmethod
@@ -57,8 +49,9 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
         if y_true.size == 0:
             raise ValueError(f"Cannot calculate scores from empty array (y_true.shape={y_true.shape}).")
         data = dict()
-        for key, metric in CLASSIFICATION_METRICS.items():
-            value = metric.score(y_true, y_score)
+        for key in classification_metric_resolver:
+            metric = classification_metric_resolver.make(key)
+            value = metric(y_true, y_score)
             if isinstance(value, np.number):
                 # TODO: fix this upstream / make metric.score comply to signature
                 value = value.item()
