@@ -289,6 +289,46 @@ class FalseNegativeRate(ConfusionMatrixClassificationMetric):
         return safe_divide(numerator=matrix[0, 1], denominator=matrix[0, :].sum(), zero_division=self.zero_division)
 
 
+class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
+    """
+    The positive predictive value is the proportion of predicted positives which are true positive.
+
+    .. math ::
+        PPV = TP / (TP + FP)
+
+    --
+    link: https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values
+    description: The proportion of predicted positives which are true positive.
+    """
+
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("ppv",)
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(numerator=matrix[0, 0], denominator=matrix[:, 0].sum(), zero_division=self.zero_division)
+
+
+class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
+    """
+    The negative predictive value is the proportion of predicted negatives which are true negative.
+
+    .. math ::
+        NPV = TN / (TN + FN)
+
+    --
+    link: https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values
+    description: The proportion of predicted negatives which are true negatives.
+    """
+
+    increasing: ClassVar[bool] = True
+    synonyms: ClassVar[Collection[str]] = ("npv",)
+
+    # docstr-coverage: inherited
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+        return safe_divide(numerator=matrix[1, 1], denominator=matrix[:, 1].sum(), zero_division=self.zero_division)
+
+
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
     base=ClassificationMetric,
     default=AveragePrecisionScore,
