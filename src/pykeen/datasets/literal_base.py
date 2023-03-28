@@ -9,12 +9,11 @@ from class_resolver import Hint, OptionalKwargs
 
 from .base import LazyDataset
 from ..triples import TriplesNumericLiteralsFactory
+from ..typing import NdArrayInOutCallable
 
 __all__ = [
     "NumericPathDataset",
 ]
-
-from ..typing import NdArrayInOutCallable
 
 
 class NumericPathDataset(LazyDataset):
