@@ -589,8 +589,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         logger.debug(f"using stopper: {stopper}")
 
-        if worker_init_fn is not None:
-            worker_init_fn = worker_init_fn_resolver.make(worker_init_fn)
+        worker_init_fn = worker_init_fn_resolver.make_safe(worker_init_fn)
 
         train_data_loader = self._create_training_data_loader(
             triples_factory,
