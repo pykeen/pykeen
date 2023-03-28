@@ -6,7 +6,6 @@ pipeline:
     create_inverse_triples: true
     numeric_literals_preprocessing: "minmax"
     numeric_triples_preprocessing: "filter_by_relations"
-    force: true # necessary for applying the above preprocessing functions in case a previous experiment with the same dataset has been performed
   evaluator: RankBasedEvaluator
   model: DistMultLiteralGated
   model_kwargs:
