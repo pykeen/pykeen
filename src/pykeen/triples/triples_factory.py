@@ -89,6 +89,8 @@ def create_entity_mapping(
     if triples is None:
         if heads is None or tails is None:
             raise ValueError("If no triples are provided, both, heads and tails must be provided.")
+        assert heads is not None
+        assert tails is not None
     else:
         heads, tails = triples[:, 0], triples[:, 2]
 
