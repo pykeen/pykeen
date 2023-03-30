@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
+from __future__ import annotations
 
 import dataclasses
 import logging
@@ -66,15 +67,31 @@ logger = logging.getLogger(__name__)
 INVERSE_SUFFIX = "_inverse"
 
 
-def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
+def create_entity_mapping(
+    *, triples: LabeledTriples | None = None, heads: Iterable[str] | None = None, tails: Iterable[str] | None = None
+) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
     :param triples: shape: (n, 3), dtype: str
+        the label-based triples; will be preferred over explicit head & tail
+    :param heads:
+        the head entity labels
+    :param tails:
+        the tail entity labels
+
     :returns:
         A mapping of entity labels to indices
+
+    :raises ValueError:
+        if triples is None and eiter of heads or tails is None, too
     """
     # Split triples
-    heads, tails = triples[:, 0], triples[:, 2]
+    if triples is None:
+        if heads is None or tails is None:
+            raise ValueError("If no triples are provided, both, heads and tails must be provided.")
+    else:
+        heads, tails = triples[:, 0], triples[:, 2]
+
     # Sorting ensures consistent results when the triples are permuted
     entity_labels = sorted(set(heads).union(tails))
     # Create mapping
