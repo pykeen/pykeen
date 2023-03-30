@@ -127,7 +127,7 @@ class OGBBioKG(OGBLoader):
                 tail=_combine_labels(x, "tail_type", "tail"),
             ),
             entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id,
+            relation_to_id=relation_to_id or {str(i): i for i in range(x["relation"].max() + 1)},
         )
 
 
