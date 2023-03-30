@@ -5,15 +5,17 @@
 Run with ``python -m pykeen.datasets.ogb``
 """
 
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, Mapping, Iterable, Sequence
 
 import click
-import numpy as np
+import torch
 from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
+from ..triples.triples_factory import create_entity_mapping, create_relation_mapping
+from ..typing import MappedTriples
 
 __all__ = [
     "OGBLoader",
@@ -70,16 +72,22 @@ class OGBLoader(LazyDataset):
     def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
         # note: we do not use the built-in constants here, since those refer to OGB nomenclature
         #       (which happens to coincide with ours)
-        triples = np.stack([x["head"], x["relation"], x["tail"]], axis=1)
-
-        # FIXME these are already identifiers
-        triples = triples.astype(np.str)
-
-        return TriplesFactory.from_labeled_triples(
-            triples=triples,
-            create_inverse_triples=self._create_inverse_triples,
+        # note: to be more memory-efficient we do not convert to numpy array of strings
+        entity_to_id = entity_to_id or create_entity_mapping(heads=x["head"], tails=x["tail"])
+        relation_to_id = relation_to_id or create_relation_mapping(relations=x["relation"])
+        # convert to integers
+        mapped_triples: MappedTriples = torch.as_tensor(
+            data=[
+                [entity_to_id[h], relation_to_id[r], entity_to_id[t]]
+                for h, r, t in zip(x["head"], x["relation"], x["tail"])
+            ],
+            dtype=torch.long,
+        )
+        return TriplesFactory(
+            mapped_triples=mapped_triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
+            create_inverse_triples=self.create_inverse_triples,
         )
 
 
@@ -96,34 +104,32 @@ class OGBBioKG(OGBLoader):
         year: 2020
         link: https://arxiv.org/abs/2005.00687
     statistics:
-        entities: 45085
+        entities: 93773
         relations: 51
         training: 4762677
         testing: 162870
         validation: 162886
-        triples: 5088433
+        triples: 5088434
     """
 
     name = "ogbl-biokg"
 
     def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
-        head_triples = _array(x, "head_type", "head")
-        tail_triples = _array(x, "tail_type", "tail")
-        triples = np.stack([head_triples, x["relation"], tail_triples], axis=1).astype(np.str)
-
-        return TriplesFactory.from_labeled_triples(
-            triples=triples,
-            create_inverse_triples=self.create_inverse_triples,
+        # note: to be more memory-efficient we do not convert to numpy array of strings
+        # heads and tails need to be prefixed by the type to avoid name collision
+        return super()._make_tf(
+            x=dict(
+                relation=x["relation"],
+                head=_combine_labels(x, "head_type", "head"),
+                tail=_combine_labels(x, "tail_type", "tail"),
+            ),
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
         )
 
 
-def _array(df, entity_type_label, entity_label):
-    return np.array(
-        [f"{entity_type}:{entity}" for entity_type, entity in zip(df[entity_type_label], df[entity_label])],
-        dtype=np.str,
-    )
+def _combine_labels(d: Mapping[str, Iterable[str]], entity_type_label: str, entity_label: str) -> Sequence[str]:
+    return [f"{entity_type}:{entity}" for entity_type, entity in zip(d[entity_type_label], d[entity_label])]
 
 
 @parse_docdata
