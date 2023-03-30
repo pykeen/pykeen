@@ -5,7 +5,7 @@
 Run with ``python -m pykeen.datasets.ogb``
 """
 
-from typing import ClassVar, Optional, Mapping, Iterable, Sequence
+from typing import ClassVar, Optional, Mapping, Iterable, Sequence, cast
 
 import click
 import torch
@@ -76,12 +76,15 @@ class OGBLoader(LazyDataset):
         entity_to_id = entity_to_id or create_entity_mapping(heads=x["head"], tails=x["tail"])
         relation_to_id = relation_to_id or create_relation_mapping(relations=x["relation"])
         # convert to integers
-        mapped_triples: MappedTriples = torch.as_tensor(
-            data=[
-                [entity_to_id[h], relation_to_id[r], entity_to_id[t]]
-                for h, r, t in zip(x["head"], x["relation"], x["tail"])
-            ],
-            dtype=torch.long,
+        mapped_triples = cast(
+            MappedTriples,
+            torch.as_tensor(
+                data=[
+                    [entity_to_id[h], relation_to_id[r], entity_to_id[t]]
+                    for h, r, t in zip(x["head"], x["relation"], x["tail"])
+                ],
+                dtype=torch.long,
+            ),
         )
         return TriplesFactory(
             mapped_triples=mapped_triples,
