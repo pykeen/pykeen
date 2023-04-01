@@ -91,6 +91,12 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
         Load the OGB dataset (lazily).
 
         Also handles error message if OGB package is not yet installed.
+
+        :return:
+            the OGB dataset instance.
+
+        :raises ModuleNotFoundError:
+            if the OGB package is not installed
         """
         try:
             from ogb.linkproppred import LinkPropPredDataset
