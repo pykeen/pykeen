@@ -10,7 +10,7 @@ import abc
 import logging
 import pathlib
 import typing
-from typing import ClassVar, Generic, Literal, Optional, Sequence, TypedDict, TypeVar, cast, overload, Union
+from typing import ClassVar, Generic, Literal, Optional, Sequence, TypedDict, TypeVar, Union, cast, overload
 
 import click
 import numpy
@@ -269,9 +269,9 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         LOGGER.info(f"Merged entity labels for {len(entity_mapping_df)} across {len(NODE_TYPES)} node types.")
 
         # we need the entity dataframe for fast re-mapping later on
-        self.df_ent = entity_mapping_df
+        self.df_ent = entity_mapping_df[["index", "local_entity_id", "entity_type"]]
 
-        entity_to_id = dict(zip(self.df_ent["name"].tolist(), self.df_ent["index"].tolist()))
+        entity_to_id = dict(zip(entity_mapping_df["name"].tolist(), entity_mapping_df["index"].tolist()))
 
         return entity_to_id, relation_to_id
 
@@ -304,10 +304,16 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         """Convert node-type local entity IDs with their types to globally unique IDs."""
         # compose temporary df
         df = pandas.DataFrame({"local_entity_id": local_entity_id, "entity_type": entity_type})
+        # add extra column with old index to revert sort order change by merge
+        df.index.name = "old_index"
+        df = df.reset_index(drop=False)
         # convert to categorical dtype
         df["entity_type"] = df["entity_type"].astype(self.df_ent["entity_type"].dtype)
         # join with entity mapping
         df = pandas.merge(df, self.df_ent, on=["local_entity_id", "entity_type"])
+        assert len(df) == len(local_entity_id)
+        # revert change in order
+        df = df.sort_values(by="old_index")
         # select global ID
         return df["index"].values
 
