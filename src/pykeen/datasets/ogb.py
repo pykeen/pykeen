@@ -4,24 +4,72 @@
 
 Run with ``python -m pykeen.datasets.ogb``
 """
-
-from typing import ClassVar, Optional, Mapping, Iterable, Sequence, cast
+import abc
+import logging
+import pathlib
+import typing
+from typing import ClassVar, Literal, Optional, Sequence, TypedDict, cast
 
 import click
+import numpy
+import pandas
 import torch
 from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
-from ..triples.triples_factory import create_entity_mapping, create_relation_mapping
-from ..typing import MappedTriples
+from ..typing import EntityMapping, MappedTriples, RelationMapping
+
+if typing.TYPE_CHECKING:
+    from ogb.linkproppred import LinkPropPredDataset
 
 __all__ = [
     "OGBLoader",
     "OGBBioKG",
     "OGBWikiKG2",
 ]
+
+LOGGER = logging.getLogger(__name__)
+
+OGBSplitKey = Literal["train", "valid", "test"]
+
+# BioKG types
+OGBBioKGNodeType = Literal["disease", "drug", "function", "protein", "sideeffect"]
+NODE_TYPES = typing.get_args(OGBBioKGNodeType)
+
+
+class OGBBioKGDict(TypedDict):
+    """The data type of the OGB BioKG preprocessed files for each split."""
+
+    relation: numpy.ndarray  # dtype: numpy.int64
+
+    # head & tail IDs are only unique within their type
+    head: numpy.ndarray  # dtype: numpy.int64
+    tail: numpy.ndarray  # dtype: numpy.int64
+
+    # one of 5 possible values
+    head_type: Sequence[OGBBioKGNodeType]
+    tail_type: Sequence[OGBBioKGNodeType]
+
+
+# WikiKG types
+class OGBWikiKGTrainDict(TypedDict):
+    """The data type of the preprocessed training dictionary."""
+
+    head: numpy.ndarray
+    relation: numpy.ndarray
+    tail: numpy.ndarray
+
+
+class OGBWikiKGEvalDict(TypedDict):
+    """The data type of preprocessed validation/test data dictionaries."""
+
+    head: numpy.ndarray
+    relation: numpy.ndarray
+    tail: numpy.ndarray
+    head_neg: numpy.ndarray
+    tail_neg: numpy.ndarray
 
 
 class OGBLoader(LazyDataset):
@@ -41,6 +89,32 @@ class OGBLoader(LazyDataset):
         self._create_inverse_triples = create_inverse_triples
 
     def _load(self) -> None:
+        dataset = self._load_ogb_dataset()
+        # label mapping is in dataset.root/mapping
+        mapping_root = pathlib.Path(dataset.root).joinpath("mapping")
+        entity_to_id, relation_to_id = self._load_mappings(mapping_root)
+        self._training = TriplesFactory(
+            mapped_triples=self._compose_mapped_triples(dataset=dataset, which="train"),
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            create_inverse_triples=self._create_inverse_triples,
+        )
+        self._testing = TriplesFactory(
+            mapped_triples=self._compose_mapped_triples(dataset=dataset, which="test"),
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+        )
+
+    def _load_validation(self) -> None:
+        dataset = self._load_ogb_dataset()
+        self._validation = TriplesFactory(
+            mapped_triples=self._compose_mapped_triples(dataset=dataset, which="valid"),
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+        )
+
+    def _load_ogb_dataset(self) -> "LinkPropPredDataset":
+        """Load the OGB dataset."""
         try:
             from ogb.linkproppred import LinkPropPredDataset
         except ImportError as e:
@@ -48,50 +122,31 @@ class OGBLoader(LazyDataset):
                 f"Need to `pip install ogb` to use pykeen.datasets.{self.__class__.__name__}.",
             ) from e
 
-        dataset = LinkPropPredDataset(name=self.name, root=self.cache_root)
-        edge_split = dataset.get_edge_split()
-        self._training = self._make_tf(edge_split["train"])
-        assert self._training is not None  # makes mypy hapy
-        self._testing = self._make_tf(
-            edge_split["test"],
-            entity_to_id=self._training.entity_to_id,
-            relation_to_id=self._training.relation_to_id,
-        )
-        self._validation = self._make_tf(
-            edge_split["valid"],
-            entity_to_id=self._training.entity_to_id,
-            relation_to_id=self._training.relation_to_id,
-        )
+        return LinkPropPredDataset(name=self.name, root=self.cache_root)
 
-    def _loaded_validation(self) -> bool:
-        return self._loaded
+    @abc.abstractmethod
+    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:
+        """Load entity and relation labels from the mapping root."""
+        raise NotImplementedError
 
-    def _load_validation(self) -> None:
-        pass
+    @abc.abstractmethod
+    def _compose_mapped_triples(self, dataset: "LinkPropPredDataset", which: OGBSplitKey) -> MappedTriples:
+        """Compose the mapped triples tensor for the given dataset and split."""
+        raise NotImplementedError
 
-    def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
-        # note: we do not use the built-in constants here, since those refer to OGB nomenclature
-        #       (which happens to coincide with ours)
-        # note: to be more memory-efficient we do not convert to numpy array of strings
-        entity_to_id = entity_to_id or create_entity_mapping(heads=x["head"], tails=x["tail"])
-        relation_to_id = relation_to_id or create_relation_mapping(relations=x["relation"])
-        # convert to integers
-        mapped_triples = cast(
-            MappedTriples,
-            torch.as_tensor(
-                data=[
-                    [entity_to_id[h], relation_to_id[r], entity_to_id[t]]
-                    for h, r, t in zip(x["head"], x["relation"], x["tail"])
-                ],
-                dtype=torch.long,
-            ),
-        )
-        return TriplesFactory(
-            mapped_triples=mapped_triples,
-            entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id,
-            create_inverse_triples=self.create_inverse_triples,
-        )
+
+def load_partial_entity_mapping(mapping_root: pathlib.Path, node_type: OGBBioKGNodeType) -> pandas.DataFrame:
+    """Load a partial entity mapping for a single node type."""
+    # disease: UMLS CUI (https://www.nlm.nih.gov/research/umls/index.html).
+    # drug: STITCH ID (http://stitch.embl.de/).
+    # function: Gene Ontology ID (http://geneontology.org/).
+    # protein: Proteins: Entrez Gene ID (https://www.genenames.org/).
+    # side effects: UMLS CUI (https://www.nlm.nih.gov/research/umls/index.html).
+    # todo(@cthoyt): proper prefixing?
+    df = pandas.read_csv(mapping_root.joinpath(f"{node_type}_entidx2name.csv.gz"))
+    df = df.rename(columns={"ent name": "entity_name", "ent idx": "local_entity_id"})
+    df["entity_type"] = node_type
+    return df
 
 
 @parse_docdata
@@ -117,22 +172,57 @@ class OGBBioKG(OGBLoader):
 
     name = "ogbl-biokg"
 
-    def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
-        # note: to be more memory-efficient we do not convert to numpy array of strings
-        # heads and tails need to be prefixed by the type to avoid name collision
-        return super()._make_tf(
-            x=dict(
-                relation=x["relation"],
-                head=_combine_labels(x, "head_type", "head"),
-                tail=_combine_labels(x, "tail_type", "tail"),
-            ),
-            entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id or {str(i): i for i in range(x["relation"].max() + 1)},
+    # docstr-coverage: inherited
+    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
+        df_rel = pandas.read_csv(mapping_root.joinpath("relidx2relname.csv.gz"))
+        LOGGER.info(f"Loaded relation mapping for {len(df_rel)} relations.")
+        relation_to_id = dict(zip(df_rel["rel name"].tolist(), df_rel["rel idx"].tolist()))
+
+        # entity mappings are separate for each node type -> combine
+        entity_mapping_df = pandas.concat(
+            [load_partial_entity_mapping(mapping_root=mapping_root, node_type=node_type) for node_type in NODE_TYPES],
+            ignore_index=True,
+        ).sort_values(by=["entity_type", "entity_name"])
+        entity_mapping_df["name"] = entity_mapping_df["entity_type"] + ":" + entity_mapping_df["entity_name"]
+        # convert entity_name to categorical for fast joins
+        entity_mapping_df["entity_type"] = entity_mapping_df["entity_type"].astype("category")
+        entity_mapping_df = entity_mapping_df.reset_index(drop=False)
+        LOGGER.info(f"Merged entity labels for {len(entity_mapping_df)} across {len(NODE_TYPES)} node types.")
+
+        # we need the entity dataframe for fast re-mapping later on
+        self.df_ent = entity_mapping_df
+
+        entity_to_id = dict(zip(self.df_ent["name"].tolist(), self.df_ent["index"].tolist()))
+
+        return entity_to_id, relation_to_id
+
+    def _compose_mapped_triples(self, dataset: "LinkPropPredDataset", which: OGBSplitKey) -> MappedTriples:
+        data_dict: OGBBioKGDict = torch.load(
+            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
         )
+        mapped_triples_np = numpy.stack(
+            [
+                self._map_entity_column(local_entity_id=data_dict["head"], entity_type=data_dict["head_type"]),
+                data_dict["relation"],
+                self._map_entity_column(local_entity_id=data_dict["tail"], entity_type=data_dict["tail_type"]),
+            ],
+            axis=-1,
+        )
+        LOGGER.debug(f"Converted {len(mapped_triples_np)} triples for split={which}")
+        return cast(MappedTriples, torch.as_tensor(mapped_triples_np))
 
-
-def _combine_labels(d: Mapping[str, Iterable[str]], entity_type_label: str, entity_label: str) -> Sequence[str]:
-    return [f"{entity_type}:{entity}" for entity_type, entity in zip(d[entity_type_label], d[entity_label])]
+    def _map_entity_column(
+        self, local_entity_id: numpy.ndarray, entity_type: Sequence[OGBBioKGNodeType]
+    ) -> numpy.ndarray:
+        """Convert node-type local entity IDs with their types to globally unique IDs."""
+        # compose temporary df
+        df = pandas.DataFrame({"local_entity_id": local_entity_id, "entity_type": entity_type})
+        # convert to categorical dtype
+        df["entity_type"] = df["entity_type"].astype(self.df_ent["entity_type"].dtype)
+        # join with entity mapping
+        df = pandas.merge(df, self.df_ent, on=["local_entity_id", "entity_type"])
+        # select global ID
+        return df["index"].values
 
 
 @parse_docdata
@@ -158,6 +248,28 @@ class OGBWikiKG2(OGBLoader):
     """
 
     name = "ogbl-wikikg2"
+
+    # docstr-coverage: inherited
+    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
+        df_ent = pandas.read_csv(mapping_root.joinpath("nodeidx2entityid.csv.gz"))
+        entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist()))
+        df_rel = pandas.read_csv(mapping_root.joinpath("reltype2relid.csv.gz"))
+        relation_to_id = dict(zip(df_rel["rel id"].tolist(), df_rel["reltype"].tolist()))
+        return entity_to_id, relation_to_id
+
+    # docstr-coverage: inherited
+    def _compose_mapped_triples(
+        self, dataset: "LinkPropPredDataset", which: OGBSplitKey
+    ) -> MappedTriples:  # noqa: D102
+        # we only load one dictionary at a time, to avoid memory issues
+        data_dict = torch.load(
+            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
+        )
+        # validation & test have additional {'head_neg', 'tail_neg'}
+        # note: we do not use the built-in constants here, since those refer to OGB nomenclature
+        #       (which happens to coincide with ours)
+        triples_np = numpy.stack([data_dict[key] for key in ("head", "relation", "tail")], axis=-1)
+        return cast(MappedTriples, torch.as_tensor(triples_np))
 
 
 @click.command()
