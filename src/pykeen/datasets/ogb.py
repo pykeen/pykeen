@@ -262,13 +262,13 @@ class OGBWikiKG2(OGBLoader):
         self, dataset: "LinkPropPredDataset", which: OGBSplitKey
     ) -> MappedTriples:  # noqa: D102
         # we only load one dictionary at a time, to avoid memory issues
-        data_dict = torch.load(
+        data_dict: OGBWikiKGTrainDict | OGBWikiKGEvalDict = torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
         )
         # validation & test have additional {'head_neg', 'tail_neg'}
         # note: we do not use the built-in constants here, since those refer to OGB nomenclature
         #       (which happens to coincide with ours)
-        triples_np = numpy.stack([data_dict[key] for key in ("head", "relation", "tail")], axis=-1)
+        triples_np = numpy.stack([data_dict["head"], data_dict["relation"], data_dict["tail"]], axis=-1)
         return cast(MappedTriples, torch.as_tensor(triples_np))
 
 
