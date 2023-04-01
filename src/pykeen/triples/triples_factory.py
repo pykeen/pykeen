@@ -1052,12 +1052,7 @@ class TriplesFactory(CoreTriplesFactory):
                 self.relation_to_id,
             ),
         ):
-            pd.DataFrame(
-                data=data.items(),
-                columns=["label", "id"],
-            ).sort_values(
-                by="id"
-            ).set_index("id").to_csv(
+            pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
             )
