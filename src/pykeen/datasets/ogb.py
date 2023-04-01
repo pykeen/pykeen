@@ -4,11 +4,13 @@
 
 Run with ``python -m pykeen.datasets.ogb``
 """
+from __future__ import annotations
+
 import abc
 import logging
 import pathlib
 import typing
-from typing import ClassVar, Literal, Optional, Sequence, TypedDict, cast
+from typing import ClassVar, Generic, Literal, Optional, Sequence, TypedDict, TypeVar, cast, overload, Union
 
 import click
 import numpy
@@ -19,7 +21,7 @@ from more_click import verbose_option
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
-from ..typing import EntityMapping, MappedTriples, RelationMapping
+from ..typing import EntityMapping, RelationMapping
 
 if typing.TYPE_CHECKING:
     from ogb.linkproppred import LinkPropPredDataset
@@ -32,47 +34,17 @@ __all__ = [
 
 LOGGER = logging.getLogger(__name__)
 
-OGBSplitKey = Literal["train", "valid", "test"]
+# Type annotation for split types
+TrainKey = Literal["train"]
+EvalKey = Literal["valid", "test"]
+SplitKey = Union[TrainKey, EvalKey]
 
-# BioKG types
-OGBBioKGNodeType = Literal["disease", "drug", "function", "protein", "sideeffect"]
-NODE_TYPES = typing.get_args(OGBBioKGNodeType)
-
-
-class OGBBioKGDict(TypedDict):
-    """The data type of the OGB BioKG preprocessed files for each split."""
-
-    relation: numpy.ndarray  # dtype: numpy.int64
-
-    # head & tail IDs are only unique within their type
-    head: numpy.ndarray  # dtype: numpy.int64
-    tail: numpy.ndarray  # dtype: numpy.int64
-
-    # one of 5 possible values
-    head_type: Sequence[OGBBioKGNodeType]
-    tail_type: Sequence[OGBBioKGNodeType]
+# type variables for dictionaries of preprocessed data loaded through torch.load
+PreprocessedTrainDictType = TypeVar("PreprocessedTrainDictType")
+PreprocessedEvalDictType = TypeVar("PreprocessedEvalDictType")
 
 
-# WikiKG types
-class OGBWikiKGTrainDict(TypedDict):
-    """The data type of the preprocessed training dictionary."""
-
-    head: numpy.ndarray
-    relation: numpy.ndarray
-    tail: numpy.ndarray
-
-
-class OGBWikiKGEvalDict(TypedDict):
-    """The data type of preprocessed validation/test data dictionaries."""
-
-    head: numpy.ndarray
-    relation: numpy.ndarray
-    tail: numpy.ndarray
-    head_neg: numpy.ndarray
-    tail_neg: numpy.ndarray
-
-
-class OGBLoader(LazyDataset):
+class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEvalDictType]):
     """Load from the Open Graph Benchmark (OGB)."""
 
     #: The name of the dataset to download
@@ -88,41 +60,58 @@ class OGBLoader(LazyDataset):
         self.cache_root = self._help_cache(cache_root)
         self._create_inverse_triples = create_inverse_triples
 
-    def _load(self) -> None:
+    # docstr-coverage: inherited
+    def _load(self) -> None:  # noqa: D102
         dataset = self._load_ogb_dataset()
         # label mapping is in dataset.root/mapping
-        mapping_root = pathlib.Path(dataset.root).joinpath("mapping")
-        entity_to_id, relation_to_id = self._load_mappings(mapping_root)
+        entity_to_id, relation_to_id = self._load_mappings(pathlib.Path(dataset.root).joinpath("mapping"))
         self._training = TriplesFactory(
-            mapped_triples=self._compose_mapped_triples(dataset=dataset, which="train"),
+            mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "train")),
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             create_inverse_triples=self._create_inverse_triples,
         )
         self._testing = TriplesFactory(
-            mapped_triples=self._compose_mapped_triples(dataset=dataset, which="test"),
+            mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "test")),
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
         )
 
-    def _load_validation(self) -> None:
+    # docstr-coverage: inherited
+    def _load_validation(self) -> None:  # noqa: D102
         dataset = self._load_ogb_dataset()
         self._validation = TriplesFactory(
-            mapped_triples=self._compose_mapped_triples(dataset=dataset, which="valid"),
+            mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "valid")),
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
 
     def _load_ogb_dataset(self) -> "LinkPropPredDataset":
-        """Load the OGB dataset."""
+        """
+        Load the OGB dataset (lazily).
+
+        Also handles error message if OGB package is not yet installed.
+        """
         try:
             from ogb.linkproppred import LinkPropPredDataset
         except ImportError as e:
             raise ModuleNotFoundError(
                 f"Need to `pip install ogb` to use pykeen.datasets.{self.__class__.__name__}.",
             ) from e
-
         return LinkPropPredDataset(name=self.name, root=self.cache_root)
+
+    @overload
+    def _load_data_dict_for_split(self, dataset: "LinkPropPredDataset", which: TrainKey) -> PreprocessedTrainDictType:
+        ...
+
+    @overload
+    def _load_data_dict_for_split(self, dataset: "LinkPropPredDataset", which: EvalKey) -> PreprocessedEvalDictType:
+        ...
+
+    @abc.abstractmethod
+    def _load_data_dict_for_split(self, dataset, which):
+        """Load the dictionary of preprocessed data for the given key."""
+        raise NotImplementedError
 
     @abc.abstractmethod
     def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:
@@ -130,9 +119,99 @@ class OGBLoader(LazyDataset):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _compose_mapped_triples(self, dataset: "LinkPropPredDataset", which: OGBSplitKey) -> MappedTriples:
+    def _compose_mapped_triples(self, data_dict: PreprocessedTrainDictType | PreprocessedEvalDictType) -> numpy.ndarray:
         """Compose the mapped triples tensor for the given dataset and split."""
         raise NotImplementedError
+
+
+class WikiKG2TrainDict(TypedDict):
+    """A type hint for dictionaries of OGB preprocessed training triples for WikiKG2."""
+
+    # note: we do not use the built-in constants here, since those refer to OGB nomenclature
+    #       (which happens to coincide with ours)
+
+    # dtype: numpy.int64, shape: (m,)
+    head: numpy.ndarray
+    relation: numpy.ndarray
+    tail: numpy.ndarray
+
+
+class WikiKG2EvalDict(WikiKG2TrainDict):
+    """A type hint for dictionaries of OGB preprocessed evaluation triples for WikiKG2."""
+
+    # dtype: numpy.int64, shape: (n, k)
+    head_neg: numpy.ndarray
+    tail_neg: numpy.ndarray
+
+
+@parse_docdata
+class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
+    """The OGB WikiKG2 dataset.
+
+    .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg2
+
+    ---
+    name: OGB WikiKG2
+    citation:
+        author: Hu
+        year: 2020
+        link: https://arxiv.org/abs/2005.00687
+        github: snap-stanford/ogb
+    statistics:
+        entities: 2500604
+        relations: 535
+        training: 16109182
+        testing: 598543
+        validation: 429456
+        triples: 17137181
+    """
+
+    name = "ogbl-wikikg2"
+
+    # docstr-coverage: inherited
+    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
+        df_ent = pandas.read_csv(mapping_root.joinpath("nodeidx2entityid.csv.gz"))
+        entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist()))
+        df_rel = pandas.read_csv(mapping_root.joinpath("reltype2relid.csv.gz"))
+        relation_to_id = dict(zip(df_rel["rel id"].tolist(), df_rel["reltype"].tolist()))
+        return entity_to_id, relation_to_id
+
+    # docstr-coverage: inherited
+    def _load_data_dict_for_split(self, dataset, which):
+        # noqa: D102
+        data_dict = torch.load(
+            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
+        )
+        if which == "train":
+            data_dict = cast(WikiKG2TrainDict, data_dict)
+        else:
+            data_dict = cast(WikiKG2EvalDict, data_dict)
+        return data_dict
+
+    # docstr-coverage: inherited
+    def _compose_mapped_triples(self, data_dict: WikiKG2TrainDict | WikiKG2EvalDict) -> numpy.ndarray:  # noqa: D102
+        return numpy.stack([data_dict["head"], data_dict["relation"], data_dict["tail"]], axis=-1)
+
+
+#: the node types
+OGBBioKGNodeType = Literal["disease", "drug", "function", "protein", "sideeffect"]
+NODE_TYPES = typing.get_args(OGBBioKGNodeType)
+
+
+class BioKGTrainDict(WikiKG2TrainDict):
+    """A type hint for dictionaries of OGB preprocessed training triples for BioKG."""
+
+    # shape: (n,)
+    head_type: Sequence[OGBBioKGNodeType]
+    tail_type: Sequence[OGBBioKGNodeType]
+
+
+class BioKGEvalDict(BioKGTrainDict):
+    """A type hint for dictionaries of OGB preprocessed evaluation triples for BioKG."""
+
+    # dtype: numpy.int64, shape: (n, k)
+    head_neg: numpy.ndarray
+    tail_neg: numpy.ndarray
 
 
 def load_partial_entity_mapping(mapping_root: pathlib.Path, node_type: OGBBioKGNodeType) -> pandas.DataFrame:
@@ -150,7 +229,7 @@ def load_partial_entity_mapping(mapping_root: pathlib.Path, node_type: OGBBioKGN
 
 
 @parse_docdata
-class OGBBioKG(OGBLoader):
+class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
     """The OGB BioKG dataset.
 
     .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-biokg
@@ -196,11 +275,9 @@ class OGBBioKG(OGBLoader):
 
         return entity_to_id, relation_to_id
 
-    def _compose_mapped_triples(self, dataset: "LinkPropPredDataset", which: OGBSplitKey) -> MappedTriples:
-        data_dict: OGBBioKGDict = torch.load(
-            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
-        )
-        mapped_triples_np = numpy.stack(
+    # docstr-coverage: inherited
+    def _compose_mapped_triples(self, data_dict: BioKGTrainDict | BioKGEvalDict) -> numpy.ndarray:
+        return numpy.stack(
             [
                 self._map_entity_column(local_entity_id=data_dict["head"], entity_type=data_dict["head_type"]),
                 data_dict["relation"],
@@ -208,8 +285,18 @@ class OGBBioKG(OGBLoader):
             ],
             axis=-1,
         )
-        LOGGER.debug(f"Converted {len(mapped_triples_np)} triples for split={which}")
-        return cast(MappedTriples, torch.as_tensor(mapped_triples_np))
+
+    # docstr-coverage: inherited
+    def _load_data_dict_for_split(self, dataset, which):  # noqa: D102
+        data_dict = torch.load(
+            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
+        )
+        if which == "train":
+            data_dict = cast(BioKGTrainDict, data_dict)
+        else:
+            data_dict = cast(BioKGEvalDict, data_dict)
+
+        return data_dict
 
     def _map_entity_column(
         self, local_entity_id: numpy.ndarray, entity_type: Sequence[OGBBioKGNodeType]
@@ -223,53 +310,6 @@ class OGBBioKG(OGBLoader):
         df = pandas.merge(df, self.df_ent, on=["local_entity_id", "entity_type"])
         # select global ID
         return df["index"].values
-
-
-@parse_docdata
-class OGBWikiKG2(OGBLoader):
-    """The OGB WikiKG2 dataset.
-
-    .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg2
-
-    ---
-    name: OGB WikiKG2
-    citation:
-        author: Hu
-        year: 2020
-        link: https://arxiv.org/abs/2005.00687
-        github: snap-stanford/ogb
-    statistics:
-        entities: 2500604
-        relations: 535
-        training: 16109182
-        testing: 598543
-        validation: 429456
-        triples: 17137181
-    """
-
-    name = "ogbl-wikikg2"
-
-    # docstr-coverage: inherited
-    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
-        df_ent = pandas.read_csv(mapping_root.joinpath("nodeidx2entityid.csv.gz"))
-        entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist()))
-        df_rel = pandas.read_csv(mapping_root.joinpath("reltype2relid.csv.gz"))
-        relation_to_id = dict(zip(df_rel["rel id"].tolist(), df_rel["reltype"].tolist()))
-        return entity_to_id, relation_to_id
-
-    # docstr-coverage: inherited
-    def _compose_mapped_triples(
-        self, dataset: "LinkPropPredDataset", which: OGBSplitKey
-    ) -> MappedTriples:  # noqa: D102
-        # we only load one dictionary at a time, to avoid memory issues
-        data_dict: OGBWikiKGTrainDict | OGBWikiKGEvalDict = torch.load(
-            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
-        )
-        # validation & test have additional {'head_neg', 'tail_neg'}
-        # note: we do not use the built-in constants here, since those refer to OGB nomenclature
-        #       (which happens to coincide with ours)
-        triples_np = numpy.stack([data_dict["head"], data_dict["relation"], data_dict["tail"]], axis=-1)
-        return cast(MappedTriples, torch.as_tensor(triples_np))
 
 
 @click.command()
