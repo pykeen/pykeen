@@ -272,7 +272,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         # convert entity_name to categorical for fast joins
         entity_mapping_df["entity_type"] = entity_mapping_df["entity_type"].astype("category")
         entity_mapping_df = entity_mapping_df.reset_index(drop=False)
-        LOGGER.info(f"Merged entity labels for {len(entity_mapping_df)} across {len(NODE_TYPES)} node types.")
+        LOGGER.info(f"Merged entity labels for {len(entity_mapping_df)} entities across {len(NODE_TYPES)} node types.")
 
         # we need the entity dataframe for fast re-mapping later on
         self.df_ent = entity_mapping_df[["index", "local_entity_id", "entity_type"]]
