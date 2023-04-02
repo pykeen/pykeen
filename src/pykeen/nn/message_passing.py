@@ -584,7 +584,7 @@ class RGCNRepresentation(Representation):
             raise ValueError(
                 f"max_id={max_id} differs from triples_factory.num_entities={triples_factory.num_entities}"
             )
-        if triples_factory.create_inverse_triples:
+        if triples_factory.use_inverse_relations:
             raise ValueError(
                 "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
             )

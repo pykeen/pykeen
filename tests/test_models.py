@@ -48,7 +48,7 @@ class TestCompGCN(cases.ModelTestCase):
     """Test the CompGCN model."""
 
     cls = pykeen.models.CompGCN
-    create_inverse_triples = True
+    use_inverse_relations = True
     num_constant_init = 3  # BN(2) + Bias
     cli_extras = ["--create-inverse-triples"]
 
@@ -77,7 +77,7 @@ class TestConvE(cases.ModelTestCase):
 
     cls = pykeen.models.ConvE
     embedding_dim = 12
-    create_inverse_triples = True
+    use_inverse_relations = True
     kwargs = {
         "output_channels": 2,
         "embedding_height": 3,
@@ -190,7 +190,7 @@ class TestNodePiece(cases.BaseNodePieceTest):
             [[0, 0, 1], [1, 1, 0], [3, 1, 0], [3, 2, 1]], dtype=torch.long
         )  # node ID 2 is missing as a disconnected node
         factory = CoreTriplesFactory.create(
-            mapped_triples=edges, num_entities=4, num_relations=3, create_inverse_triples=True
+            mapped_triples=edges, num_entities=4, num_relations=3, use_inverse_relations=True
         )
         pykeen.models.NodePiece(triples_factory=factory, num_tokens=2)
 
@@ -270,7 +270,7 @@ class TestInductiveNodePiece(cases.InductiveModelTestCase):
     """Test the InductiveNodePiece model."""
 
     cls = pykeen.models.InductiveNodePiece
-    create_inverse_triples = True
+    use_inverse_relations = True
 
 
 class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
@@ -278,7 +278,7 @@ class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
 
     cls = pykeen.models.InductiveNodePieceGNN
     num_constant_init = 6
-    create_inverse_triples = True
+    use_inverse_relations = True
     train_batch_size = 8
 
 
@@ -753,6 +753,72 @@ class ERModelTests(cases.ModelTestCase):
 
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
+
+
+
+class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.models.FixedModel]):
+    """Test for prediction with inverse relations."""
+
+    cls = pykeen.models.FixedModel
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        # create triples factory with inverse relations
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = self.factory = Nations(use_inverse_relations=True).training
+        return kwargs
+
+    def _combination_batch(
+        self,
+        heads: bool = True,
+        relations: bool = True,
+        tails: bool = True,
+    ) -> torch.LongTensor:
+        """Generate a batch with all combinations."""
+        factors = []
+        if heads:
+            factors.append(range(self.factory.num_entities))
+        if relations:
+            factors.append(range(self.factory.real_num_relations))
+        if tails:
+            factors.append(range(self.factory.num_entities))
+        return torch.as_tensor(
+            data=list(itertools.product(*factors)),
+            dtype=torch.long,
+        )
+
+    def test_predict_hrt(self):
+        """Test predict_hrt."""
+        hrt_batch = self._combination_batch()
+        expected_scores = self.instance._generate_fake_scores(
+            h=hrt_batch[:, 0],
+            r=2 * hrt_batch[:, 1],
+            t=hrt_batch[:, 2],
+        ).unsqueeze(dim=-1)
+        scores = self.instance.predict_hrt(hrt_batch=hrt_batch)
+        assert torch.allclose(scores, expected_scores)
+
+    def test_predict_h(self):
+        """Test predict_h."""
+        rt_batch = self._combination_batch(heads=False)
+        # head prediction via inverse tail prediction
+        expected_scores = self.instance._generate_fake_scores(
+            h=rt_batch[:, 1, None],
+            r=2 * rt_batch[:, 0, None] + 1,
+            t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
+        )
+        scores = self.instance.predict_h(rt_batch=rt_batch)
+        assert torch.allclose(scores, expected_scores)
+
+    def test_predict_t(self):
+        """Test predict_t."""
+        hr_batch = self._combination_batch(tails=False)
+        expected_scores = self.instance._generate_fake_scores(
+            h=hr_batch[:, 0, None],
+            r=2 * hr_batch[:, 1, None],
+            t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
+        )
+        scores = self.instance.predict_t(hr_batch=hr_batch)
+        assert torch.allclose(scores, expected_scores)
 
 
 class CooccurrenceFilteredModelTests(cases.ModelTestCase):

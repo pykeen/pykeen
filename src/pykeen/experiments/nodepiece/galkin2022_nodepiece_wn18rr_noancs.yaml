@@ -4,7 +4,7 @@ pipeline:
   random_seed: 42
   dataset: wn18rr
   dataset_kwargs:
-    create_inverse_triples: True
+    use_inverse_relations: True
   evaluator_kwargs:
     filtered: true
   loss: NSSALoss

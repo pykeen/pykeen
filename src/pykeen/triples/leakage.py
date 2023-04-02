@@ -369,7 +369,7 @@ def reindex(*triples_factories: CoreTriplesFactory) -> List[CoreTriplesFactory]:
                 entity_translation=entity_id_translation,
                 relation_translation=relation_id_translation,
             ),
-            create_inverse_triples=factory.create_inverse_triples,
+            use_inverse_relations=factory.use_inverse_relations,
         )
         for factory in triples_factories
     ]

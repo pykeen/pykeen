@@ -115,7 +115,7 @@ def test_consume_scores(num_entities: int, num_relations: int):
     """Test for consume_scores."""
     dataset = pykeen.predict.AllPredictionDataset(num_entities=num_entities, num_relations=num_relations)
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, use_inverse_relations=False)
     )
     consumer = pykeen.predict.CountScoreConsumer()
     pykeen.predict.consume_scores(model, dataset, consumer)
@@ -128,7 +128,7 @@ def _iter_predict_all_inputs() -> Iterable[Tuple[pykeen.models.Model, Optional[i
     # use a small model, since operation is expensive
     num_entities, num_relations = 3, 2
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, use_inverse_relations=False)
     )
     # all scores, automatic batch size
     yield model, None, pykeen.typing.LABEL_TAIL, None

@@ -28,15 +28,15 @@ class OGBLoader(LazyDataset):
     #: The name of the dataset to download
     name: ClassVar[str]
 
-    def __init__(self, cache_root: Optional[str] = None, create_inverse_triples: bool = False):
+    def __init__(self, cache_root: Optional[str] = None, use_inverse_relations: bool = False):
         """Initialize the OGB loader.
 
         :param cache_root: An optional override for where data should be cached.
             If not specified, uses default PyKEEN location with :mod:`pystow`.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param use_inverse_relations: Should inverse triples be created? Defaults to false.
         """
         self.cache_root = self._help_cache(cache_root)
-        self._create_inverse_triples = create_inverse_triples
+        self._use_inverse_relations = use_inverse_relations
 
     def _load(self) -> None:
         try:
@@ -77,7 +77,7 @@ class OGBLoader(LazyDataset):
 
         return TriplesFactory.from_labeled_triples(
             triples=triples,
-            create_inverse_triples=self._create_inverse_triples,
+            use_inverse_relations=self._use_inverse_relations,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
         )
@@ -113,7 +113,7 @@ class OGBBioKG(OGBLoader):
 
         return TriplesFactory.from_labeled_triples(
             triples=triples,
-            create_inverse_triples=self.create_inverse_triples,
+            use_inverse_relations=self.use_inverse_relations,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
         )

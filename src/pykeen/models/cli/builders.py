@@ -123,7 +123,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
-    @options.inverse_triples_option
+    @options.use_inverse_relations_option
     @click.option("--silent", is_flag=True)
     @click.option("--output-directory", type=pathlib.Path, default=None, help="Where to dump the results")
     def main(
@@ -147,7 +147,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         num_workers,
         random_seed,
         silent: bool,
-        create_inverse_triples: bool,
+        use_inverse_relations: bool,
         **model_kwargs,
     ):
         """CLI for PyKEEN."""
@@ -172,18 +172,22 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         def _triples_factory(path: Optional[str]) -> Optional[TriplesFactory]:
             if path is None:
                 return None
-            return TriplesFactory.from_path(path=path, create_inverse_triples=create_inverse_triples)
+            return TriplesFactory.from_path(path=path, use_inverse_relations=use_inverse_relations)
 
         training = _triples_factory(training_triples_factory)
         testing = _triples_factory(testing_triples_factory)
         validation = _triples_factory(validation_triples_factory)
+
+        if use_inverse_relations:
+            model_kwargs = model_kwargs or {}
+            model_kwargs["use_inverse_relations"] = True
 
         pipeline_result = pipeline(
             device=device,
             model=model,
             model_kwargs=model_kwargs,
             dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
+            dataset_kwargs=dict(use_inverse_relations=use_inverse_relations),
             training=training,
             testing=testing or training,
             validation=validation,

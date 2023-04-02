@@ -818,7 +818,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         """
         super().__init__()
         # TODO: Check
-        assert triples_factory.create_inverse_triples
+        assert triples_factory.use_inverse_relations
         self.entity_representations = build_representation(
             max_id=triples_factory.num_entities,
             representation=entity_representations,

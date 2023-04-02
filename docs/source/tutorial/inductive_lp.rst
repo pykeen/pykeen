@@ -91,7 +91,7 @@ Let's create a basic `InductiveNodePiece` using one of the `InductiveFB15k237` d
     from pykeen.models.inductive import InductiveNodePiece
     from pykeen.losses import NSSALoss
 
-    dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
+    dataset = InductiveFB15k237(version="v1", use_inverse_relations=True)
 
     model = InductiveNodePiece(
         triples_factory=dataset.transductive_training,  # training factory, used to tokenize training nodes
@@ -110,7 +110,7 @@ Creating a message-passing version of NodePiece is pretty much the same:
     from pykeen.models.inductive import InductiveNodePieceGNN
     from pykeen.losses import NSSALoss
 
-    dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
+    dataset = InductiveFB15k237(version="v1", use_inverse_relations=True)
 
     model = InductiveNodePieceGNN(
         triples_factory=dataset.transductive_training,  # training factory, will be also used for a GNN
@@ -166,7 +166,7 @@ Let's create a training loop and validation / test evaluators:
     from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator
     from pykeen.losses import NSSALoss
 
-    dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
+    dataset = InductiveFB15k237(version="v1", use_inverse_relations=True)
 
     model = ...  # model init here, one of InductiveNodePiece
     optimizer = ...  # some optimizer
@@ -207,7 +207,7 @@ in the sLCWA mode with 32 negative samples per positive, with NSSALoss, and Samp
 
     from torch.optim import Adam
 
-    dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
+    dataset = InductiveFB15k237(version="v1", use_inverse_relations=True)
 
     model = InductiveNodePieceGNN(
         triples_factory=dataset.transductive_training,  # training factory, will be also used for a GNN

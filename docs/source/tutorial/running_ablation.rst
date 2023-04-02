@@ -68,7 +68,7 @@ as ``title`` are special and used by PyKEEN and :mod:`optuna`.
     ... )
 
 As mentioned above, we also want to measure the effect of explicitly modeling inverse relations on the model's
-performance. Therefore, we extend the ablation study by including the ``create_inverse_triples`` argument:
+performance. Therefore, we extend the ablation study by including the ``use_inverse_relations`` argument:
 
 .. code-block:: python
 
@@ -82,7 +82,7 @@ performance. Therefore, we extend the ablation study by including the ``create_i
     ...     training_loops=["LCWA"],
     ...     optimizers=["Adam"],
     ...     # Add inverse triples with
-    ...     create_inverse_triples=[True, False],
+    ...     use_inverse_relations=[True, False],
     ...     # Fast testing configuration, make bigger in prod
     ...     epochs=1,
     ...     n_trials=1,
@@ -91,10 +91,10 @@ performance. Therefore, we extend the ablation study by including the ``create_i
 .. note::
 
     Unlike ``models``, ``datasets``, ``losses``, ``training_loops``, and ``optimizers``,
-    ``create_inverse_triples`` has a default value, which is ``False``.
+    ``use_inverse_relations`` has a default value, which is ``False``.
 
 If there is only one value for either the ``models``, ``datasets``, ``losses``, ``training_loops``, ``optimizers``,
-or ``create_inverse_triples`` argument, it can be given as a single value instead of the list.
+or ``use_inverse_relations`` argument, it can be given as a single value instead of the list.
 
 .. code-block:: python
 
@@ -107,7 +107,7 @@ or ``create_inverse_triples`` argument, it can be given as a single value instea
     ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
     ...     training_loops="LCWA",
     ...     optimizers="Adam",
-    ...     create_inverse_triples=[True, False],
+    ...     use_inverse_relations=[True, False],
     ...     # Fast testing configuration, make bigger in prod
     ...     epochs=1,
     ...     n_trials=1,
@@ -200,7 +200,7 @@ the best model of each ablation-experiment using the argument ``best_replicates`
     ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
     ...     training_loops=["LCWA"],
     ...     optimizers=["Adam"],
-    ...     create_inverse_triples=[True, False],
+    ...     use_inverse_relations=[True, False],
     ...     stopper="early",
     ...     stopper_kwargs={
     ...         "frequency": 5,
@@ -384,7 +384,7 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
     >>> optimizers = ["adam"]
-    >>> create_inverse_triples= [True, False]
+    >>> use_inverse_relations= [True, False]
     >>> stopper = "early"
     >>> stopper_kwargs = {
     ...    "frequency": 5,
@@ -513,7 +513,7 @@ defined within our program would look as follows:
             "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
             "training_loops": ["lcwa"],
             "optimizers": ["adam"],
-            "create_inverse_triples": [true,false],
+            "use_inverse_relations": [true,false],
             "stopper": "early"
             "stopper_kwargs": {
                 "frequency": 5,

@@ -181,14 +181,14 @@ def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = 
     return base64.urlsafe_b64encode(digester.digest()).decode("utf8")[:32]
 
 
-def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: bool) -> Dataset:
-    # note: we only need to set the create_inverse_triples in the training factory.
-    if dataset_instance.create_inverse_triples and not create_inverse_triples:
+def _set_inverse_triples_(dataset_instance: Dataset, use_inverse_relations: bool) -> Dataset:
+    # note: we only need to set the use_inverse_relations in the training factory.
+    if dataset_instance.use_inverse_relations and not use_inverse_relations:
         assert dataset_instance.training.num_relations % 2 == 0
         dataset_instance.training.num_relations //= 2
-    elif create_inverse_triples and not dataset_instance.training.create_inverse_triples:
+    elif use_inverse_relations and not dataset_instance.training.use_inverse_relations:
         dataset_instance.training.num_relations *= 2
-    dataset_instance.training.create_inverse_triples = create_inverse_triples
+    dataset_instance.training.use_inverse_relations = use_inverse_relations
     return dataset_instance
 
 
@@ -207,7 +207,7 @@ def _cached_get_dataset(
     force = force or dataset_kwargs.pop("force", False)
 
     # hash kwargs
-    digest = _digest_kwargs(dataset_kwargs, ignore={"create_inverse_triples"})
+    digest = _digest_kwargs(dataset_kwargs, ignore={"use_inverse_relations"})
 
     # normalize dataset name
     dataset_cls = dataset_resolver.lookup(dataset)
@@ -221,7 +221,7 @@ def _cached_get_dataset(
         logger.info(f"Loading cached preprocessed dataset from {path.as_uri()}")
         return _set_inverse_triples_(
             dataset_cls.from_directory_binary(path),
-            create_inverse_triples=dataset_kwargs.get("create_inverse_triples", False),
+            use_inverse_relations=dataset_kwargs.get("use_inverse_relations", False),
         )
 
     # load dataset without cache

@@ -6,7 +6,7 @@ pipeline:
   dataset: yago310
   # introduce inverse relations and reciprocal facts
   dataset_kwargs:
-    create_inverse_triples: True
+    use_inverse_relations: True
   evaluator_kwargs:
     filtered: true
   # optimization is using negative sampling self-adversarial loss.

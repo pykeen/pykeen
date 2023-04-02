@@ -162,12 +162,12 @@ class TestPathDatasetTriples(cases.LocalDatasetTestCase):
     exp_num_triples = 1992
     dataset_cls = Nations
 
-    def test_create_inverse_triples(self):
+    def test_use_inverse_relations(self):
         """Verify that inverse triples are only created in the training factory."""
-        dataset = Nations(create_inverse_triples=True)
-        assert dataset.training.create_inverse_triples
-        assert not dataset.testing.create_inverse_triples
-        assert not dataset.validation.create_inverse_triples
+        dataset = Nations(use_inverse_relations=True)
+        assert dataset.training.use_inverse_relations
+        assert not dataset.testing.use_inverse_relations
+        assert not dataset.validation.use_inverse_relations
 
 
 class TestPathDataset(cases.LocalDatasetTestCase):

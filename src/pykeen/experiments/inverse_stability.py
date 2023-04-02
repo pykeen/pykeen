@@ -64,7 +64,7 @@ def run_inverse_stability_workflow(
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
         dataset_kwargs=dict(
-            create_inverse_triples=True,
+            use_inverse_relations=True,
         ),
     )
     dataset_name = dataset_instance.get_normalized_name()

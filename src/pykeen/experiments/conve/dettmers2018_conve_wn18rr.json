@@ -7,7 +7,7 @@
     "dataset": "wn18rr",
     "model": "ConvE",
     "dataset_kwargs": {
-      "create_inverse_triples": true
+      "use_inverse_relations": true
     },
     "model_kwargs": {
       "embedding_dim": 200,

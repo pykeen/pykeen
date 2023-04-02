@@ -266,7 +266,7 @@ class NodePieceRepresentation(CombinedRepresentation):
 
         # normalize triples
         mapped_triples = triples_factory.mapped_triples
-        if triples_factory.create_inverse_triples:
+        if triples_factory.use_inverse_relations:
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 

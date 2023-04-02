@@ -128,4 +128,4 @@ class MinimalTriplesFactory:
 
     num_entities = 2
     num_relations = 2
-    create_inverse_triples: bool = False
+    use_inverse_relations: bool = False
