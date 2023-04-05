@@ -85,10 +85,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         path: Union[str, pathlib.Path, TextIO],
         *,
         path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
-        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
-        numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         """Load relation triples and numeric attributive triples and call from_labeled_triples() for preprocessing.
@@ -113,10 +109,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         return cls.from_labeled_triples(
             triples=triples,
             numeric_triples=numeric_triples,
-            numeric_triples_preprocessing=numeric_triples_preprocessing,
-            numeric_triples_preprocessing_kwargs=numeric_triples_preprocessing_kwargs,
-            numeric_literals_preprocessing=numeric_literals_preprocessing,
-            numeric_literals_preprocessing_kwargs=numeric_literals_preprocessing_kwargs,
             **kwargs,
         )
 
