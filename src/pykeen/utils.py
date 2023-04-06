@@ -1794,9 +1794,7 @@ def minmax_normalize(array: np.ndarray) -> np.ndarray:
     return (array - min_lit) / (max_lit - min_lit + 1e-8)
 
 
-def filter_triples_by_relations(
-    triples: LabeledTriples, min_occurrences: int = 5, regex: str = r"^(?!.*http://rdf.freebase.com/key/).*$"
-) -> LabeledTriples:
+def filter_triples_by_relations(triples: LabeledTriples, min_occurrences: int = 0, regex: str = "") -> LabeledTriples:
     """
     Filter triples based on their relations' occurrences and labels.
 

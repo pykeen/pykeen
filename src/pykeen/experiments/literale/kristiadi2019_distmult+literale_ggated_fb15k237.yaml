@@ -6,6 +6,9 @@ pipeline:
     create_inverse_triples: true
     numeric_literals_preprocessing: "minmax"
     numeric_triples_preprocessing: "filter_by_relations"
+    numeric_triples_preprocessing_kwargs:
+      min_occurrences: 5
+      regex: "^(?!.*http://rdf.freebase.com/key/).*$"
   evaluator: RankBasedEvaluator
   model: DistMultLiteralGated
   model_kwargs:
