@@ -45,7 +45,7 @@ class PharMeBINet(TarFileSingleDataset):
         """Initialize the PharMeBINet dataset from [konigs2022]_.
 
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileSingleDataset`.
         """
         super().__init__(
             url=RAW_URL,
