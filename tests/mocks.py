@@ -58,6 +58,9 @@ class MockEvaluator(Evaluator):
     ) -> None:  # noqa: D102
         pass
 
+    def clear(self):  # noqa: D102
+        pass
+
     def finalize(self) -> MetricResults:  # noqa: D102
         result = RankBasedMetricResults.create_random(self.random_state)
         assert self.values_iter is not None

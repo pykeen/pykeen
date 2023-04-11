@@ -357,6 +357,8 @@ class ERModel(
         **kwargs,
     ) -> Sequence[Representation]:
         """Build representations for the given factory."""
+        # note, triples_factory is required instead of just using self.num_entities
+        # and self.num_relations for the inductive case when this is different
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
@@ -478,7 +480,9 @@ class ERModel(
         """Raise an error, if slicing is requested, but the model does not support it."""
         if not slice_size:
             return
-        if get_batchnorm_modules(self):  # if there are any, this is truthy
+        # batch normalization modules use batch statistics in training mode
+        # -> different batch divisions lead to different results
+        if self.training and get_batchnorm_modules(self):
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
     # docstr-coverage: inherited

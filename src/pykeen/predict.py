@@ -164,11 +164,11 @@ Migration Guide
 Until version 1.9, the model itself provided wrappers which would delegate to the corresponding method
 in `pykeen.models.predict`
 
-- `model.get_all_prediction_df`
-- `model.get_prediction_df`
-- `model.get_head_prediction_df`
-- `model.get_relation_prediction_df`
-- `model.get_tail_prediction_df`
+* `model.get_all_prediction_df`
+* `model.get_prediction_df`
+* `model.get_head_prediction_df`
+* `model.get_relation_prediction_df`
+* `model.get_tail_prediction_df`
 
 These methods were already deprecated and could be replaced by providing the model as explicit parameter
 to the stand-alone functions from the prediction module. Thus, we will focus on the migrating the
@@ -176,15 +176,34 @@ stand-alone functions.
 
 In the `pykeen.models.predict` module, the prediction methods were organized differently. There were
 
-- `get_prediction_df`
-- `get_head_prediction_df`
-- `get_relation_prediction_df`
-- `get_tail_prediction_df`
-- `get_all_prediction_df`
-- `predict_triples_df`
+* `get_prediction_df`
+* `get_head_prediction_df`
+* `get_relation_prediction_df`
+* `get_tail_prediction_df`
+* `get_all_prediction_df`
+* `predict_triples_df`
 
 where `get_head_prediction_df`, `get_relation_prediction_df` and `get_tail_prediction_df` were deprecated in favour
-of directly using `get_prediction_df`.
+of directly using `get_prediction_df` with all but the prediction target being provided, i.e., e.g.,
+
+>>> from pykeen.models import predict
+>>> prediction.get_tail_prediction_df(
+...     model=model,
+...     head_label="belgium",
+...     relation_label="locatedin",
+...     triples_factory=result.training,
+... )
+
+was deprecated in favour of
+
+>>> from pykeen.models import predict
+>>> predict.get_prediction_df(
+...     model=model,
+...     head_label="brazil",
+...     relation_label="intergovorgs",
+...     triples_factory=result.training,
+... )
+
 
 `get_prediction_df`
 -------------------
@@ -202,7 +221,14 @@ The old use of
 can be replaced by
 
 >>> from pykeen import predict
->>> predict.predict_target(model=model, head="brazil", relation="intergovorgs", triples_factory=result.training).df
+>>> predict.predict_target(
+...     model=model,
+...     head="brazil",
+...     relation="intergovorgs",
+...     triples_factory=result.training,
+... ).df
+
+Notice the trailing `.df`.
 
 `get_all_prediction_df`
 -----------------------
@@ -215,7 +241,7 @@ The old use of
 can be replaced by
 
 >>> from pykeen import predict
->>> predict.predict_all(model=model, triples_factory=result.training).process().df
+>>> predict.predict_all(model=model).process(factory=result.training).df
 
 `predict_triples_df`
 --------------------

@@ -14,10 +14,42 @@ from ..models import Model
 from ..typing import RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, RankType, Target
 
 __all__ = [
+    "OGBEvaluator",
     "evaluate_ogb",
 ]
 
 logger = logging.getLogger(__name__)
+
+
+class OGBEvaluator(SampledRankBasedEvaluator):
+    """A sampled, rank-based evaluator that applies a custom OGB evaluation."""
+
+    # docstr-coverage: inherited
+    def __init__(self, filtered: bool = False, **kwargs):
+        if filtered:
+            raise ValueError(
+                "OGB evaluator is already filtered, but not dynamically like other evaluators because "
+                "it requires pre-calculated filtered negative triples. Therefore, it is not allowed to "
+                "accept filtered=True"
+            )
+        super().__init__(**kwargs, filtered=filtered)
+
+    def evaluate(
+        self,
+        model: Model,
+        mapped_triples: MappedTriples,
+        batch_size: Optional[int] = None,
+        slice_size: Optional[int] = None,
+        **kwargs,
+    ) -> MetricResults:
+        """Run :func:`evaluate_ogb` with this evaluator."""
+        return evaluate_ogb(
+            evaluator=self,
+            model=model,
+            mapped_triples=mapped_triples,
+            batch_size=batch_size,
+            **kwargs,
+        )
 
 
 def evaluate_ogb(
@@ -52,6 +84,8 @@ def evaluate_ogb(
         if ogb is not installed
     :raises NotImplementedError:
         if `batch_size` is None, i.e., automatic batch size selection is selected
+    :raises ValueError:
+        if illegal ``additional_filter_triples`` argument is given in the kwargs
     """
     try:
         import ogb.linkproppred
@@ -60,6 +94,13 @@ def evaluate_ogb(
 
     if batch_size is None:
         raise NotImplementedError("Automatic batch size selection not available for OGB evaluation.")
+
+    additional_filter_triples = kwargs.pop("additional_filter_triples", None)
+    if additional_filter_triples is not None:
+        raise ValueError(
+            f"evaluate_ogb received additional_filter_triples={additional_filter_triples}. However, it uses "
+            f"explicitly given filtered negative triples, and therefore shouldn't be passed any additional ones"
+        )
 
     class _OGBEvaluatorBridge(ogb.linkproppred.Evaluator):
         """A wrapper around OGB's evaluator to support evaluation on non-OGB datasets."""
