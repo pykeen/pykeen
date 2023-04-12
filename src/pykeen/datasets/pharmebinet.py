@@ -21,13 +21,13 @@ RAW_URL = "https://zenodo.org/record/7011027/files/pharmebinet_tsv_2022_08_19_v2
 
 @parse_docdata
 class PharMeBINet(TarFileSingleDataset):
-    """The PharMeBINet dataset from [konigs2022]_.
+    """The PharMeBINet dataset from [koenigs2022]_.
 
     ---
     name: PharMeBINet
     citation:
         github: ckoenigs/PharMeBINet
-        author: Konigs
+        author: Königs
         year: 2022
         link: https://www.nature.com/articles/s41597-022-01510-3
     single: true
@@ -42,7 +42,7 @@ class PharMeBINet(TarFileSingleDataset):
         random_state: TorchRandomHint = 0,
         **kwargs,
     ):
-        """Initialize the PharMeBINet dataset from [konigs2022]_.
+        """Initialize the PharMeBINet dataset from [koenigs2022]_.
 
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileSingleDataset`.
