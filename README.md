@@ -112,7 +112,7 @@ in ``pykeen``.
 
 ### Datasets 
 
-The following 36 datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
+The following 37 datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
 or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
 see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you

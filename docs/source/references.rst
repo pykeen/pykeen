@@ -124,6 +124,6 @@ References
    Link Prediction <https://arxiv.org/abs/2004.10037>`_, *2020 IEEE International Conference on Data Mining (ICDM)*,
    pp. 422-431, doi: 10.1109/ICDM50108.2020.00051.
 
-.. [konigs2022] Königs, C., Friedrichs, M., & Dietrich, T (2022) `The heterogeneous pharmacological medical biochemical 
+.. [konigs2022] Konigs, C., *et al* (2022) `The heterogeneous pharmacological medical biochemical
    network PharMeBINet <https://www.nature.com/articles/s41597-022-01510-3>`_, *Scientific Data*,
    doi: 10.1038/s41597-022-01510-3.
