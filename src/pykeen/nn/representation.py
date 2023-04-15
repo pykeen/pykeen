@@ -1205,6 +1205,8 @@ class CachedTextRepresentation(TextRepresentation):
         :param identifiers:
             the IDs to be resolved by the class, e.g., wikidata IDs. for :class:`WikidataTextRepresentation`,
             biomedical entities represented as compact URIs (CURIEs) for :class:`BiomedicalCURIERepresentation`
+        :param cache:
+            a pre-instantiated text cache. If None, :attr:`cache_cls` is used to instantiate one.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
