@@ -182,21 +182,21 @@ class TextRepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.TextRepresentation
     kwargs = dict(encoder="character-embedding")
-    label_key: str = "labels"
+    key_labels: str = "labels"
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         # the representation module infers the max_id from the provided labels
         kwargs.pop("max_id")
         dataset = get_dataset(dataset="nations")
-        kwargs[self.label_key] = sorted(dataset.entity_to_id.keys())
+        kwargs[self.key_labels] = sorted(dataset.entity_to_id.keys())
         self.max_id = dataset.num_entities
         return kwargs
 
     def test_from_dataset(self):
         """Test creating text-based representations from a dataset."""
         dataset = get_dataset(dataset="nations")
-        kwargs = {key: value for key, value in self.instance_kwargs.items() if key != self.label_key}
+        kwargs = {key: value for key, value in self.instance_kwargs.items() if key != self.key_labels}
         instance = self.cls.from_dataset(dataset=dataset, **kwargs)
         assert instance.max_id == dataset.num_entities
 
@@ -206,7 +206,7 @@ class CachedTextRepresentationTests(TextRepresentationTests):
 
     cls = pykeen.nn.representation.CachedTextRepresentation
     kwargs = dict(encoder="character-embedding", cache=pykeen.nn.utils.IdentityCache())
-    label_key: str = "identifiers"
+    key_labels: str = "identifiers"
 
 
 class SimpleMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
