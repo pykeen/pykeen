@@ -194,6 +194,18 @@ class TextCache(ABC):
         """Get text for the given identifiers for the cache."""
 
 
+class IdentityCache(TextCache):
+    """
+    A cache without functionality.
+
+    Mostly used for testing.
+    """
+
+    # docstr-coverage: inherited
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:  # noqa: D102
+        return identifiers
+
+
 class WikidataCache(TextCache):
     """A cache for requests against Wikidata's SPARQL endpoint."""
 
