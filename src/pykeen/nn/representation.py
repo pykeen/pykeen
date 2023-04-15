@@ -1213,6 +1213,17 @@ class CachedTextRepresentation(TextRepresentation):
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
 
+    # docstr-coverage: inherited
+    @classmethod
+    def from_triples_factory(
+        cls,
+        triples_factory: TriplesFactory,
+        for_entities: bool = True,
+        **kwargs,
+    ) -> "TextRepresentation":  # noqa: D102
+        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+        return cls(identifiers=labeling.all_labels(), **kwargs)
+
 
 class WikidataTextRepresentation(CachedTextRepresentation):
     """
