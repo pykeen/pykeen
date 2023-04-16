@@ -356,13 +356,13 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             values_dict[key] = start_value
             values_dict["slice_size"] = None
         elif key == "slice_size":
+            targets: Collection[Target] = kwargs.get("targets", (LABEL_HEAD, LABEL_TAIL))
+            predict_entities = bool({LABEL_HEAD, LABEL_TAIL}.intersection(targets))
+            predict_relations = LABEL_RELATION in targets
             if start_value is None:
                 # Since the batch_size search with size 1, i.e. one tuple ((h, r), (h, t) or (r, t)) scored on all
                 # entities/relations, must have failed to start slice_size search, we start with trying half the
                 # entities/relations.
-                targets: Collection[Target] = kwargs.get("targets", (LABEL_HEAD, LABEL_TAIL))
-                predict_entities = bool({LABEL_HEAD, LABEL_TAIL}.intersection(targets))
-                predict_relations = LABEL_RELATION in targets
                 max_id = -1
                 if predict_entities:
                     max_id = max(max_id, model.num_entities)
