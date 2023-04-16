@@ -241,7 +241,7 @@ The old use of
 can be replaced by
 
 >>> from pykeen import predict
->>> predict.predict_all(model=model, triples_factory=result.training).process().df
+>>> predict.predict_all(model=model).process(factory=result.training).df
 
 `predict_triples_df`
 --------------------
