@@ -601,7 +601,7 @@ def readme(check: bool):
     new_readme = get_readme()
 
     if check:
-        with open(readme_path) as file:
+        with open(readme_path, encoding="utf8") as file:
             old_readme = file.read()
         if new_readme.strip() != old_readme.strip():
             click.secho(
@@ -616,7 +616,7 @@ def readme(check: bool):
 
             sys.exit(-1)
 
-    with open(readme_path, "w") as file:
+    with open(readme_path, "w", encoding="utf8") as file:
         print(new_readme, file=file)  # noqa:T201
 
 
