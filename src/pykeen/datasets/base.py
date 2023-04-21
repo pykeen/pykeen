@@ -735,6 +735,7 @@ class CompressedSingleDataset(LazyDataset):
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param delimiter:
             The delimiter for the contained dataset.
+        :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
         """
         self.cache_root = self._help_cache(cache_root)
 

@@ -45,8 +45,8 @@ from .literal_base import NumericPathDataset
 from .nations import Nations
 from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
-from .pharmkg import PharmKG, PharmKG8k
 from .pharmebinet import PharMeBINet
+from .pharmkg import PharmKG, PharmKG8k
 from .primekg import PrimeKG
 from .umls import UMLS
 from .utils import get_dataset
