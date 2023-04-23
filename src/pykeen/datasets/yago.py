@@ -8,9 +8,8 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .remote_literal_base import TarRemoteDatasetWithRemoteLiterals
-
 from .base import TarFileRemoteDataset
+from .remote_literal_base import TarRemoteDatasetWithRemoteLiterals
 
 __all__ = [
     "YAGO310",

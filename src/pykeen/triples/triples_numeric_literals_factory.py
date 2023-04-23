@@ -91,12 +91,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
 
         :param path: file path for relation triples
         :param path_to_numeric_triples:  file path for numeric attributive triples, defaults to None
-        :param numeric_triples_preprocessing: function for preprocessing numeric attributive triples, defaults to None
-               e.g. ..utils.filter_triples_by_relations() can be used or a custom function to add/remove/edit triples
-        :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
-        :param numeric_literals_preprocessing: function for preprocessing numeric literals, defaults to None
-               e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
-        :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
         :param kwargs: Passed to the superclass
 
         :raises ValueError: if path_to_numeric_triples was not provided

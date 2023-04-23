@@ -13,9 +13,8 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .remote_literal_base import ZipRemoteDatasetWithRemoteLiterals
-
 from .base import PackedZipRemoteDataset, TarFileRemoteDataset
+from .remote_literal_base import ZipRemoteDatasetWithRemoteLiterals
 
 __all__ = [
     "FB15k",
