@@ -13,6 +13,7 @@ import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.pyg
 import pykeen.nn.representation
+import pykeen.nn.utils
 import pykeen.nn.vision
 from pykeen.datasets import get_dataset
 from tests import cases, constants, mocks
@@ -181,15 +182,31 @@ class TextRepresentationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.representation.TextRepresentation
     kwargs = dict(encoder="character-embedding")
+    key_labels: str = "labels"
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         # the representation module infers the max_id from the provided labels
         kwargs.pop("max_id")
         dataset = get_dataset(dataset="nations")
-        kwargs["labels"] = sorted(dataset.entity_to_id.keys())
+        kwargs[self.key_labels] = sorted(dataset.entity_to_id.keys())
         self.max_id = dataset.num_entities
         return kwargs
+
+    def test_from_dataset(self):
+        """Test creating text-based representations from a dataset."""
+        dataset = get_dataset(dataset="nations")
+        kwargs = {key: value for key, value in self.instance_kwargs.items() if key != self.key_labels}
+        instance = self.cls.from_dataset(dataset=dataset, **kwargs)
+        assert instance.max_id == dataset.num_entities
+
+
+class CachedTextRepresentationTests(TextRepresentationTests):
+    """Tests for cached text representations."""
+
+    cls = pykeen.nn.representation.CachedTextRepresentation
+    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.utils.IdentityCache())
+    key_labels: str = "identifiers"
 
 
 class SimpleMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
@@ -438,8 +455,4 @@ class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn
 
     base_cls = pykeen.nn.representation.Representation
     base_test = cases.RepresentationTestCase
-    skip_cls = {
-        mocks.CustomRepresentation,
-        pykeen.nn.pyg.MessagePassingRepresentation,
-        pykeen.nn.CachedTextRepresentation,
-    }
+    skip_cls = {mocks.CustomRepresentation, pykeen.nn.pyg.MessagePassingRepresentation}

@@ -1198,20 +1198,33 @@ class CachedTextRepresentation(TextRepresentation):
 
     cache_cls: ClassVar[Type[TextCache]]
 
-    def __init__(self, identifiers: Sequence[str], **kwargs):
+    def __init__(self, identifiers: Sequence[str], cache: TextCache | None = None, **kwargs):
         """
         Initialize the representation.
 
         :param identifiers:
             the IDs to be resolved by the class, e.g., wikidata IDs. for :class:`WikidataTextRepresentation`,
             biomedical entities represented as compact URIs (CURIEs) for :class:`BiomedicalCURIERepresentation`
+        :param cache:
+            a pre-instantiated text cache. If None, :attr:`cache_cls` is used to instantiate one.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
-        cache = self.cache_cls()
+        cache = self.cache_cls() if cache is None else cache
         labels = cache.get_texts(identifiers=identifiers)
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
+
+    # docstr-coverage: inherited
+    @classmethod
+    def from_triples_factory(
+        cls,
+        triples_factory: TriplesFactory,
+        for_entities: bool = True,
+        **kwargs,
+    ) -> "TextRepresentation":  # noqa: D102
+        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+        return cls(identifiers=labeling.all_labels(), **kwargs)
 
 
 class WikidataTextRepresentation(CachedTextRepresentation):
