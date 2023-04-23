@@ -32,3 +32,30 @@ pipeline:
     patience: 3 # added after communication with paper's author
     relative_delta: 0.000001 # = 1e-6 | added after communication with paper's author
   random_seed: 1677423275 # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/main_literal.py#L43-L49
+results:  # comment: these are from a re-trained model with PyKEEN 1.8.1-dev
+  realistic:
+    adjusted_arithmetic_mean_rank: 0.0357324216176659
+    adjusted_arithmetic_mean_rank_index: 0.9644027307748475
+    adjusted_geometric_mean_rank_index: 0.996859437985059
+    adjusted_hits_at_k: 0.4806262102735798
+    adjusted_inverse_harmonic_mean_rank: 0.31276099304491173
+    arithmetic_mean_rank: 254.9747314453125
+    count: 40876.0
+    geometric_mean_rank: 17.467453002929688
+    harmonic_mean_rank: 3.192330741528526
+    hits_at_1: 0.22920540170271064
+    hits_at_10: 0.48099129073294844
+    hits_at_3: 0.3426705157060378
+    hits_at_5: 0.4021186026029944
+    inverse_arithmetic_mean_rank: 0.003921957220882177
+    inverse_geometric_mean_rank: 0.05724932998418808
+    inverse_harmonic_mean_rank: 0.31325075030326843
+    inverse_median_rank: 0.0833333358168602
+    median_absolute_deviation: 16.30862440356162
+    median_rank: 12.0
+    standard_deviation: 830.3383178710938
+    variance: 689461.6875
+    z_arithmetic_mean_rank: 337.28394370737755
+    z_geometric_mean_rank: 201.8898474835597
+    z_hits_at_k: 3663.8296926168523
+    z_inverse_harmonic_mean_rank: 5889.478753047447
