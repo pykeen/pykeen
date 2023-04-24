@@ -1,9 +1,12 @@
 """OGB tools."""
+from __future__ import annotations
 
 import logging
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 import torch
+from torch_max_mem import maximize_memory_utilization
+from tqdm.auto import tqdm
 
 from .evaluator import MetricResults
 from .rank_based_evaluator import RankBasedMetricResults, SampledRankBasedEvaluator
@@ -11,7 +14,7 @@ from .ranking_metric_lookup import MetricKey
 from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
 from ..models import Model
-from ..typing import RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, RankType, Target
+from ..typing import LABEL_HEAD, LABEL_TAIL, RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, RankType, Target
 
 __all__ = [
     "OGBEvaluator",
@@ -40,15 +43,35 @@ class OGBEvaluator(SampledRankBasedEvaluator):
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
-        **kwargs,
+        device: Optional[torch.device] = None,
+        use_tqdm: bool = True,
+        tqdm_kwargs: Optional[Mapping[str, str]] = None,
+        restrict_entities_to: Optional[Collection[int]] = None,
+        restrict_relations_to: Optional[Collection[int]] = None,
+        do_time_consuming_checks: bool = True,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        pre_filtered_triples: bool = True,
+        targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults:
         """Run :func:`evaluate_ogb` with this evaluator."""
+        if (
+            {restrict_relations_to, restrict_entities_to, additional_filter_triples} != {None}
+            or do_time_consuming_checks is False
+            or pre_filtered_triples is False
+        ):
+            raise ValueError(
+                f"{self} does not support any of {{restrict_relations_to, restrict_entities_to, "
+                f"additional_filter_triples, do_time_consuming_checks, pre_filtered_triples}}",
+            )
         return evaluate_ogb(
             evaluator=self,
             model=model,
             mapped_triples=mapped_triples,
             batch_size=batch_size,
-            **kwargs,
+            slice_size=slice_size,
+            use_tqdm=use_tqdm,
+            tqdm_kwargs=tqdm_kwargs,
+            targets=targets,
         )
 
 
@@ -56,8 +79,12 @@ def evaluate_ogb(
     evaluator: SampledRankBasedEvaluator,
     model: Model,
     mapped_triples: MappedTriples,
-    batch_size: Optional[int] = None,
-    **kwargs,
+    batch_size: int | None = None,
+    slice_size: int | None = None,
+    device: Optional[torch.device] = None,
+    use_tqdm: bool = True,
+    tqdm_kwargs: Optional[Mapping[str, str]] = None,
+    targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
 ) -> MetricResults:
     """
     Evaluate a model using OGB's evaluator.
@@ -71,11 +98,19 @@ def evaluate_ogb(
 
         .. note ::
             the evaluation triples have to match with the stored explicit negatives
+    :param device:
+            The device on which the evaluation shall be run. If None is given, use the model's device.
 
     :param batch_size:
         the batch size
-    :param kwargs:
-        additional keyword-based parameters passed to :meth:`pykeen.nn.Model.predict`
+    :param slice_size: >0
+        The divisor for the scoring function when using slicing.
+    :param use_tqdm:
+            Should a progress bar be displayed?
+    :param tqdm_kwargs:
+        Additional keyword based arguments passed to the progress bar.
+    :param targets:
+            the prediction targets
 
     :return:
         the evaluation results
@@ -92,16 +127,7 @@ def evaluate_ogb(
     except ImportError as error:
         raise ImportError("OGB evaluation requires `ogb` to be installed.") from error
 
-    if batch_size is None:
-        raise NotImplementedError("Automatic batch size selection not available for OGB evaluation.")
-
-    additional_filter_triples = kwargs.pop("additional_filter_triples", None)
-    if additional_filter_triples is not None:
-        raise ValueError(
-            f"evaluate_ogb received additional_filter_triples={additional_filter_triples}. However, it uses "
-            f"explicitly given filtered negative triples, and therefore shouldn't be passed any additional ones"
-        )
-
+    # delay declaration
     class _OGBEvaluatorBridge(ogb.linkproppred.Evaluator):
         """A wrapper around OGB's evaluator to support evaluation on non-OGB datasets."""
 
@@ -114,6 +140,12 @@ def evaluate_ogb(
     # this setting is equivalent to the WikiKG2 setting, and will calculate MRR *and* H@k for k in {1, 3, 10}
     ogb_evaluator.eval_metric = "mrr"
     ogb_evaluator.K = None
+
+    # check targets
+    if not set(targets).issubset(evaluator.negative_samples.keys()):
+        raise ValueError(
+            f"{targets=} are not supported by {evaluator=}, which only provides negative samples for {sorted(evaluator.negative_samples.keys())}"
+        )
 
     # filter supported metrics
     metrics: List[RankBasedMetric] = []
@@ -131,30 +163,27 @@ def evaluate_ogb(
     y_pred_pos: Dict[Target, torch.Tensor] = {}
     y_pred_neg: Dict[Target, torch.Tensor] = {}
 
-    num_triples = mapped_triples.shape[0]
-    device = mapped_triples.device
+    # move tensor to device
+    device = device or model.device
+    model = model.to(device)
+    mapped_triples = mapped_triples.to(device)
+
     # iterate over prediction targets
+    tqdm_kwargs = dict(tqdm_kwargs or {})
+    tqdm_kwargs["disable"] = not use_tqdm
     for target, negatives in evaluator.negative_samples.items():
-        # pre-allocate
-        # TODO: maybe we want to collect scores on CPU / add an option?
-        y_pred_pos[target] = y_pred_pos_side = torch.empty(size=(num_triples,), device=device)
-        num_negatives = negatives.shape[1]
-        y_pred_neg[target] = y_pred_neg_side = torch.empty(size=(num_triples, num_negatives), device=device)
-        # iterate over batches
-        offset = 0
-        for hrt_batch, negatives_batch in zip(
-            mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size)
-        ):
-            # combine ids, shape: (batch_size, num_negatives + 1)
-            ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)
-            # get scores, shape: (batch_size, num_negatives + 1)
-            scores = model.predict(hrt_batch=hrt_batch, target=target, ids=ids, mode=evaluator.mode, **kwargs)
-            # store positive and negative scores
-            this_batch_size = scores.shape[0]
-            stop = offset + this_batch_size
-            y_pred_pos_side[offset:stop] = scores[:, 0]
-            y_pred_neg_side[offset:stop] = scores[:, 1:]
-            offset = stop
+        negatives = negatives.to(device)
+        with tqdm(**tqdm_kwargs) as progress_bar:
+            y_pred_pos[target], y_pred_neg[target] = _evaluate_ogb(
+                evaluator=evaluator,
+                batch_size=batch_size,
+                slice_size=slice_size,
+                mapped_triples=mapped_triples,
+                model=model,
+                negatives=negatives,
+                target=target,
+                progress_bar=progress_bar,
+            )
 
     def iter_preds() -> Iterable[Tuple[ExtendedTarget, torch.Tensor, torch.Tensor]]:
         """Iterate over predicted scores for extended prediction targets."""
@@ -183,3 +212,48 @@ def evaluate_ogb(
             value = value.mean().item()
             result[key, ext_target, rank_type] = value
     return RankBasedMetricResults(data=result)
+
+
+def _hasher(kwargs: Mapping[str, Any]) -> int:
+    return hash((id(kwargs["model"]), kwargs["mapped_triples"].shape[0], kwargs["negatives"].shape, kwargs["target"]))
+
+
+@maximize_memory_utilization(parameter_name="slice_size", hasher=_hasher)
+@maximize_memory_utilization(hasher=_hasher)
+def _evaluate_ogb(
+    *,
+    evaluator: OGBEvaluator,
+    batch_size: int,
+    slice_size: int,
+    mapped_triples: MappedTriples,
+    model: Model,
+    negatives: torch.LongTensor,
+    target: Target,
+    progress_bar: tqdm,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    # todo: maybe we can merge this code with the AMO code of the base evaluator?
+    num_triples = mapped_triples.shape[0]
+    progress_bar.reset(total=num_triples)
+    # pre-allocate
+    # TODO: maybe we want to collect scores on CPU / add an option?
+    device = model.device
+    y_pred_pos_side = torch.empty(size=(num_triples,), device=device)
+    num_negatives = negatives.shape[1]
+    y_pred_neg_side = torch.empty(size=(num_triples, num_negatives), device=device)
+    # iterate over batches
+    offset = 0
+    for hrt_batch, negatives_batch in zip(
+        mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size)
+    ):
+        # combine ids, shape: (batch_size, num_negatives + 1)
+        ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)
+        # get scores, shape: (batch_size, num_negatives + 1)
+        scores = model.predict(hrt_batch=hrt_batch, target=target, ids=ids, mode=evaluator.mode, slice_size=slice_size)
+        # store positive and negative scores
+        this_batch_size = scores.shape[0]
+        stop = offset + this_batch_size
+        y_pred_pos_side[offset:stop] = scores[:, 0]
+        y_pred_neg_side[offset:stop] = scores[:, 1:]
+        offset = stop
+        progress_bar.update(hrt_batch.shape[0])
+    return y_pred_pos_side, y_pred_neg_side
