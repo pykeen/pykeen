@@ -153,8 +153,6 @@ class Evaluator(ABC):
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
-        *,
-        mode: Optional[InductiveMode] = None,
     ) -> MetricResults:
         """Evaluate metrics for model on mapped triples.
 
@@ -199,8 +197,6 @@ class Evaluator(ABC):
             additional true triples to filter out during filtered evaluation.
         :param targets:
             the prediction targets
-        :param mode:
-            the inductive mode, or None for transductive evaluation
 
         :raises NotImplementedError:
             if relation prediction evaluation is requested
@@ -210,9 +206,6 @@ class Evaluator(ABC):
         :return:
             the evaluation results
         """
-        if mode is not None:
-            logger.warning(f"Ignoring provided mode={mode}, and use the evaluator's mode={self.mode} instead")
-
         if LABEL_RELATION in targets:
             raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
         start = timeit.default_timer()
