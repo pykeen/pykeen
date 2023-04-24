@@ -145,7 +145,7 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, str]] = None,
+        tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         restrict_entities_to: Optional[Collection[int]] = None,
         restrict_relations_to: Optional[Collection[int]] = None,
         do_time_consuming_checks: bool = True,
