@@ -255,8 +255,8 @@ class Evaluator(ABC):
         else:
             all_pos_triples = None
         device = device or model.device
+        tqdm_kwargs = dict(tqdm_kwargs or {})
         if not use_tqdm:
-            tqdm_kwargs = dict(tqdm_kwargs or {})
             tqdm_kwargs.update(disable=False)
         try:
             result = self._evaluate_on_device(
@@ -296,8 +296,8 @@ class Evaluator(ABC):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        batch_size: int,
-        slice_size: int,
+        batch_size: int | None,
+        slice_size: int | None,
         device: torch.device,
         all_pos_triples: MappedTriples | None,
         targets: Collection[Target],
@@ -329,7 +329,7 @@ class Evaluator(ABC):
         # Show progressbar
         with tqdm(
             **ChainMap(
-                tqdm_kwargs or {},
+                tqdm_kwargs,
                 dict(
                     desc=f"Evaluating on {model.device}",
                     total=num_triples,
