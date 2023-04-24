@@ -257,7 +257,7 @@ class Evaluator(ABC):
         device = device or model.device
         tqdm_kwargs = dict(tqdm_kwargs or {})
         if not use_tqdm:
-            tqdm_kwargs.update(disable=False)
+            tqdm_kwargs.update(dict(disable=False))
         try:
             result = self._evaluate_on_device(
                 model=model,
@@ -329,7 +329,7 @@ class Evaluator(ABC):
         # Show progressbar
         with tqdm(
             **ChainMap(
-                tqdm_kwargs,
+                dict(tqdm_kwargs),
                 dict(
                     desc=f"Evaluating on {model.device}",
                     total=num_triples,
