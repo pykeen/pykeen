@@ -260,7 +260,7 @@ class Evaluator(ABC):
             all_pos_triples = None
         device = device or model.device
         if not use_tqdm:
-            tqdm_kwargs = dict(tqdm_kwargs)
+            tqdm_kwargs = dict(tqdm_kwargs or {})
             tqdm_kwargs.update(disable=False)
         try:
             result = self._evaluate_on_device(
