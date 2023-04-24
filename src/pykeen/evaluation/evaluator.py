@@ -21,11 +21,7 @@ from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
-from ..utils import (
-    format_relative_comparison,
-    normalize_string,
-    prepare_filter_triples,
-)
+from ..utils import format_relative_comparison, normalize_string, prepare_filter_triples
 
 __all__ = [
     "Evaluator",

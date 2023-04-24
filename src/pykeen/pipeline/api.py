@@ -1283,7 +1283,9 @@ def _handle_evaluation(
         )
     )
     evaluate_start_time = time.time()
-    metric_results = evaluator_instance.evaluate(model=model_instance, mapped_triples=mapped_triples, **evaluation_kwargs)
+    metric_results = evaluator_instance.evaluate(
+        model=model_instance, mapped_triples=mapped_triples, **evaluation_kwargs
+    )
     evaluate_end_time = time.time() - evaluate_start_time
     step = training_kwargs.get("num_epochs")
     _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
