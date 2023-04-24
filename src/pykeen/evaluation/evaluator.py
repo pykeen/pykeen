@@ -143,7 +143,6 @@ class Evaluator(ABC):
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
-        only_size_probing: bool = False,
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
         tqdm_kwargs: Optional[Mapping[str, str]] = None,
@@ -161,8 +160,6 @@ class Evaluator(ABC):
         :param mapped_triples:
             The triples on which to evaluate. The mapped triples should never contain inverse triples - these are created by
             the model class on the fly.
-        :param only_size_probing:
-            The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
         :param batch_size: >0
             A positive integer used as batch size. Generally chosen as large as possible. Defaults to 1 if None.
         :param slice_size: >0
