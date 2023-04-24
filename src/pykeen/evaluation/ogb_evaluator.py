@@ -83,7 +83,7 @@ def evaluate_ogb(
     slice_size: int | None = None,
     device: Optional[torch.device] = None,
     use_tqdm: bool = True,
-    tqdm_kwargs: Optional[Mapping[str, str]] = None,
+    tqdm_kwargs: Optional[Mapping[str, Any]] = None,
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
 ) -> MetricResults:
     """
