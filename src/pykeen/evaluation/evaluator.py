@@ -2,14 +2,13 @@
 
 """Basic structure of a evaluator."""
 
-import gc
+from __future__ import annotations
+
 import logging
 import timeit
 from abc import ABC, abstractmethod
 from collections import ChainMap
-from contextlib import contextmanager
-from math import ceil
-from typing import Any, ClassVar, Collection, List, Mapping, Optional, Tuple, Type, Union, cast
+from typing import Any, ClassVar, Collection, List, Mapping, Optional, Tuple, Type, Union
 
 import pandas
 import torch
@@ -24,9 +23,6 @@ from ..triples.utils import get_entities, get_relations
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 from ..utils import (
     format_relative_comparison,
-    is_cuda_oom_error,
-    is_cudnn_error,
-    is_nonzero_larger_than_maxint_error,
     normalize_string,
     prepare_filter_triples,
 )
@@ -35,21 +31,10 @@ __all__ = [
     "Evaluator",
     "MetricResults",
     "filter_scores_",
-    "evaluate",
     "prepare_filter_triples",
 ]
 
 logger = logging.getLogger(__name__)
-
-
-@contextmanager
-def optional_context_manager(condition, context_manager):
-    """Return an optional context manager based on the given condition."""
-    if condition:
-        with context_manager:
-            yield context_manager
-    else:
-        yield
 
 
 class MetricResults:
