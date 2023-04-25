@@ -222,7 +222,7 @@ class EarlyStopper(Stopper):
         """Count the number of results stored in the early stopper."""
         return len(self.results)
 
-    def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
+    def should_stop(self, epoch: int) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # for mypy
         assert self.best_model_path is not None
@@ -234,9 +234,8 @@ class EarlyStopper(Stopper):
             use_tqdm=False,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
-            # Only perform time consuming checks for the first call.
+            # Only perform time-consuming checks for the first call.
             do_time_consuming_checks=self.evaluation_batch_size is None,
-            mode=mode,
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size
