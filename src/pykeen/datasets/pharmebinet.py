@@ -32,7 +32,7 @@ class PharMeBINet(TarFileSingleDataset):
         link: https://www.nature.com/articles/s41597-022-01510-3
     single: true
     statistics:
-        entities: 2653751
+        entities: 2869407
         relations: 208
         triples: 15883653
     """
