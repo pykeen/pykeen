@@ -15,6 +15,7 @@ from .typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
+    LABEL_TIMESTAMP,
     Target,
     TargetColumn,
 )
@@ -28,6 +29,12 @@ __all__ = [
     "PYKEEN_CHECKPOINTS",
     "PYKEEN_LOGS",
     "AGGREGATIONS",
+    "PYKEEN_TEMPORAL_HOME",
+    "PYKEEN_TEMPORAL_DATASETS",
+    "PYKEEN_TEMPORAL_BENCHMARKS",
+    "PYKEEN_TEMPORAL_EXPERIMENTS",
+    "DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE",
+    "COLUMN_TEMPORAL_LABELS",
 ]
 
 #: A manager around the PyKEEN data folder. It defaults to ``~/.data/pykeen``.
@@ -70,3 +77,27 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
 COLUMN_LABELS: Tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
 TARGET_TO_KEY_LABELS = {target: [c for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
 TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in cs] for target, cs in TARGET_TO_KEY_LABELS.items()}
+
+PYKEEN_TEMPORAL_MODULE: pystow.Module = pystow.module("pykeen-temporal")
+#: A path representing the PyKEEN-temporal data folder
+PYKEEN_TEMPORAL_HOME: Path = PYKEEN_TEMPORAL_MODULE.base
+#: A subdirectory of the PyKEEN-temporal data folder for datasets, defaults to ``~/.data/pykeen-temporal/datasets``
+PYKEEN_TEMPORAL_DATASETS: Path = PYKEEN_TEMPORAL_MODULE.join("datasets")
+#: A subdirectory of the PyKEEN-temporal data folder for benchmarks, defaults to ``~/.data/pykeen-temporal/benchmarks``
+PYKEEN_TEMPORAL_BENCHMARKS: Path = PYKEEN_TEMPORAL_MODULE.join("benchmarks")
+#: A subdirectory of the PyKEEN-temporal data folder for experiments,
+# defaults to ``~/.data/pykeen-temporal/experiments``
+PYKEEN_TEMPORAL_EXPERIMENTS: Path = PYKEEN_TEMPORAL_MODULE.join("experiments")
+#: A subdirectory of the PyKEEN-temporal data folder for checkpoints,
+# defaults to ``~/.data/pykeen-temporal/checkpoints``
+# PYKEEN_TEMPORAL_CHECKPOINTS: Path = PYKEEN_TEMPORAL_MODULE.join("checkpoints")
+# #: A subdirectory for PyKEEN-temporal logs
+# PYKEEN_TEMPORAL_LOGS: Path = PYKEEN_TEMPORAL_MODULE.join("logs")
+DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = dict(type=int, low=16, high=256, q=16)
+
+COLUMN_TEMPORAL_LABELS: Tuple[Target, Target, Target, Target] = (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    LABEL_TIMESTAMP,
+)

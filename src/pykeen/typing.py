@@ -53,6 +53,16 @@ __all__ = [
     "EA_SIDE_LEFT",
     "EA_SIDE_RIGHT",
     "EA_SIDES",
+    # temporal typings
+    "TimestampMapping",
+    "LabeledQuadruples",
+    "MappedQuadruples",
+    "TimestampRepresentation",
+    "Target",
+    "LABEL_HEAD",
+    "LABEL_RELATION",
+    "LABEL_TAIL",
+    "LABEL_TIMESTAMP",
 ]
 
 X = TypeVar("X")
@@ -148,3 +158,17 @@ EASide = Literal["left", "right"]
 EA_SIDE_LEFT: EASide = "left"
 EA_SIDE_RIGHT: EASide = "right"
 EA_SIDES: Tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)
+
+# temporal typing
+TimestampMapping = Mapping[str, int]
+LabeledQuadruples = np.ndarray
+MappedQuadruples = torch.LongTensor
+
+TimestampRepresentation = TypeVar("TimestampRepresentation", bound=OneOrSequence[torch.FloatTensor])
+
+#: the prediction target
+Target = Literal["head", "relation", "tail", "timestamp"]
+LABEL_HEAD: Target = "head"
+LABEL_RELATION: Target = "relation"
+LABEL_TAIL: Target = "tail"
+LABEL_TIMESTAMP: Target = "timestamp"
