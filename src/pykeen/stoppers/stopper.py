@@ -5,11 +5,9 @@
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Optional, Union
+from typing import Any, List, Mapping, Union
 
 import torch
-
-from ..typing import InductiveMode
 
 __all__ = [
     "Stopper",

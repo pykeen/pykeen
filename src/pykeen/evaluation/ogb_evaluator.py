@@ -106,19 +106,17 @@ def evaluate_ogb(
     :param slice_size: >0
         The divisor for the scoring function when using slicing.
     :param use_tqdm:
-            Should a progress bar be displayed?
+        Should a progress bar be displayed?
     :param tqdm_kwargs:
         Additional keyword based arguments passed to the progress bar.
     :param targets:
-            the prediction targets
+        the prediction targets
 
     :return:
         the evaluation results
 
     :raises ImportError:
         if ogb is not installed
-    :raises NotImplementedError:
-        if `batch_size` is None, i.e., automatic batch size selection is selected
     :raises ValueError:
         if illegal ``additional_filter_triples`` argument is given in the kwargs
     """
@@ -144,7 +142,8 @@ def evaluate_ogb(
     # check targets
     if not set(targets).issubset(evaluator.negative_samples.keys()):
         raise ValueError(
-            f"{targets=} are not supported by {evaluator=}, which only provides negative samples for {sorted(evaluator.negative_samples.keys())}"
+            f"{targets=} are not supported by {evaluator=}, which only provides negative samples for "
+            f"{sorted(evaluator.negative_samples.keys())}",
         )
 
     # filter supported metrics

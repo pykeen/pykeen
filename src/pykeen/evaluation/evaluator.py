@@ -158,8 +158,8 @@ class Evaluator(ABC):
         :param model:
             The model to evaluate.
         :param mapped_triples:
-            The triples on which to evaluate. The mapped triples should never contain inverse triples - these are created by
-            the model class on the fly.
+            The triples on which to evaluate. The mapped triples should *never* contain inverse triples - these are
+            created by the model class on the fly.
         :param batch_size: >0
             A positive integer used as batch size. Generally chosen as large as possible. Defaults to 1 if None.
         :param slice_size: >0
@@ -171,25 +171,30 @@ class Evaluator(ABC):
         :param tqdm_kwargs:
             Additional keyword based arguments passed to the progress bar.
         :param restrict_entities_to:
-            Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in a
-            part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking the
-            entities, we still compute all scores for all possible replacement entities to avoid irregular access patterns
-            which might decrease performance, but the scores will afterwards be filtered to only keep those of interest.
-            If provided, we assume by default that the triples are already filtered, such that it only contains the
-            entities of interest. To explicitly filter within this method, pass `pre_filtered_triples=False`.
+            Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in
+            a part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking
+            the entities, we still compute all scores for all possible replacement entities to avoid irregular access
+            patterns which might decrease performance, but the scores will afterward be filtered to only keep those of
+            interest. If provided, we assume by default that the triples are already filtered, such that it only
+            contains the entities of interest. To explicitly filter within this method, pass
+            `pre_filtered_triples=False`.
         :param restrict_relations_to:
-            Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested in a
-            part of the relations, e.g. due to relation types, but wants to train on all available data. If provided, we
-            assume by default that the triples are already filtered, such that it only contains the relations of interest.
-            To explicitly filter within this method, pass `pre_filtered_triples=False`.
+            Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested
+            in a part of the relations, e.g. due to relation types, but wants to train on all available data.
+            If provided, we assume by default that the triples are already filtered, such that it only contains the
+            relations of interest. To explicitly filter within this method, pass `pre_filtered_triples=False`.
         :param do_time_consuming_checks:
             Whether to perform some time-consuming checks on the provided arguments. Currently, this encompasses:
-            - If restrict_entities_to or restrict_relations_to is not None, check whether the triples have been filtered.
-            Disabling this option can accelerate the method. Only effective if pre_filtered_triples is set to True.
+
+                - If `restrict_entities_to` or `restrict_relations_to` is not `None`, check whether the triples have
+                been filtered.
+
+            Disabling this option can accelerate the method. Only effective if `pre_filtered_triples` is set to `True`.
         :param pre_filtered_triples:
-            Whether the triples have been pre-filtered to adhere to restrict_entities_to / restrict_relations_to. When set
-            to True, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the triples
-            accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
+            Whether the triples have been pre-filtered to adhere to `restrict_entities_to` / `restrict_relations_to`.
+            When set to `True`, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the
+            triples accelerates this method, and is recommended when evaluating multiple times on the same set of
+            triples.
         :param additional_filter_triples:
             additional true triples to filter out during filtered evaluation.
         :param targets:
@@ -199,6 +204,8 @@ class Evaluator(ABC):
             if relation prediction evaluation is requested
         :raises ValueError:
             if the pre_filtered_triples contain unwanted entities (can only be detected with the time-consuming checks).
+        :raises MemoryError:
+            if the evaluation fails on cpu
 
         :return:
             the evaluation results
@@ -294,7 +301,7 @@ class Evaluator(ABC):
         tqdm_kwargs: Mapping[str, Any],
         **kwargs,
     ) -> MetricResults:
-        """Evaluate the model on the given device"""
+        """Evaluate the model on the given device."""
         # Ensure evaluation mode
         model.eval()
         # Send model & tensors to device
@@ -405,6 +412,25 @@ def optimized_evaluate(
     .. note ::
         this method is wrapped into two memory utilization maximizer, which reduce the parameters `batch_size` and
         `slice_size`, if necessary due to memory constraints.
+
+    :param evaluator:
+        the evaluator instance that is used for evaluation
+    :param mapped_triples:
+        the evaluation triples
+    :param batch_size:
+        the (maximum) batch size. It will be reduced when (GPU) out-of-memory problems occur.
+    :param slice_size:
+        the (maximum) slice size. It will be reduced when (GPU) out-of-memory problems occur, and batch size reduction
+        could not resolve the issue.
+    :param progress_bar:
+        whether to display a progress bar
+    :param targets:
+        the evaluation targets
+    :param kwargs:
+        additional keyword-based parameters are passed to :meth:`_evaluate_batch`.
+
+    :return:
+        the evaluation result
     """
     # todo: maybe we want to have some more keys outside of kwargs for hashing / have more visibility about
     #  what is passed around
