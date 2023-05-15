@@ -176,7 +176,7 @@ def evaluate_ogb(
             y_pred_pos[target], y_pred_neg[target] = _evaluate_ogb(
                 evaluator=evaluator,
                 batch_size=batch_size,
-                slice_size=slice_size,
+                slice_size=slice_size or model.num_entities,  # OGB evaluator supports head/tail only
                 mapped_triples=mapped_triples,
                 model=model,
                 negatives=negatives,
