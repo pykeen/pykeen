@@ -184,12 +184,10 @@ class Evaluator(ABC):
             If provided, we assume by default that the triples are already filtered, such that it only contains the
             relations of interest. To explicitly filter within this method, pass `pre_filtered_triples=False`.
         :param do_time_consuming_checks:
-            Whether to perform some time-consuming checks on the provided arguments. Currently, this encompasses:
-
-                - If `restrict_entities_to` or `restrict_relations_to` is not `None`, check whether the triples have
-                been filtered.
-
-            Disabling this option can accelerate the method. Only effective if `pre_filtered_triples` is set to `True`.
+            Whether to perform some time-consuming checks on the provided arguments. Currently, this encompasses only:
+            If `restrict_entities_to` or `restrict_relations_to` is not `None`, check whether the triples have been
+            filtered. Disabling this option can accelerate the method. Only effective if `pre_filtered_triples` is set
+            to `True`.
         :param pre_filtered_triples:
             Whether the triples have been pre-filtered to adhere to `restrict_entities_to` / `restrict_relations_to`.
             When set to `True`, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the
