@@ -33,7 +33,7 @@ from pykeen.models import (
     Model,
     SoftInverseTripleBaseline,
 )
-from pykeen.regularizers import CombinedRegularizer, Regularizer
+from pykeen.regularizers import Regularizer
 from pykeen.sampling import NegativeSampler
 from pykeen.stoppers.stopper import NopStopper
 from pykeen.trackers import ResultTracker, tracker_resolver
@@ -386,7 +386,7 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
     ],
 )
 def test_hpo_defaults(base_cls: Type, ignore: Collection[Type]):
-    """Test"""
+    """Test HPO defaults for components that are used in the HPO pipeline."""
     assert set(ignore) == {
         cls
         for cls in get_subclasses(base_cls)
