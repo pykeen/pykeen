@@ -35,6 +35,9 @@ class PharMeBINet(TarFileSingleDataset):
         entities: 2869407
         relations: 208
         triples: 15883653
+        training: 12702210
+        testing: 1587776
+        validation: 1587777
     """
 
     def __init__(
