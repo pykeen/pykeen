@@ -379,7 +379,7 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
     "base_cls,ignore",
     [
         (Loss, []),
-        (Regularizer, {CombinedRegularizer}),
+        (Regularizer, []),
         (Model, [InductiveERModel, LiteralModel, ERModel, SoftInverseTripleBaseline, MarginalDistributionBaseline]),
         (NegativeSampler, []),
         (TrainingLoop, []),
