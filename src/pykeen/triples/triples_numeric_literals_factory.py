@@ -15,7 +15,7 @@ from class_resolver import FunctionResolver, Hint, OptionalKwargs
 from .triples_factory import Labeling, TriplesFactory
 from .utils import load_triples
 from ..typing import LabeledTriples, MappedTriples, NdArrayInOutCallable
-from ..utils import filter_triples_by_relations, minmax_normalize
+from ..utils import minmax_normalize
 
 __all__ = [
     "TriplesNumericLiteralsFactory",
