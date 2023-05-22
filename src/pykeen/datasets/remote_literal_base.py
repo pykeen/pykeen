@@ -11,10 +11,10 @@ import pandas as pd
 from class_resolver import Hint, OptionalKwargs
 from pystow.utils import download, name_from_url
 
-from pykeen.datasets import PackedZipRemoteDataset, TarFileRemoteDataset
-from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.utils import load_triples
-from pykeen.typing import NdArrayInOutCallable
+from .base import PackedZipRemoteDataset, TarFileRemoteDataset
+from ..triples import TriplesFactory, TriplesNumericLiteralsFactory
+from ..triples.utils import load_triples
+from ..typing import NdArrayInOutCallable
 
 logger = logging.getLogger(__name__)
 
