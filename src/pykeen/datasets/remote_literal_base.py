@@ -4,6 +4,7 @@
 
 import logging
 import pathlib
+from re import Pattern
 import zipfile
 from typing import Any, Mapping, Optional, Tuple
 
@@ -39,8 +40,8 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
+        relation_regex: Pattern[str] | str | None = None,
+        min_occurrence: int = 0,
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
         numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -59,8 +60,8 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
         super().__init__(**kwargs)
 
         self.numeric_triples_url = numeric_triples_url
-        self.numeric_triples_preprocessing = numeric_triples_preprocessing
-        self.numeric_triples_preprocessing_kwargs = numeric_triples_preprocessing_kwargs
+        self.relation_regex = relation_regex
+        self.min_occurrence = min_occurrence
         self.numeric_literals_preprocessing = numeric_literals_preprocessing
         self.numeric_literals_preprocessing_kwargs = numeric_literals_preprocessing_kwargs
 
@@ -99,8 +100,8 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
                     entity_to_id=entity_to_id,
                     relation_to_id=relation_to_id,
                     numeric_triples=numeric_triples,
-                    numeric_triples_preprocessing=self.numeric_triples_preprocessing,
-                    numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
+                    relation_regex=self.relation_regex,
+                    min_occurrence=self.min_occurrence,
                     numeric_literals_preprocessing=self.numeric_literals_preprocessing,
                     numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
                 )
@@ -124,8 +125,8 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
+        relation_regex: Pattern[str] | str | None = None,
+        min_occurrence: int = 0,
         numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
         numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -144,8 +145,8 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
         super().__init__(**kwargs)
 
         self.numeric_triples_url = numeric_triples_url
-        self.numeric_triples_preprocessing = numeric_triples_preprocessing
-        self.numeric_triples_preprocessing_kwargs = numeric_triples_preprocessing_kwargs
+        self.relation_regex = relation_regex
+        self.min_occurrence = min_occurrence
         self.numeric_literals_preprocessing = numeric_literals_preprocessing
         self.numeric_literals_preprocessing_kwargs = numeric_literals_preprocessing_kwargs
 
@@ -168,8 +169,8 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
             path=self.training_path,
             create_inverse_triples=self._create_inverse_triples,
             path_to_numeric_triples=self.path_to_numeric_triples,
-            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
-            numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
+            relation_regex=self.relation_regex,
+            min_occurrence=self.min_occurrence,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
             numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
         )
@@ -179,8 +180,8 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
             relation_to_id=self._training.relation_to_id,  # share relation index with training
             create_inverse_triples=self._create_inverse_triples,
             path_to_numeric_triples=self.path_to_numeric_triples,
-            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
-            numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
+            relation_regex=self.relation_regex,
+            min_occurrence=self.min_occurrence,
             numeric_literals_preprocessing=self.numeric_literals_preprocessing,
             numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,  # noqa
         )
@@ -199,8 +200,8 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
                 relation_to_id=self._training.relation_to_id,  # share relation index with training
                 create_inverse_triples=self._create_inverse_triples,
                 path_to_numeric_triples=self.path_to_numeric_triples,
-                numeric_triples_preprocessing=self.numeric_triples_preprocessing,
-                numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
+                relation_regex=self.relation_regex,
+                min_occurrence=self.min_occurrence,
                 numeric_literals_preprocessing=self.numeric_literals_preprocessing,
                 numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
             )
