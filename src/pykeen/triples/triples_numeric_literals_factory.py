@@ -15,7 +15,7 @@ from class_resolver import FunctionResolver, Hint, OptionalKwargs
 from .triples_factory import Labeling, TriplesFactory
 from .utils import load_triples
 from ..typing import LabeledTriples, MappedTriples, NdArrayInOutCallable
-from ..utils import minmax_normalize
+from ..utils import format_relative_comparison, minmax_normalize
 
 __all__ = [
     "TriplesNumericLiteralsFactory",
@@ -59,6 +59,11 @@ def create_matrix_of_literals(
     if min_occurrence:
         uniq_mask &= counts >= min_occurrence
     triple_mask = uniq_mask[inverse]
+    logger.info(
+        f"Keeping {format_relative_comparison(part=uniq_mask.sum().item(), total=len(uniq_mask))} attribute"
+        f"relations. This leads to keeping "
+        f"{format_relative_comparison(part=triple_mask.sum().item(), total=len(triple_mask))} of attribute triples.",
+    )
     uniq = uniq[uniq_mask]
     # create mapping *after* filtering
     data_rel_labeling = Labeling(label_to_id={value: key for key, value in enumerate(sorted(uniq.tolist()))})
