@@ -16,6 +16,10 @@ __all__ = [
     "YAGO310WithLiterals",
 ]
 
+YAGO310_RELATIONAL_TRIPLES_URL = (
+    "https://github.com/TimDettmers/ConvE/blob/f3c0eb286025410fa5b4c04696c918264163d0ca/YAGO3-10.tar.gz"  # noqa
+)
+
 
 @parse_docdata
 class YAGO310(TarFileRemoteDataset):
@@ -42,7 +46,7 @@ class YAGO310(TarFileRemoteDataset):
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
-            url="https://github.com/TimDettmers/ConvE/raw/master/YAGO3-10.tar.gz",
+            url=YAGO310_RELATIONAL_TRIPLES_URL,
             relative_training_path=pathlib.PurePath("train.txt"),
             relative_testing_path=pathlib.PurePath("test.txt"),
             relative_validation_path=pathlib.PurePath("valid.txt"),
@@ -76,11 +80,11 @@ class YAGO310WithLiterals(TarRemoteDatasetWithRemoteLiterals):
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
-            url="https://github.com/TimDettmers/ConvE/raw/master/YAGO3-10.tar.gz",
+            url=YAGO310_RELATIONAL_TRIPLES_URL,
             relative_training_path=pathlib.PurePath("train.txt"),
             relative_testing_path=pathlib.PurePath("test.txt"),
             relative_validation_path=pathlib.PurePath("valid.txt"),
-            numeric_triples_url="https://raw.githubusercontent.com/SmartDataAnalytics/LiteralE/master/data/YAGO3-10/literals/numerical_literals.txt",  # noqa
+            numeric_triples_url="https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/data/YAGO3-10/literals/numerical_literals.txt",  # noqa
             **kwargs,
         )
 
