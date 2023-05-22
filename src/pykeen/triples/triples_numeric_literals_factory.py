@@ -5,6 +5,7 @@
 import logging
 import pathlib
 from re import Pattern
+import re
 from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 def create_matrix_of_literals(
     numeric_triples: np.ndarray,
     entity_labeling: Labeling,
-    relation_regex: Pattern[str] | None = None,
+    relation_regex: Pattern[str] | str | None = None,
     min_occurrence: int = 0,
 ) -> Tuple[np.ndarray, Labeling]:
     """
@@ -55,6 +56,8 @@ def create_matrix_of_literals(
     uniq, counts, inverse = np.unique(attribute_relation_labels, return_counts=True, return_inverse=True)
     uniq_mask = np.ones_like(uniq, dtype=bool)
     if relation_regex:
+        if isinstance(relation_regex, str):
+            relation_regex = re.compile(relation_regex)
         uniq_mask &= np.asarray([bool(relation_regex.match(relation_label)) for relation_label in uniq.tolist()])
     if min_occurrence:
         uniq_mask &= counts >= min_occurrence
@@ -145,7 +148,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples: LabeledTriples,
         *,
         numeric_triples: LabeledTriples | None = None,
-        relation_regex: Pattern[str] | None = None,
+        relation_regex: Pattern[str] | str | None = None,
         min_occurrence: int = 0,
         literal_matrix_preprocessing: Hint[NdArrayInOutCallable] = None,
         literal_matrix_preprocessing_kwargs: OptionalKwargs = None,
