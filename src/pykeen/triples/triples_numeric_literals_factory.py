@@ -51,9 +51,15 @@ def create_matrix_of_literals(
     """
     entity_labels, attribute_relation_labels, attribute_values = numeric_triples.T
     # convert entity labels to IDs
-    entity_ids = entity_labeling._vectorized_mapper(entity_labels)
+    entity_ids = entity_labeling._vectorized_mapper(entity_labels, -1)
+    triple_mask = entity_ids >= 0
+    if not triple_mask.all():
+        logger.warning(
+            f"Dropping {format_relative_comparison(part=(~triple_mask).sum().item(), total=len(triple_mask))} "
+            f"triples with invalid entity labels.",
+        )
     # apply attribute relation filter
-    uniq, counts, inverse = np.unique(attribute_relation_labels, return_counts=True, return_inverse=True)
+    uniq, inverse, counts = np.unique(attribute_relation_labels, return_counts=True, return_inverse=True)
     uniq_mask = np.ones_like(uniq, dtype=bool)
     if relation_regex:
         if isinstance(relation_regex, str):
@@ -61,9 +67,9 @@ def create_matrix_of_literals(
         uniq_mask &= np.asarray([bool(relation_regex.match(relation_label)) for relation_label in uniq.tolist()])
     if min_occurrence:
         uniq_mask &= counts >= min_occurrence
-    triple_mask = uniq_mask[inverse]
+    triple_mask &= uniq_mask[inverse]
     logger.info(
-        f"Keeping {format_relative_comparison(part=uniq_mask.sum().item(), total=len(uniq_mask))} attribute"
+        f"Keeping {format_relative_comparison(part=uniq_mask.sum().item(), total=len(uniq_mask))} attribute "
         f"relations. This leads to keeping "
         f"{format_relative_comparison(part=triple_mask.sum().item(), total=len(triple_mask))} of attribute triples.",
     )
