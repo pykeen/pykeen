@@ -33,10 +33,10 @@ from torch.utils.data import Dataset
 
 from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
+from .utils import TRIPLES_DF_COLUMNS, load_triples_quadruples, tensor_to_df
 from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TimestampMapping, TorchRandomHint
 from ..utils import (
     ExtraReprMixin,
     compact_mapping,
@@ -97,22 +97,31 @@ def create_relation_mapping(relations: Iterable[str]) -> RelationMapping:
     return {str(label): i for (i, label) in enumerate(relation_labels)}
 
 
-def _map_triples_elements_to_ids(
+def _map_triples_quadruples_elements_to_ids(
     triples: LabeledTriples,
     entity_to_id: EntityMapping,
     relation_to_id: RelationMapping,
+    timestamp_to_id: Optional[TimestampMapping] = None,
+    is_triples: bool = True,
 ) -> MappedTriples:
     """Map entities and relations to pre-defined ids."""
     if triples.size == 0:
-        logger.warning("Provided empty triples to map.")
-        return torch.empty(0, 3, dtype=torch.long)
+        if is_triples:
+            logger.warning("Provided empty triples to map.")
+            return torch.empty(0, 3, dtype=torch.long)
+        else:
+            logger.warning("Provided empty quadruples to map.")
+            return torch.empty(0, 4, dtype=torch.long)
 
-    # When triples that don't exist are trying to be mapped, they get the id "-1"
+    # When triples or quadruples that don't exist are trying to be mapped, they get the id "-1"
     entity_getter = np.vectorize(entity_to_id.get)
     head_column = entity_getter(triples[:, 0:1], [-1])
     tail_column = entity_getter(triples[:, 2:3], [-1])
     relation_getter = np.vectorize(relation_to_id.get)
     relation_column = relation_getter(triples[:, 1:2], [-1])
+    if not is_triples:
+        timestamp_getter = np.vectorize(timestamp_to_id.get)
+        timestamp_column = timestamp_getter(triples[:, 3:4], [-1])
 
     # Filter all non-existent triples
     head_filter = head_column < 0
@@ -121,24 +130,44 @@ def _map_triples_elements_to_ids(
     num_no_head = head_filter.sum()
     num_no_relation = relation_filter.sum()
     num_no_tail = tail_filter.sum()
-
-    if (num_no_head > 0) or (num_no_relation > 0) or (num_no_tail > 0):
-        logger.warning(
-            f"You're trying to map triples with {num_no_head + num_no_tail} entities and {num_no_relation} relations"
-            f" that are not in the training set. These triples will be excluded from the mapping.",
-        )
-        non_mappable_triples = head_filter | relation_filter | tail_filter
-        head_column = head_column[~non_mappable_triples, None]
-        relation_column = relation_column[~non_mappable_triples, None]
-        tail_column = tail_column[~non_mappable_triples, None]
-        logger.warning(
-            f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out",
-        )
-
-    triples_of_ids = np.concatenate([head_column, relation_column, tail_column], axis=1)
+    if not is_triples:
+        timestamp_filter = timestamp_column < 0
+        num_no_timestamp = timestamp_filter.sum()
+    
+    if is_triples:
+        if (num_no_head > 0) or (num_no_relation > 0) or (num_no_tail > 0):
+            logger.warning(
+                f"You're trying to map triples with {num_no_head + num_no_tail} entities and {num_no_relation} relations"
+                f" that are not in the training set. These triples will be excluded from the mapping.",
+            )
+            non_mappable_triples = head_filter | relation_filter | tail_filter
+            head_column = head_column[~non_mappable_triples, None]
+            relation_column = relation_column[~non_mappable_triples, None]
+            tail_column = tail_column[~non_mappable_triples, None]
+            logger.warning(
+                f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out",
+            )
+        triples_of_ids = np.concatenate([head_column, relation_column, tail_column], axis=1)
+    else:
+        if (num_no_head > 0) or (num_no_relation > 0) or (num_no_tail > 0) or (num_no_timestamp > 0):
+            logger.warning(
+                f"You're trying to map quadruples with {num_no_head + num_no_tail} entities, {num_no_relation} relations "
+                f"and {num_no_timestamp} timestamps "
+                f"that are not in the training set. These quadruples will be excluded from the mapping.",
+            )
+            non_mappable_quadruples = head_filter | relation_filter | tail_filter | timestamp_filter
+            head_column = head_column[~non_mappable_quadruples, None]
+            relation_column = relation_column[~non_mappable_quadruples, None]
+            tail_column = tail_column[~non_mappable_quadruples, None]
+            timestamp_column = timestamp_column[~non_mappable_quadruples, None]
+            logger.warning(
+                f"In total {non_mappable_quadruples.sum():.0f} from {triples.shape[0]:.0f} quadruples were filtered out",
+            )
+        triples_of_ids = np.concatenate([head_column, relation_column, tail_column, timestamp_column], axis=1)
+    
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.int64)
-    # Note: Unique changes the order of the triples
+    # Note: Unique changes the order of the triples or quadruples
     # Note: Using unique means implicit balancing of training samples
     unique_mapped_triples = np.unique(ar=triples_of_ids, axis=0)
     return torch.tensor(unique_mapped_triples, dtype=torch.long)
@@ -221,12 +250,14 @@ class Labeling:
         return self.label(range(self.max_id))
 
 
-def restrict_triples(
+def restrict_triples_quadruples(
     mapped_triples: MappedTriples,
     entities: Optional[Collection[int]] = None,
     relations: Optional[Collection[int]] = None,
+    timestamps: Optional[Collection[int]] = None,
     invert_entity_selection: bool = False,
     invert_relation_selection: bool = False,
+    invert_timestamp_selection: bool = False,
 ) -> MappedTriples:
     """Select a subset of triples based on the given entity and relation ID selection.
 
@@ -263,6 +294,16 @@ def restrict_triples(
             invert=invert_relation_selection,
         )
         keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
+
+    # Filter for timestamps
+    if timestamps is not None:
+        timestamp_mask = _get_triple_mask(
+            ids=timestamps,
+            triples=mapped_triples,
+            columns=1,
+            invert=invert_timestamp_selection,
+        )
+        keep_mask = timestamp_mask if keep_mask is None else keep_mask & timestamp_mask
 
     # No filter
     if keep_mask is None:
@@ -684,8 +725,10 @@ class CoreTriplesFactory(KGInfo):
         self,
         entities: Union[None, Collection[int], Collection[str]] = None,
         relations: Union[None, Collection[int], Collection[str]] = None,
+        timestamps: Union[None, Collection[int], Collection[str]] = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
+        invert_timestamp_selection: bool = False,
     ) -> "CoreTriplesFactory":
         """Make a new triples factory only keeping the given entities and relations, but keeping the ID mapping.
 
@@ -714,14 +757,20 @@ class CoreTriplesFactory(KGInfo):
             relations = self.relations_to_ids(relations=relations)
             remaining_relations = (self.num_relations - len(relations)) if invert_relation_selection else len(relations)
             logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
-
+        if timestamps is not None:
+            extra_metadata["timestamp_restriction"] = timestamps
+            timestamps = self.timestamps_to_ids(timestamps=timestamps)
+            remaining_timestamps = (self.num_timestamps - len(timestamps)) if invert_timestamp_selection else len(timestamps)
+            logger.info(f"keeping {format_relative_comparison(remaining_timestamps, self.num_timestamps)} relations.")
         # Delegate to function
-        mapped_triples = restrict_triples(
+        mapped_triples = restrict_triples_quadruples(
             mapped_triples=self.mapped_triples,
             entities=entities,
             relations=relations,
+            timestamps=timestamps,
             invert_entity_selection=invert_entity_selection,
             invert_relation_selection=invert_relation_selection,
+            invert_timestamp_selection=invert_timestamp_selection,
         )
 
         # restrict triples can only remove triples; thus, if the new size equals the old one, nothing has changed
@@ -931,7 +980,7 @@ class TriplesFactory(CoreTriplesFactory):
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
 
         # Map triples of labels to triples of IDs.
-        mapped_triples = _map_triples_elements_to_ids(
+        mapped_triples = _map_triples_quadruples_elements_to_ids(
             triples=triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
@@ -986,7 +1035,7 @@ class TriplesFactory(CoreTriplesFactory):
         path = normalize_path(path)
 
         # TODO: Check if lazy evaluation would make sense
-        triples = load_triples(path, **(load_triples_kwargs or {}))
+        triples = load_triples_quadruples(path, **(load_triples_kwargs or {}))
 
         return cls.from_labeled_triples(
             triples=triples,
@@ -1274,7 +1323,7 @@ class TriplesFactory(CoreTriplesFactory):
 
     def map_triples(self, triples: LabeledTriples) -> MappedTriples:
         """Convert label-based triples to ID-based triples."""
-        return _map_triples_elements_to_ids(
+        return _map_triples_quadruples_elements_to_ids(
             triples=triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,

@@ -19,7 +19,6 @@ __all__ = [
     # Base Class
     "Regularizer",
     # Child classes
-    "Lambda3Reg",
     "LpRegularizer",
     "NoRegularizer",
     "CombinedRegularizer",
@@ -388,22 +387,3 @@ regularizer_resolver: ClassResolver[Regularizer] = ClassResolver.from_subclasses
     base=Regularizer,
     default=NoRegularizer,
 )
-
-class Lambda3Reg(Regularizer):
-    """refer to https://github.com/facebookresearch/kbc/blob/master/kbc/regularizers.py."""
-
-    def __init__(
-        self,
-        weight: float = 1.0,
-        apply_only_once: bool = False,
-        parameters: Optional[Iterable[nn.Parameter]] = None,
-    ):
-        """Initialize a regularizer."""
-        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
-
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Calculate regularization term."""
-        ddiff = x[1:] - x[:-1]
-        rank = int(ddiff.shape[1] / 2)
-        diff = torch.sqrt(ddiff[:, :rank] ** 2 + ddiff[:, rank:] ** 2) ** 3
-        return torch.sum(diff) / (x.shape[0] - 1)

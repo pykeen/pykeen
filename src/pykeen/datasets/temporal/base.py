@@ -7,11 +7,9 @@ import pathlib
 from typing import Any, Iterable, Mapping, Optional, Union
 
 from pykeen.datasets.base import LazyDataset
-
-from pykeen.quadruples.quadruples_factory import QuadruplesFactory
+from pykeen.triples.quadruples_factory import QuadruplesFactory
 
 __all__ = ["TemporalPathDataset"]
-
 
 logger = logging.getLogger(__name__)
 

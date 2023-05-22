@@ -62,7 +62,11 @@ __all__ = [
     "LABEL_HEAD",
     "LABEL_RELATION",
     "LABEL_TAIL",
-    "LABEL_TIMESTAMP",
+    "TemporalTarget",
+    "TEMPORAL_LABEL_HEAD",
+    "TEMPORAL_LABEL_RELATION",
+    "TEMPORAL_LABEL_TAIL",
+    "TEMPORAL_LABEL_TIMESTAMP",
 ]
 
 X = TypeVar("X")
@@ -166,9 +170,9 @@ MappedQuadruples = torch.LongTensor
 
 TimestampRepresentation = TypeVar("TimestampRepresentation", bound=OneOrSequence[torch.FloatTensor])
 
-#: the prediction target
-Target = Literal["head", "relation", "tail", "timestamp"]
-LABEL_HEAD: Target = "head"
-LABEL_RELATION: Target = "relation"
-LABEL_TAIL: Target = "tail"
-LABEL_TIMESTAMP: Target = "timestamp"
+#: the temporal prediction target
+TemporalTarget = Literal["head", "relation", "tail", "timestamp"]
+TEMPORAL_LABEL_HEAD: TemporalTarget = "head"
+TEMPORAL_LABEL_RELATION: TemporalTarget = "relation"
+TEMPORAL_LABEL_TAIL: TemporalTarget = "tail"
+TEMPORAL_LABEL_TIMESTAMP: TemporalTarget = "timestamp"

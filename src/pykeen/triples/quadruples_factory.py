@@ -26,34 +26,38 @@ import numpy as np
 import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
-from pykeen.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
-from pykeen.inverse import relation_inverter_resolver
-from pykeen.sampling import NegativeSampler
-from pykeen.triples.splitting import split
-from pykeen.triples.triples_factory import (
-    KGInfo,
+from torch.utils.data import Dataset
+
+from .instances import BatchedSLCWAInstances, LCWAQuadrupleInstances, SLCWAQuadrupleInstances, SubGraphSLCWAInstances
+from .triples_factory import (
+    INVERSE_SUFFIX,
+    CoreTriplesFactory,
     Labeling,
     _ensure_ids,
+    _map_triples_quadruples_elements_to_ids,
     compact_mapping,
     create_entity_mapping,
     create_relation_mapping,
     normalize_path,
 )
-from pykeen.triples.utils import tensor_to_df
-from pykeen.typing import (
-    LABEL_HEAD,
-    LABEL_RELATION,
-    LABEL_TAIL,
+from .utils import load_triples_quadruples, tensor_to_df
+from .splitting import split
+from ..constants import COLUMN_TEMPORAL_LABELS
+from ..inverse import relation_inverter_resolver
+from ..sampling import NegativeSampler
+from ..typing import (
+    TEMPORAL_LABEL_HEAD,
+    TEMPORAL_LABEL_RELATION,
+    TEMPORAL_LABEL_TAIL,
+    TEMPORAL_LABEL_TIMESTAMP,
     EntityMapping,
+    LabeledQuadruples,
+    MappedQuadruples,
     RelationMapping,
+    TimestampMapping,
     TorchRandomHint,
 )
-from pykeen.utils import format_relative_comparison
-from torch.utils.data import Dataset
-
-from .instances import LCWAQuadrupleInstances, SLCWAQuadrupleInstances
-from ..constants import COLUMN_TEMPORAL_LABELS
-from ..typing import LabeledQuadruples, MappedQuadruples, TimestampMapping
+from ..utils import format_relative_comparison
 
 __all__ = [
     "QuadruplesFactory",
@@ -61,8 +65,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-INVERSE_SUFFIX = "_inverse"
 
 QUADRUPLES_DF_COLUMNS = (
     "head_id",
@@ -75,117 +77,6 @@ QUADRUPLES_DF_COLUMNS = (
     "timestamp_label",
 )
 
-LABEL_TIMESTAMP = "timestamp"
-
-
-def load_quadruples(
-    path: Union[str, pathlib.Path, TextIO],
-    delimiter: str = "\t",
-    encoding: Optional[str] = None,
-    column_remapping: Optional[Sequence[int]] = None,
-) -> LabeledQuadruples:
-    """Load quadruples from original datafile."""
-    if encoding is None:
-        encoding = "utf-8"
-
-    if column_remapping is not None:
-        if len(column_remapping) != 4:
-            raise ValueError("remapping of temporal KG datasets must have length of 4")
-    df = pd.read_csv(
-        path, sep=delimiter, encoding=encoding, dtype=str, header=None, usecols=column_remapping
-    )
-    if column_remapping is not None:
-        df = df[[df.columns[c] for c in column_remapping]]
-    return df.to_numpy()
-
-
-def _get_quadruple_mask(
-    ids: Collection[int],
-    quadruples: MappedQuadruples,
-    columns: Union[int, Collection[int]],
-    invert: bool = False,
-    max_id: Optional[int] = None,
-) -> torch.BoolTensor:
-    # normalize input
-    quadruples = quadruples[:, columns]
-    if isinstance(columns, int):
-        columns = [columns]
-    mask = torch.isin(
-        elements=quadruples,
-        test_elements=torch.as_tensor(list(ids), dtype=torch.long),
-        assume_unique=False,
-        invert=invert,
-    )
-    if len(columns) > 1:
-        mask = mask.all(dim=-1)
-    return mask
-
-
-def restrict_quadruples(
-    mapped_quadruples: MappedQuadruples,
-    entities: Optional[Collection[int]] = None,
-    relations: Optional[Collection[int]] = None,
-    timestamps: Optional[Collection[int]] = None,
-    invert_entity_selection: bool = False,
-    invert_relation_selection: bool = False,
-    invert_timestamp_selection: bool = False,
-) -> MappedQuadruples:
-    """Select a subset of quadruples based on the given entity and relation ID selection.
-
-    :param mapped_quadruples:
-        The ID-based quadruples.
-    :param entities:
-        The entity IDs of interest. If None, defaults to all entities.
-    :param relations:
-        The relation IDs of interest. If None, defaults to all relations.
-    :param timestamps:
-        The relation IDs of interest. If None, defaults to all timestamps.
-    :param invert_entity_selection:
-        Whether to invert the entity selection, i.e. select those quadruples without the provided entities.
-    :param invert_relation_selection:
-        Whether to invert the relation selection, i.e. select those quadruples without the provided relations.
-    :param invert_timestamp_selection:
-        Whether to invert the timestamp selection, i.e. select those quadruples without the provided timestamps.
-    :return:
-        A tensor of quadruples containing the entities and relations of interest.
-    """
-    keep_mask = None
-
-    # Filter for entities
-    if entities is not None:
-        keep_mask = _get_quadruple_mask(
-            ids=entities,
-            quadruples=mapped_quadruples,
-            columns=(0, 2),  # head and entity need to fulfil the requirement
-            invert=invert_entity_selection,
-        )
-
-    # Filter for relations
-    if relations is not None:
-        relation_mask = _get_quadruple_mask(
-            ids=relations,
-            quadruples=mapped_quadruples,
-            columns=1,
-            invert=invert_relation_selection,
-        )
-        keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
-
-    # Filter for timestamps
-    if timestamps is not None:
-        timestamp_mask = _get_quadruple_mask(
-            ids=timestamps,
-            quadruples=mapped_quadruples,
-            columns=3,
-            invert=invert_timestamp_selection,
-        )
-        keep_mask = timestamp_mask if keep_mask is None else keep_mask & timestamp_mask
-
-    # No filter
-    if keep_mask is None:
-        return mapped_quadruples
-
-    return mapped_quadruples[keep_mask]
-
 
 def create_timestamp_mapping(timestamps: set) -> TimestampMapping:
     """Create sorted timestamp mapping."""
@@ -195,59 +86,7 @@ def create_timestamp_mapping(timestamps: set) -> TimestampMapping:
     return {str(label): i for (i, label) in enumerate(timestamp_labels)}
 
 
-def _map_quadruples_elements_to_ids(
-    quadruples: LabeledQuadruples,
-    entity_to_id: EntityMapping,
-    relation_to_id: RelationMapping,
-    timestamp_to_id: TimestampMapping,
-) -> MappedQuadruples:
-    """Map entities, relations, timestamps to predefined ids."""
-    if quadruples.size == 0:
-        logger.warning("Provided empty quadruples to map.")
-        return torch.empty(0, 4, dtype=torch.long)
-
-    entity_getter = np.vectorize(entity_to_id.get)
-    head_column = entity_getter(quadruples[:, 0:1], [-1])
-    tail_column = entity_getter(quadruples[:, 2:3], [-1])
-
-    relation_getter = np.vectorize(relation_to_id.get)
-    relation_column = relation_getter(quadruples[:, 1:2], [-1])
-
-    timestamp_getter = np.vectorize(timestamp_to_id.get)
-    timestamp_column = timestamp_getter(quadruples[:, 3:4], [-1])
-
-    head_filter = head_column < 0
-    relation_filter = relation_column < 0
-    tail_filter = tail_column < 0
-    timestamp_filter = timestamp_column < 0
-    num_no_head = head_filter.sum()
-    num_no_relation = relation_filter.sum()
-    num_no_tail = tail_filter.sum()
-    num_no_timestamp = timestamp_filter.sum()
-
-    if (num_no_head > 0) or (num_no_relation > 0) or (num_no_tail > 0) or (num_no_timestamp > 0):
-        logger.warning(
-            f"You're trying to map quadruples with {num_no_head + num_no_tail} entities, {num_no_relation} relations "
-            f"and {num_no_timestamp} timestamps "
-            f"that are not in the training set. These quadruples will be excluded from the mapping.",
-        )
-        non_mappable_quadruples = head_filter | relation_filter | tail_filter | timestamp_filter
-        head_column = head_column[~non_mappable_quadruples, None]
-        relation_column = relation_column[~non_mappable_quadruples, None]
-        tail_column = tail_column[~non_mappable_quadruples, None]
-        timestamp_column = timestamp_column[~non_mappable_quadruples, None]
-        logger.warning(
-            f"In total {non_mappable_quadruples.sum():.0f} from {quadruples.shape[0]:.0f} quadruples were filtered out",
-        )
-    quadruples_of_ids = np.concatenate(
-        [head_column, relation_column, tail_column, timestamp_column], axis=1
-    )
-    quadruples_of_ids = np.array(quadruples_of_ids, dtype=np.int64)
-    unique_mapped_quadruples = np.unique(ar=quadruples_of_ids, axis=0)
-    return torch.tensor(unique_mapped_quadruples, dtype=torch.long)
-
-
-class CoreQuadruplesFactory(KGInfo):
+class CoreQuadruplesFactory(CoreTriplesFactory):
     """Create instances from ID-based quadruples."""
 
     def __init__(
@@ -281,11 +120,12 @@ class CoreQuadruplesFactory(KGInfo):
             if the mapped_quadruples are of invalid shape
         """
         super().__init__(
+            mapped_triples=mapped_quadruples[:, :3],
             num_entities=num_entities,
             num_relations=num_relations,
             create_inverse_triples=create_inverse_quadruples,
+            metadata=metadata,
         )
-        self.create_inverse_quadruples = create_inverse_quadruples
         self.num_timestamps = num_timestamps
         # ensure torch.Tensor
         mapped_quadruples = torch.as_tensor(mapped_quadruples)
@@ -298,10 +138,6 @@ class CoreQuadruplesFactory(KGInfo):
             raise TypeError(f"Invalid type: {mapped_quadruples.dtype}. Must be integer dtype.")
         # always store as torch.long, i.e., torch's default integer dtype
         self.mapped_quadruples = mapped_quadruples.to(dtype=torch.long)
-        if metadata is None:
-            metadata = dict()
-        self.metadata = metadata
-        self.relation_inverter = relation_inverter_resolver.make(query=None)
 
     @classmethod
     def create(
@@ -355,7 +191,7 @@ class CoreQuadruplesFactory(KGInfo):
             and (self.num_relations == __o.num_relations)
             and (self.num_timestamps == __o.num_timestamps)
             and (self.num_quadruples == __o.num_quadruples)
-            and (self.create_inverse_quadruples == __o.create_inverse_quadruples)
+            and (self.create_inverse_triples == __o.create_inverse_triples)
             and bool((self.mapped_quadruples == __o.mapped_quadruples).all().item())
         )
 
@@ -667,93 +503,6 @@ class CoreQuadruplesFactory(KGInfo):
         """
         return tensor_to_df(tensor=tensor, **kwargs)
 
-    def new_with_restriction(
-        self,
-        entities: Union[None, Collection[int], Collection[str]] = None,
-        relations: Union[None, Collection[int], Collection[str]] = None,
-        timestamps: Union[None, Collection[int], Collection[str]] = None,
-        invert_entity_selection: bool = False,
-        invert_relation_selection: bool = False,
-        invert_timestamp_selection: bool = False,
-    ) -> "CoreQuadruplesFactory":
-        """Make a new quadruples factory only keeping the given entities and relations, but keeping the ID mapping.
-
-        :param entities:
-            The entities of interest. If None, defaults to all entities.
-        :param relations:
-            The relations of interest. If None, defaults to all relations.
-        :param timestamps:
-            The timestamps of interest. If None, defaults to all timestamps.
-        :param invert_entity_selection:
-            Whether to invert the entity selection, i.e. select those quadruples without the provided entities.
-        :param invert_relation_selection:
-            Whether to invert the relation selection, i.e. select those quadruples without the provided relations.
-        :param invert_timestamp_selection:
-            Whether to invert the timestamp selection, i.e. select those quadruples without the provided timestamps.
-
-        :return:
-            A new quadruples factory, which has only a subset of the quadruples containing the entities, relations and timestamps of
-            interest. The label-to-ID mapping is *not* modified.
-        """
-        # prepare metadata
-        extra_metadata = {}
-        if entities is not None:
-            extra_metadata["entity_restriction"] = entities
-            entities = self.entities_to_ids(entities=entities)
-            remaining_entities = (
-                (self.num_entities - len(entities)) if invert_entity_selection else len(entities)
-            )
-            logger.info(
-                f"keeping {format_relative_comparison(remaining_entities, self.num_entities)} entities."
-            )
-
-        if relations is not None:
-            extra_metadata["relation_restriction"] = relations
-            relations = self.relations_to_ids(relations=relations)
-            remaining_relations = (
-                (self.num_relations - len(relations))
-                if invert_relation_selection
-                else len(relations)
-            )
-            logger.info(
-                f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations."
-            )
-
-        if timestamps is not None:
-            extra_metadata["timestamp_restriction"] = timestamps
-            timestamps = self.timestamps_to_ids(timestamps=timestamps)
-            remaining_timestamps = (
-                (self.num_timestamps - len(timestamps))
-                if invert_timestamp_selection
-                else len(timestamps)
-            )
-            logger.info(
-                f"keeping {format_relative_comparison(remaining_timestamps, self.num_timestamps)} timestamps."
-            )
-        # Delegate to function
-        mapped_quadruples = restrict_quadruples(
-            mapped_quadruples=self.mapped_quadruples,
-            entities=entities,
-            relations=relations,
-            timestamps=timestamps,
-            invert_entity_selection=invert_entity_selection,
-            invert_relation_selection=invert_relation_selection,
-            invert_timestamp_selection=invert_timestamp_selection,
-        )
-
-        # restrict quadruples can only remove quadruples; thus, if the new size equals the old one, nothing has changed
-        if mapped_quadruples.shape[0] == self.num_quadruples:
-            return self
-
-        logger.info(
-            f"keeping {format_relative_comparison(mapped_quadruples.shape[0], self.num_quadruples)} quadruples."
-        )
-
-        return self.clone_and_exchange_quadruples(
-            mapped_quadruples=mapped_quadruples,
-            extra_metadata=extra_metadata,
-        )
-
     @classmethod
     # docstr-coverage: inherited
     def from_path_binary(
@@ -973,7 +722,7 @@ class QuadruplesFactory(CoreQuadruplesFactory):
             timestamp_to_id = create_timestamp_mapping(quadruples[:, 3])
 
         # Map quadruples of labels to quadruples of IDs
-        mapped_quadruples = _map_quadruples_elements_to_ids(
+        mapped_quadruples = _map_triples_quadruples_elements_to_ids(
             quadruples=quadruples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
@@ -1003,7 +752,7 @@ class QuadruplesFactory(CoreQuadruplesFactory):
     ) -> "QuadruplesFactory":
         """Create QuadruplesFactory from dataset Path."""
         path = normalize_path(path)
-        quadruples = load_quadruples(path, **(load_quadruples_kwargs or {}))
+        quadruples = load_triples_quadruples(path, **(load_quadruples_kwargs or {}))
         return cls.from_labeled_quadruples(
             quadruples=quadruples,
             create_inverse_quadruples=create_inverse_quadruples,
@@ -1035,7 +784,7 @@ class QuadruplesFactory(CoreQuadruplesFactory):
         # store numeric quadruples
         pd.DataFrame(
             data=self.mapped_quadruples.numpy(),
-            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LABEL_TIMESTAMP],
+            columns=[TEMPORAL_LABEL_HEAD, TEMPORAL_LABEL_RELATION, TEMPORAL_LABEL_TAIL, TEMPORAL_LABEL_TIMESTAMP],
         ).to_csv(
             path.joinpath(self.quadruples_file_name), sep="\t", index=False  # type: ignore
         )
@@ -1205,7 +954,7 @@ class QuadruplesFactory(CoreQuadruplesFactory):
 
     def map_quadruples(self, quadruples: LabeledQuadruples) -> MappedQuadruples:
         """Convert label-based quadruples to ID-based quadruples."""
-        return _map_quadruples_elements_to_ids(
+        return _map_triples_quadruples_elements_to_ids(
             quadruples=quadruples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
