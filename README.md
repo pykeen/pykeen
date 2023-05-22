@@ -45,7 +45,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets">Datasets (36)</a> •
+  <a href="#datasets">Datasets (37)</a> •
   <a href="#inductive-datasets">Inductive Datasets (5)</a> •
   <a href="#models">Models (44)</a> •
   <a href="#supporters">Support</a> •
@@ -112,7 +112,7 @@ in ``pykeen``.
 
 ### Datasets 
 
-The following 36 datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
+The following 37 datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
 or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
 see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
@@ -146,6 +146,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | OpenBioLink                        | [`pykeen.datasets.OpenBioLink`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLink.html)       | [Breit *et al*., 2020](https://doi.org/10.1093/bioinformatics/btaa274)                                                  |     180992 |          28 |   4563407 |
 | OpenBioLink LQ                     | [`pykeen.datasets.OpenBioLinkLQ`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkLQ.html)   | [Breit *et al*., 2020](https://doi.org/10.1093/bioinformatics/btaa274)                                                  |     480876 |          32 |  27320889 |
 | OpenEA Family                      | [`pykeen.datasets.OpenEA`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenEA.html)                 | [Sun *et al*., 2020](http://www.vldb.org/pvldb/vol13/p2326-sun.pdf)                                                     |      15000 |         248 |     38265 |
+| PharMeBINet                        | [`pykeen.datasets.PharMeBINet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharMeBINet.html)       | [Königs *et al*., 2022](https://www.nature.com/articles/s41597-022-01510-3)                                             |    2869407 |         208 |  15883653 |
 | PharmKG                            | [`pykeen.datasets.PharmKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG.html)               | [Zheng *et al*., 2020](https://doi.org/10.1093/bib/bbaa344)                                                             |     188296 |          39 |   1093236 |
 | PharmKG8k                          | [`pykeen.datasets.PharmKG8k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG8k.html)           | [Zheng *et al*., 2020](https://doi.org/10.1093/bib/bbaa344)                                                             |       7247 |          28 |    485787 |
 | PrimeKG                            | [`pykeen.datasets.PrimeKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PrimeKG.html)               | [Chandak *et al*., 2022](https://doi.org/10.1101/2022.05.01.489928)                                                     |     129375 |          30 |   8100498 |

@@ -29,6 +29,9 @@ __all__ = [
     # Utils
     "regularizer_resolver",
 ]
+DEFAULT_REGULARIZER_WEIGHT_HPO_RANGE = dict(
+    weight=dict(type=float, low=0.01, high=1.0, scale="log"),
+)
 
 _REGULARIZER_SUFFIX = "Regularizer"
 
@@ -49,7 +52,7 @@ class Regularizer(nn.Module, ABC):
     updated: bool
 
     #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]]
+    hpo_default: ClassVar[Mapping[str, Any]] = DEFAULT_REGULARIZER_WEIGHT_HPO_RANGE
 
     def __init__(
         self,
@@ -156,11 +159,6 @@ class LpRegularizer(Regularizer):
     #: This allows dimensionality-independent weight tuning.
     normalize: bool
 
-    #: The default strategy for optimizing the LP regularizer's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        weight=dict(type=float, low=0.01, high=1.0, scale="log"),
-    )
-
     def __init__(
         self,
         *,
@@ -204,11 +202,6 @@ class PowerSumRegularizer(Regularizer):
 
     Has some nice properties, cf. e.g. https://github.com/pytorch/pytorch/issues/28119.
     """
-
-    #: The default strategy for optimizing the power sum regularizer's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        weight=dict(type=float, low=0.01, high=1.0, scale="log"),
-    )
 
     def __init__(
         self,
@@ -301,11 +294,6 @@ class NormLimitRegularizer(Regularizer):
 class OrthogonalityRegularizer(Regularizer):
     """A regularizer for the soft orthogonality constraints from [wang2014]_."""
 
-    #: The default strategy for optimizing the TransH regularizer's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        weight=dict(type=float, low=0.01, high=1.0, scale="log"),
-    )
-
     def __init__(
         self,
         *,
@@ -353,6 +341,8 @@ class CombinedRegularizer(Regularizer):
 
     # The normalization factor to balance individual regularizers' contribution.
     normalization_factor: torch.FloatTensor
+
+    hpo_default = dict(total_weight=dict(type=float, low=0.01, high=1.0, scale="log"), regularizers=tuple())
 
     def __init__(
         self,

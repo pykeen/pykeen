@@ -19,37 +19,29 @@ from pykeen.training import SLCWATrainingLoop
 from tests import cases
 
 
-class TestRandom(unittest.TestCase):
-    """Random tests for early stopper."""
-
-    def test_is_improvement(self):
-        """Test is_improvement()."""
-        for best_value, current_value, larger_is_better, relative_delta, is_better in [
-            # equal value; larger is better
-            (1.0, 1.0, True, 0.0, False),
-            # equal value; smaller is better
-            (1.0, 1.0, False, 0.0, False),
-            # larger is better; improvement
-            (1.0, 1.1, True, 0.0, True),
-            # larger is better; improvement; but not significant
-            (1.0, 1.1, True, 0.1, False),
-        ]:
-            with self.subTest(
-                best_value=best_value,
-                current_value=current_value,
-                larger_is_better=larger_is_better,
-                relative_delta=relative_delta,
-                is_better=is_better,
-            ):
-                self.assertEqual(
-                    is_better,
-                    is_improvement(
-                        best_value=best_value,
-                        current_value=current_value,
-                        larger_is_better=larger_is_better,
-                        relative_delta=relative_delta,
-                    ),
-                )
+@pytest.mark.parametrize(
+    "best,current,larger_is_better,relative_delta,is_better",
+    [
+        # equal value; larger is better
+        (1.0, 1.0, True, 0.0, False),
+        # equal value; smaller is better
+        (1.0, 1.0, False, 0.0, False),
+        # larger is better; improvement
+        (1.0, 1.1, True, 0.0, True),
+        # larger is better; improvement; but not significant
+        (1.0, 1.1, True, 0.1, False),
+        # negative number
+        (-1, -1, True, 0.1, False),
+    ],
+)
+def test_is_improvement(best: float, current: float, larger_is_better: bool, relative_delta: float, is_better: bool):
+    """Test is_improvement()."""
+    assert (
+        is_improvement(
+            best_value=best, current_value=current, larger_is_better=larger_is_better, relative_delta=relative_delta
+        )
+        is is_better
+    )
 
 
 class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLogic]):
