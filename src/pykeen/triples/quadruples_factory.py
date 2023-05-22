@@ -34,13 +34,13 @@ from .triples_factory import (
     CoreTriplesFactory,
     Labeling,
     _ensure_ids,
-    _map_triples_quadruples_elements_to_ids,
+    _map_triples_elements_to_ids,
     compact_mapping,
     create_entity_mapping,
     create_relation_mapping,
     normalize_path,
 )
-from .utils import load_triples_quadruples, tensor_to_df
+from .utils import load_triples, tensor_to_df
 from .splitting import split
 from ..constants import COLUMN_TEMPORAL_LABELS
 from ..inverse import relation_inverter_resolver
@@ -722,7 +722,7 @@ class QuadruplesFactory(CoreQuadruplesFactory):
             timestamp_to_id = create_timestamp_mapping(quadruples[:, 3])
 
         # Map quadruples of labels to quadruples of IDs
-        mapped_quadruples = _map_triples_quadruples_elements_to_ids(
+        mapped_quadruples = _map_triples_elements_to_ids(
             quadruples=quadruples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
@@ -752,7 +752,7 @@ class QuadruplesFactory(CoreQuadruplesFactory):
     ) -> "QuadruplesFactory":
         """Create QuadruplesFactory from dataset Path."""
         path = normalize_path(path)
-        quadruples = load_triples_quadruples(path, **(load_quadruples_kwargs or {}))
+        quadruples = load_triples(path, **(load_quadruples_kwargs or {}))
         return cls.from_labeled_quadruples(
             quadruples=quadruples,
             create_inverse_quadruples=create_inverse_quadruples,
@@ -954,7 +954,7 @@ class QuadruplesFactory(CoreQuadruplesFactory):
 
     def map_quadruples(self, quadruples: LabeledQuadruples) -> MappedQuadruples:
         """Convert label-based quadruples to ID-based quadruples."""
-        return _map_triples_quadruples_elements_to_ids(
+        return _map_triples_elements_to_ids(
             quadruples=quadruples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,

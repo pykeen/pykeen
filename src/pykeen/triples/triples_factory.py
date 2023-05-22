@@ -33,7 +33,7 @@ from torch.utils.data import Dataset
 
 from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, load_triples_quadruples, tensor_to_df
+from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TimestampMapping, TorchRandomHint
@@ -97,7 +97,7 @@ def create_relation_mapping(relations: Iterable[str]) -> RelationMapping:
     return {str(label): i for (i, label) in enumerate(relation_labels)}
 
 
-def _map_triples_quadruples_elements_to_ids(
+def _map_triples_elements_to_ids(
     triples: LabeledTriples,
     entity_to_id: EntityMapping,
     relation_to_id: RelationMapping,
@@ -250,7 +250,7 @@ class Labeling:
         return self.label(range(self.max_id))
 
 
-def restrict_triples_quadruples(
+def restrict_triples(
     mapped_triples: MappedTriples,
     entities: Optional[Collection[int]] = None,
     relations: Optional[Collection[int]] = None,
@@ -763,7 +763,7 @@ class CoreTriplesFactory(KGInfo):
             remaining_timestamps = (self.num_timestamps - len(timestamps)) if invert_timestamp_selection else len(timestamps)
             logger.info(f"keeping {format_relative_comparison(remaining_timestamps, self.num_timestamps)} relations.")
         # Delegate to function
-        mapped_triples = restrict_triples_quadruples(
+        mapped_triples = restrict_triples(
             mapped_triples=self.mapped_triples,
             entities=entities,
             relations=relations,
@@ -980,7 +980,7 @@ class TriplesFactory(CoreTriplesFactory):
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
 
         # Map triples of labels to triples of IDs.
-        mapped_triples = _map_triples_quadruples_elements_to_ids(
+        mapped_triples = _map_triples_elements_to_ids(
             triples=triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
@@ -1035,7 +1035,7 @@ class TriplesFactory(CoreTriplesFactory):
         path = normalize_path(path)
 
         # TODO: Check if lazy evaluation would make sense
-        triples = load_triples_quadruples(path, **(load_triples_kwargs or {}))
+        triples = load_triples(path, **(load_triples_kwargs or {}))
 
         return cls.from_labeled_triples(
             triples=triples,
@@ -1323,7 +1323,7 @@ class TriplesFactory(CoreTriplesFactory):
 
     def map_triples(self, triples: LabeledTriples) -> MappedTriples:
         """Convert label-based triples to ID-based triples."""
-        return _map_triples_quadruples_elements_to_ids(
+        return _map_triples_elements_to_ids(
             triples=triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,

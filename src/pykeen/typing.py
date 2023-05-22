@@ -39,10 +39,12 @@ __all__ = [
     "LABEL_HEAD",
     "LABEL_RELATION",
     "LABEL_TAIL",
+    "LABEL_TIMESTAMP",
     "TargetColumn",
     "COLUMN_HEAD",
     "COLUMN_RELATION",
     "COLUMN_TAIL",
+    "COLUMN_TIMESTAMP",
     # modes
     "InductiveMode",
     "TRAINING",
@@ -58,15 +60,6 @@ __all__ = [
     "LabeledQuadruples",
     "MappedQuadruples",
     "TimestampRepresentation",
-    "Target",
-    "LABEL_HEAD",
-    "LABEL_RELATION",
-    "LABEL_TAIL",
-    "TemporalTarget",
-    "TEMPORAL_LABEL_HEAD",
-    "TEMPORAL_LABEL_RELATION",
-    "TEMPORAL_LABEL_TAIL",
-    "TEMPORAL_LABEL_TIMESTAMP",
 ]
 
 X = TypeVar("X")
@@ -126,16 +119,18 @@ VALIDATION: InductiveMode = "validation"
 TESTING: InductiveMode = "testing"
 
 #: the prediction target
-Target = Literal["head", "relation", "tail"]
+Target = Literal["head", "relation", "tail", "timestamp"]
 LABEL_HEAD: Target = "head"
 LABEL_RELATION: Target = "relation"
 LABEL_TAIL: Target = "tail"
+LABEL_TIMESTAMP: Target = "timestamp"
 
 #: the prediction target index
-TargetColumn = Literal[0, 1, 2]
+TargetColumn = Literal[0, 1, 2, 3]
 COLUMN_HEAD: TargetColumn = 0
 COLUMN_RELATION: TargetColumn = 1
 COLUMN_TAIL: TargetColumn = 2
+COLUMN_TIMESTAMP: TargetColumn = 3
 
 #: the rank types
 RankType = Literal["optimistic", "realistic", "pessimistic"]
@@ -167,12 +162,4 @@ EA_SIDES: Tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)
 TimestampMapping = Mapping[str, int]
 LabeledQuadruples = np.ndarray
 MappedQuadruples = torch.LongTensor
-
 TimestampRepresentation = TypeVar("TimestampRepresentation", bound=OneOrSequence[torch.FloatTensor])
-
-#: the temporal prediction target
-TemporalTarget = Literal["head", "relation", "tail", "timestamp"]
-TEMPORAL_LABEL_HEAD: TemporalTarget = "head"
-TEMPORAL_LABEL_RELATION: TemporalTarget = "relation"
-TEMPORAL_LABEL_TAIL: TemporalTarget = "tail"
-TEMPORAL_LABEL_TIMESTAMP: TemporalTarget = "timestamp"

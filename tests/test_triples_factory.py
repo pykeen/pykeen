@@ -19,7 +19,7 @@ from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.splitting import splitter_resolver
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_quadruples_elements_to_ids, get_mapped_triples
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids, get_mapped_triples
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
@@ -372,7 +372,7 @@ class TestLiterals(unittest.TestCase):
         self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
         self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
         assert (
-            _map_triples_quadruples_elements_to_ids(
+            _map_triples_elements_to_ids(
                 triples=triples,
                 entity_to_id=triples_factory.entity_to_id,
                 relation_to_id=triples_factory.relation_to_id,

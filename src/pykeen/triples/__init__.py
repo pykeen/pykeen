@@ -8,17 +8,17 @@ from .triples_factory import AnyTriples, CoreTriplesFactory, KGInfo, TriplesFact
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
-    "AnyTriples",
     "Instances",
-    "CoreTriplesFactory",
     "LCWAInstances",
     "LCWAQuadrupleInstances",
     "SLCWAInstances",
     "SLCWAQuadrupleInstances",
     "KGInfo",
+    "CoreTriplesFactory",
     "QuadrupleInstances",
     "QuadruplesFactory",
     "TriplesFactory",
     "TriplesNumericLiteralsFactory",
-    "get_mapped_triples",
+    "get_mapped_triples", 
+    "AnyTriples",
 ]
