@@ -191,7 +191,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
 
     def get_numeric_literals_tensor(self) -> torch.FloatTensor:
         """Return the numeric literals as a tensor."""
-        return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
+        return torch.as_tensor(self.numeric_literals, dtype=torch.get_default_dtype())
 
     @property
     def literal_shape(self) -> Tuple[int, ...]:
