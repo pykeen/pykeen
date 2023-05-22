@@ -122,7 +122,7 @@ class FB15k237WithLiterals(ZipRemoteDatasetWithRemoteLiterals):
             relative_training_path=os.path.join("Release", "train.txt"),
             relative_testing_path=os.path.join("Release", "test.txt"),
             relative_validation_path=os.path.join("Release", "valid.txt"),
-            numeric_triples_url="https://raw.githubusercontent.com/SmartDataAnalytics/LiteralE/master/data/FB15k-237/literals/numerical_literals.txt",  # noqa
+            numeric_triples_url="https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/data/FB15k-237/literals/numerical_literals.txt",  # noqa
             **kwargs,
         )
 
