@@ -5,7 +5,7 @@
 import logging
 import pathlib
 import zipfile
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Tuple
 
 import pandas as pd
 from class_resolver import Hint, OptionalKwargs
@@ -19,16 +19,16 @@ from ..typing import NdArrayInOutCallable
 logger = logging.getLogger(__name__)
 
 
-def add_literals_to_summary(summary_rows: list, triples_factory: TriplesNumericLiteralsFactory):
-    """Add to summary a row with information about numeric literals.
+def get_literal_summary(triples_factory: TriplesNumericLiteralsFactory) -> Tuple[str, str, int, int]:
+    """Construct a tuple with information about numeric literals.
 
-    :param summary_rows: summary to append to
     :param triples_factory: triples factory including numeric attributive triples
     """
     assert isinstance(triples_factory, TriplesNumericLiteralsFactory)
     n_relations = len(triples_factory.literals_to_id)
     n_triples = n_relations * triples_factory.num_entities
-    summary_rows.append(("Literals", "-", n_relations, n_triples))
+
+    return ("Literals", "-", n_relations, n_triples)
 
 
 class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
@@ -112,7 +112,7 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
         """
         rv = super()._summary_rows()
         tf = self.training
-        add_literals_to_summary(rv, tf)
+        rv.append(get_literal_summary(tf))
         return rv
 
 
@@ -212,5 +212,5 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
         """
         rv = super()._summary_rows()
         tf = self.training
-        add_literals_to_summary(rv, tf)
+        rv.append(get_literal_summary(tf))
         return rv
