@@ -8,7 +8,8 @@ import logging
 import pathlib
 from re import Pattern
 import zipfile
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple, Union
+
 
 import pandas as pd
 from class_resolver import Hint, OptionalKwargs
