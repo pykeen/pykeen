@@ -124,7 +124,7 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        relation_regex: Pattern[str] | str | None = None,
+        relation_regex: Union[Pattern, str, None] = None,
         min_occurrence: int = 0,
         literal_matrix_preprocessing: Hint[NdArrayInOutCallable] = None,
         literal_matrix_preprocessing_kwargs: OptionalKwargs = None,
