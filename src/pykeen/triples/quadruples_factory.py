@@ -42,14 +42,10 @@ from .triples_factory import (
 )
 from .utils import load_triples, tensor_to_df
 from .splitting import split
-from ..constants import COLUMN_TEMPORAL_LABELS
+from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
 from ..sampling import NegativeSampler
 from ..typing import (
-    TEMPORAL_LABEL_HEAD,
-    TEMPORAL_LABEL_RELATION,
-    TEMPORAL_LABEL_TAIL,
-    TEMPORAL_LABEL_TIMESTAMP,
     EntityMapping,
     LabeledQuadruples,
     MappedQuadruples,
@@ -553,7 +549,7 @@ class CoreQuadruplesFactory(CoreTriplesFactory):
         # store numeric quadruples
         pd.DataFrame(
             data=self.mapped_quadruples.numpy(),
-            columns=COLUMN_TEMPORAL_LABELS,
+            columns=COLUMN_LABELS,
         ).to_csv(path.joinpath(self.quadruples_file_name), sep="\t", index=False)
 
         # store metadata

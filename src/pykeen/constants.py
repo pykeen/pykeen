@@ -12,17 +12,13 @@ from .typing import (
     COLUMN_HEAD,
     COLUMN_RELATION,
     COLUMN_TAIL,
+    COLUMN_TIMESTAMP,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
     LABEL_TIMESTAMP,
-    TEMPORAL_LABEL_HEAD,
-    TEMPORAL_LABEL_RELATION,
-    TEMPORAL_LABEL_TAIL,
-    TEMPORAL_LABEL_TIMESTAMP,
     Target,
     TargetColumn,
-    TemporalTarget,
 )
 
 __all__ = [
@@ -34,12 +30,7 @@ __all__ = [
     "PYKEEN_CHECKPOINTS",
     "PYKEEN_LOGS",
     "AGGREGATIONS",
-    "PYKEEN_TEMPORAL_HOME",
-    "PYKEEN_TEMPORAL_DATASETS",
-    "PYKEEN_TEMPORAL_BENCHMARKS",
-    "PYKEEN_TEMPORAL_EXPERIMENTS",
     "DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE",
-    "COLUMN_TEMPORAL_LABELS",
 ]
 
 #: A manager around the PyKEEN data folder. It defaults to ``~/.data/pykeen``.
@@ -77,15 +68,9 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
     LABEL_HEAD: COLUMN_HEAD,
     LABEL_RELATION: COLUMN_RELATION,
     LABEL_TAIL: COLUMN_TAIL,
+    LABEL_TIMESTAMP: COLUMN_TIMESTAMP,
 }
 
-COLUMN_LABELS: Tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
+COLUMN_LABELS: Tuple[Target, Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LABEL_TIMESTAMP)
 TARGET_TO_KEY_LABELS = {target: [c for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
 TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in cs] for target, cs in TARGET_TO_KEY_LABELS.items()}
-
-COLUMN_TEMPORAL_LABELS: Tuple[TemporalTarget, TemporalTarget, TemporalTarget, TemporalTarget] = (
-    TEMPORAL_LABEL_HEAD,
-    TEMPORAL_LABEL_RELATION,
-    TEMPORAL_LABEL_TAIL,
-    TEMPORAL_LABEL_TIMESTAMP,
-)
