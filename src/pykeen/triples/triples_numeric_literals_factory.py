@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 def create_matrix_of_literals(
     numeric_triples: np.ndarray,
     entity_labeling: Labeling,
-    relation_regex: Pattern[str] | str | None = None,
+    relation_regex: Union[Pattern, str, None] = None,
     min_occurrence: int = 0,
 ) -> Tuple[np.ndarray, Labeling]:
     """
