@@ -2,6 +2,8 @@
 
 """Base classes for remote literal datasets."""
 
+from __future__ import annotations
+
 import logging
 import pathlib
 from re import Pattern
