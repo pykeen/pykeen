@@ -2,6 +2,8 @@
 
 """Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
+from __future__ import annotations
+
 import logging
 import pathlib
 from re import Pattern
