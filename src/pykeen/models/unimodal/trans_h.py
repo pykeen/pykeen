@@ -80,6 +80,8 @@ class TransH(ERModel):
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
         entity_initializer: Hint[Initializer] = init.xavier_normal_,
+        # note: this parameter is not named "entity_regularizer" for compatability with the
+        #       regularizer-specific HPO code
         regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
         relation_initializer: Hint[Initializer] = init.xavier_normal_,
