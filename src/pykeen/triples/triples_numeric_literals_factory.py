@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from re import Pattern
 import re
+from re import Pattern
 from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
@@ -43,7 +43,7 @@ def create_matrix_of_literals(
         the mapping from entity labels to IDs
     :param relation_regex:
         an optional filter-regex for attribute relations
-    :param min_occurence:
+    :param min_occurrence:
         a minimum number of occurrence to be considered
 
     :return:

@@ -6,10 +6,9 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from re import Pattern
 import zipfile
+from re import Pattern
 from typing import Any, Mapping, Optional, Tuple, Union
-
 
 import pandas as pd
 from class_resolver import Hint, OptionalKwargs
@@ -27,6 +26,8 @@ def get_literal_summary(triples_factory: TriplesNumericLiteralsFactory) -> Tuple
     """Construct a tuple with information about numeric literals.
 
     :param triples_factory: triples factory including numeric attributive triples
+
+    :return: A tuple with literal information
     """
     assert isinstance(triples_factory, TriplesNumericLiteralsFactory)
     n_relations = len(triples_factory.literals_to_id)
@@ -52,6 +53,8 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
         """Initialize fields regarding numeric attributive triples and let the parent class handle the rest of the args.
 
         :param numeric_triples_url: URL of the text file with the numeric attributive triples
+        :param relation_regex: an optional filter-regex for attribute relations
+        :param min_occurrence: a minimum number of occurrence to be considered for filtering attribute relations
         :param literal_matrix_preprocessing: function for preprocessing numeric literals, defaults to None
                e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
         :param literal_matrix_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
@@ -133,7 +136,9 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
     ):
         """Initialize fields regarding numeric attributive triples and lets the parent class handle the rest of the args.
 
-        :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
+        :param numeric_triples_url: URL of the text file with the numeric attributive triples
+        :param relation_regex: an optional filter-regex for attribute relations
+        :param min_occurrence: a minimum number of occurrence to be considered for filtering attribute relations
         :param literal_matrix_preprocessing: function for preprocessing numeric literals, defaults to None
                e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
         :param literal_matrix_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
