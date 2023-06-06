@@ -2,8 +2,12 @@
 
 """Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
+from __future__ import annotations
+
 import logging
 import pathlib
+from re import Pattern
+import re
 from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
 
 import numpy as np
@@ -11,10 +15,10 @@ import pandas
 import torch
 from class_resolver import FunctionResolver, Hint, OptionalKwargs
 
-from .triples_factory import TriplesFactory
+from .triples_factory import Labeling, TriplesFactory
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, NdArrayInOutCallable
-from ..utils import filter_triples_by_relations, minmax_normalize
+from ..typing import LabeledTriples, MappedTriples, NdArrayInOutCallable
+from ..utils import format_relative_comparison, minmax_normalize
 
 __all__ = [
     "TriplesNumericLiteralsFactory",
@@ -25,30 +29,69 @@ logger = logging.getLogger(__name__)
 
 
 def create_matrix_of_literals(
-    numeric_triples: np.array,
-    entity_to_id: EntityMapping,
-) -> Tuple[np.ndarray, Dict[str, int]]:
-    """Create matrix of literals where each row corresponds to an entity and each column to a literal."""
-    data_relations = np.unique(np.ndarray.flatten(numeric_triples[:, 1:2]))
-    data_rel_to_id: Dict[str, int] = {value: key for key, value in enumerate(data_relations)}
-    # Prepare literal matrix, set every literal to zero, and afterwards fill in the corresponding value if available
-    num_literals = np.zeros([len(entity_to_id), len(data_rel_to_id)], dtype=np.float32)
+    numeric_triples: np.ndarray,
+    entity_labeling: Labeling,
+    relation_regex: Union[Pattern, str, None] = None,
+    min_occurrence: int = 0,
+) -> Tuple[np.ndarray, Labeling]:
+    """
+    Create matrix of literals where each row corresponds to an entity and each column to a literal.
 
-    # TODO vectorize code
-    for h, r, lit in numeric_triples:
-        try:
-            # row define entity, and column the literal. Set the corresponding literal for the entity
-            num_literals[entity_to_id[h], data_rel_to_id[r]] = lit
-        except KeyError:
-            logger.info("Either entity or relation to literal doesn't exist.")
-            continue
+    :param numeric_triples: shape: (n, 3)
+        the numeric triples, each a triple (entity, attribute_label, attribute_value)
+    :param entity_labeling:
+        the mapping from entity labels to IDs
+    :param relation_regex:
+        an optional filter-regex for attribute relations
+    :param min_occurence:
+        a minimum number of occurrence to be considered
 
-    return num_literals, data_rel_to_id
+    :return:
+        a pair (literal_matrix, attribute_relation_to_id), where `literal_matrix` is a matrix of shape
+        `(num_entities, num_attribute_relations)`, and `attribute_relation_to_id` a mapping from attribute
+        relation labels to their IDs.
+    """
+    entity_labels, attribute_relation_labels, attribute_values = numeric_triples.T
+    # convert entity labels to IDs
+    entity_ids = entity_labeling._vectorized_mapper(entity_labels, -1)
+    triple_mask = entity_ids >= 0
+    if not triple_mask.all():
+        logger.warning(
+            f"Dropping {format_relative_comparison(part=(~triple_mask).sum().item(), total=len(triple_mask))} "
+            f"triples with invalid entity labels.",
+        )
+    # apply attribute relation filter
+    uniq, inverse, counts = np.unique(attribute_relation_labels, return_counts=True, return_inverse=True)
+    uniq_mask = np.ones_like(uniq, dtype=bool)
+    if relation_regex:
+        if isinstance(relation_regex, str):
+            relation_regex = re.compile(relation_regex)
+        uniq_mask &= np.asarray([bool(relation_regex.match(relation_label)) for relation_label in uniq.tolist()])
+    if min_occurrence:
+        uniq_mask &= counts >= min_occurrence
+    triple_mask &= uniq_mask[inverse]
+    logger.info(
+        f"Keeping {format_relative_comparison(part=uniq_mask.sum().item(), total=len(uniq_mask))} attribute "
+        f"relations. This leads to keeping "
+        f"{format_relative_comparison(part=triple_mask.sum().item(), total=len(triple_mask))} of attribute triples.",
+    )
+    uniq = uniq[uniq_mask]
+    # create mapping *after* filtering
+    data_rel_labeling = Labeling(label_to_id={value: key for key, value in enumerate(sorted(uniq.tolist()))})
+    # map
+    attribute_relation_ids = data_rel_labeling._vectorized_mapper(attribute_relation_labels[triple_mask])
+    # apply mask
+    entity_ids = entity_ids[triple_mask]
+    attribute_values = attribute_values[triple_mask]
+    # create matrix
+    literal_matrix = np.zeros([entity_labeling.max_id, data_rel_labeling.max_id], dtype=np.float32)
+    # row define entity, and column the literal. Set the corresponding literal for the entity
+    literal_matrix[entity_ids, attribute_relation_ids] = attribute_values
+    return literal_matrix, data_rel_labeling
 
 
-num_literals_preproc_resolver = FunctionResolver(elements=[minmax_normalize], synonyms=dict(minmax=minmax_normalize))
-num_triples_preproc_resolver = FunctionResolver(
-    elements=[filter_triples_by_relations], synonyms=dict(filterbyrelations=filter_triples_by_relations)
+literal_matrix_preprocessing_resolver: FunctionResolver[NdArrayInOutCallable] = FunctionResolver(
+    elements=[minmax_normalize], synonyms=dict(minmax=minmax_normalize)
 )
 
 
@@ -112,24 +155,28 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         cls,
         triples: LabeledTriples,
         *,
-        numeric_triples: LabeledTriples = None,
-        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
-        numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
+        numeric_triples: Union[LabeledTriples, None] = None,
+        relation_regex: Union[Pattern, str, None] = None,
+        min_occurrence: int = 0,
+        literal_matrix_preprocessing: Hint[NdArrayInOutCallable] = None,
+        literal_matrix_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         """Handle preprocessing of numeric attributive triples and their literals before creating an object of this class.
 
         :param triples: already loaded relation triples
         :param numeric_triples: already loaded numeric attributive triples, defaults to None
-        :param numeric_triples_preprocessing: function for preprocessing numeric attributive triples, defaults to None
-               e.g. ..utils.filter_triples_by_relations() can be used or a custom function to add/remove/edit triples
-        :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
-        :param numeric_literals_preprocessing: function for preprocessing numeric literals, defaults to None
-               e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
-        :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
-        :param kwargs: Passed to the superclass
+        :param relation_regex:
+            a regular expression for attribute relations to keep. If `None`, keep all attribute relations.
+        :param min_occurrence:
+            a minimum occurrence count for an attribute relation to keep.
+        :param literal_matrix_preprocessing:
+            function to preprocess the numeric literals. Defaults to `None` which does not apply any operation.
+            cf. `num_literals_preproc_resolver` for further options.
+        :param literal_matrix_preprocessing_kwargs:
+            keyword-based parameters passed to the literal matrix preprocessing function.
+        :param kwargs:
+            passed to :meth:`TriplesFactory.from_labeled_triples`
 
         :raises ValueError: if numeric_triples was not provided
         :return: an object of this class
@@ -137,17 +184,16 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         if numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
-        if numeric_triples_preprocessing is not None:
-            preprocessing_function = num_triples_preproc_resolver.make(
-                numeric_triples_preprocessing, numeric_triples_preprocessing_kwargs
-            )
-            numeric_triples = preprocessing_function(numeric_triples)
         numeric_literals, literals_to_id = create_matrix_of_literals(
-            numeric_triples=numeric_triples, entity_to_id=base.entity_to_id
+            numeric_triples=numeric_triples,
+            entity_labeling=base.entity_labeling,
+            relation_regex=relation_regex,
+            min_occurrence=min_occurrence,
         )
-        if numeric_literals_preprocessing is not None:
-            preprocessing_function = num_literals_preproc_resolver.make(
-                numeric_literals_preprocessing, numeric_literals_preprocessing_kwargs
+        # apply optional preprocessing
+        if literal_matrix_preprocessing is not None:
+            preprocessing_function = literal_matrix_preprocessing_resolver.make(
+                query=literal_matrix_preprocessing, pos_kwargs=literal_matrix_preprocessing_kwargs
             )
             numeric_literals = preprocessing_function(numeric_literals)
         return cls(
@@ -156,12 +202,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             mapped_triples=base.mapped_triples,
             create_inverse_triples=base.create_inverse_triples,
             numeric_literals=numeric_literals,
-            literals_to_id=literals_to_id,
+            literals_to_id=literals_to_id.label_to_id,
         )
 
     def get_numeric_literals_tensor(self) -> torch.FloatTensor:
         """Return the numeric literals as a tensor."""
-        return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
+        return torch.as_tensor(self.numeric_literals, dtype=torch.get_default_dtype())
 
     @property
     def literal_shape(self) -> Tuple[int, ...]:

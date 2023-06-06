@@ -2,10 +2,14 @@
 
 """Base classes for remote literal datasets."""
 
+from __future__ import annotations
+
 import logging
 import pathlib
+from re import Pattern
 import zipfile
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple, Union
+
 
 import pandas as pd
 from class_resolver import Hint, OptionalKwargs
@@ -39,30 +43,27 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
-        numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
+        relation_regex: Union[Pattern, str, None] = None,
+        min_occurrence: int = 0,
+        literal_matrix_preprocessing: Hint[NdArrayInOutCallable] = None,
+        literal_matrix_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """Initialize fields regarding numeric attributive triples and let the parent class handle the rest of the args.
 
         :param numeric_triples_url: URL of the text file with the numeric attributive triples
-        :param numeric_triples_preprocessing: function for preprocessing numeric attributive triples, defaults to None
-               e.g. ..utils.filter_triples_by_relations() can be used or a custom function to add/remove/edit triples
-        :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
-        :param numeric_literals_preprocessing: function for preprocessing numeric literals, defaults to None
+        :param literal_matrix_preprocessing: function for preprocessing numeric literals, defaults to None
                e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
-        :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
+        :param literal_matrix_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
         :param kwargs: Passed to the superclass
         """
         super().__init__(**kwargs)
 
         self.numeric_triples_url = numeric_triples_url
-        self.numeric_triples_preprocessing = numeric_triples_preprocessing
-        self.numeric_triples_preprocessing_kwargs = numeric_triples_preprocessing_kwargs
-        self.numeric_literals_preprocessing = numeric_literals_preprocessing
-        self.numeric_literals_preprocessing_kwargs = numeric_literals_preprocessing_kwargs
+        self.relation_regex = relation_regex
+        self.min_occurrence = min_occurrence
+        self.literal_matrix_preprocessing = literal_matrix_preprocessing
+        self.literal_matrix_preprocessing_kwargs = literal_matrix_preprocessing_kwargs
 
         self.numeric_triples_file_name = name_from_url(self.numeric_triples_url)
         self.path_to_numeric_triples = self.cache_root.joinpath(self.numeric_triples_file_name)
@@ -99,10 +100,10 @@ class ZipRemoteDatasetWithRemoteLiterals(PackedZipRemoteDataset):
                     entity_to_id=entity_to_id,
                     relation_to_id=relation_to_id,
                     numeric_triples=numeric_triples,
-                    numeric_triples_preprocessing=self.numeric_triples_preprocessing,
-                    numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
-                    numeric_literals_preprocessing=self.numeric_literals_preprocessing,
-                    numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
+                    relation_regex=self.relation_regex,
+                    min_occurrence=self.min_occurrence,
+                    literal_matrix_preprocessing=self.literal_matrix_preprocessing,
+                    literal_matrix_preprocessing_kwargs=self.literal_matrix_preprocessing_kwargs,
                 )
 
     def _summary_rows(self):
@@ -124,30 +125,27 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
     def __init__(
         self,
         numeric_triples_url: str,
-        numeric_triples_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_triples_preprocessing_kwargs: OptionalKwargs = None,
-        numeric_literals_preprocessing: Hint[NdArrayInOutCallable] = None,
-        numeric_literals_preprocessing_kwargs: OptionalKwargs = None,
+        relation_regex: Union[Pattern, str, None] = None,
+        min_occurrence: int = 0,
+        literal_matrix_preprocessing: Hint[NdArrayInOutCallable] = None,
+        literal_matrix_preprocessing_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """Initialize fields regarding numeric attributive triples and lets the parent class handle the rest of the args.
 
-        :param numeric_triples_url: URL of the text file with the numeric attributive triples
-        :param numeric_triples_preprocessing: function for preprocessing numeric attributive triples, defaults to None
-               e.g. ..utils.filter_triples_by_relations() can be used or a custom function to add/remove/edit triples
         :param numeric_triples_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
-        :param numeric_literals_preprocessing: function for preprocessing numeric literals, defaults to None
+        :param literal_matrix_preprocessing: function for preprocessing numeric literals, defaults to None
                e.g. ..utils.minmax_normalize() can be used or a custom function to modify literals
-        :param numeric_literals_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
+        :param literal_matrix_preprocessing_kwargs: args to pass to the above preprocessing function, defaults to None
         :param kwargs: Passed to the superclass
         """
         super().__init__(**kwargs)
 
         self.numeric_triples_url = numeric_triples_url
-        self.numeric_triples_preprocessing = numeric_triples_preprocessing
-        self.numeric_triples_preprocessing_kwargs = numeric_triples_preprocessing_kwargs
-        self.numeric_literals_preprocessing = numeric_literals_preprocessing
-        self.numeric_literals_preprocessing_kwargs = numeric_literals_preprocessing_kwargs
+        self.relation_regex = relation_regex
+        self.min_occurrence = min_occurrence
+        self.literal_matrix_preprocessing = literal_matrix_preprocessing
+        self.literal_matrix_preprocessing_kwargs = literal_matrix_preprocessing_kwargs
 
         self.numeric_triples_file_name = name_from_url(self.numeric_triples_url)
         self.path_to_numeric_triples = self.cache_root.joinpath(self.numeric_triples_file_name)  # noqa
@@ -168,10 +166,10 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
             path=self.training_path,
             create_inverse_triples=self._create_inverse_triples,
             path_to_numeric_triples=self.path_to_numeric_triples,
-            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
-            numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
-            numeric_literals_preprocessing=self.numeric_literals_preprocessing,
-            numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
+            relation_regex=self.relation_regex,
+            min_occurrence=self.min_occurrence,
+            literal_matrix_preprocessing=self.literal_matrix_preprocessing,
+            literal_matrix_preprocessing_kwargs=self.literal_matrix_preprocessing_kwargs,
         )
         self._testing = self.triples_factory_cls.from_path(
             path=self.testing_path,
@@ -179,10 +177,10 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
             relation_to_id=self._training.relation_to_id,  # share relation index with training
             create_inverse_triples=self._create_inverse_triples,
             path_to_numeric_triples=self.path_to_numeric_triples,
-            numeric_triples_preprocessing=self.numeric_triples_preprocessing,
-            numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
-            numeric_literals_preprocessing=self.numeric_literals_preprocessing,
-            numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,  # noqa
+            relation_regex=self.relation_regex,
+            min_occurrence=self.min_occurrence,
+            literal_matrix_preprocessing=self.literal_matrix_preprocessing,
+            literal_matrix_preprocessing_kwargs=self.literal_matrix_preprocessing_kwargs,  # noqa
         )
 
     def _load_validation(self) -> None:
@@ -199,10 +197,10 @@ class TarRemoteDatasetWithRemoteLiterals(TarFileRemoteDataset):
                 relation_to_id=self._training.relation_to_id,  # share relation index with training
                 create_inverse_triples=self._create_inverse_triples,
                 path_to_numeric_triples=self.path_to_numeric_triples,
-                numeric_triples_preprocessing=self.numeric_triples_preprocessing,
-                numeric_triples_preprocessing_kwargs=self.numeric_triples_preprocessing_kwargs,
-                numeric_literals_preprocessing=self.numeric_literals_preprocessing,
-                numeric_literals_preprocessing_kwargs=self.numeric_literals_preprocessing_kwargs,
+                relation_regex=self.relation_regex,
+                min_occurrence=self.min_occurrence,
+                literal_matrix_preprocessing=self.literal_matrix_preprocessing,
+                literal_matrix_preprocessing_kwargs=self.literal_matrix_preprocessing_kwargs,
             )
 
     def _summary_rows(self):

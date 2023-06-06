@@ -4,11 +4,9 @@ pipeline:
   dataset: FB15k237WithLiterals
   dataset_kwargs:
     create_inverse_triples: true
-    numeric_literals_preprocessing: "minmax"
-    numeric_triples_preprocessing: "filter_by_relations"
-    numeric_triples_preprocessing_kwargs:
-      min_occurrences: 5 # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/filter_literal.py#L11
-      regex: '^(?!.*http://rdf\.freebase\.com/key/).*$' # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/filter_literal.py#L12
+    literal_matrix_preprocessing: "minmax"
+    min_occurrence: 5 # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/filter_literal.py#L11
+    relation_regex: '^(?!.*http://rdf\.freebase\.com/key/).*$' # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/filter_literal.py#L12
   evaluator: RankBasedEvaluator
   model: ComplExLiteral
   model_kwargs:
