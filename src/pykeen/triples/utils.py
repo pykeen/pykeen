@@ -17,10 +17,22 @@ __all__ = [
     "load_triples",
     "get_entities",
     "get_relations",
+    "get_timestamps",
     "tensor_to_df",
 ]
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
+
+QUADRUPLES_DF_COLUMNS = (
+    "head_id",
+    "head_label",
+    "relation_id",
+    "relation_label",
+    "tail_id",
+    "tail_label",
+    "timestamp_id",
+    "timestamp_label",
+)
 
 
 def _load_importers(group_subname: str) -> Mapping[str, Callable[[str], LabeledTriples]]:
@@ -38,10 +50,10 @@ EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_impor
 
 def load_triples(
     path: Union[str, pathlib.Path, TextIO],
+    is_triples: bool = True,
     delimiter: str = "\t",
     encoding: Optional[str] = None,
     column_remapping: Optional[Sequence[int]] = None,
-    is_triples: bool = True,
 ) -> LabeledTriples:
     """Load triples or quadruples saved as tab separated values.
 
@@ -101,6 +113,11 @@ def get_entities(triples: torch.LongTensor) -> Set[int]:
 def get_relations(triples: torch.LongTensor) -> Set[int]:
     """Get all relations from the triples."""
     return set(triples[:, 1].tolist())
+
+
+def get_timestamps(triples: torch.LongTensor) -> Set[int]:
+    """Get all relations from the quadruples."""
+    return set(triples[:, 3].tolist())
 
 
 def tensor_to_df(

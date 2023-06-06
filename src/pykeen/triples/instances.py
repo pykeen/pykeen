@@ -565,7 +565,12 @@ class LCWAQuadrupleInstances(LCWAInstances):
         )
         num_pairs = unique_pairs.shape[0]
         tails = mapped_quadruples[:, target]
-        target_size = num_relations if target == 1 else num_entities
+        if target == 1:
+            target_size = num_relations
+        elif target == 3:
+            target_size = num_timestamps
+        else:
+            target_size = num_entities
         compressed = scipy.sparse.coo_matrix(
             (
                 np.ones(mapped_quadruples.shape[0], dtype=np.float32),

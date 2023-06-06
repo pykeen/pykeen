@@ -7,6 +7,7 @@ import logging
 import pathlib
 import re
 import warnings
+from datetime import datetime
 from typing import (
     Any,
     Callable,
@@ -29,14 +30,29 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
+from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import Dataset
 
-from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
+from .instances import BatchedSLCWAInstances, LCWAInstances, LCWAQuadrupleInstances, SLCWAQuadrupleInstances, SubGraphSLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
+from .utils import QUADRUPLES_DF_COLUMNS, TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TimestampMapping, TorchRandomHint
+from ..sampling import NegativeSampler
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    LABEL_TIMESTAMP,
+    EntityMapping,
+    LabeledTriples,
+    LabeledQuadruples,
+    MappedTriples,
+    MappedQuadruples,
+    RelationMapping,
+    TimestampMapping,
+    TorchRandomHint
+)
 from ..utils import (
     ExtraReprMixin,
     compact_mapping,
@@ -51,8 +67,10 @@ __all__ = [
     "KGInfo",
     "CoreTriplesFactory",
     "TriplesFactory",
+    "QuadruplesFactory",
     "create_entity_mapping",
     "create_relation_mapping",
+    "create_timestamp_mapping",
     "INVERSE_SUFFIX",
     "cat_triples",
     "splits_steps",
@@ -95,6 +113,14 @@ def create_relation_mapping(relations: Iterable[str]) -> RelationMapping:
     )
     # Create mapping
     return {str(label): i for (i, label) in enumerate(relation_labels)}
+
+
+def create_timestamp_mapping(timestamps: set) -> TimestampMapping:
+    """Create sorted timestamp mapping."""
+    # format of the timestamp is YYYY-MM-DD.
+    timestamp_labels = sorted(set(timestamps), key=lambda date: datetime.strptime(date, "%Y-%m-%d"))
+
+    return {str(label): i for (i, label) in enumerate(timestamp_labels)}
 
 
 def _map_triples_elements_to_ids(
@@ -300,7 +326,7 @@ def restrict_triples(
         timestamp_mask = _get_triple_mask(
             ids=timestamps,
             triples=mapped_triples,
-            columns=1,
+            columns=3,
             invert=invert_timestamp_selection,
         )
         keep_mask = timestamp_mask if keep_mask is None else keep_mask & timestamp_mask
@@ -369,8 +395,10 @@ class CoreTriplesFactory(KGInfo):
         mapped_triples: Union[MappedTriples, np.ndarray],
         num_entities: int,
         num_relations: int,
+        num_timestamps: Optional[int] = None,
         create_inverse_triples: bool = False,
-        metadata: Optional[Mapping[str, Any]] = None,
+        is_triples: bool = True,
+        metadata: Optional[Mapping[str, Any]] = None   
     ):
         """
         Create the triples factory.
@@ -399,12 +427,18 @@ class CoreTriplesFactory(KGInfo):
         # ensure torch.Tensor
         mapped_triples = torch.as_tensor(mapped_triples)
         # input validation
-        if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
-            raise ValueError(f"Invalid shape for mapped_triples: {mapped_triples.shape}; must be (n, 3)")
+        if is_triples:
+            if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
+                raise ValueError(f"Invalid shape for mapped_triples: {mapped_triples.shape}; must be (n, 3)")
+        else:
+            if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 4:
+                raise ValueError(f"Invalid shape for mapped_quadruples: {mapped_triples.shape}; must be (n, 4)")
         if mapped_triples.is_complex() or mapped_triples.is_floating_point():
             raise TypeError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
         # always store as torch.long, i.e., torch's default integer dtype
         self.mapped_triples = mapped_triples.to(dtype=torch.long)
+        self.num_timestamps = num_timestamps
+        self.is_triples = is_triples
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -477,24 +511,44 @@ class CoreTriplesFactory(KGInfo):
         self,
         entity_to_id: Mapping[str, int],
         relation_to_id: Mapping[str, int],
+        timestamp_to_id: Optional[Mapping[str, int]] = None,
     ) -> "TriplesFactory":
         """Add labeling to the TriplesFactory."""
         # check new label to ID mappings
-        for name, columns, new_labeling in (
-            ("entity", [0, 2], entity_to_id),
-            ("relation", 1, relation_to_id),
-        ):
-            existing_ids = set(self.mapped_triples[:, columns].unique().tolist())
-            if not existing_ids.issubset(new_labeling.values()):
-                diff = existing_ids.difference(new_labeling.values())
-                raise ValueError(f"Some existing IDs do not occur in the new {name} labeling: {diff}")
-        return TriplesFactory(
-            mapped_triples=self.mapped_triples,
-            entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id,
-            create_inverse_triples=self.create_inverse_triples,
-            metadata=self.metadata,
-        )
+        if self.is_triples:
+            for name, columns, new_labeling in (
+                ("entity", [0, 2], entity_to_id),
+                ("relation", 1, relation_to_id),
+            ):
+                existing_ids = set(self.mapped_triples[:, columns].unique().tolist())
+                if not existing_ids.issubset(new_labeling.values()):
+                    diff = existing_ids.difference(new_labeling.values())
+                    raise ValueError(f"Some existing IDs do not occur in the new {name} labeling: {diff}")
+            return TriplesFactory(
+                mapped_triples=self.mapped_triples,
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+                create_inverse_triples=self.create_inverse_triples,
+                metadata=self.metadata,
+            )
+        else:
+            for name, columns, new_labeling in (
+                ("entity", [0, 2], entity_to_id),
+                ("relation", 1, relation_to_id),
+                ("timestamp", 3, timestamp_to_id),
+            ):
+                existing_ids = set(self.mapped_triples[:, columns].unique().tolist())
+                if not existing_ids.issubset(new_labeling.values()):
+                    diff = existing_ids.difference(new_labeling.values())
+                    raise ValueError(f"Some existing IDs do not occur in the new {name} labeling: {diff}")
+            return QuadruplesFactory(
+                mapped_quadruples=self.mapped_triples,
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+                timestamp_to_id=timestamp_to_id,
+                create_inverse_quadruples=self.create_inverse_triples,
+                metadata=self.metadata,
+            )
 
     def get_inverse_relation_id(self, relation: int) -> int:
         """Get the inverse relation identifier for the given relation."""
@@ -588,16 +642,30 @@ class CoreTriplesFactory(KGInfo):
         """
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
-        return CoreTriplesFactory(
-            mapped_triples=mapped_triples,
-            num_entities=self.num_entities,
-            num_relations=self.real_num_relations,
-            create_inverse_triples=create_inverse_triples,
-            metadata={
-                **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),  # type: ignore
-            },
-        )
+        if self.is_triples:
+            return CoreTriplesFactory(
+                mapped_triples=mapped_triples,
+                num_entities=self.num_entities,
+                num_relations=self.real_num_relations,
+                create_inverse_triples=create_inverse_triples,
+                metadata={
+                    **(extra_metadata or {}),
+                    **(self.metadata if keep_metadata else {}),  # type: ignore
+                },
+            )
+        else:
+            return CoreTriplesFactory(
+                mapped_triples=mapped_triples,
+                num_entities=self.num_entities,
+                num_relations=self.real_num_relations,
+                num_timestamps=self.num_timestamps,
+                create_inverse_triples=create_inverse_triples,
+                is_triples=False,
+                metadata={
+                    **(extra_metadata or {}),
+                    **(self.metadata if keep_metadata else {}),  # type: ignore
+                },
+            )
 
     def split(
         self,
@@ -689,6 +757,21 @@ class CoreTriplesFactory(KGInfo):
             if not isinstance(e, int):
                 raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")
         return cast(Collection[int], relations)
+    
+    def timestamps_to_ids(self, timestamps: Union[Collection[int], Collection[str]]) -> Collection[int]:
+        """Normalize timestamps to IDs.
+
+        :param timestamps: A collection of either integer identifiers for timestamps or
+            string labels for timestamps (that will get auto-converted)
+        :returns: Integer identifiers for timestamps
+        :raises ValueError: If the ``timestamps`` passed are string labels
+            and this triples factory does not have a timestamp label to identifier mapping
+            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        """
+        for e in timestamps:
+            if not isinstance(e, int):
+                raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")
+        return cast(Collection[int], timestamps)
 
     def get_mask_for_relations(
         self,
@@ -761,7 +844,8 @@ class CoreTriplesFactory(KGInfo):
             extra_metadata["timestamp_restriction"] = timestamps
             timestamps = self.timestamps_to_ids(timestamps=timestamps)
             remaining_timestamps = (self.num_timestamps - len(timestamps)) if invert_timestamp_selection else len(timestamps)
-            logger.info(f"keeping {format_relative_comparison(remaining_timestamps, self.num_timestamps)} relations.")
+            logger.info(f"keeping {format_relative_comparison(remaining_timestamps, self.num_timestamps)} timestamps.")
+        
         # Delegate to function
         mapped_triples = restrict_triples(
             mapped_triples=self.mapped_triples,
@@ -1445,3 +1529,397 @@ def get_mapped_triples(
 
     # only labeled triples are remaining
     return get_mapped_triples(triples=x, factory=factory)
+
+
+class QuadruplesFactory(TriplesFactory):
+    """QuadruplesFactory Class."""
+
+    def __init__(
+        self,
+        mapped_quadruples: MappedQuadruples,
+        entity_to_id: EntityMapping,
+        relation_to_id: RelationMapping,
+        timestamp_to_id: TimestampMapping,
+        create_inverse_quadruples: bool = False,
+        metadata: Optional[Mapping[str, Any]] = None,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
+        num_timestamps: Optional[int] = None,
+    ):  # noqa: DAR401
+        """
+        Initialize QuadruplesFactory.
+
+        :param mapped_quadruples: shape: (n, 4)
+            A four-column matrix where each row are the head identifier, relation identifier, tail identifier, then timestamp.
+        :param entity_to_id:
+            The mapping from entities' labels to their indices.
+        :param relation_to_id:
+            The mapping from relations' labels to their indices.
+        :param timestamp_to_id:
+            The mapping from timestamps' labels to their indices.
+        :param create_inverse_quadruples:
+            Whether to create inverse quadruples.
+        :param metadata:
+            Arbitrary metadata to go with the graph.
+        :param num_entities:
+            The number of entities.
+        :param num_relations:
+            The number of relations.
+        :param num_timestamps:
+            The number of timestamps.
+        """
+        super().__init__(
+                    mapped_triples=mapped_quadruples[:, :3],
+                    entity_to_id=entity_to_id,
+                    relation_to_id=relation_to_id,
+                    create_inverse_triples=create_inverse_quadruples,
+                    metadata=metadata,
+                    num_entities=num_entities,
+                    num_relations=num_relations,
+                )
+
+        self.mapped_quadruples = mapped_quadruples
+        self.timestamp_labeling = Labeling(label_to_id=timestamp_to_id)
+        if num_timestamps is None:
+            num_timestamps = len(mapped_quadruples[:, 3])
+        self.num_timestamps = num_timestamps
+
+    @classmethod
+    def from_labeled_quadruples(
+        cls,
+        quadruples: LabeledQuadruples,
+        create_inverse_quadruples: bool = False,
+        entity_to_id: Optional[EntityMapping] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        timestamp_to_id: Optional[TimestampMapping] = None,
+        compact_id: bool = True,
+        filter_out_candidate_inverse_relations: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> "QuadruplesFactory":
+        """Create QuadruplesFactory from original data, i.e. with the real labels.
+
+        :param quadruples: shape: (n, 4), dtype: str
+            The label-based quadruples.
+        :param create_inverse_quadruples:
+            Whether to create inverse quadruples.
+        :param entity_to_id:
+            The mapping from entity labels to ID. If None, create a new one from the quadruples.
+        :param relation_to_id:
+            The mapping from relations labels to ID. If None, create a new one from the quadruples.
+        :param timestamp_to_id:
+            The mapping from timestamp labels to ID. If None, create a new one from the quadruples.
+        :param compact_id:
+            Whether to compact IDs such that the IDs are consecutive.
+        :param filter_out_candidate_inverse_relations:
+            Whether to remove quadruples with relations with the inverse suffix.
+        :param metadata:
+            Arbitrary key/value pairs to store as metadata.
+
+        :return:
+            A new quadruples factory.
+
+        """
+        # Check if the quadruples are inverted already
+        # We re-create them pure index based to ensure that _all_ inverse quadruples are present and that they are
+        # contained if and only if create_inverse_quadruples is True.
+        if filter_out_candidate_inverse_relations:
+            unique_relations, inverse = np.unique(quadruples[:, 1], return_inverse=True)
+            suspected_to_be_inverse_relations = {
+                r for r in unique_relations if r.endswith(INVERSE_SUFFIX)
+            }
+            if len(suspected_to_be_inverse_relations) > 0:
+                logger.warning(
+                    f"Some quadruples already have the inverse relation suffix {INVERSE_SUFFIX}. "
+                    f"Re-creating inverse quadruples to ensure consistency. You may disable this behaviour by passing "
+                    f"filter_out_candidate_inverse_relations=False",
+                )
+                relation_ids_to_remove = [
+                    i
+                    for i, r in enumerate(unique_relations.tolist())
+                    if r in suspected_to_be_inverse_relations
+                ]
+                mask = np.isin(element=inverse, test_elements=relation_ids_to_remove, invert=True)
+                logger.info(f"keeping {mask.sum() / mask.shape[0]} quadruples.")
+                quadruples = quadruples[mask]
+
+        # Generate entity mapping if necessary
+        if entity_to_id is None:
+            entity_to_id = create_entity_mapping(triples=quadruples)
+        if compact_id:
+            entity_to_id = compact_mapping(mapping=entity_to_id)[0]
+
+        # Generate relation mapping if necessary
+        if relation_to_id is None:
+            relation_to_id = create_relation_mapping(quadruples[:, 1])
+        if compact_id:
+            relation_to_id = compact_mapping(mapping=relation_to_id)[0]
+
+        # Generate timestamp mapping if necessary
+        if timestamp_to_id is None:
+            timestamp_to_id = create_timestamp_mapping(quadruples[:, 3])
+        if compact_id:
+            timestamp_to_id = compact_mapping(mapping=timestamp_to_id)[0]
+
+        # Map quadruples of labels to quadruples of IDs
+        mapped_quadruples = _map_triples_elements_to_ids(
+            triples=quadruples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            timestamp_to_id=timestamp_to_id,
+            is_triples=False,
+        )
+
+        return cls(
+            mapped_quadruples=mapped_quadruples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            timestamp_to_id=timestamp_to_id,
+            create_inverse_quadruples=create_inverse_quadruples,
+            metadata=metadata,
+        )
+
+    @classmethod
+    def from_path(
+        cls,
+        path: Union[str, pathlib.Path],
+        create_inverse_quadruples: bool = False,
+        entity_to_id: Optional[EntityMapping] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        timestamp_to_id: Optional[TimestampMapping] = None,
+        compact_id: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
+        load_quadruples_kwargs: Optional[Mapping[str, Any]] = None,
+    ) -> "QuadruplesFactory":
+        """Create QuadruplesFactory from dataset Path."""
+        path = normalize_path(path)
+        quadruples = load_triples(path, is_triples=False, **(load_quadruples_kwargs or {}))
+        return cls.from_labeled_quadruples(
+            quadruples=quadruples,
+            create_inverse_quadruples=create_inverse_quadruples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            timestamp_to_id=timestamp_to_id,
+            compact_id=compact_id,
+            metadata={
+                "path": path,
+                **(metadata or {}),
+            },
+        )
+
+    def to_path_binary(
+        self,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> pathlib.Path:
+        """
+        Save quadruples factory to path in (PyTorch's .pt) binary format.
+
+        :param path:
+            The path to store the quadruple factory to.
+        :return:
+            The path to store the dataset
+        """
+        path = normalize_path(path)
+        path.mkdir(exist_ok=True, parents=True)  # type: ignore
+
+        # store numeric quadruples
+        pd.DataFrame(
+            data=self.mapped_quadruples.numpy(),
+            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LABEL_TIMESTAMP],
+        ).to_csv(
+            path.joinpath(self.quadruples_file_name), sep="\t", index=False  # type: ignore
+        )
+
+        # store metadata
+        torch.save(self._get_binary_state(), path.joinpath(self.base_file_name))  # type: ignore
+        logger.info(f"Stored {self} to {path.as_uri()}")  # type: ignore
+
+        return path  # type: ignore
+
+    @property
+    def timestamp_to_id(self) -> Mapping[str, int]:
+        """Return the mapping from timestamps labels to IDs."""
+        return self.timestamp_labeling.label_to_id
+
+    @property
+    def timestamp_id_to_label(self) -> Mapping[int, str]:
+        """Return the mapping from timestamps IDs to labels."""
+        return self.timestamp_labeling.id_to_label
+
+    @property
+    def quadruples(self) -> np.ndarray:  # noqa: D401
+        """The labeled quadruples, a 4-column matrix where each row are the head label, relation label, tail label and timestamp label."""
+        logger.warning(
+            "Reconstructing all label-based quadruples. This is expensive and rarely needed."
+        )
+        return self.label_quadruples(self.mapped_quadruples)
+
+    def label_quadruples(
+        self,
+        quadruples: MappedQuadruples,
+        unknown_entity_label: str = "[UNKNOWN]",
+        unknown_relation_label: Optional[str] = None,
+        unknown_timestamp_label: Optional[str] = None,
+    ) -> LabeledQuadruples:
+        """
+        Convert ID-based quadruples to label-based ones.
+
+        :param quadruples:
+            The ID-based quadruples.
+        :param unknown_entity_label:
+            The label to use for unknown entity IDs.
+        :param unknown_relation_label:
+            The label to use for unknown relation IDs.
+        :param unknown_timestamp_label:
+            The label to use for unknown timestamp IDs.
+        :return:
+            The same triples, but labeled.
+        """
+        if len(quadruples) == 0:
+            return np.empty(shape=(0, 4), dtype=str)
+        if unknown_relation_label is None:
+            unknown_relation_label = unknown_entity_label
+        if unknown_timestamp_label is None:
+            unknown_timestamp_label = unknown_entity_label
+    
+        return np.stack(
+            [
+                labeling.label(ids=column, unknown_label=unknown_label)
+                for (labeling, unknown_label), column in zip(
+                    [
+                        (self.entity_labeling, unknown_entity_label),
+                        (self.relation_labeling, unknown_relation_label),
+                        (self.entity_labeling, unknown_entity_label),
+                        (self.timestamp_labeling, unknown_timestamp_label),
+                    ],
+                    quadruples.t().numpy(),
+                )
+            ],
+            axis=1,
+        )
+
+    def timestamps_to_ids(
+        self, timestamps: Union[Collection[int], Collection[str]]
+    ) -> Collection[int]:  # noqa: D102
+        return _ensure_ids(
+            labels_or_ids=timestamps, label_to_id=self.timestamp_labeling.label_to_id
+        )
+
+    def tensor_to_df(
+        self,
+        tensor: torch.LongTensor,
+        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+    ) -> pd.DataFrame:  # noqa: D102
+        data = super().tensor_to_df(tensor=tensor, **kwargs)
+        old_col = list(data.columns)
+
+        # vectorized label lookup
+        for column, labeling in dict(
+            head=self.entity_labeling,
+            relation=self.relation_labeling,
+            tail=self.entity_labeling,
+            timestamp=self.timestamp_labeling,
+        ).items():
+            assert labeling is not None
+            data[f"{column}_label"] = labeling.label(
+                ids=data[f"{column}_id"],
+                unknown_label=("[unknown_" + column + "]").upper(),
+            )
+
+        # Re-order columns
+        columns = list(QUADRUPLES_DF_COLUMNS) + old_col[4:]
+        return data.loc[:, columns]
+
+    def new_with_restriction(
+        self,
+        entities: Union[None, Collection[int], Collection[str]] = None,
+        relations: Union[None, Collection[int], Collection[str]] = None,
+        timestamps: Union[None, Collection[int], Collection[str]] = None,
+        invert_entity_selection: bool = False,
+        invert_relation_selection: bool = False,
+        invert_timestamp_selection: bool = False,
+    ) -> "QuadruplesFactory":  # noqa: D102
+        if entities is None and relations is None and timestamps is None:
+            return self
+        if entities is not None:
+            entities = self.entities_to_ids(entities=entities)
+        if relations is not None:
+            relations = self.relations_to_ids(relations=relations)
+        if timestamps is not None:
+            timestamps = self.timestamps_to_ids(timestamps=timestamps)
+        restricted_core = CoreTriplesFactory(
+            mapped_triples=self.mapped_quadruples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_timestamps=self.num_timestamps,
+            create_inverse_triples=self.create_inverse_triples,
+            is_triples=False,
+            metadata=self.metadata,   
+        )
+        return (
+            restricted_core
+            .new_with_restriction(
+                entities=entities,
+                relations=relations,
+                timestamps=timestamps,
+                invert_entity_selection=invert_entity_selection,
+                invert_relation_selection=invert_relation_selection,
+                invert_timestamp_selection=invert_timestamp_selection,
+            )
+            .with_labels(
+                entity_to_id=self.entity_to_id,
+                relation_to_id=self.relation_to_id,
+                timestamp_to_id=self.timestamp_to_id,
+            )
+        )
+
+    def map_quadruples(self, quadruples: LabeledQuadruples) -> MappedQuadruples:
+        """Convert label-based quadruples to ID-based quadruples."""
+        return _map_triples_elements_to_ids(
+            triples=quadruples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            timestamp_to_id=self.timestamp_to_id,
+            is_triples=False,
+        )
+
+    def _add_inverse_quadruples_if_necessary(self, mapped_quadruples: MappedQuadruples) -> MappedQuadruples:
+        if not self.create_inverse_triples:
+            return self.mapped_quadruples
+        logger.info("Creating inverse quadruples")
+        # relation_inverter: inherited from TriplesFactory
+        inverted = self.relation_inverter.map(batch=mapped_quadruples, invert=True)
+        # switch the positions of head and tail
+        inverted[:, [0, 1, 2, 3]] = inverted[:, [2, 1, 0, 3]]
+        return torch.LongTensor(
+            torch.cat(
+                [self.relation_inverter.map(batch=mapped_quadruples), inverted],
+            )
+        )
+
+    def create_slcwa_instances(
+        self,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ) -> SLCWAQuadrupleInstances:
+        """Create SLCWA instances for this factory's quadruples."""
+        return SLCWAQuadrupleInstances.from_quadruples(
+            mapped_quadruples=self._add_inverse_quadruples_if_necessary(
+                mapped_quadruples=self.mapped_quadruples
+            ),
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_timestamps=self.num_timestamps,
+            negative_sampler=negative_sampler,
+            negative_sampler_kwargs=negative_sampler_kwargs,
+        )
+    
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Dataset:
+        """Create LCWA instances for this factory's quadruples."""
+        return LCWAQuadrupleInstances.from_quadruples(
+            mapped_quadruples=self._add_inverse_quadruples_if_necessary(mapped_quadruples=self.mapped_quadruples),
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_timestamps=self.num_timestamps,
+            target=target,
+        )

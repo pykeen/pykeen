@@ -10,8 +10,6 @@ import pykeen
 from .api import get_dataset_base_path
 from .base import TemporalPathDataset
 
-BASE = get_dataset_base_path()
-
 
 class ICEWS14(TemporalPathDataset):
     """ICEWS14 Dataset."""
@@ -19,9 +17,9 @@ class ICEWS14(TemporalPathDataset):
     def __init__(self, create_inverse_quadruples: bool = False, **kwargs):
         """Initialize dataset from paths."""
         super().__init__(
-            training_path=BASE.joinpath("icews14").joinpath("train.txt"),
-            testing_path=BASE.joinpath("icews14").joinpath("test.txt"),
-            validation_path=BASE.joinpath("icews14").joinpath("valid.txt"),
+            training_path=get_dataset_base_path("icews14").joinpath("train.txt"),
+            testing_path=get_dataset_base_path("icews14").joinpath("test.txt"),
+            validation_path=get_dataset_base_path("icews14").joinpath("valid.txt"),
             create_inverse_quadruples=create_inverse_quadruples,
             **kwargs,
         )
