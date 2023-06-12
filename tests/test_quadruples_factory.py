@@ -13,6 +13,7 @@ import torch
 from pykeen.datasets.temporal import SmallSample
 from pykeen.triples import LCWAQuadrupleInstances, QuadruplesFactory
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, QUADRUPLES_DF_COLUMNS
+from utils import needs_packages
 
 quadruples = np.array(
     [
@@ -281,6 +282,23 @@ class TestQuadruplesFactory(unittest.TestCase):
         # check that in all other splits no inverse quadruples are to be created
         assert not any(f.create_inverse_triples for f in others)
 
+    @needs_packages("wordcloud", "IPython")
+    def test_entity_word_cloud(self):
+        """Test word cloud generation."""
+        wc = self.factory.entity_word_cloud(top=3)
+        self.assertIsNotNone(wc)
+
+    @needs_packages("wordcloud", "IPython")
+    def test_relation_word_cloud(self):
+        """Test word cloud generation."""
+        wc = self.factory.relation_word_cloud(top=3)
+        self.assertIsNotNone(wc)
+    
+    @needs_packages("wordcloud", "IPython")
+    def test_timestamp_word_cloud(self):
+        """Test word cloud generation."""
+        wc = self.factory.timestamp_word_cloud(top=3)
+        self.assertIsNotNone(wc)
 
 if __name__ == "__main__":
     test = TestQuadruplesFactory()
@@ -291,3 +309,6 @@ if __name__ == "__main__":
     test.test_new_with_restriction()
     test.test_create_lcwa_instances()
     test.test_split_inverse_quadruples()
+    test.test_entity_word_cloud()
+    test.test_relation_word_cloud()
+    test.test_timestamp_word_cloud()

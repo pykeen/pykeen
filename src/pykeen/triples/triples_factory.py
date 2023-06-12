@@ -1808,6 +1808,22 @@ class QuadruplesFactory(TriplesFactory):
             labels_or_ids=timestamps, label_to_id=self.timestamp_labeling.label_to_id
         )
 
+    def timestamp_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each timestamp in a Jupyter notebook.
+
+        :param top: The number of top timestamps to show. Defaults to 100.
+        :returns: A world cloud object for a Jupyter notebook
+
+        .. warning::
+
+            This function requires the ``wordcloud`` package. Use ``pip install pykeen[wordcloud]`` to install it.
+        """
+        return self._word_cloud(
+            ids=self.mapped_quadruples[:, 3],
+            id_to_label=self.timestamp_labeling.id_to_label,
+            top=top or 100,
+        )
+
     def tensor_to_df(
         self,
         tensor: torch.LongTensor,
