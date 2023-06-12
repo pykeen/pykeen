@@ -270,6 +270,17 @@ class TestQuadruplesFactory(unittest.TestCase):
             assert y.shape == (batch_size, factory.num_entities)
             assert y.dtype == torch.get_default_dtype()
 
+    def test_split_inverse_quadruples(self):
+        """Test whether inverse quadruples are only created in the training factory."""
+        # set create inverse quadruple to true
+        self.factory.create_inverse_triples = True
+        # split factory
+        train, *others = self.factory.split()
+        # check that in *training* inverse quadruples are to be created
+        assert train.create_inverse_triples
+        # check that in all other splits no inverse quadruples are to be created
+        assert not any(f.create_inverse_triples for f in others)
+
 
 if __name__ == "__main__":
     test = TestQuadruplesFactory()
@@ -279,3 +290,4 @@ if __name__ == "__main__":
     test.test_id_to_label()
     test.test_new_with_restriction()
     test.test_create_lcwa_instances()
+    test.test_split_inverse_quadruples()

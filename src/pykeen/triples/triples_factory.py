@@ -642,6 +642,10 @@ class CoreTriplesFactory(KGInfo):
         """
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
+        if mapped_triples.shape[1] == 3:
+            self.is_triples = True
+        else:
+            self.is_triples = False
         if self.is_triples:
             return CoreTriplesFactory(
                 mapped_triples=mapped_triples,
@@ -1923,3 +1927,54 @@ class QuadruplesFactory(TriplesFactory):
             num_timestamps=self.num_timestamps,
             target=target,
         )
+    
+    # docstr-coverage: inherited
+    def clone_and_exchange_triples(
+        self,
+        mapped_triples: MappedTriples,
+        extra_metadata: Optional[Dict[str, Any]] = None,
+        keep_metadata: bool = True,
+        create_inverse_triples: Optional[bool] = None,
+    ) -> "QuadruplesFactory":  # noqa: D102
+        if create_inverse_triples is None:
+            create_inverse_triples = self.create_inverse_triples
+        return QuadruplesFactory(
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            timestamp_to_id=self.timestamp_to_id,
+            mapped_quadruples=mapped_triples,
+            create_inverse_quadruples=create_inverse_triples,
+            metadata={
+                **(extra_metadata or {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore
+            },
+        )
+    
+    def split(
+        self,
+        ratios: Union[float, Sequence[float]] = 0.8,
+        *,
+        random_state: TorchRandomHint = None,
+        randomize_cleanup: bool = False,
+        method: Optional[str] = None,
+    ) -> List["CoreTriplesFactory"]:
+        return [
+            self.clone_and_exchange_triples(
+                mapped_triples=quadruples,
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=None if i == 0 else False,
+            )
+            for i, quadruples in enumerate(
+                split(
+                    mapped_triples=self.mapped_quadruples,
+                    ratios=ratios,
+                    random_state=random_state,
+                    randomize_cleanup=randomize_cleanup,
+                    method=method,
+                )
+            )
+        ]
+
+    
+    
+
