@@ -1585,7 +1585,7 @@ class QuadruplesFactory(TriplesFactory):
         self.mapped_quadruples = mapped_quadruples
         self.timestamp_labeling = Labeling(label_to_id=timestamp_to_id)
         if num_timestamps is None:
-            num_timestamps = len(mapped_quadruples[:, 3])
+            num_timestamps = len(set(mapped_quadruples[:, 3].tolist()))
         self.num_timestamps = num_timestamps
 
     @classmethod

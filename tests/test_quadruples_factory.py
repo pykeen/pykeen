@@ -10,8 +10,10 @@ from unittest.mock import patch
 import numpy as np
 import torch
 
+from pykeen.datasets import Hetionet, SingleTabbedDataset
 from pykeen.datasets.temporal import SmallSample
 from pykeen.triples import LCWAQuadrupleInstances, QuadruplesFactory
+from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, QUADRUPLES_DF_COLUMNS
 from utils import needs_packages
 
@@ -300,15 +302,86 @@ class TestQuadruplesFactory(unittest.TestCase):
         wc = self.factory.timestamp_word_cloud(top=3)
         self.assertIsNotNone(wc)
 
+
+class TestSplit(unittest.TestCase):
+    """Test splitting."""
+
+    quadruples_factory: QuadruplesFactory
+
+    def setUp(self) -> None:
+        """Set up the tests."""
+        self.dataset = SmallSample()
+        self.quadruples_factory = self.dataset.training
+        self.assertEqual(21, self.quadruples_factory.num_triples)
+
+    def _test_invariants(self, training_quadruples_factory: QuadruplesFactory, *other_factories: QuadruplesFactory) -> None:
+        """Test invariants for result of quadruples factory splitting."""
+        # verify that all entities and relations are present in the training factory
+        self.assertEqual(training_quadruples_factory.num_entities, self.quadruples_factory.num_entities)
+        self.assertEqual(training_quadruples_factory.num_relations, self.quadruples_factory.num_relations)
+        
+        all_factories = (training_quadruples_factory, *other_factories)
+
+        # verify that no quadruple got lost
+        self.assertEqual(sum(t.num_triples for t in all_factories), self.quadruples_factory.num_triples)
+
+        # verify that the label-to-id mappings match
+        self.assertSetEqual(
+            {id(factory.entity_to_id) for factory in all_factories},
+            {
+                id(self.quadruples_factory.entity_to_id),
+            },
+        )
+        self.assertSetEqual(
+            {id(factory.relation_to_id) for factory in all_factories},
+            {
+                id(self.quadruples_factory.relation_to_id),
+            },
+        )
+        self.assertSetEqual(
+            {id(factory.timestamp_to_id) for factory in all_factories},
+            {
+                id(self.quadruples_factory.timestamp_to_id),
+            },
+        )
+
+    def test_split_tf(self):
+        """Test splitting a factory."""
+        cases = [
+            (2, 0.8),
+            (2, [0.8]),
+            (3, [0.80, 0.10]),
+            (3, [0.80, 0.10, 0.10]),
+        ]
+        for (
+            method,
+            (n, ratios),
+        ) in itt.product(splitter_resolver.options, cases):
+            with self.subTest(method=method, ratios=ratios):
+                factories_1 = self.quadruples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_1))
+                self._test_invariants(*factories_1)
+
+                factories_2 = self.quadruples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_2))
+                self._test_invariants(*factories_2)
+
+                self._compare_factories(factories_1, factories_2)
+
+
 if __name__ == "__main__":
-    test = TestQuadruplesFactory()
-    test.setUp()
-    test.test_correct_inverse_creation()
-    test.test_automatic_incomplete_inverse_detection()
-    test.test_id_to_label()
-    test.test_new_with_restriction()
-    test.test_create_lcwa_instances()
-    test.test_split_inverse_quadruples()
-    test.test_entity_word_cloud()
-    test.test_relation_word_cloud()
-    test.test_timestamp_word_cloud()
+    test1 = TestQuadruplesFactory()
+    test1.setUp()
+    test1.test_correct_inverse_creation()
+    test1.test_automatic_incomplete_inverse_detection()
+    test1.test_id_to_label()
+    test1.test_new_with_restriction()
+    test1.test_create_lcwa_instances()
+    test1.test_split_inverse_quadruples()
+    test1.test_entity_word_cloud()
+    test1.test_relation_word_cloud()
+    test1.test_timestamp_word_cloud()
+
+    test2 = TestSplit()
+    test2.setUp()
+    test2.test_split_tf()
