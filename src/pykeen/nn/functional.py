@@ -560,6 +560,7 @@ def rotate_interaction(
     :return: shape: batch_dims
         The scores.
     """
+    # todo: raise error on non-complex instead
     h, r, t = ensure_complex(h, r, t)
     if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
         # r expresses a rotation in complex plane.
