@@ -971,6 +971,9 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     .. seealso:: :func:`pykeen.nn.functional.rotate_interaction`
     """
 
+    is_complex: ClassVar[bool] = True
+
+    # todo: inline function?
     func = pkf.rotate_interaction
 
 
