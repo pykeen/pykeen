@@ -14,6 +14,7 @@ import pathlib
 import random
 import re
 import time
+import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
@@ -1039,8 +1040,16 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
         A tensor formulating complex numbers
 
     :returns:
-        An elementwise noramlized vector.
+        An elementwise normalized vector.
     """
+    # todo: this is a horrible hack, and should be fixed up-stream by making NodePiece
+    #  use proper complex embeddings for rotate interaction
+    if not torch.is_complex(x):
+        warnings.warn("Applying complex_normalize on non-complex input.")
+        x_complex, = ensure_complex(x)
+        x_complex = complex_normalize(x_complex)
+        x_real = torch.view_as_real(x_complex)
+        return x_real.view(x.shape)
     return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
 
 
