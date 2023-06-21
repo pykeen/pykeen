@@ -167,6 +167,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     # TODO: annotate modelling capabilities? cf., e.g., https://arxiv.org/abs/1902.10197, Table 2
     # TODO: annotate properties, e.g., symmetry, and use them for testing?
     # TODO: annotate complexity?
+    #: whether the interaction is defined on complex input
+    is_complex: ClassVar[bool] = False
 
     @property
     def tail_entity_shape(self) -> Sequence[str]:
