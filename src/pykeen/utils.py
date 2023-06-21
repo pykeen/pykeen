@@ -1428,6 +1428,7 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
         if x.is_complex():
             yield x
             continue
+        warnings.warn(f"{x=} is not complex, but will be viewed as such")
         if x.shape[-1] != 2:
             x = x.view(*x.shape[:-1], -1, 2)
         yield torch.view_as_complex(x)
