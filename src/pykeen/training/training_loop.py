@@ -673,9 +673,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                 del batch
                 del batches
-                gc.collect()
-                self.optimizer.zero_grad()
-                self._free_graph_and_cache()
 
                 # When size probing we don't need the losses
                 if only_size_probing:
