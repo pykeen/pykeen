@@ -8,8 +8,8 @@ pipeline:
     embedding_dim: 100
     scoring_fct_norm: 2
     entity_initializer: "xavier_uniform"
-    entity_regularizer: "NormLimit"
-    entity_regularizer_kwargs:
+    regularizer: "NormLimit"
+    regularizer_kwargs:
       weight: 1.0
       apply_only_once: true
       dim: -1
