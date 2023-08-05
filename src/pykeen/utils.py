@@ -1046,7 +1046,7 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     #  use proper complex embeddings for rotate interaction
     if not torch.is_complex(x):
         warnings.warn("Applying complex_normalize on non-complex input.")
-        x_complex, = ensure_complex(x)
+        (x_complex,) = ensure_complex(x)
         x_complex = complex_normalize(x_complex)
         x_real = torch.view_as_real(x_complex)
         return x_real.view(x.shape)
