@@ -40,6 +40,10 @@ class RelationInverter(ABC):
         batch = self._map(batch=batch, index=index)
         return self.invert_(batch=batch, index=index) if invert else batch
 
+    @abstractmethod
+    def is_inverse(self, ids: torch.LongTensor) -> torch.BoolTensor:
+        """Return a mask whether the relation IDs correspond to inverse relations."""
+
 
 class DefaultRelationInverter(RelationInverter):
     """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
@@ -60,6 +64,10 @@ class DefaultRelationInverter(RelationInverter):
         # Id of inverse relation: relation + 1
         batch[:, index] += 1
         return batch
+
+    # docstr-coverage: inherited
+    def is_inverse(self, ids: torch.LongTensor) -> torch.BoolTensor:  # noqa: D102
+        return ids % 2 == 1
 
 
 relation_inverter_resolver: Resolver[RelationInverter] = Resolver.from_subclasses(
