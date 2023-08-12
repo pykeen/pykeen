@@ -1082,12 +1082,19 @@ def predict_target(
     )
 
     # get scores
-    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
+    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0)
     if ids is None:
         ids = range(len(scores))
 
+    # note: maybe we want to expose these scores, too?
+    if target == LABEL_RELATION and model.use_inverse_triples:
+        ids_t = torch.as_tensor(ids)
+        non_inv_mask = ~model.relation_inverter.is_inverse(ids_t)
+        ids = ids_t[non_inv_mask].tolist()
+        scores = scores[non_inv_mask]
+
     # create raw dataframe
-    data = {f"{target}_id": ids, "score": scores}
+    data = {f"{target}_id": ids, "score": scores.tolist()}
     if labels is not None:
         data[f"{target}_label"] = labels
     df = pandas.DataFrame(data=data).sort_values("score", ascending=False)
