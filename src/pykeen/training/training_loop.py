@@ -379,8 +379,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
             # the exit stack ensure that we cleanup temporary files when an error occurs
             with ExitStack() as exit_stack:
-                # When using early stopping models have to be saved separately at the best epoch, since the training loop will
-                # due to the patience continue to train after the best epoch and thus alter the model
+                # When using early stopping models have to be saved separately at the best epoch, since the training
+                # loop will due to the patience continue to train after the best epoch and thus alter the model
                 if (
                     stopper is not None
                     and not only_size_probing
