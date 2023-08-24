@@ -17,7 +17,7 @@ from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Un
 
 import numpy as np
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import FunctionResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import lr_scheduler_resolver, optimizer_resolver
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
@@ -38,13 +38,14 @@ from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import InductiveMode
+from ..typing import InductiveMode, WorkerInitCallable
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
     get_preferred_device,
     is_cuda_oom_error,
     is_cudnn_error,
+    literale_worker_init,
     normalize_string,
 )
 
@@ -118,6 +119,9 @@ def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
         if not key.startswith("_") and key not in ["base_lrs", "last_epoch"]
     }
     return lr_scheduler_kwargs
+
+
+worker_init_fn_resolver = FunctionResolver(elements=[literale_worker_init])
 
 
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
@@ -224,6 +228,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         stopper: Optional[Stopper] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
+        worker_init_fn: Hint[WorkerInitCallable] = None,
         clear_optimizer: bool = False,
         checkpoint_directory: Union[None, str, pathlib.Path] = None,
         checkpoint_name: Optional[str] = None,
@@ -273,6 +278,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
         :param num_workers:
             The number of child CPU workers used for loading data. If None, data are loaded in the main process.
+        :param worker_init_fn:
+            Function used to initialize each data-loading worker.
         :param clear_optimizer:
             Whether to delete the optimizer instance after training (as the optimizer might have additional memory
             consumption due to e.g. moments in Adam).
@@ -389,6 +396,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 stopper=stopper,
                 sub_batch_size=sub_batch_size,
                 num_workers=num_workers,
+                worker_init_fn=worker_init_fn,
                 save_checkpoints=save_checkpoints,
                 checkpoint_path=checkpoint_path,
                 checkpoint_frequency=checkpoint_frequency,
@@ -431,6 +439,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         stopper: Optional[Stopper] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
+        worker_init_fn: Hint[WorkerInitCallable] = None,
         save_checkpoints: bool = False,
         checkpoint_path: Union[None, str, pathlib.Path] = None,
         checkpoint_frequency: Optional[int] = None,
@@ -580,11 +589,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         logger.debug(f"using stopper: {stopper}")
 
+        worker_init_fn = worker_init_fn_resolver.make_safe(worker_init_fn)
+
         train_data_loader = self._create_training_data_loader(
             triples_factory,
             batch_size=batch_size,
             drop_last=drop_last,
             num_workers=num_workers,
+            worker_init_fn=worker_init_fn,
             pin_memory=pin_memory,
             shuffle=True,  # always shuffle during training
             sampler=sampler,

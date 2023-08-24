@@ -4,6 +4,7 @@
 
 * FB15k
 * FB15k-237
+* FB15k-237 with numeric literals
 """
 
 import os
@@ -13,11 +14,17 @@ from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import PackedZipRemoteDataset, TarFileRemoteDataset
+from .remote_literal_base import ZipRemoteDatasetWithRemoteLiterals
 
 __all__ = [
     "FB15k",
     "FB15k237",
+    "FB15k237WithLiterals",
 ]
+
+FB15K237_RELATIONAL_TRIPLES_URL = (
+    "https://download.microsoft.com/download/8/7/0/8700516A-AB3D-4850-B4BB-805C515AECE1/FB15K-237.2.zip"  # noqa
+)
 
 
 @parse_docdata
@@ -80,7 +87,7 @@ class FB15k237(PackedZipRemoteDataset):
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.ZipFileRemoteDataset`.
         """
         super().__init__(
-            url="https://download.microsoft.com/download/8/7/0/8700516A-AB3D-4850-B4BB-805C515AECE1/FB15K-237.2.zip",
+            url=FB15K237_RELATIONAL_TRIPLES_URL,
             relative_training_path=os.path.join("Release", "train.txt"),
             relative_testing_path=os.path.join("Release", "test.txt"),
             relative_validation_path=os.path.join("Release", "valid.txt"),
@@ -88,10 +95,46 @@ class FB15k237(PackedZipRemoteDataset):
         )
 
 
+@parse_docdata
+class FB15k237WithLiterals(ZipRemoteDatasetWithRemoteLiterals):
+    """The FB15k-237 dataset with numeric literals.
+
+    ---
+    name: FB15k-237 with numeric literals
+    statistics:
+        entities: 14505
+        relations: 237
+        training: 272115
+        testing: 20438
+        validation: 17526
+        triples: 310079
+        literal relations: 121
+    citation:
+        author: Agustinus Kristiadi et al.
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
+        license: https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/LICENSE # noqa
+    """
+
+    def __init__(self, **kwargs):
+        """Initialize the FB15k-237 dataset with literals.
+
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
+        """
+        super().__init__(
+            url=FB15K237_RELATIONAL_TRIPLES_URL,
+            relative_training_path=os.path.join("Release", "train.txt"),
+            relative_testing_path=os.path.join("Release", "test.txt"),
+            relative_validation_path=os.path.join("Release", "valid.txt"),
+            numeric_triples_url="https://raw.githubusercontent.com/SmartDataAnalytics/LiteralE/0b0c48fd9b74bf000400199610275ea5c159a44c/data/FB15k-237/literals/numerical_literals.txt",  # noqa
+            **kwargs,
+        )
+
+
 @click.command()
 @verbose_option
 def _main():
-    for cls in [FB15k, FB15k237]:
+    for cls in [FB15k, FB15k237, FB15k237WithLiterals]:
         cls().summarize()
 
 

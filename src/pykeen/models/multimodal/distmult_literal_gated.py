@@ -66,8 +66,8 @@ class DistMultLiteralGated(LiteralModel):
             interaction=self.interaction_cls,
             combination=GatedCombination,
             combination_kwargs=dict(
-                entity_embedding_dim=embedding_dim,
-                literal_embedding_dim=triples_factory.numeric_literals.shape[1],
+                entity_dim=embedding_dim,
+                literal_dim=triples_factory.numeric_literals.shape[1],
                 input_dropout=input_dropout,
             ),
             entity_representations_kwargs=[

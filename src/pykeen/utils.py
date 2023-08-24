@@ -123,6 +123,8 @@ __all__ = [
     "ExtraReprMixin",
     "einsum",
     "isin_many_dim",
+    "minmax_normalize",
+    "literale_worker_init",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1775,6 +1777,32 @@ def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int 
         return_counts=True, return_inverse=True, dim=dim
     )[1:]
     return counts[inverse[: elements.shape[dim]]] > 1
+
+
+def minmax_normalize(array: np.ndarray) -> np.ndarray:
+    """
+    Normalize the given array using min-max normalization.
+
+    :param array:
+        array to normalize
+
+    :return:
+        normalized array
+    """
+    max_lit, min_lit = np.max(array, axis=0), np.min(array, axis=0)
+    return (array - min_lit) / (max_lit - min_lit + 1e-8)
+
+
+def literale_worker_init(worker_id: int):
+    """Set worker-specific random seed according to the official LiteralE repo.
+
+    References: - https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/main_literal.py#L110 # noqa
+                - https://github.com/TimDettmers/spodernet/blob/afa1c4cee8b168fd2938067b37ca4795a022d91f/spodernet/preprocessing/batching.py#L260-L262  # noqa
+                - https://github.com/TimDettmers/spodernet/blob/afa1c4cee8b168fd2938067b37ca4795a022d91f/spodernet/preprocessing/batching.py#L55    # noqa
+
+    :param worker_id: ID of current worker (an int in ``[0, num_workers - 1]``)
+    """
+    set_random_seed(234 + (2345 + (worker_id * 83)))
 
 
 if __name__ == "__main__":

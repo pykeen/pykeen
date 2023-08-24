@@ -1,0 +1,59 @@
+metadata:
+  title: "Learn YAGO3-10 Dataset with DistMult+LiteralE-g_lin as described by Kristiadi et al., 2019"
+pipeline:
+  dataset: YAGO310WithLiterals
+  dataset_kwargs:
+    create_inverse_triples: true
+    literal_matrix_preprocessing: "minmax"
+    min_occurrence: 5 # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/filter_literal.py#L11
+    relation_regex: '^(?!.*http://rdf\.freebase\.com/key/).*$' # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/filter_literal.py#L12
+  evaluator: RankBasedEvaluator
+  model: DistMultLiteral
+  model_kwargs:
+    embedding_dim: 200
+    input_dropout: 0.2
+    loss: BCEWithLogitsLoss
+  epochs: 100
+  optimizer_kwargs:
+    lr: 0.001
+  training_loop: LCWA
+  training_kwargs:
+    batch_size: 128
+    label_smoothing: 0.1
+    num_workers: 4 # https://github.com/TimDettmers/spodernet/blob/afa1c4cee8b168fd2938067b37ca4795a022d91f/spodernet/preprocessing/batching.py#L214
+    worker_init_fn: "literale_worker_init" # for references see literale_worker_init() function in pykeen/utils.py
+    drop_last: True # https://github.com/SmartDataAnalytics/LiteralE/blob/master/README_ConvE.md#quirks
+  stopper: "early"
+  stopper_kwargs:
+    metric: "inverse_harmonic_mean_rank"
+    frequency: 1 # added after communication with paper's author
+    patience: 3 # added after communication with paper's author
+    relative_delta: 0.000001 # = 1e-6 | added after communication with paper's author
+  random_seed: 1677423275 # https://github.com/SmartDataAnalytics/LiteralE/blob/0b0c48fd9b74bf000400199610275ea5c159a44c/main_literal.py#L43-L49
+results:
+  realistic:
+    adjusted_arithmetic_mean_rank: 0.034185358415978834
+    adjusted_arithmetic_mean_rank_index: 0.9658305651850391
+    adjusted_geometric_mean_rank_index: 0.9997600572773723
+    adjusted_hits_at_k: 0.6348550828727296
+    adjusted_inverse_harmonic_mean_rank: 0.48717610694742675
+    arithmetic_mean_rank: 2073.479736328125
+    count: 9964.0
+    geometric_mean_rank: 11.652639389038086
+    harmonic_mean_rank: 2.052424538250183
+    hits_at_1: 0.4056603773584906
+    hits_at_10: 0.634885588117222
+    hits_at_3: 0.5321156162183862
+    hits_at_5: 0.5811922922521076
+    inverse_arithmetic_mean_rank: 0.0004822810587938875
+    inverse_geometric_mean_rank: 0.08581746369600296
+    inverse_harmonic_mean_rank: 0.4872286319732666
+    inverse_median_rank: 0.3333333432674408
+    median_absolute_deviation: 2.965204437011204
+    median_rank: 3.0
+    standard_deviation: 10115.9287109375
+    variance: 102332008.0
+    z_arithmetic_mean_rank: 166.40836676779548
+    z_geometric_mean_rank: 99.83375138752025
+    z_hits_at_k: 6932.967333867854
+    z_inverse_harmonic_mean_rank: 13121.992323396393

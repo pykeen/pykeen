@@ -148,3 +148,9 @@ EASide = Literal["left", "right"]
 EA_SIDE_LEFT: EASide = "left"
 EA_SIDE_RIGHT: EASide = "right"
 EA_SIDES: Tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)
+
+# simple ndarray callable
+NdArrayInOutCallable = Callable[[np.ndarray], np.ndarray]
+
+# worker init function callable
+WorkerInitCallable = Callable[[int], None]
