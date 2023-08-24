@@ -2,7 +2,6 @@
 
 """Training loops for KGE models using multi-modal information."""
 
-from contextlib import ExitStack
 import gc
 import logging
 import os
@@ -11,6 +10,7 @@ import pickle
 import random
 import time
 from abc import ABC, abstractmethod
+from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
