@@ -45,6 +45,7 @@ from .literal_base import NumericPathDataset
 from .nations import Nations
 from .ogb import OGBBioKG, OGBLoader, OGBWikiKG2
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
+from .pharmebinet import PharMeBINet
 from .pharmkg import PharmKG, PharmKG8k
 from .primekg import PrimeKG
 from .umls import UMLS
@@ -97,6 +98,7 @@ __all__ = [
     "PharmKG",
     "PrimeKG",
     "Globi",
+    "PharMeBINet",
 ]
 
 logger = logging.getLogger(__name__)
