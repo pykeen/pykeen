@@ -390,9 +390,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
     return hash((id(kwargs["evaluator"]), kwargs["mapped_triples"].shape[0], kwargs["targets"]))
 
 
-# note: we wrap this method twice; the inner one (=batch size) is reduced before the outer one applies
-@maximize_memory_utilization(hasher=_hasher, parameter_name="slice_size")
-@maximize_memory_utilization(hasher=_hasher)
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 @torch.inference_mode()
 def optimized_evaluate(
     *,

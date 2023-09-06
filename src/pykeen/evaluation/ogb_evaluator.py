@@ -217,8 +217,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
     return hash((id(kwargs["model"]), kwargs["mapped_triples"].shape[0], kwargs["negatives"].shape, kwargs["target"]))
 
 
-@maximize_memory_utilization(parameter_name="slice_size", hasher=_hasher)
-@maximize_memory_utilization(hasher=_hasher)
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 def _evaluate_ogb(
     *,
     evaluator: OGBEvaluator,
