@@ -63,12 +63,34 @@ class CSGraphAnchorSearcher(AnchorSearcher):
 
     @staticmethod
     def topk_argsort(array: numpy.ndarray, k: int) -> numpy.ndarray:
-        # $O ( num_entities * ( num_anchors log num_anchors) )$
+        """Return the sorted top-k indices using argsort.
+
+        Its complexity is $O(m * n log n)$.
+
+        :param array: shape: (n, m)
+            the array
+        :param k:
+            the value of $k$
+
+        :return: shape: (m, k)
+            the indices of the $k$ largest values sorted in descending order
+        """
         return numpy.argsort(array, axis=0)[:k, :].T
 
     @staticmethod
     def topk_argpartition(array: numpy.ndarray, k: int) -> numpy.ndarray:
-        # $O ( num_entities * ( num_anchors + k log k) )$
+        """Return the sorted top-k indices using argpartition.
+
+        Its complexity is $O(m * (n + k log k))$.
+
+        :param array: shape: (n, m)
+            the array
+        :param k:
+            the value of $k$
+
+        :return: shape: (m, k)
+            the indices of the $k$ largest values sorted in descending order
+        """
         # this array contains the indices of the k closest anchors nodes, but without guarantee that they are sorted
         top_k_indices = numpy.argpartition(array, kth=min(k, array.shape[0] - 1), axis=0)[:k, :]
         # now we want to sort these top-k entries, (O(k log k)) (and only those)
