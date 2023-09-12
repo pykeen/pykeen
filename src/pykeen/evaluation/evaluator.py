@@ -314,7 +314,7 @@ class Evaluator(ABC):
             logger.debug(f"Automatically set maximum batch size to {batch_size=}")
         # no slice size -> automatic memory optimization
         if slice_size is None:
-            nums = set()
+            nums: set[int] = set()
             if {LABEL_HEAD, LABEL_TAIL}.intersection(targets):
                 nums.add(model.num_entities)
             if LABEL_RELATION in targets:
