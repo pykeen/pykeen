@@ -333,7 +333,7 @@ class Evaluator(ABC):
                 ),
             )
         ) as progress_bar:
-            return optimized_evaluate(
+            return evaluate(
                 evaluator=self,
                 mapped_triples=mapped_triples,
                 # note: we provide the *maximum* batch and slice size here; it is reduced if necessary
@@ -392,7 +392,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
 
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 @torch.inference_mode()
-def optimized_evaluate(
+def evaluate(
     *,
     evaluator: Evaluator,
     mapped_triples: MappedTriples,
