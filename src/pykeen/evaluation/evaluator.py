@@ -456,7 +456,7 @@ def optimized_evaluate(
 def create_sparse_positive_filter_(
     hrt_batch: MappedTriples,
     all_pos_triples: torch.LongTensor,
-    relation_filter: torch.BoolTensor = None,
+    relation_filter: torch.BoolTensor | None = None,
     filter_col: int = 0,
 ) -> Tuple[torch.LongTensor, torch.BoolTensor]:
     """Compute indices of all positives.
