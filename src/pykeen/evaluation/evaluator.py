@@ -436,6 +436,8 @@ def optimized_evaluate(
 
     # batch-wise processing
     for batch in mapped_triples.split(split_size=batch_size):
+        # the relation_filter can be re-used (per batch) when we evaluate head *and* tail predictions
+        # (which is the standard setting), cf. create_sparse_positive_filter_
         relation_filter = None
         for target in targets:
             relation_filter = _evaluate_batch(
