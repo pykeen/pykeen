@@ -14,7 +14,7 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
-from torch_max_mem import MemoryUtilizationMaximizer
+from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 from typing_extensions import TypeAlias
 
@@ -58,11 +58,7 @@ def _hasher(d: Mapping[str, Any]) -> int:
     return id(obj)
 
 
-#: the MemoryUtilizationMaximizer instance for :func:`_evaluate`.
-evaluation_batch_size_maximizer = MemoryUtilizationMaximizer(hasher=_hasher)
-
-
-@evaluation_batch_size_maximizer
+@maximize_memory_utilization(hasher=_hasher)
 def _evaluate(
     loop: "EvaluationLoop",
     batch_size: int,
