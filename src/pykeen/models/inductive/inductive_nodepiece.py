@@ -12,13 +12,13 @@ from class_resolver import Hint, HintOrType, OptionalKwargs
 from .base import InductiveERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
+    ConcatAggregationCombination,
     DistMultInteraction,
     Interaction,
     NodePieceRepresentation,
     SubsetRepresentation,
-    representation_resolver,
-    ConcatAggregationCombination,
     TokenizationRepresentation,
+    representation_resolver,
 )
 from ...nn.node_piece import RelationTokenizer
 from ...triples.triples_factory import CoreTriplesFactory
