@@ -498,6 +498,22 @@ class ERModel(
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
         self._check_slicing(slice_size=slice_size)
+
+        # slice early to allow lazy computation of target representations
+        if slice_size:
+            return torch.cat(
+                [
+                    self.score_t(
+                        hr_batch=hr_batch,
+                        slice_size=None,
+                        mode=mode,
+                        tails=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    )
+                    for start in range(0, self.num_entities, slice_size)
+                ],
+                dim=-1,
+            )
+
         # add broadcast dimension
         hr_batch = hr_batch.unsqueeze(dim=1)
         h, r, t = self._get_representations(h=hr_batch[..., 0], r=hr_batch[..., 1], t=tails, mode=mode)
@@ -505,7 +521,7 @@ class ERModel(
         if tails is None or tails.ndimension() == 1:
             t = parallel_unsqueeze(t, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
+            scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
         )
