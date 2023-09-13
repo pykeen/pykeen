@@ -1019,8 +1019,10 @@ def predict_all(
     elif not isinstance(model, InductiveERModel):
         raise ValueError(f"{mode=} is invalid for a model that does not support inductive inference.")
     else:
-        num_entities = model._get_entity_len(mode=mode)
-        assert num_entities is not None
+        inf_num_entities = model._get_entity_len(mode=mode)
+        if inf_num_entities is None:
+            raise ValueError(f"Could not determine the number of entities for {mode=}")
+        num_entities = inf_num_entities
 
     consumer: ScoreConsumer
     if k is None:
