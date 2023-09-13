@@ -282,7 +282,7 @@ from tqdm.auto import tqdm
 from typing_extensions import TypeAlias  # Python <=3.9
 
 from .constants import COLUMN_LABELS, TARGET_TO_INDEX
-from .models.base import Model
+from .models import InductiveERModel, Model
 from .triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from .triples.utils import tensor_to_df
 from .typing import (
@@ -1014,17 +1014,23 @@ def predict_all(
         f"score evaluations.",
     )
 
+    if mode is None:
+        num_entities = model.num_entities
+    elif not isinstance(model, InductiveERModel):
+        raise ValueError(f"{mode=} is invalid for a model that does not support inductive inference.")
+    else:
+        num_entities = model._get_entity_len(mode=mode)
+        assert num_entities is not None
+
     consumer: ScoreConsumer
     if k is None:
         logger.warning(
             "Not providing k to `predict_all` entails huge memory requirements for reasonably-sized knowledge graphs.",
         )
-        consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+        consumer = AllScoreConsumer(num_entities=num_entities, num_relations=model.num_relations)
     else:
         consumer = TopKScoreConsumer(k=k, device=model.device)
-    dataset = AllPredictionDataset(
-        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
-    )
+    dataset = AllPredictionDataset(num_entities=num_entities, num_relations=model.num_real_relations, target=target)
     consume_scores(model, dataset, consumer, batch_size=batch_size or len(dataset), mode=mode)
     return consumer.finalize()
 
