@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
 
 import numpy as np
@@ -377,7 +377,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
-            # the exit stack ensure that we cleanup temporary files when an error occurs
+            # the exit stack ensure that we clean up temporary files when an error occurs
             with ExitStack() as exit_stack:
                 # When using early stopping models have to be saved separately at the best epoch, since the training
                 # loop will due to the patience continue to train after the best epoch and thus alter the model
@@ -387,9 +387,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     and last_best_epoch is None
                     and best_epoch_model_file_path is None
                 ):
+                    # note: NamedTemporaryFile does not seem to work
                     # Create a path
-                    named_temporary_file = exit_stack.enter_context(NamedTemporaryFile())
-                    best_epoch_model_file_path = pathlib.Path(named_temporary_file.name)
+                    temporary_directory = exit_stack.enter_context(TemporaryDirectory())
+                    best_epoch_model_file_path = pathlib.Path(temporary_directory).joinpath("best_model.pt")
 
                 result = self._train(
                     num_epochs=num_epochs,
