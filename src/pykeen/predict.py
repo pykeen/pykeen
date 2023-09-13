@@ -1017,15 +1017,7 @@ def predict_all(
         f"score evaluations.",
     )
 
-    if mode is None:
-        num_entities = model.num_entities
-    elif not isinstance(model, InductiveERModel):
-        raise ValueError(f"{mode=} is invalid for a model that does not support inductive inference.")
-    else:
-        inf_num_entities = model._get_entity_len(mode=mode)
-        if inf_num_entities is None:
-            raise ValueError(f"Could not determine the number of entities for {mode=}")
-        num_entities = inf_num_entities
+    num_entities = model._get_entity_len(mode=mode)
 
     consumer: ScoreConsumer
     if k is None:
