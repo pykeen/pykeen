@@ -1029,7 +1029,7 @@ def predict_all(
         logger.warning(
             "Not providing k to `predict_all` entails huge memory requirements for reasonably-sized knowledge graphs.",
         )
-        consumer = AllScoreConsumer(num_entities=num_entities, num_relations=model.num_relations)
+        consumer = AllScoreConsumer(num_entities=num_entities, num_relations=model.num_real_relations)
     else:
         consumer = TopKScoreConsumer(k=k, device=model.device)
     dataset = AllPredictionDataset(num_entities=num_entities, num_relations=model.num_real_relations, target=target)
