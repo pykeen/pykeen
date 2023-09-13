@@ -1007,6 +1007,9 @@ def predict_all(
 
     :return:
         A score pack of parallel triples and scores
+
+    :raises ValueError:
+        if an inductive inference mode is selected, but the model does not support it
     """
     # note: the models' predict method takes care of setting the model to evaluation mode
     logger.warning(
