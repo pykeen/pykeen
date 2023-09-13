@@ -61,6 +61,42 @@ class AnchorSearcher(ExtraReprMixin, ABC):
 class CSGraphAnchorSearcher(AnchorSearcher):
     """Find closest anchors using :class:`scipy.sparse.csgraph`."""
 
+    @staticmethod
+    def topk_argsort(array: numpy.ndarray, k: int) -> numpy.ndarray:
+        """Return the sorted top-k indices using argsort.
+
+        Its complexity is $O(m * n log n)$.
+
+        :param array: shape: (n, m)
+            the array
+        :param k:
+            the value of $k$
+
+        :return: shape: (m, k)
+            the indices of the $k$ smallest values sorted in descending order
+        """
+        return numpy.argsort(array, axis=0)[:k, :]
+
+    @staticmethod
+    def topk_argpartition(array: numpy.ndarray, k: int) -> numpy.ndarray:
+        """Return the sorted top-k indices using argpartition.
+
+        Its complexity is $O(m * (n + k log k))$.
+
+        :param array: shape: (n, m)
+            the array
+        :param k:
+            the value of $k$
+
+        :return: shape: (m, k)
+            the indices of the $k$ smallest values sorted in descending order
+        """
+        # this array contains the indices of the k closest anchors nodes, but without guarantee that they are sorted
+        top_k_indices = numpy.argpartition(array, kth=min(k, array.shape[0] - 1), axis=0)[:k, :]
+        # now we want to sort these top-k entries, (O(k log k)) (and only those)
+        top_dist = numpy.take_along_axis(arr=array, indices=top_k_indices, axis=0)
+        return numpy.take_along_axis(arr=top_k_indices, indices=numpy.argsort(top_dist, axis=0), axis=0)
+
     # docstr-coverage: inherited
     def __call__(
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
@@ -78,11 +114,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             indices=anchors,
         )
         # TODO: padding for unreachable?
-        # select anchor IDs with smallest distance
-        return torch.as_tensor(
-            numpy.argpartition(distances, kth=min(k, distances.shape[0] - 1), axis=0)[:k, :].T,
-            dtype=torch.long,
-        )
+        return self.topk_argpartition(array=distances, k=k).T
 
 
 class ScipySparseAnchorSearcher(AnchorSearcher):
