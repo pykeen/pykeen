@@ -19,4 +19,4 @@ python:
       extra_requirements:
         - docs
         - lightning
-  system_packages: true
+
