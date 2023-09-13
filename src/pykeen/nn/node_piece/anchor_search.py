@@ -73,7 +73,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             the value of $k$
 
         :return: shape: (m, k)
-            the indices of the $k$ largest values sorted in descending order
+            the indices of the $k$ smallest values sorted in descending order
         """
         return numpy.argsort(array, axis=0)[:k, :].T
 
@@ -89,7 +89,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             the value of $k$
 
         :return: shape: (m, k)
-            the indices of the $k$ largest values sorted in descending order
+            the indices of the $k$ smallest values sorted in descending order
         """
         # this array contains the indices of the k closest anchors nodes, but without guarantee that they are sorted
         top_k_indices = numpy.argpartition(array, kth=min(k, array.shape[0] - 1), axis=0)[:k, :]
