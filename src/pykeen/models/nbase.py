@@ -545,7 +545,7 @@ class ERModel(
             return torch.cat(
                 [
                     self.score_h(
-                        hr_batch=rt_batch,
+                        rt_batch=rt_batch,
                         slice_size=None,
                         mode=mode,
                         heads=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
@@ -585,7 +585,7 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_h(
+                    self.score_r(
                         ht_batch=ht_batch,
                         slice_size=None,
                         mode=mode,
