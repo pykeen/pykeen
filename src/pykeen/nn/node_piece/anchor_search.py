@@ -75,7 +75,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         :return: shape: (m, k)
             the indices of the $k$ smallest values sorted in descending order
         """
-        return numpy.argsort(array, axis=0)[:k, :].T
+        return numpy.argsort(array, axis=0)[:k, :]
 
     @staticmethod
     def topk_argpartition(array: numpy.ndarray, k: int) -> numpy.ndarray:
@@ -114,7 +114,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             indices=anchors,
         )
         # TODO: padding for unreachable?
-        return self.topk_argpartition(array=distances, k=k)
+        return self.topk_argpartition(array=distances, k=k).T
 
 
 class ScipySparseAnchorSearcher(AnchorSearcher):
