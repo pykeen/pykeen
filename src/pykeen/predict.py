@@ -282,7 +282,7 @@ from tqdm.auto import tqdm
 from typing_extensions import TypeAlias  # Python <=3.9
 
 from .constants import COLUMN_LABELS, TARGET_TO_INDEX
-from .models import InductiveERModel, Model
+from .models import Model
 from .triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from .triples.utils import tensor_to_df
 from .typing import (
