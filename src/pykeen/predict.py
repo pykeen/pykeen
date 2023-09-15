@@ -1018,6 +1018,8 @@ def predict_all(
     )
 
     num_entities = model._get_entity_len(mode=mode)
+    if num_entities is None:
+        raise ValueError(f"Could not determine num_entities for {mode=}")
 
     consumer: ScoreConsumer
     if k is None:
