@@ -149,13 +149,19 @@ class InductiveNodePiece(InductiveERModel):
         self, triples_factory: CoreTriplesFactory
     ) -> NodePieceRepresentation:
         """
-        Utility method to create suitable NodePiece representations for a new triples factory.
+        Create NodePiece representations for a new triples factory.
+
+        The representations are initialized such that the same relation representations are used, and the aggregation
+        is shared.
 
         :param triples_factory:
             the triples factory used for relation tokenization; must share the same relation to ID mapping.
 
         :return:
             a new NodePiece entity representation with shared relation tokenization and aggregation.
+
+        :raises ValueError:
+            if the triples factory does not request inverse triples, or the number of relations differs.
         """
         if not triples_factory.create_inverse_triples:
             raise ValueError("Must create a triples factory with inverse triples")
