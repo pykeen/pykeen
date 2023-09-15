@@ -11,7 +11,7 @@ from class_resolver import ClassResolver, Hint, HintOrType
 from class_resolver.contrib.torch import aggregation_resolver
 from more_itertools import chunked
 from torch import nn
-from torch_max_mem import MemoryUtilizationMaximizer
+from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 
 from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
@@ -29,10 +29,9 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-memory_utilization_maximizer = MemoryUtilizationMaximizer()
 
 
-@memory_utilization_maximizer
+@maximize_memory_utilization()
 def _encode_all_memory_utilization_optimized(
     encoder: "TextEncoder",
     labels: Sequence[str],
