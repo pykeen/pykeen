@@ -10,7 +10,7 @@ import math
 import string
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, ClassVar, Iterable, List, Literal, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import more_itertools
 import numpy
@@ -26,7 +26,7 @@ from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .text import TextEncoder, text_encoder_resolver
-from .utils import ShapeError, WikidataCache
+from .utils import PyOBOCache, ShapeError, TextCache, WikidataCache
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -57,9 +57,11 @@ __all__ = [
     "SubsetRepresentation",
     "CombinedRepresentation",
     "TensorTrainRepresentation",
-    "TextRepresentation",
     "TransformedRepresentation",
+    "TextRepresentation",
+    "CachedTextRepresentation",
     "WikidataTextRepresentation",
+    "BiomedicalCURIERepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -580,7 +582,7 @@ class CompGCNLayer(nn.Module):
         composition: Hint[CompositionModule] = None,
         attention_heads: int = 4,
         attention_dropout: float = 0.1,
-        activation: Hint[nn.Module] = nn.Identity,
+        activation: HintOrType[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_weighting: HintType[EdgeWeighting] = SymmetricEdgeWeighting,
     ):
@@ -952,6 +954,21 @@ class SingleCompGCNRepresentation(Representation):
         return x
 
 
+def _clean_labels(labels: Sequence[Optional[str]], missing_action: Literal["error", "blank"]) -> Sequence[str]:
+    if missing_action == "error":
+        idx = [i for i, label in enumerate(labels) if label is None]
+        if idx:
+            raise ValueError(
+                f"The labels at the following indexes were none. "
+                f"Consider an alternate `missing_action` policy.\n{idx}",
+            )
+        return cast(Sequence[str], labels)
+    elif missing_action == "blank":
+        return [label or "" for label in labels]
+    else:
+        raise ValueError(f"Invalid `missing_action` policy: {missing_action}")
+
+
 class TextRepresentation(Representation):
     """
     Textual representations using a text encoder on labels.
@@ -969,7 +986,7 @@ class TextRepresentation(Representation):
 
         dataset = get_dataset(dataset="nations")
         entity_representations = TextRepresentation.from_dataset(
-            triples_factory=dataset,
+            dataset=dataset,
             encoder="transformer",
         )
         model = ERModel(
@@ -979,20 +996,23 @@ class TextRepresentation(Representation):
         )
     """
 
+    labels: List[str]
+
     def __init__(
         self,
-        labels: Sequence[str],
+        labels: Sequence[Optional[str]],
         max_id: Optional[int] = None,
         shape: Optional[OneOrSequence[int]] = None,
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
+        missing_action: Literal["blank", "error"] = "error",
         **kwargs,
     ):
         """
         Initialize the representation.
 
         :param labels:
-            the labels
+            an ordered, finite collection of labels
         :param max_id:
             the number of representations. If provided, has to match the number of labels
         :param shape:
@@ -1001,6 +1021,9 @@ class TextRepresentation(Representation):
             the text encoder, or a hint thereof
         :param encoder_kwargs:
             keyword-based parameters used to instantiate the text encoder
+        :param missing_action:
+            Which policy for handling nones in the given labels. If "error", raises an error
+            on any nones. If "blank", replaces nones with an empty string.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`
 
@@ -1012,10 +1035,11 @@ class TextRepresentation(Representation):
         max_id = max_id or len(labels)
         if max_id != len(labels):
             raise ValueError(f"max_id={max_id} does not match len(labels)={len(labels)}")
+        labels = _clean_labels(labels, missing_action)
         # infer shape
         shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
         super().__init__(max_id=max_id, shape=shape, **kwargs)
-        self.labels = labels
+        self.labels = list(labels)
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
 
@@ -1169,7 +1193,41 @@ class CombinedRepresentation(Representation):
         return self.combine(combination=self.combination, base=self.base, indices=indices)
 
 
-class WikidataTextRepresentation(TextRepresentation):
+class CachedTextRepresentation(TextRepresentation):
+    """Textual representations for datasets with identifiers that can be looked up with a :class:`TextCache`."""
+
+    cache_cls: ClassVar[Type[TextCache]]
+
+    def __init__(self, identifiers: Sequence[str], cache: TextCache | None = None, **kwargs):
+        """
+        Initialize the representation.
+
+        :param identifiers:
+            the IDs to be resolved by the class, e.g., wikidata IDs. for :class:`WikidataTextRepresentation`,
+            biomedical entities represented as compact URIs (CURIEs) for :class:`BiomedicalCURIERepresentation`
+        :param cache:
+            a pre-instantiated text cache. If None, :attr:`cache_cls` is used to instantiate one.
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
+        """
+        cache = self.cache_cls() if cache is None else cache
+        labels = cache.get_texts(identifiers=identifiers)
+        # delegate to super class
+        super().__init__(labels=labels, **kwargs)
+
+    # docstr-coverage: inherited
+    @classmethod
+    def from_triples_factory(
+        cls,
+        triples_factory: TriplesFactory,
+        for_entities: bool = True,
+        **kwargs,
+    ) -> "TextRepresentation":  # noqa: D102
+        labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
+        return cls(identifiers=labeling.all_labels(), **kwargs)
+
+
+class WikidataTextRepresentation(CachedTextRepresentation):
     """
     Textual representations for datasets grounded in Wikidata.
 
@@ -1200,24 +1258,50 @@ class WikidataTextRepresentation(TextRepresentation):
         )
     """
 
-    def __init__(self, labels: Sequence[str], **kwargs):
-        """
-        Initialize the representation.
+    cache_cls = WikidataCache
 
-        :param labels:
-            the wikidata IDs.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
-        """
-        # set up cache
-        cache = WikidataCache()
-        # get labels & descriptions
-        titles = cache.get_labels(ids=labels)
-        descriptions = cache.get_descriptions(ids=labels)
-        # compose labels
-        labels = [f"{title}: {description}" for title, description in zip(titles, descriptions)]
-        # delegate to super class
-        super().__init__(labels=labels, **kwargs)
+
+class BiomedicalCURIERepresentation(CachedTextRepresentation):
+    """
+    Textual representations for datasets grounded with biomedical CURIEs.
+
+    The label and description for each entity are obtained via :mod:`pyobo` using
+    :class:`pykeen.nn.utils.PyOBOCache` and encoded with :class:`TextRepresentation`.
+
+    Example usage:
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.models import ERModel
+        from pykeen.nn import BiomedicalCURIERepresentation
+        from pykeen.pipeline import pipeline
+        import bioontologies
+
+        # Generate graph dataset from the Monarch Disease Ontology (MONDO)
+        graph = bioontologies.get_obograph_by_prefix("mondo").squeeze(standardize=True)
+        triples = (edge.as_tuple() for edge in graph.edges)
+        triples = [t for t in triples if all(t)]
+        triples = TriplesFactory.from_labeled_triples(np.array(triples))
+        dataset = Dataset.from_tf(triples)
+
+        entity_representations = BiomedicalCURIERepresentation.from_dataset(
+            dataset=dataset, encoder="transformer",
+        )
+        result = pipeline(
+            dataset=dataset,
+            model=ERModel,
+            model_kwargs=dict(
+                interaction="distmult",
+                entity_representations=entity_representations,
+                relation_representation_kwargs=dict(
+                    shape=entity_representations.shape,
+                ),
+            ),
+        )
+    """
+
+    cache_cls = PyOBOCache
 
 
 class PartitionRepresentation(Representation):

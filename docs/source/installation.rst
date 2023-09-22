@@ -109,4 +109,5 @@ Name              Description
 ``tests``         Code needed to run tests. Typically handled with ``tox -e py``
 ``docs``          Building of the documentation
 ``opt_einsum``    Improve performance of :func:`torch.einsum` by replacing with :func:`opt_einsum.contract`
+``biomedicine``   Use of :mod:`pyobo` for lookup of biomedical entity labels
 ================  =========================================================================================

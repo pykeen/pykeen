@@ -14,24 +14,31 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.8", "3.10" ]
+        # no need to check documentation wit multiple python versions
+        # python-version: [ "3.8", "3.10" ]
+        python-version: [ "3.10" ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+          cache: 'pip'
+          cache-dependency-path: './setup.cfg'
+      
       - name: Install dependencies
         run: pip install tox
 
       - name: Check RST conformity with doc8
         run: tox -e doc8
+      
+      # - name: Check RST format
+      #   run: tox -e doclint
 
       - name: Check README.rst
         run: tox -e readme
-
-      - name: Check docstring coverage
-        run: tox -e docstr-coverage
 
       - name: Check documentation build with Sphinx
         run: |
@@ -39,42 +46,33 @@ jobs:
           tox -e docs-test
   tests:
     name: Tests
-    runs-on: ubuntu-latest
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: [ "3.8", "3.10" ]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+          cache: 'pip'
+          cache-dependency-path: './setup.cfg'
+      
       - name: Install dependencies
         run: pip install tox
+      
       - name: Run fast tests
         run: tox -e py
+      
       - name: Run slow tests
         run: tox -e integration
+      
       - name: Run doctests
         run: tox -e doctests
-  windows:
-    name: Windows
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        python-version: [ "3.8", "3.10" ]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          conda install pip setuptools wheel sqlite
-          conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
-          pip install -e .[mlflow,wandb,tests]
-      - name: Run fast tests
-        run: pytest --durations=20 tests -m "not slow"
-      - name: Run slow tests
-        run: pytest --durations=20 tests -m "slow"
+      
+      # - name: Test notebooks
+      #   run: tox -e treon

@@ -18,7 +18,7 @@ from more_itertools import pairwise
 
 from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets import Nations
-from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
+from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import (
     CLASSIFICATION_METRICS,
     ClassificationEvaluator,
@@ -60,7 +60,7 @@ from pykeen.typing import (
     MappedTriples,
     Target,
 )
-from tests import cases
+from tests import cases, mocks
 from tests.utils import needs_packages
 
 
@@ -139,12 +139,25 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
 
-    @needs_packages("ogb")
-    def test_ogb_evaluate(self):
+
+@needs_packages("ogb")
+class OGBEvaluatorTests(RankBasedEvaluatorTests):
+    """Unit test for OGB evaluator."""
+
+    cls = OGBEvaluator
+    kwargs = dict(num_negatives=3)
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["evaluation_factory"] = self.factory
+        kwargs["batch_size"] = 1
+        return kwargs
+
+    def test_ogb_evaluate_alternate(self):
         """Test OGB evaluation."""
         self.instance: SampledRankBasedEvaluator
         model = FixedModel(triples_factory=self.factory)
-        result = self.instance.evaluate_ogb(model=model, mapped_triples=self.factory.mapped_triples, batch_size=1)
+        result = self.instance.evaluate(model=model, mapped_triples=self.factory.mapped_triples, batch_size=1)
         assert isinstance(result, MetricResults)
 
 
@@ -404,6 +417,9 @@ class DummyEvaluator(Evaluator):
             self.counter += 1
         elif target == LABEL_HEAD:
             self.counter -= 1
+
+    def clear(self):  # noqa: D102
+        pass
 
     def finalize(self) -> MetricResults:  # noqa: D102
         return RankBasedMetricResults(
@@ -858,3 +874,14 @@ class MetricResultMetaTestCase(unittest_templates.MetaTestCase):
 
     base_cls = MetricResults
     base_test = cases.MetricResultTestCase
+
+
+class EvaluatorMetaTestCase(unittest_templates.MetaTestCase):
+    """Test for tests for evaluators."""
+
+    base_cls = Evaluator
+    base_test = cases.EvaluatorTestCase
+    skip_cls = {
+        mocks.MockEvaluator,
+        DummyEvaluator,
+    }

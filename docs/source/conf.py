@@ -52,7 +52,7 @@ copyright = f"2019-{date.today().year}, PyKEEN Project Team"
 author = "PyKEEN Project Team"
 
 # The full version, including alpha/beta/rc tags.
-release = "1.9.1-dev"
+release = "1.10.2-dev"
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -252,13 +252,14 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "https://docs.python.org/3/": None,
+    "python": ("https://docs.python.org/3", None),
     "torch": ("https://pytorch.org/docs/stable", None),
     "torchvision": ("https://pytorch.org/vision/stable", None),
     "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest/", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "optuna": ("https://optuna.readthedocs.io/en/latest", None),
     "pybel": ("https://pybel.readthedocs.io/en/latest/", None),
+    "pyobo": ("https://pyobo.readthedocs.io/en/stable/", None),
     "class_resolver": ("https://class-resolver.readthedocs.io/en/latest/", None),
     "rexmex": ("https://rexmex.readthedocs.io/en/latest/", None),
     "bio2bel": ("https://bio2bel.readthedocs.io/en/latest/", None),

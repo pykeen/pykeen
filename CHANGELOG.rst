@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
+Note that since version 1.7.0, the changelog is exclusively in GitHub releases.
+
 `1.7.0 <https://github.com/pykeen/pykeen/compare/v1.6.0...v1.7.0>`_
 -------------------------------------------------------------------
 This release is only compatible with PyTorch 1.10+.

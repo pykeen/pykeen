@@ -25,7 +25,7 @@ __all__ = [
     "OpenEA",
 ]
 
-OPEN_EA_MODULE = PYKEEN_DATASETS_MODULE.submodule("openea")
+OPEN_EA_MODULE = PYKEEN_DATASETS_MODULE.module("openea")
 
 logger = logging.getLogger(__name__)
 

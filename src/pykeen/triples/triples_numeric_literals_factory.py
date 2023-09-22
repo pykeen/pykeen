@@ -149,9 +149,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping
-        pandas.DataFrame(data=self.literals_to_id.items(), columns=["label", "id"],).sort_values(by="id").set_index(
-            "id"
-        ).to_csv(
+        pandas.DataFrame(
+            data=self.literals_to_id.items(),
+            columns=["label", "id"],
+        ).sort_values(
+            by="id"
+        ).set_index("id").to_csv(
             path.joinpath(f"{self.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )

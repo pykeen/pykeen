@@ -59,7 +59,7 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.evaluation_loop import LCWAEvaluationLoop
+from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
 from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
@@ -279,6 +279,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         prefix: Optional[str] = None,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
+        additional_filter_triples: AdditionalFilterTriplesHint = None,
         **kwargs,
     ):
         """
@@ -294,6 +295,8 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
             the evaluator, or a hint thereof
         :param evaluator_kwargs:
             additional keyword-based parameters used for the evaluation instantiation
+        :param additional_filter_triples:
+            additional filter triples to use for creating the filter
         :param kwargs:
             additional keyword-based parameters passed to :meth:`EvaluationLoop.evaluate`
         """
@@ -306,6 +309,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         # lazy init
         self._evaluation_loop = None
         self.kwargs = kwargs
+        self.additional_filter_triples = additional_filter_triples
 
     @property
     def evaluation_loop(self):
@@ -315,6 +319,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
                 triples_factory=self.factory,
                 evaluator=self.evaluator,
                 model=self.model,
+                additional_filter_triples=self.additional_filter_triples,
             )
         return self._evaluation_loop
 

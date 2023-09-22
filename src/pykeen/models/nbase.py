@@ -357,6 +357,8 @@ class ERModel(
         **kwargs,
     ) -> Sequence[Representation]:
         """Build representations for the given factory."""
+        # note, triples_factory is required instead of just using self.num_entities
+        # and self.num_relations for the inductive case when this is different
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
@@ -478,7 +480,9 @@ class ERModel(
         """Raise an error, if slicing is requested, but the model does not support it."""
         if not slice_size:
             return
-        if get_batchnorm_modules(self):  # if there are any, this is truthy
+        # batch normalization modules use batch statistics in training mode
+        # -> different batch divisions lead to different results
+        if self.training and get_batchnorm_modules(self):
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
     # docstr-coverage: inherited
@@ -490,6 +494,9 @@ class ERModel(
         mode: Optional[InductiveMode] = None,
         tails: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_entities:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         hr_batch = hr_batch.unsqueeze(dim=1)
@@ -512,6 +519,9 @@ class ERModel(
         mode: Optional[InductiveMode] = None,
         heads: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_entities:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         rt_batch = rt_batch.unsqueeze(dim=1)
@@ -534,6 +544,9 @@ class ERModel(
         mode: Optional[InductiveMode] = None,
         relations: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_relations:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         ht_batch = ht_batch.unsqueeze(dim=1)

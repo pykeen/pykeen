@@ -36,7 +36,7 @@ GraphPair = Literal["en_de", "en_fr"]
 EN_DE: GraphPair = "en_de"
 EN_FR: GraphPair = "en_fr"
 GRAPH_PAIRS = (EN_DE, EN_FR)
-WK3L_MODULE = PYKEEN_DATASETS_MODULE.submodule("wk3l")
+WK3L_MODULE = PYKEEN_DATASETS_MODULE.module("wk3l")
 EA_SIDES_R: Tuple[EASide, EASide] = (EA_SIDE_RIGHT, EA_SIDE_LEFT)
 
 
