@@ -271,9 +271,9 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         num_candidates = generator.integers(low=2, high=1000, size=(2, 1000))
         ranks = generator.integers(low=1, high=num_candidates[None], size=(2, 2, 1000))
         ranks = numpy.maximum.accumulate(ranks, axis=1)  # increasing, since order of RANK_TYPES
-        data: dict[RankBasedMetricKey, float] = {}
+        data: dict[RankBasedMetricKey | str, float] = {}
 
-        rank_to_idx = {
+        rank_to_idx: dict[RankType, Sequence[int]] = {
             RANK_OPTIMISTIC: [0],
             RANK_PESSIMISTIC: [1],
             RANK_REALISTIC: [0, 1],
