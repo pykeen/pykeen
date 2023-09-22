@@ -265,7 +265,10 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
         """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
-    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
+    # docstr-coverage: inherited
+    def forward(
+        self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None
+    ) -> float:  # noqa: D102
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
         return self.extract_from_confusion_matrix(matrix=matrix)
