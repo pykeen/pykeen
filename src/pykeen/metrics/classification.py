@@ -63,7 +63,7 @@ class ClassificationFunc(Protocol):
     """A protocol for classification functions."""
 
     # TODO: check how to type properly
-    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, /, **kwargs) -> float:
+    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, /, **kwargs) -> float:  # noqa: DAR202
         """
         Calculate the metric.
 
@@ -241,7 +241,7 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     zero_division: ZeroDivisionPolicy = "warn"
 
     @abc.abstractmethod
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: DAR202
         """
         Calculate the metric from the confusion table.
 
