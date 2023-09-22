@@ -53,7 +53,6 @@ to implement a gradient clipping callback:
 from __future__ import annotations
 
 import pathlib
-import typing
 from typing import Any, List, Mapping, Optional, Sequence
 
 import torch
@@ -71,10 +70,6 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
-
-if typing.TYPE_CHECKING:
-    import pykeen.training.training_loop
-
 
 __all__ = [
     "TrainingCallbackHint",
@@ -97,7 +92,7 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self) -> "pykeen.training.training_loop.TrainingLoop":  # noqa:D401
+    def training_loop(self) -> pykeen.training.training_loop.TrainingLoop:  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
@@ -441,7 +436,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 @torch.inference_mode()
 def _validation_loss_amo_wrapper(
-    training_loop: "pykeen.training.training_loop.TrainingLoop",
+    training_loop: pykeen.training.training_loop.TrainingLoop,
     triples_factory: CoreTriplesFactory,
     batch_size: int,
     slice_size: int,
