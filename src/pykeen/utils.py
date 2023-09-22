@@ -1042,17 +1042,20 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     :returns:
         An elementwise normalized vector.
     """
+    if torch.is_complex(x):
+        return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
+
     # note: this is a hack, and should be fixed up-stream by making NodePiece
     #  use proper complex embeddings for rotate interaction; however, we also have representations
     #  that perform message passing, and we would need to propagate the base representation's complexity through it
-    if not torch.is_complex(x):
-        warnings.warn("Applying complex_normalize on non-complex input.")
-        (x_complex,) = ensure_complex(x)
-        x_complex = complex_normalize(x_complex)
-        x_real = torch.view_as_real(x_complex)
-        return x_real.view(x.shape)
-
-    return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
+    warnings.warn(
+        "Applying complex_normalize on non-complex input; if you see shape errors downstream this may be a possible "
+        "root cause.",
+    )
+    (x_complex,) = ensure_complex(x)
+    x_complex = complex_normalize(x_complex)
+    x_real = torch.view_as_real(x_complex)
+    return x_real.view(x.shape)
 
 
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
