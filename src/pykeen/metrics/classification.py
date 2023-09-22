@@ -504,6 +504,7 @@ class Accuracy(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers#Single_metrics
     description: The ratio of the number of correct classifications to the total number.
     """
+
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("acc", "fraction correct", "fc")
 
@@ -525,6 +526,7 @@ class F1Score(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/F1_score
     description: The harmonic mean of precision and recall.
     """
+
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("f1",)
 
@@ -548,6 +550,7 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/Prevalence_threshold
     description: The prevalence threshold.
     """
+
     # todo: improve doc
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("pt",)
@@ -574,6 +577,7 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/Prevalence_threshold
     description: The harmonic mean of precision and recall.
     """
+
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("ts", "critical success index", "csi", "jaccard index")
 
@@ -597,6 +601,7 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/Prevalence_threshold
     description: The Fowlkes Mallows index.
     """
+
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
@@ -622,6 +627,7 @@ class Informedness(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/Informedness
     description: The informedness metric.
     """
+
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("Youden's J", "Youden's Index", "yi")
 
@@ -647,6 +653,7 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
     link: https://en.wikipedia.org/wiki/Phi_coefficient
     description: The Matthews Correlation Coefficient (MCC).
     """
+
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("mcc",)
     value_range: ClassVar[ValueRange] = ValueRange(lower=-1, upper=1, lower_inclusive=True, upper_inclusive=True)
