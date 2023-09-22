@@ -1738,8 +1738,8 @@ class BoxEInteraction(
         state["tanh_map"] = self.tanh_map
         return state
 
-    @classmethod
-    def product_normalize(cls, x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
+    @staticmethod
+    def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
         r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
 
         :param x: shape: s
@@ -1752,9 +1752,8 @@ class BoxEInteraction(
         """
         return x / at_least_eps(at_least_eps(x.abs()).log().mean(dim=dim, keepdim=True).exp())
 
-    @classmethod
+    @staticmethod
     def point_to_box_distance(
-        cls,
         points: torch.FloatTensor,
         box_lows: torch.FloatTensor,
         box_highs: torch.FloatTensor,
