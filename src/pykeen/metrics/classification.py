@@ -486,7 +486,7 @@ class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
     """
 
     increasing: ClassVar[bool] = True
-    synonyms: ClassVar[Collection[str]] = ("lr-",)
+    synonyms: ClassVar[Collection[str]] = ("dor",)
 
     # todo: https://en.wikipedia.org/wiki/Diagnostic_odds_ratio#Confidence_interval
 
