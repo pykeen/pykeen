@@ -50,6 +50,7 @@ to implement a gradient clipping callback:
         def pre_step(self, **kwargs: Any):
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
+from __future__ import annotations
 
 import pathlib
 import typing
@@ -387,6 +388,7 @@ class StopperTrainingCallback(TrainingCallback):
 class OptimizerTrainingCallback(TrainingCallback):
     """Use optimizer to update parameters."""
 
+    # TODO: we may want to separate TrainingCallback from pre-step callbacks in the future
     def __init__(self, step: bool = True, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
         """Initialize the callback.
 
