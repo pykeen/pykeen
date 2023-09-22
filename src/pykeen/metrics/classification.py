@@ -162,7 +162,7 @@ class NumScores(ClassificationMetric):
     description: The number of scores.
     """
 
-    func = num_scores
+    func = staticmethod(num_scores)
 
 
 class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
@@ -192,7 +192,7 @@ class BalancedAccuracyScore(BinarizedClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("b-acc", "bas")
     supports_weights: ClassVar[bool] = True
-    func = metrics.balanced_accuracy_score
+    func = staticmethod(metrics.balanced_accuracy_score)
 
 
 class AveragePrecisionScore(ClassificationMetric):
@@ -214,7 +214,7 @@ class AveragePrecisionScore(ClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("aps", "ap")
     supports_weights: ClassVar[bool] = True
-    func = metrics.average_precision_score
+    func = staticmethod(metrics.average_precision_score)
 
 
 class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
@@ -231,7 +231,7 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("roc-auc",)
     supports_weights: ClassVar[bool] = True
-    func = metrics.roc_auc_score
+    func = staticmethod(metrics.roc_auc_score)
 
 
 class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
