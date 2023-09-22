@@ -53,7 +53,7 @@ to implement a gradient clipping callback:
 
 import pathlib
 import typing
-from typing import Any, List, Optional
+from typing import Any, List, Mapping, Optional
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
@@ -424,14 +424,19 @@ class LearningRateSchedulerTrainingCallback(TrainingCallback):
             self.training_loop.lr_scheduler.step(epoch=epoch)
 
 
-@maximize_memory_utilization(keys=("training_loop", "id_triples_factory", "batch_size"))
+def _hasher(kwargs: Mapping[str, Any]) -> int:
+    # do not share optimal parameters across different training loops
+    return id(kwargs["training_loop"])
+
+
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 @torch.inference_mode()
 def _validation_loss_amo_wrapper(
     training_loop: "TrainingLoop",
     triples_factory: CoreTriplesFactory,
     batch_size: int,
+    slice_size: int,
     label_smoothing: float,
-    id_triples_factory: int,  # TODO: only used for hashing (cf. 'keys' above)
     **kwargs,
 ) -> float:
     """Calculate validation loss with automatic batch size optimization."""
@@ -445,8 +450,7 @@ def _validation_loss_amo_wrapper(
         epoch=-1,
         # no sub-batching (for evaluation, we can just reduce batch size without any effect)
         sub_batch_size=None,
-        # TODO: optimize slice size?
-        slice_size=None,
+        slice_size=slice_size,
         # this is handled by the AMO wrapper
         only_size_probing=False,
         # no backward passes
@@ -458,11 +462,22 @@ class ValidationLossTrainingCallback(TrainingCallback):
     """Calculate loss on a development set."""
 
     def __init__(self, triples_factory: CoreTriplesFactory, prefix: str = "validation"):
+        """
+        Initialize the callback.
+
+        :param triples_factory:
+            the evaluation triples factory
+        :param prefix:
+            the prefix to use for logging
+        """
         super().__init__()
         self.triples_factory = triples_factory
         self.prefix = prefix
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+    # docstr-coverage: inherited
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        from pykeen.training.lcwa import LCWATrainingLoop
+
         # TODO: where to get these from?
         label_smoothing = 0.0
         training_data_loader_kwargs = dict(sampler=None)
@@ -473,10 +488,10 @@ class ValidationLossTrainingCallback(TrainingCallback):
             triples_factory=self.triples_factory,
             # TODO: this should be num_instances rather than num_triples; also for cpu, we may want to reduce this
             batch_size=self.triples_factory.num_triples,
+            # note: slicing is only effective for LCWA training
+            slice_size=self.training_loop.num_targets if isinstance(self.training_loop, LCWATrainingLoop) else 1,
             label_smoothing=label_smoothing,
             **training_data_loader_kwargs,
-            # only used for hashing
-            id_triples_factory=id(self.triples_factory),
         )
         self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
 
