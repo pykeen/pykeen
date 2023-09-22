@@ -19,10 +19,7 @@ from more_itertools import pairwise
 from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.classification_evaluator import (
-    ClassificationEvaluator,
-    ClassificationMetricResults,
-)
+from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from pykeen.evaluation.evaluator import (
     create_dense_positive_mask_,
     create_sparse_positive_filter_,

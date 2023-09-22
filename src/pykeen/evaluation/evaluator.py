@@ -8,7 +8,21 @@ import logging
 import timeit
 from abc import ABC, abstractmethod
 from collections import ChainMap
-from typing import Any, ClassVar, Collection, Generic, List, Mapping, NamedTuple, Optional, Tuple, Type, TypeVar, Union
+from typing import (
+    Any,
+    ClassVar,
+    Collection,
+    Generic,
+    List,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import pandas
 import torch

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import itertools
 from collections import defaultdict
-from typing import MutableMapping, NamedTuple, Optional, Tuple, cast, Iterable, Mapping
+from typing import Iterable, Mapping, MutableMapping, NamedTuple, Optional, Tuple, cast
 
 import numpy
 import numpy as np
@@ -14,8 +14,8 @@ import torch
 
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
-from ..metrics.classification import classification_metric_resolver, ClassificationMetric
-from ..typing import ExtendedTarget, MappedTriples, Target, normalize_target, SIDE_BOTH
+from ..metrics.classification import ClassificationMetric, classification_metric_resolver
+from ..typing import SIDE_BOTH, ExtendedTarget, MappedTriples, Target, normalize_target
 
 __all__ = [
     "ClassificationEvaluator",
