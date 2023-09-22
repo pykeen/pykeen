@@ -123,3 +123,6 @@ References
 .. [peng2020] Y. Peng and J. Zhang (2020) `LineaRE: Simple but Powerful Knowledge Graph Embedding for
    Link Prediction <https://arxiv.org/abs/2004.10037>`_, *2020 IEEE International Conference on Data Mining (ICDM)*,
    pp. 422-431, doi: 10.1109/ICDM50108.2020.00051.
+
+.. [koenigs2022] Königs, C., *et al* (2022) `The heterogeneous pharmacological medical biochemical
+   network PharMeBINet <https://doi.org/10.1038/s41597-022-01510-3>`_, *Scientific Data*, **9**, 393.

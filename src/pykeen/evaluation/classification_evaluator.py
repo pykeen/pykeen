@@ -9,8 +9,7 @@ import torch
 
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
-from ..metrics.classification import classification_metric_resolver
-from ..metrics.utils import Metric
+from ..metrics.classification import ClassificationMetric, classification_metric_resolver
 from ..typing import MappedTriples, Target
 
 __all__ = [
@@ -18,7 +17,9 @@ __all__ = [
     "ClassificationMetricResults",
 ]
 
-CLASSIFICATION_METRICS: Mapping[str, Type[Metric]] = {cls().key: cls for cls in classification_metric_resolver}
+CLASSIFICATION_METRICS: Mapping[str, Type[ClassificationMetric]] = {
+    cls().key: cls for cls in classification_metric_resolver
+}
 
 
 class ClassificationMetricResults(MetricResults):
@@ -27,8 +28,10 @@ class ClassificationMetricResults(MetricResults):
     metrics = CLASSIFICATION_METRICS
 
     @classmethod
-    def from_scores(cls, y_true, y_score):
+    def from_scores(cls, y_true: np.ndarray, y_score: np.ndarray):
         """Return an instance of these metrics from a given set of true and scores."""
+        if y_true.size == 0:
+            raise ValueError(f"Cannot calculate scores from empty array (y_true.shape={y_true.shape}).")
         data = dict()
         for key, metric in CLASSIFICATION_METRICS.items():
             value = metric.score(y_true, y_score)
@@ -36,10 +39,13 @@ class ClassificationMetricResults(MetricResults):
                 # TODO: fix this upstream / make metric.score comply to signature
                 value = value.item()
             data[key] = value
-        return ClassificationMetricResults(data=data)
+        data["num_scores"] = y_score.size
+        return cls(data=data)
 
     # docstr-coverage: inherited
     def get_metric(self, name: str) -> float:  # noqa: D102
+        if name not in self.data:
+            raise KeyError(f"Unknown metric: '{name}'. Possible options are: {sorted(self.data.keys())}")
         return self.data[name]
 
 
@@ -93,6 +99,11 @@ class ClassificationEvaluator(Evaluator):
             self.all_positives[key] = dense_positive_mask[i]
 
     # docstr-coverage: inherited
+    def clear(self) -> None:  # noqa: D102
+        self.all_positives.clear()
+        self.all_scores.clear()
+
+    # docstr-coverage: inherited
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Because the order of the values of an dictionary is not guaranteed,
         # we need to retrieve scores and masks using the exact same key order.
@@ -101,7 +112,6 @@ class ClassificationEvaluator(Evaluator):
         y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
 
         # Clear buffers
-        self.all_positives.clear()
-        self.all_scores.clear()
+        self.clear()
 
         return ClassificationMetricResults.from_scores(y_true, y_score)

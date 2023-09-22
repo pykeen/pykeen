@@ -353,6 +353,14 @@ class HpoPipelineResult(Result):
             if field.name.endswith("_kwargs"):
                 logger.debug(f"saving pre-specified field in pipeline config: {field.name}={field_value}")
                 pipeline_config[field.name] = field_value
+            elif field.name == "result_tracker" and field_value:
+                if issubclass(field_value, ResultTracker):
+                    tracker_subclass = tracker_resolver.normalize_cls(field_value)
+                    if not tracker_subclass:  # field_value is base class
+                        continue
+                    pipeline_config[field.name] = tracker_subclass
+                else:
+                    logger.error(f"Invalid value for field {field.name}: {field_value!r}")
             elif field.name in {"training", "testing", "validation"}:
                 pipeline_config[field.name] = field_value if isinstance(field_value, str) else USER_DEFINED_CODE
 
@@ -555,6 +563,7 @@ def hpo_pipeline(
     # Optuna Optimization Settings
     n_trials: Optional[int] = None,
     timeout: Optional[int] = None,
+    gc_after_trial: Optional[bool] = None,
     n_jobs: Optional[int] = None,
     save_model_directory: Optional[str] = None,
 ) -> HpoPipelineResult:
@@ -701,6 +710,8 @@ def hpo_pipeline(
         the number of trials, cf. :meth:`optuna.study.Study.optimize`.
     :param timeout:
         the timeout, cf. :meth:`optuna.study.Study.optimize`.
+    :param gc_after_trial:
+        the garbage collection after trial, cf. :meth:`optuna.study.Study.optimize`.
     :param n_jobs:
         the number of jobs, cf. :meth:`optuna.study.Study.optimize`. Defaults to 1.
 
@@ -858,6 +869,7 @@ def hpo_pipeline(
         cast(Callable[[Trial], float], objective),
         n_trials=n_trials,
         timeout=timeout,
+        gc_after_trial=gc_after_trial,
         n_jobs=n_jobs or 1,
         catch=(MemoryError, RuntimeError),
     )

@@ -100,11 +100,6 @@ def _iter_ranks(
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
     weights: Optional[Mapping[Target, Sequence[np.ndarray]]] = None,
 ) -> Iterable[RankPack]:
-    # terminate early if there are no ranks
-    if not ranks:
-        logger.debug("Empty ranks. This should only happen during size probing.")
-        return
-
     sides = sorted(num_candidates.keys())
     # flatten dictionaries
     ranks_flat = _flatten(ranks)
@@ -344,6 +339,11 @@ class RankBasedEvaluator(Evaluator):
         self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
     # docstr-coverage: inherited
+    def clear(self) -> None:  # noqa: D102
+        self.ranks.clear()
+        self.num_candidates.clear()
+
+    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -351,13 +351,8 @@ class RankBasedEvaluator(Evaluator):
             metrics=self.metrics,
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates),
         )
-        if not self.clear_on_finalize:
-            return result
-
-        # Clear buffers
-        self.ranks.clear()
-        self.num_candidates.clear()
-
+        if self.clear_on_finalize:
+            self.clear()
         return result
 
     def finalize_multi(self, n_boot: int = 1_000, seed: int = 42) -> Mapping[str, Sequence[float]]:
@@ -592,6 +587,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 LABEL_HEAD: head_negatives,
                 LABEL_TAIL: tail_negatives,
             }
+            if additional_filter_triples is not None:
+                logger.warning(f"Ignoring parameter additional_filter_triples={additional_filter_triples}")
 
         # verify input
         for side, side_negatives in negatives.items():
@@ -634,42 +631,6 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # write back correct num_entities
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
         self.num_entities = num_entities
-
-    def evaluate_ogb(
-        self,
-        model,
-        mapped_triples: MappedTriples,
-        batch_size: Optional[int] = None,
-        **kwargs,
-    ) -> MetricResults:
-        """
-        Evaluate a model using OGB's evaluator.
-
-        :param model:
-            the model; will be set to evaluation mode.
-        :param mapped_triples:
-            the evaluation triples
-
-            .. note ::
-                the evaluation triples have to match with the stored explicit negatives
-
-        :param batch_size:
-            the batch size
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`pykeen.nn.Model.predict`
-
-        :return:
-            the evaluation results
-        """
-        from .ogb_evaluator import evaluate_ogb
-
-        return evaluate_ogb(
-            evaluator=self,
-            model=model,
-            mapped_triples=mapped_triples,
-            batch_size=batch_size,
-            **kwargs,
-        )
 
 
 class MacroRankBasedEvaluator(RankBasedEvaluator):
@@ -726,6 +687,11 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().cpu().numpy())
 
     # docstr-coverage: inherited
+    def clear(self) -> None:  # noqa: D102
+        super().clear()
+        self.keys.clear()
+
+    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -738,8 +704,6 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights),
         )
         # Clear buffers
-        self.keys.clear()
-        self.ranks.clear()
-        self.num_candidates.clear()
+        self.clear()
 
         return result

@@ -32,8 +32,6 @@ class InductiveNodePiece(InductiveERModel):
 
     This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical
     :class:`pykeen.nn.Embedding` to more efficiently store representations.
-
-    INDUCTIVE VERSION
     ---
     citation:
         author: Galkin
