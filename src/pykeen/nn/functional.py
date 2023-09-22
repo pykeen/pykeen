@@ -23,8 +23,6 @@ from ..utils import (
     clamp_norm,
     compute_box,
     einsum,
-    ensure_complex,
-    estimate_cost_of_sequence,
     is_cudnn_error,
     make_ones_like,
     negative_norm,
@@ -52,7 +50,6 @@ __all__ = [
     "pair_re_interaction",
     "proje_interaction",
     "rescal_interaction",
-    "rotate_interaction",
     "simple_interaction",
     "se_interaction",
     "transd_interaction",
@@ -538,43 +535,6 @@ def rescal_interaction(
         The scores.
     """
     return einsum("...d,...de,...e->...", h, r, t)
-
-
-def rotate_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Evaluate the RotatE interaction function.
-
-    .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # todo: raise error on non-complex instead
-    h, r, t = ensure_complex(h, r, t)
-    if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
-        # r expresses a rotation in complex plane.
-        # rotate head by relation (=Hadamard product in complex space)
-        h = h * r
-    else:
-        # rotate tail by inverse of relation
-        # The inverse rotation is expressed by the complex conjugate of r.
-        # The score is computed as the distance of the relation-rotated head to the tail.
-        # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
-        # |h * r - t| = |h - conj(r) * t|
-        t = t * torch.conj(r)
-
-    return negative_norm(h - t, p=2, power_norm=False)
 
 
 def simple_interaction(

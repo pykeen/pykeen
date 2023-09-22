@@ -50,7 +50,15 @@ from ..typing import (
     Sign,
     TailRepresentation,
 )
-from ..utils import einsum, ensure_complex, ensure_tuple, unpack_singletons, upgrade_to_sequence
+from ..utils import (
+    einsum,
+    ensure_complex,
+    ensure_tuple,
+    estimate_cost_of_sequence,
+    negative_norm,
+    unpack_singletons,
+    upgrade_to_sequence,
+)
 
 __all__ = [
     "interaction_resolver",
@@ -966,15 +974,57 @@ class TransRInteraction(
 
 
 class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless RotatE interaction function.
+    r"""The RotatE interaction function proposed by [sun2019]_.
 
-    .. seealso:: :func:`pykeen.nn.functional.rotate_interaction`
+    RotatE operates on complex-valued entity and relation representations, i.e.,
+    $\textbf{e}_i, \textbf{r}_i \in \mathbb{C}^d$.
+
+    ---
+    citation:
+        arxiv: 1902.10197
+        author: Sun
+        github: DeepGraphLearning/KnowledgeGraphEmbedding
+        link: https://arxiv.org/abs/1902.10197
+        year: 2019
     """
+
+    # TODO: update docstring
 
     is_complex: ClassVar[bool] = True
 
-    # todo: inline function?
-    func = pkf.rotate_interaction
+    # TODO: give this a better name?
+    @staticmethod
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. note::
+            this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The relation representations.
+        :param t: shape: (`*batch_dims`, dim)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        # todo: raise error on non-complex instead
+        h, r, t = ensure_complex(h, r, t)
+        if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
+            # r expresses a rotation in complex plane.
+            # rotate head by relation (=Hadamard product in complex space)
+            h = h * r
+        else:
+            # rotate tail by inverse of relation
+            # The inverse rotation is expressed by the complex conjugate of r.
+            # The score is computed as the distance of the relation-rotated head to the tail.
+            # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
+            # |h * r - t| = |h - conj(r) * t|
+            t = t * torch.conj(r)
+
+        return negative_norm(h - t, p=2, power_norm=False)
 
 
 class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
