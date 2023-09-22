@@ -5,16 +5,19 @@
 import logging
 from typing import Any, Callable, ClassVar, Mapping, Optional
 
+import more_itertools
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
 
 from .base import InductiveERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
+    ConcatAggregationCombination,
     DistMultInteraction,
     Interaction,
     NodePieceRepresentation,
     SubsetRepresentation,
+    TokenizationRepresentation,
     representation_resolver,
 )
 from ...nn.node_piece import RelationTokenizer
@@ -141,3 +144,57 @@ class InductiveNodePiece(InductiveERModel):
             np2 = representations[0]
             assert isinstance(np2, NodePieceRepresentation)
             np2.combination = np.combination
+
+    def create_entity_representation_for_new_triples(
+        self, triples_factory: CoreTriplesFactory
+    ) -> NodePieceRepresentation:
+        """
+        Create NodePiece representations for a new triples factory.
+
+        The representations are initialized such that the same relation representations are used, and the aggregation
+        is shared.
+
+        :param triples_factory:
+            the triples factory used for relation tokenization; must share the same relation to ID mapping.
+
+        :return:
+            a new NodePiece entity representation with shared relation tokenization and aggregation.
+
+        :raises ValueError:
+            if the triples factory does not request inverse triples, or the number of relations differs.
+        """
+        if not triples_factory.create_inverse_triples:
+            raise ValueError("Must create a triples factory with inverse triples")
+        if triples_factory.num_relations != self.num_relations:
+            raise ValueError(f"{self.num_relations=} != {triples_factory.num_relations=} !")
+        # note: we cannot ensure the mapping also matches...
+
+        # get relation representations
+        relation_repr = more_itertools.one(self.relation_representations)
+        assert isinstance(relation_repr, SubsetRepresentation)
+        relation_repr = relation_repr.base
+
+        # get combination
+        np = more_itertools.one(self.entity_representations)
+        assert isinstance(np, NodePieceRepresentation)
+        combination = np.combination
+        assert isinstance(combination, ConcatAggregationCombination)
+
+        # get token representations
+        tr = more_itertools.one(np.base)
+        assert isinstance(tr, TokenizationRepresentation)
+        num_tokens = tr.num_tokens
+
+        # relation representations are shared
+        new = NodePieceRepresentation(
+            triples_factory=triples_factory,
+            tokenizers=RelationTokenizer,
+            token_representations=relation_repr,
+            aggregation=combination.aggregation,
+            num_tokens=num_tokens,
+        )
+
+        # share combination weights
+        new.combination = np.combination
+
+        return new
