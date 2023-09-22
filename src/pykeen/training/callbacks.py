@@ -62,6 +62,7 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from torch_max_mem import maximize_memory_utilization
 
+import pykeen
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
 from ..losses import Loss
