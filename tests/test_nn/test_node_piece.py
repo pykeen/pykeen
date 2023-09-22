@@ -5,6 +5,7 @@ from typing import Any, MutableMapping
 
 import numpy
 import numpy.testing
+import pytest
 import scipy.sparse.csgraph
 import unittest_templates
 
@@ -55,6 +56,26 @@ class CSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):
     """Tests for anchor search with scipy.sparse.csgraph."""
 
     cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
+
+
+@pytest.mark.parametrize("num_anchors, num_entities, k, seed", [(3, 7, 2, 0)])
+def test_top_k_indices(num_anchors: int, num_entities: int, k: int, seed: int) -> None:
+    """Test top-k index calculation."""
+    # generate test data (with fixed seed for reproducibility)
+    rng = numpy.random.default_rng(seed=seed)
+    array = rng.uniform(size=(num_anchors, num_entities))
+    # get result using argpartition
+    cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
+    ap = cls.topk_argpartition(array=array, k=k)
+    # check shape
+    assert ap.shape == (k, num_entities)
+    # check type
+    assert numpy.issubdtype(ap.dtype, numpy.integer)
+    # check value range
+    numpy.testing.assert_array_less(-1, ap)
+    numpy.testing.assert_array_less(ap, num_anchors)
+    # check equality with argsort
+    numpy.testing.assert_array_equal(ap, cls.topk_argsort(array=array, k=k))
 
 
 class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):

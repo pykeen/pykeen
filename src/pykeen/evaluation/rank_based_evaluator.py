@@ -290,7 +290,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         return cls(data=data)
 
 
-class RankBasedEvaluator(Evaluator):
+class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
     """A rank-based evaluator for KGE models."""
 
     metric_result_cls = RankBasedMetricResults

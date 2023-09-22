@@ -562,6 +562,7 @@ def hpo_pipeline(
     # Optuna Optimization Settings
     n_trials: Optional[int] = None,
     timeout: Optional[int] = None,
+    gc_after_trial: Optional[bool] = None,
     n_jobs: Optional[int] = None,
     save_model_directory: Optional[str] = None,
 ) -> HpoPipelineResult:
@@ -708,6 +709,8 @@ def hpo_pipeline(
         the number of trials, cf. :meth:`optuna.study.Study.optimize`.
     :param timeout:
         the timeout, cf. :meth:`optuna.study.Study.optimize`.
+    :param gc_after_trial:
+        the garbage collection after trial, cf. :meth:`optuna.study.Study.optimize`.
     :param n_jobs:
         the number of jobs, cf. :meth:`optuna.study.Study.optimize`. Defaults to 1.
 
@@ -865,6 +868,7 @@ def hpo_pipeline(
         cast(Callable[[Trial], float], objective),
         n_trials=n_trials,
         timeout=timeout,
+        gc_after_trial=gc_after_trial,
         n_jobs=n_jobs or 1,
         catch=(MemoryError, RuntimeError),
     )

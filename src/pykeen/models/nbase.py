@@ -494,6 +494,9 @@ class ERModel(
         mode: Optional[InductiveMode] = None,
         tails: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_entities:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         hr_batch = hr_batch.unsqueeze(dim=1)
@@ -516,6 +519,9 @@ class ERModel(
         mode: Optional[InductiveMode] = None,
         heads: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_entities:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         rt_batch = rt_batch.unsqueeze(dim=1)
@@ -538,6 +544,9 @@ class ERModel(
         mode: Optional[InductiveMode] = None,
         relations: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_relations:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
         # add broadcast dimension
         ht_batch = ht_batch.unsqueeze(dim=1)
