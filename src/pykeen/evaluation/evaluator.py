@@ -99,7 +99,9 @@ class MetricResults(Generic[MetricKeyType]):
     def to_df(self) -> pandas.DataFrame:
         """Output the metrics as a pandas dataframe."""
         one_key = next(iter(self.data.keys()))
-        columns = [field.capitalize() for field in one_key._fields] + ["Value"]
+        # assert isinstance(one_key, NamedTuple)
+        one_key_nt = cast(NamedTuple, one_key)
+        columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 
 
