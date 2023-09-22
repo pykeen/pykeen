@@ -470,37 +470,49 @@ def _validation_loss_amo_wrapper(
 class ValidationLossTrainingCallback(TrainingCallback):
     """Calculate loss on a development set."""
 
-    def __init__(self, triples_factory: CoreTriplesFactory, prefix: str = "validation"):
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+        label_smoothing: float = 0.0,
+        training_data_loader_kwargs: Mapping[str, Any] | None = None,
+        prefix: str = "validation",
+    ):
         """
         Initialize the callback.
 
         :param triples_factory:
             the evaluation triples factory
+        :param label_smoothing:
+            the label smoothing to use; usually this should be matched with the training settings
+        :param training_data_loader_kwargs:
+            the keyword based parameters for the training loader
         :param prefix:
             the prefix to use for logging
         """
         super().__init__()
         self.triples_factory = triples_factory
         self.prefix = prefix
+        self.label_smoothing = label_smoothing
+        if training_data_loader_kwargs is None:
+            training_data_loader_kwargs = dict(sampler=None)
+        self.training_data_loader_kwargs = training_data_loader_kwargs
 
     # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         from pykeen.training.lcwa import LCWATrainingLoop
 
-        # TODO: where to get these from?
-        label_smoothing = 0.0
-        training_data_loader_kwargs = dict(sampler=None)
         # set to evaluation mode
         self.model.eval()
+        maximum_batch_size = self.triples_factory.num_triples
         loss = _validation_loss_amo_wrapper(
             training_loop=self.training_loop,
             triples_factory=self.triples_factory,
             # TODO: this should be num_instances rather than num_triples; also for cpu, we may want to reduce this
-            batch_size=self.triples_factory.num_triples,
+            batch_size=maximum_batch_size,
             # note: slicing is only effective for LCWA training
             slice_size=self.training_loop.num_targets if isinstance(self.training_loop, LCWATrainingLoop) else 1,
-            label_smoothing=label_smoothing,
-            **training_data_loader_kwargs,
+            label_smoothing=self.label_smoothing,
+            **self.training_data_loader_kwargs,
         )
         self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
 
