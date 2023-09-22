@@ -14,6 +14,7 @@ import pathlib
 import random
 import re
 import time
+import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
@@ -1036,9 +1037,22 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
         A tensor formulating complex numbers
 
     :returns:
-        An elementwise noramlized vector.
+        An elementwise normalized vector.
     """
-    return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
+    if torch.is_complex(x):
+        return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
+
+    # note: this is a hack, and should be fixed up-stream by making NodePiece
+    #  use proper complex embeddings for rotate interaction; however, we also have representations
+    #  that perform message passing, and we would need to propagate the base representation's complexity through it
+    warnings.warn(
+        "Applying complex_normalize on non-complex input; if you see shape errors downstream this may be a possible "
+        "root cause.",
+    )
+    (x_complex,) = ensure_complex(x)
+    x_complex = complex_normalize(x_complex)
+    x_real = torch.view_as_real(x_complex)
+    return x_real.view(x.shape)
 
 
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
@@ -1253,6 +1267,7 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
         if x.is_complex():
             yield x
             continue
+        warnings.warn(f"{x=} is not complex, but will be viewed as such")
         if x.shape[-1] != 2:
             x = x.view(*x.shape[:-1], -1, 2)
         yield torch.view_as_complex(x)
