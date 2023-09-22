@@ -36,7 +36,7 @@ ZeroDivisionPolicy = Literal["warn", 0, 1]
 
 def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisionPolicy = "warn") -> float:
     """
-    Performs division and handles divide-by-zero similar to scikit-learn.
+    Perform division and handle divide-by-zero similar to scikit-learn.
 
     :param numerator:
         the numerator
@@ -44,6 +44,9 @@ def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisio
         the denominator
     :param zero_division:
         the zero-division policy; If "warn", act like 0, but warn about the case.
+
+    :return:
+        the division result
     """
     # todo: do we need numpy support?
     if denominator != 0:
@@ -69,11 +72,12 @@ class ClassificationFunc(Protocol):
         :param y_score: shape: (num_samples,)
             the predictions, either as continuous scores, or as binarized prediction
             (depending on the concrete metric at hand).
+        :param kwargs:
+            additional keyword based parameters
 
         :return:
             a scalar metric value
         """
-        ...
 
 
 def construct_indicator(*, y_score: numpy.ndarray, y_true: numpy.ndarray) -> numpy.ndarray:
@@ -132,6 +136,9 @@ class ClassificationMetric(Metric, abc.ABC):
 
         :return:
             the scalar metric value
+
+        :raises ValueError:
+            when weights are provided but the function does not support them.
         """
         if weights is None:
             return self.func(y_true, y_score)
@@ -247,7 +254,6 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
             the scalar metric
         """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
-        raise NotImplementedError
 
     def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
