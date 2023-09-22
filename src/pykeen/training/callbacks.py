@@ -449,6 +449,7 @@ def _validation_loss_amo_wrapper(
 ) -> float:
     """Calculate validation loss with automatic batch size optimization."""
     return training_loop._train_epoch(
+        # todo: create dataset only once
         batches=training_loop._create_training_data_loader(
             triples_factory=triples_factory, batch_size=batch_size, drop_last=False, **kwargs
         ),
