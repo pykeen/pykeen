@@ -978,6 +978,7 @@ class TransRInteraction(
         return dict(h=h, r=r[0], t=t, m_r=r[1])
 
 
+@parse_docdata
 class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The RotatE interaction function proposed by [sun2019]_.
 
