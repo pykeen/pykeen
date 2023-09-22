@@ -433,14 +433,18 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
         return kwargs
 
     # docstr-coverage: inherited
-    @staticmethod
+    @classmethod
     def _prepare_hrt_for_functional(
+        cls,
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         """Conversion utility to prepare the h/r/t representations for the functional form."""
+        # TODO: we only allow single-tensor representations here, but could easily generalize
         assert all(torch.is_tensor(x) for x in (h, r, t))
+        if cls.is_complex:
+            h, r, t = ensure_complex(h, r, t)
         return dict(h=h, r=r, t=t)
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
@@ -533,6 +537,8 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
         year: 2016
     """
 
+    is_complex: ClassVar[bool] = True
+
     # TODO: update class docstring
 
     # TODO: give this a better name?
@@ -550,7 +556,6 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
         :return: shape: batch_dims
             The scores.
         """
-        h, r, t = ensure_complex(h, r, t)
         return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
 
 
@@ -979,6 +984,11 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     RotatE operates on complex-valued entity and relation representations, i.e.,
     $\textbf{e}_i, \textbf{r}_i \in \mathbb{C}^d$.
 
+    .. note::
+        this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
+        `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
+        is compliant with :func:`torch.view_as_complex`, cf. :func:`pykeen.utils.ensure_complex`.
+
     ---
     citation:
         arxiv: 1902.10197
@@ -1010,8 +1020,6 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :return: shape: batch_dims
             The scores.
         """
-        # todo: raise error on non-complex instead
-        h, r, t = ensure_complex(h, r, t)
         if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
             # r expresses a rotation in complex plane.
             # rotate head by relation (=Hadamard product in complex space)
