@@ -1653,6 +1653,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         return dict(h=h, r=r, c_r=c_r, t=t)
 
 
+@parse_docdata
 class BoxEInteraction(
     NormBasedInteraction[
         Tuple[FloatTensor, FloatTensor],
