@@ -1823,13 +1823,13 @@ class BoxEInteraction(
             `entity_pos`, `other_entity_bump`, `relation_box_low` and `relation_box_high` have to be in broadcastable
             shape.
 
-        :param entity_pos: shape: (*s_p, d)
+        :param entity_pos: shape: ``(*s_p, d)``
             This is the base entity position of the entity appearing in the target position. For example,
             for a fact $r(h, t)$ and the head arity position, `entity_pos` is the base position of $h$.
-        :param other_entity_bump: shape: (*s_b, d)
+        :param other_entity_bump: shape: ``(*s_b, d)``
             This is the bump of the entity at the other position in the fact. For example, given a
             fact $r(h, t)$ and the head arity position, `other_entity_bump` is the bump of $t$.
-        :param relation_box: shape: (*s_r, d)
+        :param relation_box: shape: ``(*s_r, d)``
             The lower/upper corner of the relation box at the target arity position.
         :param tanh_map:
             whether to apply the tanh map regularizer
@@ -1838,8 +1838,8 @@ class BoxEInteraction(
         :param power_norm:
             whether to use the powered norm instead
 
-        :return: shape: s
-            Arity-position score for the entity relative to the target relation box. Larger is better. the shape is the
+        :return: shape: ``*s``
+            Arity-position score for the entity relative to the target relation box. Larger is better. The shape is the
             broadcasted shape from position, bump and box, where the last dimension has been removed.
         """
         # Step 1: Apply the other entity bump
