@@ -1662,7 +1662,7 @@ class BoxEInteraction(
     ]
 ):
     """
-    The BoxE interaction.
+    The BoxE interaction from [abboud2020]_.
 
     Entities are represented by two $d$-dimensional vectors describing the *base position* as well
     as the translational bump, which translates all the entities co-occuring in a fact with this entity
