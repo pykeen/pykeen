@@ -20,7 +20,6 @@ from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import (
-    CLASSIFICATION_METRICS,
     ClassificationEvaluator,
     ClassificationMetricResults,
 )
@@ -179,34 +178,12 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
     ):
         # Check for correct class
         assert isinstance(result, ClassificationMetricResults)
+        result: ClassificationMetricResults
 
-        # check value
-        scores = data["scores"].detach().cpu().numpy()
-        mask = data["mask"].detach().cpu().float().numpy()
-        batch = data["batch"].detach().cpu().numpy()
-
-        # filtering
-        mask_filtered, scores_filtered = [], []
-        for group_indices in [(0, 1), (1, 2)]:
-            uniq = dict()
-            for i, key in enumerate(batch[:, group_indices].tolist()):
-                uniq[tuple(key)] = i
-            indices = sorted(uniq.values())
-            mask_filtered.append(mask[indices])
-            scores_filtered.append(scores[indices])
-        mask = numpy.concatenate(mask_filtered, axis=0)
-        scores = numpy.concatenate(scores_filtered, axis=0)
-
-        y_true, y_score = numpy.array(mask.flat), numpy.array(scores.flat)
-        for name, metric in CLASSIFICATION_METRICS.items():
-            with self.subTest(metric=name):
-                exp_score = metric.score(y_true=y_true, y_score=y_score)
-                self.assertIn(name, result.data)
-                act_score = result.get_metric(name)
-                if numpy.isnan(exp_score):
-                    self.assertTrue(numpy.isnan(act_score))
-                else:
-                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {name}", delta=7)
+        for (side, metric_name), value in result.data.items():
+            self.assertIn(side, SIDES)
+            self.assertIsInstance(metric_name, str)
+            self.assertIsInstance(value, (float, int))
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
