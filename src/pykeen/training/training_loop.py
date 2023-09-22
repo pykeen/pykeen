@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
+from typing import IO, Any, ClassVar, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -136,6 +136,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         num_epochs=dict(type=int, low=100, high=1000, q=100),
         batch_size=dict(type=int, low=4, high=12, scale="power_two"),  # [16, 4096]
     )
+
+    supports_slicing: ClassVar[bool] = False
 
     def __init__(
         self,

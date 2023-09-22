@@ -458,7 +458,7 @@ def _validation_loss_amo_wrapper(
         epoch=-1,
         # no sub-batching (for evaluation, we can just reduce batch size without any effect)
         sub_batch_size=None,
-        slice_size=slice_size,
+        slice_size=slice_size if training_loop.supports_slicing else None,
         # this is handled by the AMO wrapper
         only_size_probing=False,
         # no backward passes
