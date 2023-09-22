@@ -33,7 +33,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 # TODO: maybe move into separate module?
-MetricKeyType = TypeVar("MetricKeyType", bound=NamedTuple)
+MetricKeyType = TypeVar("MetricKeyType", bound=Tuple)
 
 
 class MetricResults(Generic[MetricKeyType]):
