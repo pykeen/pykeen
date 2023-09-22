@@ -53,7 +53,7 @@ to implement a gradient clipping callback:
 
 import pathlib
 import typing
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Mapping, Optional, Sequence
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
@@ -387,14 +387,17 @@ class StopperTrainingCallback(TrainingCallback):
 class OptimizerTrainingCallback(TrainingCallback):
     """Use optimizer to update parameters."""
 
-    def __init__(self, step: bool = True):
+    def __init__(self, step: bool = True, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
         """Initialize the callback.
 
         :param step:
             whether to apply the parameter update step
+        :param pre_step_callbacks:
+            callbacks to apply before making the step, e.g., for gradient clipping.
         """
         super().__init__()
         self.step = step
+        self.pre_step_callbacks = tuple(pre_step_callbacks or [])
 
     # docstr-coverage: inherited
     def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
@@ -406,12 +409,15 @@ class OptimizerTrainingCallback(TrainingCallback):
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
         # when called by batch_size_search(), the parameter update should not be applied.
         if self.step:
-            # TODO: callback pre_step
+            # pre-step callbacks
+            for cb in self.pre_step_callbacks:
+                cb.pre_step(epoch=epoch, **kwargs)
             # update parameters according to optimizer
             self.optimizer.step()
 
         # After changing applying the gradients to the embeddings, the model is notified that the forward
         # constraints are no longer applied
+        # TODO: do we want that when self.step is not set?
         self.model.post_parameter_update()
 
 

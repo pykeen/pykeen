@@ -31,6 +31,7 @@ from .callbacks import (
     OptimizerTrainingCallback,
     StopperTrainingCallback,
     TrackerTrainingCallback,
+    TrainingCallback,
     TrainingCallbackHint,
     TrainingCallbackKwargsHint,
 )
@@ -571,15 +572,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     best_epoch_model_file_path=best_epoch_model_file_path,
                 )
             )
-        if gradient_clipping_max_norm is not None:
-            callback.register_callback(
-                GradientNormClippingTrainingCallback(
-                    max_norm=gradient_clipping_max_norm,
-                    norm_type=gradient_clipping_norm_type,
-                )
-            )
-        if gradient_clipping_max_abs_value is not None:
-            callback.register_callback(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
 
         callback.register_training_loop(self)
 
@@ -686,8 +678,20 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 format_relative_comparison(part=1, total=len(train_data_loader)),
             )
 
-        # training more callbacks
-        callback.register_callback(OptimizerTrainingCallback(step=not only_size_probing))
+        # optimizer callbacks
+        pre_step_callbacks: List[TrainingCallback] = []
+        if gradient_clipping_max_norm is not None:
+            pre_step_callbacks.append(
+                GradientNormClippingTrainingCallback(
+                    max_norm=gradient_clipping_max_norm,
+                    norm_type=gradient_clipping_norm_type,
+                )
+            )
+        if gradient_clipping_max_abs_value is not None:
+            pre_step_callbacks.append(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
+        callback.register_callback(
+            OptimizerTrainingCallback(step=not only_size_probing, pre_step_callbacks=pre_step_callbacks)
+        )
         callback.register_callback(LearningRateSchedulerTrainingCallback())
 
         # Save the time to track when the saved point was available
