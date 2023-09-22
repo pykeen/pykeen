@@ -169,7 +169,7 @@ def test_predict_all(model: pykeen.models.Model, k: Optional[int], target: pykee
     """Test the predict method."""
     pack = pykeen.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
     _check_score_pack(
-        pack=pack, model=model, num_triples=model.num_entities**2 * model.num_relations if k is None else k
+        pack=pack, model=model, num_triples=model.num_entities**2 * model.num_real_relations if k is None else k
     )
 
 
