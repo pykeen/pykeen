@@ -1008,7 +1008,8 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         """Evaluate the interaction function.
 
         .. note::
-            this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
+            this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
+            `True`.
 
         :param h: shape: (`*batch_dims`, dim)
             The head representations.
