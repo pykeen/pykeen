@@ -53,9 +53,9 @@ from ..typing import (
 from ..utils import (
     at_least_eps,
     einsum,
-    estimate_cost_of_sequence,
     ensure_complex,
     ensure_tuple,
+    estimate_cost_of_sequence,
     negative_norm,
     unpack_singletons,
     upgrade_to_sequence,
