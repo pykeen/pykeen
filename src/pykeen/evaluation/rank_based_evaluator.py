@@ -36,7 +36,7 @@ from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranks import Ranks
-from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
+from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory

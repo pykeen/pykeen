@@ -17,7 +17,7 @@ from __future__ import annotations
 import abc
 import math
 import warnings
-from typing import ClassVar, Collection, Literal, Protocol
+from typing import ClassVar, Collection, Literal
 
 import numpy
 from class_resolver import ClassResolver
