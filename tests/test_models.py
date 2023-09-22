@@ -272,6 +272,28 @@ class TestInductiveNodePiece(cases.InductiveModelTestCase):
     cls = pykeen.models.InductiveNodePiece
     create_inverse_triples = True
 
+    def test_create_entity_representation_for_new_triples(self):
+        """Test create_entity_representation_for_new_triples."""
+        assert isinstance(self.instance, pykeen.models.InductiveNodePiece)
+        # simulate creating a new triples factory with shared set of relations by shuffling
+        mapped_triples = self.factory.mapped_triples
+        mapped_triples = torch.stack(
+            [
+                mapped_triples[:, 0][torch.randperm(len(mapped_triples))],
+                mapped_triples[:, 1],
+                mapped_triples[:, 2][torch.randperm(len(mapped_triples))],
+            ],
+            dim=1,
+        )
+        factory = CoreTriplesFactory(
+            mapped_triples=mapped_triples,
+            num_entities=self.factory.num_entities,
+            num_relations=self.factory.real_num_relations,
+            create_inverse_triples=True,
+        )
+        new_instance = self.instance.create_entity_representation_for_new_triples(factory)
+        assert isinstance(new_instance, pykeen.nn.NodePieceRepresentation)
+
 
 class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
     """Test the InductiveNodePieceGNN model."""
