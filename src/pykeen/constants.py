@@ -12,9 +12,11 @@ from .typing import (
     COLUMN_HEAD,
     COLUMN_RELATION,
     COLUMN_TAIL,
+    COLUMN_TIMESTAMP,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
+    LABEL_TIMESTAMP,
     Target,
     TargetColumn,
 )
@@ -28,6 +30,7 @@ __all__ = [
     "PYKEEN_CHECKPOINTS",
     "PYKEEN_LOGS",
     "AGGREGATIONS",
+    "DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE",
 ]
 
 #: A manager around the PyKEEN data folder. It defaults to ``~/.data/pykeen``.
@@ -65,8 +68,9 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
     LABEL_HEAD: COLUMN_HEAD,
     LABEL_RELATION: COLUMN_RELATION,
     LABEL_TAIL: COLUMN_TAIL,
+    LABEL_TIMESTAMP: COLUMN_TIMESTAMP,
 }
 
-COLUMN_LABELS: Tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
+COLUMN_LABELS: Tuple[Target, Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LABEL_TIMESTAMP)
 TARGET_TO_KEY_LABELS = {target: [c for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
 TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in cs] for target, cs in TARGET_TO_KEY_LABELS.items()}

@@ -17,10 +17,22 @@ __all__ = [
     "load_triples",
     "get_entities",
     "get_relations",
+    "get_timestamps",
     "tensor_to_df",
 ]
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
+
+QUADRUPLES_DF_COLUMNS = (
+    "head_id",
+    "head_label",
+    "relation_id",
+    "relation_label",
+    "tail_id",
+    "tail_label",
+    "timestamp_id",
+    "timestamp_label",
+)
 
 
 def _load_importers(group_subname: str) -> Mapping[str, Callable[[str], LabeledTriples]]:
@@ -38,11 +50,12 @@ EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_impor
 
 def load_triples(
     path: Union[str, pathlib.Path, TextIO],
+    is_triples: bool = True,
     delimiter: str = "\t",
     encoding: Optional[str] = None,
     column_remapping: Optional[Sequence[int]] = None,
 ) -> LabeledTriples:
-    """Load triples saved as tab separated values.
+    """Load triples or quadruples saved as tab separated values.
 
     :param path: The key for the data to be loaded. Typically, this will be a file path ending in ``.tsv``
         that points to a file with three columns - the head, relation, and tail. This can also be used to
@@ -51,9 +64,10 @@ def load_triples(
     :param encoding: The encoding for the file. Defaults to utf-8.
     :param column_remapping: A remapping if the three columns do not follow the order head-relation-tail.
         For example, if the order is head-tail-relation, pass ``(0, 2, 1)``
-    :returns: A numpy array representing "labeled" triples.
+    :param is_triples: If true, triples are returned, otherwise quadruples are returned.
+    :returns: A numpy array representing "labeled" triples or quadruples.
 
-    :raises ValueError: if a column remapping was passed but it was not a length 3 sequence
+    :raises ValueError: if a column remapping was passed but it was not a length 3 sequence when triples, but it was not a length 4 sequence when quadruples.
 
     Besides TSV handling, PyKEEN does not come with any importers pre-installed. A few can be found at:
 
@@ -73,8 +87,10 @@ def load_triples(
     if encoding is None:
         encoding = "utf-8"
     if column_remapping is not None:
-        if len(column_remapping) != 3:
+        if is_triples == True and len(column_remapping) != 3:
             raise ValueError("remapping must have length of three")
+        elif is_triples == False and len(column_remapping) != 4:
+            raise ValueError("remapping must have length of four")
     df = pandas.read_csv(
         path,
         sep=delimiter,
@@ -97,6 +113,11 @@ def get_entities(triples: torch.LongTensor) -> Set[int]:
 def get_relations(triples: torch.LongTensor) -> Set[int]:
     """Get all relations from the triples."""
     return set(triples[:, 1].tolist())
+
+
+def get_timestamps(triples: torch.LongTensor) -> Set[int]:
+    """Get all relations from the quadruples."""
+    return set(triples[:, 3].tolist())
 
 
 def tensor_to_df(
