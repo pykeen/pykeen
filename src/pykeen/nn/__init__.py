@@ -68,12 +68,12 @@ from .representation import (
     LowRankRepresentation,
     PartitionRepresentation,
     Representation,
+    SingleCompGCNRepresentation,
     SubsetRepresentation,
     TensorTrainRepresentation,
     TextRepresentation,
     TransformedRepresentation,
     WikidataTextRepresentation,
-    SingleCompGCNRepresentation,
 )
 from .vision import VisualRepresentation, WikidataVisualRepresentation
 
