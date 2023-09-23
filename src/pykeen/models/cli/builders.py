@@ -217,7 +217,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 directory=output_directory,
                 # TODO: other parameters?
             )
-        elif not silent:
+        elif not silent and pipeline_result.metric_results is not None:
             json.dump(pipeline_result.metric_results.to_dict(), sys.stdout, indent=2)
             click.echo("")
 
