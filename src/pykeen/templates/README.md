@@ -58,14 +58,14 @@ The latest stable version of PyKEEN requires Python 3.8+. It can be downloaded
 and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
-$ pip install pykeen
+pip install pykeen
 ```
 
 The latest version of PyKEEN can be installed directly from the
 source code on [GitHub](https://github.com/pykeen/pykeen) with:
 
 ```shell
-$ pip install git+https://github.com/pykeen/pykeen.git
+pip install git+https://github.com/pykeen/pykeen.git
 ```
 
 More information about installation (e.g., development mode, Windows installation, Colab, Kaggle, extras)
@@ -126,6 +126,18 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 The following {{ n_inductive_datasets }} inductive datasets are built in to PyKEEN.
 
 {{ inductive_datasets }}
+
+### Representations
+
+The following {{ n_representations }} representations are implemented by PyKEEN.
+
+{{ representations }}
+
+### Interactions
+
+The following {{ n_interactions }} interactions are implemented by PyKEEN.
+
+{{ interactions }}
 
 ### Models
 
@@ -189,7 +201,7 @@ PyKEEN includes a set of curated experimental settings for reproducing past land
 experiments. They can be accessed and run like:
 
 ```shell
-$ pykeen experiments reproduce tucker balazevic2019 fb15k
+pykeen experiments reproduce tucker balazevic2019 fb15k
 ```
 
 Where the three arguments are the model name, the reference, and the dataset.
@@ -201,7 +213,7 @@ PyKEEN includes the ability to specify ablation studies using the
 hyper-parameter optimization module. They can be run like:
 
 ```shell
-$ pykeen experiments ablation ~/path/to/config.json
+pykeen experiments ablation ~/path/to/config.json
 ```
 
 ### Large-scale Reproducibility and Benchmarking Study

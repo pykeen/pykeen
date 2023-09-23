@@ -30,6 +30,7 @@ class ComplExTests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.ComplExInteraction
     dtype = torch.cfloat
 
+    # TODO: we could move this part into the interaction module itself
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         return (h * r * torch.conj(t)).sum().real
 

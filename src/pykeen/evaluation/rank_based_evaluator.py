@@ -2,12 +2,31 @@
 
 """Implementation of ranked based evaluator."""
 
+from __future__ import annotations
+
+import functools
 import itertools
 import logging
 import math
 import random
+import re
 from collections import defaultdict
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import (
+    Callable,
+    DefaultDict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import numpy.random
@@ -16,7 +35,6 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from .ranking_metric_lookup import MetricKey
 from .ranks import Ranks
 from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
@@ -25,15 +43,17 @@ from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     LABEL_HEAD,
     LABEL_TAIL,
-    RANK_OPTIMISTIC,
-    RANK_PESSIMISTIC,
     RANK_REALISTIC,
+    RANK_TYPE_SYNONYMS,
     RANK_TYPES,
     SIDE_BOTH,
+    SIDES,
     ExtendedTarget,
     MappedTriples,
     RankType,
     Target,
+    normalize_rank_type,
+    normalize_target,
 )
 
 __all__ = [
@@ -55,16 +75,35 @@ def _flatten(nested: Mapping[K, Sequence[np.ndarray]]) -> Mapping[K, np.ndarray]
     return {key: np.concatenate(value) for key, value in nested.items()}
 
 
+class RankPack(NamedTuple):
+    """A pack of ranks for aggregation."""
+
+    target: ExtendedTarget
+    rank_type: RankType
+    ranks: np.ndarray
+    num_candidates: np.ndarray
+    weights: Optional[np.ndarray]
+
+    def resample(self, seed: Optional[int]) -> "RankPack":
+        """Resample rank pack."""
+        generator = np.random.default_rng(seed=seed)
+        n = len(self.ranks)
+        ids = generator.integers(n, size=(n,))
+        weights = None if self.weights is None else self.weights[ids]
+        return RankPack(
+            target=self.target,
+            rank_type=self.rank_type,
+            ranks=self.ranks[ids],
+            num_candidates=self.num_candidates[ids],
+            weights=weights,
+        )
+
+
 def _iter_ranks(
     ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
     weights: Optional[Mapping[Target, Sequence[np.ndarray]]] = None,
-) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]]:
-    # terminate early if there are no ranks
-    if not ranks:
-        logger.debug("Empty ranks. This should only happen during size probing.")
-        return
-
+) -> Iterable[RankPack]:
     sides = sorted(num_candidates.keys())
     # flatten dictionaries
     ranks_flat = _flatten(ranks)
@@ -77,153 +116,184 @@ def _iter_ranks(
     for rank_type in RANK_TYPES:
         # individual side
         for side in sides:
-            yield side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side], weights_flat.get(side)
+            yield RankPack(
+                side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side], weights_flat.get(side)
+            )
 
         # combined
         c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in sides])
         c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
         c_weights = None if weights is None else np.concatenate([weights_flat[side] for side in sides])
-        yield SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights
+        yield RankPack(SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights)
 
 
-class RankBasedMetricResults(MetricResults):
+class RankBasedMetricKey(NamedTuple):
+    """A key for ranking-based metrics."""
+
+    side: ExtendedTarget
+    rank_type: RankType
+    metric: str
+
+
+# parsing metrics
+# metric pattern = side?.type?.metric.k?
+_SIDE_PATTERN = "|".join(SIDES)
+_TYPE_PATTERN = "|".join(itertools.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
+METRIC_PATTERN = re.compile(
+    rf"^((?P<side>{_SIDE_PATTERN})\.)?((?P<type>{_TYPE_PATTERN})\.)?(?P<name>[\w@]+)(\.(?P<k>\d+))?$",
+)
+HITS_PATTERN = re.compile(r"(?P<name>h@|hits@|hits_at_)(?P<k>\d+)")
+
+
+class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
     """Results from computing metrics."""
 
-    data: MutableMapping[Tuple[str, ExtendedTarget, RankType], float]
-
     metrics = RANKING_METRICS
+
+    @classmethod
+    def key_from_string(cls, s: str | None) -> RankBasedMetricKey:
+        """Get the rank-based metric key.
+
+        The key input is understood as a dot-separated composition of
+
+        1. The side (one of "head", "tail", or "both"). Most publications exclusively report "both".
+           If not given "both" is assumed.
+        2. The rank type (one of "optimistic", "pessimistic", "realistic"). If not given, "realistic" is assumed.
+        3. The metric name, e.g., "adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
+            "inverse_geometric_mean_rank", or "hits@k" where k defaults to 10 but can be substituted for an integer.
+            By default, 1, 3, 5, and 10 are available. Other K's can be calculated by setting the appropriate
+            variable in the ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
+            :class:`pykeen.evaluation.RankBasedEvaluator`.
+
+        In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
+        are only calculated for the average type. This is because the calculation of the expected MR in the
+        optimistic and pessimistic case scenarios is still an active area of research and therefore has no
+        implementation yet.
+
+        :param s:
+            a string denoting a metric key
+
+        :return: The resolved key.
+
+        :raises ValueError:
+            if the string cannot be resolved to a metric key
+
+        Get the average MR
+
+        >>> RankBasedMetricResults.key_from_string('both.realistic.mean_rank')
+        RankBasedMetricKey(side='both', rank_type='realistic', metric='arithmetic_mean_rank')
+
+        If you only give a metric name, it assumes that it's for 'both' sides and 'realistic' type.
+
+        >>> RankBasedMetricResults.key_from_string('adjusted_mean_rank_index')
+        RankBasedMetricKey(side='both', rank_type='realistic', metric='adjusted_arithmetic_mean_rank_index')
+
+        This function will do its best to infer what's going on if you only specify one part.
+
+        >>> RankBasedMetricResults.key_from_string('head.mean_rank')
+        RankBasedMetricKey(side='head', rank_type='realistic', metric='arithmetic_mean_rank')
+
+        >>> RankBasedMetricResults.key_from_string('optimistic.mean_rank')
+        RankBasedMetricKey(side='both', rank_type='optimistic', metric='arithmetic_mean_rank')
+
+        Get the default Hits @ K (where $k=10$)
+
+        >>> RankBasedMetricResults.key_from_string('hits@k')
+        RankBasedMetricKey(side='both', rank_type='realistic', metric='hits_at_10')
+
+        Get a given Hits @ K
+
+        >>> RankBasedMetricResults.key_from_string('hits@5')
+        RankBasedMetricKey(side='both', rank_type='realistic', metric='hits_at_5')
+        """
+        if s is None:
+            return RankBasedMetricKey(
+                side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=rank_based_metric_resolver.make(query=None).key
+            )
+
+        match = METRIC_PATTERN.match(s)
+        if not match:
+            raise ValueError(f"Invalid metric name: {s}")
+        k: Union[None, str, int]
+        name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
+        name = name.lower()
+        match = HITS_PATTERN.match(name)
+        if match:
+            name, k = match.groups()
+
+        # normalize metric name
+        if not name:
+            raise ValueError("A metric name must be provided.")
+        metric_cls = rank_based_metric_resolver.lookup(name)
+
+        kwargs = {}
+        if issubclass(metric_cls, HITS_METRICS):
+            k = int(k or 10)
+            assert k > 0
+            kwargs["k"] = k
+
+        metric = rank_based_metric_resolver.make(metric_cls, kwargs)
+
+        # normalize side
+        side = normalize_target(side)
+
+        # normalize rank type
+        rank_type = normalize_rank_type(rank_type)
+        if rank_type not in metric.supported_rank_types:
+            raise ValueError(
+                f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
+            )
+
+        return RankBasedMetricKey(side=side, rank_type=rank_type, metric=metric.key)
 
     @classmethod
     def from_ranks(
         cls,
         metrics: Iterable[RankBasedMetric],
-        rank_and_candidates: Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray, Optional[np.ndarray]]],
+        rank_and_candidates: Iterable[RankPack],
     ) -> "RankBasedMetricResults":
         """Create rank-based metric results from the given rank/candidate sets."""
         return cls(
             data={
-                (metric.key, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates, weights=weights)
-                for metric, (target, rank_type, ranks, num_candidates, weights) in itertools.product(
-                    metrics, rank_and_candidates
+                RankBasedMetricKey(side=pack.target, rank_type=pack.rank_type, metric=metric.key): metric(
+                    ranks=pack.ranks, num_candidates=pack.num_candidates, weights=pack.weights
                 )
+                for metric, pack in itertools.product(metrics, rank_and_candidates)
             }
         )
 
     @classmethod
     def create_random(cls, random_state: Optional[int] = None) -> "RankBasedMetricResults":
         """Create random results useful for testing."""
+        targets = [LABEL_HEAD, LABEL_TAIL]
+        num_targets = len(targets)
+        num_rank_types = len(RANK_TYPES)
         generator = numpy.random.default_rng(seed=random_state)
-        num_candidates = generator.integers(low=2, high=1000, size=(2, 1000))
-        ranks = generator.integers(low=1, high=num_candidates[None], size=(2, 2, 1000))
-        ranks = numpy.maximum.accumulate(ranks, axis=1)  # increasing, since order of RANK_TYPES
-        data = {}
-        target_to_idx = {
-            LABEL_HEAD: 0,
-            LABEL_TAIL: 1,
-            SIDE_BOTH: [0, 1],
-        }
-        rank_to_idx = {
-            RANK_OPTIMISTIC: [0],
-            RANK_PESSIMISTIC: [1],
-            RANK_REALISTIC: [0, 1],
-        }
+        num_candidates = generator.integers(low=2, high=1000, size=(num_targets, 1000))
+        ranks = generator.integers(low=1, high=num_candidates[None], size=(num_rank_types - 1, num_targets, 1000))
+        # ensure that rank-opt <= rank-pess
+        ranks = numpy.sort(ranks, axis=0)
+        # assert that rank-real = (opt + pess)/2
+        ranks = numpy.stack([ranks[0], (ranks[0] + ranks[1]) / 2, ranks[1]], axis=0)
+        data: dict[RankBasedMetricKey | str, float] = {}
+        # fixme: the annotation of ClassResolver.__iter__ seems to be broken (X instead of Type[X])
+        metric_cls: Type[RankBasedMetric]
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
-            for target, i in target_to_idx.items():
-                for rank_type, j in rank_to_idx.items():
-                    this_ranks = ranks[i, j].mean(axis=0).flatten()
-                    data[metric.key, target, rank_type] = metric(ranks=this_ranks, num_candidates=num_candidates[i])
+            for (target, i), (j, rank_type) in itertools.product(
+                ((LABEL_HEAD, 0), (LABEL_TAIL, 1), (SIDE_BOTH, slice(None))), enumerate(RANK_TYPES)
+            ):
+                this_ranks = ranks[j, i].flatten()
+                data[RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric.key)] = metric(
+                    ranks=this_ranks, num_candidates=num_candidates[i].flatten()
+                )
         return cls(data=data)
 
-    def get_metric(self, name: str) -> float:
-        """Get the rank-based metric.
 
-        :param name: The name of the metric, created by concatenating three parts:
-
-            1. The side (one of "head", "tail", or "both"). Most publications exclusively report "both".
-            2. The type (one of "optimistic", "pessimistic", "realistic")
-            3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
-               "inverse_geometric_mean_rank",
-               or "hits@k" where k defaults to 10 but can be substituted for an integer. By default, 1, 3, 5, and 10
-               are available. Other K's can be calculated by setting the appropriate variable in the
-               ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
-               :class:`pykeen.evaluation.RankBasedEvaluator`.
-
-            In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
-            are only calculated for the average type. This is because the calculation of the expected MR in the
-            optimistic and pessimistic case scenarios is still an active area of research and therefore has no
-            implementation yet.
-        :return: The value for the metric
-
-        :raises: ValueError
-            if an invalid name is given.
-
-        Get the average MR
-
-        >>> metric_results.get('both.realistic.mean_rank')
-
-        If you only give a metric name, it assumes that it's for "both" sides and "realistic" type.
-
-        >>> metric_results.get('adjusted_mean_rank_index')
-
-        This function will do its best to infer what's going on if you only specify one part.
-
-        >>> metric_results.get('left.mean_rank')
-        >>> metric_results.get('optimistic.mean_rank')
-
-        Get the default Hits @ K (where $k=10$)
-
-        >>> metric_results.get('hits@k')
-
-        Get a given Hits @ K
-
-        >>> metric_results.get('hits@5')
-        """
-        return self._get_metric(MetricKey.lookup(name))
-
-    def _get_metric(self, metric_key: MetricKey) -> float:
-        """
-        Get the value of the metric corresponding to the given metric key.
-
-        :param metric_key:
-            the metric key.
-
-        :return:
-            the metric value.
-
-        :raises KeyError:
-            if no metric could be found matching the given key
-        """
-        for (metric_key_, target, rank_type), value in self.data.items():
-            if MetricKey(metric=metric_key_, side=target, rank_type=rank_type) == metric_key:
-                return value
-        raise KeyError(metric_key)
-
-    # docstr-coverage: inherited
-    def to_dict(self) -> Mapping[ExtendedTarget, Mapping[RankType, Mapping[str, float]]]:  # noqa: D102
-        result: MutableMapping[ExtendedTarget, MutableMapping[RankType, MutableMapping[str, float]]] = {}
-        for side, rank_type, metric_name, metric_value in self._iter_rows():
-            result.setdefault(side, {})
-            result[side].setdefault(rank_type, {})
-            result[side][rank_type][metric_name] = metric_value
-        return result
-
-    # docstr-coverage: inherited
-    def to_flat_dict(self):  # noqa: D102
-        return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
-
-    def to_df(self) -> pd.DataFrame:
-        """Output the metrics as a pandas dataframe."""
-        return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
-
-    def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
-        for (metric_key, side, rank_type), value in self.data.items():
-            yield side, rank_type, metric_key, value
-
-
-class RankBasedEvaluator(Evaluator):
+class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
     """A rank-based evaluator for KGE models."""
 
+    metric_result_cls = RankBasedMetricResults
     num_entities: Optional[int]
     ranks: MutableMapping[Tuple[Target, RankType], List[np.ndarray]]
     num_candidates: MutableMapping[Target, List[np.ndarray]]
@@ -234,6 +304,7 @@ class RankBasedEvaluator(Evaluator):
         metrics: Optional[Sequence[HintOrType[RankBasedMetric]]] = None,
         metrics_kwargs: OptionalKwargs = None,
         add_defaults: bool = True,
+        clear_on_finalize: bool = True,
         **kwargs,
     ):
         """Initialize rank-based evaluator.
@@ -247,7 +318,14 @@ class RankBasedEvaluator(Evaluator):
             additional keyword parameter
         :param add_defaults:
             whether to add all default metrics besides the ones specified by `metrics` / `metrics_kwargs`.
-        :param kwargs: Additional keyword arguments that are passed to the base class.
+        :param clear_on_finalize:
+            whether to clear buffers on `finalize` call
+
+            .. warning ::
+                disabling this option may lead to memory leaks and incorrect results when used from the pipeline
+
+        :param kwargs:
+            Additional keyword arguments that are passed to the base class.
         """
         super().__init__(
             filtered=filtered,
@@ -270,6 +348,7 @@ class RankBasedEvaluator(Evaluator):
         self.ranks = defaultdict(list)
         self.num_candidates = defaultdict(list)
         self.num_entities = None
+        self.clear_on_finalize = clear_on_finalize
 
     # docstr-coverage: inherited
     def process_scores_(
@@ -293,6 +372,11 @@ class RankBasedEvaluator(Evaluator):
         self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
     # docstr-coverage: inherited
+    def clear(self) -> None:  # noqa: D102
+        self.ranks.clear()
+        self.num_candidates.clear()
+
+    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -300,11 +384,120 @@ class RankBasedEvaluator(Evaluator):
             metrics=self.metrics,
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates),
         )
-        # Clear buffers
-        self.ranks.clear()
-        self.num_candidates.clear()
-
+        if self.clear_on_finalize:
+            self.clear()
         return result
+
+    def finalize_multi(self, n_boot: int = 1_000, seed: int = 42) -> Mapping[str, Sequence[float]]:
+        """Bootstrap from :meth:`finalize`.
+
+        :param n_boot:
+            the number of resampling steps
+        :param seed:
+            the random seed.
+
+        :return:
+            a flat dictionary from metric names to list of values
+        """
+        result: DefaultDict[str, List[float]] = defaultdict(list)
+
+        for i in range(n_boot):
+            rank_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
+            rank_and_candidates = map(functools.partial(RankPack.resample, seed=seed + i), rank_and_candidates)
+            single_result = RankBasedMetricResults.from_ranks(
+                metrics=self.metrics, rank_and_candidates=rank_and_candidates
+            )
+            for k, v in single_result.to_flat_dict().items():
+                result[k].append(v)
+        return result
+
+    def finalize_with_confidence(
+        self,
+        estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
+        ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
+        n_boot: int = 1_000,
+        seed: int = 42,
+    ) -> Mapping[str, Tuple[float, float]]:
+        """Finalize result with confidence estimation via bootstrapping.
+
+        Start by training a model (here, only for a one epochs)
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(dataset="nations", model="rotate", training_kwargs=dict(num_epochs=1))
+
+        Create an evaluator with `clear_on_finalize` set to `False`, e.g., via
+
+        >>> from pykeen.evaluation import evaluator_resolver
+        >>> evaluator = evaluator_resolver.make("rankbased", clear_on_finalize=False)
+
+        Evaluate *once*, this time ignoring the result
+
+        >>> evaluator.evaluate(model=result.model, mapped_triples=result.training.mapped_triples)
+
+        Now, call `finalize_with_confidence` to obtain estimates for metrics together with confidence intervals
+
+        >>> evaluator.finalize_with_confidence(n_boot=10)
+
+        :param estimator:
+            the estimator of central tendency.
+        :param ci:
+            the confidence interval
+        :param n_boot:
+            the number of resamplings to use for bootstrapping
+        :param seed:
+            the random seed
+
+        :return:
+            a dictionary from metric names to (central tendency, confidence) pairs
+        """
+        return {
+            k: summarize_values(vs, estimator=estimator, ci=ci)
+            for k, vs in self.finalize_multi(n_boot=n_boot, seed=seed).items()
+        }
+
+
+def _resolve_estimator(estimator: Union[str, Callable[[Sequence[float]], float]]) -> Callable[[Sequence[float]], float]:
+    if callable(estimator):
+        return estimator
+    return getattr(np, estimator)
+
+
+def _resolve_confidence(ci: Union[int, str, Callable[[Sequence[float]], float]]) -> Callable[[Sequence[float]], float]:
+    if callable(ci):
+        return ci
+    if isinstance(ci, (int, float)):
+        if ci < 0 or ci > 100:
+            raise ValueError(f"Invalid CI value: {ci}. Must be in [0, 100].")
+        ci_half = ci / 2.0
+
+        def ipr(vs: Sequence[float]) -> float:
+            """Return the inter-percentile range."""
+            return np.diff(np.percentile(vs, q=[ci_half, 100 - ci_half])).item()
+
+        return ipr
+    return getattr(np, ci)
+
+
+def summarize_values(
+    vs: Sequence[float],
+    estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
+    ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
+) -> Tuple[float, float]:
+    """Summarize values.
+
+    :param vs:
+        the values
+    :param estimator:
+        the central tendency estimator
+    :param ci:
+        the confidence estimator
+
+    :return:
+        a tuple estimates of central tendency and confidence
+    """
+    estimator = _resolve_estimator(estimator=estimator)
+    ci = _resolve_confidence(ci=ci)
+    return estimator(vs), ci(vs)
 
 
 def sample_negatives(
@@ -370,7 +563,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     cf. https://arxiv.org/abs/2106.06935.
     """
 
-    negatives: Mapping[Target, torch.LongTensor]
+    negative_samples: Mapping[Target, torch.LongTensor]
 
     def __init__(
         self,
@@ -427,6 +620,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 LABEL_HEAD: head_negatives,
                 LABEL_TAIL: tail_negatives,
             }
+            if additional_filter_triples is not None:
+                logger.warning(f"Ignoring parameter additional_filter_triples={additional_filter_triples}")
 
         # verify input
         for side, side_negatives in negatives.items():
@@ -525,6 +720,11 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().cpu().numpy())
 
     # docstr-coverage: inherited
+    def clear(self) -> None:  # noqa: D102
+        super().clear()
+        self.keys.clear()
+
+    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -537,8 +737,6 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights),
         )
         # Clear buffers
-        self.keys.clear()
-        self.ranks.clear()
-        self.num_candidates.clear()
+        self.clear()
 
         return result

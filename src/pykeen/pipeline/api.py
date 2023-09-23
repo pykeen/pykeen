@@ -218,7 +218,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
-from ..evaluation.ranking_metric_lookup import normalize_flattened_metric_results
+from ..evaluation.evaluator import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
@@ -449,7 +449,7 @@ class PipelineResult(Result):
         if save_training:
             self.training.to_path_binary(directory.joinpath(self.TRAINING_TRIPLES_FILE_NAME))
 
-        logger.info(f"Saved to directory: {directory.as_uri()}")
+        logger.info(f"Saved to directory: {directory.resolve()}")
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
@@ -1081,6 +1081,11 @@ def _handle_training_loop(
 
     if negative_sampler is None:
         negative_sampler_cls = None
+        if negative_sampler_kwargs and issubclass(training_loop_cls, SLCWATrainingLoop):
+            training_loop_kwargs = dict(training_loop_kwargs)
+            training_loop_kwargs.update(
+                negative_sampler_kwargs=negative_sampler_kwargs,
+            )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
         raise ValueError("Can not specify negative sampler with LCWA")
     else:
@@ -1285,12 +1290,8 @@ def _handle_evaluation(
         )
     )
     evaluate_start_time = time.time()
-    metric_results: MetricResults = _safe_evaluate(
-        model=model_instance,
-        mapped_triples=evaluation.mapped_triples,
-        evaluator=evaluator_instance,
-        evaluation_kwargs=evaluation_kwargs,
-        evaluation_fallback=evaluation_fallback,
+    metric_results = evaluator_instance.evaluate(
+        model=model_instance, mapped_triples=evaluation.mapped_triples, **evaluation_kwargs
     )
     evaluate_end_time = time.time() - evaluate_start_time
     step = training_kwargs.get("num_epochs")
@@ -1588,70 +1589,3 @@ def pipeline(  # noqa: C901
         train_seconds=train_seconds,
         evaluate_seconds=evaluate_seconds,
     )
-
-
-def _safe_evaluate(
-    model: Model,
-    mapped_triples: MappedTriples,
-    evaluator: Evaluator,
-    evaluation_kwargs: Dict[str, Any],
-    evaluation_fallback: bool = False,
-) -> MetricResults:
-    """Evaluate with a potentially safe fallback to CPU.
-
-    :param model: The model
-    :param mapped_triples: Mapped triples from the evaluation set (test or valid)
-    :param evaluator: An evaluator
-    :param evaluation_kwargs: Kwargs for the evaluator (might get modified in place)
-    :param evaluation_fallback:
-        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
-        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
-    :return: A metric result
-
-    :raises MemoryError:
-        If it is not possible to evaluate the model on the hardware at hand with the given parameters.
-    :raises RuntimeError:
-        If CUDA ran into OOM issues trying to evaluate the model on the hardware at hand with the given parameters.
-    """
-    while True:
-        try:
-            metric_results: MetricResults = evaluator.evaluate(
-                model=model,
-                mapped_triples=mapped_triples,
-                **evaluation_kwargs,
-            )
-        except (MemoryError, RuntimeError) as e:
-            # If the evaluation still fail using the CPU, the error is raised
-            if model.device.type != "cuda" or not evaluation_fallback:
-                raise e
-
-            # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
-            # restarted with PyKEEN's automatic memory optimization
-            elif "batch_size" in evaluation_kwargs:
-                logging.warning(
-                    "You tried to evaluate the current model on %s with batch_size=%d which was too big for %s.",
-                    model.device,
-                    evaluation_kwargs["batch_size"],
-                    model.device,
-                )
-                logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
-                del evaluation_kwargs["batch_size"]
-
-            # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
-            # is restarted using the cpu
-            else:  # 'batch_size' not in evaluation_kwargs
-                logging.warning(
-                    "Tried to evaluate the current model on %s, but the model and the dataset are too big for the "
-                    "%s memory currently available.",
-                    model.device,
-                    model.device,
-                )
-                logging.warning(
-                    "Will revert to using the CPU for evaluation, which will increase the evaluation time "
-                    "significantly.",
-                )
-                model.cpu()
-        else:
-            break  # evaluation was successful, don't continue the ``while True`` loop
-
-    return metric_results

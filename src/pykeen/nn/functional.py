@@ -9,7 +9,7 @@ as well as broadcasting and thus naturally support slicing and 1:n scoring.
 from __future__ import annotations
 
 import functools
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy
 import torch
@@ -17,14 +17,10 @@ from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
-from ..typing import GaussianDistribution, Sign
+from ..typing import GaussianDistribution
 from ..utils import (
-    boxe_kg_arity_position_score,
     clamp_norm,
-    compute_box,
     einsum,
-    ensure_complex,
-    estimate_cost_of_sequence,
     is_cudnn_error,
     make_ones_like,
     negative_norm,
@@ -35,9 +31,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "auto_sf_interaction",
-    "boxe_interaction",
-    "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
     "cp_interaction",
@@ -54,7 +47,6 @@ __all__ = [
     "pair_re_interaction",
     "proje_interaction",
     "rescal_interaction",
-    "rotate_interaction",
     "simple_interaction",
     "se_interaction",
     "transd_interaction",
@@ -68,18 +60,6 @@ __all__ = [
     "um_interaction",
     "linea_re_interaction",
 ]
-
-
-def _extract_sizes(
-    h: torch.Tensor,
-    r: torch.Tensor,
-    t: torch.Tensor,
-) -> Tuple[int, int, int, int, int]:
-    """Extract size dimensions from head/relation/tail representations."""
-    num_heads, num_relations, num_tails = [xx.shape[i] for i, xx in enumerate((h, r, t), start=1)]
-    d_e = h.shape[-1]
-    d_r = r.shape[-1]
-    return num_heads, num_relations, num_tails, d_e, d_r
 
 
 def _apply_optional_bn_to_tensor(
@@ -113,35 +93,6 @@ def _add_cuda_warning(func):
             ) from e
 
     return wrapped
-
-
-def complex_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    r"""Evaluate the ComplEx interaction function.
-
-    .. math ::
-        Re(\langle h, r, conj(t) \rangle)
-
-    .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The complex head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The complex relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The complex tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    h, r, t = ensure_complex(h, r, t)
-    # TODO: switch to einsum ?
-    # return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
-    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
@@ -581,42 +532,6 @@ def rescal_interaction(
         The scores.
     """
     return einsum("...d,...de,...e->...", h, r, t)
-
-
-def rotate_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Evaluate the RotatE interaction function.
-
-    .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    h, r, t = ensure_complex(h, r, t)
-    if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
-        # r expresses a rotation in complex plane.
-        # rotate head by relation (=Hadamard product in complex space)
-        h = h * r
-    else:
-        # rotate tail by inverse of relation
-        # The inverse rotation is expressed by the complex conjugate of r.
-        # The score is computed as the distance of the relation-rotated head to the tail.
-        # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
-        # |h * r - t| = |h - conj(r) * t|
-        t = t * torch.conj(r)
-
-    return negative_norm(h - t, p=2, power_norm=False)
 
 
 def simple_interaction(
@@ -1156,85 +1071,6 @@ def cross_e_interaction(
     return (x * t).sum(dim=-1)
 
 
-def boxe_interaction(
-    # head
-    h_pos: torch.FloatTensor,
-    h_bump: torch.FloatTensor,
-    # relation box: head
-    rh_base: torch.FloatTensor,
-    rh_delta: torch.FloatTensor,
-    rh_size: torch.FloatTensor,
-    # relation box: tail
-    rt_base: torch.FloatTensor,
-    rt_delta: torch.FloatTensor,
-    rt_size: torch.FloatTensor,
-    # tail
-    t_pos: torch.FloatTensor,
-    t_bump: torch.FloatTensor,
-    # power norm
-    tanh_map: bool = True,
-    p: int = 2,
-    power_norm: bool = False,
-) -> torch.FloatTensor:
-    """
-    Evalute the BoxE interaction function from [abboud2020]_.
-
-    Entities are described via position and bump. Relations are described as a pair of boxes, where each box is
-    parametrized as triple (base, delta, size), where # TODO
-
-    .. note ::
-        this interaction relies on Abboud's point-to-box distance
-        :func:`pykeen.utils.point_to_box_distance`.
-
-    :param h_pos: shape: (`*batch_dims`, d)
-        the head entity position
-    :param h_bump: shape: (`*batch_dims`, d)
-        the head entity bump
-
-    :param rh_base: shape: (`*batch_dims`, d)
-        the relation-specific head box base position
-    :param rh_delta: shape: (`*batch_dims`, d)
-        # the relation-specific head box base shape (normalized to have a volume of 1):
-    :param rh_size: shape: (`*batch_dims`, 1)
-        the relation-specific head box size (a scalar)
-    :param rt_base: shape: (`*batch_dims`, d)
-        the relation-specific tail box base position
-    :param rt_delta: shape: (`*batch_dims`, d)
-        # the relation-specific tail box base shape (normalized to have a volume of 1):
-    :param rt_size: shape: (`*batch_dims`, d)
-        the relation-specific tail box size
-
-    :param t_pos: shape: (`*batch_dims`, d)
-        the tail entity position
-    :param t_bump: shape: (`*batch_dims`, d)
-        the tail entity bump
-
-    :param tanh_map:
-        whether to apply the tanh mapping
-    :param p:
-        the order of the norm to apply
-    :param power_norm:
-        whether to use the p-th power of the p-norm instead
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return sum(
-        boxe_kg_arity_position_score(
-            entity_pos=entity_pos,
-            other_entity_bump=other_entity_pos,
-            relation_box=compute_box(base=base, delta=delta, size=size),
-            tanh_map=tanh_map,
-            p=p,
-            power_norm=power_norm,
-        )
-        for entity_pos, other_entity_pos, base, delta, size in (
-            (h_pos, t_bump, rh_base, rh_delta, rh_size),
-            (t_pos, h_bump, rt_base, rt_delta, rt_size),
-        )
-    )
-
-
 def cp_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -1311,54 +1147,6 @@ def triple_re_interaction(
         p=p,
         power_norm=power_norm,
     )
-
-
-def auto_sf_interaction(
-    h: Sequence[torch.FloatTensor],
-    r: Sequence[torch.FloatTensor],
-    t: Sequence[torch.FloatTensor],
-    coefficients: Sequence[Tuple[int, int, int, Sign]],
-) -> torch.FloatTensor:
-    r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
-
-    This interaction function is a parametrized way to express bi-linear models
-    with block structure. It divides the entity and relation representations into blocks,
-    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
-    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
-    and $s \in {-1, 1}$ is the sign.
-
-    The interaction function is then given as
-
-    .. math::
-        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
-
-    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
-
-    This parametrization allows to express several well-known interaction functions, e.g.
-
-    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
-    - :class:`pykeen.models.ComplEx`: two blocks,
-      $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
-    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
-
-    :param h: each shape: (`*batch_dims`, rank, dim)
-        The list of head representations.
-    :param r: each shape: (`*batch_dims`, rank, dim)
-        The list of relation representations.
-    :param t: each shape: (`*batch_dims`, rank, dim)
-        The list of tail representations.
-    :param coefficients:
-        the coefficients, in order:
-
-        1. head_representation_index,
-        2. relation_representation_index,
-        3. tail_representation_index,
-        4. sign
-
-    :return:
-        The scores
-    """
-    return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
 
 def transformer_interaction(

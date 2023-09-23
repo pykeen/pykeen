@@ -7,7 +7,6 @@ import logging
 import pathlib
 import re
 import warnings
-from abc import abstractmethod
 from typing import (
     Any,
     Callable,
@@ -22,7 +21,7 @@ from typing import (
     Sequence,
     Set,
     TextIO,
-    TypeVar,
+    Tuple,
     Union,
     cast,
 )
@@ -36,6 +35,7 @@ from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstan
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
+from ..inverse import relation_inverter_resolver
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import (
     ExtraReprMixin,
@@ -57,8 +57,8 @@ __all__ = [
     "cat_triples",
     "splits_steps",
     "splits_similarity",
-    "RelationInverter",
-    "relation_inverter",
+    "AnyTriples",
+    "get_mapped_triples",
 ]
 
 logger = logging.getLogger(__name__)
@@ -172,59 +172,6 @@ def _ensure_ids(
 ) -> Collection[int]:
     """Convert labels to IDs."""
     return [label_to_id[l_or_i] if isinstance(l_or_i, str) else l_or_i for l_or_i in labels_or_ids]
-
-
-RelationID = TypeVar("RelationID", int, torch.LongTensor)
-
-
-class RelationInverter:
-    """An interface for inverse-relation ID mapping."""
-
-    # TODO: method is_inverse?
-
-    @abstractmethod
-    def get_inverse_id(self, relation_id: RelationID) -> RelationID:
-        """Get the inverse ID for a given relation."""
-        # TODO: inverse of inverse?
-        raise NotImplementedError
-
-    @abstractmethod
-    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
-        raise NotImplementedError
-
-    @abstractmethod
-    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
-        """Invert relations in a batch (in-place)."""
-        raise NotImplementedError
-
-    def map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:
-        """Map relations of batch, optionally also inverting them."""
-        batch = self._map(batch=batch, index=index)
-        return self.invert_(batch=batch, index=index) if invert else batch
-
-
-class DefaultRelationInverter(RelationInverter):
-    """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
-
-    # docstr-coverage: inherited
-    def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
-        return relation_id + 1
-
-    # docstr-coverage: inherited
-    def _map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:  # noqa: D102
-        batch = batch.clone()
-        batch[:, index] *= 2
-        return batch
-
-    # docstr-coverage: inherited
-    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        batch[:, index] += 1
-        return batch
-
-
-relation_inverter = DefaultRelationInverter()
 
 
 @dataclasses.dataclass
@@ -420,6 +367,7 @@ class CoreTriplesFactory(KGInfo):
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
+        self.relation_inverter = relation_inverter_resolver.make(query=None)
 
     @classmethod
     def create(
@@ -511,7 +459,7 @@ class CoreTriplesFactory(KGInfo):
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:
             raise ValueError("Can not get inverse triple, they have not been created.")
-        return relation_inverter.get_inverse_id(relation_id=relation)
+        return self.relation_inverter.get_inverse_id(relation_id=relation)
 
     def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
         """Add inverse triples if they shall be created."""
@@ -521,8 +469,8 @@ class CoreTriplesFactory(KGInfo):
         logger.info("Creating inverse triples.")
         return torch.cat(
             [
-                relation_inverter.map(batch=mapped_triples),
-                relation_inverter.map(batch=mapped_triples, invert=True).flip(1),
+                self.relation_inverter.map(batch=mapped_triples),
+                self.relation_inverter.map(batch=mapped_triples, invert=True).flip(1),
             ]
         )
 
@@ -864,11 +812,13 @@ class TriplesFactory(CoreTriplesFactory):
 
     def __init__(
         self,
-        mapped_triples: MappedTriples,
+        mapped_triples: Union[MappedTriples, np.ndarray],
         entity_to_id: EntityMapping,
         relation_to_id: RelationMapping,
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
     ):
         """
         Create the triples factory.
@@ -883,13 +833,35 @@ class TriplesFactory(CoreTriplesFactory):
             Whether to create inverse triples.
         :param metadata:
             Arbitrary metadata to go with the graph
+        :param num_entities:
+            the number of entities. May be None, in which case this number is inferred by the label mapping
+        :param num_relations:
+            the number of relations. May be None, in which case this number is inferred by the label mapping
+
+        :raises ValueError:
+            if the explicitly provided number of entities or relations does not match with the one given
+            by the label mapping
         """
         self.entity_labeling = Labeling(label_to_id=entity_to_id)
+        if num_entities is None:
+            num_entities = self.entity_labeling.max_id
+        elif num_entities != self.entity_labeling.max_id:
+            raise ValueError(
+                f"Mismatch between the number of entities in labeling ({self.entity_labeling.max_id}) "
+                f"vs. explicitly provided num_entities={num_entities}",
+            )
         self.relation_labeling = Labeling(label_to_id=relation_to_id)
+        if num_relations is None:
+            num_relations = self.relation_labeling.max_id
+        elif num_relations != self.relation_labeling.max_id:
+            raise ValueError(
+                f"Mismatch between the number of relations in labeling ({self.relation_labeling.max_id}) "
+                f"vs. explicitly provided num_relations={num_relations}",
+            )
         super().__init__(
             mapped_triples=mapped_triples,
-            num_entities=self.entity_labeling.max_id,
-            num_relations=self.relation_labeling.max_id,
+            num_entities=num_entities,
+            num_relations=num_relations,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
@@ -1060,7 +1032,12 @@ class TriplesFactory(CoreTriplesFactory):
                 self.relation_to_id,
             ),
         ):
-            pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
+            pd.DataFrame(
+                data=data.items(),
+                columns=["label", "id"],
+            ).sort_values(
+                by="id"
+            ).set_index("id").to_csv(
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
             )
@@ -1077,13 +1054,6 @@ class TriplesFactory(CoreTriplesFactory):
             )
             data[name] = dict(zip(df["label"], df["id"]))
         return data
-
-    # docstr-coverage: inherited
-    def _get_binary_state(self):  # noqa: D102
-        return dict(
-            create_inverse_triples=self.create_inverse_triples,
-            metadata=self.metadata,
-        )
 
     # docstr-coverage: inherited
     def clone_and_exchange_triples(
@@ -1346,3 +1316,83 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     steps = splits_steps(a, b)
     n = sum(tf.num_triples for tf in a)
     return 1 - steps / n
+
+
+AnyTriples = Union[
+    Tuple[str, str, str], Sequence[Tuple[str, str, str]], LabeledTriples, MappedTriples, CoreTriplesFactory
+]
+
+
+def get_mapped_triples(
+    x: Optional[AnyTriples] = None,
+    *,
+    mapped_triples: Optional[MappedTriples] = None,
+    triples: Union[None, LabeledTriples, Tuple[str, str, str], Sequence[Tuple[str, str, str]]] = None,
+    factory: Optional[CoreTriplesFactory] = None,
+) -> MappedTriples:
+    """
+    Get ID-based triples either directly, or from a factory.
+
+    Preference order:
+    1. `mapped_triples`
+    2. `triples` (converted using factory)
+    3. `x`
+    4. `factory.mapped_triples`
+
+    :param x:
+        either of label-based triples, ID-based triples, a factory, or None.
+    :param mapped_triples: shape: (n, 3)
+        the ID-based triples
+    :param triples:
+        the label-based triples
+    :param factory:
+        the triples factory
+
+    :raises ValueError:
+        if all inputs are None, or provided inputs are invalid.
+
+    :return:
+        the ID-based triples
+    """
+    # ID-based triples
+    if mapped_triples is not None:
+        if torch.is_floating_point(mapped_triples):
+            raise ValueError(
+                f"mapped_triples must be on long (or compatible) data type, but are {mapped_triples.dtype}"
+            )
+        if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
+            raise ValueError(f"mapped_triples must be of shape (?, 3), but are {mapped_triples.shape}")
+        return mapped_triples
+
+    # labeled triples
+    if triples is not None:
+        if factory is None or not isinstance(factory, TriplesFactory):
+            raise ValueError("If triples are not ID-based, a triples factory must be provided and label-based.")
+
+        # make sure triples are a numpy array
+        triples = np.asanyarray(triples)
+
+        # make sure triples are 2d
+        triples = np.atleast_2d(triples)
+
+        # convert to ID-based
+        return factory.map_triples(triples)
+
+    # triples factory
+    if x is None and factory is not None:
+        return factory.mapped_triples
+
+    # all keyword-based options have been none
+    if x is None:
+        raise ValueError("All parameters were None.")
+
+    if isinstance(x, torch.Tensor):
+        # delegate to keyword-based get_mapped_triples to re-use optional validation logic
+        return get_mapped_triples(mapped_triples=x)
+
+    if isinstance(x, CoreTriplesFactory):
+        # delegate to keyword-based get_mapped_triples to re-use optional validation logic
+        return get_mapped_triples(mapped_triples=x.mapped_triples)
+
+    # only labeled triples are remaining
+    return get_mapped_triples(triples=x, factory=factory)

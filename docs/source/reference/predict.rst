@@ -1,4 +1,6 @@
+.. _making_predictions:
+
 Prediction
 ===========
-.. automodapi:: pykeen.models.predict
+.. automodapi:: pykeen.predict
     :no-heading:

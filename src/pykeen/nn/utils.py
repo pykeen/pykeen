@@ -8,6 +8,8 @@ import functools
 import logging
 import pathlib
 import re
+import subprocess
+from abc import ABC, abstractmethod
 from itertools import chain
 from textwrap import dedent
 from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
@@ -26,8 +28,11 @@ __all__ = [
     "safe_diagonal",
     "adjacency_tensor_to_stacked_matrix",
     "use_horizontal_stacking",
-    "WikidataCache",
     "ShapeError",
+    # Caches
+    "TextCache",
+    "WikidataCache",
+    "PyOBOCache",
 ]
 
 logger = logging.getLogger(__name__)
@@ -181,7 +186,27 @@ WIKIDATA_IMAGE_RELATIONS = [
 ]
 
 
-class WikidataCache:
+class TextCache(ABC):
+    """An interface for looking up text for various flavors of entity identifiers."""
+
+    @abstractmethod
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:
+        """Get text for the given identifiers for the cache."""
+
+
+class IdentityCache(TextCache):
+    """
+    A cache without functionality.
+
+    Mostly used for testing.
+    """
+
+    # docstr-coverage: inherited
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:  # noqa: D102
+        return identifiers
+
+
+class WikidataCache(TextCache):
     """A cache for requests against Wikidata's SPARQL endpoint."""
 
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
@@ -355,29 +380,44 @@ class WikidataCache:
             assert isinstance(item, str)
         return cast(Sequence[str], result)
 
-    def get_labels(self, ids: Sequence[str]) -> Sequence[str]:
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
+        """Get a concatenation of the title and description for each Wikidata identifier.
+
+        :param identifiers:
+            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
+
+        :return:
+            the label and description for each Wikidata entity concatenated
+        """
+        # get labels & descriptions
+        titles = self.get_labels(wikidata_identifiers=identifiers)
+        descriptions = self.get_descriptions(wikidata_identifiers=identifiers)
+        # compose labels
+        return [f"{title}: {description}" for title, description in zip(titles, descriptions)]
+
+    def get_labels(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
         """
         Get entity labels for the given IDs.
 
-        :param ids:
-            the Wikidata IDs
+        :param wikidata_identifiers:
+            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
 
         :return:
             the label for each Wikidata entity
         """
-        return self._get(ids=ids, component="label")
+        return self._get(ids=wikidata_identifiers, component="label")
 
-    def get_descriptions(self, ids: Sequence[str]) -> Sequence[str]:
+    def get_descriptions(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
         """
         Get entity descriptions for the given IDs.
 
-        :param ids:
-            the Wikidata IDs
+        :param wikidata_identifiers:
+            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
 
         :return:
             the description for each Wikidata entity
         """
-        return self._get(ids=ids, component="description")
+        return self._get(ids=wikidata_identifiers, component="description")
 
     def _discover_images(self, extensions: Collection[str]) -> Mapping[str, pathlib.Path]:
         image_dir = self.module.join("images")
@@ -410,7 +450,7 @@ class WikidataCache:
         num_missing = len(missing)
         logger.info(
             f"Downloading images for {num_missing:,} entities. With the rate limit in place, "
-            f"this will take at least {num_missing/10:.2f} seconds.",
+            f"this will take at least {num_missing / 10:.2f} seconds.",
         )
         res_json = self.query(
             sparql=functools.partial(
@@ -474,6 +514,65 @@ class WikidataCache:
 
         id_to_path = self._discover_images(extensions=extensions)
         return [id_to_path.get(i) for i in ids]
+
+
+PYOBO_PREFIXES_WARNED = set()
+
+
+class PyOBOCache(TextCache):
+    """A cache that looks up labels of biomedical entities based on their CURIEs."""
+
+    def __init__(self, *args, **kwargs):
+        """Instantiate the PyOBO cache, ensuring PyOBO is installed."""
+        try:
+            import pyobo
+        except ImportError:
+            raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.")
+        else:
+            self._get_name = pyobo.get_name
+        super().__init__(*args, **kwargs)
+
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:
+        """Get text for the given CURIEs.
+
+        :param identifiers:
+            The compact URIs for each entity (e.g., ``['doid:1234', ...]``)
+
+        :return:
+            the label for each entity, looked up via :func:`pyobo.get_name`.
+            Might be none if no label is available.
+        """
+        # This import doesn't need a wrapper since it's a transitive
+        # requirement of PyOBO
+        import bioregistry
+
+        res: List[Optional[str]] = []
+        for curie in identifiers:
+            try:
+                prefix, identifier = curie.split(":", maxsplit=1)
+            except ValueError:
+                res.append(None)
+                continue
+
+            norm_prefix = bioregistry.normalize_prefix(prefix)
+            if norm_prefix is None:
+                if prefix not in PYOBO_PREFIXES_WARNED:
+                    logger.warning("Prefix not registered in the Bioregistry: %s", prefix)
+                    PYOBO_PREFIXES_WARNED.add(prefix)
+                res.append(None)
+                continue
+
+            try:
+                name = self._get_name(norm_prefix, identifier)
+            except subprocess.CalledProcessError:
+                if norm_prefix not in PYOBO_PREFIXES_WARNED:
+                    logger.warning("could not get names from %s", norm_prefix)
+                    PYOBO_PREFIXES_WARNED.add(norm_prefix)
+                res.append(None)
+                continue
+            else:
+                res.append(name)
+        return res
 
 
 class ShapeError(ValueError):

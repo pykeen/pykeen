@@ -3,6 +3,7 @@ A module of vision related components.
 
 Generally requires :module:`torchvision` to be installed.
 """
+
 import functools
 import pathlib
 from typing import Any, Callable, Optional, Sequence, Union
@@ -11,6 +12,7 @@ import torch
 import torch.nn
 import torch.utils.data
 from class_resolver import OptionalKwargs
+from docdata import parse_docdata
 
 from .representation import BackfillRepresentation, Representation
 from .utils import ShapeError, WikidataCache
@@ -48,7 +50,7 @@ class VisionDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         images: Sequence[Union[str, pathlib.Path, torch.Tensor]],
-        transforms: Sequence = None,
+        transforms: Optional[Sequence] = None,
         root: Optional[pathlib.Path] = None,
     ) -> None:
         """
@@ -91,8 +93,13 @@ class VisionDataset(torch.utils.data.Dataset):
         return len(self.images)
 
 
+@parse_docdata
 class VisualRepresentation(Representation):
-    """Visual representations using a torchvision model."""
+    """Visual representations using a torchvision model.
+
+    ---
+    name: Visual
+    """
 
     def __init__(
         self,
@@ -200,6 +207,7 @@ class VisualRepresentation(Representation):
             )
 
 
+@parse_docdata
 class WikidataVisualRepresentation(BackfillRepresentation):
     """
     Visual representations obtained from Wikidata and encoded with a vision encoder.
@@ -229,6 +237,9 @@ class WikidataVisualRepresentation(BackfillRepresentation):
                 ),
             ),
         )
+
+    ---
+    name: Wikidata Visual
     """
 
     def __init__(

@@ -41,17 +41,15 @@ class Kinships(PathDataset):
         link: https://www.aaai.org/Papers/AAAI/2006/AAAI06-061.pdf
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the Kinships dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
             training_path=KINSHIPS_TRAIN_PATH,
             testing_path=KINSHIPS_TEST_PATH,
             validation_path=KINSHIPS_VALIDATE_PATH,
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 

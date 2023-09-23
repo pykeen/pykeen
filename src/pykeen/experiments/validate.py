@@ -12,7 +12,8 @@ from torch import nn
 
 from .cli import HERE
 from ..datasets import dataset_resolver
-from ..evaluation.ranking_metric_lookup import normalize_flattened_metric_results
+from ..evaluation.evaluator import normalize_flattened_metric_results
+from ..evaluation.rank_based_evaluator import RankBasedEvaluator
 from ..losses import loss_resolver
 from ..models import Model, model_resolver
 from ..optimizers import optimizer_resolver
@@ -231,8 +232,12 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
             check_kwargs=True,
         )
 
+    # todo: read from config instead
+    evaluator_cls = RankBasedEvaluator
     try:
-        normalize_flattened_metric_results(configuration.get("results", {}))
+        normalize_flattened_metric_results(
+            configuration.get("results", {}), metric_result_cls=evaluator_cls.metric_result_cls
+        )
     except ValueError as error:
         errors.append(f"error in parsing results: {error}")
 
