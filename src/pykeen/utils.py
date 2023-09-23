@@ -143,16 +143,29 @@ def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
-    if device is None or device == "gpu":
+    cuda_available = torch.cuda.is_available()
+    mps_available = torch.backends.mps.is_available()
+    if device is None:
+        if cuda_available:
+            return torch.device("cuda")
+        elif mps_available:
+            return torch.device("mps")
+        else:
+            return torch.device("cpu")
+    if device == "gpu":
         device = "cuda"
     if isinstance(device, str):
         device = torch.device(device)
-    if not torch.cuda.is_available() and not torch.backends.mps.is_available() and device.type == "cuda":
-        device = torch.device("cpu")
-        logger.warning("No cuda devices were available. The model runs on CPU")
-    if not torch.cuda.is_available() and torch.backends.mps.is_available():
-        device = torch.device("mps")
-        logger.warning("Running using a MPS compatible device.")
+    if device.type == "cuda" and not cuda_available:
+        if mps_available:
+            logger.warning("CUDA was not available, but MPS was, so using MPS")
+            return torch.device("mps")
+        else:
+            logger.warning("CUDA was not available, defaulting to CPU")
+            return torch.device("cpu")
+    if device.type == "mps" and not mps_available:
+        logger.warning("MPS was not available, defaulting to CPU")
+        return torch.device("cpu")
     return device
 
 
