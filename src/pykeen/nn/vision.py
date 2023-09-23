@@ -239,7 +239,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         )
 
     ---
-    name: Wikidata Visualization Representation
+    name: Wikidata Visual Representation
     """
 
     def __init__(
