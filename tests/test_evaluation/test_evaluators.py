@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """Test the evaluators."""
+from __future__ import annotations
 
 import itertools
 import unittest
+from collections import Counter
 from operator import itemgetter
 from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
@@ -55,6 +57,7 @@ from pykeen.typing import (
     SIDES,
     MappedTriples,
     Target,
+    normalize_target,
 )
 from tests import cases, mocks
 from tests.utils import needs_packages
@@ -372,52 +375,36 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert not torch.isfinite(filtered_tail_scores[exp_tail_filter_mask]).any()
 
 
-class DummyEvaluator(Evaluator):
+class DummyMetricResults(MetricResults[Target]):
+    """Dummy metric results."""
+
+    @classmethod
+    def key_from_string(cls, s: str | None) -> Target:
+        return normalize_target(s)
+
+
+class DummyEvaluator(Evaluator[Target]):
     """A dummy evaluator for testing the structure of the evaluation function."""
 
-    def __init__(self, *, counter: int, filtered: bool, automatic_memory_optimization: bool = True) -> None:
-        super().__init__(filtered=filtered, automatic_memory_optimization=automatic_memory_optimization)
-        self.counter = counter
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.counter: Counter[Target] = Counter()
 
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        if target == LABEL_TAIL:
-            self.counter += 1
-        elif target == LABEL_HEAD:
-            self.counter -= 1
+        self.counter.update((target,))
 
-    def clear(self):  # noqa: D102
-        pass
+    def clear(self) -> None:  # noqa: D102
+        self.counter.clear()
 
-    def finalize(self) -> MetricResults:  # noqa: D102
-        return RankBasedMetricResults(
-            dict(
-                arithmetic_mean_rank=self.counter,
-                geometric_mean_rank=None,
-                harmonic_mean_rank=None,
-                median_rank=None,
-                inverse_arithmetic_mean_rank=None,
-                inverse_geometric_mean_rank=None,
-                inverse_harmonic_mean_rank=None,
-                inverse_median_rank=None,
-                rank_std=None,
-                rank_var=None,
-                rank_mad=None,
-                rank_count=None,
-                adjusted_arithmetic_mean_rank=None,
-                adjusted_arithmetic_mean_rank_index=None,
-                hits_at_k=dict(),
-            )
-        )
-
-    def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}(losses={self.losses})"
+    def finalize(self) -> MetricResults[Target]:  # noqa: D102
+        return DummyMetricResults(data={target: float(count) for target, count in self.counter.items()})
 
 
 class TestEvaluationStructure(unittest.TestCase):
@@ -425,8 +412,7 @@ class TestEvaluationStructure(unittest.TestCase):
 
     def setUp(self):
         """Prepare for testing the evaluation structure."""
-        self.counter = 1337
-        self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, automatic_memory_optimization=False)
+        self.evaluator = DummyEvaluator(filtered=True, automatic_memory_optimization=False)
         self.dataset = Nations()
         self.model = FixedModel(triples_factory=self.dataset.training)
 
@@ -439,8 +425,10 @@ class TestEvaluationStructure(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        self.assertIsInstance(eval_results, RankBasedMetricResults)
-        assert eval_results.arithmetic_mean_rank == self.counter, "Should end at the same value as it started"
+        self.assertIsInstance(eval_results, DummyMetricResults)
+        assert eval_results.get_metric(name=LABEL_HEAD) == eval_results.get_metric(
+            name=LABEL_TAIL
+        ), "Should be evaluated on the same number of batches per side"
 
 
 class TestEvaluationFiltering(unittest.TestCase):
