@@ -98,7 +98,7 @@ class VisualRepresentation(Representation):
     """Visual representations using a torchvision model.
 
     ---
-    name: Visualization Representation
+    name: Visual Representation
     """
 
     def __init__(
