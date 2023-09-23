@@ -127,6 +127,18 @@ The following {{ n_inductive_datasets }} inductive datasets are built in to PyKE
 
 {{ inductive_datasets }}
 
+### Representations
+
+The following {{ n_representations }} representations are implemented by PyKEEN.
+
+{{ representations }}
+
+### Interactions
+
+The following {{ n_interactions }} interactions are implemented by PyKEEN.
+
+{{ interactions }}
+
 ### Models
 
 The following {{ n_models }} models are implemented by PyKEEN.

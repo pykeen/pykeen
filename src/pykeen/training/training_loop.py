@@ -10,9 +10,10 @@ import pickle
 import random
 import time
 from abc import ABC, abstractmethod
+from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
 
 import numpy as np
@@ -381,35 +382,51 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         else:
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
-            result = self._train(
-                num_epochs=num_epochs,
-                batch_size=batch_size,
-                slice_size=slice_size,
-                label_smoothing=label_smoothing,
-                sampler=sampler,
-                continue_training=continue_training,
-                only_size_probing=only_size_probing,
-                use_tqdm=use_tqdm,
-                use_tqdm_batch=use_tqdm_batch,
-                tqdm_kwargs=tqdm_kwargs,
-                stopper=stopper,
-                sub_batch_size=sub_batch_size,
-                num_workers=num_workers,
-                save_checkpoints=save_checkpoints,
-                checkpoint_path=checkpoint_path,
-                checkpoint_frequency=checkpoint_frequency,
-                checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
-                best_epoch_model_file_path=best_epoch_model_file_path,
-                last_best_epoch=last_best_epoch,
-                drop_last=drop_last,
-                callbacks=callbacks,
-                callback_kwargs=callback_kwargs,
-                gradient_clipping_max_norm=gradient_clipping_max_norm,
-                gradient_clipping_norm_type=gradient_clipping_norm_type,
-                gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
-                triples_factory=triples_factory,
-                pin_memory=pin_memory,
-            )
+
+            # the exit stack ensure that we clean up temporary files when an error occurs
+            with ExitStack() as exit_stack:
+                # When using early stopping models have to be saved separately at the best epoch, since the training
+                # loop will due to the patience continue to train after the best epoch and thus alter the model
+                if (
+                    stopper is not None
+                    and not only_size_probing
+                    and last_best_epoch is None
+                    and best_epoch_model_file_path is None
+                ):
+                    # note: NamedTemporaryFile does not seem to work
+                    # Create a path
+                    temporary_directory = exit_stack.enter_context(TemporaryDirectory())
+                    best_epoch_model_file_path = pathlib.Path(temporary_directory).joinpath("best_model.pt")
+
+                result = self._train(
+                    num_epochs=num_epochs,
+                    batch_size=batch_size,
+                    slice_size=slice_size,
+                    label_smoothing=label_smoothing,
+                    sampler=sampler,
+                    continue_training=continue_training,
+                    only_size_probing=only_size_probing,
+                    use_tqdm=use_tqdm,
+                    use_tqdm_batch=use_tqdm_batch,
+                    tqdm_kwargs=tqdm_kwargs,
+                    stopper=stopper,
+                    sub_batch_size=sub_batch_size,
+                    num_workers=num_workers,
+                    save_checkpoints=save_checkpoints,
+                    checkpoint_path=checkpoint_path,
+                    checkpoint_frequency=checkpoint_frequency,
+                    checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
+                    best_epoch_model_file_path=best_epoch_model_file_path,
+                    last_best_epoch=last_best_epoch,
+                    drop_last=drop_last,
+                    callbacks=callbacks,
+                    callback_kwargs=callback_kwargs,
+                    gradient_clipping_max_norm=gradient_clipping_max_norm,
+                    gradient_clipping_norm_type=gradient_clipping_norm_type,
+                    gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
+                    triples_factory=triples_factory,
+                    pin_memory=pin_memory,
+                )
 
         # Ensure the release of memory
         torch.cuda.empty_cache()
@@ -456,15 +473,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError("optimizer must be set before running _train()")
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
-        if (
-            stopper is not None
-            and not only_size_probing
-            and last_best_epoch is None
-            and best_epoch_model_file_path is None
-        ):
-            # Create a path
-            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
-        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None
+        # -> the temporay file has to be created outside, which we assert here
+        if stopper is not None and not only_size_probing and last_best_epoch is None:
+            assert best_epoch_model_file_path is not None
 
         if isinstance(self.model, RGCN) and sampler != "schlichtkrull":
             logger.warning(
@@ -605,6 +616,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
+        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None
 
         # Training Loop
         for epoch in epochs:

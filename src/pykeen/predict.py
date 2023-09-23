@@ -282,7 +282,7 @@ from tqdm.auto import tqdm
 from typing_extensions import TypeAlias  # Python <=3.9
 
 from .constants import COLUMN_LABELS, TARGET_TO_INDEX
-from .models.base import Model
+from .models import Model
 from .triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from .triples.utils import tensor_to_df
 from .typing import (
@@ -1007,6 +1007,9 @@ def predict_all(
 
     :return:
         A score pack of parallel triples and scores
+
+    :raises ValueError:
+        if an inductive inference mode is selected, but the model does not support it
     """
     # note: the models' predict method takes care of setting the model to evaluation mode
     logger.warning(
@@ -1014,17 +1017,19 @@ def predict_all(
         f"score evaluations.",
     )
 
+    num_entities = model._get_entity_len(mode=mode)
+    if num_entities is None:
+        raise ValueError(f"Could not determine num_entities for {mode=}")
+
     consumer: ScoreConsumer
     if k is None:
         logger.warning(
             "Not providing k to `predict_all` entails huge memory requirements for reasonably-sized knowledge graphs.",
         )
-        consumer = AllScoreConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+        consumer = AllScoreConsumer(num_entities=num_entities, num_relations=model.num_real_relations)
     else:
         consumer = TopKScoreConsumer(k=k, device=model.device)
-    dataset = AllPredictionDataset(
-        num_entities=model.num_entities, num_relations=model.num_real_relations, target=target
-    )
+    dataset = AllPredictionDataset(num_entities=num_entities, num_relations=model.num_real_relations, target=target)
     consume_scores(model, dataset, consumer, batch_size=batch_size or len(dataset), mode=mode)
     return consumer.finalize()
 
@@ -1082,12 +1087,19 @@ def predict_target(
     )
 
     # get scores
-    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0).tolist()
+    scores = model.predict(batch, full_batch=False, mode=mode, ids=targets, target=target).squeeze(dim=0)
     if ids is None:
         ids = range(len(scores))
 
+    # note: maybe we want to expose these scores, too?
+    if target == LABEL_RELATION and model.use_inverse_triples:
+        ids_t = torch.as_tensor(ids)
+        non_inv_mask = ~model.relation_inverter.is_inverse(ids_t)
+        ids = ids_t[non_inv_mask].tolist()
+        scores = scores[non_inv_mask]
+
     # create raw dataframe
-    data = {f"{target}_id": ids, "score": scores}
+    data = {f"{target}_id": ids, "score": scores.tolist()}
     if labels is not None:
         data[f"{target}_label"] = labels
     df = pandas.DataFrame(data=data).sort_values("score", ascending=False)

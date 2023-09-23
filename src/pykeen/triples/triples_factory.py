@@ -823,7 +823,7 @@ class TriplesFactory(CoreTriplesFactory):
 
     def __init__(
         self,
-        mapped_triples: MappedTriples,
+        mapped_triples: Union[MappedTriples, np.ndarray],
         entity_to_id: EntityMapping,
         relation_to_id: RelationMapping,
         create_inverse_triples: bool = False,

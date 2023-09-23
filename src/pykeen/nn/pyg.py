@@ -61,6 +61,7 @@ from typing import Collection, Literal, Optional, Sequence
 import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
+from docdata import parse_docdata
 from torch import nn
 
 from .representation import Representation
@@ -297,6 +298,7 @@ class MessagePassingRepresentation(Representation, ABC):
         raise NotImplementedError
 
 
+@parse_docdata
 class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
     """
     A representation with message passing not making use of the relation type.
@@ -320,6 +322,9 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
             layers=["gcn"] * 2,
             layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
         )
+
+    ---
+    name: Simple Message Passing
     """
 
     # docstr-coverage: inherited
@@ -331,6 +336,7 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
         return x
 
 
+@parse_docdata
 class TypedMessagePassingRepresentation(MessagePassingRepresentation):
     """
     A representation with message passing with uses categorical relation type information.
@@ -358,6 +364,9 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
                 num_relations=dataset.num_relations,
             ),
         )
+
+    ---
+    name: Typed Message Passing
     """
 
     #: the edge type, shape: (num_edges,)
@@ -400,6 +409,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
         return x
 
 
+@parse_docdata
 class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
     """
     A representation with message passing with uses edge features obtained from relation representations.
@@ -431,6 +441,9 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
                 edge_dim=embedding_dim,  # should match relation dim
             ),
         )
+
+    ---
+    name: Featurized Message Passing
     """
 
     #: the relation representations used to obtain initial edge features
