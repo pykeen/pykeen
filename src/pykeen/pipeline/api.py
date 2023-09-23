@@ -240,8 +240,6 @@ from ..typing import (
     Hint,
     HintType,
     MappedTriples,
-    EntityMapping,
-    RelationMapping,
 )
 from ..utils import (
     Result,
@@ -929,6 +927,9 @@ class TrainingTriplesFactoryPack:
 
         :return:
             a factory or None.
+
+        :raises ValueError:
+            when an invalid combination is given
         """
         if skip or factory is None:
             return None
@@ -1010,8 +1011,8 @@ class TrainingTriplesFactoryPack:
                 raise ValueError("Must provide exactly one of `training` or `dataset`.")
             if validation is not None or testing is not None:
                 raise ValueError(
-                    f"Cannot combine training triples from dataset with custom validation or testing triples; "
-                    f"explicitly provide all of them."
+                    "Cannot combine training triples from dataset with custom validation or testing triples; "
+                    "explicitly provide all of them."
                 )
             dataset_instance: Dataset = get_dataset(dataset=dataset, dataset_kwargs=dataset_kwargs)
             info.update(dataset=dataset_instance.get_normalized_name(), dataset_kwargs=dataset_kwargs)
