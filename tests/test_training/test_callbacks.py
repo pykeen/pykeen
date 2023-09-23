@@ -7,7 +7,7 @@ import torch
 
 from pykeen.evaluation.evaluator import Evaluator
 from pykeen.pipeline import pipeline
-from pykeen.training.callbacks import EvaluationTrainingCallback, EvaluationLossTrainingCallback
+from pykeen.training.callbacks import EvaluationLossTrainingCallback, EvaluationTrainingCallback
 
 from .. import cases
 
