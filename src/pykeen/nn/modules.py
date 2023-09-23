@@ -480,19 +480,33 @@ class NormBasedInteraction(
         return dict(p=self.p, power_norm=self.power_norm)
 
 
+@parse_docdata
 class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the TransE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transe_interaction`
+
+    ---
+    citation:
+        author: Bordes
+        year: 2013
+        link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
     func = pkf.transe_interaction
 
 
+@parse_docdata
 class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateless module for the TransF interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
+
+    ---
+    citation:
+        author: Feng
+        year: 2016
+        link: https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887
     """
 
     func = pkf.transf_interaction
@@ -618,12 +632,20 @@ def _calculate_missing_shape_information(
     return input_channels, width, height  # type: ignore
 
 
+@parse_docdata
 class ConvEInteraction(
     FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]],
 ):
     """A stateful module for the ConvE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.conve_interaction`
+    ---
+    citation:
+        author: Dettmers
+        year: 2018
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366
+        github: TimDettmers/ConvE
+        arxiv: 1707.01476
     """
 
     # vector & scalar offset
@@ -757,10 +779,19 @@ class ConvEInteraction(
         )
 
 
+@parse_docdata
 class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ConvKB interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
+
+    ---
+    citation:
+        author: Nguyen
+        year: 2018
+        link: https://www.aclweb.org/anthology/N18-2053
+        github: daiquocnguyen/ConvKB
+        arxiv: 1712.02121
     """
 
     func = pkf.convkb_interaction
@@ -813,24 +844,40 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         )
 
 
+@parse_docdata
 class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless DistMult interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.distmult_interaction`
+
+    ---
+    citation:
+        author: Yang
+        year: 2014
+        link: https://arxiv.org/abs/1412.6575
+        arxiv: 1412.6575
     """
 
     func = pkf.distmult_interaction
 
 
+@parse_docdata
 class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless DistMA interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+
+    ---
+    citation:
+        author: Shi
+        year: 2019
+        link: https://www.aclweb.org/anthology/D19-1075.pdf
     """
 
     func = pkf.dist_ma_interaction
 
 
+@parse_docdata
 class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ER-MLP interaction.
 
@@ -838,6 +885,13 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
 
     .. math ::
         f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
+
+    ---
+    name: ER-MLP
+    citation:
+        author: Dong
+        year: 2014
+        link: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/45634.pdf
     """
 
     func = pkf.ermlp_interaction
@@ -882,6 +936,7 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         )
 
 
+@parse_docdata
 class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     r"""A stateful module for the ER-MLP (E) interaction function.
 
@@ -902,6 +957,14 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     special case of ERMLP (E).
 
     .. seealso:: :func:`pykeen.nn.functional.ermlpe_interaction`
+
+    ---
+    name: ER-MLP (E)
+    citation:
+        author: Sharifzadeh
+        year: 2019
+        link: https://github.com/pykeen/pykeen
+        github: pykeen/pykeen
     """
 
     func = pkf.ermlpe_interaction
@@ -945,6 +1008,7 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         return dict(mlp=self.mlp)
 
 
+@parse_docdata
 class TransRInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
@@ -955,6 +1019,12 @@ class TransRInteraction(
     """A stateful module for the TransR interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transr_interaction`
+
+    ---
+    citation:
+        author: Lin
+        year: 2015
+        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/
     """
 
     relation_shape = ("e", "de")
@@ -1040,19 +1110,35 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         return negative_norm(h - t, p=2, power_norm=False)
 
 
+@parse_docdata
 class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless HolE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.hole_interaction`
+
+    ---
+    citation:
+        author: Nickel
+        year: 2016
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828
+        github: mnick/holographic-embeddings
     """
 
     func = pkf.hole_interaction
 
 
+@parse_docdata
 class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ProjE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.proje_interaction`
+
+    ---
+    citation:
+        author: Shi
+        year: 2017
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279
+        github: nddsg/ProjE
     """
 
     func = pkf.proje_interaction
@@ -1100,16 +1186,24 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         return dict(d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity)
 
 
+@parse_docdata
 class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless RESCAL interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.rescal_interaction`
+
+    ---
+    citation:
+        author: Nickel
+        year: 2011
+        link: https://icml.cc/2011/papers/438_icmlpaper.pdf
     """
 
     relation_shape = ("dd",)
     func = pkf.rescal_interaction
 
 
+@parse_docdata
 class SEInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
@@ -1120,6 +1214,13 @@ class SEInteraction(
     """A stateful module for the Structured Embedding (SE) interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.structured_embedding_interaction`
+
+    ---
+    name: Structured Embedding
+    citation:
+        author: Bordes
+        year: 2011
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898
     """
 
     relation_shape = ("dd", "dd")
@@ -1135,10 +1236,19 @@ class SEInteraction(
         return dict(h=h, t=t, r_h=r[0], r_t=r[1])
 
 
+@parse_docdata
 class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the stateless Tucker interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.tucker_interaction`
+
+    ---
+    citation:
+        author: Balažević
+        year: 2019
+        arxiv: 1901.09590
+        link: https://arxiv.org/abs/1901.09590
+        github: ibalazevic/TuckER
     """
 
     func = pkf.tucker_interaction
@@ -1230,12 +1340,20 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         )
 
 
+@parse_docdata
 class UMInteraction(
     NormBasedInteraction[torch.FloatTensor, None, torch.FloatTensor],
 ):
     """A stateful module for the UnstructuredModel interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.unstructured_model_interaction`
+
+    ---
+    name: Unstructured Model
+    citation:
+        author: Bordes
+        year: 2014
+        link: https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf
     """
 
     # shapes
@@ -1264,10 +1382,19 @@ class UMInteraction(
         return dict(h=h, t=t)
 
 
+@parse_docdata
 class TorusEInteraction(NormBasedInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """A stateful module for the TorusE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
+
+    ---
+    citation:
+        author: Ebisu
+        year: 2018
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227
+        arxiv: 1711.05435
+        github: TakumaE/TorusE
     """
 
     func = pkf.toruse_interaction
@@ -1284,6 +1411,7 @@ class TorusEInteraction(NormBasedInteraction[torch.FloatTensor, torch.FloatTenso
         super().__init__(p=p, power_norm=power_norm)
 
 
+@parse_docdata
 class TransDInteraction(
     NormBasedInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1294,6 +1422,12 @@ class TransDInteraction(
     """A stateful module for the TransD interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transd_interaction`
+
+    ---
+    citation:
+        author: Ji
+        year: 2015
+        link: http://www.aclweb.org/anthology/P15-1067
     """
 
     entity_shape = ("d", "d")
@@ -1324,6 +1458,7 @@ class TransDInteraction(
         return dict(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p)
 
 
+@parse_docdata
 class NTNInteraction(
     FunctionalInteraction[
         torch.FloatTensor,
@@ -1334,6 +1469,13 @@ class NTNInteraction(
     """A stateful module for the NTN interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.ntn_interaction`
+
+    ---
+    citation:
+        author: Socher
+        year: 2013
+        link: https://proceedings.neurips.cc/paper/2013/file/b337e84de8752b27eda3a12363109e80-Paper.pdf
+        github: khurram18/NeuralTensorNetworks
     """
 
     relation_shape = ("kdd", "kd", "kd", "k", "k")
@@ -1372,6 +1514,7 @@ class NTNInteraction(
         return dict(activation=self.non_linearity)
 
 
+@parse_docdata
 class KG2EInteraction(
     FunctionalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1382,6 +1525,12 @@ class KG2EInteraction(
     """A stateful module for the KG2E interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.kg2e_interaction`
+
+    ---
+    citation:
+        author: He
+        year: 2015
+        link: https://dl.acm.org/doi/10.1145/2806416.2806502
     """
 
     entity_shape = ("d", "d")
@@ -1431,10 +1580,17 @@ class KG2EInteraction(
         )
 
 
+@parse_docdata
 class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the TransH interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transh_interaction`
+
+    ---
+    citation:
+        author: Wang
+        year: 2014
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
     """
 
     relation_shape = ("d", "d")
@@ -1450,6 +1606,7 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
         return dict(h=h, w_r=r[1], d_r=r[0], t=t)
 
 
+@parse_docdata
 class MuREInteraction(
     NormBasedInteraction[
         Tuple[FloatTensor, FloatTensor, FloatTensor],
@@ -1460,6 +1617,13 @@ class MuREInteraction(
     """A stateful module for the MuRE interaction function from [balazevic2019b]_.
 
     .. seealso:: :func:`pykeen.nn.functional.mure_interaction`
+
+    ---
+    citation:
+        author: Balažević
+        year: 2019
+        link: https://arxiv.org/abs/1905.09791
+        arxiv: 1905.09791
     """
 
     # there are separate biases for entities in head and tail position
@@ -1480,6 +1644,7 @@ class MuREInteraction(
         return dict(h=h, b_h=b_h, r_vec=r_vec, r_mat=r_mat, t=t, b_t=b_t)
 
 
+@parse_docdata
 class SimplEInteraction(
     FunctionalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1490,6 +1655,13 @@ class SimplEInteraction(
     """A module wrapper for the SimplE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.simple_interaction`
+
+    ---
+    citation:
+        author: Kazemi
+        year: 2018
+        link: https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs
+        github: Mehran-k/SimplE
     """
 
     func = pkf.simple_interaction
@@ -1522,10 +1694,19 @@ class SimplEInteraction(
         return dict(h=h[0], h_inv=h[1], r=r[0], r_inv=r[1], t=t[0], t_inv=t[1])
 
 
+@parse_docdata
 class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the PairRE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.pair_re_interaction`
+
+    ---
+    citation:
+        author: Chao
+        year: 2020
+        link: http://arxiv.org/abs/2011.03798
+        arxiv: 2011.03798
+        github: alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE
     """
 
     relation_shape = ("d", "d")
@@ -1541,6 +1722,7 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
 
 
+@parse_docdata
 class QuatEInteraction(
     FunctionalInteraction[
         torch.FloatTensor,
@@ -1551,6 +1733,14 @@ class QuatEInteraction(
     """A module wrapper for the QuatE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.quat_e_interaction`
+
+    ---
+    citation:
+        author: Zhang
+        year: 2019
+        arxiv: 1904.10281
+        link: https://arxiv.org/abs/1904.10281
+        github: cheungdaven/quate
     """
 
     # with k=4
@@ -1655,10 +1845,18 @@ class MonotonicAffineTransformationInteraction(
         return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
 
 
+@parse_docdata
 class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A module wrapper for the CrossE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.cross_e_interaction`
+
+    ---
+    citation:
+        author: Zhang
+        year: 2019
+        link: https://arxiv.org/abs/1903.04750
+        arxiv: 1903.04750
     """
 
     func = pkf.cross_e_interaction
@@ -2035,6 +2233,7 @@ class BoxEInteraction(
         )
 
 
+@parse_docdata
 class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """
     An implementation of the CP interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
@@ -2045,6 +2244,15 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     .. note ::
         For equivalence to CP, entities should have different representations for head & tail role. This is different
         to DistMult.
+
+    ---
+    name: Canonical Tensor Decomposition
+    citation:
+        author: Lacroix
+        year: 2018
+        arxiv: 1806.07297
+        link: https://arxiv.org/abs/1806.07297
+        github: facebookresearch/kbc
     """
 
     func = pkf.cp_interaction
@@ -2270,6 +2478,7 @@ class TripleREInteraction(
 AutoSFBlock = Tuple[int, int, int, Sign]
 
 
+@parse_docdata
 class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     r"""
     The AutoSF interaction as described by [zhang2020]_.
@@ -2298,6 +2507,14 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
     While in theory, we can have up to `num_blocks**3` unique triples, usually, a smaller number is preferable to have
     some sparsity.
+
+    ---
+    citation:
+        author: Zhang
+        year: 2020
+        arxiv: 1904.11682
+        link: https://arxiv.org/abs/1904.11682
+        github: AutoML-Research/AutoSF
     """
 
     #: a description of the block structure
