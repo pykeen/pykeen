@@ -1730,6 +1730,10 @@ class TensorTrainRepresentation(Representation):
     Another variant in the paper used an assignment based on hierarchical topological clustering.
     ---
     name: Tensor-Train
+    author: Yin
+    year: 2022
+    arxiv: 2206.10581
+    link: https://arxiv.org/abs/2206.10581
     """
 
     #: shape: (max_id, num_cores)
