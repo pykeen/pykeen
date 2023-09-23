@@ -54,15 +54,13 @@ to implement a gradient clipping callback:
 from __future__ import annotations
 
 import pathlib
-from typing import Any, List, Mapping, Optional, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Sequence
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from torch_max_mem import maximize_memory_utilization
-
-import pykeen
 
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
@@ -504,7 +502,7 @@ class ValidationLossTrainingCallback(TrainingCallback):
 
     # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
-        from pykeen.training.lcwa import LCWATrainingLoop
+        from .lcwa import LCWATrainingLoop
 
         # set to evaluation mode
         self.model.eval()
