@@ -151,8 +151,9 @@ class NumScores(ClassificationMetric):
     The number of scores.
 
     Lower numbers may indicate unreliable results.
-    --
+    ---
     description: The number of scores.
+    link: https://pykeen.readthedocs.io/en/stable/reference/evaluation.html
     """
 
     name: ClassVar[str] = "Number of Scores"
@@ -181,11 +182,12 @@ class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
         )
 
 
+@parse_docdata
 class BalancedAccuracyScore(BinarizedClassificationMetric):
     """
     The average of recall obtained on each class.
 
-    --
+    ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html
     description: The average of recall obtained on each class.
     """
@@ -211,7 +213,7 @@ class AveragePrecisionScore(ClassificationMetric):
         this metric is different from the area under the precision-recall curve, which uses
         interpolation and can be too optimistic.
 
-    --
+    ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html
     description: The average precision across different thresholds.
     """
@@ -236,7 +238,7 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
     """
     The area under the receiver operating characteristic curve.
 
-    --
+    ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html
     description: The area under the receiver operating characteristic curve.
     """
@@ -293,7 +295,7 @@ class TruePositiveRate(ConfusionMatrixClassificationMetric):
     .. math ::
         TPR = TP / (TP + FN)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Sensitivity_(test)
     description: The probability that a truly positive triple is predicted positive.
     """
@@ -322,7 +324,7 @@ class TrueNegativeRate(ConfusionMatrixClassificationMetric):
         most knowledge graph datasets do not have true negatives, i.e., verified false facts, but rather are
         collection of (mostly) true facts, where the missing ones are generally unknown rather than false.
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Specificity_(tests)
     description: The probability that a truly false triple is predicted negative.
     """
@@ -347,7 +349,7 @@ class FalsePositiveRate(ConfusionMatrixClassificationMetric):
     .. math ::
         FPR = FP / (FP + TN)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/False_positive_rate
     description: The probability that a truly negative triple is predicted positive.
     """
@@ -372,7 +374,7 @@ class FalseNegativeRate(ConfusionMatrixClassificationMetric):
     .. math ::
         FNR = FN / (FN + TP)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates
     description: The probability that a truly positive triple is predicted negative.
     """
@@ -397,7 +399,7 @@ class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
     .. math ::
         PPV = TP / (TP + FP)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values
     description: The proportion of predicted positives which are true positive.
     """
@@ -422,7 +424,7 @@ class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
     .. math ::
         NPV = TN / (TN + FN)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values
     description: The proportion of predicted negatives which are true negatives.
     """
@@ -447,7 +449,7 @@ class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
     .. math ::
         FDR = FP / (FP + TP)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/False_discovery_rate
     description: The proportion of predicted negatives which are true positive.
     """
@@ -472,7 +474,7 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
     .. math ::
         FOR = FN / (FN + TN)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/False_discovery_rate
     description: The proportion of predicted positives which are true negative.
     """
@@ -497,7 +499,7 @@ class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
     .. math ::
         LR+ = TPR / FPR = \frac{TP / (TP + FN)}{FP / (FP + TN)} = \frac{TP \cdot (FP + TN)}{FP \cdot (TP + FN)}
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Likelihood_ratios_in_diagnostic_testing#Calculation_example
     description: The ratio of true positive rate to false positive rate.
     """
@@ -524,7 +526,7 @@ class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
     .. math ::
         LR- = FNR / TNR = \frac{FN / (TP + FN)}{TN / (FP + TN)} = \frac{FN \cdot (FP + TN)}{TN \cdot (TP + FN)}
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Likelihood_ratios_in_diagnostic_testing#Calculation_example
     description: The ratio of false positive rate to true positive rate.
     """
@@ -551,7 +553,7 @@ class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
     .. math ::
         DOR = \frac{LR+}{LR-} = \frac{TP \cdot TN}{FP \cdot FN}
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Diagnostic_odds_ratio
     description: The ratio of positive and negative likelihood ratio.
     """
@@ -580,7 +582,7 @@ class Accuracy(ConfusionMatrixClassificationMetric):
     .. math ::
         ACC = (TP + TN) / (TP + TN + FP + FN)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers#Single_metrics
     description: The ratio of the number of correct classifications to the total number.
     """
@@ -607,7 +609,7 @@ class F1Score(ConfusionMatrixClassificationMetric):
     .. math ::
         F1 = 2TP / (2TP + FP + FN)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/F1_score
     description: The harmonic mean of precision and recall.
     """
@@ -634,7 +636,7 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
     .. math ::
         PT = √FPR / (√TPR + √FPR)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Prevalence_threshold
     description: The prevalence threshold.
     """
@@ -664,7 +666,7 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
     .. math ::
         TS = TP / (TP + FN + FP)
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Prevalence_threshold
     description: The harmonic mean of precision and recall.
     """
@@ -691,7 +693,7 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
     .. math ::
         FM = \sqrt{\frac{TP^2}{(2TP + FP + FN)}}
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Prevalence_threshold
     description: The Fowlkes Mallows index.
     """
@@ -720,7 +722,7 @@ class Informedness(ConfusionMatrixClassificationMetric):
     .. math ::
         YI = TPR + TNR - 1 = TP / (TP + FN) + TN / (TN + FP) - 1
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Informedness
     description: The informedness metric.
     """
@@ -753,7 +755,7 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
     .. math ::
         MCC = (TP * TN - FP * FN) / sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
 
-    --
+    ---
     link: https://en.wikipedia.org/wiki/Phi_coefficient
     description: The Matthews Correlation Coefficient (MCC).
     """
