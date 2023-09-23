@@ -492,7 +492,7 @@ class ValidationLossTrainingCallback(TrainingCallback):
         triples_factory: CoreTriplesFactory,
         maximum_batch_size: int | None = None,
         label_smoothing: float = 0.0,
-        training_data_loader_kwargs: Mapping[str, Any] | None = None,
+        data_loader_kwargs: Mapping[str, Any] | None = None,
         prefix: str = "validation",
     ):
         """
@@ -504,8 +504,8 @@ class ValidationLossTrainingCallback(TrainingCallback):
             the maximum batch size
         :param label_smoothing:
             the label smoothing to use; usually this should be matched with the training settings
-        :param training_data_loader_kwargs:
-            the keyword based parameters for the training loader
+        :param data_loader_kwargs:
+            the keyword based parameters for the data loader
         :param prefix:
             the prefix to use for logging
         """
@@ -513,9 +513,9 @@ class ValidationLossTrainingCallback(TrainingCallback):
         self.triples_factory = triples_factory
         self.prefix = prefix
         self.label_smoothing = label_smoothing
-        if training_data_loader_kwargs is None:
-            training_data_loader_kwargs = dict(sampler=None)
-        self.training_data_loader_kwargs = training_data_loader_kwargs
+        if data_loader_kwargs is None:
+            data_loader_kwargs = dict(sampler=None)
+        self.data_loader_kwargs = data_loader_kwargs
         self.maximum_batch_size = maximum_batch_size
 
     # docstr-coverage: inherited
@@ -527,7 +527,7 @@ class ValidationLossTrainingCallback(TrainingCallback):
 
         # determine maximum batch size
         maximum_batch_size = self.maximum_batch_size or self.triples_factory.num_triples
-        if self.model.device.type != "gpu":
+        if self.model.device.type != "cuda":
             # try to avoid OOM kills on cpu for large datasets
             maximum_batch_size = min(maximum_batch_size, 2**16)
 
@@ -539,7 +539,7 @@ class ValidationLossTrainingCallback(TrainingCallback):
             # note: slicing is only effective for LCWA training
             slice_size=self.training_loop.num_targets if isinstance(self.training_loop, LCWATrainingLoop) else 1,
             label_smoothing=self.label_smoothing,
-            **self.training_data_loader_kwargs,
+            **self.data_loader_kwargs,
         )
         self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
 
