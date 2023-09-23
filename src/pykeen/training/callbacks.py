@@ -54,7 +54,7 @@ to implement a gradient clipping callback:
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Sequence
+from typing import Any, List, Mapping, Optional, Sequence
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
@@ -62,6 +62,7 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from torch_max_mem import maximize_memory_utilization
 
+from .. import training  # required for type annotations
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
 from ..losses import Loss
@@ -70,9 +71,6 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
-
-if TYPE_CHECKING:
-    import pykeen.training
 
 __all__ = [
     "TrainingCallbackHint",
@@ -95,7 +93,7 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self) -> "pykeen.training.TrainingLoop":  # noqa:D401
+    def training_loop(self) -> training.TrainingLoop:  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
@@ -122,7 +120,7 @@ class TrainingCallback:
         assert self.training_loop.result_tracker is not None
         return self.training_loop.result_tracker
 
-    def register_training_loop(self, training_loop) -> None:
+    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:
         """Register the training loop."""
         self._training_loop = training_loop
 
@@ -443,7 +441,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 @torch.inference_mode()
 def _validation_loss_amo_wrapper(
-    training_loop: "pykeen.training.TrainingLoop",
+    training_loop: training.TrainingLoop,
     triples_factory: CoreTriplesFactory,
     batch_size: int,
     slice_size: int,
@@ -532,9 +530,9 @@ class EvaluationLossTrainingCallback(TrainingCallback):
         self.callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
 
     # docstr-coverage: inherited
-    def register_training_loop(self, training_loop) -> None:  # noqa: D102
+    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
         super().register_training_loop(training_loop)
-        self.callback.register_training_loop(loop=training_loop)
+        self.callback.register_training_loop(training_loop=training_loop)
 
     # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
@@ -597,10 +595,10 @@ class MultiTrainingCallback(TrainingCallback):
         self.callbacks = callback_resolver.make_many(callbacks, callbacks_kwargs) if callbacks else []
 
     # docstr-coverage: inherited
-    def register_training_loop(self, loop) -> None:  # noqa: D102
-        super().register_training_loop(training_loop=loop)
+    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
+        super().register_training_loop(training_loop=training_loop)
         for callback in self.callbacks:
-            callback.register_training_loop(training_loop=loop)
+            callback.register_training_loop(training_loop=training_loop)
 
     def register_callback(self, callback: TrainingCallback) -> None:
         """Register a callback."""
