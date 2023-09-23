@@ -471,9 +471,9 @@ def _validation_loss_amo_wrapper(
     )
 
 
-class ValidationLossTrainingCallback(TrainingCallback):
+class EvaluationLossTrainingCallback(TrainingCallback):
     """
-    Calculate loss on a development set.
+    Calculate loss on an evaluation set.
 
     .. code-block ::
 
@@ -485,8 +485,9 @@ class ValidationLossTrainingCallback(TrainingCallback):
             dataset=dataset,
             model="mure",
             training_kwargs=dict(
-                callbacks="validation-loss",
+                callbacks="evaluation-loss",
                 callback_kwargs=dict(triples_factory=dataset.validation),
+                prefix="validation",
             ),
             result_tracker="console",
         )

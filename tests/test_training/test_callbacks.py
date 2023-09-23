@@ -7,7 +7,7 @@ import torch
 
 from pykeen.evaluation.evaluator import Evaluator
 from pykeen.pipeline import pipeline
-from pykeen.training.callbacks import EvaluationTrainingCallback, ValidationLossTrainingCallback
+from pykeen.training.callbacks import EvaluationTrainingCallback, EvaluationLossTrainingCallback
 
 from .. import cases
 
@@ -41,10 +41,10 @@ class EvaluationTrainingCallbackTestCase(cases.TrainingCallbackTestCase):
 
 
 # TODO: more tests
-class ValidationLossTrainingCallbackTestCase(cases.TrainingCallbackTestCase):
+class EvaluationLossTrainingCallbackTestCase(cases.TrainingCallbackTestCase):
     """Test for evaluation callback."""
 
-    cls = ValidationLossTrainingCallback
+    cls = EvaluationLossTrainingCallback
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
