@@ -907,20 +907,50 @@ class TrainingTriplesFactoryPack:
         no_validation: bool = False,
         no_testing: bool = False,
     ) -> None:
+        """Prepare the triples pack for training.
+
+        :param result_tracker:
+            the result-tracker; required to log final resolved configuration to.
+
+        :param dataset:
+            a dataset choice
+        :param dataset_kwargs:
+            keyword based parameters for the dataset
+
+        :param training:
+            an explicit training triples factory
+        :param testing:
+            an explicit testing triples factory
+        :param validation:
+            an explicit validation triples factory
+
+        :param evaluation_entity_whitelist:
+            restrict evaluation (validation/testing) to triples with these entities
+        :param evaluation_relation_whitelist:
+            restrict evaluation (validation/testing) to triples with these relations
+
+        :param no_testing:
+            ignore testing triples
+        :param no_validation:
+            ignore validation triples
+        """
         info = dict()
         if training is None:
             if dataset is None:
-                raise ValueError
+                raise ValueError("Must provide exactly one of `training` or `dataset`.")
+            if validation is not None or testing is not None:
+                raise ValueError(
+                    f"Cannot combine training triples from dataset with custom validation or testing triples; "
+                    f"explicitly provide all of them."
+                )
             dataset_instance: Dataset = get_dataset(dataset=dataset, dataset_kwargs=dataset_kwargs)
             info.update(dataset=dataset_instance.get_normalized_name(), dataset_kwargs=dataset_kwargs)
             training = dataset_instance.training
-            if validation is None:
-                validation = dataset_instance.validation
-            if testing is None:
-                testing = dataset_instance.testing
+            validation = dataset_instance.validation
+            testing = dataset_instance.testing
         else:
             if dataset is not None:
-                raise ValueError
+                raise ValueError("Must provide exactly one of `training` or `dataset`.")
             info.update(dataset=USER_DEFINED_CODE)
         if no_validation:
             validation = None
@@ -1499,7 +1529,7 @@ def pipeline(  # noqa: C901
     _result_tracker.start_run(run_name=title)
 
     tfs = TrainingTriplesFactoryPack(
-        _result_tracker=_result_tracker,
+        result_tracker=_result_tracker,
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
         training=training,
