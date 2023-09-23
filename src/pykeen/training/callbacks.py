@@ -497,7 +497,7 @@ class EvaluationLossTrainingCallback(TrainingCallback):
         self,
         triples_factory: CoreTriplesFactory,
         callbacks: TrainingCallbackHint = None,
-        callback_kwargs: TrainingCallbackKwargsHint = None,
+        callbacks_kwargs: TrainingCallbackKwargsHint = None,
         maximum_batch_size: int | None = None,
         label_smoothing: float = 0.0,
         data_loader_kwargs: Mapping[str, Any] | None = None,
@@ -510,7 +510,7 @@ class EvaluationLossTrainingCallback(TrainingCallback):
             the evaluation triples factory
         :param callbacks:
             callbacks for the validation loss loop
-        :param callback_kwargs:
+        :param callbacks_kwargs:
             keyword-based parameters for the callbacks of the validation loss loop
         :param maximum_batch_size:
             the maximum batch size
@@ -529,7 +529,7 @@ class EvaluationLossTrainingCallback(TrainingCallback):
             data_loader_kwargs = dict(sampler=None)
         self.data_loader_kwargs = data_loader_kwargs
         self.maximum_batch_size = maximum_batch_size
-        self.callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
+        self.callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
 
     # docstr-coverage: inherited
     def register_training_loop(self, training_loop) -> None:  # noqa: D102
@@ -578,7 +578,7 @@ class MultiTrainingCallback(TrainingCallback):
     def __init__(
         self,
         callbacks: TrainingCallbackHint = None,
-        callback_kwargs: TrainingCallbackKwargsHint = None,
+        callbacks_kwargs: TrainingCallbackKwargsHint = None,
     ) -> None:
         """
         Initialize the callback.
@@ -590,11 +590,11 @@ class MultiTrainingCallback(TrainingCallback):
 
         :param callbacks:
             the callbacks
-        :param callback_kwargs:
+        :param callbacks_kwargs:
             additional keyword-based parameters for instantiating the callbacks
         """
         super().__init__()
-        self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs) if callbacks else []
+        self.callbacks = callback_resolver.make_many(callbacks, callbacks_kwargs) if callbacks else []
 
     # docstr-coverage: inherited
     def register_training_loop(self, loop) -> None:  # noqa: D102
