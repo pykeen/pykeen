@@ -132,11 +132,9 @@ def _iter_ranks(
 class RankBasedMetricKey(NamedTuple):
     """A key for ranking-based metrics."""
 
-    # note: for backwards compatibility, we still use (metric, side, rank_type)
-
-    metric: str
     side: ExtendedTarget
     rank_type: RankType
+    metric: str
 
 
 # parsing metrics
@@ -269,27 +267,27 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
     @classmethod
     def create_random(cls, random_state: Optional[int] = None) -> "RankBasedMetricResults":
         """Create random results useful for testing."""
+        targets = [LABEL_HEAD, LABEL_TAIL]
+        num_targets = len(targets)
+        num_rank_types = len(RANK_TYPES)
         generator = numpy.random.default_rng(seed=random_state)
-        num_candidates = generator.integers(low=2, high=1000, size=(2, 1000))
-        ranks = generator.integers(low=1, high=num_candidates[None], size=(2, 2, 1000))
-        ranks = numpy.maximum.accumulate(ranks, axis=1)  # increasing, since order of RANK_TYPES
+        num_candidates = generator.integers(low=2, high=1000, size=(num_targets, 1000))
+        ranks = generator.integers(low=1, high=num_candidates[None], size=(num_rank_types - 1, num_targets, 1000))
+        # ensure that rank-opt <= rank-pess
+        ranks = numpy.sort(ranks, axis=0)
+        # assert that rank-real = (opt + pess)/2
+        ranks = numpy.stack([ranks[0], (ranks[0] + ranks[1]) / 2, ranks[1]], axis=0)
         data: dict[RankBasedMetricKey | str, float] = {}
-
-        rank_to_idx: dict[RankType, Sequence[int]] = {
-            RANK_OPTIMISTIC: [0],
-            RANK_PESSIMISTIC: [1],
-            RANK_REALISTIC: [0, 1],
-        }
         # fixme: the annotation of ClassResolver.__iter__ seems to be broken (X instead of Type[X])
         metric_cls: Type[RankBasedMetric]
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
-            for (target, i), (rank_type, j) in itertools.product(
-                ((LABEL_HEAD, 0), (LABEL_TAIL, 1), (SIDE_BOTH, slice(None))), rank_to_idx.items()
+            for (target, i), (j, rank_type) in itertools.product(
+                ((LABEL_HEAD, 0), (LABEL_TAIL, 1), (SIDE_BOTH, slice(None))), enumerate(RANK_TYPES)
             ):
-                this_ranks = ranks[i, j].mean(axis=0).flatten()
+                this_ranks = ranks[j, i].flatten()
                 data[RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric.key)] = metric(
-                    ranks=this_ranks, num_candidates=num_candidates[i]
+                    ranks=this_ranks, num_candidates=num_candidates[i].flatten()
                 )
         return cls(data=data)
 
