@@ -943,6 +943,10 @@ class TrainingTriplesFactoryPack:
                 relation_to_id=relation_to_id,
             )
 
+        if not factory.num_triples:
+            logger.warning(f"Empty {factory=}")
+            return None
+
         if isinstance(reference, TriplesFactory):
             if not isinstance(factory, TriplesFactory):
                 raise ValueError(f"Incompatible types: {type(reference)=} vs. {type(factory)=}")
@@ -1016,6 +1020,8 @@ class TrainingTriplesFactoryPack:
         training = self.resolve_factory(
             factory=training, create_inverse_triples=(dataset_kwargs or {}).get("create_inverse_triples", False)
         )
+        if training is None:
+            raise ValueError("No training triples")
         validation = self.resolve_factory(factory=validation, reference=training, skip=no_validation)
         testing = self.resolve_factory(factory=testing, reference=training, skip=no_testing)
         if evaluation_entity_whitelist or evaluation_relation_whitelist:
