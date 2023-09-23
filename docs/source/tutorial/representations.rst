@@ -49,11 +49,11 @@ relations (including inverse relations) as tokens.
 
 .. seealso:: https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
 
-Label-based
------------
-Label-based representations use the entities' (or relations') labels to
+Text-based
+----------
+Text-based representations use the entities' (or relations') labels to
 derive representations. To this end,
-:class:`pykeen.nn.representation.LabelBasedTransformerRepresentation` uses a
+:class:`pykeen.nn.representation.TextRepresentation` uses a
 (pre-trained) transformer model from the :mod:`transformers` library to encode
 the labels. Since the transformer models have been trained on huge corpora
 of text, their text encodings often contain semantic information, i.e.,
@@ -61,7 +61,7 @@ labels with similar semantic meaning get similar representations. While we
 can also benefit from these strong features by just initializing an
 :class:`pykeen.nn.representation.Embedding` with the vectors, e.g., using
 :class:`pykeen.nn.init.LabelBasedInitializer`, the
-:class:`pykeen.nn.representation.LabelBasedTransformerRepresentation` include the
+:class:`pykeen.nn.representation.TextRepresentation` include the
 transformer model as part of the KGE model, and thus allow fine-tuning
 the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
@@ -71,12 +71,13 @@ predictions for entities not seen during training.
 
     from pykeen.pipeline import pipeline
     from pykeen.datasets import get_dataset
-    from pykeen.nn import LabelBasedTransformerRepresentation
+    from pykeen.nn import TextRepresentation
     from pykeen.models import ERModel
 
     dataset = get_dataset(dataset="nations")
-    entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
-        triples_factory=dataset.training,
+    entity_representations = TextRepresentation.from_dataset(
+        triples_factory=dataset,
+        encoder="transformer",
     )
     result = pipeline(
         dataset=dataset,
@@ -132,3 +133,18 @@ function, we would get similar scores
 
 As a downside, this will usually substantially increase the
 computational cost of computing triple scores.
+
+Biomedical Entities
+~~~~~~~~~~~~~~~~~~~
+If your dataset is labeled with compact uniform resource identifiers (e.g., CURIEs)
+for biomedical entities like chemicals, proteins, diseases, and pathways, then
+the :class:`pykeen.nn.representation.BiomedicalCURIERepresentation`
+representation can make use of :mod:`pyobo` to look up names (via CURIE) via the
+:func:`pyobo.get_name` function, then encode them using the text encoder.
+
+All biomedical knowledge graphs in PyKEEN (at the time of adding this representation),
+unfortunately do not use CURIEs for referencing biomedical entities. In the future, we hope
+this will change.
+
+To learn more about CURIEs, please take a look at the `Bioregistry <https://bioregistry.io>`_
+and `this blog post on CURIEs <https://cthoyt.com/2021/09/14/curies.html>`_.

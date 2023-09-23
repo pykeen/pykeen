@@ -80,8 +80,10 @@ class TransH(ERModel):
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
         entity_initializer: Hint[Initializer] = init.xavier_normal_,
-        entity_regularizer: HintOrType[Regularizer] = None,
-        entity_regularizer_kwargs: OptionalKwargs = None,
+        # note: this parameter is not named "entity_regularizer" for compatability with the
+        #       regularizer-specific HPO code
+        regularizer: HintOrType[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
         relation_initializer: Hint[Initializer] = init.xavier_normal_,
         relation_regularizer: HintOrType[Regularizer] = None,
         relation_regularizer_kwargs: OptionalKwargs = None,
@@ -96,9 +98,9 @@ class TransH(ERModel):
 
         :param entity_initializer:
             the entity initializer function
-        :param entity_regularizer:
+        :param regularizer:
             the entity regularizer. Defaults to :attr:`pykeen.models.TransH.regularizer_default`
-        :param entity_regularizer_kwargs:
+        :param regularizer_kwargs:
             keyword-based parameters for the entity regularizer. If `entity_regularizer` is None,
             the default from :attr:`pykeen.models.TransH.regularizer_default_kwargs` will be used instead
 
@@ -143,8 +145,8 @@ class TransH(ERModel):
         # which only regularizes the weights used in a batch
         self.append_weight_regularizer(
             parameter=self.entity_representations[0].parameters(),
-            regularizer=entity_regularizer,
-            regularizer_kwargs=entity_regularizer_kwargs,
+            regularizer=regularizer,
+            regularizer_kwargs=regularizer_kwargs,
             # note: the following is already the default
             # default_regularizer=self.regularizer_default,
             # default_regularizer_kwargs=self.regularizer_default_kwargs,

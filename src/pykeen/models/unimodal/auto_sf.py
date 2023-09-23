@@ -28,6 +28,9 @@ YAGO310_COEFFICIENTS: Sequence[Tuple[int, int, int, Sign]] = [
 class AutoSF(ERModel):
     r"""An implementation of AutoSF from [zhang2020]_.
 
+    The AutoSF model combines one or more :class:`pykeen.nn.Embedding`s for entities and relations with a
+    :class:`pykeen.nn.AutoSFInteraction` describing the interaction thereof.
+
     ---
     name: AutoSF
     citation:
@@ -51,25 +54,27 @@ class AutoSF(ERModel):
         embedding_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
-        r"""Initialize AutoSF via the :class:`pykeen.nn.modules.AutoSFInteraction` interaction.
+        r"""Initialize AutoSF via the :class:`pykeen.nn.AutoSFInteraction` interaction.
 
         .. note::
             this variant uses `num_components` entity and relation representations with shared configuration.
             The coefficients should only be in $[0, num_components)$.
 
-        :param embedding_dim: The entity embedding dimension $d$.
-        :param num_components: the number of components.
+        :param embedding_dim:
+            the entity embedding dimension $d$ for each block.
+        :param num_components:
+            the number of components/blocks.
         :param coefficients:
-            the coefficients determining the structure. The coefficients describe which head/relation/tail
-            component get combined with each other. While in theory, we can have up to `num_components**3`
-            unique triples, usually, a smaller number is preferable to have some sparsity.
-        :param embedding_kwargs: keyword arguments passed to the entity representation
-        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+            the coefficients determining the block structure, cf. :class:`pykeen.nn.AutoSFInteraction`.
+        :param embedding_kwargs:
+            keyword arguments passed to the entity and relation representation
+        :param kwargs:
+            remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         embedding_kwargs = embedding_kwargs or {}
         super().__init__(
             interaction=AutoSFInteraction,
-            interaction_kwargs=dict(coefficients=coefficients),
+            interaction_kwargs=dict(num_blocks=num_components, coefficients=coefficients),
             entity_representations_kwargs=[
                 dict(
                     shape=embedding_dim,

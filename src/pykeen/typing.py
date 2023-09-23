@@ -2,6 +2,8 @@
 
 """Type hints for PyKEEN."""
 
+from __future__ import annotations
+
 from typing import Callable, Collection, Literal, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
@@ -34,7 +36,6 @@ __all__ = [
     "TailRepresentation",
     # Dataclasses
     "GaussianDistribution",
-    "ScorePack",
     # prediction targets
     "Target",
     "LABEL_HEAD",
@@ -54,6 +55,9 @@ __all__ = [
     "EA_SIDE_LEFT",
     "EA_SIDE_RIGHT",
     "EA_SIDES",
+    # utils
+    "normalize_rank_type",
+    "normalize_target",
 ]
 
 X = TypeVar("X")
@@ -104,13 +108,6 @@ class GaussianDistribution(NamedTuple):
     diagonal_covariance: torch.FloatTensor
 
 
-class ScorePack(NamedTuple):
-    """A pair of result triples and scores."""
-
-    result: torch.LongTensor
-    scores: torch.FloatTensor
-
-
 Sign = Literal[-1, 1]
 
 #: the inductive prediction and training mode
@@ -124,6 +121,7 @@ Target = Literal["head", "relation", "tail"]
 LABEL_HEAD: Target = "head"
 LABEL_RELATION: Target = "relation"
 LABEL_TAIL: Target = "tail"
+
 
 #: the prediction target index
 TargetColumn = Literal[0, 1, 2]
@@ -145,11 +143,33 @@ RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
     "average": RANK_REALISTIC,
 }
 
+
+def normalize_rank_type(rank: str | None) -> RankType:
+    """Normalize a rank type."""
+    if rank is None:
+        return RANK_REALISTIC
+    rank = rank.lower()
+    rank = RANK_TYPE_SYNONYMS.get(rank, rank)
+    if rank not in RANK_TYPES:
+        raise ValueError(f"Invalid target={rank}. Possible values: {RANK_TYPES}")
+    return cast(RankType, rank)
+
+
 TargetBoth = Literal["both"]
 SIDE_BOTH: TargetBoth = "both"
 ExtendedTarget = Union[Target, TargetBoth]
 SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
 SIDE_MAPPING = {LABEL_HEAD: [LABEL_HEAD], LABEL_TAIL: [LABEL_TAIL], SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL]}
+
+
+def normalize_target(target: str | None) -> ExtendedTarget:
+    """Normalize a prediction target side."""
+    if target is None:
+        return SIDE_BOTH
+    if target not in SIDES:
+        raise ValueError(f"Invalid target={target}. Possible values: {SIDES}")
+    return cast(ExtendedTarget, target)
+
 
 # entity alignment
 EASide = Literal["left", "right"]

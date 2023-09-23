@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """Test hyper-parameter optimization."""
-
+import inspect
 import tempfile
 import unittest
-from typing import Type
+from typing import Collection, Type
 from unittest.mock import MagicMock, patch
 
 import optuna
 import pytest
+from class_resolver import get_subclasses
 from optuna.trial import TrialState
 from torch.optim import Adam
 
@@ -22,12 +23,22 @@ from pykeen.datasets.nations import (
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.hpo import hpo_pipeline
 from pykeen.hpo.hpo import ExtraKeysError, Objective, suggest_kwargs
-from pykeen.losses import MarginRankingLoss
-from pykeen.models import FixedModel
+from pykeen.losses import Loss, MarginRankingLoss
+from pykeen.models import (
+    ERModel,
+    FixedModel,
+    InductiveERModel,
+    LiteralModel,
+    MarginalDistributionBaseline,
+    Model,
+    SoftInverseTripleBaseline,
+)
+from pykeen.regularizers import Regularizer
+from pykeen.sampling import NegativeSampler
 from pykeen.stoppers.stopper import NopStopper
 from pykeen.trackers import ResultTracker, tracker_resolver
 from pykeen.trackers.base import PythonResultTracker
-from pykeen.training import LCWATrainingLoop
+from pykeen.training import LCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 
 
@@ -362,3 +373,22 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
         # Check a loss param is optimized
         self.assertIn(("params", "loss.margin"), df.columns)
         self.assertNotIn(("params", "training.num_epochs"), df.columns)
+
+
+@pytest.mark.parametrize(
+    "base_cls,ignore",
+    [
+        (Loss, []),
+        (Regularizer, []),
+        (Model, [InductiveERModel, LiteralModel, ERModel, SoftInverseTripleBaseline, MarginalDistributionBaseline]),
+        (NegativeSampler, []),
+        (TrainingLoop, []),
+    ],
+)
+def test_hpo_defaults(base_cls: Type, ignore: Collection[Type]):
+    """Test HPO defaults for components that are used in the HPO pipeline."""
+    assert set(ignore) == {
+        cls
+        for cls in get_subclasses(base_cls)
+        if not (inspect.isabstract(cls) or isinstance(getattr(cls, "hpo_default", None), dict))
+    }

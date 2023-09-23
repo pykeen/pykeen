@@ -50,7 +50,7 @@ class VisionDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         images: Sequence[Union[str, pathlib.Path, torch.Tensor]],
-        transforms: Sequence = None,
+        transforms: Optional[Sequence] = None,
         root: Optional[pathlib.Path] = None,
     ) -> None:
         """
