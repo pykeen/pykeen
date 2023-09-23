@@ -194,7 +194,7 @@ class EvaluationLoop(Generic[BatchType]):
         """
         # set upper limit of batch size for automatic memory optimization
         if not batch_size:
-            if self.model.device.type == "cpu":
+            if self.model.device.type != "cuda":
                 batch_size = 32
             else:
                 batch_size = len(self.dataset)
