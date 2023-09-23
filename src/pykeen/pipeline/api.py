@@ -934,7 +934,7 @@ class TrainingTriplesFactoryPack:
         :param no_validation:
             ignore validation triples
         """
-        info = dict()
+        info: dict[str, Any] = dict()
         if training is None:
             if dataset is None:
                 raise ValueError("Must provide exactly one of `training` or `dataset`.")
