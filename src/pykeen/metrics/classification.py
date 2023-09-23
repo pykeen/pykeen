@@ -220,7 +220,7 @@ class AveragePrecisionScore(ClassificationMetric):
 
     # TODO: can we directly include sklearn's docstring here?
 
-    name = "Average Precision Score (APS)"
+    name = "Average Precision Score"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("aps", "ap")
@@ -243,7 +243,7 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
     description: The area under the receiver operating characteristic curve.
     """
 
-    name = "Area Under The Receiver Operating Characteristic Curve (ROC AUC)"
+    name = "Area Under The Receiver Operating Characteristic Curve"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("roc-auc",)
@@ -300,7 +300,7 @@ class TruePositiveRate(ConfusionMatrixClassificationMetric):
     description: The probability that a truly positive triple is predicted positive.
     """
 
-    name = "True Positive Rate (TPR)"
+    name = "True Positive Rate"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("tpr", "sensitivity", "recall", "hit rate")
@@ -329,7 +329,7 @@ class TrueNegativeRate(ConfusionMatrixClassificationMetric):
     description: The probability that a truly false triple is predicted negative.
     """
 
-    name = "True Negative Rate (TNR)"
+    name = "True Negative Rate"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("tnr", "specificity", "selectivity")
@@ -354,7 +354,7 @@ class FalsePositiveRate(ConfusionMatrixClassificationMetric):
     description: The probability that a truly negative triple is predicted positive.
     """
 
-    name = "False Positive Rate (FPR)"
+    name = "False Positive Rate"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fpr", "fall-out", "false alarm ratio")
@@ -379,7 +379,7 @@ class FalseNegativeRate(ConfusionMatrixClassificationMetric):
     description: The probability that a truly positive triple is predicted negative.
     """
 
-    name = "False Negative Rate (FNR)"
+    name = "False Negative Rate"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fnr", "miss-rate")
@@ -400,11 +400,11 @@ class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
         PPV = TP / (TP + FP)
 
     ---
-    link: https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values
+    link: https://en.wikipedia.org/wiki/Positive_predictive_value
     description: The proportion of predicted positives which are true positive.
     """
 
-    name = "Positive Predictive Value (PPV)"
+    name = "Positive Predictive Value"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("ppv",)
@@ -425,11 +425,11 @@ class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
         NPV = TN / (TN + FN)
 
     ---
-    link: https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values
+    link: https://en.wikipedia.org/wiki/Negative_predictive_value
     description: The proportion of predicted negatives which are true negatives.
     """
 
-    name = "Negative Predictive Value (NPV)"
+    name = "Negative Predictive Value"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("npv",)
@@ -454,7 +454,7 @@ class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
     description: The proportion of predicted negatives which are true positive.
     """
 
-    name = "False Discovery Rate (FDR)"
+    name = "False Discovery Rate"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fdr",)
@@ -475,11 +475,11 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
         FOR = FN / (FN + TN)
 
     ---
-    link: https://en.wikipedia.org/wiki/False_discovery_rate
+    link: https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values
     description: The proportion of predicted positives which are true negative.
     """
 
-    name = "False Omission Rate (FOR)"
+    name = "False Omission Rate"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fom",)
@@ -500,11 +500,11 @@ class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
         LR+ = TPR / FPR = \frac{TP / (TP + FN)}{FP / (FP + TN)} = \frac{TP \cdot (FP + TN)}{FP \cdot (TP + FN)}
 
     ---
-    link: https://en.wikipedia.org/wiki/Likelihood_ratios_in_diagnostic_testing#Calculation_example
+    link: https://en.wikipedia.org/wiki/Positive_likelihood_ratio
     description: The ratio of true positive rate to false positive rate.
     """
 
-    name = "Positive Likelihood Ratio (LR+)"
+    name = "Positive Likelihood Ratio"
     value_range = ValueRange(lower=0, lower_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("lr+",)
@@ -527,11 +527,11 @@ class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
         LR- = FNR / TNR = \frac{FN / (TP + FN)}{TN / (FP + TN)} = \frac{FN \cdot (FP + TN)}{TN \cdot (TP + FN)}
 
     ---
-    link: https://en.wikipedia.org/wiki/Likelihood_ratios_in_diagnostic_testing#Calculation_example
+    link: https://en.wikipedia.org/wiki/Negative_likelihood_ratio
     description: The ratio of false positive rate to true positive rate.
     """
 
-    name = "Negative Likelihood Ratio (LR-)"
+    name = "Negative Likelihood Ratio"
     value_range = ValueRange(lower=0, lower_inclusive=True)
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("lr-",)
@@ -558,7 +558,7 @@ class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
     description: The ratio of positive and negative likelihood ratio.
     """
 
-    name = "Diagnostic Odds Ratio (DOR)"
+    name = "Diagnostic Odds Ratio"
     value_range = ValueRange(lower=0, lower_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("dor",)
@@ -587,7 +587,7 @@ class Accuracy(ConfusionMatrixClassificationMetric):
     description: The ratio of the number of correct classifications to the total number.
     """
 
-    name = "Accuracy (ACC)"
+    name = "Accuracy"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("acc", "fraction correct", "fc")
@@ -642,7 +642,7 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
     """
 
     # todo: improve doc
-    name = "Prevalence Threshold (PT)"
+    name = "Prevalence Threshold"
     value_range = ValueRange(lower=0, lower_inclusive=True)
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("pt",)
@@ -667,11 +667,11 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
         TS = TP / (TP + FN + FP)
 
     ---
-    link: https://en.wikipedia.org/wiki/Prevalence_threshold
+    link: https://en.wikipedia.org/wiki/Sensitivity_and_specificity
     description: The harmonic mean of precision and recall.
     """
 
-    name = "Threat Score (TS)"
+    name = "Threat Score"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("ts", "critical success index", "csi", "jaccard index")
@@ -694,12 +694,12 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
         FM = \sqrt{\frac{TP^2}{(2TP + FP + FN)}}
 
     ---
-    link: https://en.wikipedia.org/wiki/Prevalence_threshold
+    link: https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index
     description: The Fowlkes Mallows index.
     """
 
-    name = "Fowlkes Mallows Index (FM)"
-    value_range = ValueRange(lower=0, lower_inclusive=True)
+    name = "Fowlkes Mallows Index"
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
@@ -727,7 +727,7 @@ class Informedness(ConfusionMatrixClassificationMetric):
     description: The informedness metric.
     """
 
-    name = "Youden's Index (YI)"
+    name = "Informedness"
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("Youden's J", "Youden's Index", "yi")
@@ -760,7 +760,7 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
     description: The Matthews Correlation Coefficient (MCC).
     """
 
-    name = "Matthews Correlation Coefficient (MCC)"
+    name = "Matthews Correlation Coefficient"
     value_range: ClassVar[ValueRange] = ValueRange(lower=-1, upper=1, lower_inclusive=True, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("mcc",)
