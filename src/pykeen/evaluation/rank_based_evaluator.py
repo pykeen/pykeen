@@ -43,8 +43,6 @@ from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     LABEL_HEAD,
     LABEL_TAIL,
-    RANK_OPTIMISTIC,
-    RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPE_SYNONYMS,
     RANK_TYPES,
