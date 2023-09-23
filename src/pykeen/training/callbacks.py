@@ -72,7 +72,7 @@ from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
 
 if TYPE_CHECKING:
-    from .training_loop import TrainingLoop
+    import pykeen.training
 
 __all__ = [
     "TrainingCallbackHint",
@@ -95,7 +95,7 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self) -> "TrainingLoop":  # noqa:D401
+    def training_loop(self) -> "pykeen.training.TrainingLoop":  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
@@ -439,7 +439,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 @torch.inference_mode()
 def _validation_loss_amo_wrapper(
-    training_loop: "TrainingLoop",
+    training_loop: "pykeen.training.TrainingLoop",
     triples_factory: CoreTriplesFactory,
     batch_size: int,
     slice_size: int,
