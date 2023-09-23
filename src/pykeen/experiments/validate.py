@@ -12,8 +12,8 @@ from torch import nn
 
 from .cli import HERE
 from ..datasets import dataset_resolver
+from ..evaluation.evaluator import normalize_flattened_metric_results
 from ..evaluation.rank_based_evaluator import RankBasedEvaluator
-from ..evaluation.ranking_metric_lookup import normalize_flattened_metric_results
 from ..losses import loss_resolver
 from ..models import Model, model_resolver
 from ..optimizers import optimizer_resolver
