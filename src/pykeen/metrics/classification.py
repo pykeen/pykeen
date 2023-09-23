@@ -127,7 +127,7 @@ class ClassificationMetric(Metric, abc.ABC):
     @abc.abstractmethod
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
-    ) -> float:  # noqa: DAR202
+    ) -> float:
         """
         Calculate the metric.
 
@@ -141,8 +141,7 @@ class ClassificationMetric(Metric, abc.ABC):
 
         :return:
             a scalar metric value
-        """
-        raise NotImplementedError
+        """  # noqa: DAR202
 
 
 class NumScores(ClassificationMetric):
@@ -251,18 +250,19 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     zero_division: ZeroDivisionPolicy = "warn"
 
     @abc.abstractmethod
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: DAR202
+    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:
         """
         Calculate the metric from the confusion table.
 
         :param matrix: shape: (2, 2)
-            the confusion table
+            the confusion table of the form::
+
                 [[ TP, FN ]
                  [ FP, TN ]]
 
         :return:
             the scalar metric
-        """
+        """  # noqa: DAR202
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
     # docstr-coverage: inherited
