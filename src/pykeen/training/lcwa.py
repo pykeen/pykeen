@@ -229,8 +229,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
 class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedTriples]]):
-    r"""
-    A "symmetric" LCWA scoring heads *and* tails at once.
+    r"""A "symmetric" LCWA scoring heads *and* tails at once.
 
     This objective was introduced by [lacroix2018]_ as
 

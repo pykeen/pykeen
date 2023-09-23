@@ -1273,7 +1273,7 @@ class AdjustedInverseHarmonicMeanRank(ReindexedMetric):
     ---
     link: https://arxiv.org/abs/2203.07544
     description: The re-indexed adjusted MRR
-    tight_lower: -E[f]/(1-E[f])
+    tight_lower: \frac{-E[f]}{1-E[f]}
     """
 
     name = "Adjusted Inverse Harmonic Mean Rank"
@@ -1575,7 +1575,7 @@ class AdjustedHitsAtK(ReindexedMetric):
     ---
     link: https://arxiv.org/abs/2203.07544
     description: The re-indexed adjusted hits at K
-    tight_lower: -E[f]/(1-E[f])
+    tight_lower: \frac{-E[f]}{1-E[f]}
     """
 
     name = "Adjusted Hits at K"
@@ -1655,12 +1655,12 @@ class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
 
 @parse_docdata
 class AdjustedGeometricMeanRankIndex(ReindexedMetric):
-    """The adjusted geometric mean rank index (AGMRI).
+    r"""The adjusted geometric mean rank index (AGMRI).
 
     ---
     link: https://arxiv.org/abs/2002.06914
     description: The re-indexed adjusted geometric mean rank (AGMRI)
-    tight_lower: -E[f]/(1-E[f])
+    tight_lower: \frac{-E[f]}{1-E[f]}
     """
 
     name = "Adjusted Geometric Mean Rank Index (AGMRI)"

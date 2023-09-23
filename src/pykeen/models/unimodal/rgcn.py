@@ -59,6 +59,7 @@ class RGCN(
         author: Schlichtkrull
         year: 2018
         link: https://arxiv.org/pdf/1703.06103
+        github: https://github.com/MichSchli/RelationPrediction
     """
 
     #: The default strategy for optimizing the model"s hyper-parameters
