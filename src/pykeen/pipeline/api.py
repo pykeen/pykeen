@@ -996,6 +996,9 @@ class TrainingTriplesFactoryPack:
             ignore testing triples
         :param no_validation:
             ignore validation triples
+
+        :raises ValueError:
+            when an invalid configuration is given
         """
         info: dict[str, Any] = dict()
         if training is None:
