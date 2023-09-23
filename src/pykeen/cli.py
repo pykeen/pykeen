@@ -501,7 +501,7 @@ def _get_metrics_lines(tablefmt: str):
         link = getattr_or_docdata(metric, "link")
         yv = [
             f"[{label}]({link})",
-            metric.get_range(),
+            "$" + metric.get_range() + "$",
             "📈" if metric.increasing else "📉",
             getattr_or_docdata(metric, "description"),
             METRIC_NAMES[metric_results_cls],
