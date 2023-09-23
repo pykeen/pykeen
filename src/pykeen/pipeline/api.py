@@ -232,15 +232,7 @@ from ..trackers import ResultTracker, resolve_result_trackers
 from ..trackers.base import MultiResultTracker
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import (
-    TESTING,
-    TRAINING,
-    VALIDATION,
-    DeviceHint,
-    Hint,
-    HintType,
-    MappedTriples,
-)
+from ..typing import TESTING, TRAINING, VALIDATION, DeviceHint, Hint, HintType, MappedTriples
 from ..utils import (
     Result,
     ensure_ftp_directory,
