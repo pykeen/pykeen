@@ -467,7 +467,25 @@ def _validation_loss_amo_wrapper(
 
 
 class ValidationLossTrainingCallback(TrainingCallback):
-    """Calculate loss on a development set."""
+    """
+    Calculate loss on a development set.
+
+    .. code-block ::
+
+        from pykeen.datasets import get_dataset
+        from pykeen.pipeline import pipeline
+
+        dataset = get_dataset(dataset="nations")
+        pipeline(
+            dataset=dataset,
+            model="mure",
+            training_kwargs=dict(
+                callbacks="validation-loss",
+                callback_kwargs=dict(triples_factory=dataset.validation),
+            ),
+            result_tracker="console",
+        )
+    """
 
     def __init__(
         self,
