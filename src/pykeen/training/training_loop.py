@@ -703,7 +703,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if gradient_clipping_max_abs_value is not None:
             pre_step_callbacks.append(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
         callback.register_callback(
-            OptimizerTrainingCallback(step=not only_size_probing, pre_step_callbacks=pre_step_callbacks)
+            OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
         )
         callback.register_callback(LearningRateSchedulerTrainingCallback())
 

@@ -388,37 +388,41 @@ class OptimizerTrainingCallback(TrainingCallback):
     """Use optimizer to update parameters."""
 
     # TODO: we may want to separate TrainingCallback from pre-step callbacks in the future
-    def __init__(self, step: bool = True, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
+    def __init__(self, only_size_probing: bool = False, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
         """Initialize the callback.
 
-        :param step:
-            whether to apply the parameter update step
+        :param only_size_probing:
+            whether this is during size probing, where we do not want to apply weight changes
         :param pre_step_callbacks:
             callbacks to apply before making the step, e.g., for gradient clipping.
         """
         super().__init__()
-        self.step = step
+        self.only_size_probing = only_size_probing
         self.pre_step_callbacks = tuple(pre_step_callbacks or [])
 
     # docstr-coverage: inherited
     def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
         # Recall that torch *accumulates* gradients. Before passing in a
         # new instance, you need to zero out the gradients from the old instance
+
+        # note: we want to run this step during size probing to cleanup any remaining grads
         self.optimizer.zero_grad(set_to_none=True)
 
     # docstr-coverage: inherited
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
+        # pre-step callbacks
+        for cb in self.pre_step_callbacks:
+            cb.pre_step(epoch=epoch, **kwargs)
+
         # when called by batch_size_search(), the parameter update should not be applied.
-        if self.step:
-            # pre-step callbacks
-            for cb in self.pre_step_callbacks:
-                cb.pre_step(epoch=epoch, **kwargs)
+        if not self.only_size_probing:
             # update parameters according to optimizer
             self.optimizer.step()
 
         # After changing applying the gradients to the embeddings, the model is notified that the forward
         # constraints are no longer applied
-        # TODO: do we want that when self.step is not set?
+        # note: we want to apply this during size probing to properly account for the memory necessary for e.g.,
+        # regularization
         self.model.post_parameter_update()
 
 
