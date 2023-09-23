@@ -148,7 +148,7 @@ def _get_resolver_lines2(
             module = ".".join(module.split(".", maxsplit=top_k)[:-1])
         short = f"{module}.{name}"
         # verify that short name can be imported from the abbreviated reference
-        if not name in dir(importlib.import_module(module)):
+        if name not in dir(importlib.import_module(module)):
             click.secho(message=f"{name} not visible in {module}", err=True)
         # get docdata and extract name & citation
         docdata = resolver.docdata(clsx) or {}
