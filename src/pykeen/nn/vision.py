@@ -98,7 +98,7 @@ class VisualRepresentation(Representation):
     """Visual representations using a torchvision model.
 
     ---
-    name: Visual Representation
+    name: Visual
     """
 
     def __init__(
@@ -239,7 +239,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         )
 
     ---
-    name: Wikidata Visual Representation
+    name: Wikidata Visual
     """
 
     def __init__(

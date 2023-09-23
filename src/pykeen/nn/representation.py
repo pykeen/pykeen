@@ -926,7 +926,7 @@ class SingleCompGCNRepresentation(Representation):
     """A wrapper around the combined representation module.
 
     ---
-    name: Single CompGCN Representation
+    name: CompGCN
     """
 
     def __init__(
@@ -1016,7 +1016,7 @@ class TextRepresentation(Representation):
         )
 
     ---
-    name: Text Representation
+    name: Text Encoding
     """
 
     labels: List[str]
@@ -1130,7 +1130,7 @@ class CombinedRepresentation(Representation):
     """A combined representation.
 
     ---
-    name: Combined Representation
+    name: Combined
     """
 
     #: the base representations
@@ -1287,7 +1287,7 @@ class WikidataTextRepresentation(CachedTextRepresentation):
         )
 
     ---
-    name: Wikidata Text Representation
+    name: Wikidata Text Encoding
     """
 
     cache_cls = WikidataCache
@@ -1331,6 +1331,9 @@ class BiomedicalCURIERepresentation(CachedTextRepresentation):
                 ),
             ),
         )
+
+    ---
+    name: Biomedical CURIE Text Encoding
     """
 
     cache_cls = PyOBOCache
@@ -1392,7 +1395,7 @@ class PartitionRepresentation(Representation):
     ... )
 
     ---
-    name: Partition Representation
+    name: Partition
     """
 
     #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
@@ -1534,7 +1537,7 @@ class BackfillRepresentation(PartitionRepresentation):
     ... )
 
     ---
-    name: Backfill Representation
+    name: Backfill
     """
 
     def __init__(
@@ -1627,7 +1630,7 @@ class TransformedRepresentation(Representation):
     ... )
 
     ---
-    name: Transformed Representation
+    name: Transformed
     """
 
     def __init__(
@@ -1726,7 +1729,7 @@ class TensorTrainRepresentation(Representation):
 
     Another variant in the paper used an assignment based on hierarchical topological clustering.
     ---
-    name: Tensor-Train Representation
+    name: Tensor-Train
     """
 
     #: shape: (max_id, num_cores)

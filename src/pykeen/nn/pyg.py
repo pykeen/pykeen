@@ -324,7 +324,7 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
         )
 
     ---
-    name: Simple Message Passing Representation
+    name: Simple Message Passing
     """
 
     # docstr-coverage: inherited
@@ -366,7 +366,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
         )
 
     ---
-    name: Typed Message Passing Representation
+    name: Typed Message Passing
     """
 
     #: the edge type, shape: (num_edges,)
@@ -443,7 +443,7 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
         )
 
     ---
-    name: Featurized Message Passing Representation
+    name: Featurized Message Passing
     """
 
     #: the relation representations used to obtain initial edge features
