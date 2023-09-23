@@ -444,6 +444,8 @@ def _validation_loss_amo_wrapper(
     batch_size: int,
     slice_size: int,
     label_smoothing: float,
+    epoch: int,
+    callback: MultiTrainingCallback,
     **kwargs,
 ) -> float:
     """Calculate validation loss with automatic batch size optimization."""
@@ -453,9 +455,8 @@ def _validation_loss_amo_wrapper(
             triples_factory=triples_factory, batch_size=batch_size, drop_last=False, **kwargs
         ),
         label_smoothing=label_smoothing,
-        # no callbacks, no epoch
-        callbacks=MultiTrainingCallback(),
-        epoch=-1,
+        callbacks=callback,
+        epoch=epoch,
         # no sub-batching (for evaluation, we can just reduce batch size without any effect)
         sub_batch_size=None,
         slice_size=slice_size if training_loop.supports_slicing else None,
@@ -490,6 +491,8 @@ class ValidationLossTrainingCallback(TrainingCallback):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
+        callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
         maximum_batch_size: int | None = None,
         label_smoothing: float = 0.0,
         data_loader_kwargs: Mapping[str, Any] | None = None,
@@ -500,6 +503,10 @@ class ValidationLossTrainingCallback(TrainingCallback):
 
         :param triples_factory:
             the evaluation triples factory
+        :param callbacks:
+            callbacks for the validation loss loop
+        :param callback_kwargs:
+            keyword-based parameters for the callbacks of the validation loss loop
         :param maximum_batch_size:
             the maximum batch size
         :param label_smoothing:
@@ -517,6 +524,12 @@ class ValidationLossTrainingCallback(TrainingCallback):
             data_loader_kwargs = dict(sampler=None)
         self.data_loader_kwargs = data_loader_kwargs
         self.maximum_batch_size = maximum_batch_size
+        self.callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
+
+    # docstr-coverage: inherited
+    def register_training_loop(self, training_loop) -> None:  # noqa: D102
+        super().register_training_loop(training_loop)
+        self.callback.register_training_loop(loop=training_loop)
 
     # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
@@ -539,6 +552,8 @@ class ValidationLossTrainingCallback(TrainingCallback):
             # note: slicing is only effective for LCWA training
             slice_size=self.training_loop.num_targets if isinstance(self.training_loop, LCWATrainingLoop) else 1,
             label_smoothing=self.label_smoothing,
+            callback=self.callback,
+            epoch=epoch,
             **self.data_loader_kwargs,
         )
         self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
