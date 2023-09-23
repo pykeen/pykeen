@@ -132,9 +132,11 @@ def _iter_ranks(
 class RankBasedMetricKey(NamedTuple):
     """A key for ranking-based metrics."""
 
+    # note: for backwards compatibility, we still use (metric, side, rank_type)
+
+    metric: str
     side: ExtendedTarget
     rank_type: RankType
-    metric: str
 
 
 # parsing metrics
