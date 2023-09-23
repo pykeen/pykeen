@@ -285,7 +285,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
             for (target, i), (rank_type, j) in itertools.product(
-                ((LABEL_HEAD, 0), (LABEL_TAIL, 1)), rank_to_idx.items()
+                ((LABEL_HEAD, 0), (LABEL_TAIL, 1), (SIDE_BOTH, slice(None))), rank_to_idx.items()
             ):
                 this_ranks = ranks[i, j].mean(axis=0).flatten()
                 data[RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric.key)] = metric(
