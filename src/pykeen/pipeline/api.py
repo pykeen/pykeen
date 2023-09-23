@@ -927,7 +927,7 @@ class TrainingTriplesFactoryPack:
         :return:
             a factory or None.
         """
-        if skip:
+        if skip or factory is None:
             return None
 
         if isinstance(factory, str):
@@ -1014,7 +1014,7 @@ class TrainingTriplesFactoryPack:
                 raise ValueError("Must provide exactly one of `training` or `dataset`.")
             info.update(dataset=USER_DEFINED_CODE)
         training = self.resolve_factory(
-            factory=training, create_inverse_triples=dataset_kwargs.get("create_inverse_triples", False)
+            factory=training, create_inverse_triples=(dataset_kwargs or {}).get("create_inverse_triples", False)
         )
         validation = self.resolve_factory(factory=validation, reference=training, skip=no_validation)
         testing = self.resolve_factory(factory=testing, reference=training, skip=no_testing)
