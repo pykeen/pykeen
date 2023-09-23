@@ -182,6 +182,7 @@ can be used to specify the parameters during their respective instantiations.
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
 the :class:`pykeen.datasets.Nations`
 """
+from __future__ import annotations
 
 import ftplib
 import hashlib
@@ -230,8 +231,18 @@ from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, resolve_result_trackers
 from ..trackers.base import MultiResultTracker
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from ..triples import CoreTriplesFactory
-from ..typing import TESTING, TRAINING, VALIDATION, DeviceHint, Hint, HintType, MappedTriples
+from ..triples import CoreTriplesFactory, TriplesFactory
+from ..typing import (
+    TESTING,
+    TRAINING,
+    VALIDATION,
+    DeviceHint,
+    Hint,
+    HintType,
+    MappedTriples,
+    EntityMapping,
+    RelationMapping,
+)
 from ..utils import (
     Result,
     ensure_ftp_directory,
@@ -893,6 +904,56 @@ class TrainingTriplesFactoryPack:
     validation: Optional[CoreTriplesFactory]
     testing: Optional[CoreTriplesFactory]
 
+    @classmethod
+    def resolve_factory(
+        cls,
+        factory: str | CoreTriplesFactory | None,
+        reference: CoreTriplesFactory | None = None,
+        skip: bool = False,
+        create_inverse_triples: bool = False,
+    ) -> CoreTriplesFactory | None:
+        """
+        Help to resolve a factory.
+
+        :param factory:
+            the factory or a path or None to ignore
+        :param reference:
+            a reference factory (for validation/testing)
+        :param skip:
+            whether to return None
+        :param create_inverse_triples:
+            whether to create inverse triples
+
+        :return:
+            a factory or None.
+        """
+        if skip:
+            return None
+
+        if isinstance(factory, str):
+            if isinstance(reference, TriplesFactory):
+                entity_to_id = reference.entity_to_id
+                relation_to_id = reference.relation_to_id
+            else:
+                entity_to_id = relation_to_id = None
+            factory = TriplesFactory.from_path(
+                path=factory,
+                create_inverse_triples=create_inverse_triples,
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+            )
+
+        if isinstance(reference, TriplesFactory):
+            if not isinstance(factory, TriplesFactory):
+                raise ValueError(f"Incompatible types: {type(reference)=} vs. {type(factory)=}")
+            if reference.entity_to_id != factory.entity_to_id or reference.relation_to_id != factory.relation_to_id:
+                raise ValueError(f"Id mapping mismatch between {factory=} and {reference=}.")
+        elif isinstance(reference, CoreTriplesFactory):
+            if reference.num_entities != factory.num_entities or reference.num_relations != factory.num_relations:
+                raise ValueError(f"Number mismatch between {factory=} and {reference=}.")
+
+        return factory
+
     def __init__(
         self,
         *,
@@ -952,10 +1013,11 @@ class TrainingTriplesFactoryPack:
             if dataset is not None:
                 raise ValueError("Must provide exactly one of `training` or `dataset`.")
             info.update(dataset=USER_DEFINED_CODE)
-        if no_validation:
-            validation = None
-        if no_testing:
-            testing = None
+        training = self.resolve_factory(
+            factory=training, create_inverse_triples=dataset_kwargs.get("create_inverse_triples", False)
+        )
+        validation = self.resolve_factory(factory=validation, reference=training, skip=no_validation)
+        testing = self.resolve_factory(factory=testing, reference=training, skip=no_testing)
         if evaluation_entity_whitelist or evaluation_relation_whitelist:
             if validation is not None:
                 validation = validation.new_with_restriction(
