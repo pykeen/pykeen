@@ -173,11 +173,12 @@ The following 5 inductive datasets are built in to PyKEEN.
 
 ### Representations
 
-The following 19 representations are implemented by PyKEEN.
+The following 20 representations are implemented by PyKEEN.
 
 | Name                                      | Reference                                                                                                                                                   |
 |-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Backfill Representation                   | [`pykeen.nn.BackfillRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.BackfillRepresentation.html)                      |
+| Text Representation                       | [`pykeen.nn.BiomedicalCURIERepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.BiomedicalCURIERepresentation.html)        |
 | Combined Representation                   | [`pykeen.nn.CombinedRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.CombinedRepresentation.html)                      |
 | Embedding                                 | [`pykeen.nn.Embedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.Embedding.html)                                                |
 | Featurized Message Passing Representation | [`pykeen.nn.FeaturizedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.FeaturizedMessagePassingRepresentation.html) |
