@@ -9,12 +9,11 @@ from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 
 from .evaluator import MetricResults
-from .rank_based_evaluator import RankBasedMetricResults, SampledRankBasedEvaluator
-from .ranking_metric_lookup import MetricKey
+from .rank_based_evaluator import RankBasedMetricKey, RankBasedMetricResults, SampledRankBasedEvaluator
 from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
 from ..models import Model
-from ..typing import LABEL_HEAD, LABEL_TAIL, RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, RankType, Target
+from ..typing import LABEL_HEAD, LABEL_TAIL, RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, Target
 
 __all__ = [
     "OGBEvaluator",
@@ -195,7 +194,7 @@ def evaluate_ogb(
             torch.cat([y_pred_neg[t] for t in targets], dim=0),
         )
 
-    result: Dict[Tuple[str, ExtendedTarget, RankType], float] = {}
+    result: Dict[RankBasedMetricKey | str, float] = {}
     # cf. https://github.com/snap-stanford/ogb/pull/357
     rank_type = RANK_REALISTIC
     for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
@@ -206,10 +205,10 @@ def evaluate_ogb(
         # post-processing
         for key, value in ogb_result.items():
             # normalize name
-            key = MetricKey.lookup(key.replace("_list", "")).metric
+            key = RankBasedMetricResults.key_from_string(key.replace("_list", "")).metric
             # OGB does not aggregate values across triples
             value = value.mean().item()
-            result[key, ext_target, rank_type] = value
+            result[RankBasedMetricKey(side=ext_target, rank_type=rank_type, metric=key)] = value
     return RankBasedMetricResults(data=result)
 
 
