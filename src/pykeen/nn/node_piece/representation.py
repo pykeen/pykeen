@@ -33,7 +33,12 @@ class TokenizationRepresentation(Representation):
     """A module holding the result of tokenization.
 
     ---
-    name: Tokenization Representation
+    name: Tokenization
+    citation:
+        author: Galkin
+        year: 2021
+        link: https://arxiv.org/abs/2106.12144
+        github: https://github.com/migalkin/NodePiece
     """
 
     #: the token ID of the padding token
@@ -211,6 +216,7 @@ class HashDiversityInfo(NamedTuple):
     uniques_total: float
 
 
+@parse_docdata
 class NodePieceRepresentation(CombinedRepresentation):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
@@ -220,6 +226,14 @@ class NodePieceRepresentation(CombinedRepresentation):
 
     where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
     an aggregation function, which aggregates the individual token representations to a single entity representation.
+
+    ---
+    name: NodePiece
+    citation:
+        author: Galkin
+        year: 2021
+        link: https://arxiv.org/abs/2106.12144
+        github: https://github.com/migalkin/NodePiece
     """
 
     def __init__(
