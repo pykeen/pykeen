@@ -6,7 +6,6 @@ from __future__ import annotations
 import itertools
 import unittest
 from collections import Counter
-from operator import itemgetter
 from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
 import numpy
@@ -92,7 +91,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         assert self.instance.num_entities == self.dataset.num_entities
         result: RankBasedMetricResults
 
-        for (metric, side, rank_type), value in result.data.items():
+        for (side, rank_type, metric), value in result.data.items():
             self.assertIn(side, SIDES)
             self.assertIn(rank_type, RANK_TYPES)
             self.assertIsInstance(metric, str)
@@ -778,8 +777,8 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
             "adjusted_hits_at_",
         ]
         self.instance: RankBasedMetricResults
-        metric_names, targets = [set(map(itemgetter(i), self.instance.data.keys())) for i in (0, 1)]
-        for metric_name in metric_names:
+        targets = {key.side for key in self.instance.data.keys()}
+        for metric_name in {key.metric for key in self.instance.data.keys()}:
             if metric_name in {"variance", "standard_deviation", "median_absolute_deviation"}:
                 continue
             norm_metric_name = metric_name
@@ -792,7 +791,9 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
             for target in targets:
                 values = numpy.asarray(
                     [
-                        self.instance.data[metric_name, target, rank_type]
+                        self.instance.get_metric(
+                            name=RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric_name)
+                        )
                         for rank_type in (RANK_PESSIMISTIC, RANK_REALISTIC, RANK_OPTIMISTIC)
                     ]
                 )
@@ -831,6 +832,7 @@ class MetricResultMetaTestCase(unittest_templates.MetaTestCase):
 
     base_cls = MetricResults
     base_test = cases.MetricResultTestCase
+    skip_cls = {DummyMetricResults}
 
 
 class EvaluatorMetaTestCase(unittest_templates.MetaTestCase):
