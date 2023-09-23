@@ -6,9 +6,24 @@ from __future__ import annotations
 
 import logging
 import timeit
+import warnings
 from abc import ABC, abstractmethod
 from collections import ChainMap
-from typing import Any, ClassVar, Collection, List, Mapping, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    ClassVar,
+    Collection,
+    Generic,
+    List,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import pandas
 import torch
@@ -21,58 +36,100 @@ from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
-from ..utils import format_relative_comparison, normalize_string, prepare_filter_triples
+from ..utils import flatten_dictionary, format_relative_comparison, normalize_string, prepare_filter_triples
 
 __all__ = [
     "Evaluator",
     "MetricResults",
     "filter_scores_",
     "prepare_filter_triples",
+    "normalize_flattened_metric_results",
 ]
 
 logger = logging.getLogger(__name__)
 
+# TODO: maybe move into separate module?
+MetricKeyType = TypeVar("MetricKeyType", bound=Tuple)
 
-class MetricResults:
+
+class MetricResults(Generic[MetricKeyType]):
     """Results from computing metrics."""
 
     metrics: ClassVar[Mapping[str, Type[Metric]]]
+    data: Mapping[MetricKeyType, float]
 
-    def __init__(self, data: Mapping):
+    def __init__(self, data: Mapping[MetricKeyType | str, float]):
         """Initialize the result wrapper."""
-        self.data = data
+        self.data = {self.string_or_key_to_key(key): value for key, value in data.items()}
 
-    def __getattr__(self, item):  # noqa:D105
-        # TODO remove this, it makes code much harder to reason about
-        if item not in self.data:
-            raise AttributeError
-        return self.data[item]
-
+    @classmethod
     @abstractmethod
-    def get_metric(self, name: str) -> float:
+    def key_from_string(cls, s: str | None) -> MetricKeyType:
+        """
+        Parse the metric key from a (un-normalized) string.
+
+        :param s:
+            the metric key, or `None` to get the default key.
+
+        :return:
+            the fully resolved key as a named tuple
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def key_to_string(cls, s: str | MetricKeyType | None) -> str:
+        """Convert a key to a normalized key."""
+        return ".".join(cls.string_or_key_to_key(s))
+
+    @classmethod
+    def string_or_key_to_key(cls, s: str | MetricKeyType | None) -> MetricKeyType:
+        """Convert a key to a named tuple."""
+        if s is None or isinstance(s, str):
+            s = cls.key_from_string(s)
+        return s
+
+    def get_metric(self, name: str | MetricKeyType) -> float:
         """Get the given metric from the results.
 
         :param name: The name of the metric
         :returns: The value for the metric
         """
-        raise NotImplementedError
-
-    def to_dict(self):
-        """Get the results as a dictionary."""
-        return self.data
+        return self.data[self.string_or_key_to_key(name)]
 
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
-        return self.to_dict()
+        return {self.key_to_string(key): value for key, value in self.data.items()}
+
+    def to_dict(self) -> Mapping[str, Any]:
+        """Extract a (potentially nested) JSON-compatible dictionary."""
+        # actual type: nested dictionary with string keys
+        result: dict[str, Any] = {}
+        for compound_key, metric_value in self.data.items():
+            partial_result = result
+            for key_part in compound_key[:-1]:
+                partial_result.setdefault(str(key_part), {})
+                partial_result = partial_result[key_part]
+            partial_result[str(compound_key[-1])] = metric_value
+        return result
+
+    def to_df(self) -> pandas.DataFrame:
+        """Output the metrics as a pandas dataframe."""
+        one_key = next(iter(self.data.keys()))
+        # assert isinstance(one_key, NamedTuple)
+        one_key_nt = cast(NamedTuple, one_key)
+        columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
+        return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 
 
-class Evaluator(ABC):
+class Evaluator(ABC, Generic[MetricKeyType]):
     """An abstract evaluator for KGE models.
 
     The evaluator encapsulates the computation of evaluation metrics based on head and tail scores. To this end, it
     offers two methods to process a batch of triples together with the scores produced by some model. It maintains
     intermediate results in its state, and offers a method to obtain the final results once finished.
     """
+
+    metric_result_cls: Type[MetricResults[MetricKeyType]]
 
     def __init__(
         self,
@@ -133,7 +190,7 @@ class Evaluator(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def finalize(self) -> MetricResults:
+    def finalize(self) -> MetricResults[MetricKeyType]:
         """Compute the final results, and clear buffers."""
         raise NotImplementedError
 
@@ -152,7 +209,7 @@ class Evaluator(ABC):
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
-    ) -> MetricResults:
+    ) -> MetricResults[MetricKeyType]:
         """Evaluate metrics for model on mapped triples.
 
         :param model:
@@ -726,3 +783,38 @@ def get_candidate_set_size(
         df_eval[column] = df_eval[column].fillna(value=total)
 
     return df_eval
+
+
+def normalize_flattened_metric_results(
+    result: Mapping[str, Any], metric_result_cls: Type[MetricResults] | None = None
+) -> Mapping[str, Any]:
+    """
+    Flatten metric result dictionary and normalize metric keys.
+
+    :param result:
+        the result dictionary.
+    :param metric_result_cls:
+        the metric result class providing metric name normalization
+
+    :return:
+        the flattened metric results with normalized metric names.
+    """
+    # avoid cyclic imports
+    from .rank_based_evaluator import RankBasedMetricResults
+
+    # normalize keys
+    if metric_result_cls is None:
+        warnings.warn("Please explicitly provide a metric result class.", category=DeprecationWarning)
+        metric_result_cls = RankBasedMetricResults
+    # TODO: find a better way to handle this
+    flat_result = flatten_dictionary(result)
+    result = {}
+    for key, value in flat_result.items():
+        try:
+            normalized_key = metric_result_cls.key_from_string(key)
+        except ValueError as error:
+            new_key = key.replace("nondeterministic", "").replace("unknown", "").strip(".").replace("..", ".")
+            logger.warning(f"Trying to fix malformed key={key} to key={new_key} (error: {error})")
+            normalized_key = metric_result_cls.key_from_string(new_key)
+        result[metric_result_cls.key_to_string(normalized_key)] = value
+    return result

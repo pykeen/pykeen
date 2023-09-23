@@ -1433,7 +1433,7 @@ class Count(RankBasedMetric):
 
     name = "Count"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
-    increasing = False
+    increasing = True
     synonyms: ClassVar[Collection[str]] = ("rank_count",)
 
     # docstr-coverage: inherited
