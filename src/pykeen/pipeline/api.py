@@ -295,7 +295,7 @@ class PipelineResult(Result):
     losses: List[float]
 
     #: The results evaluated by the pipeline
-    metric_results: MetricResults
+    metric_results: MetricResults | None
 
     #: How long in seconds did training take?
     train_seconds: float
@@ -388,6 +388,8 @@ class PipelineResult(Result):
 
     def get_metric(self, key: str) -> float:
         """Get the given metric out of the metric result object."""
+        if self.metric_results is None:
+            raise ValueError("The pipeline did not run any evaluation.")
         return self.metric_results.get_metric(key)
 
     def _get_results(self) -> Mapping[str, Any]:
@@ -396,9 +398,10 @@ class PipelineResult(Result):
                 training=self.train_seconds,
                 evaluation=self.evaluate_seconds,
             ),
-            metrics=self.metric_results.to_dict(),
             losses=self.losses,
         )
+        if self.metric_results is not None:
+            results["metrics"] = self.metric_results.to_dict()
         if self.stopper is not None and isinstance(self.stopper, EarlyStopper):
             results["stopper"] = self.stopper.get_summary_dict()
         return results
@@ -931,6 +934,8 @@ class TrainingTriplesFactoryPack:
             return None
 
         if isinstance(factory, str):
+            entity_to_id: Mapping[str, int] | None
+            relation_to_id: Mapping[str, int] | None
             if isinstance(reference, TriplesFactory):
                 entity_to_id = reference.entity_to_id
                 relation_to_id = reference.relation_to_id
@@ -1677,7 +1682,7 @@ def pipeline(  # noqa: C901
     return PipelineResult(
         random_seed=_random_seed,
         model=model_instance,
-        training=training,
+        training=tfs.training,
         training_loop=training_loop_instance,
         losses=losses,
         stopper=stopper_instance,
