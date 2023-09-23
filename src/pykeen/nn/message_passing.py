@@ -524,7 +524,12 @@ class RGCNRepresentation(Representation):
     Since having one matrix for each relation introduces a large number of additional parameters, the authors instead
     propose to use a decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
     ---
-    name: R-GCN Representation
+    name: R-GCN
+    citation:
+        author: Schlichtkrull
+        year: 2018
+        link: https://arxiv.org/pdf/1703.06103
+        github: https://github.com/MichSchli/RelationPrediction
     """
 
     def __init__(
