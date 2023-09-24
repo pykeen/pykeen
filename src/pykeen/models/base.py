@@ -59,6 +59,11 @@ class Model(nn.Module, ABC):
     #: utility for generating inverse relations
     relation_inverter: RelationInverter
 
+    #: When predict_with_sigmoid is set to True, the sigmoid function is
+    #: applied to the logits during evaluation and also for predictions
+    #: after training, but has no effect on the training.
+    predict_with_sigmoid: bool
+
     can_slice_h: ClassVar[bool]
     can_slice_r: ClassVar[bool]
     can_slice_t: ClassVar[bool]
