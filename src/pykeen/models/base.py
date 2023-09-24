@@ -52,12 +52,11 @@ class Model(nn.Module, ABC):
 
     #: the number of entities
     num_entities: int
-
     #: the number of relations
     num_relations: int
-
     #: whether to use inverse relations
     use_inverse_triples: bool
+    #: utility for generating inverse relations
     relation_inverter: RelationInverter
 
     can_slice_h: ClassVar[bool]
