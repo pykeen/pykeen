@@ -160,6 +160,6 @@ class NodePiece(ERModel):
                 # max_id=triples_factory.num_relations,  # will get added by ERModel
                 base=relation_representations,
             ),
-            use_inverse_relations=True,
+            create_inverse_triples=True,
             **kwargs,
         )

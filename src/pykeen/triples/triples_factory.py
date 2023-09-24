@@ -735,7 +735,7 @@ class CoreTriplesFactory(KGInfo):
     def _get_binary_state(self):
         return dict(
             num_entities=self.num_entities,
-            num_relations=self.real_num_relations,  # FIXME check this before merge, should be self.num_relations?
+            num_relations=self.num_relations,
             metadata=self.metadata,
         )
 
