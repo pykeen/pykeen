@@ -71,16 +71,16 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         # and polymorphism introduced by slicability that these need to be ignored
         if self.target == 0 and not self.model.use_inverse_triples:
             self.score_method = self.model.score_h  # type: ignore
-            self.supports_slicing = self.model.can_slice_h
+            self.can_slice = self.model.can_slice_h
         elif self.target == 0 and self.model.use_inverse_triples:
             self.score_method = self.model.score_h_inverse  # type: ignore
-            self.supports_slicing = self.model.can_slice_t
+            self.can_slice = self.model.can_slice_t
         elif self.target == 1:
             self.score_method = self.model.score_r  # type: ignore
-            self.supports_slicing = self.model.can_slice_r
+            self.can_slice = self.model.can_slice_r
         elif self.target == 2:  # TODO: inverse relations?
             self.score_method = self.model.score_t  # type: ignore
-            self.supports_slicing = self.model.can_slice_t
+            self.can_slice = self.model.can_slice_t
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
 
@@ -216,7 +216,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         return slice_size
 
     def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self.supports_slicing:
+        if self.can_slice:
             return
         elif supports_sub_batching:
             report = (
