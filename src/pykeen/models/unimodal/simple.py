@@ -79,6 +79,25 @@ class SimplE(ERModel):
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            the embedding dimension
+        :param clamp_score:
+            whether to clamp scores, cf. :meth:`SimplEInteraction.__init__`
+        :param entity_initializer:
+            the entity representation initializer
+        :param relation_initializer:
+            the relation representation initializer
+        :param regularizer:
+            the regularizer, defaults to :attr:`SimplE.regularizer_default`
+        :param regularizer_kwargs:
+            additional keyword-based parameters passed to the regularizer, defaults to
+            :attr:`SimplE.regularizer_default_kwargs`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         regularizer = regularizer_resolver.make_safe(regularizer, pos_kwargs=regularizer_kwargs)
         super().__init__(
             interaction=SimplEInteraction,

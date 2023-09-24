@@ -8,7 +8,6 @@ import torch
 from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
-from pykeen.evaluation.ranking_metric_lookup import MetricKey
 from pykeen.nn import Representation
 from pykeen.typing import ExtendedTarget, MappedTriples, RankType, Target
 
@@ -24,7 +23,7 @@ class CustomRepresentation(Representation):
         super().__init__(max_id=num_entities, shape=shape)
         self.x = nn.Parameter(torch.rand(*shape))
 
-    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa:D102
+    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
         n = self.max_id if indices is None else indices.shape[0]
         return self.x.unsqueeze(dim=0).repeat(n, *(1 for _ in self.shape))
 
@@ -40,7 +39,7 @@ class MockEvaluator(Evaluator):
         random_state: Optional[int] = None,
     ) -> None:
         super().__init__(automatic_memory_optimization=automatic_memory_optimization)
-        self.key = MetricKey.lookup(key)
+        self.key = RankBasedMetricResults.key_from_string(s=None if key is None else ".".join((*key[1:], key[0])))
         self.random_state = random_state
         if values is None:
             self.values = self.values_iter = None
@@ -56,6 +55,9 @@ class MockEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
+        pass
+
+    def clear(self):  # noqa: D102
         pass
 
     def finalize(self) -> MetricResults:  # noqa: D102

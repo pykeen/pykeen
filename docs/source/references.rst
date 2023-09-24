@@ -110,3 +110,19 @@ References
 
 .. [hoyt2022] Hoyt, C.T., *et al.* (2022) `A Unified Framework for Rank-based Evaluation Metrics for
    Link Prediction in Knowledge Graphs <https://arxiv.org/abs/2203.07544>`_. *arXiv*, 2203.07544.
+
+.. [chandak2022] Chandak, P., *et al* (2022). `Building a knowledge graph to enable precision medicine
+   <https://doi.org/10.1101/2022.05.01.489928>`_. *bioRxiv*, 2022.05.01.489928.
+
+.. [wang2022] Wang, L., *et al* (2022). `SimKGC: Simple Contrastive Knowledge Graph Completion with
+   Pre-trained Language Models <https://arxiv.org/abs/2203.02167>`_. *arXiv*, 2203.02167.
+
+.. [thanapalasingam2021] Thanapalasingam, T., *et al* (2021). `Relational Graph Convolutional Networks:
+   A Closer Look <https://arxiv.org/abs/2107.10015>`_. *arXiv*, 2107.10015.
+
+.. [peng2020] Y. Peng and J. Zhang (2020) `LineaRE: Simple but Powerful Knowledge Graph Embedding for
+   Link Prediction <https://arxiv.org/abs/2004.10037>`_, *2020 IEEE International Conference on Data Mining (ICDM)*,
+   pp. 422-431, doi: 10.1109/ICDM50108.2020.00051.
+
+.. [koenigs2022] Königs, C., *et al* (2022) `The heterogeneous pharmacological medical biochemical
+   network PharMeBINet <https://doi.org/10.1038/s41597-022-01510-3>`_, *Scientific Data*, **9**, 393.

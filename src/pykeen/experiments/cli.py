@@ -18,13 +18,13 @@ import pandas
 import tabulate
 from class_resolver import get_subclasses
 from more_click import verbose_option
+from tqdm.auto import tqdm
 
 from pykeen.datasets import get_dataset
-from pykeen.evaluation.evaluator import get_candidate_set_size
-from pykeen.evaluation.ranking_metric_lookup import MetricKey, normalize_flattened_metric_results
+from pykeen.evaluation.evaluator import get_candidate_set_size, normalize_flattened_metric_results
 from pykeen.metrics import RankBasedMetric, rank_based_metric_resolver
 from pykeen.metrics.ranking import DerivedRankBasedMetric, HitsAtK
-from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration
+from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_path
 
 __all__ = [
     "experiments",
@@ -81,13 +81,7 @@ def experiments():
     """Run landmark experiments."""
 
 
-@experiments.command(
-    epilog="Available experiments:\n\n\b\n"
-    + tabulate.tabulate(
-        sorted(path.stem.split("_") for ext in CONFIGURATION_FILE_FORMATS for path in HERE.rglob(f"*{ext}")),
-        headers=("reference", "model", "dataset"),
-    ),
-)
+@experiments.command()
 @click.argument("model")
 @click.argument("reference")
 @click.argument("dataset")
@@ -112,6 +106,9 @@ def reproduce(
     """Reproduce a pre-defined experiment included in PyKEEN.
 
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
+
+    # noqa:DAR101
+    # noqa:DAR401
     """
     file_name = f"{reference}_{model}_{dataset}"
     path = HERE.joinpath(model, file_name)
@@ -182,13 +179,13 @@ def _help_reproduce(
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param file_name: Name of JSON/YAML file (optional)
+    :param extra_config: Extra configuration path
     :param keep_seed:
         whether to keep a random seed if given as part of the configuration
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
-    if isinstance(path, str):
-        path = pathlib.Path(path).resolve()
+    path = normalize_path(path)
 
     if not path.is_file():
         click.secho(f"Could not find configuration at {path}", fg="red")
@@ -197,15 +194,10 @@ def _help_reproduce(
 
     # Create directory in which all experimental artifacts are saved
     datetime = time.strftime("%Y-%m-%d-%H-%M-%S")
+    experiment_id = f"{datetime}_{uuid4()}"
     if file_name is not None:
-        experiment_id = f"{datetime}_{uuid4()}_{file_name}"
-    else:
-        experiment_id = f"{datetime}_{uuid4()}"
-
-    if isinstance(directory, str):
-        directory = pathlib.Path(directory).resolve()
-    output_directory = directory.joinpath(experiment_id)
-    output_directory.mkdir(exist_ok=True, parents=True)
+        experiment_id += f"_{file_name}"
+    output_directory = normalize_path(directory, experiment_id, mkdir=True)
 
     extra_kwargs = {} if extra_config is None else load_configuration(path=extra_config)
 
@@ -255,6 +247,8 @@ def ablation(
     """Generate a set of HPO configurations.
 
     A sample file can be run with ``pykeen experiments ablation tests/resources/hpo_complex_nations.json``.
+
+    # noqa:DAR101
     """
     from ..ablation.ablation import _run_ablation_experiments, prepare_ablation_from_path
 
@@ -288,7 +282,7 @@ def validate():
 
 def _iter_results(configuration: Mapping[str, Any]) -> Iterable[Tuple[RankBasedMetric, float]]:
     for metric, value in normalize_flattened_metric_results(configuration.get("results", {})).items():
-        key = MetricKey.lookup(metric)
+        key = MetricKey.lookup(metric)  # FIXME
         kwargs = {}
         metric_name = key.metric
         if metric_name.startswith("hits_at_"):
@@ -345,6 +339,26 @@ def post_adjust():
                 data.append([model, dataset.get_normalized_name(), adjusted_metric.key, adjusted_value, path.name])
     df = pandas.DataFrame(data=data, columns=["model", "dataset", "metric", "value", "path"])
     df.to_csv("/tmp/post_adjustments.tsv", sep="\t", index=False)
+
+
+def _iter_configurations() -> Iterable[pathlib.Path]:
+    """Iterate over configuration paths."""
+    for ext in CONFIGURATION_FILE_FORMATS:
+        yield from HERE.rglob(f"*{ext}")
+
+
+@experiments.command()
+def list():
+    """List experiment configurations."""
+    data = set()
+    for path in tqdm(_iter_configurations(), unit="configuration", unit_scale=True, leave=False):
+        # clip for node piece configurations
+        reference, model, dataset = path.stem.split("_")[:3]
+        # "pykeen experiments reproduce" expects "model reference dataset"
+        data.add((model, reference, dataset))
+    click.secho(f"There are {len(data)} available experiments. Run via\n")
+    click.secho("\tpykeen experiments reproduce <MODEL> <REFERENCE> <DATASET>\n")
+    click.echo(tabulate.tabulate(sorted(data), headers=("model", "reference", "dataset")))
 
 
 if __name__ == "__main__":

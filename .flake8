@@ -18,6 +18,9 @@ ignore =
     S402
     E203  # whitespace before ':'
     B018  # bugbear doesn't allow multi-line comments as of https://github.com/PyCQA/flake8-bugbear/issues/195
+    # bugbear seems to emit false positives, cf. https://github.com/PyCQA/flake8-bugbear/issues/278
+    B024
+    B028
 exclude =
     .tox,
     .git,

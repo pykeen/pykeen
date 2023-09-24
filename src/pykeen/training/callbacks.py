@@ -51,14 +51,20 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
-import pathlib
-from typing import Any, List, Optional
+from __future__ import annotations
 
+import pathlib
+from typing import Any, List, Mapping, Optional, Sequence
+
+import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
+from torch_max_mem import maximize_memory_utilization
 
+from .. import training  # required for type annotations
 from ..evaluation import Evaluator, evaluator_resolver
+from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
 from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
@@ -71,6 +77,7 @@ __all__ = [
     "TrainingCallback",
     "StopperTrainingCallback",
     "TrackerTrainingCallback",
+    "EvaluationLoopTrainingCallback",
     "EvaluationTrainingCallback",
     "MultiTrainingCallback",
     "GradientNormClippingTrainingCallback",
@@ -86,7 +93,7 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self):  # noqa:D401
+    def training_loop(self) -> training.TrainingLoop:  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
@@ -113,9 +120,12 @@ class TrainingCallback:
         assert self.training_loop.result_tracker is not None
         return self.training_loop.result_tracker
 
-    def register_training_loop(self, training_loop) -> None:
+    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:
         """Register the training loop."""
         self._training_loop = training_loop
+
+    def pre_batch(self, **kwargs: Any) -> None:
+        """Call before training batch."""
 
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:
         """Call for training batches."""
@@ -140,6 +150,7 @@ class TrackerTrainingCallback(TrainingCallback):
     It logs the loss after each epoch to the given result tracker,
     """
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
@@ -160,6 +171,7 @@ class GradientNormClippingTrainingCallback(TrainingCallback):
         self.max_norm = max_norm
         self.norm_type = norm_type or 2.0
 
+    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_norm_(
             parameters=self.model.get_grad_params(),
@@ -183,6 +195,7 @@ class GradientAbsClippingTrainingCallback(TrainingCallback):
         super().__init__()
         self.clip_value = clip_value
 
+    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_value_(self.model.get_grad_params(), clip_value=self.clip_value)
 
@@ -248,7 +261,9 @@ class EvaluationTrainingCallback(TrainingCallback):
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         self.prefix = prefix
         self.kwargs = kwargs
+        self.batch_size = self.kwargs.pop("batch_size", None)
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return
@@ -256,8 +271,71 @@ class EvaluationTrainingCallback(TrainingCallback):
             model=self.model,
             mapped_triples=self.evaluation_triples,
             device=self.training_loop.device,
+            batch_size=self.evaluator.batch_size or self.batch_size,
             **self.kwargs,
         )
+        self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
+
+
+class EvaluationLoopTrainingCallback(TrainingCallback):
+    """A callback for regular evaluation using new-style evaluation loops."""
+
+    def __init__(
+        self,
+        factory: CoreTriplesFactory,
+        frequency: int = 1,
+        prefix: Optional[str] = None,
+        evaluator: HintOrType[Evaluator] = None,
+        evaluator_kwargs: OptionalKwargs = None,
+        additional_filter_triples: AdditionalFilterTriplesHint = None,
+        **kwargs,
+    ):
+        """
+        Initialize the callback.
+
+        :param factory:
+            the triples factory comprising the evaluation triples
+        :param frequency:
+            the evaluation frequency
+        :param prefix:
+            a prefix to use for logging (e.g., to distinguish between different splits)
+        :param evaluator:
+            the evaluator, or a hint thereof
+        :param evaluator_kwargs:
+            additional keyword-based parameters used for the evaluation instantiation
+        :param additional_filter_triples:
+            additional filter triples to use for creating the filter
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`EvaluationLoop.evaluate`
+        """
+        super().__init__()
+        self.frequency = frequency
+        self.prefix = prefix
+
+        self.factory = factory
+        self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+        # lazy init
+        self._evaluation_loop = None
+        self.kwargs = kwargs
+        self.additional_filter_triples = additional_filter_triples
+
+    @property
+    def evaluation_loop(self):
+        """Return the evaluation loop instance (lazy-initialization)."""
+        if self._evaluation_loop is None:
+            self._evaluation_loop = LCWAEvaluationLoop(
+                triples_factory=self.factory,
+                evaluator=self.evaluator,
+                model=self.model,
+                additional_filter_triples=self.additional_filter_triples,
+            )
+        return self._evaluation_loop
+
+    # docstr-coverage: inherited
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        if epoch % self.frequency:
+            return
+        result = self.evaluation_loop.evaluate(**self.kwargs)
         self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
@@ -290,6 +368,7 @@ class StopperTrainingCallback(TrainingCallback):
         self.last_best_epoch = last_best_epoch
         self.best_epoch_model_file_path = best_epoch_model_file_path
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if self.stopper.should_evaluate(epoch):
             # TODO how to pass inductive mode
@@ -303,9 +382,185 @@ class StopperTrainingCallback(TrainingCallback):
             self.last_best_epoch = epoch
 
 
-callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
-    base=TrainingCallback,
-)
+class OptimizerTrainingCallback(TrainingCallback):
+    """Use optimizer to update parameters."""
+
+    # TODO: we may want to separate TrainingCallback from pre-step callbacks in the future
+    def __init__(self, only_size_probing: bool = False, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
+        """Initialize the callback.
+
+        :param only_size_probing:
+            whether this is during size probing, where we do not want to apply weight changes
+        :param pre_step_callbacks:
+            callbacks to apply before making the step, e.g., for gradient clipping.
+        """
+        super().__init__()
+        self.only_size_probing = only_size_probing
+        self.pre_step_callbacks = tuple(pre_step_callbacks or [])
+
+    # docstr-coverage: inherited
+    def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
+        # Recall that torch *accumulates* gradients. Before passing in a
+        # new instance, you need to zero out the gradients from the old instance
+
+        # note: we want to run this step during size probing to cleanup any remaining grads
+        self.optimizer.zero_grad(set_to_none=True)
+
+    # docstr-coverage: inherited
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
+        # pre-step callbacks
+        for cb in self.pre_step_callbacks:
+            cb.pre_step(epoch=epoch, **kwargs)
+
+        # when called by batch_size_search(), the parameter update should not be applied.
+        if not self.only_size_probing:
+            # update parameters according to optimizer
+            self.optimizer.step()
+
+        # After changing applying the gradients to the embeddings, the model is notified that the forward
+        # constraints are no longer applied
+        # note: we want to apply this during size probing to properly account for the memory necessary for e.g.,
+        # regularization
+        self.model.post_parameter_update()
+
+
+class LearningRateSchedulerTrainingCallback(TrainingCallback):
+    """Update learning rate scheduler."""
+
+    # docstr-coverage: inherited
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        if self.training_loop.lr_scheduler is not None:
+            self.training_loop.lr_scheduler.step(epoch=epoch)
+
+
+def _hasher(kwargs: Mapping[str, Any]) -> int:
+    # do not share optimal parameters across different training loops
+    return id(kwargs["training_loop"])
+
+
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
+@torch.inference_mode()
+def _validation_loss_amo_wrapper(
+    training_loop: training.TrainingLoop,
+    triples_factory: CoreTriplesFactory,
+    batch_size: int,
+    slice_size: int,
+    label_smoothing: float,
+    epoch: int,
+    callback: MultiTrainingCallback,
+    **kwargs,
+) -> float:
+    """Calculate validation loss with automatic batch size optimization."""
+    return training_loop._train_epoch(
+        # todo: create dataset only once
+        batches=training_loop._create_training_data_loader(
+            triples_factory=triples_factory, batch_size=batch_size, drop_last=False, **kwargs
+        ),
+        label_smoothing=label_smoothing,
+        callbacks=callback,
+        epoch=epoch,
+        # no sub-batching (for evaluation, we can just reduce batch size without any effect)
+        sub_batch_size=None,
+        slice_size=slice_size if training_loop.supports_slicing else None,
+        # this is handled by the AMO wrapper
+        only_size_probing=False,
+        # no backward passes
+        backward=False,
+    )
+
+
+class EvaluationLossTrainingCallback(TrainingCallback):
+    """
+    Calculate loss on an evaluation set.
+
+    .. code-block ::
+
+        from pykeen.datasets import get_dataset
+        from pykeen.pipeline import pipeline
+
+        dataset = get_dataset(dataset="nations")
+        pipeline(
+            dataset=dataset,
+            model="mure",
+            training_kwargs=dict(
+                callbacks="evaluation-loss",
+                callback_kwargs=dict(triples_factory=dataset.validation),
+                prefix="validation",
+            ),
+            result_tracker="console",
+        )
+    """
+
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+        callbacks: TrainingCallbackHint = None,
+        callbacks_kwargs: TrainingCallbackKwargsHint = None,
+        maximum_batch_size: int | None = None,
+        label_smoothing: float = 0.0,
+        data_loader_kwargs: Mapping[str, Any] | None = None,
+        prefix: str = "validation",
+    ):
+        """
+        Initialize the callback.
+
+        :param triples_factory:
+            the evaluation triples factory
+        :param callbacks:
+            callbacks for the validation loss loop
+        :param callbacks_kwargs:
+            keyword-based parameters for the callbacks of the validation loss loop
+        :param maximum_batch_size:
+            the maximum batch size
+        :param label_smoothing:
+            the label smoothing to use; usually this should be matched with the training settings
+        :param data_loader_kwargs:
+            the keyword based parameters for the data loader
+        :param prefix:
+            the prefix to use for logging
+        """
+        super().__init__()
+        self.triples_factory = triples_factory
+        self.prefix = prefix
+        self.label_smoothing = label_smoothing
+        if data_loader_kwargs is None:
+            data_loader_kwargs = dict(sampler=None)
+        self.data_loader_kwargs = data_loader_kwargs
+        self.maximum_batch_size = maximum_batch_size
+        self.callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
+
+    # docstr-coverage: inherited
+    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
+        super().register_training_loop(training_loop)
+        self.callback.register_training_loop(training_loop=training_loop)
+
+    # docstr-coverage: inherited
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        from .lcwa import LCWATrainingLoop
+
+        # set to evaluation mode
+        self.model.eval()
+
+        # determine maximum batch size
+        maximum_batch_size = self.maximum_batch_size or self.triples_factory.num_triples
+        if self.model.device.type != "cuda":
+            # try to avoid OOM kills on cpu for large datasets
+            maximum_batch_size = min(maximum_batch_size, 2**16)
+
+        loss = _validation_loss_amo_wrapper(
+            training_loop=self.training_loop,
+            triples_factory=self.triples_factory,
+            # TODO: this should be num_instances rather than num_triples; also for cpu, we may want to reduce this
+            batch_size=maximum_batch_size,
+            # note: slicing is only effective for LCWA training
+            slice_size=self.training_loop.num_targets if isinstance(self.training_loop, LCWATrainingLoop) else 1,
+            label_smoothing=self.label_smoothing,
+            callback=self.callback,
+            epoch=epoch,
+            **self.data_loader_kwargs,
+        )
+        self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
+
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
 TrainingCallbackHint = OneOrSequence[HintOrType[TrainingCallback]]
@@ -321,7 +576,7 @@ class MultiTrainingCallback(TrainingCallback):
     def __init__(
         self,
         callbacks: TrainingCallbackHint = None,
-        callback_kwargs: TrainingCallbackKwargsHint = None,
+        callbacks_kwargs: TrainingCallbackKwargsHint = None,
     ) -> None:
         """
         Initialize the callback.
@@ -333,16 +588,17 @@ class MultiTrainingCallback(TrainingCallback):
 
         :param callbacks:
             the callbacks
-        :param callback_kwargs:
+        :param callbacks_kwargs:
             additional keyword-based parameters for instantiating the callbacks
         """
         super().__init__()
-        self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs) if callbacks else []
+        self.callbacks = callback_resolver.make_many(callbacks, callbacks_kwargs) if callbacks else []
 
-    def register_training_loop(self, loop) -> None:  # noqa: D102
-        super().register_training_loop(training_loop=loop)
+    # docstr-coverage: inherited
+    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
+        super().register_training_loop(training_loop=training_loop)
         for callback in self.callbacks:
-            callback.register_training_loop(training_loop=loop)
+            callback.register_training_loop(training_loop=training_loop)
 
     def register_callback(self, callback: TrainingCallback) -> None:
         """Register a callback."""
@@ -350,22 +606,38 @@ class MultiTrainingCallback(TrainingCallback):
         if self._training_loop is not None:
             callback.register_training_loop(self._training_loop)
 
+    # docstr-coverage: inherited
+    def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.pre_batch(**kwargs)
+
+    # docstr-coverage: inherited
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss, **kwargs)
 
+    # docstr-coverage: inherited
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_batch(epoch=epoch, batch=batch, **kwargs)
 
+    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.pre_step(**kwargs)
 
+    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
 
+    # docstr-coverage: inherited
     def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses, **kwargs)
+
+
+callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
+    base=TrainingCallback,
+    skip={MultiTrainingCallback},
+)

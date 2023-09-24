@@ -3,7 +3,7 @@
 """Constants for PyKEEN."""
 
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Tuple
 
 import pystow
 import torch
@@ -22,6 +22,7 @@ from .typing import (
 __all__ = [
     "PYKEEN_HOME",
     "PYKEEN_DATASETS",
+    "PYKEEN_DATASETS_MODULE",
     "PYKEEN_BENCHMARKS",
     "PYKEEN_EXPERIMENTS",
     "PYKEEN_CHECKPOINTS",
@@ -37,6 +38,7 @@ PYKEEN_MODULE: pystow.Module = pystow.module("pykeen")
 PYKEEN_HOME: Path = PYKEEN_MODULE.base
 #: A subdirectory of the PyKEEN data folder for datasets, defaults to ``~/.data/pykeen/datasets``
 PYKEEN_DATASETS: Path = PYKEEN_MODULE.join("datasets")
+PYKEEN_DATASETS_MODULE: pystow.Module = PYKEEN_MODULE.module("datasets")
 #: A subdirectory of the PyKEEN data folder for benchmarks, defaults to ``~/.data/pykeen/benchmarks``
 PYKEEN_BENCHMARKS: Path = PYKEEN_MODULE.join("benchmarks")
 #: A subdirectory of the PyKEEN data folder for experiments, defaults to ``~/.data/pykeen/experiments``
@@ -64,3 +66,7 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
     LABEL_RELATION: COLUMN_RELATION,
     LABEL_TAIL: COLUMN_TAIL,
 }
+
+COLUMN_LABELS: Tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
+TARGET_TO_KEY_LABELS = {target: [c for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
+TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in cs] for target, cs in TARGET_TO_KEY_LABELS.items()}

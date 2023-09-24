@@ -9,7 +9,7 @@ as well as broadcasting and thus naturally support slicing and 1:n scoring.
 from __future__ import annotations
 
 import functools
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy
 import torch
@@ -17,13 +17,10 @@ from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
-from ..moves import irfft, rfft
-from ..typing import GaussianDistribution, Sign
+from ..typing import GaussianDistribution
 from ..utils import (
-    boxe_kg_arity_position_score,
     clamp_norm,
-    compute_box,
-    estimate_cost_of_sequence,
+    einsum,
     is_cudnn_error,
     make_ones_like,
     negative_norm,
@@ -34,9 +31,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "auto_sf_interaction",
-    "boxe_interaction",
-    "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
     "cp_interaction",
@@ -53,7 +47,6 @@ __all__ = [
     "pair_re_interaction",
     "proje_interaction",
     "rescal_interaction",
-    "rotate_interaction",
     "simple_interaction",
     "se_interaction",
     "transd_interaction",
@@ -65,19 +58,8 @@ __all__ = [
     "triple_re_interaction",
     "tucker_interaction",
     "um_interaction",
+    "linea_re_interaction",
 ]
-
-
-def _extract_sizes(
-    h: torch.Tensor,
-    r: torch.Tensor,
-    t: torch.Tensor,
-) -> Tuple[int, int, int, int, int]:
-    """Extract size dimensions from head/relation/tail representations."""
-    num_heads, num_relations, num_tails = [xx.shape[i] for i, xx in enumerate((h, r, t), start=1)]
-    d_e = h.shape[-1]
-    d_r = r.shape[-1]
-    return num_heads, num_relations, num_tails, d_e, d_r
 
 
 def _apply_optional_bn_to_tensor(
@@ -95,6 +77,7 @@ def _apply_optional_bn_to_tensor(
 
 
 def _add_cuda_warning(func):
+    # docstr-coverage: excused `wrapped`
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
@@ -110,34 +93,6 @@ def _add_cuda_warning(func):
             ) from e
 
     return wrapped
-
-
-def complex_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    r"""Evaluate the ComplEx interaction function.
-
-    .. math ::
-        Re(\langle h, r, conj(t) \rangle)
-
-    .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The complex head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The complex relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The complex tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # TODO: switch to einsum ?
-    # return torch.real(torch.einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
-    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
@@ -200,7 +155,7 @@ def conve_interaction(
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: batch_dims
-    x = torch.einsum("...d, ...d -> ...", x, t)
+    x = einsum("...d, ...d -> ...", x, t)
 
     # add bias term
     return x + t_bias
@@ -238,38 +193,18 @@ def convkb_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # decompose convolution for faster computation in 1-n case
-    num_filters = conv.weight.shape[0]
-    assert conv.weight.shape == (num_filters, 1, 1, 3)
-
-    # compute conv(stack(h, r, t))
-    # prepare input shapes for broadcasting
-    # (*batch_dims, 1, d)
-    h = h.unsqueeze(dim=-2)
-    r = r.unsqueeze(dim=-2)
-    t = t.unsqueeze(dim=-2)
-
-    # conv.weight.shape = (C_out, C_in, kernel_size[0], kernel_size[1])
-    # here, kernel_size = (1, 3), C_in = 1, C_out = num_filters
-    # -> conv_head, conv_rel, conv_tail shapes: (num_filters,)
-    # reshape to (..., f, 1)
-    conv_head, conv_rel, conv_tail, conv_bias = [
-        c.view(*make_ones_like(h.shape[:-2]), num_filters, 1) for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
-    ]
-
-    # convolve -> output.shape: (*, embedding_dim, num_filters)
-    h = conv_head @ h
-    r = conv_rel @ r
-    t = conv_tail @ t
-
-    x = tensor_sum(conv_bias, h, r, t)
+    # cat into shape (..., 1, d, 3)
+    x = torch.stack(torch.broadcast_tensors(h, r, t), dim=-1).unsqueeze(dim=-3)
+    s = x.shape
+    x = x.view(-1, *s[-3:])
+    x = conv(x)
+    x = x.view(*s[:-3], -1)
     x = activation(x)
 
     # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
     x = hidden_dropout(x)
 
     # Linear layer for final scores; use flattened representations, shape: (*batch_dims, d * f)
-    x = x.view(*x.shape[:-2], -1)
     x = linear(x)
     return x.squeeze(dim=-1)
 
@@ -343,18 +278,20 @@ def ermlp_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # same shape
-    *prefix, dim = h.shape
+    # shortcut for same shape
     if h.shape == r.shape and h.shape == t.shape:
-        return final(activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * dim)))).view(prefix)
-
-    # split, shape: (embedding_dim, hidden_dim)
-    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
-    bias = hidden.bias.view(*make_ones_like(prefix), -1)
-    h = torch.einsum("...i,ij->...j", h, head_to_hidden)
-    r = torch.einsum("...i,ij->...j", r, rel_to_hidden)
-    t = torch.einsum("...i,ij->...j", t, tail_to_hidden)
-    return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
+        x = hidden(torch.cat([h, r, t], dim=-1))
+    else:
+        # split weight into head-/relation-/tail-specific sub-matrices
+        *prefix, dim = h.shape
+        x = tensor_sum(
+            hidden.bias.view(*make_ones_like(prefix), -1),
+            *(
+                einsum("...i, ji -> ...j", xx, weight)
+                for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1))
+            ),
+        )
+    return final(activation(x)).squeeze(dim=-1)
 
 
 def ermlpe_interaction(
@@ -385,14 +322,14 @@ def ermlpe_interaction(
     x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
     # dot product
-    return (x * t).sum(dim=-1)
+    return einsum("...d,...d->...", x, t)
 
 
 def hole_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-) -> torch.FloatTensor:  # noqa: D102
+) -> torch.FloatTensor:
     """Evaluate the HolE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -431,14 +368,14 @@ def circular_correlation(
         The circular correlation between the vectors.
     """
     # Circular correlation of entity embeddings
-    a_fft = rfft(a, dim=-1)
-    b_fft = rfft(b, dim=-1)
+    a_fft = torch.fft.rfft(a, dim=-1)
+    b_fft = torch.fft.rfft(b, dim=-1)
     # complex conjugate
     a_fft = torch.conj(a_fft)
     # Hadamard product in frequency domain
     p_fft = a_fft * b_fft
     # inverse real FFT
-    return irfft(p_fft, n=a.shape[-1], dim=-1)
+    return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
 def kg2e_interaction(
@@ -521,9 +458,9 @@ def ntn_interaction(
         u
         * activation(
             tensor_sum(
-                torch.einsum("...d,...kde,...e->...k", h, w, t),  # shape: (*batch_dims, k)
-                torch.einsum("...d, ...kd->...k", h, vh),
-                torch.einsum("...d, ...kd->...k", t, vt),
+                einsum("...d,...kde,...e->...k", h, w, t),  # shape: (*batch_dims, k)
+                einsum("...d, ...kd->...k", h, vh),
+                einsum("...d, ...kd->...k", t, vt),
                 b,
             )
         )
@@ -567,14 +504,14 @@ def proje_interaction(
         The scores.
     """
     # global projections
-    h = torch.einsum("...d, d -> ...d", h, d_e)
-    r = torch.einsum("...d, d -> ...d", r, d_r)
+    h = einsum("...d, d -> ...d", h, d_e)
+    r = einsum("...d, d -> ...d", r, d_r)
 
     # combination, shape: (*batch_dims, d)
     x = activation(tensor_sum(h, r, b_c))
 
     # dot product with t
-    return torch.einsum("...d, ...d -> ...", x, t) + b_p
+    return einsum("...d, ...d -> ...", x, t) + b_p
 
 
 def rescal_interaction(
@@ -594,42 +531,7 @@ def rescal_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    return torch.einsum("...d,...de,...e->...", h, r, t)
-
-
-def rotate_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Evaluate the RotatE interaction function.
-
-    .. note::
-        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
-        # r expresses a rotation in complex plane.
-        # rotate head by relation (=Hadamard product in complex space)
-        h = h * r
-    else:
-        # rotate tail by inverse of relation
-        # The inverse rotation is expressed by the complex conjugate of r.
-        # The score is computed as the distance of the relation-rotated head to the tail.
-        # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
-        # |h * r - t| = |h - conj(r) * t|
-        t = t * torch.conj(r)
-
-    return negative_norm(h - t, p=2, power_norm=False)
+    return einsum("...d,...de,...e->...", h, r, t)
 
 
 def simple_interaction(
@@ -700,7 +602,7 @@ def se_interaction(
         The scores.
     """
     return negative_norm(
-        (r_h @ h.unsqueeze(dim=-1) - r_t @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
+        einsum("...rd,...d->...r", r_h, h) - einsum("...rd,...d->...r", r_t, t),
         p=p,
         power_norm=power_norm,
     )
@@ -859,12 +761,12 @@ def transh_interaction(
     return negative_norm_of_sum(
         # h projection to hyperplane
         h,
-        -(h * w_r).sum(dim=-1, keepdims=True) * w_r,
+        -einsum("...i, ...i, ...j -> ...j", h, w_r, w_r),
         # r
         d_r,
         # -t projection to hyperplane
         -t,
-        (t * w_r).sum(dim=-1, keepdims=True) * w_r,
+        einsum("...i, ...i, ...j -> ...j", t, w_r, w_r),
         p=p,
         power_norm=power_norm,
     )
@@ -897,8 +799,8 @@ def transr_interaction(
         The scores.
     """
     # project to relation specific subspace
-    h_bot = torch.einsum("...e, ...er -> ...r", h, m_r)
-    t_bot = torch.einsum("...e, ...er -> ...r", t, m_r)
+    h_bot = einsum("...e, ...er -> ...r", h, m_r)
+    t_bot = einsum("...e, ...er -> ...r", t, m_r)
     # ensure constraints
     h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.0)
     t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.0)
@@ -950,11 +852,11 @@ def tucker_interaction(
     """
     return (
         _apply_optional_bn_to_tensor(
-            x=torch.einsum(
+            x=einsum(
                 # x_1 contraction
                 "...ik,...i->...k",
                 _apply_optional_bn_to_tensor(
-                    x=torch.einsum(
+                    x=einsum(
                         # x_2 contraction
                         "ijk,...j->...ik",
                         core_tensor,
@@ -1083,53 +985,30 @@ def pair_re_interaction(
     )
 
 
-def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
-    # Rotate (=Hamilton product in quaternion space).
-    return torch.cat(
-        [
-            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
-            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
-            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
-            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
-        ],
-        dim=-1,
-    )
-
-
-def _split_quaternion(x: torch.FloatTensor) -> torch.FloatTensor:
-    return torch.chunk(x, chunks=4, dim=-1)
-
-
 def quat_e_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
+    table: torch.FloatTensor,
 ):
     """Evaluate the interaction function of QuatE for given embeddings.
 
     The embeddings have to be in a broadcastable shape.
 
-    .. note ::
-        dim has to be divisible by 4.
-
-    :param h: shape: (`*batch_dims`, dim)
+    :param h: shape: (`*batch_dims`, dim, 4)
         The head representations.
-    :param r: shape: (`*batch_dims`, dim)
+    :param r: shape: (`*batch_dims`, dim, 4)
         The head representations.
-    :param t: shape: (`*batch_dims`, dim)
+    :param t: shape: (`*batch_dims`, dim, 4)
         The tail representations.
+    :param table:
+        the quaternion multiplication table.
 
     :return: shape: (...)
         The scores.
     """
-    return -(
-        # Rotation in quaternion space
-        _rotate_quaternion(
-            _split_quaternion(h),
-            _split_quaternion(r),
-        )
-        * t
-    ).sum(dim=-1)
+    # TODO: this sign is in the official code, too, but why do we need it?
+    return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
 
 
 def cross_e_interaction(
@@ -1192,85 +1071,6 @@ def cross_e_interaction(
     return (x * t).sum(dim=-1)
 
 
-def boxe_interaction(
-    # head
-    h_pos: torch.FloatTensor,
-    h_bump: torch.FloatTensor,
-    # relation box: head
-    rh_base: torch.FloatTensor,
-    rh_delta: torch.FloatTensor,
-    rh_size: torch.FloatTensor,
-    # relation box: tail
-    rt_base: torch.FloatTensor,
-    rt_delta: torch.FloatTensor,
-    rt_size: torch.FloatTensor,
-    # tail
-    t_pos: torch.FloatTensor,
-    t_bump: torch.FloatTensor,
-    # power norm
-    tanh_map: bool = True,
-    p: int = 2,
-    power_norm: bool = False,
-) -> torch.FloatTensor:
-    """
-    Evalute the BoxE interaction function from [abboud2020]_.
-
-    Entities are described via position and bump. Relations are described as a pair of boxes, where each box is
-    parametrized as triple (base, delta, size), where # TODO
-
-    .. note ::
-        this interaction relies on Abboud's point-to-box distance
-        :func:`pykeen.utils.point_to_box_distance`.
-
-    :param h_pos: shape: (`*batch_dims`, d)
-        the head entity position
-    :param h_bump: shape: (`*batch_dims`, d)
-        the head entity bump
-
-    :param rh_base: shape: (`*batch_dims`, d)
-        the relation-specific head box base position
-    :param rh_delta: shape: (`*batch_dims`, d)
-        # the relation-specific head box base shape (normalized to have a volume of 1):
-    :param rh_size: shape: (`*batch_dims`, 1)
-        the relation-specific head box size (a scalar)
-    :param rt_base: shape: (`*batch_dims`, d)
-        the relation-specific tail box base position
-    :param rt_delta: shape: (`*batch_dims`, d)
-        # the relation-specific tail box base shape (normalized to have a volume of 1):
-    :param rt_size: shape: (`*batch_dims`, d)
-        the relation-specific tail box size
-
-    :param t_pos: shape: (`*batch_dims`, d)
-        the tail entity position
-    :param t_bump: shape: (`*batch_dims`, d)
-        the tail entity bump
-
-    :param tanh_map:
-        whether to apply the tanh mapping
-    :param p:
-        the order of the norm to apply
-    :param power_norm:
-        whether to use the p-th power of the p-norm instead
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return sum(
-        boxe_kg_arity_position_score(
-            entity_pos=entity_pos,
-            other_entity_bump=other_entity_pos,
-            relation_box=compute_box(base=base, delta=delta, size=size),
-            tanh_map=tanh_map,
-            p=p,
-            power_norm=power_norm,
-        )
-        for entity_pos, other_entity_pos, base, delta, size in (
-            (h_pos, t_bump, rh_base, rh_delta, rh_size),
-            (t_pos, h_bump, rt_base, rt_delta, rt_size),
-        )
-    )
-
-
 def cp_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -1308,13 +1108,8 @@ def triple_re_interaction(
 ) -> torch.FloatTensor:
     r"""Evaluate the TripleRE interaction function.
 
-    .. math ::
-        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
-
-    .. note ::
-
-        For equivalence to the paper version, `h` and `t` should be normalized to unit
-        Euclidean length, and `p` and `power_norm` be kept at their default values.
+    .. seealso ::
+        :class:`pykeen.nn.modules.TripleREInteraction` for the stateful interaction module
 
     :param h: shape: (`*batch_dims`, rank, dim)
         The head representations.
@@ -1352,54 +1147,6 @@ def triple_re_interaction(
         p=p,
         power_norm=power_norm,
     )
-
-
-def auto_sf_interaction(
-    h: Sequence[torch.FloatTensor],
-    r: Sequence[torch.FloatTensor],
-    t: Sequence[torch.FloatTensor],
-    coefficients: Sequence[Tuple[int, int, int, Sign]],
-) -> torch.FloatTensor:
-    r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
-
-    This interaction function is a parametrized way to express bi-linear models
-    with block structure. It divides the entity and relation representations into blocks,
-    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
-    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
-    and $s \in {-1, 1}$ is the sign.
-
-    The interaction function is then given as
-
-    .. math::
-        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
-
-    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
-
-    This parametrization allows to express several well-known interaction functions, e.g.
-
-    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
-    - :class:`pykeen.models.ComplEx`: two blocks,
-      $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
-    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
-
-    :param h: each shape: (`*batch_dims`, rank, dim)
-        The list of head representations.
-    :param r: each shape: (`*batch_dims`, rank, dim)
-        The list of relation representations.
-    :param t: each shape: (`*batch_dims`, rank, dim)
-        The list of tail representations.
-    :param coefficients:
-        the coefficients, in order:
-
-        1. head_representation_index,
-        2. relation_representation_index,
-        3. tail_representation_index,
-        4. sign
-
-    :return:
-        The scores
-    """
-    return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
 
 def transformer_interaction(
@@ -1483,4 +1230,45 @@ def multilinear_tucker_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    return torch.einsum("ijk,...i,...j,...k->...", core_tensor, h, r, t)
+    return einsum("ijk,...i,...j,...k->...", core_tensor, h, r, t)
+
+
+def linea_re_interaction(
+    # head
+    h: torch.FloatTensor,
+    # relation
+    r_head: torch.FloatTensor,
+    r_mid: torch.FloatTensor,
+    r_tail: torch.FloatTensor,
+    # tail
+    t: torch.FloatTensor,
+    # extension: negative (power) norm
+    p: int = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate the LineaRE interaction function.
+
+    .. note ::
+        the interaction is equivalent to TripleRE interaction without the `u` term.
+
+    :param h: shape: (`*batch_dims`, rank, dim)
+        The head representations.
+    :param r_head: shape: (`*batch_dims`, rank, dim)
+        The relation-specific head multiplicator representations.
+    :param r_mid: shape: (`*batch_dims`, rank, dim)
+        The relation representations.
+    :param r_tail: shape: (`*batch_dims`, rank, dim)
+        The relation-specific tail multiplicator representations.
+    :param t: shape: (`*batch_dims`, rank, dim)
+        The tail representations.
+    :param p:
+        The p for the norm. cf. :func:`negative_norm_of_sum`.
+    :param power_norm:
+        Whether to return the powered norm. cf. :func:`negative_norm_of_sum`.
+
+    :return: shape: batch_dims
+        The scores.
+    """
+    return triple_re_interaction(
+        h=h, r_head=r_head, r_mid=r_mid, r_tail=r_tail, t=t, u=None, p=p, power_norm=power_norm
+    )

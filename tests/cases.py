@@ -10,13 +10,15 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from collections import Counter
+from collections import ChainMap, Counter
 from typing import (
     Any,
+    Callable,
     ClassVar,
     Collection,
     Dict,
     Iterable,
+    List,
     Mapping,
     MutableMapping,
     Optional,
@@ -27,27 +29,34 @@ from typing import (
     Union,
 )
 from unittest.case import SkipTest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy
 import numpy.random
+import pandas
 import pytest
 import torch
 import torch.utils.data
 import unittest_templates
+from class_resolver import HintOrType
 from click.testing import CliRunner, Result
 from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
+import pykeen.evaluation.evaluation_loop
 import pykeen.models
+import pykeen.nn.combination
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.representation
+import pykeen.nn.text
 import pykeen.nn.weighting
+import pykeen.predict
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
+from pykeen.datasets.ea.combination import GraphPairCombinator
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
@@ -60,24 +69,31 @@ from pykeen.metrics.ranking import (
     RankBasedMetric,
     generate_num_candidates_and_ranks,
 )
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
+from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.models.nbase import ERModel
-from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.models.meta.filtered import CooccurrenceFilteredModel
+from pykeen.models.mocks import FixedModel
+from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction
 from pykeen.nn.representation import Representation
+from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
+from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.trackers import ResultTracker
-from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
+from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingCallback, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
 from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
 from pykeen.typing import (
+    EA_SIDE_LEFT,
+    EA_SIDE_RIGHT,
     LABEL_HEAD,
     LABEL_TAIL,
+    RANK_REALISTIC,
+    SIDE_BOTH,
     TRAINING,
     HeadRepresentation,
     InductiveMode,
@@ -85,6 +101,7 @@ from pykeen.typing import (
     MappedTriples,
     RelationRepresentation,
     TailRepresentation,
+    Target,
 )
 from pykeen.utils import (
     all_in_bounds,
@@ -97,8 +114,8 @@ from pykeen.utils import (
     unpack_singletons,
 )
 from tests.constants import EPSILON
-from tests.mocks import CustomRepresentation
-from tests.utils import rand
+from tests.mocks import MockEvaluator
+from tests.utils import needs_packages, rand
 
 T = TypeVar("T")
 
@@ -410,6 +427,10 @@ class InteractionTestCase(
     num_relations: int = 5
     num_entities: int = 7
     dtype: torch.dtype = torch.get_default_dtype()
+    # the relative tolerance for checking close results, cf. torch.allclose
+    rtol: float = 1.0e-5
+    # the absolute tolerance for checking close results, cf. torch.allclose
+    atol: float = 1.0e-8
 
     shape_kwargs = dict()
 
@@ -636,7 +657,13 @@ class InteractionTestCase(
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)
-            assert torch.allclose(scores_f_manual, scores_f), f"Diff: {scores_f_manual - scores_f}"
+            if not torch.allclose(scores_f, scores_f_manual, rtol=self.rtol, atol=self.atol):
+                # allclose checks: | input - other | < atol + rtol * |other|
+                a_delta = (scores_f_manual - scores_f).abs()
+                r_delta = (scores_f_manual - scores_f).abs() / scores_f.abs().clamp_min(1.0e-08)
+                raise AssertionError(
+                    f"Abs. Diff: {a_delta.item()} (tol.: {self.atol}); Rel. Diff: {r_delta.item()} (tol. {self.rtol})",
+                )
 
     @abstractmethod
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
@@ -728,83 +755,93 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     """A test case for quickly defining common tests for regularizers."""
 
     #: The batch size
-    batch_size: int
-    #: The triples factory
-    triples_factory: TriplesFactory
-    #: Class of regularizer to test
-    cls: ClassVar[Type[Regularizer]]
-    #: The constructor parameters to pass to the regularizer
-    kwargs: ClassVar[Optional[Dict[str, Any]]] = None
-    #: The regularizer instance, initialized in setUp
-    instance: Regularizer
-    #: A positive batch
-    positive_batch: MappedTriples
+    batch_size: int = 16
     #: The device
     device: torch.device
 
-    def setUp(self) -> None:
-        """Set up the test case with a triples factory and model."""
+    def post_instantiation_hook(self) -> None:
+        """Move instance to device."""
         self.device = resolve_device()
-        self.triples_factory = Nations().training
-        self.batch_size = 16
-        self.positive_batch = self.triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
-        super().setUp()
         # move test instance to device
         self.instance = self.instance.to(self.device)
 
     def test_model(self) -> None:
         """Test whether the regularizer can be passed to a model."""
+        triples_factory = Nations().training
+        positive_batch = triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
+
         # Use RESCAL as it regularizes multiple tensors of different shape.
         model = RESCAL(
-            triples_factory=self.triples_factory,
+            triples_factory=triples_factory,
             regularizer=self.instance,
         ).to(self.device)
 
-        # Check if regularizer is stored correctly.
-        self.assertEqual(model.regularizer, self.instance)
+        # verify that the regularizer is stored for both, entity and relation representations
+        for r in (model.entity_representations, model.relation_representations):
+            assert len(r) == 1
+            self.assertEqual(r[0].regularizer, self.instance)
 
         # Forward pass (should update regularizer)
-        model.score_hrt(hrt_batch=self.positive_batch)
+        model.score_hrt(hrt_batch=positive_batch)
 
         # Call post_parameter_update (should reset regularizer)
         model.post_parameter_update()
 
         # Check if regularization term is reset
-        self.assertEqual(0.0, model.regularizer.term)
+        self.assertEqual(0.0, self.instance.term)
+
+    def _check_reset(self, instance: Optional[Regularizer] = None):
+        """Verify that the regularizer is in resetted state."""
+        if instance is None:
+            instance = self.instance
+        # regularization term should be zero
+        self.assertEqual(0.0, instance.regularization_term.item())
+        # updated should be set to false
+        self.assertFalse(instance.updated)
 
     def test_reset(self) -> None:
         """Test method `reset`."""
-        # Call method
+        # call method
         self.instance.reset()
+        self._check_reset()
 
-        self.assertEqual(0.0, self.instance.regularization_term)
+    def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:
+        """Generate input for update."""
+        # generate random tensors
+        return (
+            rand(self.batch_size, 10, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+            rand(self.batch_size, 20, generator=self.generator, device=self.device).requires_grad_(requires_grad),
+        )
+
+    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+        """Calculate the expected updated regularization term."""
+        exp_penalties = torch.stack([self._expected_penalty(x) for x in inputs])
+        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
+        assert expected_term.shape == (1,)
+        return expected_term
 
     def test_update(self) -> None:
         """Test method `update`."""
-        # Generate random tensors
-        a = rand(self.batch_size, 10, generator=self.generator, device=self.device)
-        b = rand(self.batch_size, 20, generator=self.generator, device=self.device)
+        # generate inputs
+        inputs = self._generate_update_input()
 
-        # Call update
-        self.instance.update(a, b)
+        # call update
+        self.instance.update(*inputs)
 
         # check shape
         self.assertEqual((1,), self.instance.term.shape)
 
-        # compute expected term
-        exp_penalties = torch.stack([self._expected_penalty(x) for x in (a, b)])
-        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
-        assert expected_term.shape == (1,)
-
-        self.assertAlmostEqual(self.instance.term.item(), expected_term.item())
+        # check result
+        expected_term = self._expected_updated_term(inputs=inputs)
+        self.assertAlmostEqual(self.instance.regularization_term.item(), expected_term.item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
-        # Generate random tensor
+        # generate single random tensor
         x = rand(self.batch_size, 10, generator=self.generator, device=self.device)
 
         # calculate penalty
-        penalty = self.instance.forward(x=x)
+        penalty = self.instance(x=x)
 
         # check shape
         assert penalty.numel() == 1
@@ -823,12 +860,36 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_pop_regularization_term(self):
         """Verify popping a regularization term."""
         # update term
-        x = torch.rand(self.batch_size, 10, generator=self.generator, device=self.device, requires_grad=True)
-        self.instance.update(x)
+        inputs = self._generate_update_input(requires_grad=True)
+        self.instance.update(*inputs)
 
         # check that the expected term is returned
-        exp = (self.instance.weight * self.instance.regularization_term).item()
+        exp = (self.instance.weight * self._expected_updated_term(inputs)).item()
         self.assertEqual(exp, self.instance.pop_regularization_term().item())
+
+        # check that the regularizer is now reset
+        self._check_reset()
+
+    def test_apply_only_once(self):
+        """Test apply-only-once support."""
+        # create another instance with apply_only_once enabled
+        instance = self.cls(**ChainMap(dict(apply_only_once=True), self.instance_kwargs)).to(self.device)
+
+        # test initial state
+        self._check_reset(instance=instance)
+
+        # after first update, should change the term
+        first_tensors = self._generate_update_input()
+        instance.update(*first_tensors)
+        self.assertTrue(instance.updated)
+        self.assertNotEqual(0.0, instance.regularization_term.item())
+        term = instance.regularization_term.clone()
+
+        # after second update, no change should happen
+        second_tensors = self._generate_update_input()
+        instance.update(*second_tensors)
+        self.assertTrue(instance.updated)
+        self.assertEqual(term, instance.regularization_term)
 
 
 class LpRegularizerTest(RegularizerTestCase):
@@ -961,78 +1022,82 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         with tempfile.TemporaryDirectory() as temp_directory:
             torch.save(self.instance, os.path.join(temp_directory, "model.pickle"))
 
-    def test_score_hrt(self) -> None:
-        """Test the model's ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
+    def _test_score(
+        self, score: Callable, columns: Union[Sequence[int], slice], shape: Tuple[int, ...], **kwargs
+    ) -> None:
+        """Test score functions."""
+        batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
         try:
-            scores = self.instance.score_hrt(batch, mode=self.mode)
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        self.assertEqual(scores.shape, (self.batch_size, 1))
-        self._check_scores(batch, scores)
-
-    def test_score_t(self) -> None:
-        """Test the model's ``score_t()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, :2].to(self.instance.device)
-        # assert batch comprises (head, relation) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_relations).all()
-        try:
-            scores = self.instance.score_t(batch, mode=self.mode)
+            scores = score(batch, mode=self.mode, **kwargs)
+        except ValueError as error:
+            raise SkipTest() from error
         except NotImplementedError:
-            self.fail(msg="score_t not yet implemented")
+            self.fail(msg=f"{score} not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
-        assert scores.shape == (self.batch_size, self.instance.num_entities)
-        self._check_scores(batch, scores)
-
-    def test_score_r(self) -> None:
-        """Test the model's ``score_r()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
-        # assert batch comprises (head, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch < self.factory.num_entities).all()
-        try:
-            scores = self.instance.score_r(batch, mode=self.mode)
-        except NotImplementedError:
-            self.fail(msg="score_r not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        if self.create_inverse_triples:
+        if score is self.instance.score_r and self.create_inverse_triples:
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
-            assert scores.shape == (self.batch_size, self.instance.num_relations)
+            self.assertTupleEqual(tuple(scores.shape), shape)
         self._check_scores(batch, scores)
+        # clear buffers for message passing models
+        self.instance.post_parameter_update()
+
+    def _test_score_multi(self, name: str, max_id: int, **kwargs):
+        """Test score functions with multi scoring."""
+        k = max_id // 2
+        for ids in (
+            torch.randperm(max_id)[:k],
+            torch.randint(max_id, size=(self.batch_size, k)),
+        ):
+            with self.subTest(shape=ids.shape):
+                self._test_score(shape=(self.batch_size, k), **kwargs, **{name: ids.to(device=self.instance.device)})
+
+    def test_score_hrt(self) -> None:
+        """Test the model's ``score_hrt()`` function."""
+        self._test_score(score=self.instance.score_hrt, columns=slice(None), shape=(self.batch_size, 1))
+
+    def test_score_t(self) -> None:
+        """Test the model's ``score_t()`` function."""
+        self._test_score(
+            score=self.instance.score_t, columns=slice(0, 2), shape=(self.batch_size, self.instance.num_entities)
+        )
+
+    def test_score_t_multi(self) -> None:
+        """Test the model's ``score_t()`` function with custom tail candidates."""
+        self._test_score_multi(
+            name="tails", max_id=self.factory.num_entities, score=self.instance.score_t, columns=slice(0, 2)
+        )
+
+    def test_score_r(self) -> None:
+        """Test the model's ``score_r()`` function."""
+        self._test_score(
+            score=self.instance.score_r,
+            columns=[0, 2],
+            shape=(self.batch_size, self.instance.num_relations),
+        )
+
+    def test_score_r_multi(self) -> None:
+        """Test the model's ``score_r()`` function with custom relation candidates."""
+        self._test_score_multi(
+            name="relations", max_id=self.factory.num_relations, score=self.instance.score_r, columns=[0, 2]
+        )
 
     def test_score_h(self) -> None:
         """Test the model's ``score_h()`` function."""
-        batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_relations).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
-        try:
-            scores = self.instance.score_h(batch, mode=self.mode)
-        except NotImplementedError:
-            self.fail(msg="score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-        assert scores.shape == (self.batch_size, self.instance.num_entities)
-        self._check_scores(batch, scores)
+        self._test_score(
+            score=self.instance.score_h, columns=slice(1, None), shape=(self.batch_size, self.instance.num_entities)
+        )
+
+    def test_score_h_multi(self) -> None:
+        """Test the model's ``score_h()`` function with custom head candidates."""
+        self._test_score_multi(
+            name="heads", max_id=self.factory.num_entities, score=self.instance.score_h, columns=slice(1, None)
+        )
 
     @pytest.mark.slow
     def test_train_slcwa(self) -> None:
@@ -1101,15 +1166,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, "test.pt")
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
     @property
     def _cli_extras(self):
@@ -1185,7 +1245,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if issubclass(self.cls, pykeen.models.RGCN) or self.cls is pykeen.models.ERModel:
+        if (
+            issubclass(self.cls, (pykeen.models.RGCN, pykeen.models.CooccurrenceFilteredModel))
+            or self.cls is pykeen.models.ERModel
+        ):
             self.skipTest(f"Cannot choose interaction via CLI for {self.cls}.")
         runner = CliRunner()
         cli = build_cli_from_cls(self.cls)
@@ -1257,77 +1320,40 @@ Traceback
     def _check_constraints(self):
         """Check model constraints."""
 
-    def test_score_h_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+    def _test_score_equality(self, columns: Union[slice, List[int]], name: str) -> None:
+        """Migration tests for non-ERModel models testing for consistent optimized score implementations."""
         if isinstance(self.instance, ERModel):
             raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
+        if isinstance(self.instance, CooccurrenceFilteredModel):
+            raise SkipTest("CooccurrenceFilteredModel fulfils this if its base model fulfils it.")
+        batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
         self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_relations).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores_h = self.instance.score_h(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_h(batch)
+            scores = getattr(self.instance, name)(batch)
+            scores_super = getattr(super(self.instance.__class__, self.instance), name)(batch)
         except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
+            self.fail(msg=f"{name} not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
 
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_h, scores_hrt, atol=1e-06)
+        self.assertIsNotNone(scores)
+        self.assertIsNotNone(scores_super)
+        assert torch.allclose(scores, scores_super, atol=1e-06)
+
+    def test_score_h_with_score_hrt_equality(self) -> None:
+        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+        self._test_score_equality(columns=slice(1, None), name="score_h")
 
     def test_score_r_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
-        if isinstance(self.instance, ERModel):
-            raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
-        self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
-        try:
-            scores_r = self.instance.score_r(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_r(batch)
-        except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_r, scores_hrt, atol=1e-06)
+        self._test_score_equality(columns=[0, 2], name="score_r")
 
     def test_score_t_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
-        if isinstance(self.instance, ERModel):
-            raise SkipTest("ERModel fulfils this by design.")
-        batch = self.factory.mapped_triples[: self.batch_size, :-1].to(self.instance.device)
-        self.instance.eval()
-        # assert batch comprises (relation, tail) pairs
-        assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_entities).all()
-        assert (batch[:, 1] < self.factory.num_relations).all()
-        try:
-            scores_t = self.instance.score_t(batch)
-            scores_hrt = super(self.instance.__class__, self.instance).score_t(batch)
-        except NotImplementedError:
-            self.fail(msg="Score_h not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-
-        self.assertIsNotNone(scores_hrt)
-        assert torch.allclose(scores_t, scores_hrt, atol=1e-06)
+        self._test_score_equality(columns=slice(2), name="score_t")
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
@@ -1337,23 +1363,6 @@ Traceback
             except TypeError as error:
                 assert error.args == ("'NoneType' object is not callable",)
             mock_method.assert_called_once()
-
-    def test_custom_representations(self):
-        """Tests whether we can provide custom representations."""
-        if isinstance(self.instance, EntityRelationEmbeddingModel):
-            old_embeddings = self.instance.relation_embeddings
-            self.instance.relation_embeddings = CustomRepresentation(
-                num_entities=self.factory.num_relations,
-                shape=old_embeddings.shape,
-            )
-            # call some functions
-            self.instance.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.instance.relation_embeddings = old_embeddings
-        else:
-            self.skipTest(f"Not testing custom representations for model: {self.instance.__class__.__name__}")
 
 
 class DistanceModelTestCase(ModelTestCase):
@@ -1461,6 +1470,12 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     batch_size: ClassVar[int] = 2
     num_negatives: ClassVar[int] = 3
+    max_id: ClassVar[int] = 7
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs.update(dict(max_id=self.max_id))
+        return kwargs
 
     def _check_result(self, x: torch.FloatTensor, prefix_shape: Tuple[int, ...]):
         """Check the result."""
@@ -1474,13 +1489,17 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     def _test_forward(self, indices: Optional[torch.LongTensor]):
         """Test forward method."""
-        representations = self.instance.forward_unique(indices=indices)
+        representations = self.instance(indices=indices)
         prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
         self._check_result(x=representations, prefix_shape=prefix_shape)
 
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
+
+    def test_max_id(self):
+        """Test maximum id."""
+        self.assertEqual(self.max_id, self.instance.max_id)
 
     def test_no_indices(self):
         """Test without indices."""
@@ -1511,6 +1530,50 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         # use more samples to make sure that enough values can be dropped
         a = torch.stack([dropout_instance(indices) for _ in range(20)])
         assert not (a[0:1] == a).all()
+
+    def test_str(self):
+        """Test generating the string representation."""
+        # this implicitly tests extra_repr / iter_extra_repr
+        assert isinstance(str(self), str)
+
+
+class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
+    """Tests for representations requiring triples factories."""
+
+    num_entities: ClassVar[int]
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
+    create_inverse_triples: bool = False
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.num_entities = self.max_id
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = generation.generate_triples_factory(
+            num_entities=self.max_id,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+            create_inverse_triples=self.create_inverse_triples,
+        )
+        return kwargs
+
+
+@needs_packages("torch_geometric")
+class MessagePassingRepresentationTests(TriplesFactoryRepresentationTestCase):
+    """Tests for message passing representations."""
+
+    def test_consistency_k_hop(self):
+        """Test consistency of results between using only k-hop and using the full graph."""
+        # select random indices
+        indices = torch.randint(self.num_entities, size=(self.num_entities // 2,), generator=self.generator)
+        assert isinstance(self.instance, pykeen.nn.pyg.MessagePassingRepresentation)
+        # forward pass with full graph
+        self.instance.restrict_k_hop = False
+        x_full = self.instance(indices=indices)
+        # forward pass with restricted graph
+        self.instance.restrict_k_hop = True
+        x_restrict = self.instance(indices=indices)
+        # verify the results are similar
+        assert torch.allclose(x_full, x_restrict)
 
 
 class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
@@ -1562,16 +1625,18 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
 class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
     """Tests for relation-specific weight decomposition message passing classes."""
 
-    #: The input dimension
-    input_dim: int = 3
+    #: the input dimension
+    input_dim: int = 8
+    #: the output dimension
+    output_dim: int = 4
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        self.output_dim = self.input_dim
         self.factory = Nations().training
         self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
-        self.x = torch.rand(self.factory.num_entities, self.input_dim)
+        self.x = torch.rand(self.factory.num_entities, self.input_dim, requires_grad=True)
         kwargs["input_dim"] = self.input_dim
+        kwargs["output_dim"] = self.output_dim
         kwargs["num_relations"] = self.factory.num_relations
         return kwargs
 
@@ -1587,36 +1652,66 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
             )
             assert y.shape == (self.x.shape[0], self.output_dim)
 
+    def prepare_adjacency(self, horizontal: bool) -> torch.Tensor:
+        """
+        Prepare adjacency matrix for the given stacking direction.
 
-class BasesDecompositionTestCase(DecompositionTestCase):
-    """Tests for bases Decomposition."""
+        :param horizontal:
+            whether to stack horizontally or vertically
 
-    cls = pykeen.nn.message_passing.BasesDecomposition
+        :return:
+            the adjacency matrix
+        """
+        return adjacency_tensor_to_stacked_matrix(
+            num_relations=self.factory.num_relations,
+            num_entities=self.factory.num_entities,
+            source=self.source,
+            target=self.target,
+            edge_type=self.edge_type,
+            horizontal=horizontal,
+        )
 
+    def check_output(self, x: torch.Tensor):
+        """Check the output tensor."""
+        assert torch.is_tensor(x)
+        assert x.shape == (self.factory.num_entities, self.output_dim)
+        assert x.requires_grad
 
-class LiteralTestCase(InteractionTestCase):
-    """Tests for literal ineractions."""
+    def test_horizontal(self):
+        """Test processing of horizontally stacked matrix."""
+        adj = self.prepare_adjacency(horizontal=True)
+        x = self.instance.forward_horizontally_stacked(x=self.x, adj=adj)
+        self.check_output(x=x)
 
-    cls = LiteralInteraction
-
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h_proj = self.instance.combination(*h)
-        t_proj = self.instance.combination(*t)
-        return self.instance.base(h_proj, r, t_proj)
+    def test_vertical(self):
+        """Test processing of vertically stacked matrix."""
+        adj = self.prepare_adjacency(horizontal=False)
+        x = self.instance.forward_vertically_stacked(x=self.x, adj=adj)
+        self.check_output(x=x)
 
 
 class InitializerTestCase(unittest.TestCase):
     """A test case for initializers."""
 
+    #: the number of entities
+    num_entities: ClassVar[int] = 33
+
     #: the shape of the tensor to initialize
-    shape: Tuple[int, ...] = (3, 4)
+    shape: ClassVar[Tuple[int, ...]] = (3,)
 
     #: to be initialized / set in subclass
     initializer: Initializer
 
+    #: the interaction to use for testing a model
+    interaction: ClassVar[HintOrType[Interaction]] = DistMultInteraction
+    dtype: ClassVar[torch.dtype] = torch.get_default_dtype()
+
     def test_initialization(self):
         """Test whether the initializer returns a modified tensor."""
-        x = torch.rand(*self.shape)
+        shape = (self.num_entities, *self.shape)
+        if self.dtype.is_complex:
+            shape = shape + (2,)
+        x = torch.rand(size=shape)
         # initializers *may* work in-place => clone
         y = self.initializer(x.clone())
         assert not (x == y).all()
@@ -1628,21 +1723,17 @@ class InitializerTestCase(unittest.TestCase):
 
     def test_model(self):
         """Test whether initializer can be used for a model."""
-        triples_factory = generation.generate_triples_factory(
-            num_entities=self.shape[0],
-        )
-        model = pykeen.models.TransE(
+        triples_factory = generation.generate_triples_factory(num_entities=self.num_entities)
+        # actual number may be different...
+        self.num_entities = triples_factory.num_entities
+        model = pykeen.models.ERModel(
             triples_factory=triples_factory,
-            embedding_dim=self.shape[1],
-            entity_initializer=self.initializer,
+            interaction=self.interaction,
+            entity_representations_kwargs=dict(shape=self.shape, initializer=self.initializer, dtype=self.dtype),
+            relation_representations_kwargs=dict(shape=self.shape),
             random_seed=0,
         ).to(resolve_device())
         model.reset_parameters_()
-
-        with tempfile.TemporaryDirectory() as d:
-            path = pathlib.Path(d) / "test.pkl"
-            model.save_state(path)
-            model.load_state(path)
 
 
 class PredictBaseTestCase(unittest.TestCase):
@@ -1821,9 +1912,8 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
             dense_positive_mask=mask,
         )
 
-    def test_finalize(self) -> None:
-        """Test the finalize() function."""
-        # Process one batch
+    def _process_batches(self):
+        """Process one batch per side."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
         for target in (LABEL_HEAD, LABEL_TAIL):
@@ -1834,6 +1924,12 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
                 scores=scores,
                 dense_positive_mask=mask,
             )
+        return hrt_batch, scores, mask
+
+    def test_finalize(self) -> None:
+        """Test the finalize() function."""
+        # Process one batch
+        hrt_batch, scores, mask = self._process_batches()
 
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)
@@ -1958,19 +2054,45 @@ class NodePieceTestCase(RepresentationTestCase):
     """General test case for node piece representations."""
 
     cls = pykeen.nn.node_piece.NodePieceRepresentation
-    num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
-            num_entities=self.num_entities,
+            num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
             create_inverse_triples=False,
         )
+        # inferred from triples factory
+        kwargs.pop("max_id")
         return kwargs
+
+    def test_estimate_diversity(self):
+        """Test estimating diversity."""
+        diversity = self.instance.estimate_diversity()
+        assert len(diversity.uniques_per_representation) == len(self.instance.base)
+        assert 0.0 <= diversity.uniques_total <= 1.0
+
+
+class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.EvaluationLoop]):
+    """Tests for evaluation loops."""
+
+    batch_size: int = 2
+    factory: CoreTriplesFactory
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.factory = Nations().training
+        kwargs["model"] = FixedModel(triples_factory=self.factory)
+        return kwargs
+
+    @torch.inference_mode()
+    def test_process_batch(self):
+        """Test processing a single batch."""
+        batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
+        self.instance.process_batch(batch=batch)
 
 
 class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
@@ -2284,3 +2406,303 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
             ),
             self.factory.num_triples,
         )
+
+
+class TrainingCallbackTestCase(unittest_templates.GenericTestCase[TrainingCallback]):
+    """Base test case for training callbacks."""
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        self.dataset = Nations()
+        return kwargs
+
+    def test_pipeline(self):
+        """Test running a small pipeline with the provided callback."""
+        pipeline(
+            dataset=self.dataset,
+            model="distmult",
+            training_kwargs=dict(
+                callbacks=self.instance,
+            ),
+        )
+
+
+class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCombinator]):
+    """Base test for graph pair combination methods."""
+
+    def _add_labels(self, tf: CoreTriplesFactory) -> TriplesFactory:
+        """Add artificial labels to a triples factory."""
+        entity_to_id = {f"e_{i}": i for i in range(tf.num_entities)}
+        relation_to_id = {f"r_{i}": i for i in range(tf.num_relations)}
+        return TriplesFactory(
+            mapped_triples=tf.mapped_triples, entity_to_id=entity_to_id, relation_to_id=relation_to_id
+        )
+
+    def _test_combination(self, labels: bool):
+        # generate random triples factories
+        left, right = [generation.generate_triples_factory(random_state=random_state) for random_state in (0, 1)]
+        # generate random alignment
+        left_idx, right_idx = torch.stack([torch.arange(left.num_entities), torch.randperm(left.num_entities)])[
+            : left.num_entities // 2
+        ].numpy()
+        # add label information if necessary
+        if labels:
+            left, right = [self._add_labels(tf) for tf in (left, right)]
+            left_idx = [left.entity_id_to_label[i] for i in left_idx]
+            right_idx = [right.entity_id_to_label[i] for i in right_idx]
+        # prepare alignment data frame
+        alignment = pandas.DataFrame(data={EA_SIDE_LEFT: left_idx, EA_SIDE_RIGHT: right_idx})
+        # call
+        tf_both, alignment_t = self.instance(left=left, right=right, alignment=alignment)
+        # check
+        assert type(tf_both) is type(left)
+        assert alignment_t.ndim == 2
+        assert alignment_t.shape[0] == 2
+        assert alignment_t.shape[1] <= len(alignment)
+
+    def test_combination_label(self):
+        """Test combination with labels."""
+        self._test_combination(labels=True)
+
+    def test_combination_id(self):
+        """Test combination without labels."""
+        self._test_combination(labels=False)
+
+    def test_manual(self):
+        """
+        Smoke-test on a manual example.
+
+        cf. https://github.com/pykeen/pykeen/pull/893#discussion_r861553903
+        """
+        left_tf = TriplesFactory.from_labeled_triples(
+            pandas.DataFrame(
+                [
+                    ["la", "0", "lb"],
+                    ["lb", "0", "lc"],
+                    ["la", "1", "ld"],
+                    ["le", "1", "lg"],
+                    ["lh", "1", "lg"],
+                ],
+            ).values
+        )
+        right_tf = TriplesFactory.from_labeled_triples(
+            pandas.DataFrame(
+                [
+                    ["ra", "2", "rb"],
+                    ["ra", "2", "rc"],
+                    ["rc", "3", "rd"],
+                    ["re", "3", "rg"],
+                    ["rh", "3", "rg"],
+                ],
+            ).values
+        )
+        test_links = pandas.DataFrame(
+            [
+                ["ld", "rd"],
+                ["le", "re"],
+                ["lg", "rg"],
+                ["lh", "rh"],
+            ],
+            columns=[EA_SIDE_LEFT, EA_SIDE_RIGHT],
+        )
+        combined_tf, alignment_t = self.instance(left=left_tf, right=right_tf, alignment=test_links)
+        self._verify_manual(combined_tf=combined_tf)
+
+    @abstractmethod
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):
+        """Verify the result of the combination of the manual example."""
+
+
+class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
+    """Base test for early stopper."""
+
+    cls = EarlyStopper
+
+    #: The window size used by the early stopper
+    patience: int = 2
+    #: The mock losses the mock evaluator will return
+    mock_losses: List[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
+    #: The (zeroed) index  - 1 at which stopping will occur
+    stop_constant: int = 4
+    #: The minimum improvement
+    delta: float = 0.0
+    #: The best results
+    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        nations = Nations()
+        kwargs.update(
+            dict(
+                evaluator=MockEvaluator(
+                    key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC),
+                    values=self.mock_losses,
+                    # Set automatic_memory_optimization to false for tests
+                    automatic_memory_optimization=False,
+                ),
+                model=FixedModel(triples_factory=nations.training),
+                training_triples_factory=nations.training,
+                evaluation_triples_factory=nations.validation,
+                patience=self.patience,
+                relative_delta=self.delta,
+                larger_is_better=False,
+                best_model_path=pathlib.Path(tempfile.gettempdir(), "test-best-model-weights.pt"),
+            )
+        )
+        return kwargs
+
+    def test_initialization(self):
+        """Test warm-up phase."""
+        for epoch in range(self.patience):
+            should_stop = self.instance.should_stop(epoch=epoch)
+            assert not should_stop
+
+    def test_result_processing(self):
+        """Test that the mock evaluation of the early stopper always gives the right loss."""
+        for epoch in range(len(self.mock_losses)):
+            # Step early stopper
+            should_stop = self.instance.should_stop(epoch=epoch)
+
+            if should_stop:
+                break
+            else:
+                # check storing of results
+                assert self.instance.results == self.mock_losses[: epoch + 1]
+                assert self.instance.best_metric == self.best_results[epoch]
+
+    def test_should_stop(self):
+        """Test that the stopper knows when to stop."""
+        for epoch in range(self.stop_constant):
+            self.assertFalse(self.instance.should_stop(epoch=epoch))
+        self.assertTrue(self.instance.should_stop(epoch=self.stop_constant))
+
+    def test_result_logging(self):
+        """Test whether result logger is called properly."""
+        self.instance.result_tracker = mock_tracker = Mock()
+        self.instance.should_stop(epoch=0)
+        log_metrics = mock_tracker.log_metrics
+        self.assertIsInstance(log_metrics, Mock)
+        log_metrics.assert_called_once()
+        _, call_args = log_metrics.call_args_list[0]
+        self.assertIn("step", call_args)
+        self.assertEqual(0, call_args["step"])
+        self.assertIn("prefix", call_args)
+        self.assertEqual("validation", call_args["prefix"])
+
+    def test_serialization(self):
+        """Test for serialization."""
+        summary = self.instance.get_summary_dict()
+        new_stopper = EarlyStopper(
+            # not needed for test
+            model=...,
+            evaluator=...,
+            training_triples_factory=...,
+            evaluation_triples_factory=...,
+        )
+        new_stopper._write_from_summary_dict(**summary)
+        for key in summary.keys():
+            assert getattr(self.instance, key) == getattr(new_stopper, key)
+
+
+class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combination.Combination]):
+    """Test for combinations."""
+
+    input_dims: Sequence[Sequence[int]] = [[5, 7], [5, 7, 11]]
+
+    def _iter_input_shapes(self) -> Iterable[Sequence[Tuple[int, ...]]]:
+        """Iterate over test input shapes."""
+        for prefix_shape in [tuple(), (2,), (2, 3)]:
+            for input_dims in self.input_dims:
+                yield [prefix_shape + (input_dim,) for input_dim in input_dims]
+
+    def _create_input(self, input_shapes: Sequence[Tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
+        return [torch.empty(size=size) for size in input_shapes]
+
+    def test_inputs(self):
+        """Test that the test uses at least one input shape."""
+        assert list(self._iter_input_shapes())
+
+    def test_forward(self):
+        """Test forward call."""
+        for input_shapes in self._iter_input_shapes():
+            xs = self._create_input(input_shapes=input_shapes)
+
+            # verify that the input is valid
+            assert len(xs) == len(input_shapes)
+            assert all(x.shape == shape for x, shape in zip(xs, input_shapes))
+
+            # combine
+            x = self.instance(xs=xs)
+            self.assertIsInstance(x, torch.Tensor)
+
+            # verify shape
+            output_shape = self.instance.output_shape(input_shapes)
+            self.assertTupleEqual(x.shape, output_shape)
+
+
+class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.TextEncoder]):
+    """Base tests for text encoders."""
+
+    def test_encode(self):
+        """Test encoding of texts."""
+        labels = ["A first sentence", "some other label"]
+        x = self.instance.encode_all(labels=labels)
+        assert torch.is_tensor(x)
+        assert x.shape[0] == len(labels)
+
+
+class PredictionTestCase(unittest_templates.GenericTestCase[pykeen.predict.Predictions]):
+    """Tests for prediction post-processing."""
+
+    # to be initialized in subclass
+    df: pandas.DataFrame
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        self.dataset = Nations()
+        kwargs["factory"] = self.dataset.training
+        return kwargs
+
+    def test_contains(self):
+        """Test contains method."""
+        pred_annotated = self.instance.add_membership_columns(**self.dataset.factory_dict)
+        assert isinstance(pred_annotated, pykeen.predict.Predictions)
+        df_annot = pred_annotated.df
+        # no column has been removed
+        assert set(df_annot.columns).issuperset(self.df.columns)
+        # all old columns are unmodified
+        for col in self.df.columns:
+            assert (df_annot[col] == self.df[col]).all()
+        # new columns are boolean
+        for new_col in set(df_annot.columns).difference(self.df.columns):
+            assert df_annot[new_col].dtype == bool
+
+    def test_filter(self):
+        """Test filter method."""
+        pred_filtered = self.instance.filter_triples(*self.dataset.factory_dict.values())
+        assert isinstance(pred_filtered, pykeen.predict.Predictions)
+        df_filtered = pred_filtered.df
+        # no columns have been added
+        assert set(df_filtered.columns) == set(self.df.columns)
+        # check subset relation
+        assert set(df_filtered.itertuples()).issubset(self.df.itertuples())
+
+
+class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.ScoreConsumer]):
+    """Tests for score consumers."""
+
+    batch_size: int = 2
+    num_entities: int = 3
+    target: Target = LABEL_TAIL
+
+    def test_consumption(self):
+        """Test calling."""
+        generator = torch.manual_seed(seed=42)
+        batch = torch.randint(self.num_entities, size=(self.batch_size, 2), generator=generator)
+        scores = torch.rand(self.batch_size, self.num_entities)
+        self.instance(batch=batch, target=self.target, scores=scores)
+        self.check()
+
+    def check(self):
+        """Perform additional verification."""
+        pass

@@ -10,10 +10,11 @@ import pickle
 import random
 import time
 from abc import ABC, abstractmethod
+from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
-from tempfile import NamedTemporaryFile
-from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
+from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import IO, Any, ClassVar, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -26,9 +27,12 @@ from tqdm.autonotebook import tqdm, trange
 from .callbacks import (
     GradientAbsClippingTrainingCallback,
     GradientNormClippingTrainingCallback,
+    LearningRateSchedulerTrainingCallback,
     MultiTrainingCallback,
+    OptimizerTrainingCallback,
     StopperTrainingCallback,
     TrackerTrainingCallback,
+    TrainingCallback,
     TrainingCallbackHint,
     TrainingCallbackKwargsHint,
 )
@@ -86,6 +90,12 @@ class SubBatchingNotSupportedError(NotImplementedError):
     """An exception raised when sub batching is not implemented."""
 
     def __init__(self, model: Model):
+        """
+        Initialize the error.
+
+        :param model:
+            the unsupported model
+        """
         super().__init__(model)
         self.model = model
 
@@ -128,6 +138,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size=dict(type=int, low=4, high=12, scale="power_two"),  # [16, 4096]
     )
 
+    supports_slicing: ClassVar[bool] = False
+
     def __init__(
         self,
         model: Model,
@@ -156,6 +168,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
+        :param mode: The inductive training mode. None if transductive.
         :param result_tracker:
             the result tracker
         :param result_tracker_kwargs:
@@ -224,7 +237,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
-        callback_kwargs: TrainingCallbackKwargsHint = None,
+        callbacks_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
@@ -233,9 +246,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         """Train the KGE model.
 
         .. note ::
+
             Gradient clipping is a technique to avoid the exploding gradient problem. Clip by norm and clip by value
             are two alternative implementations.
-
 
         :param triples_factory:
             The training triples.
@@ -291,7 +304,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param callbacks:
             An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
             one of several functionalities. Their interface was inspired by Keras.
-        :param callback_kwargs:
+        :param callbacks_kwargs:
             additional keyword-based parameter to instantiate the training callback.
         :param gradient_clipping_max_norm:
             The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
@@ -368,35 +381,51 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         else:
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
-            result = self._train(
-                num_epochs=num_epochs,
-                batch_size=batch_size,
-                slice_size=slice_size,
-                label_smoothing=label_smoothing,
-                sampler=sampler,
-                continue_training=continue_training,
-                only_size_probing=only_size_probing,
-                use_tqdm=use_tqdm,
-                use_tqdm_batch=use_tqdm_batch,
-                tqdm_kwargs=tqdm_kwargs,
-                stopper=stopper,
-                sub_batch_size=sub_batch_size,
-                num_workers=num_workers,
-                save_checkpoints=save_checkpoints,
-                checkpoint_path=checkpoint_path,
-                checkpoint_frequency=checkpoint_frequency,
-                checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
-                best_epoch_model_file_path=best_epoch_model_file_path,
-                last_best_epoch=last_best_epoch,
-                drop_last=drop_last,
-                callbacks=callbacks,
-                callback_kwargs=callback_kwargs,
-                gradient_clipping_max_norm=gradient_clipping_max_norm,
-                gradient_clipping_norm_type=gradient_clipping_norm_type,
-                gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
-                triples_factory=triples_factory,
-                pin_memory=pin_memory,
-            )
+
+            # the exit stack ensure that we clean up temporary files when an error occurs
+            with ExitStack() as exit_stack:
+                # When using early stopping models have to be saved separately at the best epoch, since the training
+                # loop will due to the patience continue to train after the best epoch and thus alter the model
+                if (
+                    stopper is not None
+                    and not only_size_probing
+                    and last_best_epoch is None
+                    and best_epoch_model_file_path is None
+                ):
+                    # note: NamedTemporaryFile does not seem to work
+                    # Create a path
+                    temporary_directory = exit_stack.enter_context(TemporaryDirectory())
+                    best_epoch_model_file_path = pathlib.Path(temporary_directory).joinpath("best_model.pt")
+
+                result = self._train(
+                    num_epochs=num_epochs,
+                    batch_size=batch_size,
+                    slice_size=slice_size,
+                    label_smoothing=label_smoothing,
+                    sampler=sampler,
+                    continue_training=continue_training,
+                    only_size_probing=only_size_probing,
+                    use_tqdm=use_tqdm,
+                    use_tqdm_batch=use_tqdm_batch,
+                    tqdm_kwargs=tqdm_kwargs,
+                    stopper=stopper,
+                    sub_batch_size=sub_batch_size,
+                    num_workers=num_workers,
+                    save_checkpoints=save_checkpoints,
+                    checkpoint_path=checkpoint_path,
+                    checkpoint_frequency=checkpoint_frequency,
+                    checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
+                    best_epoch_model_file_path=best_epoch_model_file_path,
+                    last_best_epoch=last_best_epoch,
+                    drop_last=drop_last,
+                    callbacks=callbacks,
+                    callbacks_kwargs=callbacks_kwargs,
+                    gradient_clipping_max_norm=gradient_clipping_max_norm,
+                    gradient_clipping_norm_type=gradient_clipping_norm_type,
+                    gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
+                    triples_factory=triples_factory,
+                    pin_memory=pin_memory,
+                )
 
         # Ensure the release of memory
         torch.cuda.empty_cache()
@@ -407,6 +436,92 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             self.lr_scheduler = None
 
         return result
+
+    def _train_epoch(
+        self,
+        batches: DataLoader,
+        callbacks: MultiTrainingCallback,
+        sub_batch_size: Optional[int],
+        label_smoothing: float,
+        slice_size: Optional[int],
+        epoch: int,
+        only_size_probing: bool,
+        backward: bool = True,
+    ) -> float:
+        """
+        Run one epoch.
+
+        :param batches:
+            the batches to process
+        :param callbacks:
+            the callbacks to apply (wrapped into a single object)
+        :param sub_batch_size:
+            the sub-batch size to use
+        :param label_smoothing:
+            the label-smoothing to apply
+        :param slice_size:
+            the optional slice size
+        :param epoch:
+            the current epoch (only used to forward to callbacks)
+        :param only_size_probing:
+            whether to stop after the second batch
+        :param backward:
+            whether to calculate gradients via backward
+
+        :return:
+            the epoch loss
+        """
+        # Accumulate loss over epoch
+        current_epoch_loss = 0.0
+
+        # Flag to check when to quit the size probing
+        evaluated_once = False
+
+        for batch in batches:
+            # apply callbacks before starting with batch
+            callbacks.pre_batch()
+
+            # Get batch size of current batch (last batch may be incomplete)
+            current_batch_size = self._get_batch_size(batch)
+            _sub_batch_size = sub_batch_size or current_batch_size
+
+            # accumulate gradients for whole batch
+            for start in range(0, current_batch_size, _sub_batch_size):
+                stop = min(start + _sub_batch_size, current_batch_size)
+
+                # forward pass call
+                batch_loss = self._forward_pass(
+                    batch,
+                    start,
+                    stop,
+                    current_batch_size,
+                    label_smoothing,
+                    slice_size,
+                    backward=backward,
+                )
+                current_epoch_loss += batch_loss
+                callbacks.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
+
+            callbacks.pre_step()
+            callbacks.post_batch(epoch=epoch, batch=batch)
+
+            # For testing purposes we're only interested in processing one batch
+            if only_size_probing and evaluated_once:
+                break
+            evaluated_once = True
+
+        # note: this epoch loss can be slightly biased towards the last batch, if this is smaller than the rest
+        #        in practice, this should have a minor effect, since typically batch_size << num_instances
+        current_epoch_loss = current_epoch_loss / len(batches)
+
+        # TODO: is this necessary?
+        del batch
+        del batches
+        gc.collect()
+        self.optimizer.zero_grad()
+        self._free_graph_and_cache()
+
+        return current_epoch_loss
 
     def _train(  # noqa: C901
         self,
@@ -432,7 +547,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
-        callback_kwargs: TrainingCallbackKwargsHint = None,
+        callbacks_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
@@ -443,15 +558,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError("optimizer must be set before running _train()")
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
-        if (
-            stopper is not None
-            and not only_size_probing
-            and last_best_epoch is None
-            and best_epoch_model_file_path is None
-        ):
-            # Create a path
-            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
-        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None
+        # -> the temporay file has to be created outside, which we assert here
+        if stopper is not None and not only_size_probing and last_best_epoch is None:
+            assert best_epoch_model_file_path is not None
 
         if isinstance(self.model, RGCN) and sampler != "schlichtkrull":
             logger.warning(
@@ -460,7 +569,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
 
         # Prepare all of the callbacks
-        callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
+        callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
         # Register a callback for the result tracker, if given
         if self.result_tracker is not None:
             callback.register_callback(TrackerTrainingCallback())
@@ -475,15 +584,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     best_epoch_model_file_path=best_epoch_model_file_path,
                 )
             )
-        if gradient_clipping_max_norm is not None:
-            callback.register_callback(
-                GradientNormClippingTrainingCallback(
-                    max_norm=gradient_clipping_max_norm,
-                    norm_type=gradient_clipping_norm_type,
-                )
-            )
-        if gradient_clipping_max_abs_value is not None:
-            callback.register_callback(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
 
         callback.register_training_loop(self)
 
@@ -575,10 +675,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         train_data_loader = self._create_training_data_loader(
             triples_factory,
-            batch_size,
-            drop_last,
-            num_workers,
-            pin_memory,
+            batch_size=batch_size,
+            drop_last=drop_last,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            shuffle=True,  # always shuffle during training
             sampler=sampler,
         )
         if len(train_data_loader) == 0:
@@ -589,8 +690,25 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 format_relative_comparison(part=1, total=len(train_data_loader)),
             )
 
+        # optimizer callbacks
+        pre_step_callbacks: List[TrainingCallback] = []
+        if gradient_clipping_max_norm is not None:
+            pre_step_callbacks.append(
+                GradientNormClippingTrainingCallback(
+                    max_norm=gradient_clipping_max_norm,
+                    norm_type=gradient_clipping_norm_type,
+                )
+            )
+        if gradient_clipping_max_abs_value is not None:
+            pre_step_callbacks.append(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
+        callback.register_callback(
+            OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
+        )
+        callback.register_callback(LearningRateSchedulerTrainingCallback())
+
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
+        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None
 
         # Training Loop
         for epoch in epochs:
@@ -598,9 +716,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             try:
                 # Enforce training mode
                 self.model.train()
-
-                # Accumulate loss over epoch
-                current_epoch_loss = 0.0
 
                 # Batching
                 # Only create a progress bar when not in size probing mode
@@ -614,74 +729,21 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 else:
                     batches = train_data_loader
 
-                # Flag to check when to quit the size probing
-                evaluated_once = False
-
-                num_training_instances = 0
-                for batch in batches:
-                    # Recall that torch *accumulates* gradients. Before passing in a
-                    # new instance, you need to zero out the gradients from the old instance
-                    self.optimizer.zero_grad()
-
-                    # Get batch size of current batch (last batch may be incomplete)
-                    current_batch_size = self._get_batch_size(batch)
-                    _sub_batch_size = sub_batch_size or current_batch_size
-
-                    # accumulate gradients for whole batch
-                    for start in range(0, current_batch_size, _sub_batch_size):
-                        stop = min(start + _sub_batch_size, current_batch_size)
-
-                        # forward pass call
-                        batch_loss = self._forward_pass(
-                            batch,
-                            start,
-                            stop,
-                            current_batch_size,
-                            label_smoothing,
-                            slice_size,
-                        )
-                        current_epoch_loss += batch_loss
-                        num_training_instances += stop - start
-                        callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
-
-                    # when called by batch_size_search(), the parameter update should not be applied.
-                    if not only_size_probing:
-                        callback.pre_step()
-
-                        # update parameters according to optimizer
-                        self.optimizer.step()
-
-                    # After changing applying the gradients to the embeddings, the model is notified that the forward
-                    # constraints are no longer applied
-                    self.model.post_parameter_update()
-
-                    # For testing purposes we're only interested in processing one batch
-                    if only_size_probing and evaluated_once:
-                        break
-
-                    callback.post_batch(epoch=epoch, batch=batch)
-
-                    evaluated_once = True
-
-                del batch
-                del batches
-                gc.collect()
-                self.optimizer.zero_grad()
-                self._free_graph_and_cache()
+                epoch_loss = self._train_epoch(
+                    batches=batches,
+                    callbacks=callback,
+                    sub_batch_size=sub_batch_size,
+                    label_smoothing=label_smoothing,
+                    slice_size=slice_size,
+                    epoch=epoch,
+                    only_size_probing=only_size_probing,
+                )
 
                 # When size probing we don't need the losses
                 if only_size_probing:
                     return None
 
-                # Update learning rate scheduler
-                if self.lr_scheduler is not None:
-                    self.lr_scheduler.step(epoch=epoch)
-
                 # Track epoch loss
-                if self.model.loss.reduction == "mean":
-                    epoch_loss = current_epoch_loss / num_training_instances
-                else:
-                    epoch_loss = current_epoch_loss / len(train_data_loader)
                 self.losses_per_epochs.append(epoch_loss)
 
                 # Print loss information to console
@@ -769,13 +831,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     @abstractmethod
     def _create_training_data_loader(
-        self,
-        triples_factory: CoreTriplesFactory,
-        batch_size: int,
-        drop_last: bool,
-        num_workers: int,
-        pin_memory: bool,
-        sampler: Optional[str],
+        self, triples_factory: CoreTriplesFactory, *, sampler: Optional[str], batch_size: int, drop_last: bool, **kwargs
     ) -> DataLoader[BatchType]:
         """
         Create a data loader over training instances.
@@ -786,12 +842,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             the batch size to use
         :param drop_last:
             whether to drop the last (incomplete) batch, cf. torch.utils.data.DataLoader
-        :param num_workers:
-            the number of CPU workers to use for preparing batches, cf. torch.utils.data.DataLoader
-        :param pin_memory:
-            whether to pin the memory, cf. torch.utils.data.DataLoader
         :param sampler:
             the batch sampler to use. Either None, or "schlichtkrull".
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`torch.utils.data.DataLoader.__init__`
 
         :return:
             a data loader over training instances.
@@ -806,6 +860,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         current_batch_size: int,
         label_smoothing: float,
         slice_size: Optional[int],
+        backward: bool = True,
     ) -> float:
         # forward pass
         loss = self._process_batch(
@@ -826,7 +881,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             loss *= this_sub_batch_size / current_batch_size
 
         # backward pass
-        loss.backward()
+        if backward:
+            loss.backward()
         current_epoch_loss = loss.item()
 
         self.model.post_forward_pass()
@@ -873,6 +929,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :return:
             Tuple containing the maximum possible batch size as well as an indicator if the evaluation with that size
             was successful.
+
+        :raises RuntimeError:
+            If a runtime error is raised during training
         """
         if batch_size is None:
             batch_size = 8192
@@ -961,6 +1020,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         and sub_batch size on the hardware at hand. If even the slice size 1 is too high, it will raise an error.
         Otherwise it will return the determined slice size.
 
+        :param triples_factory:
+            A triples factory
         :param batch_size:
             The batch size to use.
         :param sub_batch_size:
@@ -991,10 +1052,17 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         :param batch_size:
             The initial batch size to start with.
+        :param sampler:
+            The sampler (None or schlichtkrull)
+        :param triples_factory:
+            A triples factory
 
         :return:
             Tuple containing the sub-batch size to use and indicating if the search was finished, i.e. successfully
             without hardware errors, as well as if sub-batching is possible
+
+        :raises RuntimeError:
+            If a runtime error is raised during training
         """
         sub_batch_size = batch_size
         finished_search = False
@@ -1084,6 +1152,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             The file path for the checkpoint of the best epoch model when using early stopping.
         :param triples_factory:
             The triples factory being used in the current training loop.
+        :raises ValueError: if the internal optimizer is not set
         """
         if self.optimizer is None:
             raise ValueError
@@ -1159,6 +1228,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :return:
             Temporary file path of the best epoch model and the best epoch when using early stoppers, None otherwise.
 
+        :raises ValueError:
+            If the internal optimizer is none
         :raises CheckpointMismatchError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
         """

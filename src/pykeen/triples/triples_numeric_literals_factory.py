@@ -69,12 +69,13 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         self.numeric_literals = numeric_literals
         self.literals_to_id = literals_to_id
 
+    # docstr-coverage: inherited
     @classmethod
     def from_path(
         cls,
         path: Union[str, pathlib.Path, TextIO],
         *,
-        path_to_numeric_triples: Union[str, pathlib.Path, TextIO] = None,
+        path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if path_to_numeric_triples is None:
@@ -83,6 +84,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples = load_triples(path)
         return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
 
+    # docstr-coverage: inherited
     @classmethod
     def from_labeled_triples(
         cls,
@@ -110,10 +112,17 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """Return the numeric literals as a tensor."""
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 
-    def _iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super()._iter_extra_repr()
+    @property
+    def literal_shape(self) -> Tuple[int, ...]:
+        """Return the shape of the literals."""
+        return self.numeric_literals.shape[1:]
+
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
         yield f"num_literals={len(self.literals_to_id)}"
 
+    # docstr-coverage: inherited
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
@@ -136,12 +145,16 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
+    # docstr-coverage: inherited
     def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping
-        pandas.DataFrame(data=self.literals_to_id.items(), columns=["label", "id"],).sort_values(by="id").set_index(
-            "id"
-        ).to_csv(
+        pandas.DataFrame(
+            data=self.literals_to_id.items(),
+            columns=["label", "id"],
+        ).sort_values(
+            by="id"
+        ).set_index("id").to_csv(
             path.joinpath(f"{self.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )

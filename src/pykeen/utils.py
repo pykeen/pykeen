@@ -13,10 +13,13 @@ import os
 import pathlib
 import random
 import re
+import time
+import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
+from textwrap import dedent
 from typing import (
     Any,
     Callable,
@@ -26,9 +29,11 @@ from typing import (
     Iterable,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Set,
+    TextIO,
     Tuple,
     Type,
     TypeVar,
@@ -56,6 +61,7 @@ __all__ = [
     "clamp_norm",
     "compact_mapping",
     "create_relation_to_entity_set_mapping",
+    "ensure_complex",
     "ensure_torch_random_state",
     "format_relative_comparison",
     "invert_mapping",
@@ -63,7 +69,6 @@ __all__ = [
     "random_non_negative_int",
     "resolve_device",
     "split_complex",
-    "split_list_in_batches_iter",
     "normalize_string",
     "get_until_first_blank",
     "flatten_dictionary",
@@ -72,7 +77,6 @@ __all__ = [
     "Result",
     "fix_dataclass_init_docs",
     "get_benchmark",
-    "extended_einsum",
     "upgrade_to_sequence",
     "ensure_tuple",
     "unpack_singletons",
@@ -103,14 +107,20 @@ __all__ = [
     "complex_normalize",
     "lp_norm",
     "powersum_norm",
-    "product_normalize",
-    "compute_box",
-    "point_to_box_distance",
     "get_devices",
     "get_preferred_device",
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
     "logcumsumexp",
+    "get_connected_components",
+    "normalize_path",
+    "get_edge_index",
+    "prepare_filter_triples",
+    "nested_get",
+    "rate_limited",
+    "ExtraReprMixin",
+    "einsum",
+    "isin_many_dim",
 ]
 
 logger = logging.getLogger(__name__)
@@ -181,11 +191,6 @@ def get_preferred_device(module: nn.Module, allow_ambiguity: bool = True) -> tor
 
 
 X = TypeVar("X")
-
-
-def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable[List[X]]:
-    """Split a list of instances in batches of size batch_size."""
-    return (input_list[i : i + batch_size] for i in range(0, len(input_list), batch_size))
 
 
 def get_until_first_blank(s: str) -> str:
@@ -663,38 +668,6 @@ def negative_norm(
     return -x.norm(p=p, dim=-1)
 
 
-def extended_einsum(
-    eq: str,
-    *tensors,
-) -> torch.FloatTensor:
-    """Drop dimensions of size 1 to allow broadcasting."""
-    # TODO: check if einsum is still very slow.
-    lhs, rhs = eq.split("->")
-    mod_ops, mod_t = [], []
-    for op, t in zip(lhs.split(","), tensors):
-        mod_op = ""
-        if len(op) != len(t.shape):
-            raise ValueError(f"Shapes not equal: op={op} and t.shape={t.shape}")
-        # TODO: t_shape = list(t.shape); del t_shape[i]; t.view(*shape) -> only one reshape operation
-        for i, c in reversed(list(enumerate(op))):
-            if t.shape[i] == 1:
-                t = t.squeeze(dim=i)
-            else:
-                mod_op = c + mod_op
-        mod_ops.append(mod_op)
-        mod_t.append(t)
-    m_lhs = ",".join(mod_ops)
-    r_keep_dims = set("".join(mod_ops))
-    m_rhs = "".join(c for c in rhs if c in r_keep_dims)
-    m_eq = f"{m_lhs}->{m_rhs}"
-    mod_r = torch.einsum(m_eq, *mod_t)
-    # unsqueeze
-    for i, c in enumerate(rhs):
-        if c not in r_keep_dims:
-            mod_r = mod_r.unsqueeze(dim=i)
-    return mod_r
-
-
 def project_entity(
     e: torch.FloatTensor,
     e_p: torch.FloatTensor,
@@ -875,36 +848,43 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
 
 def extend_batch(
     batch: MappedTriples,
-    all_ids: List[int],
+    max_id: int,
     dim: int,
+    ids: Optional[torch.LongTensor] = None,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
     :param batch: shape: (batch_size, 2)
         The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
+    :param max_id:
+        The maximum IDs to enumerate.
+    :param ids: shape: (num_ids,) | (batch_size, num_ids)
+        explicit IDs
     :param dim: in {0,1,2}
         The column along which to insert the enumerated IDs.
 
     :return: shape: (batch_size * num_choices, 3)
         A large batch, where every pair from the original batch is combined with every ID.
     """
-    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
+    # normalize ids: -> ids.shape: (batch_size, num_ids)
+    if ids is None:
+        ids = torch.arange(max_id, device=batch.device)
+    if ids.ndimension() < 2:
+        ids = ids.unsqueeze(dim=0)
+    assert ids.ndimension() == 2
 
-    # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
+    # normalize batch -> batch.shape: (batch_size, 1, 3)
+    batch = batch.unsqueeze(dim=1)
 
-    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
-    extended_ids = ids.repeat(batch.shape[0])
+    # allocate memory
+    hrt_batch = batch.new_empty(size=(batch.shape[0], ids.shape[-1], 3))
 
-    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
-    columns = [extended_batch[:, i] for i in (0, 1)]
-    columns.insert(dim, extended_ids)
-    hrt_batch = torch.stack(columns, dim=-1)
+    # copy ids
+    hrt_batch[..., dim] = ids
+    hrt_batch[..., [i for i in range(3) if i != dim]] = batch
 
-    return hrt_batch
+    # reshape
+    return hrt_batch.view(-1, 3)
 
 
 def check_shapes(
@@ -1057,9 +1037,22 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
         A tensor formulating complex numbers
 
     :returns:
-        An elementwise noramlized vector.
+        An elementwise normalized vector.
     """
-    return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
+    if torch.is_complex(x):
+        return x / x.abs().clamp_min(torch.finfo(x.dtype).eps)
+
+    # note: this is a hack, and should be fixed up-stream by making NodePiece
+    #  use proper complex embeddings for rotate interaction; however, we also have representations
+    #  that perform message passing, and we would need to propagate the base representation's complexity through it
+    warnings.warn(
+        "Applying complex_normalize on non-complex input; if you see shape errors downstream this may be a possible "
+        "root cause.",
+    )
+    (x_complex,) = ensure_complex(x)
+    x_complex = complex_normalize(x_complex)
+    x_real = torch.view_as_real(x_complex)
+    return x_real.view(x.shape)
 
 
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
@@ -1079,169 +1072,6 @@ def load_configuration(path: Union[str, pathlib.Path, os.PathLike]) -> Mapping[s
             return yaml.safe_load(file)
 
     raise ValueError(f"Unknown configuration file format: {path.suffix}. Valid formats: {CONFIGURATION_FILE_FORMATS}")
-
-
-def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
-    r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
-
-    :param x: shape: s
-        An input tensor
-    :param dim:
-        the dimension along which to normalize the tensor
-
-    :return: shape: s
-        An output tensor where the given dimension is normalized to have a geometric mean of 1.0.
-    """
-    return x / at_least_eps(at_least_eps(x.abs()).log().mean(dim=dim, keepdim=True).exp())
-
-
-def compute_box(
-    base: torch.FloatTensor,
-    delta: torch.FloatTensor,
-    size: torch.FloatTensor,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-    r"""Compute the lower and upper corners of a resulting box.
-
-    :param base: shape: ``(*, d)``
-        the base position (box center) of the input relation embeddings
-    :param delta:  shape: ``(*, d)``
-        the base shape of the input relation embeddings
-    :param size: shape: ``(*, d)``
-        the size scalar vectors of the input relation embeddings
-
-    :return: shape: ``(*, d)`` each
-        lower and upper bounds of the box whose embeddings are provided as input.
-    """
-    # Enforce that sizes are strictly positive by passing through ELU
-    size_pos = torch.nn.functional.elu(size) + 1
-
-    # Shape vector is normalized using the above helper function
-    delta_norm = product_normalize(delta)
-
-    # Size is learned separately and applied to normalized shape
-    delta_final = size_pos * delta_norm
-
-    # Compute potential boundaries by applying the shape in substraction
-    first_bound = base - 0.5 * delta_final
-
-    # and in addition
-    second_bound = base + 0.5 * delta_final
-
-    # Compute box upper bounds using min and max respectively
-    box_low = torch.minimum(first_bound, second_bound)
-    box_high = torch.maximum(first_bound, second_bound)
-
-    return box_low, box_high
-
-
-def point_to_box_distance(
-    points: torch.FloatTensor,
-    box_lows: torch.FloatTensor,
-    box_highs: torch.FloatTensor,
-) -> torch.FloatTensor:
-    r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
-
-    :param points: shape: ``(*, d)``
-        the positions of the points being scored against boxes
-    :param box_lows: shape: ``(*, d)``
-        the lower corners of the boxes
-    :param box_highs: shape: ``(*, d)``
-        the upper corners of the boxes
-
-    :returns:
-        Element-wise distance function scores as per the definition above
-
-        Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
-        defined:
-
-        - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
-        - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
-
-        Finally, the point to box distance $dist(p,l,h)$ is defined as
-        the following piecewise function:
-
-        .. math::
-
-            dist(p,l,h) = \begin{cases}
-                |p-c|/(w+1) & l <= p <+ h \\
-                |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
-            \end{cases}
-    """
-    widths = box_highs - box_lows
-
-    # compute width plus 1
-    widths_p1 = widths + 1
-
-    # compute box midpoints
-    # TODO: we already had this before, as `base`
-    centres = 0.5 * (box_lows + box_highs)
-
-    return torch.where(
-        # inside box?
-        torch.logical_and(points >= box_lows, points <= box_highs),
-        # yes: |p - c| / (w + 1)
-        torch.abs(points - centres) / widths_p1,
-        # no: (w + 1) * |p - c| - 0.5 * w * (w - 1/(w + 1))
-        widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
-    )
-
-
-def boxe_kg_arity_position_score(
-    entity_pos: torch.FloatTensor,
-    other_entity_bump: torch.FloatTensor,
-    relation_box: Tuple[torch.FloatTensor, torch.FloatTensor],
-    tanh_map: bool,
-    p: int,
-    power_norm: bool,
-) -> torch.FloatTensor:
-    r"""Perform the BoxE computation at a single arity position.
-
-    .. note::
-        this computation is parallelizable across all positions
-
-    .. note ::
-        `entity_pos`, `other_entity_bump`, `relation_box_low` and `relation_box_high` have to be in broadcastable
-        shape.
-
-    :param entity_pos: shape: (*s_p, d)
-        This is the base entity position of the entity appearing in the target position. For example,
-        for a fact $r(h, t)$ and the head arity position, `entity_pos` is the base position of $h$.
-    :param other_entity_bump: shape: (*s_b, d)
-        This is the bump of the entity at the other position in the fact. For example, given a
-        fact $r(h, t)$ and the head arity position, `other_entity_bump` is the bump of $t$.
-    :param relation_box: shape: (*s_r, d)
-        The lower/upper corner of the relation box at the target arity position.
-    :param tanh_map:
-        whether to apply the tanh map regularizer
-    :param p:
-        The norm order to apply across dimensions to compute overall position score.
-    :param power_norm:
-        whether to use the powered norm instead
-
-    :return: shape: s
-        Arity-position score for the entity relative to the target relation box. Larger is better. the shape is the
-        broadcasted shape from position, bump and box, where the last dimension has been removed.
-    """
-    # Step 1: Apply the other entity bump
-    bumped_representation = entity_pos + other_entity_bump
-
-    relation_box_low, relation_box_high = relation_box
-
-    # Step 2: Apply tanh if tanh_map is set to True.
-    if tanh_map:
-        relation_box_low = torch.tanh(relation_box_low)
-        relation_box_high = torch.tanh(relation_box_high)
-        bumped_representation = torch.tanh(bumped_representation)
-
-    # Compute the distance function output element-wise
-    element_wise_distance = point_to_box_distance(
-        points=bumped_representation,
-        box_lows=relation_box_low,
-        box_highs=relation_box_high,
-    )
-
-    # Finally, compute the norm
-    return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
 
 
 def getattr_or_docdata(cls, key: str) -> str:
@@ -1319,6 +1149,481 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     out = np.log(s)
     out += a_max
     return out
+
+
+def find(x: X, parent: MutableMapping[X, X]) -> X:
+    """Find step of union-find data structure with path compression."""
+    # check validity
+    if x not in parent:
+        raise ValueError(f"Unknown element: {x}.")
+    # path compression
+    while parent[x] != x:
+        x, parent[x] = parent[x], parent[parent[x]]
+    return x
+
+
+def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
+    """
+    Calculate the connected components for a graph given as edge list.
+
+    The implementation uses a `union-find <https://en.wikipedia.org/wiki/Disjoint-set_data_structure>`_ data structure
+    with path compression.
+
+    :param pairs:
+        the edge list, i.e., pairs of node ids.
+
+    :return:
+        a collection of connected components, i.e., a collection of disjoint collections of node ids.
+    """
+    parent: Dict[X, X] = dict()
+    for x, y in pairs:
+        parent.setdefault(x, x)
+        parent.setdefault(y, y)
+        # get representatives
+        x = find(x=x, parent=parent)
+        y = find(x=y, parent=parent)
+        # already merged
+        if x == y:
+            continue
+        # make x the smaller one
+        if y < x:  # type: ignore
+            x, y = y, x
+        # merge
+        parent[y] = x
+    # extract partitions
+    result = defaultdict(list)
+    for k, v in parent.items():
+        result[v].append(k)
+    return list(result.values())
+
+
+PathType = Union[str, pathlib.Path, TextIO]
+
+
+def normalize_path(
+    path: Optional[PathType],
+    *other: Union[str, pathlib.Path],
+    mkdir: bool = False,
+    is_file: bool = False,
+    default: Optional[PathType] = None,
+) -> pathlib.Path:
+    """
+    Normalize a path.
+
+    :param path:
+        the path in either of the valid forms.
+    :param other:
+        additional parts to join to the path
+    :param mkdir:
+        whether to ensure that the path refers to an existing directory by creating it if necessary
+    :param is_file:
+        whether the path is intended to be a file - only relevant for creating directories
+    :param default:
+        the default to use if path is None
+
+    :raises TypeError:
+        if `path` is of unsuitable type
+    :raises ValueError:
+        if `path` and `default` are both `None`
+
+    :return:
+        the absolute and resolved path
+    """
+    if path is None:
+        if default is None:
+            raise ValueError("If no default is provided, path cannot be None.")
+        path = default
+    if isinstance(path, TextIO):
+        path = path.name
+    if isinstance(path, str):
+        path = pathlib.Path(path)
+    if not isinstance(path, pathlib.Path):
+        raise TypeError(f"path is invalid type: {type(path)}")
+    if other:
+        path = path.joinpath(*other)
+    # resolve path to make sure it is an absolute path
+    path = path.expanduser().resolve()
+    # ensure directory exists
+    if mkdir:
+        directory = path
+        if is_file:
+            directory = path.parent
+        directory.mkdir(exist_ok=True, parents=True)
+    return path
+
+
+def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
+    """
+    Ensure that all tensors are of complex dtype.
+
+    Reshape and convert if necessary.
+
+    :param xs:
+        the tensors
+
+    :yields: complex tensors.
+    """
+    for x in xs:
+        if x.is_complex():
+            yield x
+            continue
+        warnings.warn(f"{x=} is not complex, but will be viewed as such")
+        if x.shape[-1] != 2:
+            x = x.view(*x.shape[:-1], -1, 2)
+        yield torch.view_as_complex(x)
+
+
+def _weisfeiler_lehman_iteration(
+    adj: torch.Tensor,
+    colors: torch.LongTensor,
+    dense_dtype: torch.dtype = torch.long,
+) -> torch.Tensor:
+    """
+    Perform a single Weisfeiler-Lehman iteration.
+
+    :param adj: shape: `(n, n)`
+        the adjacency matrix
+    :param colors: shape: `(n,)`
+        the node colors (as integers)
+    :param dense_dtype:
+        a datatype for storing integers of sufficient capacity to store `n`
+
+    :return: shape: `(n,)`
+        the new node colors
+    """
+    num_nodes = colors.shape[0]
+    # message passing: collect colors of neighbors
+    # dense colors: shape: (n, c)
+    # adj:          shape: (n, n)
+    color_sparse = torch.sparse_coo_tensor(
+        indices=torch.stack([torch.arange(num_nodes, device=colors.device), colors], dim=0),
+        # values need to be float, since torch.sparse.mm does not support integer dtypes
+        values=torch.ones_like(colors, dtype=torch.get_default_dtype()),
+        # size: will be correctly inferred
+    )
+    color_dense = torch.sparse.mm(adj, color_sparse).to(dtype=dense_dtype).to_dense()
+
+    # concat with old colors
+    colors = torch.cat([colors.unsqueeze(dim=-1), color_dense], dim=-1)
+
+    # hash
+    return colors.unique(dim=0, return_inverse=True)[1]
+
+
+def _weisfeiler_lehman_iteration_approx(
+    adj: torch.Tensor,
+    colors: torch.LongTensor,
+    dim: int = 32,
+    decimals: int = 6,
+) -> torch.Tensor:
+    """
+    Perform an approximate  single Weisfeiler-Lehman iteration.
+
+    It utilizes the trick from https://arxiv.org/abs/2001.09621 of replacing node indicator functions by
+    randomly drawn functions of fixed and low dimensionality.
+
+    :param adj: shape: `(n, n)`
+        the adjacency matrix
+    :param colors: shape: `(n,)`
+        the node colors (as integers)
+    :param dim:
+        the dimensionality of the random node indicator functions
+    :param decimals:
+        the number of decimals to round to
+
+    :return: shape: `(n,)`
+        the new node colors
+    """
+    num_colors = colors.max() + 1
+
+    # create random indicator functions of low dimensionality
+    rand = torch.rand(num_colors, dim, device=colors.device)
+    x = rand[colors]
+
+    # collect neighbors' colors
+    x = torch.sparse.mm(adj, x)
+
+    # round to avoid numerical effects
+    x = torch.round(x, decimals=decimals)
+
+    # hash first
+    new_colors = x.unique(return_inverse=True, dim=0)[1]
+
+    # concat with old colors
+    colors = torch.stack([colors, new_colors], dim=-1)
+
+    # re-hash
+    return colors.unique(return_inverse=True, dim=0)[1]
+
+
+def iter_weisfeiler_lehman(
+    edge_index: torch.LongTensor,
+    max_iter: int = 2,
+    num_nodes: Optional[int] = None,
+    approximate: bool = False,
+) -> Iterable[torch.Tensor]:
+    """
+    Iterate Weisfeiler-Lehman colors.
+
+    The Weisfeiler-Lehman algorithm starts from a uniformly node-colored graph, and iteratively counts the colors in
+    each nodes' neighborhood, and hashes these multi-sets into a new set of colors.
+
+    .. note::
+        more precisely, this implementation calculates the results of the 1-Weisfeiler-Lehman algorithm. There is a
+        hierarchy of k-WL tests, which color k-tuples of nodes instead of single nodes
+
+    .. note::
+        Graph Neural Networks are closely related to the 1-WL test, cf. e.g., https://arxiv.org/abs/1810.02244
+
+    .. note::
+        colorings based on the WL test have been used to define graph kernels, cf., e.g.,
+        https://www.jmlr.org/papers/volume12/shervashidze11a/shervashidze11a.pdf
+
+    .. note::
+        the implementation creates intermediate dense tensors of shape `(num_nodes, num_colors)`
+
+    .. seealso::
+        https://towardsdatascience.com/expressive-power-of-graph-neural-networks-and-the-weisefeiler-lehman-test-b883db3c7c49
+
+    :param edge_index: shape: `(2, m)`
+        the edge list
+    :param max_iter:
+        the maximum number of iterations
+    :param num_nodes:
+        the number of nodes. If None, will be inferred from the edge index.
+    :param approximate:
+        whether to use an approximate, but more memory-efficient implementation.
+
+    :raises ValueError:
+        if the number of nodes exceeds `torch.long` (this cannot happen in practice, as the edge index tensor
+        construction would already fail earlier)
+
+    :yields: the colors for each Weisfeiler-Lehman iteration
+    """
+    # only keep connectivity, but remove multiplicity
+    edge_index = edge_index.unique(dim=1)
+
+    num_nodes = num_nodes or edge_index.max().item() + 1
+    colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
+    # note: in theory, we could return this uniform coloring as the first coloring; however, for featurization,
+    #       this is rather useless
+
+    # initial: degree
+    # note: we calculate this separately, since we can use a more efficient implementation for the first step
+    unique, counts = edge_index.unique(return_counts=True)
+    colors[unique] = counts
+
+    # hash
+    colors = colors.unique(return_inverse=True)[1]
+    num_colors = colors.max() + 1
+    yield colors
+
+    # determine small integer type for dense count array
+    for idtype in (torch.int8, torch.int16, torch.int32, torch.int64):
+        if torch.iinfo(idtype).max >= num_nodes:
+            dense_dtype = idtype
+            logger.debug(f"Selected dense dtype: {dense_dtype}")
+            break
+    else:
+        raise ValueError(f"{num_nodes} too large")
+
+    adj = torch.sparse_coo_tensor(
+        indices=edge_index,
+        values=torch.ones(size=edge_index[0].shape),
+        device=edge_index.device,
+        size=(num_nodes, num_nodes),
+    )
+    for i in range(2, max_iter + 1):
+        if approximate:
+            colors = _weisfeiler_lehman_iteration_approx(adj=adj, colors=colors)
+        else:
+            colors = _weisfeiler_lehman_iteration(adj=adj, colors=colors, dense_dtype=dense_dtype)
+        yield colors
+
+        # convergence check
+        new_num_colors = colors.max() + 1
+
+        # each node has a unique color
+        if new_num_colors >= (num_nodes - 1):
+            logger.debug(f"Weisfeiler-Lehman terminated with unique colors for each node after {i} iterations")
+            break
+
+        # the number of colors did not improve in the last iteration
+        if num_colors >= new_num_colors:
+            logger.debug(f"Weisfeiler-Lehman could not further refine coloring in iteration {i}")
+            break
+
+        num_colors = new_num_colors
+    else:
+        logger.debug(f"Weisfeiler-Lehman did not converge after {max_iter} iterations.")
+
+
+def get_edge_index(
+    *,
+    # cannot use Optional[pykeen.triples.CoreTriplesFactory] due to cyclic imports
+    triples_factory: Optional[Any] = None,
+    mapped_triples: Optional[MappedTriples] = None,
+    edge_index: Optional[torch.LongTensor] = None,
+) -> torch.LongTensor:
+    """
+    Get the edge index from a number of different sources.
+
+    :param triples_factory:
+        the triples factory
+    :param mapped_triples: shape: `(m, 3)`
+        ID-based triples
+    :param edge_index: shape: `(2, m)`
+        the edge index
+
+    :raises ValueError:
+        if none of the source was different from `None`
+
+    :return: shape: `(2, m)`
+        the edge index
+    """
+    if triples_factory is not None:
+        if mapped_triples is not None:
+            logger.warning("Ignoring mapped_triples, since triples_factory is present.")
+        mapped_triples = triples_factory.mapped_triples
+    if mapped_triples is not None:
+        if edge_index is not None:
+            logger.warning("Ignoring edge_index, since mapped_triples is present.")
+        edge_index = mapped_triples[:, 0::2].t()
+    if edge_index is None:
+        raise ValueError("At least one of the parameters must be different to None.")
+    return edge_index
+
+
+def prepare_filter_triples(
+    mapped_triples: MappedTriples,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    warn: bool = True,
+) -> MappedTriples:
+    """Prepare the filter triples from the evaluation triples, and additional filter triples."""
+    if torch.is_tensor(additional_filter_triples):
+        additional_filter_triples = [additional_filter_triples]
+    if additional_filter_triples is not None:
+        return torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
+    if warn:
+        logger.warning(
+            dedent(
+                """\
+                The filtered setting was enabled, but there were no `additional_filter_triples`
+                given. This means you probably forgot to pass (at least) the training triples. Try:
+
+                    additional_filter_triples=[dataset.training.mapped_triples]
+
+                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+
+                    additional_filter_triples=[
+                        dataset.training.mapped_triples,
+                        dataset.validation.mapped_triples,
+                    ]
+                """
+            )
+        )
+    return mapped_triples
+
+
+def nested_get(d: Mapping[str, Any], *key: str, default=None) -> Any:
+    """
+    Get from a nested dictionary.
+
+    :param d:
+        the (nested) dictionary
+    :param key:
+        a sequence of keys
+    :param default:
+        the default value
+
+    :return:
+        the value or default
+    """
+    for k in key:
+        if k not in d:
+            return default
+        d = d[k]
+    return d
+
+
+def rate_limited(xs: Iterable[X], min_avg_time: float = 1.0) -> Iterable[X]:
+    """Iterate over iterable with rate limit.
+
+    :param xs:
+        the iterable
+    :param min_avg_time:
+        the minimum average time per element
+
+    :yields: elements of the iterable
+    """
+    start = time.perf_counter()
+    for i, x in enumerate(xs):
+        duration = time.perf_counter() - start
+        under = min_avg_time * i - duration
+        under = max(0, under)
+        if under:
+            logger.debug(f"Applying rate limit; sleeping for {under} seconds")
+            time.sleep(under)
+        yield x
+
+
+class ExtraReprMixin:
+    """
+    A mixin for modules with hierarchical `extra_repr`.
+
+    It takes up the :meth:`torch.nn.Module.extra_repr` idea, and additionally provides a simple
+    composable way to generate the components of :meth:`extra_repr` via :meth:`iter_extra_repr`.
+
+    If combined with `torch.nn.Module`, make sure to put :class:`ExtraReprMixin` *behind*
+    :class:`torch.nn.Module` to prefer the latter's :func:`__repr__` implementation.
+    """
+
+    def iter_extra_repr(self) -> Iterable[str]:
+        """
+        Iterate over the components of the :meth:`extra_repr`.
+
+        This method is typically overridden. A common pattern would be
+
+        .. code-block:: python
+
+            def iter_extra_repr(self) -> Iterable[str]:
+                yield from super().iter_extra_repr()
+                yield "<key1>=<value1>"
+                yield "<key2>=<value2>"
+
+        :return:
+            an iterable over individual components of the :meth:`extra_repr`
+        """
+        return []
+
+    def extra_repr(self) -> str:
+        """
+        Generate the extra repr, cf. :meth`torch.nn.Module.extra_repr`.
+
+        :return:
+            the extra part of the :func:`repr`
+        """
+        return ", ".join(self.iter_extra_repr())
+
+    def __repr__(self) -> str:  # noqa: D105
+        return f"{self.__class__.__name__}({self.extra_repr()})"
+
+
+try:
+    from opt_einsum import contract
+
+    einsum = functools.partial(contract, backend="torch")
+    logger.info("Using opt_einsum")
+except ImportError:
+    einsum = torch.einsum
+
+
+def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> torch.BoolTensor:
+    """Return whether elements are contained in test elements."""
+    inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
+        return_counts=True, return_inverse=True, dim=dim
+    )[1:]
+    return counts[inverse[: elements.shape[dim]]] > 1
 
 
 if __name__ == "__main__":

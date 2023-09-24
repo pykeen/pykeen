@@ -158,7 +158,10 @@ def predict_uncertain_helper(
 
     # draw samples
     batch = batch.to(model.device)
-    scores = torch.stack([score_method(batch, mode=mode, slice_size=slice_size) for _ in range(num_samples)], dim=0)
+    kwargs = {}
+    if slice_size is not None:
+        kwargs["slice_size"] = slice_size
+    scores = torch.stack([score_method(batch, mode=mode, **kwargs) for _ in range(num_samples)], dim=0)
     if model.predict_with_sigmoid:
         scores = torch.sigmoid(scores)
 
@@ -200,7 +203,7 @@ def predict_hrt_uncertain(
     Example Usage::
 
         from pykeen.pipeline import pipeline
-        from pykeen.models.predict import predict_hrt_uncertain
+        from pykeen.models.uncertainty import predict_hrt_uncertain
 
         result = pipeline(dataset="nations", model="ERMLPE")
         prediction_with_uncertainty = predict_hrt_uncertain(

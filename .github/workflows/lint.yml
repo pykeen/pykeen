@@ -1,0 +1,42 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+    types: [auto_merge_enabled]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.8", "3.10" ]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+          cache: 'pip'
+          cache-dependency-path: './setup.cfg'
+      
+      - name: Install dependencies
+        run: pip install tox
+
+      - name: Check package metadata with Pyroma
+        run: tox -e pyroma
+      
+      - name: Check docstring coverage
+        run: tox -e docstr-coverage
+
+      - name: Check static typing with MyPy
+        run: tox -e mypy
+
+      - name: Check manifest
+        run: tox -e manifest
+
+      - name: Check code quality with flake8
+        run: tox -e flake8

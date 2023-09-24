@@ -4,6 +4,7 @@
 
 import logging
 import re
+from collections import defaultdict
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Pattern, Union
 
 from tqdm.auto import tqdm
@@ -82,24 +83,27 @@ class PythonResultTracker(ResultTracker):
     store_metrics: bool
 
     #: The metrics, a mapping from step -> (name -> value)
-    metrics: MutableMapping[Optional[int], Mapping[str, float]]
+    metrics: MutableMapping[Optional[int], MutableMapping[str, float]]
 
     def __init__(self, store_metrics: bool = True) -> None:
         """Initialize the tracker."""
         super().__init__()
         self.store_metrics = store_metrics
         self.configuration = dict()
-        self.metrics = dict()
+        self.metrics = defaultdict(dict)
         self.run_name = None
 
+    # docstr-coverage: inherited
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         self.run_name = run_name
 
+    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         if prefix is not None:
             params = {f"{prefix}.{key}": value for key, value in params.items()}
         self.configuration.update(params)
 
+    # docstr-coverage: inherited
     def log_metrics(
         self,
         metrics: Mapping[str, float],
@@ -111,7 +115,7 @@ class PythonResultTracker(ResultTracker):
 
         if prefix is not None:
             metrics = {f"{prefix}.{key}": value for key, value in metrics.items()}
-        self.metrics[step] = metrics
+        self.metrics[step].update(metrics)
 
 
 class ConsoleResultTracker(ResultTracker):
@@ -158,14 +162,16 @@ class ConsoleResultTracker(ResultTracker):
         if writer == "tqdm":
             self.write = tqdm.write
         elif writer == "builtin":
-            self.write = print  # noqa:T002
+            self.write = print  # noqa:T202
         elif writer == "logging":
             self.write = logging.getLogger("pykeen").info
 
+    # docstr-coverage: inherited
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         if run_name is not None and self.start_end_run:
             self.write(f"Starting run: {run_name}")
 
+    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         if not self.track_parameters:
             return
@@ -174,6 +180,7 @@ class ConsoleResultTracker(ResultTracker):
             if not self.parameter_filter or self.parameter_filter.match(key):
                 self.write(f"Parameter: {key} = {value}")
 
+    # docstr-coverage: inherited
     def log_metrics(
         self,
         metrics: Mapping[str, float],
@@ -188,6 +195,7 @@ class ConsoleResultTracker(ResultTracker):
             if not self.metric_filter or self.metric_filter.match(key):
                 self.write(f"Metric: {key} = {value}")
 
+    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         if not success:
             self.write("Run failed.")
@@ -218,14 +226,17 @@ class MultiResultTracker(ResultTracker):
         else:
             self.trackers = list(trackers)
 
+    # docstr-coverage: inherited
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.start_run(run_name=run_name)
 
+    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.log_params(params=params, prefix=prefix)
 
+    # docstr-coverage: inherited
     def log_metrics(
         self,
         metrics: Mapping[str, float],
@@ -235,6 +246,7 @@ class MultiResultTracker(ResultTracker):
         for tracker in self.trackers:
             tracker.log_metrics(metrics=metrics, step=step, prefix=prefix)
 
+    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.end_run(success=success)

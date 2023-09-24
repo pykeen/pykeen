@@ -2,14 +2,14 @@
 
 """Implementation of the DistMultLiteralGated model."""
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Type
 
 import torch.nn as nn
 
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.combinations import GatedCombination
-from ...nn.modules import DistMultInteraction, LiteralInteraction
+from ...nn.combination import GatedCombination
+from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -40,6 +40,7 @@ class DistMultLiteralGated(LiteralModel):
     )
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(margin=0.0)
+    interaction_cls: ClassVar[Type[Interaction]] = DistMultInteraction
 
     def __init__(
         self,
@@ -48,15 +49,26 @@ class DistMultLiteralGated(LiteralModel):
         input_dropout: float = 0.0,
         **kwargs,
     ) -> None:
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            the (training) triples factory
+        :param embedding_dim:
+            the embedding dimension
+        :param input_dropout:
+            the input dropout, cf. :meth:`DistMultCombination.__init__`
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`LiteralModel.__init__`
+        """
         super().__init__(
             triples_factory=triples_factory,
-            interaction=LiteralInteraction(
-                base=DistMultInteraction(),
-                combination=GatedCombination(
-                    entity_embedding_dim=embedding_dim,
-                    literal_embedding_dim=triples_factory.numeric_literals.shape[1],
-                    input_dropout=input_dropout,
-                ),
+            interaction=self.interaction_cls,
+            combination=GatedCombination,
+            combination_kwargs=dict(
+                entity_embedding_dim=embedding_dim,
+                literal_embedding_dim=triples_factory.numeric_literals.shape[1],
+                input_dropout=input_dropout,
             ),
             entity_representations_kwargs=[
                 dict(

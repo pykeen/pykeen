@@ -49,9 +49,10 @@ relations and tail entities as input and computes a scalar plausability score fo
 
 from class_resolver import ClassResolver, get_subclasses
 
-from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
+from .base import Model
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
-from .inductive import InductiveNodePiece, InductiveNodePieceGNN
+from .inductive import InductiveERModel, InductiveNodePiece, InductiveNodePieceGNN
+from .meta import CooccurrenceFilteredModel
 from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
@@ -95,10 +96,8 @@ from .unimodal import (
 __all__ = [
     # Base Models
     "Model",
-    "_OldAbstractModel",
-    "EntityRelationEmbeddingModel",
-    "_NewAbstractModel",
     "ERModel",
+    "InductiveERModel",
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models
@@ -145,25 +144,25 @@ __all__ = [
     # Evaluation-only models
     "SoftInverseTripleBaseline",
     "MarginalDistributionBaseline",
+    # Meta Models
+    "CooccurrenceFilteredModel",
     # Utils
     "model_resolver",
     "make_model",
     "make_model_cls",
 ]
 
-model_resolver = ClassResolver.from_subclasses(
+model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
     base=Model,
     skip={
         # Abstract Models
         _NewAbstractModel,
         # We might be able to relax this later
         ERModel,
+        InductiveERModel,
         LiteralModel,
         # baseline models behave differently
         EvaluationOnlyModel,
         *get_subclasses(EvaluationOnlyModel),
-        # Old style models should never be looked up
-        _OldAbstractModel,
-        EntityRelationEmbeddingModel,
     },
 )

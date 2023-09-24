@@ -182,9 +182,13 @@ def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = 
 
 
 def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: bool) -> Dataset:
-    dataset_instance.create_inverse_triples = create_inverse_triples
-    for factory in dataset_instance.factory_dict.values():
-        factory.create_inverse_triples = create_inverse_triples
+    # note: we only need to set the create_inverse_triples in the training factory.
+    if dataset_instance.create_inverse_triples and not create_inverse_triples:
+        assert dataset_instance.training.num_relations % 2 == 0
+        dataset_instance.training.num_relations //= 2
+    elif create_inverse_triples and not dataset_instance.training.create_inverse_triples:
+        dataset_instance.training.num_relations *= 2
+    dataset_instance.training.create_inverse_triples = create_inverse_triples
     return dataset_instance
 
 
@@ -196,8 +200,13 @@ def _cached_get_dataset(
     """Get dataset by name, potentially using file-based cache."""
     from . import dataset_resolver
 
+    # normalize dataset kwargs
+    dataset_kwargs = dict(dataset_kwargs or {})
+
+    # enable passing force option via dataset_kwargs
+    force = force or dataset_kwargs.pop("force", False)
+
     # hash kwargs
-    dataset_kwargs = dataset_kwargs or {}
     digest = _digest_kwargs(dataset_kwargs, ignore={"create_inverse_triples"})
 
     # normalize dataset name

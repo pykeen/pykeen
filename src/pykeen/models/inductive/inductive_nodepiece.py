@@ -5,22 +5,23 @@
 import logging
 from typing import Any, Callable, ClassVar, Mapping, Optional
 
+import more_itertools
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
 
-from ..nbase import ERModel, _prepare_representation_module_list
+from .base import InductiveERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
+    ConcatAggregationCombination,
     DistMultInteraction,
     Interaction,
     NodePieceRepresentation,
     SubsetRepresentation,
+    TokenizationRepresentation,
     representation_resolver,
 )
 from ...nn.node_piece import RelationTokenizer
-from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode, OneOrSequence
 
 __all__ = [
     "InductiveNodePiece",
@@ -29,13 +30,11 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class InductiveNodePiece(ERModel):
+class InductiveNodePiece(InductiveERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
     This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical
     :class:`pykeen.nn.Embedding` to more efficiently store representations.
-
-    INDUCTIVE VERSION
     ---
     citation:
         author: Galkin
@@ -58,7 +57,6 @@ class InductiveNodePiece(ERModel):
         relation_representations_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        shape: Optional[OneOrSequence[int]] = None,
         validation_factory: Optional[CoreTriplesFactory] = None,
         test_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,
@@ -67,7 +65,13 @@ class InductiveNodePiece(ERModel):
         Initialize the model.
 
         :param triples_factory:
-            the triples factory. Must have create_inverse_triples set to True.
+            the triples factory of training triples. Must have create_inverse_triples set to True.
+        :param inference_factory:
+            the triples factory of inference triples. Must have create_inverse_triples set to True.
+        :param validation_factory:
+            the triples factory of validation triples. Must have create_inverse_triples set to True.
+        :param test_factory:
+            the triples factory of testing triples. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
             :class:`pykeen.nn.NodePieceRepresentation`.
@@ -91,9 +95,6 @@ class InductiveNodePiece(ERModel):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-            this will only be necessary if the aggregation is an *ad hoc* function.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
@@ -106,13 +107,6 @@ class InductiveNodePiece(ERModel):
                 "representations inverse relation representations are required.",
             )
 
-        # Create an MLP for string aggregation
-        if aggregation == "mlp":
-            aggregation = ConcatMLP(
-                num_tokens=num_tokens,
-                embedding_dim=embedding_dim,
-            )
-
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
             query=None,
@@ -120,6 +114,8 @@ class InductiveNodePiece(ERModel):
             max_id=2 * triples_factory.real_num_relations + 1,
             shape=embedding_dim,
         )
+        if validation_factory is None:
+            validation_factory = inference_factory
 
         super().__init__(
             triples_factory=triples_factory,
@@ -130,52 +126,75 @@ class InductiveNodePiece(ERModel):
                 tokenizers=RelationTokenizer,
                 token_representations=relation_representations,
                 aggregation=aggregation,
-                shape=shape,
                 num_tokens=num_tokens,
             ),
             relation_representations=SubsetRepresentation(  # hide padding relation
                 max_id=triples_factory.num_relations,
                 base=relation_representations,
             ),
+            validation_factory=validation_factory,
+            testing_factory=test_factory,
             **kwargs,
         )
-        self.inference_representation = _prepare_representation_module_list(
-            representations=NodePieceRepresentation,
-            representation_kwargs=dict(
-                triples_factory=inference_factory,
-                tokenizers=RelationTokenizer,
-                token_representations=relation_representations,
-                aggregation=aggregation,
-                shape=shape,
-                num_tokens=num_tokens,
-            ),
-            max_id=inference_factory.num_entities,
-            shapes=self.interaction.full_entity_shapes(),
-            label="entity",
+        # note: we need to share the aggregation across representations, since the aggregation may have
+        #   trainable parameters
+        np: NodePieceRepresentation = self.entity_representations[0]
+        for representations in self._mode_to_representations.values():
+            assert len(representations) == 1
+            np2 = representations[0]
+            assert isinstance(np2, NodePieceRepresentation)
+            np2.combination = np.combination
+
+    def create_entity_representation_for_new_triples(
+        self, triples_factory: CoreTriplesFactory
+    ) -> NodePieceRepresentation:
+        """
+        Create NodePiece representations for a new triples factory.
+
+        The representations are initialized such that the same relation representations are used, and the aggregation
+        is shared.
+
+        :param triples_factory:
+            the triples factory used for relation tokenization; must share the same relation to ID mapping.
+
+        :return:
+            a new NodePiece entity representation with shared relation tokenization and aggregation.
+
+        :raises ValueError:
+            if the triples factory does not request inverse triples, or the number of relations differs.
+        """
+        if not triples_factory.create_inverse_triples:
+            raise ValueError("Must create a triples factory with inverse triples")
+        if triples_factory.num_relations != self.num_relations:
+            raise ValueError(f"{self.num_relations=} != {triples_factory.num_relations=} !")
+        # note: we cannot ensure the mapping also matches...
+
+        # get relation representations
+        relation_repr = more_itertools.one(self.relation_representations)
+        assert isinstance(relation_repr, SubsetRepresentation)
+        relation_repr = relation_repr.base
+
+        # get combination
+        np = more_itertools.one(self.entity_representations)
+        assert isinstance(np, NodePieceRepresentation)
+        combination = np.combination
+        assert isinstance(combination, ConcatAggregationCombination)
+
+        # get token representations
+        tr = more_itertools.one(np.base)
+        assert isinstance(tr, TokenizationRepresentation)
+        num_tokens = tr.num_tokens
+
+        # relation representations are shared
+        new = NodePieceRepresentation(
+            triples_factory=triples_factory,
+            tokenizers=RelationTokenizer,
+            token_representations=relation_repr,
+            aggregation=combination.aggregation,
+            num_tokens=num_tokens,
         )
 
-        self.num_train_entities = triples_factory.num_entities
-        self.num_inference_entities, self.num_valid_entities, self.num_test_entities = None, None, None
-        if inference_factory is not None:
-            self.num_inference_entities = inference_factory.num_entities
-            self.num_valid_entities = self.num_test_entities = self.num_inference_entities
-        else:
-            self.num_valid_entities = validation_factory.num_entities
-            self.num_test_entities = test_factory.num_entities
+        # share combination weights
+        new.combination = np.combination
 
-    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
-        assert mode is not None, "Inductive mode must be explicitly set for inductive models"
-        if mode == TRAINING:
-            return self.entity_representations
-        else:
-            return self.inference_representation
-
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
-        if mode == TRAINING:
-            return self.num_train_entities
-        elif mode == TESTING:
-            return self.num_test_entities
-        elif mode == VALIDATION:
-            return self.num_valid_entities
-        else:
-            raise ValueError
+        return new

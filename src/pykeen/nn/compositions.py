@@ -43,6 +43,7 @@ class FunctionalCompositionModule(CompositionModule):
 
     func: ClassVar[Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]]
 
+    # docstr-coverage: inherited
     def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return self.__class__.func(a, b)
 
@@ -65,7 +66,7 @@ class CircularCorrelationCompositionModule(FunctionalCompositionModule):
     func = circular_correlation
 
 
-composition_resolver = ClassResolver.from_subclasses(
+composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
     skip={

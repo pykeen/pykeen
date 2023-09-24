@@ -6,20 +6,23 @@ import itertools as itt
 import os
 import tempfile
 import unittest
+from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Collection, Optional
+from typing import Any, Collection, Iterable, Mapping, Optional, Tuple
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.splitting import splitter_resolver
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids, get_mapped_triples
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
+from tests.utils import needs_packages
 
 triples = np.array(
     [
@@ -58,6 +61,13 @@ numeric_triples = np.array(
     ],
     dtype=str,
 )
+
+# See https://github.com/pykeen/pykeen/pull/883
+triples_with_nans = [
+    ["netherlands", "militaryalliance", "uk"],
+    ["egypt", "intergovorgs3", "usa"],
+    ["jordan", "relbooktranslations", "nan"],
+]
 
 
 class TestTriplesFactory(unittest.TestCase):
@@ -250,6 +260,18 @@ class TestTriplesFactory(unittest.TestCase):
         # check that in all other splits no inverse triples are to be created
         assert not any(f.create_inverse_triples for f in others)
 
+    @needs_packages("wordcloud", "IPython")
+    def test_entity_word_cloud(self):
+        """Test word cloud generation."""
+        wc = self.factory.entity_word_cloud(top=3)
+        self.assertIsNotNone(wc)
+
+    @needs_packages("wordcloud", "IPython")
+    def test_relation_word_cloud(self):
+        """Test word cloud generation."""
+        wc = self.factory.relation_word_cloud(top=3)
+        self.assertIsNotNone(wc)
+
 
 class TestSplit(unittest.TestCase):
     """Test splitting."""
@@ -386,50 +408,25 @@ class TestLiterals(unittest.TestCase):
     def test_metadata(self):
         """Test metadata passing for triples factories."""
         t = Nations().training
-        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata["path"])
-        self.assertEqual(
-            (
-                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,"
-                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
-            ),
-            repr(t),
-        )
+        self.assertEqual(t.metadata, dict(path=NATIONS_TRAIN_PATH))
 
         entities = ["poland", "ussr"]
         x = t.new_with_restriction(entities=entities)
         entities_ids = t.entities_to_ids(entities=entities)
-        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata["path"])
-        self.assertEqual(
-            (
-                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=37,"
-                f' inverse_triples=False, entity_restriction={repr(entities_ids)}, path="{NATIONS_TRAIN_PATH}")'
-            ),
-            repr(x),
-        )
+        self.assertEqual(x.metadata, dict(path=NATIONS_TRAIN_PATH, entity_restriction=entities_ids))
 
         relations = ["negativebehavior"]
         v = t.new_with_restriction(relations=relations)
         relations_ids = t.relations_to_ids(relations=relations)
-        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata["path"])
-        self.assertEqual(
-            (
-                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=29,"
-                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations_ids)})'
-            ),
-            repr(v),
-        )
+        self.assertEqual(v.metadata, dict(path=NATIONS_TRAIN_PATH, relation_restriction=relations_ids))
 
-        w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
+        w = t.clone_and_exchange_triples(t.mapped_triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
-        self.assertNotIn("path", w.metadata)
-        self.assertEqual(
-            "TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)",
-            repr(w),
-        )
+        self.assertEqual(w.metadata, dict())
 
         y, z = t.split()
-        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata["path"])
-        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata["path"])
+        self.assertEqual(y.metadata, dict(path=NATIONS_TRAIN_PATH))
+        self.assertEqual(z.metadata, dict(path=NATIONS_TRAIN_PATH))
 
     def test_triples_numeric_literals_factory_split(self):
         """Test splitting a TriplesNumericLiteralsFactory object."""
@@ -480,6 +477,20 @@ class TestUtils(unittest.TestCase):
             _triples.tolist(),
         )
 
+    def test_load_triples_with_nans(self):
+        """Test loading triples that have a ``nan`` string.
+
+        .. seealso:: https://github.com/pykeen/pykeen/pull/883
+        """
+        path = RESOURCES.joinpath("test_nans.tsv")
+        expected_triples = [
+            ["netherlands", "militaryalliance", "uk"],
+            ["egypt", "intergovorgs3", "usa"],
+            ["jordan", "relbooktranslations", "nan"],
+        ]
+        _triples = load_triples(path).tolist()
+        self.assertEqual(expected_triples, _triples)
+
     def test_labeled_binary(self):
         """Test binary i/o on labeled triples factory."""
         tf1 = Nations().training
@@ -488,6 +499,11 @@ class TestUtils(unittest.TestCase):
     def test_core_binary(self):
         """Test binary i/o on core triples factory."""
         tf1 = Nations().training.to_core_triples_factory()
+        self.assert_binary_io(tf1, CoreTriplesFactory)
+
+    def test_core_binary_inverse_relations(self):
+        """Test binary i/o on core triples factory with inverse relations."""
+        tf1 = Nations(create_inverse_triples=True).training.to_core_triples_factory()
         self.assert_binary_io(tf1, CoreTriplesFactory)
 
     def assert_binary_io(self, tf, tf_cls):
@@ -506,15 +522,74 @@ class TestUtils(unittest.TestCase):
         """Check two triples factories have all of the same stuff."""
         # TODO: this could be (Core)TriplesFactory.__equal__
         self.assertEqual(type(tf1), type(tf2))
-        self.assertEqual(tf1.entity_ids, tf2.entity_ids)
-        self.assertEqual(tf1.relation_ids, tf2.relation_ids)
-        self.assertEqual(tf1.relation_ids, tf2.relation_ids)
         if isinstance(tf1, TriplesFactory):
             self.assertEqual(tf1.entity_labeling, tf2.entity_labeling)
             self.assertEqual(tf1.relation_labeling, tf2.relation_labeling)
         self.assertEqual(tf1.metadata, tf2.metadata)
+        self.assertEqual(tf1.num_entities, tf2.num_entities)
+        self.assertEqual(tf1.num_relations, tf2.num_relations)
         self.assertEqual(tf1.create_inverse_triples, tf2.create_inverse_triples)
         self.assertEqual(
             tf1.mapped_triples.detach().cpu().numpy().tolist(),
             tf2.mapped_triples.detach().cpu().numpy().tolist(),
         )
+
+
+# cf. https://docs.pytest.org/en/7.1.x/example/parametrize.html#parametrizing-conditional-raising
+@pytest.mark.parametrize(
+    ["dtype", "size", "expectation"],
+    [
+        # wrong ndim
+        (torch.long, (3,), pytest.raises(ValueError)),
+        # wrong last dim
+        (torch.long, (3, 11), pytest.raises(ValueError)),
+        # wrong dtype: float
+        (torch.float, (11, 3), pytest.raises(TypeError)),
+        # wrong dtype: complex
+        (torch.cfloat, (11, 3), pytest.raises(TypeError)),
+        # correct
+        (torch.long, (11, 3), does_not_raise()),
+        (torch.long, (0, 3), does_not_raise()),
+        (torch.uint8, (11, 3), does_not_raise()),
+        (torch.bool, (11, 3), does_not_raise()),
+    ],
+)
+def test_core_triples_factory_error_handling(dtype: torch.dtype, size: Tuple[int, ...], expectation):
+    """Test error handling in init method of CoreTriplesFactory."""
+    with expectation:
+        CoreTriplesFactory(
+            mapped_triples=torch.randint(33, size=size).to(dtype=dtype), num_entities=..., num_relations=...
+        )
+
+
+def _iter_get_mapped_triples_inputs() -> Iterable[Tuple[Any, Mapping[str, Any]]]:
+    """Iterate valid test inputs for get_mapped_triples."""
+    factory = Nations().training
+    # >>> positional argument
+    # mapped_triples
+    yield factory.mapped_triples, {}
+    # triples factory
+    yield factory, {}
+    # labeled triples + factory
+    labeled = [("brazil", "accusation", "burma"), ("brazil", "accusation", "uk")]
+    # single labeled triple
+    yield labeled[0], dict(factory=factory)
+    # multiple labeled triples as list
+    yield labeled, dict(factory=factory)
+    # multiple labeled triples as array
+    yield np.asarray(labeled), dict(factory=factory)
+    # >>> keyword only
+    yield None, dict(mapped_triples=factory.mapped_triples)
+    yield None, dict(factory=factory)
+    yield None, dict(triples=labeled, factory=factory)
+    yield None, dict(triples=np.asarray(labeled), factory=factory)
+
+
+@pytest.mark.parametrize(["x", "inputs"], _iter_get_mapped_triples_inputs())
+def test_get_mapped_triples(x, inputs: Mapping[str, Any]):
+    """Test get_mapped_triples."""
+    mapped_triples = get_mapped_triples(x, **inputs)
+    assert torch.is_tensor(mapped_triples)
+    assert mapped_triples.dtype == torch.long
+    assert mapped_triples.ndim == 2
+    assert mapped_triples.shape[-1] == 3

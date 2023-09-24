@@ -8,19 +8,33 @@ import logging
 from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
-from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
+from typing import (
+    Any,
+    ClassVar,
+    Generic,
+    Iterable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import torch
-from class_resolver import OptionalKwargs
-from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs
+from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
 from torch import nn
 
 from .base import Model
 from ..nn import representation_resolver
-from ..nn.modules import Interaction, interaction_resolver
+from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
 from ..nn.representation import Representation
-from ..regularizers import Regularizer
-from ..triples import CoreTriplesFactory
+from ..regularizers import Regularizer, regularizer_resolver
+from ..triples import KGInfo
 from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes, get_batchnorm_modules
 
@@ -98,20 +112,36 @@ class _NewAbstractModel(Model, ABC):
             for i, p_id in enumerate(uninitialized_parameters, start=1):
                 logger.debug("[%3d] Parents to blame: %s", i, parents.get(p_id))
 
-    def _instantiate_default_regularizer(self, **kwargs) -> Optional[Regularizer]:
-        """Instantiate the regularizer from this class's default settings.
-
-        :param kwargs: Additional keyword arguments to be passed through to the ``__init__()`` function of the
-            default regularizer, if one is set.
-
-        :returns: If the default regularizer is None, None is returned.
+    def _instantiate_regularizer(
+        self,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
+    ) -> Optional[Regularizer]:
         """
-        if self.regularizer_default is None:
-            return None
+        Instantiate a regularizer using the default if None is provided.
 
-        _kwargs = dict(self.regularizer_default_kwargs or {})
-        _kwargs.update(kwargs)
-        return self.regularizer_default(**_kwargs)
+        The following precedence order is used:
+
+        1. If the passed regularizer is not None, use it
+        2. If the regularizer is None, use the default regularizer. In this case, the
+           default kwargs will be used in favor of provided ones.
+        3. If both, the regularizer and the default regularizer are None, return None.
+
+        :param regularizer:
+            the regularizer, or a hint thereof
+        :param regularizer_kwargs:
+            additional keyword-based parameters passed to the regularizer upon instantiation
+
+        :return:
+            the regularizer instance.
+        """
+        regularizer, regularizer_kwargs = normalize_with_default(
+            choice=regularizer,
+            kwargs=regularizer_kwargs,
+            default=self.regularizer_default,
+            default_kwargs=self.regularizer_default_kwargs,
+        )
+        return regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
@@ -121,6 +151,7 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
+    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
@@ -134,7 +165,7 @@ def _prepare_representation_module_list(
     shapes: Sequence[str],
     label: str,
     representations: OneOrManyHintOrType[Representation] = None,
-    representation_kwargs: OneOrManyOptionalKwargs = None,
+    representations_kwargs: OneOrManyOptionalKwargs = None,
     skip_checks: bool = False,
 ) -> Sequence[Representation]:
     """
@@ -145,7 +176,7 @@ def _prepare_representation_module_list(
 
     :param representations:
         the representations, or hints for them.
-    :param representation_kwargs:
+    :param representations_kwargs:
         additional keyword-based parameters for instantiating representations from hints.
     :param max_id:
         the maximum representation ID. Newly instantiated representations will contain that many representations, and
@@ -165,7 +196,7 @@ def _prepare_representation_module_list(
     """
     # TODO: allow max_id being present in representation_kwargs; if it matches max_id
     # TODO: we could infer some shapes from the given interaction shape information
-    rs = representation_resolver.make_many(representations, kwargs=representation_kwargs, max_id=max_id)
+    rs = representation_resolver.make_many(representations, kwargs=representations_kwargs, max_id=max_id)
 
     # check max-id
     for r in rs:
@@ -262,12 +293,8 @@ class ERModel(
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
-        interaction: Union[
-            str,
-            Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
-        ],
+        triples_factory: KGInfo,
+        interaction: HintOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         interaction_kwargs: OptionalKwargs = None,
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
@@ -295,21 +322,23 @@ class ERModel(
         :param kwargs:
             Keyword arguments to pass to the base model
         """
+        # TODO: support "broadcasting" representation regularizers?
+        # e.g. re-use the same regularizer for everything; or
+        # pass a dictionary with keys "entity"/"relation";
+        # values are either a regularizer hint (=the same regularizer for all repr); or a sequence of appropriate length
         super().__init__(triples_factory=triples_factory, **kwargs)
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
-        self.entity_representations = _prepare_representation_module_list(
+        self.entity_representations = self._build_representations(
+            triples_factory=triples_factory,
             representations=entity_representations,
-            representation_kwargs=entity_representations_kwargs,
-            max_id=triples_factory.num_entities,
-            shapes=self.interaction.full_entity_shapes(),
+            representations_kwargs=entity_representations_kwargs,
             label="entity",
             skip_checks=skip_checks,
         )
-        self.relation_representations = _prepare_representation_module_list(
+        self.relation_representations = self._build_representations(
+            triples_factory=triples_factory,
             representations=relation_representations,
-            representation_kwargs=relation_representations_kwargs,
-            max_id=triples_factory.num_relations,
-            shapes=self.interaction.relation_shape,
+            representations_kwargs=relation_representations_kwargs,
             label="relation",
             skip_checks=skip_checks,
         )
@@ -319,21 +348,61 @@ class ERModel(
         # Explicitly call reset_parameters to trigger initialization
         self.reset_parameters_()
 
+    def _build_representations(
+        self,
+        triples_factory: KGInfo,
+        representations: OneOrManyHintOrType[Representation] = None,
+        representations_kwargs: OneOrManyOptionalKwargs = None,
+        label: Literal["entity", "relation"] = "entity",
+        **kwargs,
+    ) -> Sequence[Representation]:
+        """Build representations for the given factory."""
+        # note, triples_factory is required instead of just using self.num_entities
+        # and self.num_relations for the inductive case when this is different
+        return _prepare_representation_module_list(
+            representations=representations,
+            representations_kwargs=representations_kwargs,
+            max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
+            shapes=self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape,
+            label=label,
+            **kwargs,
+        )
+
     def append_weight_regularizer(
         self,
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
-        regularizer: Regularizer,
+        regularizer: HintOrType[Regularizer],
+        regularizer_kwargs: OptionalKwargs = None,
+        default_regularizer: HintOrType[Regularizer] = None,
+        default_regularizer_kwargs: OptionalKwargs = None,
     ) -> None:
-        """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
+        """
+        Add a model weight to a regularizer's weight list, and register the regularizer with the model.
 
         :param parameter:
             The parameter, either as name, or as nn.Parameter object. A list of available parameter names is shown by
              `sorted(dict(self.named_parameters()).keys())`.
         :param regularizer:
-            The regularizer instance which will regularize the weights.
+            the regularizer or a hint thereof
+        :param regularizer_kwargs:
+            additional keyword-based parameters for the regularizer's instantiation
+        :param default_regularizer:
+            the default regularizer; if None, use :attr:`regularizer_default`
+        :param default_regularizer_kwargs:
+            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
 
         :raises KeyError: If an invalid parameter name was given
         """
+        # instantiate regularizer
+        regularizer = regularizer_resolver.make(
+            *normalize_with_default(
+                choice=regularizer,
+                kwargs=regularizer_kwargs,
+                default=default_regularizer or self.regularizer_default,
+                default_kwargs=default_regularizer_kwargs or self.regularizer_default_kwargs,
+            )
+        )
+
         # normalize input
         if isinstance(parameter, (str, nn.Parameter)):
             parameter = [parameter]
@@ -411,93 +480,168 @@ class ERModel(
         """Raise an error, if slicing is requested, but the model does not support it."""
         if not slice_size:
             return
-        if get_batchnorm_modules(self):  # if there are any, this is truthy
+        # batch normalization modules use batch statistics in training mode
+        # -> different batch divisions lead to different results
+        if self.training and get_batchnorm_modules(self):
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
+    # docstr-coverage: inherited
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using right side (tail) prediction.
-
-        This method calculates the score for all possible tails for each (head, relation) pair.
-
-        :param hr_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, relation) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each h-r pair, the scores for all possible tails.
-        """
+        self,
+        hr_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        tails: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_entities:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
+
+        # slice early to allow lazy computation of target representations
+        if slice_size:
+            return torch.cat(
+                [
+                    self.score_t(
+                        hr_batch=hr_batch,
+                        slice_size=None,
+                        mode=mode,
+                        tails=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    )
+                    for start in range(0, self.num_entities, slice_size)
+                ],
+                dim=-1,
+            )
+
+        # add broadcast dimension
+        hr_batch = hr_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=hr_batch[..., 0], r=hr_batch[..., 1], t=tails, mode=mode)
+        # unsqueeze if necessary
+        if tails is None or tails.ndimension() == 1:
+            t = parallel_unsqueeze(t, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
+            scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode),
+            num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
         )
 
+    # docstr-coverage: inherited
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using left side (head) prediction.
-
-        This method calculates the score for all possible heads for each (relation, tail) pair.
-
-        :param rt_batch: shape: (batch_size, 2), dtype: long
-            The indices of (relation, tail) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each r-t pair, the scores for all possible heads.
-        """
+        self,
+        rt_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        heads: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_entities:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
+
+        # slice early to allow lazy computation of target representations
+        if slice_size:
+            return torch.cat(
+                [
+                    self.score_h(
+                        rt_batch=rt_batch,
+                        slice_size=None,
+                        mode=mode,
+                        heads=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    )
+                    for start in range(0, self.num_entities, slice_size)
+                ],
+                dim=-1,
+            )
+
+        # add broadcast dimension
+        rt_batch = rt_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=heads, r=rt_batch[..., 0], t=rt_batch[..., 1], mode=mode)
+        # unsqueeze if necessary
+        if heads is None or heads.ndimension() == 1:
+            h = parallel_unsqueeze(h, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
+            scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode),
+            num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
         )
 
+    # docstr-coverage: inherited
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:
-        """Forward pass using middle (relation) prediction.
-
-        This method calculates the score for all possible relations for each (head, tail) pair.
-
-        :param ht_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, tail) pairs.
-        :param slice_size:
-            The slice size.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, num_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
-        """
+        self,
+        ht_batch: torch.LongTensor,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode] = None,
+        relations: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_relations:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
+
+        # slice early to allow lazy computation of target representations
+        if slice_size:
+            return torch.cat(
+                [
+                    self.score_r(
+                        ht_batch=ht_batch,
+                        slice_size=None,
+                        mode=mode,
+                        relations=torch.arange(start=start, end=min(start + slice_size, self.num_relations)),
+                    )
+                    for start in range(0, self.num_relations, slice_size)
+                ],
+                dim=-1,
+            )
+
+        # add broadcast dimension
+        ht_batch = ht_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=ht_batch[..., 0], r=relations, t=ht_batch[..., 1], mode=mode)
+        # unsqueeze if necessary
+        if relations is None or relations.ndimension() == 1:
+            r = parallel_unsqueeze(r, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
+            scores=self.interaction(h=h, r=r, t=t),
             representations=self.relation_representations,
-            num=self.num_relations,
+            num=self.num_relations if relations is None else relations.shape[-1],
         )
 
-    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
+    def _get_entity_representations_from_inductive_mode(
+        self, *, mode: Optional[InductiveMode]
+    ) -> Sequence[Representation]:
+        """
+        Return the entity representations for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises ValueError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the entity representations for the given inductive mode
+        """
         if mode is not None:
-            raise NotImplementedError
+            raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
     def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105
+        """
+        Return the number of entities for the given inductive mode.
+
+        :param mode:
+            the inductive mode
+
+        :raises NotImplementedError:
+            if the model does not support the given inductive mode, e.g.,
+            because it is purely transductive
+
+        :return:
+            the number of entities in the given inductive mode
+        """
         if mode is not None:
             raise NotImplementedError
         return self.num_entities
@@ -511,11 +655,11 @@ class ERModel(
         mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        head_representations = tail_representations = self._entity_representation_from_mode(mode=mode)
+        head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
         head_representations = [head_representations[i] for i in self.interaction.head_indices()]
         tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
         hr, rr, tr = [
-            [representation.forward_unique(indices=indices) for representation in representations]
+            [representation(indices=indices) for representation in representations]
             for indices, representations in (
                 (h, head_representations),
                 (r, self.relation_representations),

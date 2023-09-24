@@ -52,19 +52,13 @@ We've added experimental support for Windows as of `!95 <https://github.com/pyke
 However, be warned, it's much less straightforward to install PyTorch and therefore PyKEEN on Windows.
 
 First, to install PyTorch, you must install `Anaconda <https://www.anaconda.com/>`_ and follow
-the instructions on the PyTorch website. For example, if you're using CUDA version 10.2, use
-the following command:
-
-.. code-block:: bash
-
-    $ conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
-
+the instructions on the `PyTorch website <https://pytorch.org/get-started/locally/>`_.
 Then, assuming your `python` and `pip` command are linked to the same place where conda is installing,
 you can proceed with the normal installation (or the installation from GitHub as shown above):
 
 .. code-block:: bash
 
-    $ pip install pytorch
+    $ pip install pykeen
 
 If you're having trouble with ``pip`` or ``sqlite``, you might also have to use
 ``conda install pip setuptools wheel sqlite``. See our
@@ -102,9 +96,9 @@ of the ``setup.cfg``. They can be included with installation using the bracket n
 ``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
 ``pip install pykeen[docs,plotting]``.
 
-================  ==============================================================================
+================  =========================================================================================
 Name              Description
-================  ==============================================================================
+================  =========================================================================================
 ``templating``    Building of templated documentation, like the README
 ``plotting``      Plotting with ``seaborn`` and generation of word clouds
 ``mlflow``        Tracking of results with ``mlflow``
@@ -114,4 +108,6 @@ Name              Description
 ``transformers``  Label-based initialization with ``transformers``.
 ``tests``         Code needed to run tests. Typically handled with ``tox -e py``
 ``docs``          Building of the documentation
-================  ==============================================================================
+``opt_einsum``    Improve performance of :func:`torch.einsum` by replacing with :func:`opt_einsum.contract`
+``biomedicine``   Use of :mod:`pyobo` for lookup of biomedical entity labels
+================  =========================================================================================

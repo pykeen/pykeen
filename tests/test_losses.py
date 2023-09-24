@@ -9,9 +9,15 @@ import torch
 import unittest_templates
 
 import pykeen.losses
-from pykeen.losses import Loss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, apply_label_smoothing
+from pykeen.losses import Loss, NSSALoss, apply_label_smoothing
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
+
+
+class AdversarialBCELossTests(cases.SetwiseLossTestCase):
+    """Unit test for adversarially weighted BCE."""
+
+    cls = pykeen.losses.AdversarialBCEWithLogitsLoss
 
 
 class CrossEntropyLossTests(cases.SetwiseLossTestCase):
@@ -84,7 +90,8 @@ class TestCustomLossFunctions(unittest.TestCase):
         # sigmoids ≈ [0.27, 0.27, 0.5, 0.5]
         log_sigmoids = torch.tensor([-1.31, -1.31, -0.69, -0.69])
         intermediate = weights * log_sigmoids
-        neg_loss = torch.mean(intermediate, dim=-1)
+        # sum over the softmax dim as weights sum up to 1
+        neg_loss = torch.sum(intermediate, dim=-1)
 
         # pos_distances = [0., 0., 0.5, 0.5]
         # margin - pos_distances = [1. 1., 0.5, 0.5]
@@ -98,7 +105,7 @@ class TestCustomLossFunctions(unittest.TestCase):
 
         loss = loss_fct(pos_scores, neg_scores, weights).item()
 
-        self.assertAlmostEqual(expected_loss, 0.34, delta=0.02)
+        self.assertAlmostEqual(expected_loss, 0.77, delta=0.02)
         self.assertAlmostEqual(expected_loss, loss, delta=0.02)
 
     def test_pipeline(self):
@@ -148,17 +155,25 @@ class PairwiseLogisticLossTestCase(cases.GMRLTestCase):
     cls = pykeen.losses.PairwiseLogisticLoss
 
 
+class InfoNCELossTests(cases.SetwiseLossTestCase):
+    """Unit test for InfoNCE loss."""
+
+    cls = pykeen.losses.InfoNCELoss
+
+
 class TestLosses(unittest_templates.MetaTestCase[Loss]):
     """Test that the loss functions all have tests."""
 
     base_cls = Loss
     base_test = cases.LossTestCase
     skip_cls = {
-        PairwiseLoss,
-        PointwiseLoss,
-        SetwiseLoss,
+        # abstract classes
+        pykeen.losses.PairwiseLoss,
+        pykeen.losses.PointwiseLoss,
+        pykeen.losses.SetwiseLoss,
         pykeen.losses.DeltaPointwiseLoss,
         pykeen.losses.MarginPairwiseLoss,
+        pykeen.losses.AdversarialLoss,
     }
 
 

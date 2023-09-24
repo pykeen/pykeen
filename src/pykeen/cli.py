@@ -13,13 +13,15 @@ later, but that will cause problems - the code will get executed twice:
 .. seealso:: http://click.pocoo.org/5/setuptools/#setuptools-integration
 """
 
+import importlib
 import inspect
 import os
 import sys
 from pathlib import Path
-from typing import List, Mapping, Optional, Tuple, Type
+from typing import Iterable, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import click
+from class_resolver import ClassResolver
 from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
 from tabulate import tabulate
@@ -38,10 +40,12 @@ from .hpo.cli import optimize
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .metrics.utils import Metric
-from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
+from .models import model_resolver
 from .models.cli import build_cli_from_cls
-from .nn.modules import LiteralInteraction, interaction_resolver
+from .nn import representation_resolver
+from .nn.modules import interaction_resolver
 from .nn.node_piece.cli import tokenize
+from .nn.pyg import MessagePassingRepresentation
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver
@@ -53,6 +57,7 @@ from .utils import get_until_first_blank, getattr_or_docdata
 from .version import env_table
 
 HERE = Path(__file__).resolve().parent
+X = TypeVar("X")
 
 
 @click.group()
@@ -82,9 +87,87 @@ def models(tablefmt: str):
     click.echo(_help_models(tablefmt=tablefmt)[0])
 
 
-def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
-    lines = sorted(_get_model_lines(link_fmt=link_fmt))
-    headers = ["Name", "Model", "Interaction", "Citation"]
+def format_class(cls: Type, module: Optional[str] = None) -> str:
+    """
+    Generate the fully-qualified class name.
+
+    :param cls:
+        the class
+    :param module:
+        the module name to use instead of `cls.__module__`
+
+    :return:
+        the fully qualified class name
+    """
+    if module is None:
+        module = cls.__module__
+    return f"{module}.{cls.__qualname__}"
+
+
+def _citation(dd):
+    citation = (dd or {}).get("citation")
+    if citation is None:
+        return None
+    return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
+
+
+def _format_reference(reference: Optional[str], link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
+    """
+    Format a reference.
+
+    :param reference:
+        the reference
+    :param link_fmt:
+        the link format
+    :param alt_reference:
+        the link target. Defaults to the reference.
+    :return:
+        a Markdown reference
+    """
+    if reference is None:
+        return ""
+    if link_fmt is None:
+        return f"`{reference}`"
+    return f"[`{reference}`]({link_fmt.format(alt_reference or reference)})"
+
+
+def _get_resolver_lines2(
+    resolver: ClassResolver[X],
+    link_fmt: Optional[str] = None,
+    skip: Optional[Set[Type[X]]] = None,
+    top_k: int = 2,
+) -> Iterable[Tuple[str, str, Optional[str]]]:
+    for _, clsx in sorted(resolver.lookup_dict.items()):
+        if skip and clsx in skip:
+            continue
+        # determine fully qualified name
+        module, name = clsx.__module__, clsx.__qualname__
+        full = f"{module}.{name}"
+        # shorten to main module
+        if top_k:
+            module = ".".join(module.split(".", maxsplit=top_k)[:-1])
+        short = f"{module}.{name}"
+        # verify that short name can be imported from the abbreviated reference
+        if name not in dir(importlib.import_module(module)):
+            click.secho(message=f"{name} not visible in {module}", err=True)
+        # get docdata and extract name & citation
+        docdata = resolver.docdata(clsx) or {}
+        assert isinstance(docdata, dict)
+        # fallback for name: capitalized class name without base suffix
+        name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
+        assert isinstance(name, str)
+        # extract citation information and warn about lack thereof
+        citation = _citation(docdata)
+        if not citation:
+            click.secho(message=f"Missing citation for {short}", err=True)
+        # compose reference
+        reference = _format_reference(reference=short, link_fmt=link_fmt, alt_reference=full)
+        yield name, reference, citation
+
+
+def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
+    lines = sorted(_get_resolver_lines2(resolver=model_resolver, link_fmt=link_fmt))
+    headers = ["Name", "Model", "Citation"]
     return (
         tabulate(
             lines,
@@ -95,71 +178,43 @@ def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
     )
 
 
-_MODEL_MAP = {
-    DistMultLiteralGated: LiteralInteraction,
-    DistMultLiteral: LiteralInteraction,
-    ComplExLiteral: LiteralInteraction,
-}
+def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
+    lines = list(
+        _get_resolver_lines2(
+            resolver=interaction_resolver,
+            link_fmt=link_fmt,
+        )
+    )
+    headers = ["Name", "Reference", "Citation"]
+    return (
+        tabulate(
+            lines,
+            headers=headers,
+            tablefmt=tablefmt,
+        ),
+        len(lines),
+    )
 
 
-def _get_model_lines(*, link_fmt: Optional[str] = None):
-    seen_interactions = set()
-    for _, model_cls in sorted(model_resolver.lookup_dict.items()):
-        try:
-            if model_cls in _MODEL_MAP:
-                interaction_cls = _MODEL_MAP[model_cls]
-            else:
-                interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
-        except KeyError:
-            click.echo(f"could not look up {model_resolver.normalize_cls(model_cls)}")
-            interaction_reference = None
-        else:
-            seen_interactions.add(interaction_cls)
-            interaction_reference = f"pykeen.nn.{interaction_cls.__name__}"
-
-        model_reference = f"pykeen.models.{model_cls.__name__}"
-        docdata = getattr(model_cls, "__docdata__", None)
-        if docdata is None:
-            raise ValueError("All models must have docdata")
-        if link_fmt:
-            model_reference = _fmt_ref(model_reference, link_fmt)
-        else:
-            model_reference = f"`{model_reference}`"
-
-        if interaction_reference:
-            if link_fmt:
-                interaction_reference = _fmt_ref(interaction_reference, link_fmt)
-            else:
-                interaction_reference = f"`{interaction_reference}`"
-        else:
-            interaction_reference = ""
-
-        name = docdata.get("name", model_cls.__name__)
-        yield name, model_reference, interaction_reference, _citation(docdata)
-
-    for interaction_cls in set(interaction_resolver) - seen_interactions:
-        docdata = getattr(interaction_cls, "__docdata__", None)
-        if docdata is None:
-            raise ValueError(f"All unmodeled interactions must have docdata: {interaction_cls}")
-        name = docdata.get("name")
-        if name is None:
-            raise ValueError(f"All unmodeled interactions must have a name: {interaction_cls}")
-        yield name, "", _fmt_ref(
-            f"pykeen.nn.{interaction_cls.__name__}", link_fmt, f"pykeen.nn.module.{interaction_cls.__name__}"
-        ), _citation(docdata)
-
-
-def _citation(dd):
-    citation = dd["citation"]
-    return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
-
-
-def _fmt_ref(model_reference: str, link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
-    if model_reference is None:
-        return ""
-    if link_fmt is None:
-        return f"`{model_reference}`"
-    return f"[`{model_reference}`]({link_fmt.format(alt_reference or model_reference)})"
+def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
+    lines = list(
+        line[:2]
+        for line in _get_resolver_lines2(
+            resolver=representation_resolver,
+            link_fmt=link_fmt,
+            # cf. https://github.com/python/mypy/issues/5374
+            skip={MessagePassingRepresentation},  # type: ignore
+        )
+    )
+    headers = ["Name", "Reference"]
+    return (
+        tabulate(
+            lines,
+            headers=headers,
+            tablefmt=tablefmt,
+        ),
+        len(lines),
+    )
 
 
 @ls.command()
@@ -207,7 +262,7 @@ def training_loops(tablefmt: str):
 
 
 def _help_training(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(training_loop_resolver.lookup_dict, tablefmt, "training", link_fmt=link_fmt)
+    lines = _get_resolver_lines(training_loop_resolver.lookup_dict, tablefmt, "training", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Description"] if tablefmt == "plain" else ["Name", "Reference", "Description"],
@@ -223,7 +278,7 @@ def negative_samplers(tablefmt: str):
 
 
 def _help_negative_samplers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(negative_sampler_resolver.lookup_dict, tablefmt, "sampling", link_fmt=link_fmt)
+    lines = _get_resolver_lines(negative_sampler_resolver.lookup_dict, tablefmt, "sampling", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Description"] if tablefmt == "plain" else ["Name", "Reference", "Description"],
@@ -239,7 +294,7 @@ def stoppers(tablefmt: str):
 
 
 def _help_stoppers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(stopper_resolver.lookup_dict, tablefmt, "stoppers", link_fmt=link_fmt)
+    lines = _get_resolver_lines(stopper_resolver.lookup_dict, tablefmt, "stoppers", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Description"] if tablefmt == "plain" else ["Name", "Reference", "Description"],
@@ -255,7 +310,7 @@ def evaluators(tablefmt: str):
 
 
 def _help_evaluators(tablefmt, link_fmt: Optional[str] = None):
-    lines = sorted(_get_lines(evaluator_resolver.lookup_dict, tablefmt, "evaluation", link_fmt=link_fmt))
+    lines = sorted(_get_resolver_lines(evaluator_resolver.lookup_dict, tablefmt, "evaluation", link_fmt=link_fmt))
     return tabulate(
         lines,
         headers=["Name", "Description"] if tablefmt == "plain" else ["Name", "Reference", "Description"],
@@ -331,7 +386,7 @@ def regularizers(tablefmt: str):
 
 
 def _help_regularizers(tablefmt, link_fmt: Optional[str] = None):
-    lines = _get_lines(regularizer_resolver.lookup_dict, tablefmt, "regularizers", link_fmt=link_fmt)
+    lines = _get_resolver_lines(regularizer_resolver.lookup_dict, tablefmt, "regularizers", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Reference", "Description"],
@@ -400,7 +455,7 @@ def trackers(tablefmt: str):
 
 
 def _help_trackers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(tracker_resolver.lookup_dict, tablefmt, "trackers", link_fmt=link_fmt)
+    lines = _get_resolver_lines(tracker_resolver.lookup_dict, tablefmt, "trackers", link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=["Name", "Reference", "Description"],
@@ -446,7 +501,7 @@ def _get_metrics_lines(tablefmt: str):
         link = getattr_or_docdata(metric, "link")
         yv = [
             f"[{label}]({link})",
-            metric.get_range(),
+            "$" + metric.get_range() + "$",
             "📈" if metric.increasing else "📉",
             getattr_or_docdata(metric, "description"),
             METRIC_NAMES[metric_results_cls],
@@ -458,7 +513,9 @@ def _get_metrics_lines(tablefmt: str):
         yield tuple(yv)
 
 
-def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
+def _get_resolver_lines(
+    d: Mapping[str, Type[X]], tablefmt: str, submodule: str, link_fmt: Optional[str] = None
+) -> Union[Iterable[Tuple[str, str]], Iterable[Tuple[str, str, Optional[str]]]]:
     for name, value in sorted(d.items()):
         if tablefmt == "rst":
             if isinstance(value, type):
@@ -470,7 +527,7 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
         elif tablefmt == "github":
             try:
                 ref = value.__name__
-                doc = value.__doc__.splitlines()[0]
+                doc = value.__doc__.splitlines()[0]  # type: ignore
             except AttributeError:
                 ref = name
                 doc = value.__class__.__doc__
@@ -483,6 +540,7 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
 
             yield name, reference, doc
         else:
+            assert isinstance(value.__doc__, str)
             yield name, value.__doc__.splitlines()[0]
 
 
@@ -582,7 +640,7 @@ def readme(check: bool):
     new_readme = get_readme()
 
     if check:
-        with open(readme_path) as file:
+        with open(readme_path, encoding="utf8") as file:
             old_readme = file.read()
         if new_readme.strip() != old_readme.strip():
             click.secho(
@@ -597,8 +655,8 @@ def readme(check: bool):
 
             sys.exit(-1)
 
-    with open(readme_path, "w") as file:
-        print(new_readme, file=file)  # noqa:T001
+    with open(readme_path, "w", encoding="utf8") as file:
+        print(new_readme, file=file)  # noqa:T201
 
 
 def get_readme() -> str:
@@ -615,7 +673,13 @@ def get_readme() -> str:
     tablefmt = "github"
     api_link_fmt = "https://pykeen.readthedocs.io/en/latest/api/{}.html"
     models, n_models = _help_models(tablefmt, link_fmt=api_link_fmt)
+    interactions, n_interactions = _help_interactions(tablefmt, link_fmt=api_link_fmt)
+    representations, n_representations = _help_representations(tablefmt, link_fmt=api_link_fmt)
     return readme_template.render(
+        interactions=interactions,
+        n_interactions=n_interactions,
+        representations=representations,
+        n_representations=n_representations,
         models=models,
         n_models=n_models,
         regularizers=_help_regularizers(tablefmt, link_fmt=api_link_fmt),

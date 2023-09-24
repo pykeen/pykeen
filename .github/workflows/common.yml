@@ -1,0 +1,78 @@
+name: Common
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+  pull_request:
+    types: [review_requested, ready_for_review, auto_merge_enabled]
+
+jobs:
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # no need to check documentation wit multiple python versions
+        # python-version: [ "3.8", "3.10" ]
+        python-version: [ "3.10" ]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+          cache: 'pip'
+          cache-dependency-path: './setup.cfg'
+      
+      - name: Install dependencies
+        run: pip install tox
+
+      - name: Check RST conformity with doc8
+        run: tox -e doc8
+      
+      # - name: Check RST format
+      #   run: tox -e doclint
+
+      - name: Check README.rst
+        run: tox -e readme
+
+      - name: Check documentation build with Sphinx
+        run: |
+          sudo apt-get install graphviz
+          tox -e docs-test
+  tests:
+    name: Tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: [ "3.8", "3.10" ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+          cache: 'pip'
+          cache-dependency-path: './setup.cfg'
+      
+      - name: Install dependencies
+        run: pip install tox
+      
+      - name: Run fast tests
+        run: tox -e py
+      
+      - name: Run slow tests
+        run: tox -e integration
+      
+      - name: Run doctests
+        run: tox -e doctests
+      
+      # - name: Test notebooks
+      #   run: tox -e treon

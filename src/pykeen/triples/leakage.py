@@ -10,8 +10,7 @@ novel triples.
 """
 
 import logging
-from collections import defaultdict
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
+from typing import Collection, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
 
 import click
 import numpy
@@ -21,7 +20,7 @@ import torch
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import CoreTriplesFactory, TriplesFactory, cat_triples
 from pykeen.typing import MappedTriples
-from pykeen.utils import compact_mapping
+from pykeen.utils import compact_mapping, get_connected_components
 
 __all__ = [
     "Sealant",
@@ -32,40 +31,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 X = TypeVar("X")
 Y = TypeVar("Y")
-
-
-def find(x: X, parent: Mapping[X, X]) -> X:
-    # check validity
-    if x not in parent:
-        raise ValueError(f"Unknown element: {x}.")
-    # path compression
-    while parent[x] != x:
-        x, parent[x] = parent[x], parent[parent[x]]  # type: ignore
-    return x
-
-
-def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
-    # collect connected components using union find with path compression
-    parent: Dict[X, X] = dict()
-    for x, y in pairs:
-        parent.setdefault(x, x)
-        parent.setdefault(y, y)
-        # get representatives
-        x = find(x=x, parent=parent)
-        y = find(x=y, parent=parent)
-        # already merged
-        if x == y:
-            continue
-        # make x the smaller one
-        if y < x:  # type: ignore
-            x, y = y, x
-        # merge
-        parent[y] = x
-    # extract partitions
-    result = defaultdict(list)
-    for k, v in parent.items():
-        result[v].append(k)
-    return list(result.values())
 
 
 def _select_by_most_pairs(
@@ -232,8 +197,11 @@ class Sealant:
 
         :param triples_factory: The triples factory to index.
         :param minimum_frequency: The minimum overlap between two relations' triples to consider them as inverses. The
-         default value, 0.97, is taken from `Toutanova and Chen (2015) <https://www.aclweb.org/anthology/W15-4007/>`_,
-         who originally described the generation of FB15k-237.
+            default value, 0.97, is taken from `Toutanova and Chen (2015)
+            <https://www.aclweb.org/anthology/W15-4007/>`_, who originally described the generation of FB15k-237.
+        :param symmetric: If the similarities are computed as symmetric
+        :raises NotImplementedError:
+            If symmetric is False
         """
         self.triples_factory = triples_factory
         if minimum_frequency is None:
@@ -259,7 +227,7 @@ class Sealant:
         sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True)))
         self.relations_to_delete = _select_by_most_pairs(
             size=sizes,
-            components=_get_connected_components((a, b) for a, b in self.candidates if a != b),
+            components=get_connected_components((a, b) for a, b in self.candidates if a != b),
         )
         logger.info(f"identified {len(self.candidates)} from {self.triples_factory} to delete")
 
@@ -279,11 +247,12 @@ def unleak(
     :param train: The target triples factory
     :param triples_factories: All other triples factories (test, validate, etc.)
     :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
-     to keep. If left none, frequent relations are not removed.
+        to keep. If left none, frequent relations are not removed.
     :param minimum_frequency: The minimum overlap between two relations' triples to consider them as inverses or
-     duplicates. The default value, 0.97, is taken from
-     `Toutanova and Chen (2015) <https://www.aclweb.org/anthology/W15-4007/>`_, who originally described the generation
-     of FB15k-237.
+        duplicates. The default value, 0.97, is taken from `Toutanova and Chen (2015)
+        <https://www.aclweb.org/anthology/W15-4007/>`_, who originally described the generation of FB15k-237.
+    :returns:
+        A sequence of reindexed triples factories
     """
     if n is not None:
         frequent_relations = train.get_most_frequent_relations(n=n)

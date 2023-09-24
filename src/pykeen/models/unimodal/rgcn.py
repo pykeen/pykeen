@@ -59,6 +59,7 @@ class RGCN(
         author: Schlichtkrull
         year: 2018
         link: https://arxiv.org/pdf/1703.06103
+        github: https://github.com/MichSchli/RelationPrediction
     """
 
     #: The default strategy for optimizing the model"s hyper-parameters
@@ -87,9 +88,9 @@ class RGCN(
         # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
         base_entity_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
         base_entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_representations: HintOrType[Representation] = None,
         relation_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_representations: HintOrType[Representation] = None,
         interaction: HintOrType[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = "DistMult",
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         use_bias: bool = True,
@@ -104,6 +105,60 @@ class RGCN(
         regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            the (training) triples factory
+        :param embedding_dim:
+            the embedding dimension
+        :param num_layers: >0
+            the number of layers
+
+        :param base_entity_initializer:
+            the entity base representation initializer
+        :param base_entity_initializer_kwargs:
+            the entity base representation initializer's keyword-based parameters
+
+        :param relation_representations:
+            the relation representations, or a hint thereof
+        :param relation_initializer:
+            the entity base representation initializer
+        :param relation_initializer_kwargs:
+            the entity base representation initializer's keyword-based parameters
+
+        :param interaction:
+            the interaction function, or a hint thereof
+        :param interaction_kwargs:
+            additional keyword-based parameters passed to the interaction function
+
+        :param use_bias:
+            whether to use a bias on the message passing layers
+
+        :param activation:
+            the activation function, or a hint thereof
+        :param activation_kwargs:
+            additional keyword-based parameters passed to the activation function
+
+        :param edge_dropout:
+            the edge dropout, except for self-loops
+        :param self_loop_dropout:
+            the self-loop dropout
+        :param edge_weighting:
+            the edge weighting
+
+        :param decomposition:
+            the convolution weight decomposition
+        :param decomposition_kwargs:
+            additional keyword-based parameters passed to the weight decomposition
+        :param regularizer:
+            the regularizer applied to the base representations
+        :param regularizer_kwargs:
+            additional keyword-based parameters passed to the regularizer
+
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        """
         super().__init__(
             entity_representations=RGCNRepresentation,
             entity_representations_kwargs=dict(

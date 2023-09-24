@@ -45,10 +45,9 @@ class OpenBioLink(PackedZipRemoteDataset):
         triples: 4563407
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the OpenBioLink dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
@@ -57,7 +56,6 @@ class OpenBioLink(PackedZipRemoteDataset):
             relative_training_path="HQ_DIR/train_test_data/train_sample.csv",
             relative_testing_path="HQ_DIR/train_test_data/test_sample.csv",
             relative_validation_path="HQ_DIR/train_test_data/val_sample.csv",
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 
@@ -82,10 +80,9 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
         triples: 27320889
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the OpenBioLink (low quality) dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
@@ -94,7 +91,6 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
             relative_training_path="ALL_DIR/train_test_data/train_sample.csv",
             relative_testing_path="ALL_DIR/train_test_data/test_sample.csv",
             relative_validation_path="ALL_DIR/train_test_data/val_sample.csv",
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 

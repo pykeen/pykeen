@@ -23,7 +23,6 @@ from ..constants import USER_DEFINED_CODE
 from ..datasets import dataset_resolver, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.ranking_metric_lookup import MetricKey
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
@@ -36,7 +35,7 @@ from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
-from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
+from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io, normalize_path
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -55,6 +54,12 @@ class ExtraKeysError(ValueError):
     """Raised on extra keys being used."""
 
     def __init__(self, keys: Iterable[str]):
+        """
+        Initialize the error.
+
+        :param keys:
+            the extra keys
+        """
         super().__init__(sorted(keys))
 
     def __str__(self) -> str:
@@ -242,6 +247,14 @@ class Objective:
             kwargs_ranges=self.training_kwargs_ranges,
         )
 
+        # a fixed checkpoint_name leads avoid collision across trials
+        checkpoint_name = _training_kwargs.get("checkpoint_name", None)
+        if checkpoint_name:
+            raise ValueError(
+                f"Cannot set a fixed {checkpoint_name=} across all trials; if you want to save the final model per "
+                f"trial, use `save_model_directory` instead!",
+            )
+
         # create result tracker to allow to gracefully close failed trials
         result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
 
@@ -347,6 +360,14 @@ class HpoPipelineResult(Result):
             if field.name.endswith("_kwargs"):
                 logger.debug(f"saving pre-specified field in pipeline config: {field.name}={field_value}")
                 pipeline_config[field.name] = field_value
+            elif field.name == "result_tracker" and field_value:
+                if issubclass(field_value, ResultTracker):
+                    tracker_subclass = tracker_resolver.normalize_cls(field_value)
+                    if not tracker_subclass:  # field_value is base class
+                        continue
+                    pipeline_config[field.name] = tracker_subclass
+                else:
+                    logger.error(f"Invalid value for field {field.name}: {field_value!r}")
             elif field.name in {"training", "testing", "validation"}:
                 pipeline_config[field.name] = field_value if isinstance(field_value, str) else USER_DEFINED_CODE
 
@@ -375,9 +396,7 @@ class HpoPipelineResult(Result):
 
     def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        if isinstance(directory, str):
-            directory = pathlib.Path(directory).resolve()
-        directory.mkdir(exist_ok=True, parents=True)
+        directory = normalize_path(directory, mkdir=True)
 
         # Output study information
         with directory.joinpath("study.json").open("w") as file:
@@ -551,6 +570,7 @@ def hpo_pipeline(
     # Optuna Optimization Settings
     n_trials: Optional[int] = None,
     timeout: Optional[int] = None,
+    gc_after_trial: Optional[bool] = None,
     n_jobs: Optional[int] = None,
     save_model_directory: Optional[str] = None,
 ) -> HpoPipelineResult:
@@ -697,6 +717,8 @@ def hpo_pipeline(
         the number of trials, cf. :meth:`optuna.study.Study.optimize`.
     :param timeout:
         the timeout, cf. :meth:`optuna.study.Study.optimize`.
+    :param gc_after_trial:
+        the garbage collection after trial, cf. :meth:`optuna.study.Study.optimize`.
     :param n_jobs:
         the number of jobs, cf. :meth:`optuna.study.Study.optimize`. Defaults to 1.
 
@@ -781,12 +803,12 @@ def hpo_pipeline(
         raise ValueError("can not use early stopping while optimizing epochs")
 
     # 8. Evaluation
-    evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
+    evaluator_cls = evaluator_resolver.lookup(evaluator)
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
-    metric = MetricKey.normalize(metric)
-    study.set_user_attr("metric", metric)
-    logger.info(f"Attempting to {direction} {metric}")
+    resolved_metric = evaluator_cls.metric_result_cls.key_to_string(metric)
+    study.set_user_attr("metric", resolved_metric)
+    logger.info(f"Attempting to {direction} {resolved_metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)
     logger.info("Filter validation triples when testing: %s", filter_validation_when_testing)
 
@@ -843,7 +865,7 @@ def hpo_pipeline(
         result_tracker=result_tracker,
         result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
-        metric=metric,
+        metric=resolved_metric,
         save_model_directory=save_model_directory,
         # Pipeline Misc.
         device=device,
@@ -854,6 +876,7 @@ def hpo_pipeline(
         cast(Callable[[Trial], float], objective),
         n_trials=n_trials,
         timeout=timeout,
+        gc_after_trial=gc_after_trial,
         n_jobs=n_jobs or 1,
         catch=(MemoryError, RuntimeError),
     )
@@ -889,6 +912,21 @@ def suggest_kwargs(
     kwargs_ranges: Mapping[str, Any],
     kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Mapping[str, Any]:
+    """
+    Suggest parameters from given dictionaries.
+
+    :param trial:
+        the optuna trial
+    :param prefix:
+        the prefix to be prepended to the name
+    :param kwargs:
+        a dictionary of fixed parameters
+    :param kwargs_ranges:
+        a dictionary of parameters to be sampled with their ranges.
+
+    :return:
+        a dictionary with fixed and sampled parameters
+    """
     _kwargs: Dict[str, Any] = {}
     if kwargs:
         _kwargs.update(kwargs)

@@ -12,6 +12,7 @@ import pandas
 import torch
 from class_resolver.api import ClassResolver, HintOrType
 
+from ..constants import COLUMN_LABELS
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target, TorchRandomHint
 from ..utils import ensure_torch_random_state
 
@@ -39,6 +40,9 @@ def _split_triples(
 
     :return:
         The splitted triples.
+
+    :raises ValueError:
+        If the given sizes are different from the number of triples in mapped triples
     """
     num_triples = mapped_triples.shape[0]
     if sum(sizes) != num_triples:
@@ -85,10 +89,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    df = pandas.DataFrame(
-        data=triples.numpy(),
-        columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
-    ).reset_index()
+    df = pandas.DataFrame(data=triples.numpy(), columns=COLUMN_LABELS).reset_index()
 
     # select one triple per relation
     chosen = _get_cover_for_column(df=df, column=LABEL_RELATION)
@@ -112,6 +113,14 @@ class TripleCoverageError(RuntimeError):
     """An exception thrown when not all entities/relations are covered by triples."""
 
     def __init__(self, arr, name: str = "ids"):
+        """
+        Initialize the error.
+
+        :param arr: shape: (num_indices,)
+            the array of covering triple IDs
+        :param name:
+            the name to use for creating the error message
+        """
         r = sorted((arr < 0).nonzero(as_tuple=False))
         super().__init__(
             f"Could not cover the following {name} from the provided triples: {r}. One possible reason is that you are"
@@ -135,6 +144,9 @@ def normalize_ratios(
 
     :return:
         A sequence of ratios of at least two elements which sums to one.
+
+    :raises ValueError:
+        if the ratio sum is bigger than 1.0
     """
     # Prepare split index
     if isinstance(ratios, float):
@@ -207,12 +219,11 @@ class Cleaner:
     ) -> Sequence[MappedTriples]:
         """Cleanup a list of triples array with respect to the first array."""
         reference, *others = triples_groups
-        # [...] is necessary for Python 3.7 compatibility
         result = []
         for other in others:
             reference, other = self.cleanup_pair(reference=reference, other=other, random_state=random_state)
             result.append(other)
-        return [reference, *result]
+        return reference, *result
 
 
 def _prepare_cleanup(
@@ -227,6 +238,8 @@ def _prepare_cleanup(
         The training triples.
     :param testing: shape: (m, 3)
         The testing triples.
+    :param max_ids:
+        The maximum identifier in each column. Calculates it automatically if not given.
 
     :return: shape: (m,)
         The move mask.
@@ -263,6 +276,7 @@ class RandomizedCleaner(Cleaner):
     3. Continue until ``move_id_mask`` has no true bits
     """
 
+    # docstr-coverage: inherited
     def cleanup_pair(
         self,
         reference: MappedTriples,
@@ -292,6 +306,7 @@ class RandomizedCleaner(Cleaner):
 class DeterministicCleaner(Cleaner):
     """Cleanup a triples array (testing) with respect to another (training)."""
 
+    # docstr-coverage: inherited
     def cleanup_pair(
         self,
         reference: MappedTriples,
@@ -304,7 +319,7 @@ class DeterministicCleaner(Cleaner):
         return reference, other
 
 
-cleaner_resolver = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+cleaner_resolver: ClassResolver[Cleaner] = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
 
 
 class Splitter:
@@ -398,6 +413,7 @@ class CleanupSplitter(Splitter):
         """
         self.cleaner = cleaner_resolver.make(cleaner)
 
+    # docstr-coverage: inherited
     def split_absolute_size(
         self,
         mapped_triples: MappedTriples,
@@ -419,6 +435,7 @@ class CleanupSplitter(Splitter):
 class CoverageSplitter(Splitter):
     """This splitter greedily selects training triples such that each entity is covered and then splits the rest."""
 
+    # docstr-coverage: inherited
     def split_absolute_size(
         self,
         mapped_triples: MappedTriples,
@@ -439,7 +456,7 @@ class CoverageSplitter(Splitter):
         return [torch.cat([train_seed, train], dim=0), *rest]
 
 
-splitter_resolver = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
+splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
 
 
 def split(

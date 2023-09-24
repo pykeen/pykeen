@@ -76,6 +76,9 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
 
         :return:
             The instances.
+
+        # noqa:DAR202
+        # noqa:DAR401
         """
         raise NotImplementedError
 
@@ -138,9 +141,11 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
             masks = torch.cat(masks, dim=0)
         return SLCWABatch(positives, negatives, masks)
 
+    # docstr-coverage: inherited
     def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatch]]:  # noqa: D102
         return self.collate
 
+    # docstr-coverage: inherited
     @classmethod
     def from_triples(
         cls,
@@ -149,7 +154,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
         num_entities: int,
         num_relations: int,
         **kwargs,
-    ) -> Instances:  # noqa:D102
+    ) -> Instances:  # noqa: D102
         return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)
 
 
@@ -242,6 +247,7 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
 class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     """Random pre-batched training instances for the sLCWA training loop."""
 
+    # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
         yield from data.BatchSampler(
             sampler=data.RandomSampler(data_source=self.split_workload(len(self.mapped_triples))),
@@ -254,6 +260,12 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
     def __init__(self, **kwargs):
+        """
+        Initialize the instances.
+
+        :param kwargs:
+            keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
+        """
         super().__init__(**kwargs)
         # indexing
         self.degrees, self.offset, self.neighbors = compute_compressed_adjacency_list(
@@ -312,6 +324,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
             node_weights[other_vertex] -= 1
         return result
 
+    # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
         yield from (self.subgraph_sample() for _ in self.split_workload(n=len(self)))
 
@@ -349,6 +362,8 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
             The number of relations.
         :param target:
             The column to predict
+        :param kwargs:
+            Keyword arguments (thrown out)
 
         :return:
             The instances.

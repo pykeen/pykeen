@@ -5,12 +5,13 @@ from typing import Any, MutableMapping
 
 import numpy
 import numpy.testing
+import pytest
 import scipy.sparse.csgraph
 import unittest_templates
 
 import pykeen.nn.node_piece
-from pykeen.nn.node_piece.utils import page_rank
 from tests import cases
+from tests.utils import needs_packages
 
 
 class DegreeAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
@@ -57,6 +58,26 @@ class CSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):
     cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
 
 
+@pytest.mark.parametrize("num_anchors, num_entities, k, seed", [(3, 7, 2, 0)])
+def test_top_k_indices(num_anchors: int, num_entities: int, k: int, seed: int) -> None:
+    """Test top-k index calculation."""
+    # generate test data (with fixed seed for reproducibility)
+    rng = numpy.random.default_rng(seed=seed)
+    array = rng.uniform(size=(num_anchors, num_entities))
+    # get result using argpartition
+    cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
+    ap = cls.topk_argpartition(array=array, k=k)
+    # check shape
+    assert ap.shape == (k, num_entities)
+    # check type
+    assert numpy.issubdtype(ap.dtype, numpy.integer)
+    # check value range
+    numpy.testing.assert_array_less(-1, ap)
+    numpy.testing.assert_array_less(ap, num_anchors)
+    # check equality with argsort
+    numpy.testing.assert_array_equal(ap, cls.topk_argsort(array=array, k=k))
+
+
 class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
     """Tests for anchor search with scipy.sparse."""
 
@@ -91,6 +112,13 @@ class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
         numpy.testing.assert_array_equal(pool, exp_pool)
 
 
+@needs_packages("torch_sparse")
+class SparseBFSSearcherTests(cases.AnchorSearcherTestCase):
+    """Tests for anchor search with scipy.sparse."""
+
+    cls = pykeen.nn.node_piece.SparseBFSSearcher
+
+
 class PersonalizedPageRankAnchorSearcherTests(cases.AnchorSearcherTestCase):
     """Tests for anchor search via PPR."""
 
@@ -116,6 +144,13 @@ class AnchorTokenizerTests(cases.TokenizerTestCase):
     cls = pykeen.nn.node_piece.AnchorTokenizer
 
 
+@needs_packages("torch_sparse")
+class MetisAnchorTokenizerTests(cases.TokenizerTestCase):
+    """Tests for tokenization with anchor entities and metis."""
+
+    cls = pykeen.nn.node_piece.MetisAnchorTokenizer
+
+
 class PrecomputedPoolTokenizerTests(cases.TokenizerTestCase):
     """Tests for tokenization with precomputed token pools."""
 
@@ -135,19 +170,3 @@ class TokenizerMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece
 
     base_cls = pykeen.nn.node_piece.Tokenizer
     base_test = cases.TokenizerTestCase
-
-
-def test_page_rank():
-    """Test for page-rank code."""
-    n = 10
-    edge_index = numpy.stack(
-        [
-            numpy.arange(n),
-            (numpy.arange(n) + 1) % n,
-        ],
-    )
-    result = page_rank(
-        edge_index=edge_index,
-        epsilon=1.0e-08,
-    )
-    numpy.testing.assert_allclose(result.sum(), 1.0, rtol=1e-6)

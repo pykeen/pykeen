@@ -13,11 +13,13 @@ from abc import ABC, abstractmethod
 from typing import Iterable, Optional, Sequence, Union
 
 import numpy
+import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from torch_ppr import page_rank
 
-from .utils import page_rank
 from ...triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ...typing import OneOrSequence
+from ...utils import ExtraReprMixin
 
 __all__ = [
     # Resolver
@@ -35,7 +37,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class AnchorSelection(ABC):
+class AnchorSelection(ExtraReprMixin, ABC):
     """Anchor entity selection strategy."""
 
     def __init__(self, num_anchors: int = 32) -> None:
@@ -72,12 +74,9 @@ class AnchorSelection(ABC):
         """
         raise NotImplementedError
 
-    def extra_repr(self) -> Iterable[str]:
+    def iter_extra_repr(self) -> Iterable[str]:
         """Extra components for __repr__."""
         yield f"num_anchors={self.num_anchors}"
-
-    def __repr__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
     def filter_unique(
         self,
@@ -150,6 +149,7 @@ class SingleSelection(AnchorSelection, ABC):
 class DegreeAnchorSelection(SingleSelection):
     """Select entities according to their (undirected) degree."""
 
+    # docstr-coverage: inherited
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         unique, counts = numpy.unique(edge_index, return_counts=True)
         # sort by decreasing degree
@@ -181,14 +181,17 @@ class PageRankAnchorSelection(SingleSelection):
         super().__init__(num_anchors=num_anchors)
         self.kwargs = kwargs
 
-    def extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().extra_repr()
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
         for key, value in self.kwargs.items():
             yield f"{key}={value}"
 
+    # docstr-coverage: inherited
+    @torch.inference_mode()
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # sort by decreasing page rank
-        return numpy.argsort(page_rank(edge_index=edge_index, **self.kwargs))[::-1]
+        return numpy.argsort(page_rank(edge_index=torch.as_tensor(edge_index), **self.kwargs).cpu().numpy())[::-1]
 
 
 class RandomAnchorSelection(SingleSelection):
@@ -210,6 +213,7 @@ class RandomAnchorSelection(SingleSelection):
         super().__init__(num_anchors=num_anchors)
         self.generator: numpy.random.Generator = numpy.random.default_rng(random_seed)
 
+    # docstr-coverage: inherited
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         return self.generator.permutation(edge_index.max())
 
@@ -258,10 +262,12 @@ class MixtureAnchorSelection(AnchorSelection):
                 logger.warning(f"{selection} had wrong number of anchors. Setting to {num}")
                 selection.num_anchors = num
 
-    def extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().extra_repr()
+    # docstr-coverage: inherited
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
         yield f"selections={self.selections}"
 
+    # docstr-coverage: inherited
     def __call__(
         self,
         edge_index: numpy.ndarray,

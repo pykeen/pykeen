@@ -3,10 +3,11 @@
 """Plotting utilities for the pipeline results."""
 
 import logging
-from typing import Mapping, Optional, Set
+from typing import Callable, Mapping, Optional, Set
 
 from ..losses import loss_resolver
-from ..nn.representation import Embedding
+from ..models.nbase import ERModel
+from ..nn.representation import Representation
 from ..stoppers import EarlyStopper
 
 __all__ = [
@@ -55,16 +56,34 @@ def plot_early_stopping(pipeline_result, *, ax=None, lineplot_kwargs=None):
     return rv
 
 
-def _default_entity_embedding_getter(m) -> Embedding:
-    x = m.entity_embeddings
-    assert isinstance(x, Embedding)
-    return x
+def build_representation_getter(relation: bool = False, index: int = 0) -> Callable[[ERModel], Representation]:
+    """
+    Build a representation getter.
 
+    :param relation:
+        whether to get relation representations, or entity representations.
+    :param index:
+        the index of the representation to get
 
-def _default_relation_embedding_getter(m) -> Embedding:
-    x = m.relation_embeddings
-    assert isinstance(x, Embedding)
-    return x
+    :return:
+        a function to get the representation.
+    """
+
+    def getter(model: ERModel) -> Representation:
+        """
+        Get a specific representation from model.
+
+        :param model:
+            the model
+
+        :return:
+            the representation
+        """
+        # cf. also https://github.com/pykeen/pykeen/issues/1071
+        representations = model.relation_representations if relation else model.entity_representations
+        return representations[index]
+
+    return getter
 
 
 def plot_er(  # noqa: C901
@@ -82,6 +101,7 @@ def plot_er(  # noqa: C901
     entity_embedding_getter=None,
     relation_embedding_getter=None,
     ax=None,
+    subtitle: Optional[str] = None,
     **kwargs,
 ):
     """Plot the reduced entities and relation vectors in 2D.
@@ -105,6 +125,7 @@ def plot_er(  # noqa: C901
         defaults to :func:`_default_relation_embedding_getter`, which just gets ``model.relation_embeddings``. Note,
         the default only works with old-style PyKEEN models.
     :param ax: The matplotlib axis, if pre-defined
+    :param subtitle: A user-defined subtitle. Is inferred if not given. Pass an empty string to not use a subtitle.
     :param kwargs: The keyword arguments passed to `__init__()` of
         the reducer class (e.g., PCA, TSNE)
     :returns: The axis
@@ -136,9 +157,9 @@ def plot_er(  # noqa: C901
     sns.set_style("whitegrid")
 
     if entity_embedding_getter is None:
-        entity_embedding_getter = _default_entity_embedding_getter
+        entity_embedding_getter = build_representation_getter(relation=False, index=0)
     if relation_embedding_getter is None:
-        relation_embedding_getter = _default_relation_embedding_getter
+        relation_embedding_getter = build_representation_getter(relation=True, index=0)
 
     if plot_relations and plot_entities:
         e_embeddings, e_reduced = _reduce_embeddings(entity_embedding_getter(pipeline_result.model), reducer, fit=True)
@@ -175,11 +196,13 @@ def plot_er(  # noqa: C901
     else:
         raise ValueError  # not even possible
 
-    if not e_reduced and not r_reduced:
+    if subtitle is not None:
+        pass  # a specific subtitle has been given
+    elif not e_reduced and not r_reduced:
         subtitle = ""
     elif reducer_kwargs:
-        subtitle = ", ".join("=".join(item) for item in reducer_kwargs.items())
-        subtitle = f" using {reducer_cls.__name__} ({subtitle})"
+        _subtitle_ending = ", ".join(f"{key}={value}" for key, value in reducer_kwargs.items())
+        subtitle = f" using {reducer_cls.__name__} ({_subtitle_ending})"
     else:
         subtitle = f" using {reducer_cls.__name__}"
 
@@ -226,7 +249,7 @@ def _ensure_ax(ax):
     return plt.gca()
 
 
-def _reduce_embeddings(embedding: Embedding, reducer, fit: bool = False):
+def _reduce_embeddings(embedding: Representation, reducer, fit: bool = False):
     embeddings_numpy = embedding(indices=None).detach().cpu().numpy()
     if embeddings_numpy.shape[1] == 2:
         logger.debug("not reducing entity embeddings, already dim=2")
@@ -247,6 +270,7 @@ def _get_reducer_cls(model: str, **kwargs):
 
     :raises ValueError: if invalid model name is passed
     """
+    # TODO: use a class-resolver?
     if model.upper() == "PCA":
         from sklearn.decomposition import PCA as Reducer  # noqa:N811
     elif model.upper() == "KPCA":
