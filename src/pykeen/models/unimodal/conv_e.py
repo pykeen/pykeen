@@ -62,7 +62,7 @@ class ConvE(ERModel):
 
     >>> # Step 1: Get triples
     >>> from pykeen.datasets import Nations
-    >>> dataset = Nations(create_inverse_triples=True)
+    >>> dataset = Nations()
     >>> # Step 2: Configure the model
     >>> from pykeen.models import ConvE
     >>> model = ConvE(
@@ -76,6 +76,7 @@ class ConvE(ERModel):
     ...     input_dropout       = 0.2,
     ...     feature_map_dropout = 0.2,
     ...     output_dropout      = 0.3,
+    ...     create_inverse_triples = True,
     ... )
     >>> # Step 3: Configure the loop
     >>> from torch.optim import Adam
@@ -179,6 +180,6 @@ class ConvE(ERModel):
                 shape=embedding_dim,
                 initializer=relation_initializer,
             ),
-            use_inverse_relations=create_inverse_triples,
+            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )

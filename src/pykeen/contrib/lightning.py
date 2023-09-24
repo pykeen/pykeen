@@ -14,7 +14,7 @@ has some nice features:
     model = LitLCWAModule(
         dataset="fb15k237",
         model="mure",
-        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits", use_inverse_relations=True),
+        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits", create_inverse_triples=True),
         batch_size=128,
     )
     trainer = pytorch_lightning.Trainer(

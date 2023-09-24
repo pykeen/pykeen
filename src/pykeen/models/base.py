@@ -74,8 +74,7 @@ class Model(nn.Module, ABC):
         random_seed: Optional[int] = None,
         create_inverse_triples: bool = False,
     ) -> None:
-        """
-        Initialize the module.
+        """Initialize the module.
 
         :param triples_factory:
             The triples factory facilitates access to the dataset.
@@ -108,9 +107,9 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
+        self.use_inverse_triples = create_inverse_triples
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
-        self.use_inverse_triples = create_inverse_triples
         self.relation_inverter = relation_inverter_resolver.make(query=None, num_relations=self.num_relations)
 
         """
@@ -187,7 +186,6 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
-
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
