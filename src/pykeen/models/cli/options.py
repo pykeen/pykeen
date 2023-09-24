@@ -182,6 +182,6 @@ random_seed_option = click.option(
     show_default=True,
     help="Random seed for PyTorch, NumPy, and Python.",
 )
-use_inverse_relations_option = click.option(
+inverse_triples_option = click.option(
     "-I", "--use-inverse-relations", is_flag=True, help="Model inverse relations"
 )

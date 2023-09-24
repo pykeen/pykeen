@@ -71,10 +71,10 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
-        if self.target == 0 and not self.model.use_inverse_relations:
+        if self.target == 0 and not self.model.use_inverse_triples:
             self.score_method = self.model.score_h  # type: ignore
             self.can_slice = self.model.can_slice_h
-        elif self.target == 0 and self.model.use_inverse_relations:
+        elif self.target == 0 and self.model.use_inverse_triples:
             self.score_method = self.model.score_h_inverse  # type: ignore
             self.can_slice = self.model.can_slice_t
         elif self.target == 1:

@@ -57,7 +57,7 @@ class Model(nn.Module, ABC):
     num_relations: int
 
     #: whether to use inverse relations
-    use_inverse_relations: bool
+    use_inverse_triples: bool
     relation_inverter: RelationInverter
 
     can_slice_h: ClassVar[bool]
@@ -72,7 +72,7 @@ class Model(nn.Module, ABC):
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
         random_seed: Optional[int] = None,
-        use_inverse_relations: bool = False,
+        create_inverse_triples: bool = False,
     ) -> None:
         """
         Initialize the module.
@@ -89,7 +89,7 @@ class Model(nn.Module, ABC):
             applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
-        :param use_inverse_relations:
+        :param create_inverse_triples:
             whether to use the inverse relations modelling technique
         """
         super().__init__()
@@ -110,7 +110,7 @@ class Model(nn.Module, ABC):
 
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
-        self.use_inverse_relations = use_inverse_relations
+        self.use_inverse_triples = create_inverse_triples
         self.relation_inverter = relation_inverter_resolver.make(query=None, num_relations=self.num_relations)
 
         """
@@ -122,7 +122,7 @@ class Model(nn.Module, ABC):
     @property
     def effective_num_relations(self) -> int:
         """Return the effective number of relations, i.e., including inverse relations."""
-        if self.use_inverse_relations:
+        if self.use_inverse_triples:
             return 2 * self.num_relations
         return self.num_relations
 
@@ -320,11 +320,11 @@ class Model(nn.Module, ABC):
         index_relation: int,
         invert_relation: bool,
     ) -> torch.LongTensor:
-        if invert_relation and not self.use_inverse_relations:
+        if invert_relation and not self.use_inverse_triples:
             raise ValueError("Can only invert relations if use_inverse_relations is set to True")
 
         # TODO: with the current default inversion, we have to materialize the relation IDs
-        if self.use_inverse_relations and batch is None:
+        if self.use_inverse_triples and batch is None:
             batch = torch.arange(self.num_relations, device=self.device)
 
         if batch is None:
@@ -499,7 +499,7 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
-        if self.use_inverse_relations:
+        if self.use_inverse_triples:
             # TODO: properly handle heads restriction
             scores = self.score_t_extended(hr_batch=rt_batch.flip(1), invert_relation=True, **kwargs)
         else:

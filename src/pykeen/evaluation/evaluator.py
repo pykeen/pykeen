@@ -404,7 +404,7 @@ class Evaluator(ABC):
             if not model.can_slice_t:
                 reasons.append("score_t")
             # otherwise, i.e., without inverse triples, we also need score_h
-            if not model.use_inverse_relations and not model.can_slice_t:
+            if not model.use_inverse_triples and not model.can_slice_t:
                 reasons.append("score_h")
         # if relations are to be predicted, we need to slice score_r
         if relations and not model.can_slice_r:
