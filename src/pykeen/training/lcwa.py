@@ -42,8 +42,6 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     [ruffinelli2020]_ call the LCWA ``KvsAll`` in their work.
     """
 
-    supports_slicing: bool
-
     def __init__(
         self,
         *,
