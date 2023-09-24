@@ -7,7 +7,7 @@ import torch
 
 from pykeen.evaluation.evaluator import Evaluator
 from pykeen.pipeline import pipeline
-from pykeen.training.callbacks import EvaluationTrainingCallback
+from pykeen.training.callbacks import EvaluationLossTrainingCallback, EvaluationTrainingCallback
 
 from .. import cases
 
@@ -38,3 +38,15 @@ class EvaluationTrainingCallbackTestCase(cases.TrainingCallbackTestCase):
                 ),
             )
             assert {c.kwargs.get("batch_size", None) for c in mock_evaluate.call_args_list} != {None}
+
+
+# TODO: more tests
+class EvaluationLossTrainingCallbackTestCase(cases.TrainingCallbackTestCase):
+    """Test for evaluation callback."""
+
+    cls = EvaluationLossTrainingCallback
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["triples_factory"] = self.dataset.validation
+        return kwargs
