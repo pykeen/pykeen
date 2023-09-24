@@ -106,6 +106,9 @@ class Scorer:
         return parallel_unsqueeze(r, dim=index_ndim)
 
     def score(self, model: ERModel, batch: Batch, slice_size: int | None = None, mode=None) -> torch.FloatTensor:
+        if batch.use_inverse_relation and not model.use_inverse_triples:
+            raise ValueError
+
         if batch.all_target is None:
             nums = tuple()
         elif batch.all_target == LABEL_RELATION:
