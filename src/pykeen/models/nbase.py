@@ -31,7 +31,7 @@ from torch import nn
 
 from .base import Model
 from ..nn import representation_resolver
-from ..nn.modules import Interaction, interaction_resolver
+from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
 from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo

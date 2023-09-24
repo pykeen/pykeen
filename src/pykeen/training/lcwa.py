@@ -4,7 +4,7 @@
 
 import logging
 from math import ceil
-from typing import Callable, ClassVar, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import torch
 from torch.nn import functional
