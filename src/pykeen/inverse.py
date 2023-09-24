@@ -29,8 +29,6 @@ class RelationInverter(ABC):
         """
         self.num_relations = num_relations
 
-    # TODO: method is_inverse?
-
     @abstractmethod
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:
         """Get the inverse ID for a given relation."""
