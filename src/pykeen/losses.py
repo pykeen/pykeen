@@ -165,7 +165,7 @@ import logging
 import math
 from abc import abstractmethod
 from textwrap import dedent
-from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
+from typing import Any, ClassVar, Mapping, MutableMapping, Optional, Set, Tuple
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -352,6 +352,12 @@ class Loss(_Loss):
             num_classes=num_entities,
         )
         return self(predictions, labels)
+
+    def get_config(self) -> MutableMapping[str, Any]:
+        """Return the configuration necessary to re-instantiate the module as a JSON-serializable dictionary."""
+        return {
+            "reduction": self.reduction,
+        }
 
 
 class PointwiseLoss(Loss):
@@ -666,6 +672,12 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
         """
         super().__init__(margin=0.0, reduction=reduction)
 
+    def get_config(self) -> MutableMapping[str, Any]:  # noqa: D102
+        config = super().get_config()
+        config["margin"] = self.margin
+        config["margin_activation"] = margin_activation_resolver.normalize_inst(self.margin_activation)
+        return config
+
 
 @parse_docdata
 class DoubleMarginLoss(PointwiseLoss):
@@ -891,6 +903,14 @@ class DoubleMarginLoss(PointwiseLoss):
         ) + self.negative_weight * self._reduction_method(
             (1.0 - labels) * self.margin_activation(self.negative_margin + predictions),
         )
+
+    def get_config(self) -> MutableMapping[str, Any]:  # noqa: D102
+        config = super().get_config()
+        config["positive_margin"] = self.positive_margin
+        config["negative_margin"] = self.negative_margin
+        config["positive_negative_balance"] = self.positive_weight
+        config["margin_activation"] = margin_activation_resolver.normalize_inst(self.margin_activation)
+        return config
 
 
 class DeltaPointwiseLoss(PointwiseLoss):
@@ -1537,6 +1557,12 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
             reduction="none",
         )
 
+    def get_config(self) -> MutableMapping[str, Any]:  # noqa: D102
+        config = super().get_config()
+        config["adversarial_temperature"] = self.inverse_softmax_temperature
+        config["margin"] = self.margin
+        return config
+
 
 @parse_docdata
 class FocalLoss(PointwiseLoss):
@@ -1611,6 +1637,12 @@ class FocalLoss(PointwiseLoss):
             loss = alpha_t * loss
 
         return self._reduction_method(loss)
+
+    def get_config(self) -> MutableMapping[str, Any]:  # noqa: D102
+        config = super().get_config()
+        config["gamma"] = self.gamma
+        config["alpha"] = self.alpha
+        return config
 
 
 loss_resolver: ClassResolver[Loss] = ClassResolver.from_subclasses(
