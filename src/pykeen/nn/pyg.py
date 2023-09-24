@@ -37,7 +37,7 @@ relation representations and a DistMult interaction function.
         model=ERModel,
         model_kwargs=dict(
             interaction="distmult",
-            use_inverse_relations=True,
+            create_inverse_triples=True,
             entity_representations="SimpleMessagePassing",
             entity_representations_kwargs=dict(
                 triples_factory=dataset.training,

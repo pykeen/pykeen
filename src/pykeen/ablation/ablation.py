@@ -519,7 +519,7 @@ def prepare_ablation(  # noqa:C901
         hpo_config["model"] = model
         hpo_config["model_kwargs"] = model_to_model_kwargs.get(model, {})
         logger.info(f"Use inverse relations: {create_inverse_triples}")
-        hpo_config["model_kwargs"]["use_inverse_relations"] = create_inverse_triples
+        hpo_config["model_kwargs"]["create_inverse_triples"] = create_inverse_triples
         hpo_config["model_kwargs_ranges"] = model_to_model_kwargs_ranges.get(model, {})
         logger.info(f"Model: {model}")
 

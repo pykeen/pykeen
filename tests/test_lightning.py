@@ -45,7 +45,7 @@ MODEL_CONFIGURATIONS = {
     models.ProjE: dict(embedding_dim=EMBEDDING_DIM),
     models.QuatE: dict(embedding_dim=EMBEDDING_DIM),
     models.RESCAL: dict(embedding_dim=EMBEDDING_DIM),
-    models.RGCN: dict(embedding_dim=EMBEDDING_DIM, use_inverse_relations=True),
+    models.RGCN: dict(embedding_dim=EMBEDDING_DIM, create_inverse_triples=True),
     models.RotatE: dict(embedding_dim=EMBEDDING_DIM),
     models.SE: dict(embedding_dim=EMBEDDING_DIM),
     models.SimplE: dict(embedding_dim=EMBEDDING_DIM),

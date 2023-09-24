@@ -931,7 +931,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     embedding_dim: int = 3
 
     #: Whether to create inverse triples (needed e.g. by ConvE)
-    use_inverse_relations: bool = False
+    create_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
     sampler: Optional[str] = None
@@ -970,7 +970,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         # insert shared parameters
         kwargs["triples_factory"] = self.factory
         kwargs["embedding_dim"] = self.embedding_dim
-        kwargs["use_inverse_relations"] = self.use_inverse_relations
+        kwargs["create_inverse_triples"] = self.create_inverse_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
@@ -1039,7 +1039,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 self.skipTest(str(e))
             else:
                 raise e
-        if score is self.instance.score_r and self.use_inverse_relations:
+        if score is self.instance.score_r and self.create_inverse_triples:
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
@@ -1203,8 +1203,8 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         extras.extend(self.cli_extras)
 
         # Make sure that inverse triples are created if flagged
-        if self.use_inverse_relations:
-            extras.append("--use-inverse-relations")
+        if self.create_inverse_triples:
+            extras.append("--create-inverse-triples")
 
         extras = [str(e) for e in extras]
         return extras
@@ -1217,10 +1217,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):
         """Test running the pipeline with early stopping."""
-        model_kwargs = dict(self.instance_kwargs)
+        model_kwargs: Dict[str, Any] = dict(self.instance_kwargs)
         # triples factory is added by the pipeline
         model_kwargs.pop("triples_factory")
-        model_kwargs.setdefault("use_inverse_relations", self.use_inverse_relations)
+        model_kwargs.setdefault("create_inverse_triples", self.create_inverse_triples)
         pipeline(
             model=self.cls,
             model_kwargs=model_kwargs,
@@ -1422,7 +1422,7 @@ class BaseNodePieceTest(ModelTestCase):
     """Test the NodePiece model."""
 
     cls = pykeen.models.NodePiece
-    use_inverse_relations = True
+    create_inverse_triples = True
 
     def _help_test_cli(self, args):  # noqa: D102
         if self.instance_kwargs.get("tokenizers_kwargs"):
