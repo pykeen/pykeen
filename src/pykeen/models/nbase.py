@@ -339,7 +339,6 @@ class ERModel(
             triples_factory=triples_factory,
             representations=relation_representations,
             representations_kwargs=relation_representations_kwargs,
-            # TODO: check this
             # note: this is the *effective* number of relations, since we also need
             # representations for the inverse relations
             max_id=self.effective_num_relations,
