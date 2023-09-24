@@ -498,7 +498,8 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         if self.use_inverse_triples:
-            # TODO: properly handle heads restriction
+            # note: if we have a heads restriction, we need to convert it to a tails restriction here
+            kwargs["tails"] = kwargs.pop("heads")
             scores = self.score_t_extended(hr_batch=rt_batch.flip(1), invert_relation=True, **kwargs)
         else:
             scores = self.score_h_extended(rt_batch=rt_batch, **kwargs)
