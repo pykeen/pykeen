@@ -4,7 +4,7 @@
 
 import logging
 from math import ceil
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, ClassVar, Optional, Tuple, Union
 
 import torch
 from torch.nn import functional
@@ -42,7 +42,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     [ruffinelli2020]_ call the LCWA ``KvsAll`` in their work.
     """
 
-    can_slice: bool
+    supports_slicing: ClassVar[bool] = True
 
     def __init__(
         self,
@@ -233,8 +233,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
 class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedTriples]]):
-    r"""
-    A "symmetric" LCWA scoring heads *and* tails at once.
+    r"""A "symmetric" LCWA scoring heads *and* tails at once.
 
     This objective was introduced by [lacroix2018]_ as
 

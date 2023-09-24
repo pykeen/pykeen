@@ -748,7 +748,7 @@ class TriplesFactory(CoreTriplesFactory):
 
     def __init__(
         self,
-        mapped_triples: MappedTriples,
+        mapped_triples: Union[MappedTriples, np.ndarray],
         entity_to_id: EntityMapping,
         relation_to_id: RelationMapping,
         metadata: Optional[Mapping[str, Any]] = None,
@@ -936,7 +936,12 @@ class TriplesFactory(CoreTriplesFactory):
                 self.relation_to_id,
             ),
         ):
-            pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
+            pd.DataFrame(
+                data=data.items(),
+                columns=["label", "id"],
+            ).sort_values(
+                by="id"
+            ).set_index("id").to_csv(
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
             )

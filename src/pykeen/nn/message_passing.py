@@ -10,6 +10,7 @@ from typing import Any, Iterable, Mapping, Optional, Sequence
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
+from docdata import parse_docdata
 from torch import nn
 
 from .init import uniform_norm_p1_, xavier_normal_
@@ -21,6 +22,7 @@ from ..utils import ExtraReprMixin, einsum
 
 __all__ = [
     "RGCNRepresentation",
+    "RGCNLayer",
     "Decomposition",
     "BasesDecomposition",
     "BlockDecomposition",
@@ -496,6 +498,7 @@ decomposition_resolver: ClassResolver[Decomposition] = ClassResolver.from_subcla
 )
 
 
+@parse_docdata
 class RGCNRepresentation(Representation):
     r"""Entity representations enriched by R-GCN.
 
@@ -520,6 +523,13 @@ class RGCNRepresentation(Representation):
 
     Since having one matrix for each relation introduces a large number of additional parameters, the authors instead
     propose to use a decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
+    ---
+    name: R-GCN
+    citation:
+        author: Schlichtkrull
+        year: 2018
+        link: https://arxiv.org/pdf/1703.06103
+        github: https://github.com/MichSchli/RelationPrediction
     """
 
     def __init__(

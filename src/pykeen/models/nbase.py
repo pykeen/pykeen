@@ -362,6 +362,8 @@ class ERModel(
         **kwargs,
     ) -> Sequence[Representation]:
         """Build representations for the given factory."""
+        # note, triples_factory is required instead of just using self.num_entities
+        # and self.num_relations for the inductive case when this is different
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
@@ -484,7 +486,9 @@ class ERModel(
         """Raise an error, if slicing is requested, but the model does not support it."""
         if not slice_size:
             return
-        if get_batchnorm_modules(self):  # if there are any, this is truthy
+        # batch normalization modules use batch statistics in training mode
+        # -> different batch divisions lead to different results
+        if self.training and get_batchnorm_modules(self):
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
     # docstr-coverage: inherited
@@ -495,11 +499,35 @@ class ERModel(
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
         tails: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_entities:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
+
+        # slice early to allow lazy computation of target representations
+        if slice_size:
+            return torch.cat(
+                [
+                    self.score_t(
+                        hr_batch=hr_batch,
+                        slice_size=None,
+                        mode=mode,
+                        tails=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    )
+                    for start in range(0, self.num_entities, slice_size)
+                ],
+                dim=-1,
+            )
+
+        # add broadcast dimension
+        hr_batch = hr_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=hr_batch[..., 0], r=hr_batch[..., 1], t=tails, mode=mode)
+        # unsqueeze if necessary
+        if tails is None or tails.ndimension() == 1:
+            t = parallel_unsqueeze(t, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
+            scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
         )
@@ -512,11 +540,35 @@ class ERModel(
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
         heads: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_entities:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
+
+        # slice early to allow lazy computation of target representations
+        if slice_size:
+            return torch.cat(
+                [
+                    self.score_h(
+                        rt_batch=rt_batch,
+                        slice_size=None,
+                        mode=mode,
+                        heads=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    )
+                    for start in range(0, self.num_entities, slice_size)
+                ],
+                dim=-1,
+            )
+
+        # add broadcast dimension
+        rt_batch = rt_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=heads, r=rt_batch[..., 0], t=rt_batch[..., 1], mode=mode)
+        # unsqueeze if necessary
+        if heads is None or heads.ndimension() == 1:
+            h = parallel_unsqueeze(h, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
+            scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
         )
@@ -529,11 +581,35 @@ class ERModel(
         slice_size: Optional[int] = None,
         mode: Optional[InductiveMode] = None,
         relations: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa: D102
+        # normalize before checking
+        if slice_size and slice_size >= self.num_relations:
+            slice_size = None
         self._check_slicing(slice_size=slice_size)
-        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
+
+        # slice early to allow lazy computation of target representations
+        if slice_size:
+            return torch.cat(
+                [
+                    self.score_r(
+                        ht_batch=ht_batch,
+                        slice_size=None,
+                        mode=mode,
+                        relations=torch.arange(start=start, end=min(start + slice_size, self.num_relations)),
+                    )
+                    for start in range(0, self.num_relations, slice_size)
+                ],
+                dim=-1,
+            )
+
+        # add broadcast dimension
+        ht_batch = ht_batch.unsqueeze(dim=1)
+        h, r, t = self._get_representations(h=ht_batch[..., 0], r=relations, t=ht_batch[..., 1], mode=mode)
+        # unsqueeze if necessary
+        if relations is None or relations.ndimension() == 1:
+            r = parallel_unsqueeze(r, dim=0)
         return repeat_if_necessary(
-            scores=self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=1),
+            scores=self.interaction(h=h, r=r, t=t),
             representations=self.relation_representations,
             num=self.num_relations if relations is None else relations.shape[-1],
         )

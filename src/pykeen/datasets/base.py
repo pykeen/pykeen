@@ -691,6 +691,7 @@ class CompressedSingleDataset(LazyDataset):
         eager: bool = False,
         delimiter: Optional[str] = None,
         random_state: TorchRandomHint = None,
+        read_csv_kwargs: Optional[Dict[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -707,6 +708,7 @@ class CompressedSingleDataset(LazyDataset):
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param delimiter:
             The delimiter for the contained dataset.
+        :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -715,6 +717,8 @@ class CompressedSingleDataset(LazyDataset):
         self.delimiter = delimiter or "\t"
         self.url = url
         self._relative_path = pathlib.PurePosixPath(relative_path)
+        self.read_csv_kwargs = read_csv_kwargs or {}
+        self.read_csv_kwargs.setdefault("sep", self.delimiter)
 
         if eager:
             self._load()
@@ -779,7 +783,13 @@ class TarFileSingleDataset(CompressedSingleDataset):
                 # tarfile does not like pathlib
                 tar_file.extract(str(self._relative_path), self.cache_root)
 
-        df = pd.read_csv(_actual_path, sep=self.delimiter)
+        df = pd.read_csv(_actual_path, **self.read_csv_kwargs)
+
+        usecols = self.read_csv_kwargs.get("usecols")
+        if usecols is not None:
+            logger.info("reordering columns: %s", usecols)
+            df = df[usecols]
+
         return df
 
 

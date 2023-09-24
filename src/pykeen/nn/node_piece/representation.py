@@ -8,6 +8,7 @@ from typing import Callable, Iterable, List, NamedTuple, Optional, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from docdata import parse_docdata
 
 from .tokenization import Tokenizer, tokenizer_resolver
 from ..combination import ConcatAggregationCombination
@@ -27,8 +28,18 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+@parse_docdata
 class TokenizationRepresentation(Representation):
-    """A module holding the result of tokenization."""
+    """A module holding the result of tokenization.
+
+    ---
+    name: Tokenization
+    citation:
+        author: Galkin
+        year: 2021
+        link: https://arxiv.org/abs/2106.12144
+        github: https://github.com/migalkin/NodePiece
+    """
 
     #: the token ID of the padding token
     vocabulary_size: int
@@ -205,6 +216,7 @@ class HashDiversityInfo(NamedTuple):
     uniques_total: float
 
 
+@parse_docdata
 class NodePieceRepresentation(CombinedRepresentation):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
@@ -214,6 +226,14 @@ class NodePieceRepresentation(CombinedRepresentation):
 
     where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
     an aggregation function, which aggregates the individual token representations to a single entity representation.
+
+    ---
+    name: NodePiece
+    citation:
+        author: Galkin
+        year: 2021
+        link: https://arxiv.org/abs/2106.12144
+        github: https://github.com/migalkin/NodePiece
     """
 
     def __init__(
@@ -345,13 +365,11 @@ class NodePieceRepresentation(CombinedRepresentation):
         .. seealso:: https://github.com/pykeen/pykeen/pull/896
         """
         # unique hashes per representation
-        uniques_per_representation = [
-            tokens.assignment.unique(dim=0).shape[0] / self.max_id for tokens in self.token_representations
-        ]
+        uniques_per_representation = [tokens.assignment.unique(dim=0).shape[0] / self.max_id for tokens in self.base]
 
         # unique hashes if we concatenate all representations together
         unnormalized_uniques_total = torch.unique(
-            torch.cat([tokens.assignment for tokens in self.token_representations], dim=-1), dim=0
+            torch.cat([tokens.assignment for tokens in self.base], dim=-1), dim=0
         ).shape[0]
         return HashDiversityInfo(
             uniques_per_representation=uniques_per_representation,

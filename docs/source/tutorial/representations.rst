@@ -51,14 +51,9 @@ relations (including inverse relations) as tokens.
 
 Text-based
 ----------
-Text-based representations use, e.g., the entities' (or relations') labels to
-derive representations. To this end, PyKEEN provides a base class
-:class:`pykeen.nn.representation.TextRepresentation` with a configurable
-:class:`pykeen.nn.text.TextEncoder`. As a baseline without external dependencies,
-:class:`pykeen.nn.text.CharacterEmbeddingTextEncoder` encodes the label character-wise,
-with trainable representations for individual characters.
-A more advanced text encoder is given by
-:class:`pykeen.nn.text.TransformerTextEncoder`, which utilizes a
+Text-based representations use the entities' (or relations') labels to
+derive representations. To this end,
+:class:`pykeen.nn.representation.TextRepresentation` uses a
 (pre-trained) transformer model from the :mod:`transformers` library to encode
 the labels. Since the transformer models have been trained on huge corpora
 of text, their text encodings often contain semantic information, i.e.,
@@ -66,8 +61,8 @@ labels with similar semantic meaning get similar representations. While we
 can also benefit from these strong features by just initializing an
 :class:`pykeen.nn.representation.Embedding` with the vectors, e.g., using
 :class:`pykeen.nn.init.LabelBasedInitializer`, the
-:class:`pykeen.nn.representation.TextEncoder` include the
-text encoder model as part of the KGE model, and thus allow fine-tuning
+:class:`pykeen.nn.representation.TextRepresentation` include the
+transformer model as part of the KGE model, and thus allow fine-tuning
 the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
 predictions for entities not seen during training.
@@ -138,3 +133,18 @@ function, we would get similar scores
 
 As a downside, this will usually substantially increase the
 computational cost of computing triple scores.
+
+Biomedical Entities
+~~~~~~~~~~~~~~~~~~~
+If your dataset is labeled with compact uniform resource identifiers (e.g., CURIEs)
+for biomedical entities like chemicals, proteins, diseases, and pathways, then
+the :class:`pykeen.nn.representation.BiomedicalCURIERepresentation`
+representation can make use of :mod:`pyobo` to look up names (via CURIE) via the
+:func:`pyobo.get_name` function, then encode them using the text encoder.
+
+All biomedical knowledge graphs in PyKEEN (at the time of adding this representation),
+unfortunately do not use CURIEs for referencing biomedical entities. In the future, we hope
+this will change.
+
+To learn more about CURIEs, please take a look at the `Bioregistry <https://bioregistry.io>`_
+and `this blog post on CURIEs <https://cthoyt.com/2021/09/14/curies.html>`_.
