@@ -171,7 +171,7 @@ class TestPipelineTriples(unittest.TestCase):
             training_kwargs=dict(
                 num_epochs=2,
                 callbacks="evaluation-loop",
-                callback_kwargs=dict(
+                callbacks_kwargs=dict(
                     frequency=1,
                     prefix="validation",
                     factory=dataset.validation,

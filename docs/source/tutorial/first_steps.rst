@@ -217,7 +217,7 @@ While not being active for the high-level `pipeline`, you can already use it exp
     ...     batch_size=256,
     ...     # NEW: validation evaluation callback
     ...     callbacks="evaluation-loop",
-    ...     callback_kwargs=dict(
+    ...     callbacks_kwargs=dict(
     ...         prefix="validation",
     ...         factory=dataset.validation,
     ...     ),
@@ -254,7 +254,7 @@ tenth epoch
         training_kwargs=dict(
             num_epochs=100,
             callbacks="evaluation",
-            callback_kwargs=dict(
+            callbacks_kwargs=dict(
                 evaluation_triples=dataset.training.mapped_triples,
                 tracker="console",
                 prefix="training",
