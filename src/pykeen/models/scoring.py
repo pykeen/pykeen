@@ -1,4 +1,5 @@
 """WIP: Fast Scoring."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -13,6 +14,11 @@ from pykeen.nn.modules import parallel_unsqueeze
 from pykeen.typing import OneOrSequence, Target, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from pykeen.utils import upgrade_to_sequence
 from pykeen.inverse import RelationInverter, relation_inverter_resolver
+
+__all__ = [
+    "Batch",
+    "Scorer",
+]
 
 
 @dataclasses.dataclass
@@ -53,7 +59,7 @@ class Batch:
 
     @property
     def indices(self) -> tuple[torch.FloatTensor | None, torch.FloatTensor | None, torch.FloatTensor | None]:
-        return (self.head, self.relation, self.tail)
+        return self.head, self.relation, self.tail
 
     def via_inverse(self, inverter: RelationInverter) -> Batch:
         if self.use_inverse_relation:
