@@ -686,7 +686,7 @@ class DoubleMarginLoss(PointwiseLoss):
     """
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin_positive=dict(type=float, low=-1, high=1),
+        positive_margin=dict(type=float, low=-1, high=1),
         offset=dict(type=float, low=0, high=1),
         positive_negative_balance=dict(type=float, low=1.0e-03, high=1.0 - 1.0e-03),
         margin_activation=dict(
