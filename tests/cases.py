@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Test cases for PyKEEN."""
-
+import inspect
 import logging
 import os
 import pathlib
@@ -350,6 +350,12 @@ class LossTestCase(GenericTestCase[Loss]):
 
         # negative scores decreased compared to positive ones
         assert (negative_scores < positive_scores.unsqueeze(dim=1) - 1.0e-06).all()
+
+    def test_hpo_defaults(self):
+        """Test hpo defaults."""
+        signature = inspect.signature(self.cls.__init__)
+        invalid_keys = set(self.cls.hpo_default.keys()).difference(signature.parameters)
+        assert not invalid_keys
 
 
 class PointwiseLossTestCase(LossTestCase):
