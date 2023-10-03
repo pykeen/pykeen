@@ -12,6 +12,7 @@ from pykeen.models import ERModel
 from pykeen.nn.modules import parallel_unsqueeze
 from pykeen.typing import OneOrSequence, Target, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from pykeen.utils import upgrade_to_sequence
+from pykeen.inverse import RelationInverter, relation_inverter_resolver
 
 
 @dataclasses.dataclass
@@ -54,12 +55,12 @@ class Batch:
     def indices(self) -> tuple[torch.FloatTensor | None, torch.FloatTensor | None, torch.FloatTensor | None]:
         return (self.head, self.relation, self.tail)
 
-    def via_inverse(self) -> Batch:
+    def via_inverse(self, inverter: RelationInverter) -> Batch:
         if self.use_inverse_relation:
             return self
         return Batch(
             head=self.tail,
-            relation=2 * self.relation + 1,  # todo: batch inversion, None resolution, use relation inverter
+            relation=inverter.get_inverse_id(self.relation),
             tail=self.head,
             use_inverse_relation=True,
         )
