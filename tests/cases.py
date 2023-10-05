@@ -354,8 +354,17 @@ class LossTestCase(GenericTestCase[Loss]):
     def test_hpo_defaults(self):
         """Test hpo defaults."""
         signature = inspect.signature(self.cls.__init__)
+        # check for invalid keys
         invalid_keys = set(self.cls.hpo_default.keys()).difference(signature.parameters)
         assert not invalid_keys
+        # check that each parameter without a default occurs
+        required_parameters = {
+            parameter_name
+            for parameter_name, parameter in signature.parameters.items()
+            if parameter.default == inspect.Parameter.empty
+        }.difference({"self"})
+        missing_required = required_parameters.difference(self.cls.hpo_default.keys())
+        assert not missing_required
 
 
 class PointwiseLossTestCase(LossTestCase):
