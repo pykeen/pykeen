@@ -200,7 +200,6 @@ __all__ = [
     "DoubleMarginLoss",
     "SoftMarginRankingLoss",
     "PairwiseLogisticLoss",
-    "MarginPairwiseLoss",
     # Utils
     "loss_resolver",
 ]
@@ -917,6 +916,14 @@ class DeltaPointwiseLoss(PointwiseLoss):
     Pointwise Logistic (softplus)  softplus    $\lambda = 0$           $g(s, l) = \log(1+\exp(-\hat{l}*s))$                      :class:`pykeen.losses.SoftplusLoss`
     =============================  ==========  ======================  ========================================================  =============================================
     """  # noqa:E501
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+        margin_activation=dict(
+            type="categorical",
+            choices=margin_activation_resolver.options,
+        ),
+    )
 
     def __init__(
         self,
