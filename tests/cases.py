@@ -383,6 +383,7 @@ class LossTestCase(GenericTestCase[Loss]):
             parameter_name
             for parameter_name, parameter in signature.parameters.items()
             if parameter.default == inspect.Parameter.empty
+            and parameter.kind not in {inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL}
         }.difference({"self"})
         missing_required = required_parameters.difference(self.cls.hpo_default.keys())
         assert not missing_required
