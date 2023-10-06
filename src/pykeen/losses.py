@@ -200,6 +200,7 @@ __all__ = [
     "DoubleMarginLoss",
     "SoftMarginRankingLoss",
     "PairwiseLogisticLoss",
+    "MarginPairwiseLoss",
     # Utils
     "loss_resolver",
 ]
@@ -455,10 +456,18 @@ class MarginPairwiseLoss(PairwiseLoss):
     function like the ReLU or softmax, and $\lambda$ is the margin.
     """
 
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+        margin_activation=dict(
+            type="categorical",
+            choices=margin_activation_resolver.options,
+        ),
+    )
+
     def __init__(
         self,
-        margin: float,
-        margin_activation: Hint[nn.Module],
+        margin: float = 1.0,
+        margin_activation: Hint[nn.Module] = None,
         reduction: str = "mean",
     ):
         r"""Initialize the margin loss instance.
