@@ -250,6 +250,7 @@ def iter_from_space(key: str, space: Mapping[str, Any]) -> Iterable[MutableMappi
             yield {key: choice}
     elif typ in (float, int):
         yield {key: space["low"]}
+        yield {key: space["high"]}
     else:
         raise NotImplementedError(typ)
 
