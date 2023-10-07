@@ -149,6 +149,18 @@ class SoftMarginrankingLossTestCase(cases.GMRLTestCase):
     cls = pykeen.losses.SoftMarginRankingLoss
 
 
+class MarginPairwiseLossTestCase(cases.GMRLTestCase):
+    """Tests for general margin pairwise loss."""
+
+    cls = pykeen.losses.MarginPairwiseLoss
+
+
+class DeltaPointwiseLossTestCase(cases.PointwiseLossTestCase):
+    """Tests for general delta point-wise loss."""
+
+    cls = pykeen.losses.DeltaPointwiseLoss
+
+
 class PairwiseLogisticLossTestCase(cases.GMRLTestCase):
     """Tests for the pairwise logistic loss."""
 
@@ -171,8 +183,6 @@ class TestLosses(unittest_templates.MetaTestCase[Loss]):
         pykeen.losses.PairwiseLoss,
         pykeen.losses.PointwiseLoss,
         pykeen.losses.SetwiseLoss,
-        pykeen.losses.DeltaPointwiseLoss,
-        pykeen.losses.MarginPairwiseLoss,
         pykeen.losses.AdversarialLoss,
     }
 

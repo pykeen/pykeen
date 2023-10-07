@@ -2,6 +2,7 @@
 
 """Test cases for PyKEEN."""
 import inspect
+import itertools
 import logging
 import os
 import pathlib
@@ -61,7 +62,7 @@ from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults, evaluator_resolver
-from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
+from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError, loss_resolver
 from pykeen.metrics import rank_based_metric_resolver
 from pykeen.metrics.ranking import (
     DerivedRankBasedMetric,
@@ -241,6 +242,27 @@ class CachedDatasetCase(DatasetTestCase):
         self.directory.cleanup()
 
 
+def iter_from_space(key: str, space: Mapping[str, Any]) -> Iterable[MutableMapping[str, Any]]:
+    """Iterate over some configurations for a single hyperparameter."""
+    typ = space["type"]
+    if typ == "categorical":
+        for choice in space["choices"]:
+            yield {key: choice}
+    elif typ in (float, int):
+        yield {key: space["low"]}
+        yield {key: space["high"]}
+    else:
+        raise NotImplementedError(typ)
+
+
+def iter_hpo_configs(hpo_default: Mapping[str, Mapping[str, Any]]) -> Iterable[Mapping[str, Any]]:
+    """Iterate over some representative configurations from the HPO default."""
+    for combination in itertools.product(
+        *(iter_from_space(key=key, space=space) for key, space in hpo_default.items())
+    ):
+        yield ChainMap(*combination)
+
+
 class LossTestCase(GenericTestCase[Loss]):
     """Base unittest for loss functions."""
 
@@ -354,8 +376,21 @@ class LossTestCase(GenericTestCase[Loss]):
     def test_hpo_defaults(self):
         """Test hpo defaults."""
         signature = inspect.signature(self.cls.__init__)
+        # check for invalid keys
         invalid_keys = set(self.cls.hpo_default.keys()).difference(signature.parameters)
         assert not invalid_keys
+        # check that each parameter without a default occurs
+        required_parameters = {
+            parameter_name
+            for parameter_name, parameter in signature.parameters.items()
+            if parameter.default == inspect.Parameter.empty
+            and parameter.kind not in {inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL}
+        }.difference({"self"})
+        missing_required = required_parameters.difference(self.cls.hpo_default.keys())
+        assert not missing_required
+        # try to instantiate loss for some configurations in the HPO search space
+        for config in iter_hpo_configs(self.cls.hpo_default):
+            assert loss_resolver.make(query=self.cls, pos_kwargs=config)
 
 
 class PointwiseLossTestCase(LossTestCase):
