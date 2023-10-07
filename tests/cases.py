@@ -242,7 +242,7 @@ class CachedDatasetCase(DatasetTestCase):
         self.directory.cleanup()
 
 
-def iter_from_space(key: str, space: Mapping[str, Any]) -> Iterable[dict[str, Any]]:
+def iter_from_space(key: str, space: Mapping[str, Any]) -> Iterable[MutableMapping[str, Any]]:
     """Iterate over some configurations for a single hyperparameter."""
     typ = space["type"]
     if typ == "categorical":
