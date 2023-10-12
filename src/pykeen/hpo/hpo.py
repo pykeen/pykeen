@@ -322,10 +322,13 @@ class Objective:
 
             trial.set_user_attr("random_seed", result.random_seed)
 
-            for k, v in result.metric_results.to_flat_dict().items():
+            metric_results = result.metric_results
+            if metric_results is None:
+                raise ValueError("Did not run any evaluation? Did you miss to provide a validation factory?")
+            for k, v in metric_results.to_flat_dict().items():
                 trial.set_user_attr(k, v)
 
-            return result.metric_results.get_metric(self.metric)
+            return metric_results.get_metric(self.metric)
 
 
 @fix_dataclass_init_docs

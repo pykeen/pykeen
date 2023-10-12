@@ -181,6 +181,32 @@ class TestPipelineTriples(unittest.TestCase):
         )
         assert result is not None
 
+    def test_empty_testing(self):
+        """Test training loop with an empty test set."""
+        result = pipeline(
+            training=self.training,
+            testing=self.testing.clone_and_exchange_triples(torch.empty(0, 3, dtype=torch.long)),
+            validation=self.validation,
+            model="TransE",
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            random_seed=0,
+        )
+        assert len(result.losses) == 1
+
+    def test_no_testing(self):
+        """Test training loop with disabled evaluation."""
+        result = pipeline(
+            training=self.training,
+            testing=None,
+            validation=None,
+            model="TransE",
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            random_seed=0,
+        )
+        assert len(result.losses) == 1
+
 
 class TestPipelineReplicate(unittest.TestCase):
     """Test the replication with pipeline."""
