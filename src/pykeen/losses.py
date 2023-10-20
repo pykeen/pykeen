@@ -455,10 +455,18 @@ class MarginPairwiseLoss(PairwiseLoss):
     function like the ReLU or softmax, and $\lambda$ is the margin.
     """
 
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+        margin_activation=dict(
+            type="categorical",
+            choices=margin_activation_resolver.options,
+        ),
+    )
+
     def __init__(
         self,
-        margin: float,
-        margin_activation: Hint[nn.Module],
+        margin: float = 1.0,
+        margin_activation: Hint[nn.Module] = None,
         reduction: str = "mean",
     ):
         r"""Initialize the margin loss instance.
@@ -730,6 +738,10 @@ class DoubleMarginLoss(PointwiseLoss):
         :raises ValueError:
             In case of an invalid combination.
         """
+        # 0. default
+        if all(p is None for p in (positive_margin, negative_margin, offset)):
+            return 1.0, 0.0
+
         # 1. positive & negative margin
         if positive_margin is not None and negative_margin is not None and offset is None:
             if negative_margin > positive_margin:
@@ -771,8 +783,8 @@ class DoubleMarginLoss(PointwiseLoss):
     def __init__(
         self,
         *,
-        positive_margin: Optional[float] = 1.0,
-        negative_margin: Optional[float] = 0.0,
+        positive_margin: Optional[float] = None,
+        negative_margin: Optional[float] = None,
         offset: Optional[float] = None,
         positive_negative_balance: float = 0.5,
         margin_activation: Hint[nn.Module] = "relu",
@@ -904,6 +916,14 @@ class DeltaPointwiseLoss(PointwiseLoss):
     Pointwise Logistic (softplus)  softplus    $\lambda = 0$           $g(s, l) = \log(1+\exp(-\hat{l}*s))$                      :class:`pykeen.losses.SoftplusLoss`
     =============================  ==========  ======================  ========================================================  =============================================
     """  # noqa:E501
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+        margin_activation=dict(
+            type="categorical",
+            choices=margin_activation_resolver.options,
+        ),
+    )
 
     def __init__(
         self,
