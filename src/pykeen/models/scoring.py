@@ -102,7 +102,10 @@ def parallel_prefix_unsqueeze(x: OneOrSequence[torch.FloatTensor], ndim: int) ->
 
 
 class Scorer:
-    predict_with_sigmoid: bool = False
+    predict_with_sigmoid: bool
+
+    def __init__(self, predict_with_sigmoid: bool = False):
+        self.predict_with_sigmoid = predict_with_sigmoid
 
     @staticmethod
     def unsqueeze(
