@@ -247,6 +247,14 @@ class Objective:
             kwargs_ranges=self.training_kwargs_ranges,
         )
 
+        # a fixed checkpoint_name leads avoid collision across trials
+        checkpoint_name = _training_kwargs.get("checkpoint_name", None)
+        if checkpoint_name:
+            raise ValueError(
+                f"Cannot set a fixed {checkpoint_name=} across all trials; if you want to save the final model per "
+                f"trial, use `save_model_directory` instead!",
+            )
+
         # create result tracker to allow to gracefully close failed trials
         result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
 

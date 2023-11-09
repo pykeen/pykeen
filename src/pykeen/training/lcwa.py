@@ -4,7 +4,7 @@
 
 import logging
 from math import ceil
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, ClassVar, Optional, Tuple, Union
 
 import torch
 from torch.nn import functional
@@ -41,6 +41,8 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
     [ruffinelli2020]_ call the LCWA ``KvsAll`` in their work.
     """
+
+    supports_slicing: ClassVar[bool] = True
 
     def __init__(
         self,
