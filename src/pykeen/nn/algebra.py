@@ -1,4 +1,5 @@
 """Utilities for handling exoctic algebras such as quaternions."""
+
 from functools import lru_cache
 
 import torch
