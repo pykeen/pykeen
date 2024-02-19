@@ -403,5 +403,5 @@ def test_hpo_defaults(base_cls: Type, ignore: Collection[Type]):
     # note: this is only of limited use since many have **kwargs which
     for cls in classes:
         signature = inspect.signature(cls.__init__)
-        hpo_default = getattr(cls, "hpo_default")
-        signature.bind_partial({key: None for key in hpo_default})
+        assert hasattr(cls, "hpo_default")
+        signature.bind_partial({key: None for key in cls.hpo_default})
