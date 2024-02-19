@@ -14,6 +14,7 @@ from torch.utils import data
 
 from .utils import compute_compressed_adjacency_list
 from ..sampling import NegativeSampler, negative_sampler_resolver
+from ..sampling.fast import FastSLCWABatch, RestrictedNegativeSampler
 from ..typing import MappedTriples
 
 __all__ = [
@@ -80,6 +81,21 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         raise NotImplementedError
 
 
+def split_workload(n: int) -> range:
+    """Split workload for multi-processing."""
+    # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
+    worker_info = torch.utils.data.get_worker_info()
+    if worker_info is None:  # single-process data loading, return the full iterator
+        workload = range(n)
+    else:
+        num_workers = worker_info.num_workers
+        worker_id = worker_info.id  # 1-based
+        start = math.ceil(n / num_workers * worker_id)
+        stop = math.ceil(n / num_workers * (worker_id + 1))
+        workload = range(start, stop)
+    return workload
+
+
 class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
     """
     Pre-batched training instances for the sLCWA training loop.
@@ -134,20 +150,6 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
         return SLCWABatch(positives=positive_batch, negatives=negative_batch, masks=masks)
 
-    def split_workload(self, n: int) -> range:
-        """Split workload for multi-processing."""
-        # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info is None:  # single-process data loading, return the full iterator
-            workload = range(n)
-        else:
-            num_workers = worker_info.num_workers
-            worker_id = worker_info.id  # 1-based
-            start = math.ceil(n / num_workers * worker_id)
-            stop = math.ceil(n / num_workers * (worker_id + 1))
-            workload = range(start, stop)
-        return workload
-
     @abstractmethod
     def iter_triple_ids(self) -> Iterable[List[int]]:
         """Iterate over batches of IDs of positive triples."""
@@ -171,7 +173,7 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
 
     def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
         yield from data.BatchSampler(
-            sampler=data.RandomSampler(data_source=self.split_workload(len(self.mapped_triples))),
+            sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
             batch_size=self.batch_size,
             drop_last=self.drop_last,
         )
@@ -240,7 +242,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         return result
 
     def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
-        yield from (self.subgraph_sample() for _ in self.split_workload(n=len(self)))
+        yield from (self.subgraph_sample() for _ in split_workload(n=len(self)))
 
 
 class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
@@ -304,3 +306,56 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
 
 
 SLCWAInstances = BatchedSLCWAInstances
+
+
+class FastSLCWAInstances(Instances[FastSLCWABatch, FastSLCWABatch], data.IterableDataset):
+    def __init__(
+        self,
+        mapped_triples: MappedTriples,
+        batch_size: int = 1,
+        drop_last: bool = True,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
+        negative_sampler: HintOrType[RestrictedNegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+    ):
+        self.mapped_triples = mapped_triples
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+        self.negative_sampler: RestrictedNegativeSampler = negative_sampler_resolver.make(
+            negative_sampler,
+            pos_kwargs=negative_sampler_kwargs,
+            mapped_triples=self.mapped_triples,
+            num_entities=num_entities,
+            num_relations=num_relations,
+        )
+
+    def __len__(self) -> int:
+        """Return the number of batches."""
+        num_batches, remainder = divmod(len(self.mapped_triples), self.batch_size)
+        if remainder and not self.drop_last:
+            num_batches += 1
+        return num_batches
+
+    def __getitem__(self, item: List[int]) -> FastSLCWABatch:
+        """Get a batch from the given list of positive triple IDs."""
+        positive_batch = self.mapped_triples[item]
+        return self.negative_sampler.corrupt_batch_structured(positive_batch)
+
+    def __iter__(self) -> Iterator[SLCWABatch]:
+        """Iterate over batches."""
+        for triple_ids in self.iter_triple_ids():
+            yield self[triple_ids]
+
+    def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
+        yield from data.BatchSampler(
+            sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
+            batch_size=self.batch_size,
+            drop_last=self.drop_last,
+        )
+
+    @classmethod
+    def from_triples(
+        cls, mapped_triples: MappedTriples, *, num_entities: int, num_relations: int, **kwargs
+    ) -> "FastSLCWAInstances":
+        return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)

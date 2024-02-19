@@ -57,6 +57,16 @@ def _restrict_to(
     return scores.gather(dim=1, index=ids)
 
 
+def split_batch_for_prediction(hrt_batch, target: Target) -> tuple[torch.LongTensor, torch.LongTensor]:
+    if target == LABEL_TAIL:
+        return hrt_batch[:, 0:2], hrt_batch[:, 2]
+    if target == LABEL_RELATION:
+        return hrt_batch[:, 0::2], hrt_batch[:, 1]
+    if target == LABEL_HEAD:
+        return hrt_batch[:, 1:3], hrt_batch[:, 0]
+    raise ValueError(target)
+
+
 class Model(nn.Module, ABC):
     """A base module for KGE models.
 
@@ -321,7 +331,6 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
 
-    @abstractmethod
     def score_hs(
         self,
         rt_batch: torch.LongTensor,
@@ -349,6 +358,26 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
         return _restrict_to(scores=self.score_h(rt_batch=rt_batch, slice_size=slice_size, mode=mode), ids=hs)
+
+    def score(
+        self,
+        batch: torch.LongTensor,
+        target: Target,
+        restriction: torch.LongTensor | None = None,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode],
+    ) -> torch.FloatTensor:
+        if target == LABEL_TAIL:
+            return self.score_ts(hr_batch=batch, ts=restriction, slice_size=slice_size, mode=mode)
+
+        if target == LABEL_RELATION:
+            return self.score_rs(ht_batch=batch, rs=restriction, slice_size=slice_size, mode=mode)
+
+        if target == LABEL_HEAD:
+            return self.score_hs(rt_batch=batch, hs=restriction, slice_size=slice_size, mode=mode)
+
+        raise ValueError(f"Unknown target={target}")
 
     @abstractmethod
     def collect_regularization_term(self) -> torch.FloatTensor:
@@ -534,14 +563,15 @@ class Model(nn.Module, ABC):
         mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         """Predict scores for the given target."""
+        batch = split_batch_for_prediction(hrt_batch, target=target)[0]
         if target == LABEL_TAIL:
-            return self.predict_t(hrt_batch[:, 0:2], slice_size=slice_size, mode=mode)
+            return self.predict_t(batch, slice_size=slice_size, mode=mode)
 
         if target == LABEL_RELATION:
-            return self.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size, mode=mode)
+            return self.predict_r(batch, slice_size=slice_size, mode=mode)
 
         if target == LABEL_HEAD:
-            return self.predict_h(hrt_batch[:, 1:3], slice_size=slice_size, mode=mode)
+            return self.predict_h(batch, slice_size=slice_size, mode=mode)
 
         raise ValueError(f"Unknown target={target}")
 

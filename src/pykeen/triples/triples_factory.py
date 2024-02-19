@@ -32,9 +32,10 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
+from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances, FastSLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
+from ..sampling.fast import BasicRestrictedNegativeSampler
 from ..typing import (
     LABEL_HEAD,
     LABEL_RELATION,
@@ -486,6 +487,7 @@ class CoreTriplesFactory:
 
     def create_slcwa_instances(self, *, sampler: Optional[str] = None, **kwargs) -> Dataset:
         """Create sLCWA instances for this factory's triples."""
+        # fixme: move to training loop
         cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
         if "shuffle" in kwargs:
             if kwargs.pop("shuffle"):
@@ -501,11 +503,29 @@ class CoreTriplesFactory:
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Dataset:
         """Create LCWA instances for this factory's triples."""
+        # fixme: move to training loop
         return LCWAInstances.from_triples(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
             num_relations=self.num_relations,
             target=target,
+        )
+
+    def create_fslcwa_instances(self, num_negs_per_pos: int, **kwargs) -> Dataset:
+        """Create LCWA instances for this factory's triples."""
+        # fixme: move to training loop
+        mapped_triples = self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples)
+        return FastSLCWAInstances.from_triples(
+            mapped_triples=mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            negative_sampler=BasicRestrictedNegativeSampler(
+                mapped_triples=mapped_triples,
+                num_entities=self.num_entities,
+                num_relations=self.num_relations,
+                num_negs_per_pos=num_negs_per_pos,
+            ),
+            **kwargs,
         )
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
@@ -1013,7 +1033,12 @@ class TriplesFactory(CoreTriplesFactory):
                 self.relation_to_id,
             ),
         ):
-            pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
+            pd.DataFrame(
+                data=data.items(),
+                columns=["label", "id"],
+            ).sort_values(
+                by="id"
+            ).set_index("id").to_csv(
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
             )

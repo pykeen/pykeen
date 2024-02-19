@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """Test for sLCWA and LCWA."""
+from typing import MutableMapping, Any
 
 from pykeen.losses import MarginRankingLoss, NSSALoss, SoftplusLoss
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
+from pykeen.training.fslcwa import FastSLCWATrainingLoop
 from tests.test_training import cases
 
 
@@ -85,3 +87,10 @@ class SoftPlusLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
 
     cls = LCWATrainingLoop
     loss_cls = SoftplusLoss
+
+
+class MRUnfilteredFastSLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test fast sLCWA with unfiltered negative sampling with margin ranking loss."""
+
+    cls = FastSLCWATrainingLoop
+    loss_cls = MarginRankingLoss
