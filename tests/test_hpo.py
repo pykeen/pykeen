@@ -387,6 +387,7 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
 )
 def test_hpo_defaults(base_cls: Type, ignore: Collection[Type]):
     """Test HPO defaults for components that are used in the HPO pipeline."""
+    # todo: it would be nice to check against __init__ parameters, but this is difficult due to **kwargs
     assert set(ignore) == {
         cls
         for cls in get_subclasses(base_cls)
