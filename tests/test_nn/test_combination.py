@@ -1,4 +1,5 @@
 """Tests for combination modules."""
+
 from typing import Sequence, Tuple
 
 import torch

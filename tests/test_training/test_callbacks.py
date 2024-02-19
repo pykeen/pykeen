@@ -1,4 +1,5 @@
 """Tests for training callbacks."""
+
 import unittest
 from typing import Any, MutableMapping
 from unittest import mock
