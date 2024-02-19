@@ -4,7 +4,7 @@
 
 from typing import Any, Mapping, Type
 
-from class_resolver import ClassResolver
+from class_resolver.contrib.torch import lr_scheduler_resolver
 from torch.optim.lr_scheduler import (
     CosineAnnealingLR,
     CosineAnnealingWarmRestarts,
@@ -34,8 +34,6 @@ __all__ = [
     "StepLR",
 ]
 
-# fixme: bring this upstream to class_resolver.contrib?
-lr_scheduler_resolver = ClassResolver.from_subclasses(LRScheduler, default=ExponentialLR, suffix="LR")
 
 #: The default strategy for optimizing the lr_schedulers' hyper-parameters
 lr_schedulers_hpo_defaults: Mapping[Type[LRScheduler], Mapping[str, Any]] = {
