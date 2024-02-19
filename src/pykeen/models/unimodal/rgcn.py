@@ -62,18 +62,17 @@ class RGCN(
         github: https://github.com/MichSchli/RelationPrediction
     """
 
-    #: The default strategy for optimizing the model"s hyper-parameters
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=32, high=512, q=32),
         num_layers=dict(type=int, low=1, high=5, q=1),
         use_bias=dict(type="bool"),
-        use_batch_norm=dict(type="bool"),
-        activation_cls=dict(type="categorical", choices=[nn.ReLU, nn.LeakyReLU]),
+        activation=dict(type="categorical", choices=[nn.ReLU, nn.LeakyReLU]),
         interaction=dict(type="categorical", choices=["distmult", "complex", "ermlp"]),
         edge_dropout=dict(type=float, low=0.0, high=0.9),
         self_loop_dropout=dict(type=float, low=0.0, high=0.9),
         edge_weighting=dict(type="categorical", choices=["inverse_in_degree", "inverse_out_degree", "symmetric"]),
-        decomposition=dict(type="categorical", choices=["bases", "blocks"]),
+        decomposition=dict(type="categorical", choices=["bases", "block"]),
         # TODO: Decomposition kwargs
         # num_bases=dict(type=int, low=2, high=100, q=1),
         # num_blocks=dict(type=int, low=2, high=20, q=1),
