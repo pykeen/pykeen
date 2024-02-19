@@ -9,7 +9,7 @@ from class_resolver import Hint, HintOrType
 from torch import nn
 
 from ..nbase import ERModel
-from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE, DEFAULT_DROPOUT_HPO_RANGE
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.message_passing import Decomposition, RGCNRepresentation
 from ...nn.modules import Interaction
 from ...nn.representation import Representation
