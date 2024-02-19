@@ -131,6 +131,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
     def collate(samples: Iterable[SLCWASampleType]) -> SLCWABatch:
         """Collate samples."""
         # each shape: (1, 3), (1, k, 3), (1, k, 3)?
+        masks: torch.LongTensor | None
         positives, negatives, masks = zip(*samples)
         positives = torch.cat(positives, dim=0)
         negatives = torch.cat(negatives, dim=0)
