@@ -387,9 +387,21 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
 )
 def test_hpo_defaults(base_cls: Type, ignore: Collection[Type]):
     """Test HPO defaults for components that are used in the HPO pipeline."""
-    # todo: it would be nice to check against __init__ parameters, but this is difficult due to **kwargs
-    assert set(ignore) == {
-        cls
-        for cls in get_subclasses(base_cls)
-        if not (inspect.isabstract(cls) or isinstance(getattr(cls, "hpo_default", None), dict))
-    }
+    classes = set(get_subclasses(base_cls))
+
+    assert classes.issuperset(ignore)
+    classes.difference_update(ignore)
+
+    # ignore abstract classes
+    abstract_classes = {cls for cls in classes if inspect.isabstract(cls)}
+    classes.difference_update(abstract_classes)
+
+    # verify that all classes have the hpo_default dictionary
+    assert all(isinstance(getattr(cls, "hpo_default", None), dict) for cls in classes)
+
+    # verify that we can bind the keys to the __init__'s signature
+    # note: this is only of limited use since many have **kwargs which
+    for cls in classes:
+        signature = inspect.signature(cls.__init__)
+        hpo_default = getattr(cls, "hpo_default")
+        signature.bind_partial({key: None for key in hpo_default})
