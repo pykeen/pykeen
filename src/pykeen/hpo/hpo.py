@@ -23,7 +23,6 @@ from ..constants import USER_DEFINED_CODE
 from ..datasets import dataset_resolver, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.ranking_metric_lookup import MetricKey
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
@@ -247,6 +246,14 @@ class Objective:
             kwargs=self.training_kwargs,
             kwargs_ranges=self.training_kwargs_ranges,
         )
+
+        # a fixed checkpoint_name leads avoid collision across trials
+        checkpoint_name = _training_kwargs.get("checkpoint_name", None)
+        if checkpoint_name:
+            raise ValueError(
+                f"Cannot set a fixed {checkpoint_name=} across all trials; if you want to save the final model per "
+                f"trial, use `save_model_directory` instead!",
+            )
 
         # create result tracker to allow to gracefully close failed trials
         result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
@@ -796,12 +803,12 @@ def hpo_pipeline(
         raise ValueError("can not use early stopping while optimizing epochs")
 
     # 8. Evaluation
-    evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
+    evaluator_cls = evaluator_resolver.lookup(evaluator)
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
-    metric = MetricKey.normalize(metric)
-    study.set_user_attr("metric", metric)
-    logger.info(f"Attempting to {direction} {metric}")
+    resolved_metric = evaluator_cls.metric_result_cls.key_to_string(metric)
+    study.set_user_attr("metric", resolved_metric)
+    logger.info(f"Attempting to {direction} {resolved_metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)
     logger.info("Filter validation triples when testing: %s", filter_validation_when_testing)
 
@@ -858,7 +865,7 @@ def hpo_pipeline(
         result_tracker=result_tracker,
         result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
-        metric=metric,
+        metric=resolved_metric,
         save_model_directory=save_model_directory,
         # Pipeline Misc.
         device=device,

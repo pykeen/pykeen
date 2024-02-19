@@ -1,4 +1,5 @@
 """Tests for prediction tools."""
+
 from typing import Any, Collection, Iterable, MutableMapping, Optional, Sequence, Tuple, Union
 
 import numpy
@@ -169,7 +170,7 @@ def test_predict_all(model: pykeen.models.Model, k: Optional[int], target: pykee
     """Test the predict method."""
     pack = pykeen.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
     _check_score_pack(
-        pack=pack, model=model, num_triples=model.num_entities**2 * model.num_relations if k is None else k
+        pack=pack, model=model, num_triples=model.num_entities**2 * model.num_real_relations if k is None else k
     )
 
 
@@ -236,17 +237,15 @@ def test_predict_triples(
     _check_score_pack(pack=pack, model=model, num_triples=num_triples)
 
 
-def _iter_get_input_batch_inputs() -> (
-    Iterable[
-        Tuple[
-            Optional[CoreTriplesFactory],
-            Union[None, int, str],
-            Union[None, int, str],
-            Union[None, int, str],
-            pykeen.typing.Target,
-        ]
+def _iter_get_input_batch_inputs() -> Iterable[
+    Tuple[
+        Optional[CoreTriplesFactory],
+        Union[None, int, str],
+        Union[None, int, str],
+        Union[None, int, str],
+        pykeen.typing.Target,
     ]
-):
+]:
     """Iterate over test inputs for _get_input_batch."""
     factory = Nations().training
     # ID-based, no factory

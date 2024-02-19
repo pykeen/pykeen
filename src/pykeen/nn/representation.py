@@ -19,6 +19,7 @@ import torch
 import torch.nn
 from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
+from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -215,8 +216,13 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
         return get_preferred_device(module=self, allow_ambiguity=True)
 
 
+@parse_docdata
 class SubsetRepresentation(Representation):
-    """A representation module, which only exposes a subset of representations of its base."""
+    """A representation module, which only exposes a subset of representations of its base.
+
+    ---
+    name: Subset Representation
+    """
 
     def __init__(
         self,
@@ -264,6 +270,7 @@ class SubsetRepresentation(Representation):
         return self.base._plain_forward(indices=indices)
 
 
+@parse_docdata
 class Embedding(Representation):
     """Trainable embeddings.
 
@@ -293,6 +300,9 @@ class Embedding(Representation):
     >>> import torch
     >>> batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
     >>> scores = model.score_hrt(batch)
+
+    ---
+    name: Embedding
     """
 
     normalizer: Optional[Normalizer]
@@ -433,6 +443,7 @@ class Embedding(Representation):
         return x
 
 
+@parse_docdata
 class LowRankRepresentation(Representation):
     r"""
     Low-rank embedding factorization.
@@ -442,6 +453,9 @@ class LowRankRepresentation(Representation):
 
     .. math ::
         E[i] = \sum_k B[i, k] * W[k]
+
+    ---
+    name: Low Rank Embedding
     """
 
     def __init__(
@@ -907,8 +921,13 @@ class CombinedCompGCNRepresentations(nn.Module):
         )
 
 
+@parse_docdata
 class SingleCompGCNRepresentation(Representation):
-    """A wrapper around the combined representation module."""
+    """A wrapper around the combined representation module.
+
+    ---
+    name: CompGCN
+    """
 
     def __init__(
         self,
@@ -969,6 +988,7 @@ def _clean_labels(labels: Sequence[Optional[str]], missing_action: Literal["erro
         raise ValueError(f"Invalid `missing_action` policy: {missing_action}")
 
 
+@parse_docdata
 class TextRepresentation(Representation):
     """
     Textual representations using a text encoder on labels.
@@ -994,6 +1014,9 @@ class TextRepresentation(Representation):
             entity_representations=entity_representations,
             relation_representations_kwargs=dict(shape=entity_representations.shape),
         )
+
+    ---
+    name: Text Encoding
     """
 
     labels: List[str]
@@ -1102,8 +1125,13 @@ class TextRepresentation(Representation):
         return self.encoder(labels=labels)
 
 
+@parse_docdata
 class CombinedRepresentation(Representation):
-    """A combined representation."""
+    """A combined representation.
+
+    ---
+    name: Combined
+    """
 
     #: the base representations
     base: Sequence[Representation]
@@ -1227,6 +1255,7 @@ class CachedTextRepresentation(TextRepresentation):
         return cls(identifiers=labeling.all_labels(), **kwargs)
 
 
+@parse_docdata
 class WikidataTextRepresentation(CachedTextRepresentation):
     """
     Textual representations for datasets grounded in Wikidata.
@@ -1256,6 +1285,9 @@ class WikidataTextRepresentation(CachedTextRepresentation):
                 ),
             ),
         )
+
+    ---
+    name: Wikidata Text Encoding
     """
 
     cache_cls = WikidataCache
@@ -1299,11 +1331,15 @@ class BiomedicalCURIERepresentation(CachedTextRepresentation):
                 ),
             ),
         )
+
+    ---
+    name: Biomedical CURIE Text Encoding
     """
 
     cache_cls = PyOBOCache
 
 
+@parse_docdata
 class PartitionRepresentation(Representation):
     """
     A partition of the indices into different representation modules.
@@ -1357,6 +1393,9 @@ class PartitionRepresentation(Representation):
     ...     training=training,
     ...     testing=testing,
     ... )
+
+    ---
+    name: Partition
     """
 
     #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
@@ -1457,6 +1496,7 @@ class PartitionRepresentation(Representation):
         return x
 
 
+@parse_docdata
 class BackfillRepresentation(PartitionRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
 
@@ -1495,6 +1535,9 @@ class BackfillRepresentation(PartitionRepresentation):
     ...     training=training,
     ...     testing=testing,
     ... )
+
+    ---
+    name: Backfill
     """
 
     def __init__(
@@ -1549,6 +1592,7 @@ class BackfillRepresentation(PartitionRepresentation):
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
 
 
+@parse_docdata
 class TransformedRepresentation(Representation):
     """
     A (learnable) transformation upon base representations.
@@ -1584,6 +1628,9 @@ class TransformedRepresentation(Representation):
     ...     transformation=mlp,
     ...     base_kwargs=dict(max_id=dataset.num_entities, shape=(dim,), initializer=initializer, trainable=False),
     ... )
+
+    ---
+    name: Transformed
     """
 
     def __init__(
@@ -1660,6 +1707,7 @@ class TransformedRepresentation(Representation):
 
 
 # TODO: can be a combined representations, with appropriate tensor-train combination
+@parse_docdata
 class TensorTrainRepresentation(Representation):
     r"""
     A tensor factorization of representations.
@@ -1680,6 +1728,12 @@ class TensorTrainRepresentation(Representation):
     with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times m_i \times n_i \times R_i$ and $R_0 = R_d = 1$.
 
     Another variant in the paper used an assignment based on hierarchical topological clustering.
+    ---
+    name: Tensor-Train
+    author: Yin
+    year: 2022
+    arxiv: 2206.10581
+    link: https://arxiv.org/abs/2206.10581
     """
 
     #: shape: (max_id, num_cores)

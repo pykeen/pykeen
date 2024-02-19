@@ -1,4 +1,5 @@
 """Command-Line Interface for pre-computing tokenizations for NodePiece."""
+
 import copy
 import logging
 import math
