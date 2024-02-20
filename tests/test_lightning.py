@@ -23,7 +23,8 @@ EMBEDDING_DIM = 8
 MODEL_CONFIGURATIONS = {
     models.AutoSF: dict(embedding_dim=EMBEDDING_DIM),
     models.BoxE: dict(embedding_dim=EMBEDDING_DIM),
-    models.CompGCN: dict(embedding_dim=EMBEDDING_DIM),
+    # fixme: CompGCN leads to an autograd runtime error...
+    # models.CompGCN: dict(embedding_dim=EMBEDDING_DIM),
     models.ComplEx: dict(embedding_dim=EMBEDDING_DIM),
     models.ConvE: dict(embedding_dim=EMBEDDING_DIM),
     models.ConvKB: dict(embedding_dim=EMBEDDING_DIM, num_filters=2),

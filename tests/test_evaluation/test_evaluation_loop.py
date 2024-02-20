@@ -1,4 +1,5 @@
 """Tests for evaluation loops."""
+
 from typing import Any, MutableMapping
 
 import pykeen.evaluation.evaluation_loop

@@ -1,4 +1,5 @@
 """Test for ranks."""
+
 from typing import Sequence
 
 import pytest
