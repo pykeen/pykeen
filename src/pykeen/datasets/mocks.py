@@ -1,4 +1,5 @@
 """Small mock datasets for testing."""
+
 from .inductive.base import EagerInductiveDataset, InductiveDataset
 from ..triples.generation import generate_triples_factory
 
