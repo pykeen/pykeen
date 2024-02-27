@@ -94,6 +94,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     # select one triple per relation
     chosen = _get_cover_for_column(df=df, column=LABEL_RELATION)
 
+    # fixme: unused variable!
     # maintain set of covered entities
     covered = _get_covered_entities(df=df, chosen=chosen)
 
