@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Utilities for ablation study configurations."""
+from __future__ import annotations
 
 import itertools as itt
 import json
@@ -28,7 +29,7 @@ Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
 
 
 def ablation_pipeline(
-    datasets: Union[str, List[str]],
+    datasets: str | List[str | dict[str, str | pathlib.Path]],
     directory: Union[str, pathlib.Path],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
@@ -315,8 +316,15 @@ def prepare_ablation_from_config(
     )
 
 
+def path_to_str(x: object) -> str:
+    """Convert path to string and error on everything which is not a path."""
+    if isinstance(x, pathlib.Path):
+        return x.as_posix()
+    raise TypeError(x)
+
+
 def prepare_ablation(  # noqa:C901
-    datasets: Union[str, List[str]],
+    datasets: str | List[str | dict[str, str | pathlib.Path]],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
@@ -421,7 +429,7 @@ def prepare_ablation(  # noqa:C901
             the paths to the training, testing, and validation data.
     """
     directory = normalize_path(path=directory)
-    if isinstance(datasets, str):
+    if isinstance(datasets, (str, dict)):
         datasets = [datasets]
     if isinstance(create_inverse_triples, bool):
         create_inverse_triples = [create_inverse_triples]
@@ -463,6 +471,7 @@ def prepare_ablation(  # noqa:C901
         optimizer,
         training_loop,
     ) in enumerate(it):
+        dataset: str | dict[str, str | pathlib.Path]
         dataset_name = normalize_string(dataset) if isinstance(dataset, str) else "user_data"
         experiment_name = f"{counter:04d}_{dataset_name}_{normalize_string(model)}"
         output_directory = directory.joinpath(experiment_name)
@@ -602,7 +611,8 @@ def prepare_ablation(  # noqa:C901
 
         rv_config_path = output_directory.joinpath("hpo_config.json")
         with rv_config_path.open("w") as file:
-            json.dump(rv_config, file, indent=2, ensure_ascii=True)
+            # paths need to be encoded as strings to make them JSON-serializable
+            json.dump(rv_config, file, indent=2, ensure_ascii=True, default=path_to_str)
 
         directories.append((output_directory, rv_config_path))
 
