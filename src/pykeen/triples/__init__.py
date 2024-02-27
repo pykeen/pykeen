@@ -36,24 +36,35 @@ with the files.
 Splitting
 =========
 
-Numeric Triples
-===============
+To evaluate knowledge graph embedding models, we need training, validation, and test sets.
+In classical machine learning settings, we often have a large number of independent samples and can use simple random
+sampling.
+In graph learning settings, however, we are interested in learning relational patterns, i.e. patterns between different
+samples.
+In these settings, we need to be more careful.
 
-Training Instances
-==================
+For example, to evaluate models in a transductive setting, we need to make sure that all entities and relations of the
+triples used in the evaluation are also present in the training triples.
+PyKEEN includes methods to construct splits that ensure the presence of all entities and relations in the training part.
+Those can be found in :mod:`pykeen.triples.splitting`.
 
-Analyis
-=======
+In addition, knowledge graphs may contain inverse relationships, such as a _predecessor_ and _successor_ relationship.
+In this case, careless splitting can lead to test leakage, where models that only check whether the inverse relationship
+exists in training can produce significantly strong results, inflating scores without learning meaningful relationship
+patterns.
+PyKEEN includes methods to check knowledge graph splits for leakage, which can be found in
+:mod:`pykeen.triples.leakage`.
 
-Basic Statistics
-----------------
+In :mod:`pykeen.triples.remix`, we offer methods to examine the effects of a particular choice of splits.
 
 
-Leakage Detection
------------------
+Analysis
+========
 
-Deterioation & Remixing
------------------------
+We also provide methods for analyzing knowledge graphs.
+These include simple statistics such as the number of entities or relations (in :mod:`pykeen.triples.stats`),
+as well as advanced analysis of relational patterns (:mod:`pykeen.triples.analysis`).
+
 """
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
