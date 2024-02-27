@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-"""
+r"""
+A module to handle triples.
+
 A knowledge graph can be thought of as a collection of facts, where each individual fact is represented
 as a triple of a head entity $h$, a relation $r$ and a tail entity $t$. In order to operate efficiently
 on them, most of PyKEEN assumes that the set of entities has been that the set of entities has been
