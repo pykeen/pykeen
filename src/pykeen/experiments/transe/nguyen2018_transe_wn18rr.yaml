@@ -1,5 +1,5 @@
 metadata:
-  commenrs: TransE was used to initialize the emebddings. Could not find batch size and number of epochs.
+  comments: TransE was used to initialize the emebddings. Could not find batch size and number of epochs.
   title: Learn FB15k-237 Dataset with TransE as described by Nguyen et al., 2018
 pipeline:
   dataset: wn18rr
@@ -16,7 +16,7 @@ pipeline:
     entity_initializer: xavier_uniform
     relation_initializer: xavier_uniform
     scoring_fct_norm: 1
-  negative_sampler_cls: bernoulli
+  negative_sampler: bernoulli
   negative_sampler_kwargs:
     num_negs_per_pos: 1
   optimizer: SGD
