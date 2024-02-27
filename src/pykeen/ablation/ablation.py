@@ -471,7 +471,6 @@ def prepare_ablation(  # noqa:C901
         optimizer,
         training_loop,
     ) in enumerate(it):
-        dataset: str | dict[str, str | pathlib.Path]
         dataset_name = normalize_string(dataset) if isinstance(dataset, str) else "user_data"
         experiment_name = f"{counter:04d}_{dataset_name}_{normalize_string(model)}"
         output_directory = directory.joinpath(experiment_name)
