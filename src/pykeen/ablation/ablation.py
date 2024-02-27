@@ -74,7 +74,10 @@ def ablation_pipeline(
 ):
     """Run ablation study.
 
-    :param datasets: A dataset name or list of dataset names.
+    :param datasets:
+        A single or a list of dataset specifications.
+        Datasets can be specified either by name (referring to a single built-in dataset) or as a dictionary with
+        paths for training, validation, and testing.
     :param directory: The directory in which the experimental artifacts will be saved.
     :param models: A model name or list of model names.
     :param losses: A loss function name or list of loss function names.
@@ -364,7 +367,10 @@ def prepare_ablation(  # noqa:C901
 ) -> List[Tuple[pathlib.Path, pathlib.Path]]:
     """Prepare an ablation directory.
 
-    :param datasets: A dataset name or list of dataset names.
+    :param datasets:
+        A single or a list of dataset specifications.
+        Datasets can be specified either by name (referring to a single built-in dataset) or as a dictionary with
+        paths for training, validation, and testing.
     :param models: A model name or list of model names.
     :param losses: A loss function name or list of loss function names.
     :param optimizers: An optimizer name or list of optimizer names.
