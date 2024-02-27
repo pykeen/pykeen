@@ -137,12 +137,13 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
         positives, negatives, masks = zip(*samples)
         positives = torch.cat(positives, dim=0)
         negatives = torch.cat(negatives, dim=0)
+        mask_batch: torch.BoolTensor | None
         if masks[0] is None:
             assert all(m is None for m in masks)
-            masks = None
+            mask_batch = None
         else:
-            masks = torch.cat(masks, dim=0)
-        return SLCWABatch(positives, negatives, masks)
+            mask_batch = torch.cat(masks, dim=0)
+        return SLCWABatch(positives, negatives, mask_batch)
 
     # docstr-coverage: inherited
     def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatch]]:  # noqa: D102
