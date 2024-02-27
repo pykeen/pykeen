@@ -38,7 +38,7 @@ You can navigate to the created project in WANDB and observe a running experimen
 Further tweaking of appearance, charts, and other settings is described in the official
 `documentation <https://docs.wandb.com/>`_
 
-You can also specify an optional ``experiment`` which will appear on the website instead of randomly generated
+You can also specify optional ``tags`` which will appear on the website instead of randomly generated
 labels. All further keyword arguments are passed to :func:`wandb.init`.
 
 .. code-block:: python
@@ -51,7 +51,7 @@ labels. All further keyword arguments are passed to :func:`wandb.init`.
         result_tracker='wandb',
         result_tracker_kwargs=dict(
             project='pykeen_project',
-            experiment='experiment-1',
+            tags='experiment-1',
         ),
     )
 
@@ -70,7 +70,7 @@ This example shows using WANDB with the :func:`pykeen.hpo.hpo_pipeline` function
         result_tracker='wandb',
         result_tracker_kwargs=dict(
             project='pykeen_project',
-            experiment='new run',
+            tags='new run',
             reinit=True,
         ),
     )
