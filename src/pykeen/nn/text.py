@@ -1,6 +1,5 @@
 """Modules for text encoding."""
 
-
 import logging
 import string
 from abc import abstractmethod

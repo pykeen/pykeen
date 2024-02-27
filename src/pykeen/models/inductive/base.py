@@ -1,4 +1,5 @@
 """Base classes for inductive models."""
+
 from collections import ChainMap
 from typing import Mapping, Optional, Sequence
 
