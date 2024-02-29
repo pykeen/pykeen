@@ -8,7 +8,7 @@ import json
 import logging
 import pathlib
 import time
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, TypedDict
 from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
@@ -326,8 +326,16 @@ def path_to_str(x: object) -> str:
     raise TypeError(x)
 
 
+class SplitToPathDict(TypedDict):
+    """A mapping of the split keys to the paths in which the triples are stored."""
+
+    training: str | pathlib.Path
+    validation: str | pathlib.Path
+    testing: str | pathlib.Path
+
+
 def prepare_ablation(  # noqa:C901
-    datasets: str | List[str | dict[str, str | pathlib.Path]],
+    datasets: str | List[str | SplitToPathDict],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
