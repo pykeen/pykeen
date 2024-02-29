@@ -28,8 +28,16 @@ Mapping2D = Mapping[str, Mapping[str, Any]]
 Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
 
 
+class SplitToPathDict(TypedDict):
+    """A mapping of the split keys to the paths in which the triples are stored."""
+
+    training: str | pathlib.Path
+    validation: str | pathlib.Path
+    testing: str | pathlib.Path
+
+
 def ablation_pipeline(
-    datasets: str | List[str | dict[str, str | pathlib.Path]],
+    datasets: str | List[str | SplitToPathDict],
     directory: Union[str, pathlib.Path],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
@@ -326,14 +334,6 @@ def path_to_str(x: object) -> str:
     raise TypeError(x)
 
 
-class SplitToPathDict(TypedDict):
-    """A mapping of the split keys to the paths in which the triples are stored."""
-
-    training: str | pathlib.Path
-    validation: str | pathlib.Path
-    testing: str | pathlib.Path
-
-
 def prepare_ablation(  # noqa:C901
     datasets: str | List[str | SplitToPathDict],
     models: Union[str, List[str]],
@@ -460,7 +460,7 @@ def prepare_ablation(  # noqa:C901
     elif regularizers is None:
         regularizers = [None]
 
-    it = itt.product(
+    it: Iterable[tuple[str | SplitToPathDict, bool, str, str, str | None, str, str]] = itt.product(
         datasets,
         create_inverse_triples,
         models,
