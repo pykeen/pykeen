@@ -8,7 +8,7 @@ import json
 import logging
 import pathlib
 import time
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, TypedDict
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, TypedDict, Union
 from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
