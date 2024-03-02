@@ -12,6 +12,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
+from ..typing import OneOrSequence
 from ..utils import normalize_path, normalize_string
 
 __all__ = [
@@ -37,7 +38,7 @@ class SplitToPathDict(TypedDict):
 
 
 def ablation_pipeline(
-    datasets: str | List[str | SplitToPathDict],
+    datasets: OneOrSequence[str | SplitToPathDict],
     directory: Union[str, pathlib.Path],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
@@ -335,7 +336,7 @@ def path_to_str(x: object) -> str:
 
 
 def prepare_ablation(  # noqa:C901
-    datasets: str | List[str | SplitToPathDict],
+    datasets: OneOrSequence[str | SplitToPathDict],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
