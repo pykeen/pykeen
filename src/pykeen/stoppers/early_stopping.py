@@ -228,7 +228,7 @@ class EarlyStopper(Stopper):
             model=self.model,
             additional_filter_triples=self.training_triples_factory.mapped_triples,
             mapped_triples=self.evaluation_triples_factory.mapped_triples,
-            use_tqdm=False,
+            use_tqdm=True,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
             # Only perform time-consuming checks for the first call.
