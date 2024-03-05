@@ -183,6 +183,8 @@ Arguments can be given to the dataset with ``dataset_kwargs``. These are passed 
 the :class:`pykeen.datasets.Nations`
 """
 
+from __future__ import annotations
+
 import ftplib
 import hashlib
 import json
@@ -1206,9 +1208,9 @@ def _handle_evaluation(
     model_instance: Model,
     evaluator_instance: Evaluator,
     stopper_instance: Stopper,
-    training: Hint[CoreTriplesFactory],
-    testing: Hint[CoreTriplesFactory],
-    validation: Hint[CoreTriplesFactory],
+    training: CoreTriplesFactory,
+    testing: CoreTriplesFactory,
+    validation: CoreTriplesFactory | None,
     training_kwargs: Dict[str, Any],
     evaluation_kwargs: Dict[str, Any],
     # Misc
@@ -1218,11 +1220,18 @@ def _handle_evaluation(
     use_tqdm: Optional[bool] = None,
 ) -> Tuple[MetricResults, float]:
     if use_testing_data:
-        mapped_triples = testing.mapped_triples
+        evaluation_factory = testing
     elif validation is None:
         raise ValueError("no validation triples available")
     else:
-        mapped_triples = validation.mapped_triples
+        evaluation_factory = validation
+    if evaluation_factory.create_inverse_triples:
+        logger.warning(
+            f"Found {evaluation_factory.create_inverse_triples=} which is ignored for evaluation factories. "
+            f"The model itself determines whether inverse relations are used in head prediction. "
+            f"Here, the model was created with {training.create_inverse_triples=}",
+        )
+    mapped_triples = evaluation_factory.mapped_triples
 
     # Build up a list of triples if we want to be in the filtered setting
     additional_filter_triples_names = dict()

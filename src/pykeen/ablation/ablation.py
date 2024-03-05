@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """Utilities for ablation study configurations."""
+from __future__ import annotations
 
 import itertools as itt
 import json
 import logging
 import pathlib
 import time
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, TypedDict, Union
 from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
+from ..typing import OneOrSequence
 from ..utils import normalize_path, normalize_string
 
 __all__ = [
@@ -27,8 +29,16 @@ Mapping2D = Mapping[str, Mapping[str, Any]]
 Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
 
 
+class SplitToPathDict(TypedDict):
+    """A mapping of the split keys to the paths in which the triples are stored."""
+
+    training: str | pathlib.Path
+    validation: str | pathlib.Path
+    testing: str | pathlib.Path
+
+
 def ablation_pipeline(
-    datasets: Union[str, List[str]],
+    datasets: OneOrSequence[str | SplitToPathDict],
     directory: Union[str, pathlib.Path],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
@@ -73,7 +83,10 @@ def ablation_pipeline(
 ):
     """Run ablation study.
 
-    :param datasets: A dataset name or list of dataset names.
+    :param datasets:
+        A single or a list of dataset specifications.
+        Datasets can be specified either by name (referring to a single built-in dataset) or as a dictionary with
+        paths for training, validation, and testing.
     :param directory: The directory in which the experimental artifacts will be saved.
     :param models: A model name or list of model names.
     :param losses: A loss function name or list of loss function names.
@@ -315,8 +328,15 @@ def prepare_ablation_from_config(
     )
 
 
+def path_to_str(x: object) -> str:
+    """Convert path to string and error on everything which is not a path."""
+    if isinstance(x, pathlib.Path):
+        return x.as_posix()
+    raise TypeError(x)
+
+
 def prepare_ablation(  # noqa:C901
-    datasets: Union[str, List[str]],
+    datasets: OneOrSequence[str | SplitToPathDict],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
@@ -356,7 +376,10 @@ def prepare_ablation(  # noqa:C901
 ) -> List[Tuple[pathlib.Path, pathlib.Path]]:
     """Prepare an ablation directory.
 
-    :param datasets: A dataset name or list of dataset names.
+    :param datasets:
+        A single or a list of dataset specifications.
+        Datasets can be specified either by name (referring to a single built-in dataset) or as a dictionary with
+        paths for training, validation, and testing.
     :param models: A model name or list of model names.
     :param losses: A loss function name or list of loss function names.
     :param optimizers: An optimizer name or list of optimizer names.
@@ -421,7 +444,7 @@ def prepare_ablation(  # noqa:C901
             the paths to the training, testing, and validation data.
     """
     directory = normalize_path(path=directory)
-    if isinstance(datasets, str):
+    if isinstance(datasets, (str, dict)):
         datasets = [datasets]
     if isinstance(create_inverse_triples, bool):
         create_inverse_triples = [create_inverse_triples]
@@ -438,7 +461,7 @@ def prepare_ablation(  # noqa:C901
     elif regularizers is None:
         regularizers = [None]
 
-    it = itt.product(
+    it: Iterable[tuple[str | SplitToPathDict, bool, str, str, str | None, str, str]] = itt.product(
         datasets,
         create_inverse_triples,
         models,
@@ -602,7 +625,8 @@ def prepare_ablation(  # noqa:C901
 
         rv_config_path = output_directory.joinpath("hpo_config.json")
         with rv_config_path.open("w") as file:
-            json.dump(rv_config, file, indent=2, ensure_ascii=True)
+            # paths need to be encoded as strings to make them JSON-serializable
+            json.dump(rv_config, file, indent=2, ensure_ascii=True, default=path_to_str)
 
         directories.append((output_directory, rv_config_path))
 
