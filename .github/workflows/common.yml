@@ -76,3 +76,7 @@ jobs:
       
       # - name: Test notebooks
       #   run: tox -e treon
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

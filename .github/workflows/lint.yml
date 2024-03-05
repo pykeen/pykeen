@@ -40,3 +40,8 @@ jobs:
 
       - name: Check code quality with flake8
         run: tox -e flake8
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+        
