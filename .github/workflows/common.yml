@@ -49,12 +49,13 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: [ "3.8", "3.11" ]
-        include:
-          # cannot use macos-latest for now
-          # cf. https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners
-          # cannot use Python 3.8
-          - os: macos-14
-            python-version: "3.11"
+        # cannot use macos-latest for now, cf.
+        # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners
+        # cannot use Python 3.8
+        # cannot use M1 at all, since PyG does not provide M1 packages...
+        # include:
+        #   - os: macos-14
+        #     python-version: "3.11"
 
     runs-on: ${{ matrix.os }}
     steps:
