@@ -15,8 +15,7 @@ jobs:
     strategy:
       matrix:
         # no need to check documentation wit multiple python versions
-        # python-version: [ "3.8", "3.10" ]
-        python-version: [ "3.10" ]
+        python-version: [ "3.11" ]
     steps:
       - uses: actions/checkout@v4
       
@@ -48,7 +47,9 @@ jobs:
     name: Tests
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        # cannot use macos-latest for now
+        # cf. https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners
+        os: [ubuntu-latest, windows-latest, macos-14]
         python-version: [ "3.8", "3.11" ]
     runs-on: ${{ matrix.os }}
     steps:
