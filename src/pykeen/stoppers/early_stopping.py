@@ -7,7 +7,7 @@ import logging
 import math
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Callable, List, Mapping, Optional, Union
+from typing import Any, Callable, List, Mapping, Optional, Union, Dict
 from uuid import uuid4
 
 import torch
@@ -176,7 +176,7 @@ class EarlyStopper(Stopper):
     #: Whether to use a tqdm progress bar for evaluation
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
-    tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
+    tqdm_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
