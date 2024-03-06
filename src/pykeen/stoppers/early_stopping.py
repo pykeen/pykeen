@@ -7,7 +7,7 @@ import logging
 import math
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Callable, List, Mapping, Optional, Union, Dict
+from typing import Any, Callable, Dict, List, Mapping, Optional, Union
 from uuid import uuid4
 
 import torch
