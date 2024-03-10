@@ -11,6 +11,7 @@ from class_resolver import Resolver
 __all__ = [
     "RelationInverter",
     "DefaultRelationInverter",
+    "BlockRelationInverter",
     "relation_inverter_resolver",
 ]
 
@@ -20,7 +21,14 @@ RelationID = TypeVar("RelationID", int, torch.LongTensor)
 class RelationInverter(ABC):
     """An interface for inverse-relation ID mapping."""
 
-    # TODO: method is_inverse?
+    def __init__(self, num_relations: int):
+        """
+        Initialize the relation inversion.
+
+        :param num_relations: >0
+            the number of real relations.
+        """
+        self.num_relations = num_relations
 
     @abstractmethod
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:
@@ -68,6 +76,28 @@ class DefaultRelationInverter(RelationInverter):
     # docstr-coverage: inherited
     def is_inverse(self, ids: torch.LongTensor) -> torch.BoolTensor:  # noqa: D102
         return ids % 2 == 1
+
+
+class BlockRelationInverter(RelationInverter):
+    """Keep normal relations' IDs untouched and append additional ones."""
+
+    # docstr-coverage: inherited
+    def is_inverse(self, ids: torch.LongTensor) -> torch.BoolTensor:  # noqa: D102
+        return ids >= self.num_relations
+
+    # docstr-coverage: inherited
+    def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
+        return relation_id + self.num_relations
+
+    # docstr-coverage: inherited
+    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
+        # nothing to be done here; maybe verify that the input does not contain any inverses?
+        return batch
+
+    # docstr-coverage: inherited
+    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
+        batch[:, index] += self.num_relations
+        return batch
 
 
 relation_inverter_resolver: Resolver[RelationInverter] = Resolver.from_subclasses(

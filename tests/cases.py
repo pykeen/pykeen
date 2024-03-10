@@ -1006,11 +1006,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        dataset = Nations(create_inverse_triples=self.create_inverse_triples)
+        dataset = Nations()
         self.factory = dataset.training
         # insert shared parameters
         kwargs["triples_factory"] = self.factory
         kwargs["embedding_dim"] = self.embedding_dim
+        kwargs["create_inverse_triples"] = self.create_inverse_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
@@ -1242,7 +1243,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         ]
         extras.extend(self.cli_extras)
 
-        # Make sure that inverse triples are created if create_inverse_triples=True
+        # Make sure that inverse triples are created if flagged
         if self.create_inverse_triples:
             extras.append("--create-inverse-triples")
 
@@ -1257,14 +1258,14 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):
         """Test running the pipeline with early stopping."""
-        model_kwargs = dict(self.instance_kwargs)
+        model_kwargs: Dict[str, Any] = dict(self.instance_kwargs)
         # triples factory is added by the pipeline
         model_kwargs.pop("triples_factory")
+        model_kwargs.setdefault("create_inverse_triples", self.create_inverse_triples)
         pipeline(
             model=self.cls,
             model_kwargs=model_kwargs,
             dataset="nations",
-            dataset_kwargs=dict(create_inverse_triples=self.create_inverse_triples),
             stopper="early",
             training_loop_kwargs=self.training_loop_kwargs,
             stopper_kwargs=dict(frequency=1),
@@ -1489,12 +1490,11 @@ class InductiveModelTestCase(ModelTestCase):
             num_triples_training=self.num_triples_training,
             num_triples_inference=self.num_triples_inference,
             num_triples_testing=self.num_triples_testing,
-            create_inverse_triples=self.create_inverse_triples,
         )
         training_loop_kwargs = dict(self.training_loop_kwargs or dict())
         training_loop_kwargs["mode"] = self.mode
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
-        # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
+        # dataset = InductiveFB15k237()
         kwargs["triples_factory"] = self.factory = dataset.transductive_training
         kwargs["inference_factory"] = dataset.inductive_inference
         return kwargs
@@ -1581,10 +1581,9 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     """Tests for representations requiring triples factories."""
 
-    num_entities: ClassVar[int]
+    num_entities: int
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
-    create_inverse_triples: bool = False
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         self.num_entities = self.max_id
@@ -1593,7 +1592,6 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
             num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
-            create_inverse_triples=self.create_inverse_triples,
         )
         return kwargs
 
@@ -2104,7 +2102,6 @@ class NodePieceTestCase(RepresentationTestCase):
             num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
-            create_inverse_triples=False,
         )
         # inferred from triples factory
         kwargs.pop("max_id")

@@ -30,7 +30,6 @@ class EADataset(EagerDataset):
         self,
         *,
         side: Optional[EASide] = EA_SIDE_LEFT,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
         combination: HintOrType[GraphPairCombinator] = None,
@@ -43,8 +42,6 @@ class EADataset(EagerDataset):
         :param side:
             the side, if only a single graph should be considered, or `None` to combine the two graphs into a
             single one, using `combination`.
-        :param create_inverse_triples:
-            whether to create inverse triples.
         :param random_state:
             the random state to use for reproducible splits
         :param split_ratios:
@@ -85,8 +82,6 @@ class EADataset(EagerDataset):
         self.side = side
         # split
         training, testing, validation = tf.split(ratios=split_ratios, random_state=random_state)
-        # create inverse triples only for training
-        training.create_inverse_triples = create_inverse_triples
         super().__init__(training=training, testing=testing, validation=validation, **kwargs)
 
     @abstractmethod
