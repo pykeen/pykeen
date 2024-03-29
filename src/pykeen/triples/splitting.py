@@ -3,17 +3,30 @@
 """Implementation of triples splitting functions."""
 
 import logging
+import random
 import typing
 from abc import abstractmethod
-from typing import Collection, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Collection, Iterable, Literal, Optional, Sequence, Set, Tuple, Type, Union, cast
 
+import more_itertools
 import numpy
 import pandas
 import torch
 from class_resolver.api import ClassResolver, HintOrType
 
+from pykeen.triples.utils import get_entities
+
 from ..constants import COLUMN_LABELS
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target, TorchRandomHint
+from ..typing import (
+    COLUMN_HEAD,
+    COLUMN_TAIL,
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    MappedTriples,
+    Target,
+    TorchRandomHint,
+)
 from ..utils import ensure_torch_random_state
 
 logger = logging.getLogger(__name__)
@@ -508,3 +521,89 @@ def split(
         ratios=ratios,
         random_state=random_state,
     )
+
+
+def _iter_id_split(
+    ids: Collection[int],
+    ratios: Union[float, Sequence[float]] = 0.8,
+    seed: int | None = None,
+) -> Iterable[set[int]]:
+    """
+    Iterate over the parts after splitting a set of ids.
+
+    >>> list(_iter_id_split(ids=range(12), ratios=[0.2, 0.6], seed=42))
+    [{5, 7}, {2, 3, 4, 6, 8, 9, 11}, {0, 1, 10}]
+    """
+    # normalize input
+    ratios = normalize_ratios(ratios=ratios)
+    # reproducible split -> sort ids first, then shuffle
+    ids = sorted(ids)
+    rng = random.Random(seed)
+    rng.shuffle(ids)
+
+    total_sizes = get_absolute_split_sizes(n_total=len(ids), ratios=ratios)
+    for start, stop in more_itertools.pairwise(numpy.r_[0, numpy.cumsum(total_sizes)].tolist()):
+        yield set(ids[start:stop])
+
+
+def _masked_subset(mapped_triples: MappedTriples, mask: torch.Tensor) -> MappedTriples:
+    # just for typing
+    return cast(MappedTriples, mapped_triples[mask])
+
+
+def _get_semi_inductive_mask(
+    mapped_triples: MappedTriples,
+    train_entities: torch.Tensor,
+    evaluation_entities: torch.Tensor,
+) -> torch.Tensor:
+    train_to_eval_mask = torch.isin(mapped_triples[:, COLUMN_HEAD], test_elements=train_entities) & torch.isin(
+        mapped_triples[:, COLUMN_TAIL], test_elements=evaluation_entities
+    )
+    eval_to_train_mask = torch.isin(mapped_triples[:, COLUMN_HEAD], test_elements=evaluation_entities) & torch.isin(
+        mapped_triples[:, COLUMN_TAIL], test_elements=train_entities
+    )
+    return train_to_eval_mask | eval_to_train_mask
+
+
+def _get_fully_inductive_mask(mapped_triples: MappedTriples, evaluation_entities: torch.Tensor) -> torch.Tensor:
+    return torch.isin(mapped_triples[:, [COLUMN_HEAD, COLUMN_TAIL]], test_elements=evaluation_entities)
+
+
+def inductive_entity_split(
+    mapped_triples: MappedTriples,
+    ratios: Union[float, Sequence[float]] = 0.8,
+    seed: int | None = None,
+    kind: Literal["semi", "full"] = "full",
+) -> tuple[MappedTriples, ...]:
+    """
+
+    :param mapped_triples: shape: (n, 3)
+        The ID-based triples.
+    :param kind:
+        "semi": each triple has exactly one training and one evaluation entity
+        "full": each triple has two evaluation entities
+    """
+    # create inductive entity split
+    parts = _iter_id_split(ids=get_entities(mapped_triples), ratios=ratios, seed=seed)
+    # convert to tensors
+    parts = (torch.as_tensor(part) for part in parts)
+    # select training triples
+    train, *others = parts
+    result = (
+        _masked_subset(
+            mapped_triples, mask=_get_fully_inductive_mask(mapped_triples=mapped_triples, evaluation_entities=train)
+        ),
+    )
+    # TODO: re-evaluate training entities
+    for other in others:
+        if kind == "semi":
+            other_mask = _get_semi_inductive_mask(
+                mapped_triples=mapped_triples, train_entities=train, evaluation_entities=other
+            )
+        elif kind == "full":
+            other_mask = _get_fully_inductive_mask(mapped_triples=mapped_triples, evaluation_entities=other)
+        else:
+            raise ValueError(kind)
+        result += (_masked_subset(mapped_triples, mask=other_mask),)
+    # TODO: project to train-only relations
+    return result
