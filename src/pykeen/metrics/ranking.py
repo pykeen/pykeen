@@ -1593,6 +1593,13 @@ class AdjustedHitsAtK(ReindexedMetric):
     base_cls = HitsAtK
     supports_weights: ClassVar[bool] = HitsAtK.supports_weights
 
+    @property
+    def key(self) -> str:  # noqa: D 102
+        # TODO: update base Reindexed metrics -> needs canonization of adjusted metric names
+        assert isinstance(self.base, HitsAtK)
+        k = self.base.k
+        return super().key[:-1] + str(k)
+
 
 @parse_docdata
 class ZHitsAtK(ZMetric):
@@ -1610,6 +1617,13 @@ class ZHitsAtK(ZMetric):
     needs_candidates = True
     base_cls = HitsAtK
     supports_weights: ClassVar[bool] = HitsAtK.supports_weights
+
+    @property
+    def key(self) -> str:  # noqa: D 102
+        # TODO: update base Reindexed metrics -> needs canonization of adjusted metric names
+        assert isinstance(self.base, HitsAtK)
+        k = self.base.k
+        return super().key[:-1] + str(k)
 
 
 @parse_docdata
