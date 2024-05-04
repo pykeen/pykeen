@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
 from ..typing import OneOrSequence
-from ..utils import normalize_path, normalize_string
+from ..utils import normalize_path, normalize_string, upgrade_to_sequence
 
 __all__ = [
     "ablation_pipeline",
@@ -238,7 +238,7 @@ def _run_ablation_experiments(
 def iter_unique_ids(disable: bool = False) -> Iterable[str]:
     """Iterate unique id to append to a path."""
     if disable:
-        return []
+        return
     datetime = time.strftime("%Y-%m-%d-%H-%M")
     yield f"{datetime}_{uuid4()}"
 
@@ -337,15 +337,15 @@ def path_to_str(x: object) -> str:
 
 def prepare_ablation(  # noqa:C901
     datasets: OneOrSequence[str | SplitToPathDict],
-    models: Union[str, List[str]],
-    losses: Union[str, List[str]],
-    optimizers: Union[str, List[str]],
-    training_loops: Union[str, List[str]],
+    models: OneOrSequence[str],
+    losses: OneOrSequence[str],
+    optimizers: OneOrSequence[str],
+    training_loops: OneOrSequence[str],
     directory: Union[str, pathlib.Path],
     *,
+    create_inverse_triples: OneOrSequence[bool] = False,
+    regularizers: OneOrSequence[None | str] = None,
     epochs: Optional[int] = None,
-    create_inverse_triples: Union[bool, List[bool]] = False,
-    regularizers: Union[None, str, List[str], List[None]] = None,
     negative_sampler: Optional[str] = None,
     evaluator: Optional[str] = None,
     model_to_model_kwargs: Optional[Mapping2D] = None,
@@ -444,24 +444,33 @@ def prepare_ablation(  # noqa:C901
             the paths to the training, testing, and validation data.
     """
     directory = normalize_path(path=directory)
-    if isinstance(datasets, (str, dict)):
-        datasets = [datasets]
-    if isinstance(create_inverse_triples, bool):
-        create_inverse_triples = [create_inverse_triples]
-    if isinstance(models, str):
-        models = [models]
-    if isinstance(losses, str):
-        losses = [losses]
-    if isinstance(optimizers, str):
-        optimizers = [optimizers]
-    if isinstance(training_loops, str):
-        training_loops = [training_loops]
-    if isinstance(regularizers, str):
-        regularizers = [regularizers]
-    elif regularizers is None:
-        regularizers = [None]
+    datasets = upgrade_to_sequence(datasets)
+    create_inverse_triples = upgrade_to_sequence(create_inverse_triples)
+    models = upgrade_to_sequence(models)
+    losses = upgrade_to_sequence(losses)
+    optimizers = upgrade_to_sequence(optimizers)
+    training_loops = upgrade_to_sequence(training_loops)
+    regularizers = upgrade_to_sequence(regularizers)
 
-    it: Iterable[tuple[str | SplitToPathDict, bool, str, str, str | None, str, str]] = itt.product(
+    # note: for some reason, mypy does not properly recognize the tuple[T1, T2, T3] notation,
+    #  but rather uses tuple[T1 | T2 | T3, ...]
+    it: Iterable[
+        tuple[
+            # dataset
+            str | SplitToPathDict,
+            # create inverse triples
+            bool,
+            # models, losses
+            str,
+            str,
+            # regularizers
+            str | None,
+            # optimizers, training loops
+            str,
+            str,
+        ]
+    ]
+    it = itt.product(  # type: ignore
         datasets,
         create_inverse_triples,
         models,
@@ -479,7 +488,7 @@ def prepare_ablation(  # noqa:C901
     directories = []
     for counter, (
         dataset,
-        create_inverse_triples,
+        this_create_inverse_triples,
         model,
         loss,
         regularizer,
@@ -538,8 +547,8 @@ def prepare_ablation(  # noqa:C901
                 "the paths to the training, testing, and validation data.",
             )
         logger.info(f"Dataset: {dataset}")
-        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=create_inverse_triples)
-        logger.info(f"Add inverse triples: {create_inverse_triples}")
+        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=this_create_inverse_triples)
+        logger.info(f"Add inverse triples: {this_create_inverse_triples}")
 
         hpo_config["model"] = model
         hpo_config["model_kwargs"] = model_to_model_kwargs.get(model, {})
