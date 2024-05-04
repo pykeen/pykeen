@@ -337,15 +337,15 @@ def path_to_str(x: object) -> str:
 
 def prepare_ablation(  # noqa:C901
     datasets: OneOrSequence[str | SplitToPathDict],
-    models: Union[str, List[str]],
-    losses: Union[str, List[str]],
-    optimizers: Union[str, List[str]],
-    training_loops: Union[str, List[str]],
+    models: OneOrSequence[str],
+    losses: OneOrSequence[str],
+    optimizers: OneOrSequence[str],
+    training_loops: OneOrSequence[str],
     directory: Union[str, pathlib.Path],
     *,
+    create_inverse_triples: OneOrSequence[bool] = False,
+    regularizers: OneOrSequence[None | str] = None,
     epochs: Optional[int] = None,
-    create_inverse_triples: Union[bool, List[bool]] = False,
-    regularizers: Union[None, str, List[str], List[None]] = None,
     negative_sampler: Optional[str] = None,
     evaluator: Optional[str] = None,
     model_to_model_kwargs: Optional[Mapping2D] = None,
@@ -461,7 +461,7 @@ def prepare_ablation(  # noqa:C901
     elif regularizers is None:
         regularizers = [None]
 
-    it: Iterable[tuple[str | SplitToPathDict, bool, str, str, str | None, str, str]] = itt.product(
+    it = itt.product(
         datasets,
         create_inverse_triples,
         models,
@@ -479,7 +479,7 @@ def prepare_ablation(  # noqa:C901
     directories = []
     for counter, (
         dataset,
-        create_inverse_triples,
+        this_create_inverse_triples,
         model,
         loss,
         regularizer,
@@ -538,8 +538,8 @@ def prepare_ablation(  # noqa:C901
                 "the paths to the training, testing, and validation data.",
             )
         logger.info(f"Dataset: {dataset}")
-        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=create_inverse_triples)
-        logger.info(f"Add inverse triples: {create_inverse_triples}")
+        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=this_create_inverse_triples)
+        logger.info(f"Add inverse triples: {this_create_inverse_triples}")
 
         hpo_config["model"] = model
         hpo_config["model_kwargs"] = model_to_model_kwargs.get(model, {})
