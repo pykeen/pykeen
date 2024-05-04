@@ -1,3 +1,5 @@
+"""Tests for LR schedulers."""
+
 import pytest
 from class_resolver import HintOrType, OptionalKwargs
 from torch.optim import lr_scheduler
