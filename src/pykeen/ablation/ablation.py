@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
 from ..typing import OneOrSequence
-from ..utils import normalize_path, normalize_string
+from ..utils import normalize_path, normalize_string, upgrade_to_sequence
 
 __all__ = [
     "ablation_pipeline",
@@ -444,22 +444,13 @@ def prepare_ablation(  # noqa:C901
             the paths to the training, testing, and validation data.
     """
     directory = normalize_path(path=directory)
-    if isinstance(datasets, (str, dict)):
-        datasets = [datasets]
-    if isinstance(create_inverse_triples, bool):
-        create_inverse_triples = [create_inverse_triples]
-    if isinstance(models, str):
-        models = [models]
-    if isinstance(losses, str):
-        losses = [losses]
-    if isinstance(optimizers, str):
-        optimizers = [optimizers]
-    if isinstance(training_loops, str):
-        training_loops = [training_loops]
-    if isinstance(regularizers, str):
-        regularizers = [regularizers]
-    elif regularizers is None:
-        regularizers = [None]
+    datasets = upgrade_to_sequence(datasets)
+    create_inverse_triples = upgrade_to_sequence(create_inverse_triples)
+    models = upgrade_to_sequence(models)
+    losses = upgrade_to_sequence(losses)
+    optimizers = upgrade_to_sequence(optimizers)
+    training_loops = upgrade_to_sequence(training_loops)
+    regularizers = upgrade_to_sequence(regularizers)
 
     # note: for some reason, mypy does not properly recognize the tuple[T1, T2, T3] notation, but rather uses tuple[T1 | T2 | T3, ...]
     it: Iterable[
