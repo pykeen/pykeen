@@ -452,7 +452,8 @@ def prepare_ablation(  # noqa:C901
     training_loops = upgrade_to_sequence(training_loops)
     regularizers = upgrade_to_sequence(regularizers)
 
-    # note: for some reason, mypy does not properly recognize the tuple[T1, T2, T3] notation, but rather uses tuple[T1 | T2 | T3, ...]
+    # note: for some reason, mypy does not properly recognize the tuple[T1, T2, T3] notation,
+    #  but rather uses tuple[T1 | T2 | T3, ...]
     it: Iterable[
         tuple[
             # dataset
