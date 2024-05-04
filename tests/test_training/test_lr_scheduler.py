@@ -1,14 +1,12 @@
-from typing import Any
-
 import pytest
-from class_resolver import HintOrType
+from class_resolver import HintOrType, OptionalKwargs
 from torch.optim import lr_scheduler
 
 from pykeen.pipeline import pipeline
 
 
 @pytest.mark.parametrize("cls, kwargs", [("CosineAnnealingWarmRestarts", {"T_0": 10})])
-def test_lr_scheduler(cls: HintOrType[lr_scheduler.LRScheduler], kwargs: dict[str, Any] | None):
+def test_lr_scheduler(cls: HintOrType[lr_scheduler.LRScheduler], kwargs: OptionalKwargs) -> None:
     """Smoke-test for training with learning rate schedule."""
     pipeline(
         dataset="nations",
