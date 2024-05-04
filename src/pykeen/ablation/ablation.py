@@ -238,7 +238,7 @@ def _run_ablation_experiments(
 def iter_unique_ids(disable: bool = False) -> Iterable[str]:
     """Iterate unique id to append to a path."""
     if disable:
-        return []
+        return
     datetime = time.strftime("%Y-%m-%d-%H-%M")
     yield f"{datetime}_{uuid4()}"
 
