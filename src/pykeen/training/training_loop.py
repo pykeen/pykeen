@@ -705,7 +705,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         callback.register_callback(
             OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
         )
-        callback.register_callback(LearningRateSchedulerTrainingCallback())
+        if self.lr_scheduler is not None:
+            callback.register_callback(LearningRateSchedulerTrainingCallback())
 
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
