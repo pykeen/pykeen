@@ -461,7 +461,24 @@ def prepare_ablation(  # noqa:C901
     elif regularizers is None:
         regularizers = [None]
 
-    it = itt.product(
+    # note: for some reason, mypy does not properly recognize the tuple[T1, T2, T3] notation, but rather uses tuple[T1 | T2 | T3, ...]
+    it: Iterable[
+        tuple[
+            # dataset
+            str | SplitToPathDict,
+            # create inverse triples
+            bool,
+            # models, losses
+            str,
+            str,
+            # regularizers
+            str | None,
+            # optimizers, training loops
+            str,
+            str,
+        ]
+    ]
+    it = itt.product(  # type: ignore
         datasets,
         create_inverse_triples,
         models,
