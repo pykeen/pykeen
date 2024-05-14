@@ -21,5 +21,4 @@ def test_lr_scheduler(cls: HintOrType[lr_scheduler.LRScheduler], kwargs: Optiona
         training_kwargs=dict(num_epochs=1),
         lr_scheduler=cls,
         lr_scheduler_kwargs=kwargs,
-        epochs=2,
     )
