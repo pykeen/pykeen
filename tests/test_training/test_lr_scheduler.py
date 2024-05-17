@@ -7,11 +7,14 @@ from torch.optim import lr_scheduler
 from pykeen.pipeline import pipeline
 
 
-@pytest.mark.parametrize("cls, kwargs", [
-    (None, None),
-    ("CosineAnnealingWarmRestarts", None),
-    ("CosineAnnealingWarmRestarts", {"T_0": 10}),
-])
+@pytest.mark.parametrize(
+    "cls, kwargs",
+    [
+        (None, None),
+        ("CosineAnnealingWarmRestarts", None),
+        ("CosineAnnealingWarmRestarts", {"T_0": 10}),
+    ],
+)
 def test_lr_scheduler(cls: HintOrType[lr_scheduler.LRScheduler], kwargs: OptionalKwargs) -> None:
     """Smoke-test for training with learning rate schedule."""
     pipeline(
