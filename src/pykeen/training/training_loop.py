@@ -3,6 +3,7 @@
 """Training loops for KGE models using multi-modal information."""
 
 import gc
+import inspect
 import logging
 import os
 import pathlib
@@ -115,13 +116,13 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
 
 
 def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
-    lr_scheduler_kwargs = lr_scheduler.state_dict()
-    lr_scheduler_kwargs = {
+    # note: this seems to be a pretty unsafe method to derive __init__ kwargs...
+    init_parameters = inspect.signature(lr_scheduler.__init__).parameters
+    return {
         key: value
-        for key, value in lr_scheduler_kwargs.items()
-        if not key.startswith("_") and key not in ["base_lrs", "last_epoch"]
+        for key, value in lr_scheduler.state_dict().items()
+        if key not in {"last_epoch", "optimizer"} and key in init_parameters
     }
-    return lr_scheduler_kwargs
 
 
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
@@ -646,7 +647,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             if self.lr_scheduler is not None:
                 # Create a new lr scheduler and add the optimizer
                 lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
-                self.lr_scheduler = self.lr_scheduler.__class__(self.optimizer, **lr_scheduler_kwargs)
+                self.lr_scheduler = self.lr_scheduler.__class__(optimizer=self.optimizer, **lr_scheduler_kwargs)
         elif not self.optimizer.state:
             raise ValueError("Cannot continue_training without being trained once.")
 
@@ -704,7 +705,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         callback.register_callback(
             OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
         )
-        callback.register_callback(LearningRateSchedulerTrainingCallback())
+        if self.lr_scheduler is not None:
+            callback.register_callback(LearningRateSchedulerTrainingCallback())
 
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
