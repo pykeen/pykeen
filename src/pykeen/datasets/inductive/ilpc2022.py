@@ -46,7 +46,6 @@ class ILPC2022Small(UnpackedRemoteDisjointInductiveDataset):
             inductive_inference_url=SMALL_INFERENCE_URL,
             inductive_validation_url=SMALL_INFERENCE_VAL_URL,
             inductive_testing_url=SMALL_INFERENCE_TEST_URL,
-            create_inverse_triples=True,
             eager=True,
             **kwargs,
         )
@@ -75,7 +74,6 @@ class ILPC2022Large(UnpackedRemoteDisjointInductiveDataset):
             inductive_inference_url=LARGE_INFERENCE_URL,
             inductive_validation_url=LARGE_INFERENCE_VAL_URL,
             inductive_testing_url=LARGE_INFERENCE_TEST_URL,
-            create_inverse_triples=True,
             eager=True,
             **kwargs,
         )
