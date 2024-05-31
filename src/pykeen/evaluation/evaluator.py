@@ -309,7 +309,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         device = device or model.device
         tqdm_kwargs = dict(tqdm_kwargs or {})
         if not use_tqdm:
-            tqdm_kwargs.update(dict(disable=True))
+            tqdm_kwargs["disable"] = True
         try:
             result = self._evaluate_on_device(
                 model=model,
