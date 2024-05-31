@@ -39,6 +39,7 @@ class ILPC2022Small(UnpackedRemoteDisjointInductiveDataset):
     def __init__(self, create_inverse_triples: bool = True, **kwargs):
         """Initialize the inductive link prediction dataset.
 
+        :param create_inverse_triples: Should inverse triples be created?
         :param kwargs: keyword arguments to forward to the base dataset class, cf. DisjointInductivePathDataset
         """
         super().__init__(
@@ -68,6 +69,7 @@ class ILPC2022Large(UnpackedRemoteDisjointInductiveDataset):
     def __init__(self, create_inverse_triples: bool = True, **kwargs):
         """Initialize the inductive link prediction dataset.
 
+        :param create_inverse_triples: Should inverse triples be created?
         :param kwargs: keyword arguments to forward to the base dataset class, cf. DisjointInductivePathDataset
         """
         super().__init__(
