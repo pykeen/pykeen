@@ -36,7 +36,7 @@ class ILPC2022Small(UnpackedRemoteDisjointInductiveDataset):
         github: https://github.com/pykeen/ilpc2022
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, create_inverse_triples: bool = True, **kwargs):
         """Initialize the inductive link prediction dataset.
 
         :param kwargs: keyword arguments to forward to the base dataset class, cf. DisjointInductivePathDataset
@@ -46,6 +46,7 @@ class ILPC2022Small(UnpackedRemoteDisjointInductiveDataset):
             inductive_inference_url=SMALL_INFERENCE_URL,
             inductive_validation_url=SMALL_INFERENCE_VAL_URL,
             inductive_testing_url=SMALL_INFERENCE_TEST_URL,
+            create_inverse_triples=create_inverse_triples,
             eager=True,
             **kwargs,
         )
@@ -64,7 +65,7 @@ class ILPC2022Large(UnpackedRemoteDisjointInductiveDataset):
         github: https://github.com/pykeen/ilpc2022
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, create_inverse_triples: bool = True, **kwargs):
         """Initialize the inductive link prediction dataset.
 
         :param kwargs: keyword arguments to forward to the base dataset class, cf. DisjointInductivePathDataset
@@ -74,6 +75,7 @@ class ILPC2022Large(UnpackedRemoteDisjointInductiveDataset):
             inductive_inference_url=LARGE_INFERENCE_URL,
             inductive_validation_url=LARGE_INFERENCE_VAL_URL,
             inductive_testing_url=LARGE_INFERENCE_TEST_URL,
+            create_inverse_triples=create_inverse_triples,
             eager=True,
             **kwargs,
         )
