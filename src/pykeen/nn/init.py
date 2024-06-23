@@ -270,12 +270,16 @@ class LabelBasedInitializer(PretrainedInitializer):
         from pykeen.models import ERMLPE
 
         dataset = get_dataset(dataset="nations")
+        entity_initializer = LabelBasedInitializer.from_triples_factory(
+            triples_factory=dataset.training,
+            encoder="transformer",
+        )
         model = ERMLPE(
-            embedding_dim=768,  # for BERT base
-            entity_initializer=LabelBasedInitializer.from_triples_factory(
-                triples_factory=dataset.training,
-                encoder="transformer",
-            ),
+            embedding_dim=entity_initializer.tensor.shape[-1],  # 768 for BERT base
+            entity_initializer=entity_initializer,
+            # note: we explicitly need to provide a relation initializer here,
+            # since ERMLPE shares initializers between entities and relations by default
+            relation_initializer="uniform",
         )
     """
 
