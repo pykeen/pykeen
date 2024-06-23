@@ -275,6 +275,7 @@ class LabelBasedInitializer(PretrainedInitializer):
             encoder="transformer",
         )
         model = ERMLPE(
+            triples_factory=dataset.training,
             embedding_dim=entity_initializer.tensor.shape[-1],  # 768 for BERT base
             entity_initializer=entity_initializer,
             # note: we explicitly need to provide a relation initializer here,
