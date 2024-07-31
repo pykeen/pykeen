@@ -193,7 +193,7 @@ import os
 import pathlib
 import pickle
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import (
     Any,
     ClassVar,
@@ -270,18 +270,6 @@ def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
 class PipelineResult(Result):
     """A dataclass containing the results of running :func:`pykeen.pipeline.pipeline`."""
 
-    #: The random seed used at the beginning of the pipeline
-    random_seed: int
-
-    #: The model trained by the pipeline
-    model: Model
-
-    #: The training triples
-    training: CoreTriplesFactory
-
-    #: The training loop used by the pipeline
-    training_loop: TrainingLoop
-
     #: The losses during training
     losses: List[float]
 
@@ -293,6 +281,18 @@ class PipelineResult(Result):
 
     #: How long in seconds did evaluation take?
     evaluate_seconds: float
+
+    #: The model trained by the pipeline
+    model: Optional[Model] = None
+
+    #: The training triples
+    training: Optional[CoreTriplesFactory] = None
+
+    #: The random seed used at the beginning of the pipeline
+    random_seed: Optional[int] = None
+
+    #: The training loop used by the pipeline
+    training_loop: Optional[TrainingLoop] = None
 
     #: An early stopper
     stopper: Optional[Stopper] = None
@@ -314,6 +314,7 @@ class PipelineResult(Result):
     METADATA_FILE_NAME: ClassVar[str] = "metadata.json"
     MODEL_FILE_NAME: ClassVar[str] = "trained_model.pkl"
     TRAINING_TRIPLES_FILE_NAME: ClassVar[str] = "training_triples"
+    PIPELINE_INFO_FILE_NAME: ClassVar[str] = "pipeline_info.json"
 
     @property
     def title(self) -> Optional[str]:  # noqa:D401
@@ -394,6 +395,10 @@ class PipelineResult(Result):
             results["stopper"] = self.stopper.get_summary_dict()
         return results
 
+    def _get_pipeline_info(self) -> Mapping[str, Any]:
+        pipeline_info = dict(random_seed=self.random_seed, version=self.version, git_hash=self.git_hash)
+        return pipeline_info
+
     def save_to_directory(
         self,
         directory: Union[str, pathlib.Path],
@@ -401,6 +406,7 @@ class PipelineResult(Result):
         save_metadata: bool = True,
         save_replicates: bool = True,
         save_training: bool = True,
+        save_pipeline_info: bool = True,
         **_kwargs,
     ) -> None:
         """
@@ -450,8 +456,90 @@ class PipelineResult(Result):
             self.save_model(directory.joinpath(self.MODEL_FILE_NAME))
         if save_training:
             self.training.to_path_binary(directory.joinpath(self.TRAINING_TRIPLES_FILE_NAME))
+        if save_pipeline_info:
+            with directory.joinpath(self.PIPELINE_INFO_FILE_NAME).open("w") as file:
+                json.dump(self._get_pipeline_info(), file, indent=2, sort_keys=True)
 
         logger.info(f"Saved to directory: {directory.resolve()}")
+
+    @classmethod
+    def load_from_directory(cls, directory: Union[str, pathlib.Path]) -> "PipelineResult":
+        """
+        Load the artifacts saved in the directory previously given to :func:`save_to_directory`.
+
+        It is mandatory to have at least the results file inside the directory.
+        Optional artifacts such as the model, the metadata and the training triples factory
+        will be reloaded if they are found inside the directory.
+
+        :param directory:
+            the directory path. It should coincide with the directory given to :func:`save_to_directory`
+        :return: The reloaded pipeline results.
+
+        :raises FileNotFoundError:
+            If the directory or the results file stored with :func:`save_to_directory` are not found.
+        :raises KeyError:
+            If one of the files stored in the directory have been damaged and don't contain the JSON keys
+            saved by :func:`save_to_directory`.
+
+        .. note::
+            The returned :class:`PipelineResult` is different from the one that has been
+            saved, since it could have default values for some of the attributes that this function
+            has not been able to restore.
+        """
+        pipeline_kwargs = {}
+        directory = normalize_path(path=directory)
+
+        if not directory.is_dir():
+            raise FileNotFoundError(f"The results directory {directory} doesn't exist.")
+
+        # load results (mandatory)
+        result_file_path = directory.joinpath(cls.RESULT_FILE_NAME)
+        if not result_file_path.is_file():
+            raise FileNotFoundError(f"The results file {result_file_path} doesn't exist.")
+
+        with result_file_path.open("r") as result_file:
+            results = json.load(result_file)
+            times = results["times"]
+            pipeline_kwargs["train_seconds"] = times["training"]
+            pipeline_kwargs["evaluate_seconds"] = times["evaluation"]
+            pipeline_kwargs["metric_results"] = MetricResults(results["metrics"])
+            pipeline_kwargs["losses"] = results["losses"]
+
+        # load metadata
+        metadata_file_path = directory.joinpath(cls.METADATA_FILE_NAME)
+        if metadata_file_path.is_file():
+            with metadata_file_path.open("r") as metadata_file:
+                pipeline_kwargs["metadata"] = json.load(metadata_file)
+
+        # load model
+        model_file_path = directory.joinpath(cls.MODEL_FILE_NAME)
+        if model_file_path.is_file():
+            pipeline_kwargs["model"] = torch.load(model_file_path)
+
+        # load training triples
+        training_triples_file_path = directory.joinpath(cls.TRAINING_TRIPLES_FILE_NAME)
+        if training_triples_file_path.is_dir():
+            pipeline_kwargs["training"] = CoreTriplesFactory.from_path_binary(training_triples_file_path)
+
+        # load pipeline info
+        pipeline_info_file_path = directory.joinpath(cls.PIPELINE_INFO_FILE_NAME)
+        if pipeline_info_file_path.is_file():
+            with pipeline_info_file_path.open("r") as pipeline_info_file:
+                pipeline_info = json.load(pipeline_info_file)
+                pipeline_kwargs["random_seed"] = pipeline_info["random_seed"]
+                pipeline_kwargs["version"] = pipeline_info["version"]
+                pipeline_kwargs["git_hash"] = pipeline_info["git_hash"]
+
+        # warn users about default attributes
+        pipeline_res_fields = [field.name for field in fields(PipelineResult)]
+        pipeline_res_missing_fields = [
+            f"`{field}`" for field in pipeline_res_fields if field not in pipeline_kwargs.keys()
+        ]
+        logging.warn(
+            f"The restored `PipelineResult` will have default values for the attributes: {', '.join(pipeline_res_missing_fields)}."
+        )
+
+        return PipelineResult(**pipeline_kwargs)
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
