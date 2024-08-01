@@ -594,7 +594,7 @@ class CoreTriplesFactory(KGInfo):
             which share everything else with this root triples factory.
 
         .. seealso::
-            :method:`pykeen.triples.splitting.split`
+            :func:`pykeen.triples.splitting.split`
 
         .. code-block:: python
 
