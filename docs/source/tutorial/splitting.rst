@@ -3,7 +3,7 @@
 Splitting
 =========
 In the transductive setting, we require that all entities and relations encountered during evaluation are already known at the time of training, i.e. are contained in the training dataset.
-This makes the creation of scoring splits more difficult.
+This makes the creation of evaluation splits more difficult.
 
 One way to deal with this situation is to randomly select training triples, and then discard any entity or relation from the remaining triples that is not part of any training triple.
 You can do this in PyKEEN by creating a :class:`TriplesFactory` for the training triples, and then passing its entity and relation to the ID mapping to create a :class:`TriplesFactory` for the evaluation triples.
