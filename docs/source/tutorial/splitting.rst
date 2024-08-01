@@ -28,7 +28,7 @@ After that, there may be entities or relations that only occur in evaluation tri
 Thus, for each set of evaluation triples, we move triples from the evaluation set to the training set until all entities occur in at least one training triple.
 This may increase the number of training triples and thus tilt the split ratio towards training.
 
-We offer two different cleanup methods: `randomized`` and `deterministic`.
+We offer two different cleanup methods: `randomized` and `deterministic`.
 
 Deterministic
 ~~~~~~~~~~~~~
