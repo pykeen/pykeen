@@ -287,6 +287,8 @@ class RandomizedCleaner(Cleaner):
         while move_id_mask.any():
             # Pick a random triple to move over to the training triples
             (candidates,) = move_id_mask.nonzero(as_tuple=True)
+            # TODO: this could easily be extended to select a batch of triples
+            # -> speeds up the process at the cost of slightly larger movements
             idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
             idx = candidates[idx]
 
