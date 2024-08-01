@@ -9,8 +9,6 @@ One way to deal with this situation is to randomly select training triples, and 
 You can do this in PyKEEN by creating a :class:`TriplesFactory` for the training triples, and then passing its entity and relation to the ID mapping to create a :class:`TriplesFactory` for the evaluation triples.
 This will filter out any triple with an unknown ID (and warn you about it, so you know).
 
-.. todo:: insert code example
-
 PyKEEN also offers more advanced methods for creating splits that aim to preserve more of the underlying triples used to create the split.
 We have implemented several algorithms to achieve this goal, which are described below.
 The coverage-based algorithm is the default.
