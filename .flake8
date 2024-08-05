@@ -21,6 +21,8 @@ ignore =
     # bugbear seems to emit false positives, cf. https://github.com/PyCQA/flake8-bugbear/issues/278
     B024
     B028
+    # pydoclint: good point, but tbd in a separate commit
+    DOC301
 exclude =
     .tox,
     .git,
