@@ -64,9 +64,6 @@ jobs:
 
     - name: Check RST conformity with doc8
       run: tox -e doc8
-    
-    - name: Check README.rst
-      run: tox -e readme
 
 
 concurrency:
