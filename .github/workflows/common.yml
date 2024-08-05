@@ -30,11 +30,11 @@ jobs:
       - name: Install dependencies
         run: pip install tox
       
-      - name: Check README.rst
-        run: tox -e readme
-      
       # - name: Check RST format
       #   run: tox -e doclint
+
+      - name: Check README.rst
+        run: tox -e readme
 
       - name: Check documentation build with Sphinx
         run: |
