@@ -1,3 +1,5 @@
+.. _inductive_lp:
+
 Inductive Link Prediction
 =========================
 
