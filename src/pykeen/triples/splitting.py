@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import typing
 from abc import abstractmethod
-from typing import Collection, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Collection, Optional, Sequence, Set, Tuple, Type
 
 import numpy
 import pandas
@@ -602,8 +602,9 @@ def split_fully_inductive(
     inference_triples = mapped_triples[_entity_mask(mapped_triples=mapped_triples, heads=inference, tails=inference)]
     num_train, num_inference = len(training_triples), len(inference_triples)
     logger.info(
-        f"Extracted {num_train:_} training triples and {num_inference:_} inference triples. "
-        f"Managed to keep {format_relative_comparison(part=num_train + num_inference, total=len(mapped_triples))} of the original triples."
+        f"Extracted {num_train:_} training triples and {num_inference:_} inference triples. Managed to keep "
+        f"{format_relative_comparison(part=num_train + num_inference, total=len(mapped_triples))} of the original "
+        f"triples."
     )
 
     result = [training_triples]
