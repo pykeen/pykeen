@@ -2,6 +2,8 @@
 
 """Implementation of triples splitting functions."""
 
+from __future__ import annotations
+
 import logging
 import typing
 from abc import abstractmethod
@@ -156,7 +158,7 @@ class TripleCoverageError(RuntimeError):
 
 
 def normalize_ratios(
-    ratios: Union[float, Sequence[float]],
+    ratios: float | Sequence[float],
     epsilon: float = 1.0e-06,
 ) -> Tuple[float, ...]:
     """Normalize relative sizes.
@@ -255,7 +257,7 @@ class Cleaner:
 def _prepare_cleanup(
     training: MappedTriples,
     testing: MappedTriples,
-    max_ids: Optional[Tuple[int, int]] = None,
+    max_ids: Tuple[int, int] | None = None,
 ) -> torch.BoolTensor:
     """
     Calculate a mask for the test triples with triples containing test-only entities or relations.
@@ -381,7 +383,7 @@ class Splitter:
         self,
         *,
         mapped_triples: MappedTriples,
-        ratios: Union[float, Sequence[float]] = 0.8,
+        ratios: float | Sequence[float] = 0.8,
         random_state: TorchRandomHint = None,
     ) -> Sequence[MappedTriples]:
         """Split triples into clean groups.
@@ -477,7 +479,7 @@ splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=
 
 def split(
     mapped_triples: MappedTriples,
-    ratios: Union[float, Sequence[float]] = 0.8,
+    ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
     randomize_cleanup: bool = False,
     method: Optional[str] = None,
@@ -538,7 +540,7 @@ def _entity_mask(mapped_triples: torch.Tensor, heads: torch.Tensor, tails: torch
 
 def split_semi_inductive(
     mapped_triples: MappedTriples,
-    ratios: Union[float, Sequence[float]] = 0.8,
+    ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
     """
@@ -577,7 +579,7 @@ def split_semi_inductive(
 def split_fully_inductive(
     mapped_triples: MappedTriples,
     entity_split_ratio: float = 0.5,
-    evaluation_triples_ratios: Union[float, Sequence[float]] = 0.8,
+    evaluation_triples_ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
     """
