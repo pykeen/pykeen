@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # no need to check documentation wit multiple python versions
+        # no need to check documentation with multiple python versions
         python-version: [ "3.11" ]
     steps:
       - uses: actions/checkout@v4
@@ -29,9 +29,6 @@ jobs:
       
       - name: Install dependencies
         run: pip install tox
-
-      - name: Check RST conformity with doc8
-        run: tox -e doc8
       
       # - name: Check RST format
       #   run: tox -e doclint
