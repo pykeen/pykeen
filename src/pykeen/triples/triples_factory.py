@@ -566,7 +566,11 @@ class CoreTriplesFactory(KGInfo):
         randomize_cleanup: bool = False,
         method: Optional[str] = None,
     ) -> List["CoreTriplesFactory"]:
-        """Split a triples factory into a train/test.
+        """Split a triples factory into a training part and a variable number of (transductive) evaluation parts.
+
+        .. warning::
+
+            This method is not suitable to create *inductive* splits.
 
         :param ratios:
             There are three options for this argument:
@@ -580,15 +584,17 @@ class CoreTriplesFactory(KGInfo):
         :param random_state:
             The random state used to shuffle and split the triples.
         :param randomize_cleanup:
-            If true, uses the non-deterministic method for moving triples to the training set. This has the
-            advantage that it does not necessarily have to move all of them, but it might be significantly
-            slower since it moves one triple at a time.
+            This parameter is forwarded to the underlying :func:`pykeen.triples.splitting.split`.
         :param method:
-            The name of the method to use, from SPLIT_METHODS. Defaults to "coverage".
+            This parameter is forwarded to the underlying :func:`pykeen.triples.splitting.split`.
+
 
         :return:
             A partition of triples, which are split (approximately) according to the ratios, stored TriplesFactory's
             which share everything else with this root triples factory.
+
+        .. seealso::
+            :func:`pykeen.triples.splitting.split`
 
         .. code-block:: python
 

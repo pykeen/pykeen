@@ -287,6 +287,8 @@ class RandomizedCleaner(Cleaner):
         while move_id_mask.any():
             # Pick a random triple to move over to the training triples
             (candidates,) = move_id_mask.nonzero(as_tuple=True)
+            # TODO: this could easily be extended to select a batch of triples
+            # -> speeds up the process at the cost of slightly larger movements
             idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
             idx = candidates[idx]
 
@@ -482,7 +484,8 @@ def split(
         it does not necessarily have to move all of them, but it might be significantly slower since it moves one
         triple at a time.
     :param method:
-        The name of the method to use, cf. :data:`splitter_resolver`. Defaults to "coverage".
+        The name of the method to use, cf. :data:`splitter_resolver`. Defaults to "coverage", i.e.,
+        :class:`CoverageSplitter`.
 
     :return:
         A partition of triples, which are split (approximately) according to the ratios.
