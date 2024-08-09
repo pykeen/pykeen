@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Test hyper-parameter optimization."""
+
 import inspect
 import tempfile
 import unittest

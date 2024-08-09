@@ -19,7 +19,7 @@ __all__ = [
 class CustomRepresentation(Representation):
     """A custom representation module with minimal implementation."""
 
-    def __init__(self, num_entities: int, shape: Tuple[int, ...] = (2,)):
+    def __init__(self, num_entities: int, shape: Tuple[int, ...] = (2,)):  # noqa:D107
         super().__init__(max_id=num_entities, shape=shape)
         self.x = nn.Parameter(torch.rand(*shape))
 

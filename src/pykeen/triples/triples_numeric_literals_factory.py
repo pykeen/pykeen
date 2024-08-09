@@ -152,9 +152,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         pandas.DataFrame(
             data=self.literals_to_id.items(),
             columns=["label", "id"],
-        ).sort_values(
-            by="id"
-        ).set_index("id").to_csv(
+        ).sort_values(by="id").set_index("id").to_csv(
             path.joinpath(f"{self.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )

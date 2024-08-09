@@ -479,7 +479,7 @@ class CoreTriplesFactory(KGInfo):
         cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
         if "shuffle" in kwargs:
             if kwargs.pop("shuffle"):
-                warnings.warn("Training instances are always shuffled.", DeprecationWarning)
+                warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
             else:
                 raise AssertionError("If shuffle is provided, it must be True.")
         return cls(
@@ -1041,9 +1041,7 @@ class TriplesFactory(CoreTriplesFactory):
             pd.DataFrame(
                 data=data.items(),
                 columns=["label", "id"],
-            ).sort_values(
-                by="id"
-            ).set_index("id").to_csv(
+            ).sort_values(by="id").set_index("id").to_csv(
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
             )

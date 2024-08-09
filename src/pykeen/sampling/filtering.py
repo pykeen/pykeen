@@ -13,13 +13,13 @@ many-to-one            :math:`(h_1,r,t), (h_2,r,t) \in \mathcal{K}`  :math:`(h_2
 =====================  ============================================  ==============================================================
 
 If no relations in $\mathcal{K}$ satisfy any of the relevant properties for the corruption schema chosen in negative
-sampling, then there is guaranteed to be no overlap between $\mathcal{N}$ and $\mathcal{K}$ such that 
+sampling, then there is guaranteed to be no overlap between $\mathcal{N}$ and $\mathcal{K}$ such that
 $\mathcal{N} \cap \mathcal{K} \neq \emptyset$. However, this scenario is very unlikely for real-world knowledge graphs.
 
-The known positive triples that appear in $\mathcal{N}$ are known false negatives. Hence, we know that these are 
+The known positive triples that appear in $\mathcal{N}$ are known false negatives. Hence, we know that these are
 incorrect (negative) training examples, and might want to exclude them to reduce the training noise.
 
-.. warning:: 
+.. warning::
 
     It should be taken into account that also a corrupted triple that is *not part*
     of the knowledge graph can represent a true fact. These "unknown" false negatives can
@@ -27,11 +27,11 @@ incorrect (negative) training examples, and might want to exclude them to reduce
     on the low number of unknown false negatives such that learning can take place.
 
 
-However, in practice, $|\mathcal{N}| \gg |\mathcal{K}|$, so the likelihood of generating a false negative is rather low. 
-Therefore, the additional filter step is often omitted to lower computational cost. This general observation might not 
-hold for all entities; e.g., for a hub entity which is connected to many other entities, there may be a considerable 
+However, in practice, $|\mathcal{N}| \gg |\mathcal{K}|$, so the likelihood of generating a false negative is rather low.
+Therefore, the additional filter step is often omitted to lower computational cost. This general observation might not
+hold for all entities; e.g., for a hub entity which is connected to many other entities, there may be a considerable
 number of false negatives without filtering.
- 
+
 
 Identifying False Negatives During Training
 -------------------------------------------
@@ -46,15 +46,15 @@ negative examples during training, the ``filtered`` keyword can be given to ``ne
         training_loop='sLCWA',
         negative_sampler='basic',
         negative_sampler_kwargs=dict(
-            filtered=True,    
+            filtered=True,
         ),
     )
 
 PyKEEN implements several algorithms for filtering with different properties that can be chosen using the
 ``filterer`` keyword argument in ``negative_sampler_kwargs``. By default, an fast and approximate algorithm is used in
-:class:`pykeen.sampling.filtering.BloomFilterer`, which is based on 
-`bloom filters <https://en.wikipedia.org/wiki/Bloom_filter>`_. The bloom filterer also has a configurable desired error 
-rate, which can be further lowered at the cost of increase in memory and computation costs. 
+:class:`pykeen.sampling.filtering.BloomFilterer`, which is based on
+`bloom filters <https://en.wikipedia.org/wiki/Bloom_filter>`_. The bloom filterer also has a configurable desired error
+rate, which can be further lowered at the cost of increase in memory and computation costs.
 
 .. code-block:: python
 
@@ -74,7 +74,7 @@ rate, which can be further lowered at the cost of increase in memory and computa
         ),
     )
 
-If you want to have a guarantee that all known false negatives are filtered, you can use a slower implementation based 
+If you want to have a guarantee that all known false negatives are filtered, you can use a slower implementation based
 on Python's built-in sets, the :class:`pykeen.sampling.filtering.PythonSetFilterer`. It can be activated with:
 
 .. code-block:: python
@@ -88,10 +88,10 @@ on Python's built-in sets, the :class:`pykeen.sampling.filtering.PythonSetFilter
         negative_sampler='basic',
         negative_sampler_kwargs=dict(
             filtered=True,
-            filterer='python-set',    
+            filterer='python-set',
         ),
     )
-    
+
 Identifying False Negatives During Evaluation
 ---------------------------------------------
 In contrast to training, PyKEEN **does** filter false negatives from $\mathcal{N}$ during evaluation by default.

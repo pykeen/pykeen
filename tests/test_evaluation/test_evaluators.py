@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Test the evaluators."""
+
 from __future__ import annotations
 
 import itertools
