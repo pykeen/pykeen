@@ -118,3 +118,4 @@ scratch/*
 wandb/*
 mlruns
 doctests/
+tox2.ini
