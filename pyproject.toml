@@ -177,6 +177,11 @@ plugins = [
 # Doc8, see https://doc8.readthedocs.io/en/stable/readme.html#ini-file-usage
 [tool.doc8]
 max-line-length = 120
+ignore-path-errors = [
+    "docs/source/tutorial/inductive_lp.rst; D000",
+    "docs/source/tutorial/understanding_evaluation.rst; D000",
+    # TODO reinvestigate after upgrading to sphinx 7+
+]
 
 # Coverage, see https://coverage.readthedocs.io/en/latest/config.html
 [tool.coverage.run]
