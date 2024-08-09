@@ -9,14 +9,14 @@ version = "0.0.1-dev"
 description = "A package for training and evaluating multimodal knowledge graph embeddings"
 readme = "README.md"
 authors = [
-    { name = "Charles Tapley Hoyt", email = "cthoyt@gmail.com" },
     { name = "Mehdi Ali", email = "pykeen2019@gmail.com" },
-    { name = "Max Berrendorf", email = "pykeen2019@gmail.com" },
+    { name = "Max Berrendorf", email = "max.berrendorf@gmail.com" },
     { name = "Laurent Vermue", email = "pykeen2019@gmail.com" },
+    { name = "Charles Tapley Hoyt", email = "cthoyt@gmail.com" },
 ]
 maintainers = [
+    { name = "Max Berrendorf", email = "max.berrendorf@gmail.com" },
     { name = "Charles Tapley Hoyt", email = "cthoyt@gmail.com" },
-    { name = "Max Berrendorf", email = "pykeen2019@gmail.com" },
 ]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers
@@ -221,8 +221,6 @@ target-version = [
 profile = "black"
 multi_line_output = 3
 line_length = 120
-include_trailing_comma = true
-reverse_relative = true
 
 [tool.ruff]
 line-length = 120
@@ -260,6 +258,10 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
+
+[tool.ruff.lint.isort]
+known-third-party = ["tqdm"]
+relative-imports-order = "closest-to-furthest"
 
 # Pytest, see https://docs.pytest.org/en/stable/reference/customize.html#pyproject-toml
 [tool.pytest.ini_options]
