@@ -261,6 +261,7 @@ convention = "pep257"
 
 [tool.ruff.lint.isort]
 known-third-party = ["tqdm"]
+known-first-party = ["pykeen", "tests"]
 relative-imports-order = "closest-to-furthest"
 
 # Pytest, see https://docs.pytest.org/en/stable/reference/customize.html#pyproject-toml
