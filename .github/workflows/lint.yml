@@ -30,8 +30,8 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
 
-      - name: Check code quality with flake8
-        run: tox -e flake8
+      - name: Check code quality
+        run: tox -e lint
   
   lint-single-version:
     name: Lint Single Version
