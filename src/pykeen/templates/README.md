@@ -54,7 +54,7 @@
 
 ## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-The latest stable version of PyKEEN requires Python 3.9+. It can be downloaded
+The latest stable version of PyKEEN requires Python 3.8+. It can be downloaded
 and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
