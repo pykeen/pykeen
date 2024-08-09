@@ -25,7 +25,7 @@ jobs:
           cache-dependency-path: './setup.cfg'
       
       - name: Install dependencies
-        run: pip install tox
+        run: pip install tox tox-uv
 
       - name: Check static typing with MyPy
         run: tox -e mypy
@@ -51,7 +51,7 @@ jobs:
         cache-dependency-path: './setup.cfg'
     
     - name: Install dependencies
-      run: pip install tox
+      run: pip install tox tox-uv
 
     - name: Check package metadata with Pyroma
       run: tox -e pyroma
