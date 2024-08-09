@@ -80,6 +80,7 @@ dependencies = [
     "torch_max_mem>=0.1.1",
     "torch-ppr>=0.0.7",
     "typing_extensions",
+    "setuptools", # for pkg_resources entrypoint loading, need to update
 ]
 
 [project.optional-dependencies]
