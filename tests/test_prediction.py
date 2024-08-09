@@ -237,15 +237,17 @@ def test_predict_triples(
     _check_score_pack(pack=pack, model=model, num_triples=num_triples)
 
 
-def _iter_get_input_batch_inputs() -> Iterable[
-    Tuple[
-        Optional[CoreTriplesFactory],
-        Union[None, int, str],
-        Union[None, int, str],
-        Union[None, int, str],
-        pykeen.typing.Target,
+def _iter_get_input_batch_inputs() -> (
+    Iterable[
+        Tuple[
+            Optional[CoreTriplesFactory],
+            Union[None, int, str],
+            Union[None, int, str],
+            Union[None, int, str],
+            pykeen.typing.Target,
+        ]
     ]
-]:
+):
     """Iterate over test inputs for _get_input_batch."""
     factory = Nations().training
     # ID-based, no factory

@@ -215,9 +215,7 @@ class SLCWALitModule(LitModule):
         return loss
 
     # docstr-coverage: inherited
-    def _dataloader(
-        self, triples_factory: CoreTriplesFactory, shuffle: bool = False
-    ) -> torch.utils.data.DataLoader:  # noqa: D102
+    def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
             dataset=triples_factory.create_slcwa_instances(
                 batch_size=self.batch_size,
@@ -260,9 +258,7 @@ class LCWALitModule(LitModule):
         return loss
 
     # docstr-coverage: inherited
-    def _dataloader(
-        self, triples_factory: CoreTriplesFactory, shuffle: bool = False
-    ) -> torch.utils.data.DataLoader:  # noqa: D102
+    def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
             dataset=triples_factory.create_lcwa_instances(),
             batch_size=self.batch_size,

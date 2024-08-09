@@ -304,9 +304,7 @@ class SparseBFSSearcher(AnchorSearcher):
         # symmetric + self-loops
         edge_list = torch.cat(
             [edge_index, edge_index.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
-        ).unique(
-            dim=1
-        )  # unique for deduplicating repeated edges
+        ).unique(dim=1)  # unique for deduplicating repeated edges
 
         return edge_list
 
