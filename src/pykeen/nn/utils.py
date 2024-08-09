@@ -533,7 +533,7 @@ class PyOBOCache(TextCache):
         try:
             import pyobo
         except ImportError:
-            raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.")
+            raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.") from None
         else:
             self._get_name = pyobo.get_name
         super().__init__(*args, **kwargs)

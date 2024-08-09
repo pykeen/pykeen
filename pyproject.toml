@@ -265,6 +265,10 @@ known-third-party = ["tqdm"]
 known-first-party = ["pykeen", "tests"]
 relative-imports-order = "closest-to-furthest"
 
+[tool.ruff.lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds 5.
+max-complexity = 21
+
 # Pytest, see https://docs.pytest.org/en/stable/reference/customize.html#pyproject-toml
 [tool.pytest.ini_options]
 addopts = "--strict-markers"

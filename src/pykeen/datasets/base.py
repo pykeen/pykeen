@@ -563,7 +563,7 @@ class RemoteDataset(PathDataset):
         )
 
     def _get_paths(self) -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
-        """The paths where the extracted files can be found."""
+        """Get the paths where the extracted files can be found."""
         return (
             self.cache_root.joinpath(self._relative_training_path),
             self.cache_root.joinpath(self._relative_testing_path),
@@ -598,8 +598,8 @@ class TarFileRemoteDataset(RemoteDataset):
 
     # docstr-coverage: inherited
     def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
-        with tarfile.open(fileobj=archive_file) as tf:  # noqa:S202
-            tf.extractall(path=self.cache_root)
+        with tarfile.open(fileobj=archive_file) as tf:
+            tf.extractall(path=self.cache_root)  # noqa:S202
 
 
 class PackedZipRemoteDataset(LazyDataset):
