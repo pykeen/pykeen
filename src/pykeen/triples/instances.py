@@ -49,7 +49,7 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
     """Base class for training instances."""
 
     def __len__(self):  # noqa:D401
-        """The number of instances."""
+        """Get the number of instances."""
         raise NotImplementedError
 
     def get_collator(self) -> Optional[Callable[[List[SampleType]], BatchType]]:

@@ -479,7 +479,7 @@ class CoreTriplesFactory(KGInfo):
         cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
         if "shuffle" in kwargs:
             if kwargs.pop("shuffle"):
-                warnings.warn("Training instances are always shuffled.", DeprecationWarning)
+                warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
             else:
                 raise AssertionError("If shuffle is provided, it must be True.")
         return cls(

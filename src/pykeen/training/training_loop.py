@@ -210,7 +210,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     @property
     def checksum(self) -> str:  # noqa: D401
         """The checksum of the model and optimizer the training loop was configured with."""
-        h = md5()  # noqa: S303
+        h = md5(usedforsecurity=False)  # noqa: S303
         h.update(str(self.model).encode("utf-8"))
         h.update(str(self.optimizer).encode("utf-8"))
         return h.hexdigest()

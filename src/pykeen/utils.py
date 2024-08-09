@@ -1048,6 +1048,7 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     warnings.warn(
         "Applying complex_normalize on non-complex input; if you see shape errors downstream this may be a possible "
         "root cause.",
+        stacklevel=2,
     )
     (x_complex,) = ensure_complex(x)
     x_complex = complex_normalize(x_complex)
@@ -1267,7 +1268,7 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
         if x.is_complex():
             yield x
             continue
-        warnings.warn(f"{x=} is not complex, but will be viewed as such")
+        warnings.warn(f"{x=} is not complex, but will be viewed as such", stacklevel=2)
         if x.shape[-1] != 2:
             x = x.view(*x.shape[:-1], -1, 2)
         yield torch.view_as_complex(x)
