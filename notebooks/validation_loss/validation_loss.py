@@ -1,4 +1,9 @@
 # %%
+"""Validation loss notebook."""
+
+import pandas
+import seaborn
+
 from pykeen.datasets import get_dataset
 from pykeen.pipeline import pipeline
 from pykeen.trackers import PythonResultTracker
@@ -23,10 +28,6 @@ result = pipeline(
 )
 # %% [markdown]
 # ## Evaluation with seaborn
-
-# %%
-import pandas
-import seaborn
 
 # %%
 grid = seaborn.relplot(

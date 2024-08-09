@@ -55,7 +55,9 @@ def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisio
     if zero_division == "warn":
         zero_division = 0
         warnings.warn(
-            message=f"Division by zero. Result set to {zero_division} according to policy.", category=UserWarning
+            message=f"Division by zero. Result set to {zero_division} according to policy.",
+            category=UserWarning,
+            stacklevel=2,
         )
     return zero_division
 
