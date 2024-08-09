@@ -126,9 +126,9 @@ docs = [
     "sphinx<7",
     "sphinx-rtd-theme",
     "sphinx-click",
-    "sphinx-autodoc-typehints<=1.13.1",
     "sphinx_automodapi",
     "texext",
+    "graphviz",
 ]
 pyg = [
     # from 2.3 onwards, you can install this without pre-compiled dependencies

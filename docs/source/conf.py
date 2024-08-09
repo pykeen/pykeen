@@ -86,7 +86,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
-    "sphinx_autodoc_typehints",
+    # "sphinx_autodoc_typehints",
     "sphinx_click.ext",
     "sphinx_automodapi.automodapi",
     "texext",
@@ -253,21 +253,18 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "torch": ("https://pytorch.org/docs/stable", None),
     "torchvision": ("https://pytorch.org/vision/stable", None),
-    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest/", None),
+    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "optuna": ("https://optuna.readthedocs.io/en/latest", None),
-    "pybel": ("https://pybel.readthedocs.io/en/latest/", None),
-    "pyobo": ("https://pyobo.readthedocs.io/en/stable/", None),
-    "class_resolver": ("https://class-resolver.readthedocs.io/en/latest/", None),
-    "rexmex": ("https://rexmex.readthedocs.io/en/latest/", None),
-    "bio2bel": ("https://bio2bel.readthedocs.io/en/latest/", None),
-    "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest/", None),
+    "pybel": ("https://pybel.readthedocs.io/en/latest", None),
+    "pyobo": ("https://pyobo.readthedocs.io/en/stable", None),
+    "class_resolver": ("https://class-resolver.readthedocs.io/en/latest", None),
+    "bio2bel": ("https://bio2bel.readthedocs.io/en/latest", None),
+    "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
-    # See discussion for adding huggingface intersphinx docs at
-    # https://github.com/huggingface/transformers/issues/14728#issuecomment-1133521776
-    "datasets": ("https://huggingface.co/docs/datasets/master/en/", None),
-    "transformers": ("https://huggingface.co/docs/transformers/master/en/", None),
+    "datasets": ("https://huggingface.co/docs/datasets/main/en", None),
+    "transformers": ("https://huggingface.co/docs/transformers/main/en", None),
 }
 
 autoclass_content = "both"
