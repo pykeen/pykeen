@@ -1,4 +1,5 @@
 """Tests for prediction tools."""
+
 from typing import Any, Collection, Iterable, MutableMapping, Optional, Sequence, Tuple, Union
 
 import numpy

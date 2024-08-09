@@ -309,7 +309,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         device = device or model.device
         tqdm_kwargs = dict(tqdm_kwargs or {})
         if not use_tqdm:
-            tqdm_kwargs.update(dict(disable=False))
+            tqdm_kwargs["disable"] = True
         try:
             result = self._evaluate_on_device(
                 model=model,
@@ -804,7 +804,7 @@ def normalize_flattened_metric_results(
 
     # normalize keys
     if metric_result_cls is None:
-        warnings.warn("Please explicitly provide a metric result class.", category=DeprecationWarning)
+        warnings.warn("Please explicitly provide a metric result class.", category=DeprecationWarning, stacklevel=2)
         metric_result_cls = RankBasedMetricResults
     # TODO: find a better way to handle this
     flat_result = flatten_dictionary(result)

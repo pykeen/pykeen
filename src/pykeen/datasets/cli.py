@@ -199,7 +199,7 @@ def _get_plotting_libraries():
                 pip install matplotlib seaborn
         """
             )
-        )
+        ) from None
     return plt, sns
 
 

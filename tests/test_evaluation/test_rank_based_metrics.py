@@ -1,4 +1,5 @@
 """Tests for rank-based metrics."""
+
 import unittest
 from typing import Callable, Optional
 

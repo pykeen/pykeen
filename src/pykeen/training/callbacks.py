@@ -429,8 +429,9 @@ class LearningRateSchedulerTrainingCallback(TrainingCallback):
 
     # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
-        if self.training_loop.lr_scheduler is not None:
-            self.training_loop.lr_scheduler.step(epoch=epoch)
+        if self.training_loop.lr_scheduler is None:
+            raise ValueError(f"{self} can only be called when a learning rate schedule is used.")
+        self.training_loop.lr_scheduler.step(epoch=epoch)
 
 
 def _hasher(kwargs: Mapping[str, Any]) -> int:

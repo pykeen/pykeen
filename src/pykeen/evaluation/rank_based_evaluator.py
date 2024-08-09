@@ -32,7 +32,7 @@ import numpy as np
 import numpy.random
 import pandas as pd
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranks import Ranks
@@ -301,8 +301,8 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
     def __init__(
         self,
         filtered: bool = True,
-        metrics: Optional[Sequence[HintOrType[RankBasedMetric]]] = None,
-        metrics_kwargs: OptionalKwargs = None,
+        metrics: OneOrManyHintOrType = None,
+        metrics_kwargs: OneOrManyOptionalKwargs = None,
         add_defaults: bool = True,
         clear_on_finalize: bool = True,
         **kwargs,

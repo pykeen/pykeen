@@ -16,7 +16,7 @@ __all__ = [
     "env",
 ]
 
-VERSION = "1.10.2-dev"
+VERSION = "1.10.3-dev"
 
 
 @lru_cache(maxsize=2)
@@ -50,7 +50,7 @@ def _run(*args: str) -> Optional[str]:
     with open(os.devnull, "w") as devnull:
         try:
             ret = check_output(  # noqa: S603,S607
-                args,
+                args,  # noqa:S603
                 cwd=os.path.dirname(__file__),
                 stderr=devnull,
             )

@@ -1,4 +1,5 @@
 """Tests for splitting of triples."""
+
 import numpy
 import pytest
 import torch
