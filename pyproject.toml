@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pykeen"
-version = "0.0.1-dev"
+version = "1.10.3-dev"
 description = "A package for training and evaluating multimodal knowledge graph embeddings"
 readme = "README.md"
 authors = [
