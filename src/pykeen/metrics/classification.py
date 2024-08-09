@@ -144,7 +144,9 @@ class ClassificationMetric(Metric, abc.ABC):
 
         :return:
             a scalar metric value
-        """  # noqa: DAR202
+
+        # noqa:DAR202
+        """
 
 
 @parse_docdata
@@ -277,7 +279,9 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
 
         :return:
             the scalar metric
-        """  # noqa: DAR202
+
+        # noqa: DAR202
+        """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
     # docstr-coverage: inherited
