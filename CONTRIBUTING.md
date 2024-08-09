@@ -16,7 +16,7 @@ the problems the KGE community is currently facing, and has a lot of excited peo
 
 ## Have a Question or Suggestion?
 
-Same drill! Submit an issue and we'll have a nice conversation in the thread.
+Same drill! Submit an issue, and we'll have a nice conversation in the thread.
 
 ## Code Contribution
 
@@ -36,7 +36,7 @@ model for code contributions. Follow these steps:
 
 ### Merge Model
 
-This project
+This repository
 uses [squash merges](https://docs.github.com/en/github/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-pull-request-commits)
 to group all related commits in a given pull request into a single commit upon
 acceptance and merge into the main branch. This has several benefits:
@@ -48,21 +48,21 @@ acceptance and merge into the main branch. This has several benefits:
 
 ### Code Style
 
+This project uses `tox` for running code quality checks. Start by installing
+`tox` and `tox-uv` with `pip install tox tox-uv`.
+
 This project encourages the use of optional static typing. It
-uses [`mypy`](http://mypy-lang.org/) as a type checker
-and [`sphinx_autodoc_typehints`](https://github.com/agronholm/sphinx-autodoc-typehints)
-to automatically generate documentation based on type hints. You can check if
+uses [`mypy`](http://mypy-lang.org/) as a type checker. You can check if
 your code passes `mypy` with `tox -e mypy`.
 
-This project uses [`black`](https://github.com/psf/black) to automatically
-enforce a consistent code style. You can apply `black` and other pre-configured
-linters with `tox -e lint`.
+This project uses [`ruff`](https://docs.astral.sh/ruff/) to automatically
+enforce a consistent code style. You can apply `ruff format` and other pre-configured
+formatters with `tox -e format`.
 
-This project uses [`flake8`](https://flake8.pycqa.org) and several plugins for
+This project uses [`ruff`](https://docs.astral.sh/ruff/) and several plugins for
 additional checks of documentation style, security issues, good variable
-nomenclature, and more (
-see [`tox.ini`](tox.ini) for a list of flake8 plugins). You can check if your
-code passes `flake8` with `tox -e flake8`.
+nomenclature, and more (see `pyproject.toml` for a list of Ruff plugins). You can check if your
+code passes `ruff check` with `tox -e lint`.
 
 Each of these checks are run on each commit using GitHub Actions as a continuous
 integration service. Passing all of them is required for accepting a
@@ -74,7 +74,7 @@ comment, and we will help you.
 
 Python's builtin `print()` should not be used (except when writing to files),
 it's checked by the
-[`flake8-print`](https://github.com/jbkahn/flake8-print) plugin to `flake8`. If
+[`flake8-print` (T20)](https://docs.astral.sh/ruff/rules/#flake8-print-t20) plugin to `ruff`. If
 you're in a command line setting or `main()` function for a module, you can use
 `click.echo()`. Otherwise, you can use the builtin `logging` module by adding
 `logger = logging.getLogger(__name__)` below the imports at the top of your
@@ -82,16 +82,16 @@ file.
 
 ### Documentation
 
-All public functions (i.e., not starting with an underscore `_`) should be
+All public functions (i.e., not starting with an underscore `_`) must be
 documented using
 the [sphinx documentation format](https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html#the-sphinx-docstring-format).
-The [`darglint`](https://github.com/terrencepreilly/darglint) plugin to `flake8`
+The [`darglint2`](https://github.com/akaihola/darglint2) tool
 reports on functions that are not fully documented.
 
 This project uses [`sphinx`](https://www.sphinx-doc.org) to automatically build
 documentation into a narrative structure. You can check that the documentation
-properly builds with `tox -e docs-test` and build the docs locally with
-`tox -e docs`.
+builds properly in an isolated environment with `tox -e docs-test` and actually
+build it locally with `tox -e docs`.
 
 ### Testing
 
@@ -112,47 +112,21 @@ $ git remote add pykeen https://github.com/pykeen/pykeen.git
 ```
 
 Then, you can merge upstream code into your branch. You can also use the GitHub
-UI to do this by following [this tutorial](https://docs.github.com/en/github/collaborating-with-pull-requests/working-with-forks/syncing-a-fork).
+UI to do this by
+following [this tutorial](https://docs.github.com/en/github/collaborating-with-pull-requests/working-with-forks/syncing-a-fork).
 
 ### Python Version Compatibility
 
 This project aims to support all versions of Python that have not passed their
 end-of-life dates. After end-of-life, the version will be removed from the Trove
-qualifiers in the [`setup.cfg`](setup.cfg) and from the GitHub Actions testing
+qualifiers in the `pyproject.toml` and from the GitHub Actions testing
 configuration.
 
 See https://endoflife.date/python for a timeline of Python release and
 end-of-life dates.
 
-## Making a Release
+## Acknowledgements
 
-PyKEEN uses single source versioning. This means that there's a variable
-`pykeen.version.VERSION` which is the canonical value used as the version.
-
-Management of this value is done by `bumpversion` via `tox`. When you're
-ready to make a release, do the following:
-
-1. Make sure there are no uncommitted changes.
-2. Run `tox -e bumpversion release`
-3. Push to GitHub
-4. Draft a new release at https://github.com/pykeen/pykeen/releases/new.
-   Name the release based on the version that was just bumped to with the form
-   vX.Y.Z where X is major release, Y is minor release, and Z is patch. By default,
-   there's a box that says `Target: master`. If you're not 100% sure the last commit
-   made before making a tag/release was the bump commit, click it, click "Recent Commits"
-   then click the commit with the text `Bump version: X.Y.Z-dev -> X.Y.Z`.
-
-### Upload to PyPI
-
-Directly after making a release, you can easily upload to PyPI using another `tox`
-command:
-
-1. `tox -e release` prepares the code and uploads it to PyPI.
-2. `tox -e bumpversion patch` to bump the version. **DO NOT** do this before uploading to
-   PyPI, otherwise the version on PyPI will have `-dev` as a suffix.
-3. Push to GitHub
-
-The process of bumping the version (release), pushing to GitHub, making a release to PyPI,
-bumping the version (patch), and pushing to GitHub one more time has been automated with
-`tox -e finish`. If you use this, make sure you go to GitHub and manually find the right
-commit for making a tag/release, since it will not be the most recent one.
+These code contribution guidelines are derived from
+the [cthoyt/cookiecutter-snekpack](https://github.com/cthoyt/cookiecutter-snekpack)
+Python package template. They're free to reuse and modify as long as they're properly acknowledged.

@@ -124,7 +124,7 @@ class Regularizer(nn.Module, ABC):
             :meth:`pop_regularization_term`. In this case, there should be no need to manually call this method.
         """
         if self.updated:
-            warnings.warn("Resetting regularization term without using it; this may be an error.")
+            warnings.warn("Resetting regularization term without using it; this may be an error.", stacklevel=2)
         self.reset()
 
 

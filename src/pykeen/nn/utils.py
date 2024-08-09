@@ -248,6 +248,7 @@ class WikidataCache(TextCache):
         sparql: Union[str, Callable[..., str]],
         wikidata_ids: Sequence[str],
         batch_size: int = 256,
+        timeout=None,
     ) -> Iterable[Mapping[str, Any]]:
         """
         Batched SPARQL query execution for the given IDS.
@@ -258,6 +259,8 @@ class WikidataCache(TextCache):
             the Wikidata IDs
         :param batch_size:
             the batch size, i.e., maximum number of IDs per query
+        :param timeout:
+            the timeout for the GET request to the SPARQL endpoint
 
         :return:
             an iterable over JSON results, where the keys correspond to query variables,
@@ -277,10 +280,13 @@ class WikidataCache(TextCache):
             sparql = sparql.format
         sparql = sparql(ids=" ".join(f"wd:{i}" for i in wikidata_ids))
         logger.debug("running query: %s", sparql)
+        if timeout is None:
+            timeout = 60.0
         res = requests.get(
             cls.WIKIDATA_ENDPOINT,
             params={"query": sparql, "format": "json"},
             headers=cls.HEADERS,
+            timeout=timeout,
         )
         res.raise_for_status()
         bindings = res.json()["results"]["bindings"]
@@ -527,7 +533,7 @@ class PyOBOCache(TextCache):
         try:
             import pyobo
         except ImportError:
-            raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.")
+            raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.") from None
         else:
             self._get_name = pyobo.get_name
         super().__init__(*args, **kwargs)

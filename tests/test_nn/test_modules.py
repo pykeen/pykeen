@@ -227,9 +227,7 @@ class QuatETests(cases.InteractionTestCase):
     shape_kwargs = dict(k=4)  # quaternions
     atol = 1.0e-06
 
-    def _exp_score(
-        self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor, table: torch.Tensor
-    ) -> torch.FloatTensor:  # noqa: D102
+    def _exp_score(self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor, table: torch.Tensor) -> torch.FloatTensor:  # noqa: D102
         # we calculate the scores using the hard-coded formula, instead of utilizing table + einsum
         x = _rotate_quaternion(*(x.unbind(dim=-1) for x in [h, r]))
         return -(x * t).sum()

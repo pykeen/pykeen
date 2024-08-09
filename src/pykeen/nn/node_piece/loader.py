@@ -48,7 +48,7 @@ class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
     def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         with path.open(mode="rb") as pickle_file:
             # contains: anchor_ids, entity_ids, mapping {entity_id -> {"ancs": anchors, "dists": distances}}
-            anchor_ids, mapping = pickle.load(pickle_file)[0::2]
+            anchor_ids, mapping = pickle.load(pickle_file)[0::2]  # noqa:S301
         logger.info(f"Loaded precomputed pools with {len(anchor_ids)} anchors, and {len(mapping)} pools.")
         # normalize anchor_ids
         anchor_map = {a: i for i, a in enumerate(anchor_ids) if a >= 0}

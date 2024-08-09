@@ -2,7 +2,6 @@
 
 """Tests for edge weightings."""
 
-
 import unittest_templates
 
 import pykeen.nn.weighting

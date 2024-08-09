@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Test cases for PyKEEN."""
+
 import inspect
 import itertools
 import logging

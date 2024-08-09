@@ -247,8 +247,8 @@ class TestUtils(unittest.TestCase):
             a_shape = [1 for _ in range(n_dim)]
             b_shape = [1 for _ in range(n_dim)]
             for j in range(n_dim):
-                dim = 2 + random.randrange(max_dim)
-                mod = random.randrange(3)
+                dim = 2 + random.randrange(max_dim)  # noqa:S311
+                mod = random.randrange(3)  # noqa:S311
                 if mod % 2 == 0:
                     a_shape[j] = dim
                 if mod > 0:

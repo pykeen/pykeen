@@ -28,7 +28,7 @@ jobs:
           cache-dependency-path: './setup.cfg'
       
       - name: Install dependencies
-        run: pip install tox
+        run: pip install tox tox-uv
       
       # - name: Check RST format
       #   run: tox -e doclint
@@ -67,7 +67,7 @@ jobs:
           cache-dependency-path: './setup.cfg'
       
       - name: Install dependencies
-        run: pip install tox
+        run: pip install tox tox-uv
       
       - name: Run fast tests
         run: tox -e py
