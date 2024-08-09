@@ -488,7 +488,7 @@ def invert_mapping(mapping: Mapping[K, V]) -> Mapping[V, K]:
 def random_non_negative_int() -> int:
     """Generate a random positive integer."""
     rng = np.random.default_rng()
-    dtype = np.int_
+    dtype = np.int32
     max_value = np.iinfo(dtype).max
     return int(rng.integers(max_value, dtype=dtype))
 
