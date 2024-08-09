@@ -170,7 +170,6 @@ skip = [
 # MyPy, see https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
 plugins = [
-    "pydantic.mypy",
 ]
 
 # Doc8, see https://doc8.readthedocs.io/en/stable/readme.html#ini-file-usage
