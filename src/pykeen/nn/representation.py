@@ -571,7 +571,7 @@ def process_max_id(max_id: Optional[int], num_embeddings: Optional[int]) -> int:
     if max_id is None:
         if num_embeddings is None:
             raise ValueError("Must provide max_id")
-        warnings.warn("prefer using 'max_id' over 'num_embeddings'", DeprecationWarning)
+        warnings.warn("prefer using 'max_id' over 'num_embeddings'", DeprecationWarning, stacklevel=2)
         max_id = num_embeddings
     elif num_embeddings is not None and num_embeddings != max_id:
         raise ValueError("Cannot provide both, 'max_id' over 'num_embeddings'")

@@ -28,7 +28,7 @@ class OGBEvaluator(SampledRankBasedEvaluator):
     """A sampled, rank-based evaluator that applies a custom OGB evaluation."""
 
     # docstr-coverage: inherited
-    def __init__(self, filtered: bool = False, **kwargs):
+    def __init__(self, filtered: bool = False, **kwargs):  # noqa:D107
         if filtered:
             raise ValueError(
                 "OGB evaluator is already filtered, but not dynamically like other evaluators because "

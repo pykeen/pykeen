@@ -529,6 +529,7 @@ class RemoteDataset(PathDataset):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
+        timeout=None,
     ):
         """Initialize dataset.
 
@@ -542,10 +543,12 @@ class RemoteDataset(PathDataset):
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param timeout: The timeout number of seconds for waiting to download the dataset. Defaults to 60.
         """
         self.cache_root = self._help_cache(cache_root)
 
         self.url = url
+        self.timeout = timeout if timeout is not None else 60
         self._relative_training_path = pathlib.PurePath(relative_training_path)
         self._relative_testing_path = pathlib.PurePath(relative_testing_path)
         self._relative_validation_path = pathlib.PurePath(relative_validation_path)
@@ -560,7 +563,7 @@ class RemoteDataset(PathDataset):
         )
 
     def _get_paths(self) -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
-        """The paths where the extracted files can be found."""
+        """Get the paths where the extracted files can be found."""
         return (
             self.cache_root.joinpath(self._relative_training_path),
             self.cache_root.joinpath(self._relative_testing_path),
@@ -574,7 +577,7 @@ class RemoteDataset(PathDataset):
 
     def _get_bytes(self) -> BytesIO:
         logger.info(f"Requesting dataset from {self.url}")
-        res = requests.get(url=self.url)
+        res = requests.get(url=self.url, timeout=self.timeout)
         res.raise_for_status()
         return BytesIO(res.content)
 
@@ -596,7 +599,7 @@ class TarFileRemoteDataset(RemoteDataset):
     # docstr-coverage: inherited
     def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
         with tarfile.open(fileobj=archive_file) as tf:
-            tf.extractall(path=self.cache_root)
+            tf.extractall(path=self.cache_root)  # noqa:S202
 
 
 class PackedZipRemoteDataset(LazyDataset):

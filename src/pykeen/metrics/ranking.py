@@ -84,6 +84,7 @@ density function of the standard Gaussian distribution to retrieve a *p*-value. 
 - :class:`pykeen.metrics.ranking.ZHitsAtK`
 - :class:`pykeen.metrics.ranking.ZInverseHarmonicMeanRank`
 """
+
 import math
 from abc import ABC, abstractmethod
 from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union

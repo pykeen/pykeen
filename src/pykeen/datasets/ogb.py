@@ -4,6 +4,7 @@
 
 Run with ``python -m pykeen.datasets.ogb``
 """
+
 from __future__ import annotations
 
 import abc

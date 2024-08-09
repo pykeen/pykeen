@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Utilities for ablation study configurations."""
+
 from __future__ import annotations
 
 import itertools as itt

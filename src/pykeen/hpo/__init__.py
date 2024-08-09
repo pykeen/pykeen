@@ -615,7 +615,8 @@ If you have a configuration (in the same format) in a JSON file:
 
 .. seealso::
 
-   - https://towardsdatascience.com/a-conceptual-explanation-of-bayesian-model-based-hyperparameter-optimization-for-machine-learning-b8172278050f  # noqa:E501
+   - https://towardsdatascience.com/a-conceptual-explanation-of-bayesian-model-based-\
+hyperparameter-optimization-for-machine-learning-b8172278050f
 """
 
 from .hpo import HpoPipelineResult, hpo_pipeline, hpo_pipeline_from_config, hpo_pipeline_from_path  # noqa: F401

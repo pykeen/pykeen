@@ -345,7 +345,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
 
     @staticmethod
     def collate(
-        batch: Iterable[Tuple[Target, MappedTriples, Optional[torch.LongTensor]]]
+        batch: Iterable[Tuple[Target, MappedTriples, Optional[torch.LongTensor]]],
     ) -> Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]:
         """Collate batches by grouping by target."""
         # group by target

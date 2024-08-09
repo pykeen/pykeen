@@ -20,7 +20,7 @@ from tests.mocks import MockEvaluator
 class DummyTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop."""
 
-    def __init__(
+    def __init__(  # noqa:D107
         self,
         model: Model,
         triples_factory: TriplesFactory,
