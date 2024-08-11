@@ -1,4 +1,3 @@
-
 """Functional forms of interaction methods.
 
 These implementations allow for an arbitrary number of batch dimensions,

@@ -1,4 +1,3 @@
-
 """Implementation of ERMLP."""
 
 from collections.abc import Mapping

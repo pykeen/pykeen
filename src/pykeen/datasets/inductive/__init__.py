@@ -1,4 +1,3 @@
-
 """Inductive models in PyKEEN."""
 
 from class_resolver import ClassResolver

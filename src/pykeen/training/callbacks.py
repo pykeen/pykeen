@@ -1,4 +1,3 @@
-
 """Training callbacks.
 
 Training callbacks allow for arbitrary extension of the functionality of the :class:`pykeen.training.TrainingLoop`

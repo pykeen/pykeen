@@ -1,4 +1,3 @@
-
 """Analysis utilities for (mapped) triples."""
 
 import hashlib

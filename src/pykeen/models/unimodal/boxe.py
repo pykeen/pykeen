@@ -1,4 +1,3 @@
-
 """Implementation of the BoxE model."""
 
 from collections.abc import Mapping

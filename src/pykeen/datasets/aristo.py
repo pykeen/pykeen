@@ -1,4 +1,3 @@
-
 """The Aristo-v4 dataset."""
 
 import pathlib

@@ -1,4 +1,3 @@
-
 """Various decompositions for R-GCN."""
 
 import logging

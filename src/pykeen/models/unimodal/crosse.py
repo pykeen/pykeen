@@ -1,4 +1,3 @@
-
 """Implementation of CrossE."""
 
 from collections.abc import Mapping

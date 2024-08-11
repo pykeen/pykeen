@@ -1,4 +1,3 @@
-
 """Implementation of MuRE."""
 
 from collections.abc import Mapping

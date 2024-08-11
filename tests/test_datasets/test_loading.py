@@ -1,4 +1,3 @@
-
 """Test that datasets can be loaded."""
 
 import pathlib

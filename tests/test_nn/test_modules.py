@@ -1,4 +1,3 @@
-
 """Tests for interaction functions."""
 
 import logging

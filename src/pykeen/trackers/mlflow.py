@@ -1,4 +1,3 @@
-
 """An adapter for MLflow."""
 
 from collections.abc import Mapping

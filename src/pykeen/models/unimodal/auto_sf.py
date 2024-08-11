@@ -1,4 +1,3 @@
-
 """A simple AutoSF-based model."""
 
 from collections.abc import Mapping, Sequence

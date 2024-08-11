@@ -1,4 +1,3 @@
-
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging

@@ -1,4 +1,3 @@
-
 """Various edge weighting implementations for R-GCN."""
 
 from abc import abstractmethod

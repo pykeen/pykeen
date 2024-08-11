@@ -1,4 +1,3 @@
-
 """Implementation of the QuatE model."""
 
 from collections.abc import Mapping

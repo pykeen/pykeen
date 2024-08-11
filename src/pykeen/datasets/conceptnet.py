@@ -1,4 +1,3 @@
-
 """The `ConceptNet <https://conceptnet.io/>`_ dataset.
 
 Get a summary with ``python -m pykeen.datasets.conceptnet``

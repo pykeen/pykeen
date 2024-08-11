@@ -1,4 +1,3 @@
-
 """Tests for the remix algorithms."""
 
 import unittest

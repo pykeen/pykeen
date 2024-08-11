@@ -1,4 +1,3 @@
-
 """Implementation of wrapper around sklearn metrics."""
 
 from __future__ import annotations

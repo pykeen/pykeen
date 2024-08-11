@@ -1,4 +1,3 @@
-
 """Test that CUDA exceptions are processed properly."""
 
 import unittest

@@ -1,4 +1,3 @@
-
 """Tests for generating triples."""
 
 import unittest

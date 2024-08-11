@@ -1,4 +1,3 @@
-
 """Test hyper-parameter optimization."""
 
 import inspect

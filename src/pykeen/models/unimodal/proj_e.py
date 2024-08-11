@@ -1,4 +1,3 @@
-
 """Implementation of ProjE."""
 
 from collections.abc import Mapping

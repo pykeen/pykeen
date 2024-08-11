@@ -1,4 +1,3 @@
-
 """Test the evaluators."""
 
 from __future__ import annotations

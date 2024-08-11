@@ -1,4 +1,3 @@
-
 """The DBpedia datasets from [shi2017b]_.
 
 - GitHub Repository: https://github.com/bxshi/ConMask

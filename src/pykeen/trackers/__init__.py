@@ -1,4 +1,3 @@
-
 """Result trackers in PyKEEN."""
 
 from class_resolver import ClassResolver

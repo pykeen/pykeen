@@ -1,4 +1,3 @@
-
 """Tests for result trackers."""
 
 from pykeen.trackers import TensorBoardResultTracker

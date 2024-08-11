@@ -1,4 +1,3 @@
-
 """Tests for the :mod:`pykeen.nn.sim` submodule."""
 
 import itertools

@@ -1,4 +1,3 @@
-
 """Test cases for sampling."""
 
 from collections.abc import MutableMapping

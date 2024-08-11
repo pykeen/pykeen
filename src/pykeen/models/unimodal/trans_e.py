@@ -1,4 +1,3 @@
-
 """TransE."""
 
 from collections.abc import Mapping

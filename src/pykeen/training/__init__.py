@@ -1,4 +1,3 @@
-
 r"""Training loops for KGE models using multi-modal information.
 
 Throughout the following explanations of training loops, we will assume the

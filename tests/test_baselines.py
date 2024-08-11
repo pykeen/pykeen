@@ -1,4 +1,3 @@
-
 """Test non-parametric baseline models."""
 
 import torch

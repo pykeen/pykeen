@@ -1,4 +1,3 @@
-
 """Relation inversion logic."""
 
 from abc import ABC, abstractmethod

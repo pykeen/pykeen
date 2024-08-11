@@ -1,4 +1,3 @@
-
 """Type hints for PyKEEN."""
 
 from __future__ import annotations

@@ -1,4 +1,3 @@
-
 """New-style base module for all KGE models."""
 
 from __future__ import annotations

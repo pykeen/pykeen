@@ -1,4 +1,3 @@
-
 """Test cases for PyKEEN."""
 
 import inspect
@@ -2432,10 +2431,8 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
         """Test data loader with multiple workers."""
         self.assertEqual(
             sum(
-
-                    batch.positives.shape[0]
-                    for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
-
+                batch.positives.shape[0]
+                for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
             ),
             self.factory.num_triples,
         )

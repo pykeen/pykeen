@@ -1,4 +1,3 @@
-
 """Implementation of DistMult."""
 
 from collections.abc import Mapping

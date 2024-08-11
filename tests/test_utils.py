@@ -1,4 +1,3 @@
-
 """Tests for the :mod:`pykeen.utils` module."""
 
 import functools

@@ -1,4 +1,3 @@
-
 """The `BioKG <https://github.com/dsi-bdi/biokg/>`_ dataset.
 
 Get a summary with ``python -m pykeen.datasets.biokg``.

@@ -1,4 +1,3 @@
-
 """Constants for PyKEEN."""
 
 from collections.abc import Mapping

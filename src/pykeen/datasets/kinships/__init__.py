@@ -1,4 +1,3 @@
-
 """Get triples from the Kinships dataset."""
 
 import pathlib

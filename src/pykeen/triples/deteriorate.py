@@ -1,4 +1,3 @@
-
 """Deterioration algorithm."""
 
 import logging

@@ -1,4 +1,3 @@
-
 """Perceptron-like modules."""
 
 from typing import Optional, Union

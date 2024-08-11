@@ -1,4 +1,3 @@
-
 """Representation modules for NodePiece."""
 
 import logging

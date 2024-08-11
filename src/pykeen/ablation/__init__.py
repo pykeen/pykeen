@@ -1,4 +1,3 @@
-
 """Ablation studies in PyKEEN."""
 
 from .ablation import (

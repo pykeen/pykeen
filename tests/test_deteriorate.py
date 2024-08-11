@@ -1,4 +1,3 @@
-
 """Tests for deterioration workflow."""
 
 import unittest

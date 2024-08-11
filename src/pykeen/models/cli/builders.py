@@ -1,4 +1,3 @@
-
 """Functions for building magical KGE model CLIs."""
 
 import inspect

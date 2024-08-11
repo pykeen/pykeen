@@ -1,4 +1,3 @@
-
 """Implementation of early stopping."""
 
 import dataclasses

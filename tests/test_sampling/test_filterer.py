@@ -1,4 +1,3 @@
-
 """Tests for filterers."""
 
 from collections.abc import MutableMapping

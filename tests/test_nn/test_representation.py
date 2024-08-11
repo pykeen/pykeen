@@ -1,4 +1,3 @@
-
 """Test embeddings."""
 
 from collections import ChainMap

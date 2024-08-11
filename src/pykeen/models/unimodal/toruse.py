@@ -1,4 +1,3 @@
-
 """Implementation of TorusE."""
 
 from collections.abc import Mapping

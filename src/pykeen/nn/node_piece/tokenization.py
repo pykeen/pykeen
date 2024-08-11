@@ -1,4 +1,3 @@
-
 """Tokenization algorithms for NodePiece."""
 
 import logging

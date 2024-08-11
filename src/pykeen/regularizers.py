@@ -1,4 +1,3 @@
-
 """Regularization in PyKEEN."""
 
 from __future__ import annotations

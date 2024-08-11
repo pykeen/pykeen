@@ -1,4 +1,3 @@
-
 """Tracking results in local files."""
 
 import csv

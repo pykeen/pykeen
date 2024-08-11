@@ -1,4 +1,3 @@
-
 """An implementation of TransH."""
 
 import itertools

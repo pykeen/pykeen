@@ -1,4 +1,3 @@
-
 """Similarity functions."""
 
 import itertools

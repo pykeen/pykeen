@@ -1,4 +1,3 @@
-
 """Inductive models in PyKEEN."""
 
 from .base import InductiveERModel

@@ -1,4 +1,3 @@
-
 """Composition modules."""
 
 from abc import ABC, abstractmethod

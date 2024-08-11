@@ -1,4 +1,3 @@
-
 """Test the integrity of the reproduction experiment scripts."""
 
 import logging

@@ -1,4 +1,3 @@
-
 """The OpenEA dataset family.
 
 Get a summary with ``python -m pykeen.datasets.openea``

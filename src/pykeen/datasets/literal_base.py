@@ -1,4 +1,3 @@
-
 """Base classes for literal datasets."""
 
 import pathlib

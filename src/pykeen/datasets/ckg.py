@@ -1,4 +1,3 @@
-
 """Clinical Knowledge Graph."""
 
 import pathlib

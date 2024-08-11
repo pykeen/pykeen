@@ -1,4 +1,3 @@
-
 """Implementation of PairRE."""
 
 from collections.abc import Mapping

@@ -1,4 +1,3 @@
-
 """Implementation of NTN."""
 
 from collections.abc import Mapping

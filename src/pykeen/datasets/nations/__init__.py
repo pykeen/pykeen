@@ -1,4 +1,3 @@
-
 """Get triples from the Nations dataset."""
 
 import pathlib

@@ -1,4 +1,3 @@
-
 """Implementation of the ComplexLiteral model."""
 
 from collections.abc import Mapping

@@ -1,4 +1,3 @@
-
 """Implementation of the ComplEx model."""
 
 from collections.abc import Mapping

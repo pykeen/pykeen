@@ -1,4 +1,3 @@
-
 """Utilities and base classes for PyKEEN tracker adapters."""
 
 import logging

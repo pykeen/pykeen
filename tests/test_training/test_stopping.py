@@ -1,4 +1,3 @@
-
 """Test that training loops work correctly."""
 
 import unittest

@@ -1,4 +1,3 @@
-
 """An adapter for Neptune.ai."""
 
 from collections.abc import Collection, Mapping

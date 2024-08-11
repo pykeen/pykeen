@@ -1,4 +1,3 @@
-
 """Compute kernels for common sub-tasks."""
 
 import torch

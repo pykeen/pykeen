@@ -1,4 +1,3 @@
-
 """Implementation of triples splitting functions."""
 
 import logging

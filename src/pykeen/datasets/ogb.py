@@ -1,4 +1,3 @@
-
 """Load the OGB datasets.
 
 Run with ``python -m pykeen.datasets.ogb``

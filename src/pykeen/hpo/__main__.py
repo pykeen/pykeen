@@ -1,4 +1,3 @@
-
 """Entrypoint module, in case you use ``python -m pykeen.hpo``.
 
 Why does this file exist, and why ``__main__``? For more info, read:

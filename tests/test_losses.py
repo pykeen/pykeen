@@ -1,4 +1,3 @@
-
 """Test the PyKEEN custom loss functions."""
 
 import unittest

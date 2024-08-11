@@ -1,4 +1,3 @@
-
 """Implementation of the DistMultLiteralGated model."""
 
 from collections.abc import Mapping

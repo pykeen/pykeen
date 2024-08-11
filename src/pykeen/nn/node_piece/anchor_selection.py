@@ -1,4 +1,3 @@
-
 """
 Anchor selection for NodePiece.
 

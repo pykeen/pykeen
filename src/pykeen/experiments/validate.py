@@ -1,4 +1,3 @@
-
 """A validator for experimental settings."""
 
 import inspect

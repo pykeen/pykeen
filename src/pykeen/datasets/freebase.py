@@ -1,4 +1,3 @@
-
 """Freebase datasets.
 
 * FB15k

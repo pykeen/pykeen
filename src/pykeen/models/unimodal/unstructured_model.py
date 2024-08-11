@@ -1,4 +1,3 @@
-
 """Implementation of UM."""
 
 from collections.abc import Mapping

@@ -1,4 +1,3 @@
-
 """Implementation of the Comp-GCN model."""
 
 from collections.abc import Mapping

@@ -1,4 +1,3 @@
-
 """Constants for PyKEEN testing."""
 
 import os

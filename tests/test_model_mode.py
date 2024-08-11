@@ -1,4 +1,3 @@
-
 """Test that models are set in the right mode when they're training."""
 
 import unittest

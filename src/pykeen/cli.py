@@ -1,4 +1,3 @@
-
 """A command line interface for PyKEEN.
 
 Why does this file exist, and why not put this in ``__main__``? You might be tempted to import things from ``__main__``

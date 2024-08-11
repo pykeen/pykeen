@@ -1,4 +1,3 @@
-
 """The `PharMeBINet <https://github.com/ckoenigs/PharMeBINet/>`_ dataset.
 
 Get a summary with ``python -m pykeen.datasets.pharmebinet``.

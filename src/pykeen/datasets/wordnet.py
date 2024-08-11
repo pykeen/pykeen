@@ -1,4 +1,3 @@
-
 """WordNet datasets."""
 
 import pathlib

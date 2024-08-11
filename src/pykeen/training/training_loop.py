@@ -1,4 +1,3 @@
-
 """Training loops for KGE models using multi-modal information."""
 
 import gc

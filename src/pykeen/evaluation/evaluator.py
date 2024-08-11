@@ -1,4 +1,3 @@
-
 """Basic structure of a evaluator."""
 
 from __future__ import annotations

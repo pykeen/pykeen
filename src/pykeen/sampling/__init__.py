@@ -1,4 +1,3 @@
-
 r"""For entities $\mathcal{E}$ and relations $\mathcal{R}$, the set of all possible triples $\mathcal{T}$ is
 constructed through their cartesian product $\mathcal{T} = \mathcal{E} \times \mathcal{R} \times \mathcal{E}$.
 A given knowledge graph $\mathcal{K}$ is a subset of all possible triples $\mathcal{K} \subseteq \mathcal{T}$.

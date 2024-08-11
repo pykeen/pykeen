@@ -1,4 +1,3 @@
-
 """The `DRKG <https://github.com/gnn4dr/DRKG>`_ dataset.
 
 Get a summary with ``python -m pykeen.datasets.drkg``

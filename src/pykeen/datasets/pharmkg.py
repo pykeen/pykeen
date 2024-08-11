@@ -1,4 +1,3 @@
-
 """The `PharmKG <https://github.com/biomed-AI/PharmKG/>`_ datasets.
 
 Get a summary with ``python -m pykeen.datasets.pharmkg``.

@@ -1,4 +1,3 @@
-
 """Implementation of structured model (SE)."""
 
 from collections.abc import Mapping

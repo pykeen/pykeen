@@ -1,4 +1,3 @@
-
 """An adapter for TensorBoard."""
 
 import pathlib

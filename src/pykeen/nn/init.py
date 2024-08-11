@@ -1,4 +1,3 @@
-
 """Embedding weight initialization routines."""
 
 import functools

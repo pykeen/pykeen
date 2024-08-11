@@ -1,4 +1,3 @@
-
 """Test cases for training."""
 
 import tempfile

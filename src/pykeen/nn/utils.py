@@ -1,4 +1,3 @@
-
 """Utilities for neural network components."""
 
 from __future__ import annotations

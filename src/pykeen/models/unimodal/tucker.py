@@ -1,4 +1,3 @@
-
 """Implementation of TuckEr."""
 
 from collections.abc import Mapping

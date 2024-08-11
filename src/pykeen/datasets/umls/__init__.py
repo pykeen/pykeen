@@ -1,4 +1,3 @@
-
 """Get triples from the UMLS dataset."""
 
 import pathlib

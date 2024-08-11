@@ -1,4 +1,3 @@
-
 """Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
 import logging

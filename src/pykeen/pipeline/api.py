@@ -1,4 +1,3 @@
-
 """The easiest way to train and evaluate a model is with the :func:`pykeen.pipeline.pipeline` function.
 
 It provides a high-level entry point into the extensible functionality of

@@ -1,4 +1,3 @@
-
 """Utility classes for constructing inductive datasets."""
 
 from __future__ import annotations

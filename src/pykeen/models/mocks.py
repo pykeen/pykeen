@@ -1,4 +1,3 @@
-
 """Mock models that return fixed scores.
 
 These are useful for baselines.

@@ -1,4 +1,3 @@
-
 """The Wk3l-15k dataset family.
 
 Get a summary with ``python -m pykeen.datasets.wk3l``

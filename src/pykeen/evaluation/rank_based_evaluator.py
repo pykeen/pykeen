@@ -1,4 +1,3 @@
-
 """Implementation of ranked based evaluator."""
 
 from __future__ import annotations

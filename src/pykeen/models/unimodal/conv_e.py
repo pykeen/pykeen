@@ -1,4 +1,3 @@
-
 """Implementation of ConvE."""
 
 import logging

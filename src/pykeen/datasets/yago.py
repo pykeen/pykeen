@@ -1,4 +1,3 @@
-
 """YAGO3 datasets."""
 
 import pathlib

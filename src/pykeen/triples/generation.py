@@ -1,4 +1,3 @@
-
 """Utilities for generating triples."""
 
 import torch

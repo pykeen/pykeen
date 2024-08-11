@@ -1,4 +1,3 @@
-
 """Version information for PyKEEN."""
 
 import os

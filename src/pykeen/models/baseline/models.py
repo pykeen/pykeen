@@ -1,4 +1,3 @@
-
 """Non-parametric baseline models."""
 
 from typing import Optional

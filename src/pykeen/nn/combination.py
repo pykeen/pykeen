@@ -1,4 +1,3 @@
-
 """Implementation of combinations for the :class:`pykeen.models.LiteralModel`."""
 
 import logging

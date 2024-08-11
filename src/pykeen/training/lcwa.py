@@ -1,4 +1,3 @@
-
 """Training KGE models based on the LCWA."""
 
 import logging

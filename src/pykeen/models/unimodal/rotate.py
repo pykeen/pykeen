@@ -1,4 +1,3 @@
-
 """Implementation of the RotatE model."""
 
 from collections.abc import Mapping

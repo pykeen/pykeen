@@ -1,4 +1,3 @@
-
 """Utilities for PyKEEN."""
 
 import ftplib

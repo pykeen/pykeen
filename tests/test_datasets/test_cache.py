@@ -1,4 +1,3 @@
-
 """Test caching."""
 
 import pathlib

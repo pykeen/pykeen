@@ -1,4 +1,3 @@
-
 r"""Consider the following properties of relation $r$. Because the corruption operations (see `Corruption`_)
 are applied independently of triples, the resulting candidate corrupt triples could overlap with known positive
 triples in $\mathcal{K}$.

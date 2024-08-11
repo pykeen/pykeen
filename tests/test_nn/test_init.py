@@ -1,4 +1,3 @@
-
 """Tests for initializers."""
 
 from typing import ClassVar

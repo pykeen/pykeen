@@ -1,4 +1,3 @@
-
 """Implementation of SimplE."""
 
 from collections.abc import Mapping

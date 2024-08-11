@@ -1,4 +1,3 @@
-
 """Test that models can be executed."""
 
 import importlib

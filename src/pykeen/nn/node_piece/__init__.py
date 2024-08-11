@@ -1,4 +1,3 @@
-
 """
 NodePiece modules.
 

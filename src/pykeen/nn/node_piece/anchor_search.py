@@ -1,4 +1,3 @@
-
 """Anchor search for NodePiece."""
 
 import logging

@@ -1,4 +1,3 @@
-
 """Tests for message passing blocks."""
 
 import unittest_templates

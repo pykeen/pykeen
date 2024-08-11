@@ -1,4 +1,3 @@
-
 """A script for splitting triples into a dataset."""
 
 import json

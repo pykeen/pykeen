@@ -1,4 +1,3 @@
-
 """Learning Rate Schedulers available in PyKEEN."""
 
 from collections.abc import Mapping

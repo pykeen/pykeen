@@ -1,4 +1,3 @@
-
 """The Global Biotic Interactions (GloBI) dataset.
 
 Get a summary with ``python -m pykeen.datasets.globi``

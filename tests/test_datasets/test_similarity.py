@@ -1,4 +1,3 @@
-
 """Tests for remixing and other triples reorganization."""
 
 import unittest

@@ -1,4 +1,3 @@
-
 """Inverse Stability Workflow.
 
 This experiment investigates the differences between

@@ -1,4 +1,3 @@
-
 """Implementation of DistMA."""
 
 from collections.abc import Mapping

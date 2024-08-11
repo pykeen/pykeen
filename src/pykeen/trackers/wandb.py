@@ -1,4 +1,3 @@
-
 """An adapter for Weights and Biases."""
 
 import os

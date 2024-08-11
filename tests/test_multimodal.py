@@ -1,4 +1,3 @@
-
 """Tests for literal models."""
 
 import tempfile

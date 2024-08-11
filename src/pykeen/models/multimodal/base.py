@@ -1,4 +1,3 @@
-
 """Base classes for multi-modal models."""
 
 from typing import ClassVar

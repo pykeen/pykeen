@@ -1,4 +1,3 @@
-
 """Evaluation loops for KGE models."""
 
 import dataclasses

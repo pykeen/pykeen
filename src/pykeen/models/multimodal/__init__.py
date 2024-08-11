@@ -1,4 +1,3 @@
-
 """Multimodal KGE Models.
 
 .. [kristiadi2018] Kristiadi, A.., *et al.* (2018) `Incorporating literals into knowledge graph embeddings.

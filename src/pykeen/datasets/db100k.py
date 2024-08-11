@@ -1,4 +1,3 @@
-
 """The DB100K dataset."""
 
 from docdata import parse_docdata

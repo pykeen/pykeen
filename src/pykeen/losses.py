@@ -1,4 +1,3 @@
-
 r"""Loss functions integrated in PyKEEN.
 
 Rather than re-using the built-in loss functions in PyTorch, we have elected to re-implement

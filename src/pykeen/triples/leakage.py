@@ -1,4 +1,3 @@
-
 """Tools for removing the leakage from datasets.
 
 Leakage is when the inverse of a given training triple appears in either

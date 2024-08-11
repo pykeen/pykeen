@@ -1,4 +1,3 @@
-
 """Test that regularizers can be executed."""
 
 import unittest

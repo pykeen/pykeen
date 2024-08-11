@@ -1,4 +1,3 @@
-
 """Plotting utilities for the pipeline results."""
 
 import logging

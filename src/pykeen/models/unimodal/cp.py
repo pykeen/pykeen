@@ -1,4 +1,3 @@
-
 """Implementation of CP model."""
 
 from collections.abc import Mapping

@@ -1,4 +1,3 @@
-
 """Evaluation."""
 
 from class_resolver import ClassResolver

@@ -1,4 +1,3 @@
-
 r"""
 A module to handle triples.
 

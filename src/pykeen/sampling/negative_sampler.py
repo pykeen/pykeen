@@ -1,4 +1,3 @@
-
 """Basic structure for a negative sampler."""
 
 from abc import abstractmethod

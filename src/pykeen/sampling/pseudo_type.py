@@ -1,4 +1,3 @@
-
 """Pseudo-Typed negative sampling."""
 
 import itertools

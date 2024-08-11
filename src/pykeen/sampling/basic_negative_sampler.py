@@ -1,4 +1,3 @@
-
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
 import math

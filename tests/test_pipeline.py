@@ -1,4 +1,3 @@
-
 """Test the PyKEEN pipeline function."""
 
 import itertools

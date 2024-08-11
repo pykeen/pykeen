@@ -1,4 +1,3 @@
-
 """Implementation of the HolE model."""
 
 from collections.abc import Mapping

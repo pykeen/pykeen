@@ -1,4 +1,3 @@
-
 """Implementation of RESCAL."""
 
 from collections.abc import Mapping

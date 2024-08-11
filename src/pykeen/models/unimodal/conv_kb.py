@@ -1,4 +1,3 @@
-
 """Implementation of the ConvKB model."""
 
 import logging

@@ -1,4 +1,3 @@
-
 """The OpenBioLink dataset.
 
 Get a summary with ``python -m pykeen.datasets.openbiolink``

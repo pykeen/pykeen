@@ -1,4 +1,3 @@
-
 """Utilities for PyKEEN testing."""
 
 import importlib

@@ -1,4 +1,3 @@
-
 """Implementation of KG2E."""
 
 from collections.abc import Mapping

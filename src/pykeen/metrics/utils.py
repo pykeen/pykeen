@@ -1,4 +1,3 @@
-
 """Utilities for metrics."""
 
 from collections.abc import Collection

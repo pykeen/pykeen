@@ -1,4 +1,3 @@
-
 """Utility class for storing ranks."""
 
 from collections.abc import Iterable, Mapping

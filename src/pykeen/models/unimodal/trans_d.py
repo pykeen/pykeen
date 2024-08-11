@@ -1,4 +1,3 @@
-
 """Implementation of TransD."""
 
 from collections.abc import Mapping

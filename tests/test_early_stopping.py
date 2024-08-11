@@ -1,4 +1,3 @@
-
 """Tests of early stopping."""
 
 import unittest

@@ -1,4 +1,3 @@
-
 """Unit tests for triples factories."""
 
 import itertools as itt

@@ -1,4 +1,3 @@
-
 """A :class:`pykeen.models.ERModel` can be constructed from :class:`pykeen.nn.modules.Interaction`.
 
 The new style-class, :class:`pykeen.models.ERModel` abstracts the interaction away from the representations

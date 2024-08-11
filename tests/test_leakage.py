@@ -1,4 +1,3 @@
-
 """Tests for leakage analysis."""
 
 import itertools as itt

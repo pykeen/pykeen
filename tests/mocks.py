@@ -1,4 +1,3 @@
-
 """Mocks for tests."""
 
 from collections.abc import Iterable

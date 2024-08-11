@@ -1,4 +1,3 @@
-
 """Basic stoppers."""
 
 import logging
