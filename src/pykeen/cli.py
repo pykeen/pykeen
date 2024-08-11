@@ -52,7 +52,7 @@ from .sampling import negative_sampler_resolver
 from .stoppers import stopper_resolver
 from .trackers import tracker_resolver
 from .training import training_loop_resolver
-from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
+from .triples.utils import EXTENSION_IMPORTER_RESOLVER, PREFIX_IMPORTER_RESOLVER
 from .utils import get_until_first_blank, getattr_or_docdata
 from .version import env_table
 
@@ -220,9 +220,9 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] =
 @ls.command()
 def importers():
     """List triple importers."""
-    for prefix, f in sorted(PREFIX_IMPORTERS.items()):
+    for prefix, f in sorted(PREFIX_IMPORTER_RESOLVER.lookup_dict.items()):
         click.secho(f"prefix: {prefix} from {inspect.getmodule(f).__name__}")
-    for suffix, f in sorted(EXTENSION_IMPORTERS.items()):
+    for suffix, f in sorted(EXTENSION_IMPORTER_RESOLVER.lookup_dict.items()):
         click.secho(f"suffix: {suffix} from {inspect.getmodule(f).__name__}")
 
 
