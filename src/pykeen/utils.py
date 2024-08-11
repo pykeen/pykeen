@@ -487,8 +487,10 @@ def invert_mapping(mapping: Mapping[K, V]) -> Mapping[V, K]:
 
 def random_non_negative_int() -> int:
     """Generate a random positive integer."""
-    sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
-    return int(sq.generate_state(1)[0])
+    rng = np.random.default_rng()
+    dtype = np.int32
+    max_value = np.iinfo(dtype).max
+    return int(rng.integers(max_value, dtype=dtype))
 
 
 def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
