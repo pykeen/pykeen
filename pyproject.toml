@@ -59,7 +59,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = [
     "dataclasses-json",
-    "numpy",
+    "numpy<2.0.0",
     "scipy>=1.7.0",
     "click",
     "click_default_group",
@@ -86,28 +86,34 @@ dependencies = [
 templating = [
     "jinja2",
 ]
-
 plotting = [
     "matplotlib",
     "seaborn",
 ]
 wordcloud = [
     "wordcloud",
-    "IPython", ]
+    "IPython",
+]
 opt_einsum = [
-    "opt_einsum", ]
+    "opt_einsum",
+]
 mlflow = [
-    "mlflow>=1.8.0", ]
+    "mlflow>=1.8.0",
+]
 ogb = [
-    "ogb>=1.3.4", ]
+    "ogb>=1.3.4",
+]
 wandb = [
     "wandb", ]
 neptune = [
-    "neptune-client", ]
+    "neptune-client",
+]
 tensorboard = [
-    "tensorboard", ]
+    "tensorboard",
+]
 transformers = [
-    "transformers", ]
+    "transformers",
+]
 lightning = [
     # cf. https://github.com/Lightning-AI/lightning/pull/14117
     "pytorch_lightning>=1.7.2",
