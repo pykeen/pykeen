@@ -3,7 +3,7 @@
 """Instance creation utilities."""
 
 import pathlib
-from typing import Callable, List, Optional, Sequence, Set, TextIO, Tuple, TypeAlias, Union
+from typing import Callable, List, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
@@ -22,7 +22,7 @@ __all__ = [
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
 
-Importer: TypeAlias = Callable[[str], LabeledTriples]
+Importer = Callable[[str], LabeledTriples]
 
 #: Functions for specifying exotic resources with a given prefix
 PREFIX_IMPORTER_RESOLVER: FunctionResolver[Importer] = FunctionResolver.from_entrypoint(
