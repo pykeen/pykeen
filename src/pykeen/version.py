@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Version information for PyKEEN."""
 
@@ -6,7 +5,7 @@ import os
 import sys
 from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
-from typing import Optional, Tuple
+from typing import Optional
 
 __all__ = [
     "VERSION",
@@ -70,7 +69,7 @@ def get_version(with_git_hash: bool = False) -> str:
     return f"{VERSION}-{get_git_hash(terse=True)}" if with_git_hash else VERSION
 
 
-def env_table(tablefmt: str = "github", headers: Tuple[str, str] = ("Key", "Value")) -> str:
+def env_table(tablefmt: str = "github", headers: tuple[str, str] = ("Key", "Value")) -> str:
     """Generate a table describing the environment in which PyKEEN is being run."""
     import platform
     import time

@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 
 """Utility class for storing ranks."""
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Iterable, Mapping, Tuple, Union
+from typing import Union
 
 import torch
 
@@ -39,7 +39,7 @@ class Ranks:
     #: shape: (batch_size,)
     number_of_options: torch.LongTensor
 
-    def items(self) -> Iterable[Tuple[RankType, torch.FloatTensor]]:
+    def items(self) -> Iterable[tuple[RankType, torch.FloatTensor]]:
         """Iterate over pairs of rank types and their associated tensors."""
         yield from self.to_type_dict().items()
 

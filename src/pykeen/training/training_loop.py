@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Training loops for KGE models using multi-modal information."""
 
@@ -11,11 +10,12 @@ import pickle
 import random
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
+from typing import IO, Any, ClassVar, Generic, Optional, TypeVar, Union
 
 import numpy as np
 import torch
@@ -132,7 +132,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     model: Model
     optimizer: Optimizer
 
-    losses_per_epochs: List[float]
+    losses_per_epochs: list[float]
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -243,7 +243,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
         pin_memory: bool = True,
-    ) -> Optional[List[float]]:
+    ) -> Optional[list[float]]:
         """Train the KGE model.
 
         .. note ::
@@ -378,7 +378,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         # If the stopper loaded from the training loop checkpoint stopped the training, we return those results
         if getattr(stopper, "stopped", False):
-            result: Optional[List[float]] = self.losses_per_epochs
+            result: Optional[list[float]] = self.losses_per_epochs
         else:
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
@@ -553,7 +553,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
         pin_memory: bool = True,
-    ) -> Optional[List[float]]:
+    ) -> Optional[list[float]]:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         if self.optimizer is None:
             raise ValueError("optimizer must be set before running _train()")
@@ -692,7 +692,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
 
         # optimizer callbacks
-        pre_step_callbacks: List[TrainingCallback] = []
+        pre_step_callbacks: list[TrainingCallback] = []
         if gradient_clipping_max_norm is not None:
             pre_step_callbacks.append(
                 GradientNormClippingTrainingCallback(
@@ -915,7 +915,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         *,
         triples_factory: CoreTriplesFactory,
         batch_size: Optional[int] = None,
-    ) -> Tuple[int, bool]:
+    ) -> tuple[int, bool]:
         """Find the maximum batch size for training with the current setting.
 
         This method checks how big the batch size can be for the current model with the given training data and the
@@ -988,7 +988,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size: int,
         sampler: Optional[str],
         triples_factory: CoreTriplesFactory,
-    ) -> Tuple[int, Optional[int]]:
+    ) -> tuple[int, Optional[int]]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
         sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(
             batch_size=batch_size,
@@ -1045,7 +1045,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size: int,
         sampler: Optional[str],
         triples_factory: CoreTriplesFactory,
-    ) -> Tuple[int, bool, bool]:
+    ) -> tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
 
         This method checks if it is possible to train the model with the given training data and the desired batch size
@@ -1217,7 +1217,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         path: Union[str, pathlib.Path],
         triples_factory: Optional[CoreTriplesFactory] = None,
-    ) -> Tuple[Optional[pathlib.Path], Optional[int]]:
+    ) -> tuple[Optional[pathlib.Path], Optional[int]]:
         """Load the state of the training loop from a checkpoint.
 
         :param path:

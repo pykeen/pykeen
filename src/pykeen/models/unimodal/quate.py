@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of the QuatE model."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 import torch
 from torch.nn import functional
@@ -73,7 +73,7 @@ class QuatE(ERModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
+    loss_default: ClassVar[type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
     #: The LP settings used by [zhang2019]_ for QuatE.

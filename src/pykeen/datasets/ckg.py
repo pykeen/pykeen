@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 
 """Clinical Knowledge Graph."""
 
 import pathlib
 import tarfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 from urllib.request import urlretrieve
 
 import click

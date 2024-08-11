@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """The `ConceptNet <https://conceptnet.io/>`_ dataset.
 

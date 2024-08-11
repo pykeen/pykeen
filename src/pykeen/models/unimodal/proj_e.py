@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of ProjE."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from torch import nn
 
@@ -54,7 +54,7 @@ class ProjE(ERModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
+    loss_default: ClassVar[type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs = dict(reduction="mean")
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 r"""Consider the following properties of relation $r$. Because the corruption operations (see `Corruption`_)
 are applied independently of triples, the resulting candidate corrupt triples could overlap with known positive
@@ -125,7 +124,7 @@ as solid evaluation results as possible.
 
 import math
 from abc import abstractmethod
-from typing import Iterable
+from collections.abc import Iterable
 
 import torch
 from class_resolver import ClassResolver

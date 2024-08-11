@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of early stopping."""
 
@@ -6,8 +5,9 @@ import dataclasses
 import logging
 import math
 import pathlib
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Mapping, Optional, Union
+from typing import Any, Callable, Optional, Union
 from uuid import uuid4
 
 import torch
@@ -155,17 +155,17 @@ class EarlyStopper(Stopper):
     #: The minimum relative improvement necessary to consider it an improved result
     relative_delta: float = 0.01
     #: The metric results from all evaluations
-    results: List[float] = dataclasses.field(default_factory=list, repr=False)
+    results: list[float] = dataclasses.field(default_factory=list, repr=False)
     #: Whether a larger value is better, or a smaller
     larger_is_better: bool = True
     #: The result tracker
     result_tracker: Optional[ResultTracker] = None
     #: Callbacks when after results are calculated
-    result_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
+    result_callbacks: list[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Callbacks when training gets continued
-    continue_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
+    continue_callbacks: list[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Callbacks when training is stopped early
-    stopped_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
+    stopped_callbacks: list[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Did the stopper ever decide to stop?
     stopped: bool = False
     #: The path to the weights of the best model
@@ -176,7 +176,7 @@ class EarlyStopper(Stopper):
     #: Whether to use a tqdm progress bar for evaluation
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
-    tqdm_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
+    tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -306,7 +306,7 @@ class EarlyStopper(Stopper):
         relative_delta: float,
         metric: str,
         larger_is_better: bool,
-        results: List[float],
+        results: list[float],
         stopped: bool,
         best_epoch: int,
         best_metric: float,

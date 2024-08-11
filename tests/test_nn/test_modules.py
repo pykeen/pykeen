@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 
 """Tests for interaction functions."""
 
 import logging
 import unittest
-from typing import Any, MutableMapping, Sequence, Tuple, Union
+from collections.abc import MutableMapping, Sequence
+from typing import Any, Union
 from unittest import SkipTest
 
 import numpy
@@ -166,7 +166,7 @@ class HolETests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.HolEInteraction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, t = [torch.fft.rfft(x.view(1, -1), dim=-1) for x in (h, t)]
+        h, t = (torch.fft.rfft(x.view(1, -1), dim=-1) for x in (h, t))
         h = torch.conj(h)
         c = torch.fft.irfft(h * t, n=h.shape[-1], dim=-1)
         return (c * r).sum()
@@ -274,7 +274,7 @@ class TuckerTests(cases.InteractionTestCase):
         a = do_r((core_tensor * r[None, :, None]).sum(dim=1, keepdims=True))  # shape: (embedding_dim, 1, embedding_dim)
         b = do_h(bn_h(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
         c = (b[:, None, None] * a).sum(dim=0, keepdims=True)  # shape: (1, 1, embedding_dim)
-        d = do_hr(bn_hr((c.view(1, -1)))).view(1, 1, -1)  # shape: (1, 1, 1, embedding_dim)
+        d = do_hr(bn_hr(c.view(1, -1))).view(1, 1, -1)  # shape: (1, 1, 1, embedding_dim)
         return (d * t[None, None, :]).sum()
 
 
@@ -358,7 +358,7 @@ class TransHTests(cases.TranslationalInteractionTests):
 
     def _exp_score(self, h, w_r, d_r, t, p, power_norm) -> torch.FloatTensor:  # noqa: D102
         assert not power_norm
-        h, t = [x - (x * w_r).sum() * w_r for x in (h, t)]
+        h, t = (x - (x * w_r).sum() * w_r for x in (h, t))
         return -(h + d_r - t).norm(p=p)
 
 
@@ -383,7 +383,7 @@ class TransRTests(cases.TranslationalInteractionTests):
 
     def _exp_score(self, h, r, m_r, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm
-        h_bot, t_bot = [clamp_norm(x.unsqueeze(dim=0) @ m_r, p=2, dim=-1, maxnorm=1.0) for x in (h, t)]
+        h_bot, t_bot = (clamp_norm(x.unsqueeze(dim=0) @ m_r, p=2, dim=-1, maxnorm=1.0) for x in (h, t))
         return -((h_bot + r - t_bot) ** p).sum()
 
 
@@ -607,7 +607,7 @@ class ParallelSliceBatchesTest(unittest.TestCase):
 
     def _generate(
         self,
-        shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+        shape: Union[tuple[int, ...], Sequence[tuple[int, ...]]],
     ) -> Representation:
         """Generate dummy representations for the given shape(s)."""
         if not shape:
@@ -620,14 +620,14 @@ class ParallelSliceBatchesTest(unittest.TestCase):
 
     def _test(
         self,
-        h_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
-        r_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
-        t_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+        h_shape: Union[tuple[int, ...], Sequence[tuple[int, ...]]],
+        r_shape: Union[tuple[int, ...], Sequence[tuple[int, ...]]],
+        t_shape: Union[tuple[int, ...], Sequence[tuple[int, ...]]],
         dim: int,
         split_size: int,
     ):
         """Test slicing for given representation shapes."""
-        h, r, t = [self._generate(s) for s in (h_shape, r_shape, t_shape)]
+        h, r, t = (self._generate(s) for s in (h_shape, r_shape, t_shape))
         for batch in pykeen.nn.modules.parallel_slice_batches(h, r, t, split_size=split_size, dim=dim):
             assert len(batch) == 3
             for old, new in zip((h, r, t), batch):
@@ -681,7 +681,7 @@ class AutoSFTests(cases.InteractionTestCase):
         h: Sequence[torch.FloatTensor],
         r: Sequence[torch.FloatTensor],
         t: Sequence[torch.FloatTensor],
-        coefficients: Sequence[Tuple[int, int, int, Sign]],
+        coefficients: Sequence[tuple[int, int, int, Sign]],
     ) -> torch.FloatTensor:  # noqa: D102
         h, r, t = ensure_tuple(h, r, t)
         return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)

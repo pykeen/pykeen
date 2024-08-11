@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 
 """Representation modules for NodePiece."""
 
 import logging
 import pathlib
-from typing import Callable, Iterable, List, NamedTuple, Optional, Union
+from collections.abc import Iterable
+from typing import Callable, NamedTuple, Optional, Union
 
 import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -210,7 +210,7 @@ class HashDiversityInfo(NamedTuple):
 
     #: A list with ratios per representation in their creation order,
     #: e.g., ``[0.58, 0.82]`` for :class:`AnchorTokenization` and :class:`RelationTokenization`
-    uniques_per_representation: List[float]
+    uniques_per_representation: list[float]
 
     #: A scalar ratio of unique rows when combining all representations into one matrix, e.g. 0.95
     uniques_total: float

@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of combinations for the :class:`pykeen.models.LiteralModel`."""
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, Tuple
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any, Callable, Optional
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
@@ -42,7 +42,7 @@ class Combination(nn.Module, ExtraReprMixin, ABC):
         """
         raise NotImplementedError
 
-    def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:
+    def output_shape(self, input_shapes: Sequence[tuple[int, ...]]) -> tuple[int, ...]:
         """
         Calculate the output shape for the given input shapes.
 
@@ -207,7 +207,7 @@ class ComplexSeparatedCombination(Combination):
         return combine_complex(x_re=x_re, x_im=x_im)
 
     # docstr-coverage: inherited
-    def output_shape(self, input_shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:  # noqa: D102
+    def output_shape(self, input_shapes: Sequence[tuple[int, ...]]) -> tuple[int, ...]:  # noqa: D102
         # symbolic output to avoid dtype issue
         # we only need to consider real part here
         return self.real_combination.output_shape(input_shapes=input_shapes)

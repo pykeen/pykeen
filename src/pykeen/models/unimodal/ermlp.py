@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of ERMLP."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from torch.nn.init import uniform_
 

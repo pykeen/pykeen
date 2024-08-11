@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Run landmark experiments."""
 
@@ -8,7 +7,8 @@ import pathlib
 import shutil
 import sys
 import time
-from typing import Iterable, Optional, Union
+from collections.abc import Iterable
+from typing import Optional, Union
 from uuid import uuid4
 
 import click

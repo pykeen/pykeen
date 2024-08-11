@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """PyKEEN is a Python package for reproducible, facile knowledge graph embeddings.
 

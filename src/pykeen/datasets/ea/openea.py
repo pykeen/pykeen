@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """The OpenEA dataset family.
 
@@ -8,7 +7,7 @@ Get a summary with ``python -m pykeen.datasets.openea``
 import itertools
 import logging
 import pathlib
-from typing import Literal, Tuple
+from typing import Literal
 
 import click
 import pandas
@@ -35,7 +34,7 @@ D_W: GraphPair = "D_W"
 D_Y: GraphPair = "D_Y"
 EN_DE: GraphPair = "EN_DE"
 EN_FR: GraphPair = "EN_FR"
-GRAPH_PAIRS: Tuple[GraphPair, ...] = (D_W, D_Y, EN_DE, EN_FR)
+GRAPH_PAIRS: tuple[GraphPair, ...] = (D_W, D_Y, EN_DE, EN_FR)
 
 # graph sizes
 GraphSize = Literal["15K", "100K"]

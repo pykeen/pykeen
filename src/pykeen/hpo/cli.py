@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """A command line interface for hyper-parameter optimization in PyKEEN."""
 

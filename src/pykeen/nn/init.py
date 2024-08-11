@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 
 """Embedding weight initialization routines."""
 
 import functools
 import logging
 import math
-from typing import Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any, Optional
 
 import numpy as np
 import torch

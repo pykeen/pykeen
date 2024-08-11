@@ -1,6 +1,7 @@
 """Filtered models."""
 
-from typing import Any, ClassVar, List, Mapping, Optional, Union
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional, Union
 
 import scipy.sparse
 import torch
@@ -44,7 +45,7 @@ class CooccurrenceFilteredModel(Model):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        additional_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        additional_triples: Union[None, MappedTriples, list[MappedTriples]] = None,
         apply_in_training: bool = False,
         base: HintOrType[Model] = "rotate",
         training_fill_value: float = -1.0e03,
@@ -128,17 +129,17 @@ class CooccurrenceFilteredModel(Model):
             return scores
         fill_value = self.training_fill_value if in_training else self.inference_fill_value
         # get masks, shape: (batch_size, num_entities/num_relations)
-        first_mask, second_mask = [
+        first_mask, second_mask = (
             index[batch_indices.cpu().numpy()]
             for batch_indices, (_target, index) in zip(
                 batch.t(), sorted(self.indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]])
             )
-        ]
+        )
         # combine masks
         # note: * is an elementwise and, and + and elementwise or
         mask = (first_mask * second_mask) if self.conjunctive else (first_mask + second_mask)
         # get non-zero entries
-        rows, cols = [torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero()]
+        rows, cols = (torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero())
         # set scores for fill value for every non-occuring entry
         new_scores = scores.new_full(size=scores.shape, fill_value=fill_value)
         new_scores[rows, cols] = scores[rows, cols]

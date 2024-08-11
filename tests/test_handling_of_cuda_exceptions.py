@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Test that CUDA exceptions are processed properly."""
 

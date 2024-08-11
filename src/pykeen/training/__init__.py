@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 r"""Training loops for KGE models using multi-modal information.
 

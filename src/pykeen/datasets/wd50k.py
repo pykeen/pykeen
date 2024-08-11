@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """The Wikidata-based WD50K dataset (triple-only version) from [galkin2020]_.
 

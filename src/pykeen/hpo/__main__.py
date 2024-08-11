@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Entrypoint module, in case you use ``python -m pykeen.hpo``.
 

@@ -1,6 +1,6 @@
 """Tests for combination modules."""
 
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
 import torch
 import unittest_templates
@@ -34,7 +34,7 @@ class ComplexSeparatedCombinationTest(cases.CombinationTestCase):
 
     cls = pykeen.nn.combination.ComplexSeparatedCombination
 
-    def _create_input(self, input_shapes: Sequence[Tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
+    def _create_input(self, input_shapes: Sequence[tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
         # requires at least one complex tensor as input
         first_shape, *input_shapes = input_shapes
         return torch.empty(size=first_shape, dtype=torch.cfloat), *super()._create_input(input_shapes=input_shapes)

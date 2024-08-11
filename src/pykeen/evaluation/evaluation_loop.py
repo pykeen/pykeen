@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Evaluation loops for KGE models."""
 
@@ -6,7 +5,8 @@ import dataclasses
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Collection, DefaultDict, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
+from collections.abc import Collection, Iterable, Mapping
+from typing import Any, Generic, Optional, TypeVar, Union, cast
 
 import numpy
 import pandas
@@ -269,7 +269,7 @@ class FilterIndex:
         return self.indices[low:high]
 
 
-class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]]):
+class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, Optional[torch.Tensor]]]]):
     """A dataset for link prediction evaluation."""
 
     filter_indices: Optional[Mapping[Target, FilterIndex]]
@@ -335,7 +335,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
     def __len__(self) -> int:  # noqa: D105
         return self.num_triples * self.num_targets
 
-    def __getitem__(self, index: int) -> Tuple[Target, MappedTriples, Optional[torch.LongTensor]]:  # noqa: D105
+    def __getitem__(self, index: int) -> tuple[Target, MappedTriples, Optional[torch.LongTensor]]:  # noqa: D105
         # sorted by target -> most of the batches only have a single target
         target_id, index = divmod(index, self.num_triples)
         target = self.targets[target_id]
@@ -345,12 +345,12 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, Tuple[MappedTriples, Optiona
 
     @staticmethod
     def collate(
-        batch: Iterable[Tuple[Target, MappedTriples, Optional[torch.LongTensor]]],
-    ) -> Mapping[Target, Tuple[MappedTriples, Optional[torch.Tensor]]]:
+        batch: Iterable[tuple[Target, MappedTriples, Optional[torch.LongTensor]]],
+    ) -> Mapping[Target, tuple[MappedTriples, Optional[torch.Tensor]]]:
         """Collate batches by grouping by target."""
         # group by target
-        triples: DefaultDict[Target, List[torch.LongTensor]] = defaultdict(list)
-        nnz: DefaultDict[Target, List[torch.LongTensor]] = defaultdict(list)
+        triples: defaultdict[Target, list[torch.LongTensor]] = defaultdict(list)
+        nnz: defaultdict[Target, list[torch.LongTensor]] = defaultdict(list)
         for target, triple, opt_nnz in batch:
             triples[target].append(triple)
             if opt_nnz is not None:

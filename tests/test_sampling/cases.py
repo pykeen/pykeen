@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Test cases for sampling."""
 
-from typing import Any, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any
 
 import numpy
 import torch

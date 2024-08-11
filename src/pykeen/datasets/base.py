@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Utility classes for constructing datasets."""
 
@@ -9,8 +8,9 @@ import pathlib
 import tarfile
 import zipfile
 from abc import abstractmethod
+from collections.abc import Iterable, Mapping, Sequence
 from io import BytesIO
-from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Any, ClassVar, cast
 
 import click
 import docdata
@@ -51,7 +51,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def dataset_similarity(a: Dataset, b: Dataset, metric: Optional[str] = None) -> float:
+def dataset_similarity(a: Dataset, b: Dataset, metric: str | None = None) -> float:
     """Calculate the similarity between two datasets.
 
     :param a: The reference dataset
@@ -77,12 +77,12 @@ class Dataset(ExtraReprMixin):
     #: A factory wrapping the testing triples, that share indices with the training triples
     testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the training triples
-    validation: Optional[CoreTriplesFactory]
+    validation: CoreTriplesFactory | None
     #: the dataset's name
-    metadata: Optional[Mapping[str, Any]] = None
+    metadata: Mapping[str, Any] | None = None
 
     metadata_file_name: ClassVar[str] = "metadata.pth"
-    triples_factory_cls: ClassVar[Type[CoreTriplesFactory]] = TriplesFactory
+    triples_factory_cls: ClassVar[type[CoreTriplesFactory]] = TriplesFactory
 
     def __eq__(self, __o: object) -> bool:  # noqa: D105
         return (
@@ -142,12 +142,12 @@ class Dataset(ExtraReprMixin):
         return rv
 
     @staticmethod
-    def triples_sort_key(cls: Type[Dataset]) -> int:
+    def triples_sort_key(cls: type[Dataset]) -> int:
         """Get the number of triples for sorting."""
         return cls.docdata("statistics", "triples")
 
     @classmethod
-    def triples_pair_sort_key(cls, pair: Tuple[str, Type[Dataset]]) -> int:
+    def triples_pair_sort_key(cls, pair: tuple[str, type[Dataset]]) -> int:
         """Get the number of triples for sorting in an iterator context."""
         return cls.triples_sort_key(pair[1])
 
@@ -159,7 +159,7 @@ class Dataset(ExtraReprMixin):
             )
         ]
 
-    def summary_str(self, title: Optional[str] = None, show_examples: Optional[int] = 5, end="\n") -> str:
+    def summary_str(self, title: str | None = None, show_examples: int | None = 5, end="\n") -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
@@ -176,7 +176,7 @@ class Dataset(ExtraReprMixin):
             rv += "\n" + examples
         return rv + end
 
-    def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
+    def summarize(self, title: str | None = None, show_examples: int | None = 5, file=None) -> None:
         """Print a summary of the dataset."""
         print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
 
@@ -187,13 +187,13 @@ class Dataset(ExtraReprMixin):
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
     @classmethod
-    def from_path(cls, path: Union[str, pathlib.Path], ratios: Optional[List[float]] = None) -> "Dataset":
+    def from_path(cls, path: str | pathlib.Path, ratios: list[float] | None = None) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
 
     @classmethod
-    def from_directory_binary(cls, path: Union[str, pathlib.Path]) -> "Dataset":
+    def from_directory_binary(cls, path: str | pathlib.Path) -> Dataset:
         """Load a dataset from a directory."""
         path = pathlib.Path(path)
 
@@ -212,7 +212,7 @@ class Dataset(ExtraReprMixin):
         metadata = torch.load(metadata_path) if metadata_path.is_file() else None
         return EagerDataset(**tfs, metadata=metadata)
 
-    def to_directory_binary(self, path: Union[str, pathlib.Path]) -> None:
+    def to_directory_binary(self, path: str | pathlib.Path) -> None:
         """Store a dataset to a path in binary format."""
         path = pathlib.Path(path)
         for key, factory in self.factory_dict.items():
@@ -224,10 +224,10 @@ class Dataset(ExtraReprMixin):
         torch.save(metadata, path.joinpath(self.metadata_file_name))
 
     @staticmethod
-    def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> "Dataset":
+    def from_tf(tf: TriplesFactory, ratios: list[float] | None = None) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = cast(
-            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
             tf.split(ratios or [0.8, 0.1, 0.1]),
         )
         return EagerDataset(training=training, testing=testing, validation=validation)
@@ -259,7 +259,7 @@ class Dataset(ExtraReprMixin):
             ),
         )
 
-    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
+    def deteriorate(self, n: int | float, random_state: TorchRandomHint = None) -> Dataset:
         """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
         return EagerDataset(
             *deteriorate(
@@ -269,7 +269,7 @@ class Dataset(ExtraReprMixin):
             )
         )
 
-    def similarity(self, other: Dataset, metric: Optional[str] = None) -> float:
+    def similarity(self, other: Dataset, metric: str | None = None) -> float:
         """Compute the similarity between two shuffles of the same dataset.
 
         :param other: The other shuffling of the dataset
@@ -293,9 +293,9 @@ class EagerDataset(Dataset):
         self,
         training: CoreTriplesFactory,
         testing: CoreTriplesFactory,
-        validation: Optional[CoreTriplesFactory] = None,
+        validation: CoreTriplesFactory | None = None,
         *,
-        metadata: Optional[Mapping[str, Any]] = None,
+        metadata: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the eager dataset.
 
@@ -319,11 +319,11 @@ class LazyDataset(Dataset):
     """A dataset whose training, testing, and optional validation factories are lazily loaded."""
 
     #: The actual instance of the training factory, which is exposed to the user through `training`
-    _training: Optional[TriplesFactory] = None
+    _training: TriplesFactory | None = None
     #: The actual instance of the testing factory, which is exposed to the user through `testing`
-    _testing: Optional[TriplesFactory] = None
+    _testing: TriplesFactory | None = None
     #: The actual instance of the validation factory, which is exposed to the user through `validation`
-    _validation: Optional[TriplesFactory] = None
+    _validation: TriplesFactory | None = None
     #: The directory in which the cached data is stored
     cache_root: pathlib.Path
 
@@ -344,7 +344,7 @@ class LazyDataset(Dataset):
         return self._testing
 
     @property
-    def validation(self) -> Optional[TriplesFactory]:  # type:ignore # noqa: D401
+    def validation(self) -> TriplesFactory | None:  # type:ignore # noqa: D401
         """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
@@ -366,7 +366,7 @@ class LazyDataset(Dataset):
     def _load_validation(self) -> None:
         raise NotImplementedError
 
-    def _help_cache(self, cache_root: Union[None, str, pathlib.Path]) -> pathlib.Path:
+    def _help_cache(self, cache_root: None | str | pathlib.Path) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
         :param cache_root: If none is passed, defaults to a subfolder of the
@@ -390,12 +390,12 @@ class PathDataset(LazyDataset):
 
     def __init__(
         self,
-        training_path: Union[str, pathlib.Path],
-        testing_path: Union[str, pathlib.Path],
-        validation_path: Union[None, str, pathlib.Path],
+        training_path: str | pathlib.Path,
+        testing_path: str | pathlib.Path,
+        validation_path: None | str | pathlib.Path,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        load_triples_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -464,12 +464,12 @@ class UnpackedRemoteDataset(PathDataset):
         training_url: str,
         testing_url: str,
         validation_url: str,
-        cache_root: Optional[str] = None,
+        cache_root: str | None = None,
         force: bool = False,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
-        download_kwargs: Optional[Mapping[str, Any]] = None,
+        load_triples_kwargs: Mapping[str, Any] | None = None,
+        download_kwargs: Mapping[str, Any] | None = None,
     ):
         """Initialize dataset.
 
@@ -523,10 +523,10 @@ class RemoteDataset(PathDataset):
     def __init__(
         self,
         url: str,
-        relative_training_path: Union[str, pathlib.PurePath],
-        relative_testing_path: Union[str, pathlib.PurePath],
-        relative_validation_path: Union[str, pathlib.PurePath],
-        cache_root: Optional[str] = None,
+        relative_training_path: str | pathlib.PurePath,
+        relative_testing_path: str | pathlib.PurePath,
+        relative_validation_path: str | pathlib.PurePath,
+        cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
         timeout=None,
@@ -562,7 +562,7 @@ class RemoteDataset(PathDataset):
             create_inverse_triples=create_inverse_triples,
         )
 
-    def _get_paths(self) -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
+    def _get_paths(self) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
         """Get the paths where the extracted files can be found."""
         return (
             self.cache_root.joinpath(self._relative_training_path),
@@ -613,12 +613,12 @@ class PackedZipRemoteDataset(LazyDataset):
 
     def __init__(
         self,
-        relative_training_path: Union[str, pathlib.PurePath],
-        relative_testing_path: Union[str, pathlib.PurePath],
-        relative_validation_path: Union[str, pathlib.PurePath],
-        url: Optional[str] = None,
-        name: Optional[str] = None,
-        cache_root: Optional[str] = None,
+        relative_training_path: str | pathlib.PurePath,
+        relative_testing_path: str | pathlib.PurePath,
+        relative_validation_path: str | pathlib.PurePath,
+        url: str | None = None,
+        name: str | None = None,
+        cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
     ):
@@ -677,8 +677,8 @@ class PackedZipRemoteDataset(LazyDataset):
     def _load_helper(
         self,
         relative_path: pathlib.PurePath,
-        entity_to_id: Optional[Mapping[str, Any]] = None,
-        relation_to_id: Optional[Mapping[str, Any]] = None,
+        entity_to_id: Mapping[str, Any] | None = None,
+        relation_to_id: Mapping[str, Any] | None = None,
     ) -> TriplesFactory:
         if not self.path.is_file():
             if self.url is None:
@@ -713,14 +713,14 @@ class CompressedSingleDataset(LazyDataset):
     def __init__(
         self,
         url: str,
-        relative_path: Union[str, pathlib.PurePosixPath],
-        name: Optional[str] = None,
-        cache_root: Optional[str] = None,
+        relative_path: str | pathlib.PurePosixPath,
+        name: str | None = None,
+        cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        delimiter: Optional[str] = None,
+        delimiter: str | None = None,
         random_state: TorchRandomHint = None,
-        read_csv_kwargs: Optional[Dict[str, Any]] = None,
+        read_csv_kwargs: dict[str, Any] | None = None,
     ):
         """Initialize dataset.
 
@@ -766,7 +766,7 @@ class CompressedSingleDataset(LazyDataset):
             metadata={"path": tf_path},
         )
         self._training, self._testing, self._validation = cast(
-            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
             tf.split(
                 ratios=self.ratios,
                 random_state=self.random_state,
@@ -829,11 +829,11 @@ class TabbedDataset(LazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
-    _triples_factory: Optional[TriplesFactory]
+    _triples_factory: TriplesFactory | None
 
     def __init__(
         self,
-        cache_root: Optional[str] = None,
+        cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
@@ -859,7 +859,7 @@ class TabbedDataset(LazyDataset):
         if eager:
             self._load()
 
-    def _get_path(self) -> Optional[pathlib.Path]:
+    def _get_path(self) -> pathlib.Path | None:
         """Get the path of the data if there's a single file."""
 
     def _get_df(self) -> pd.DataFrame:
@@ -874,7 +874,7 @@ class TabbedDataset(LazyDataset):
             metadata=dict(path=path) if path else None,
         )
         self._training, self._testing, self._validation = cast(
-            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
             tf.split(
                 ratios=self.ratios,
                 random_state=self.random_state,
@@ -889,7 +889,7 @@ class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
-    _triples_factory: Optional[TriplesFactory]
+    _triples_factory: TriplesFactory | None
 
     #: URL to the data to download
     url: str
@@ -897,13 +897,13 @@ class SingleTabbedDataset(TabbedDataset):
     def __init__(
         self,
         url: str,
-        name: Optional[str] = None,
-        cache_root: Optional[str] = None,
+        name: str | None = None,
+        cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
-        download_kwargs: Optional[Dict[str, Any]] = None,
-        read_csv_kwargs: Optional[Dict[str, Any]] = None,
+        download_kwargs: dict[str, Any] | None = None,
+        read_csv_kwargs: dict[str, Any] | None = None,
     ):
         """Initialize dataset.
 

@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of ConvE."""
 
 import logging
-from typing import Any, ClassVar, Mapping, Optional, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 import torch
 from torch import nn
@@ -109,7 +109,7 @@ class ConvE(ERModel):
         feature_map_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 

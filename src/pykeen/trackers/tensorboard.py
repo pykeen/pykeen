@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 
 """An adapter for TensorBoard."""
 
 import pathlib
 import time
-from typing import TYPE_CHECKING, Any, Mapping, Optional, Union
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS

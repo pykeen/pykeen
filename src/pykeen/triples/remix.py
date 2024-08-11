@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Remixing and dataset distance utilities.
 
@@ -11,7 +10,7 @@ Later, this will be used to map the landscape and see if there is a smooth, cont
 relationship between datasets' splits' distances and their maximum performance.
 """
 
-from typing import List, Sequence
+from collections.abc import Sequence
 
 import click
 
@@ -23,7 +22,7 @@ __all__ = [
 ]
 
 
-def remix(*triples_factories: CoreTriplesFactory, **kwargs) -> List[CoreTriplesFactory]:
+def remix(*triples_factories: CoreTriplesFactory, **kwargs) -> list[CoreTriplesFactory]:
     """Remix the triples from the training, testing, and validation set.
 
     :param triples_factories: A sequence of triples factories

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """The `BioKG <https://github.com/dsi-bdi/biokg/>`_ dataset.
 

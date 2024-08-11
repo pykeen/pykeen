@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 
 """Utilities for metrics."""
 
+from collections.abc import Collection
 from dataclasses import dataclass
-from typing import ClassVar, Collection, Optional
+from typing import ClassVar, Optional
 
 import numpy as np
 from docdata import get_docdata

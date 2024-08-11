@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """An adapter for MLflow."""
 
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, Optional
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary
@@ -20,7 +20,7 @@ class MLFlowResultTracker(ResultTracker):
         tracking_uri: Optional[str] = None,
         experiment_id: Optional[int] = None,
         experiment_name: Optional[str] = None,
-        tags: Optional[Dict[str, Any]] = None,
+        tags: Optional[dict[str, Any]] = None,
     ):
         """
         Initialize result tracking via MLFlow.

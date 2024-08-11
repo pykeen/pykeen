@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Dataset utilities."""
 
@@ -7,7 +6,9 @@ import hashlib
 import logging
 import pathlib
 import re
-from typing import Any, Collection, Iterable, Mapping, Optional, Pattern, Tuple, Type, Union
+from collections.abc import Collection, Iterable, Mapping
+from re import Pattern
+from typing import Any, Optional, Union
 
 import click
 from tqdm import tqdm
@@ -29,7 +30,7 @@ def iter_dataset_classes(
     max_triples: Optional[int] = None,
     min_triples: Optional[int] = None,
     use_tqdm: bool = True,
-) -> Iterable[Tuple[str, Type[Dataset]]]:
+) -> Iterable[tuple[str, type[Dataset]]]:
     """Iterate over dataset classes with given constraints.
 
     :param regex_name_filter: An optional regular expression string or pre-compiled regular expression
@@ -69,7 +70,7 @@ def iter_dataset_instances(
     max_triples: Optional[int] = None,
     min_triples: Optional[int] = None,
     use_tqdm: bool = True,
-) -> Iterable[Tuple[str, Dataset]]:
+) -> Iterable[tuple[str, Dataset]]:
     """Iterate over dataset instances with given constraints.
 
     :param regex_name_filter: An optional regular expression string or pre-compiled regular expression
@@ -90,7 +91,7 @@ def iter_dataset_instances(
 
 def get_dataset(
     *,
-    dataset: Union[None, str, pathlib.Path, Dataset, Type[Dataset]] = None,
+    dataset: Union[None, str, pathlib.Path, Dataset, type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
     testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,

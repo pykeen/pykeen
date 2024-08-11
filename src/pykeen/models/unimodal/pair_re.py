@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of PairRE."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from torch.nn import functional
 from torch.nn.init import uniform_
@@ -36,7 +36,7 @@ class PairRE(ERModel):
     )
 
     #: the default loss function is the self-adversarial negative sampling loss
-    loss_default: ClassVar[Type[Loss]] = NSSALoss
+    loss_default: ClassVar[type[Loss]] = NSSALoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(
         margin=12.0, adversarial_temperature=1.0, reduction="mean"

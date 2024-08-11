@@ -56,7 +56,8 @@ relation representations and a DistMult interaction function.
 """
 
 from abc import ABC, abstractmethod
-from typing import Collection, Literal, Optional, Sequence
+from collections.abc import Collection, Sequence
+from typing import Literal, Optional
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs

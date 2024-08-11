@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 
 """Test embeddings."""
 
 from collections import ChainMap
-from typing import Any, ClassVar, MutableMapping, Tuple
+from collections.abc import MutableMapping
+from typing import Any, ClassVar
 
 import numpy
 import torch
@@ -166,7 +166,7 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
     kwargs = dict(
         max_id=7,
     )
-    shape: Tuple[int, ...] = (13,)
+    shape: tuple[int, ...] = (13,)
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -359,8 +359,8 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
     """Tests for partition representation."""
 
     cls = pykeen.nn.representation.PartitionRepresentation
-    max_ids: ClassVar[Tuple[int, ...]] = (5, 7)
-    shape: Tuple[int, ...] = (3,)
+    max_ids: ClassVar[tuple[int, ...]] = (5, 7)
+    shape: tuple[int, ...] = (3,)
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)

@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 
 """Test that models can be executed."""
 
 import importlib
 import os
 import unittest
-from typing import Any, Iterable, MutableMapping, Set, Type, Union
+from collections.abc import Iterable, MutableMapping
+from typing import Any, Union
 
 import torch
 import unittest_templates
@@ -717,7 +717,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                 )
 
 
-def _remove_non_models(elements: Iterable[Union[str, Type[Model]]]) -> Set[Type[Model]]:
+def _remove_non_models(elements: Iterable[Union[str, type[Model]]]) -> set[type[Model]]:
     rv = set()
     for element in elements:
         try:

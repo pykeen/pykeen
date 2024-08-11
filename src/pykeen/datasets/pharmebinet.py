@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """The `PharMeBINet <https://github.com/ckoenigs/PharMeBINet/>`_ dataset.
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Utilities for PyKEEN."""
 
@@ -17,25 +16,16 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
 from typing import (
     Any,
     Callable,
-    Collection,
-    Dict,
     Generic,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
     Optional,
-    Sequence,
-    Set,
     TextIO,
-    Tuple,
-    Type,
     TypeVar,
     Union,
 )
@@ -208,7 +198,7 @@ def flatten_dictionary(
     dictionary: Mapping[str, Any],
     prefix: Optional[str] = None,
     sep: str = ".",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
@@ -217,8 +207,8 @@ def flatten_dictionary(
 
 def _flatten_dictionary(
     dictionary: Mapping[str, Any],
-    prefix: Tuple[str, ...],
-) -> Dict[Tuple[str, ...], Any]:
+    prefix: tuple[str, ...],
+) -> dict[tuple[str, ...], Any]:
     """Help flatten a nested dictionary."""
     result = {}
     for k, v in dictionary.items():
@@ -279,7 +269,7 @@ class compose(Generic[X]):  # noqa:N801
         return x
 
 
-def set_random_seed(seed: int) -> Tuple[None, torch.Generator, None]:
+def set_random_seed(seed: int) -> tuple[None, torch.Generator, None]:
     """Set the random seed on numpy, torch, and python.
 
     :param seed: The seed that will be used in :func:`np.random.seed`, :func:`torch.manual_seed`,
@@ -350,7 +340,7 @@ def is_nonzero_larger_than_maxint_error(runtime_error: RuntimeError) -> bool:
 
 def compact_mapping(
     mapping: Mapping[X, int],
-) -> Tuple[Mapping[X, int], Mapping[int, int]]:
+) -> tuple[Mapping[X, int], Mapping[int, int]]:
     """Update a mapping (key -> id) such that the IDs range from 0 to len(mappings) - 1.
 
     :param mapping:
@@ -387,7 +377,7 @@ class Result(ABC):
 
 def split_complex(
     x: torch.FloatTensor,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+) -> tuple[torch.FloatTensor, torch.FloatTensor]:
     """Split a complex tensor into real and imaginary part."""
     x = torch.view_as_real(x)
     return x[..., 0], x[..., 1]
@@ -412,7 +402,7 @@ def combine_complex(
     return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
-def fix_dataclass_init_docs(cls: Type) -> Type:
+def fix_dataclass_init_docs(cls: type) -> type:
     """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
 
     :param cls: The class whose docstring needs fixing
@@ -513,27 +503,27 @@ def format_relative_comparison(
     return f"{part}/{total} ({part / total:2.2%})"
 
 
-def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
+def get_batchnorm_modules(module: torch.nn.Module) -> list[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
     return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)]
 
 
-def get_dropout_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
+def get_dropout_modules(module: torch.nn.Module) -> list[torch.nn.Module]:
     """Return all submodules which are dropout layers."""
     return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.dropout._DropoutNd)]
 
 
 def calculate_broadcasted_elementwise_result_shape(
-    first: Tuple[int, ...],
-    second: Tuple[int, ...],
-) -> Tuple[int, ...]:
+    first: tuple[int, ...],
+    second: tuple[int, ...],
+) -> tuple[int, ...]:
     """Determine the return shape of a broadcasted elementwise operation."""
     return tuple(max(a, b) for a, b in zip(first, second))
 
 
 def estimate_cost_of_sequence(
-    shape: Tuple[int, ...],
-    *other_shapes: Tuple[int, ...],
+    shape: tuple[int, ...],
+    *other_shapes: tuple[int, ...],
 ) -> int:
     """Cost of a sequence of broadcasted element-wise operations of tensors, given their shapes."""
     return sum(
@@ -553,8 +543,8 @@ def estimate_cost_of_sequence(
 
 @functools.lru_cache(maxsize=32)
 def _get_optimal_sequence(
-    *sorted_shapes: Tuple[int, ...],
-) -> Tuple[int, Tuple[int, ...]]:
+    *sorted_shapes: tuple[int, ...],
+) -> tuple[int, tuple[int, ...]]:
     """Find the optimal sequence in which to combine tensors element-wise based on the shapes.
 
     The shapes should be sorted to enable efficient caching.
@@ -570,7 +560,7 @@ def _get_optimal_sequence(
 
 
 @functools.lru_cache(maxsize=64)
-def get_optimal_sequence(*shapes: Tuple[int, ...]) -> Tuple[int, Tuple[int, ...]]:
+def get_optimal_sequence(*shapes: tuple[int, ...]) -> tuple[int, tuple[int, ...]]:
     """Find the optimal sequence in which to combine tensors elementwise based on the shapes.
 
     :param shapes:
@@ -592,8 +582,8 @@ def get_optimal_sequence(*shapes: Tuple[int, ...]) -> Tuple[int, Tuple[int, ...]
 
 
 def _reorder(
-    tensors: Tuple[torch.FloatTensor, ...],
-) -> Tuple[torch.FloatTensor, ...]:
+    tensors: tuple[torch.FloatTensor, ...],
+) -> tuple[torch.FloatTensor, ...]:
     """Re-order tensors for broadcasted element-wise combination of tensors.
 
     The optimal execution plan gets cached so that the optimization is only performed once for a fixed set of shapes.
@@ -836,7 +826,7 @@ def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
     return tuple(upgrade_to_sequence(xx) for xx in x)
 
 
-def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
+def unpack_singletons(*xs: tuple[X]) -> Sequence[Union[X, tuple[X]]]:
     """Unpack sequences of length one.
 
     :param xs: A sequence of tuples of length 1 or more
@@ -890,7 +880,7 @@ def extend_batch(
 
 
 def check_shapes(
-    *x: Tuple[Union[torch.Tensor, Tuple[int, ...]], str],
+    *x: tuple[Union[torch.Tensor, tuple[int, ...]], str],
     raise_on_errors: bool = True,
 ) -> bool:
     """Verify that a sequence of tensors are of matching shapes.
@@ -914,7 +904,7 @@ def check_shapes(
     >>> check_shapes(((10, 20), "bd"), ((10, 30, 20), "bdd"), raise_on_errors=False)
     False
     """
-    dims: Dict[str, Tuple[int, ...]] = dict()
+    dims: dict[str, tuple[int, ...]] = dict()
     errors = []
     for actual_shape, shape in x:
         if isinstance(actual_shape, torch.Tensor):
@@ -1090,7 +1080,7 @@ def getattr_or_docdata(cls, key: str) -> str:
     raise KeyError
 
 
-def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
+def triple_tensor_to_set(tensor: torch.LongTensor) -> set[tuple[int, ...]]:
     """Convert a tensor of triples to a set of int-tuples."""
     return set(map(tuple, tensor.tolist()))
 
@@ -1101,8 +1091,8 @@ def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
 
 
 def create_relation_to_entity_set_mapping(
-    triples: Iterable[Tuple[int, int, int]],
-) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    triples: Iterable[tuple[int, int, int]],
+) -> tuple[Mapping[int, set[int]], Mapping[int, set[int]]]:
     """
     Create mappings from relation IDs to the set of their head / tail entities.
 
@@ -1165,7 +1155,7 @@ def find(x: X, parent: MutableMapping[X, X]) -> X:
     return x
 
 
-def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
+def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collection[X]]:
     """
     Calculate the connected components for a graph given as edge list.
 
@@ -1178,7 +1168,7 @@ def get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collect
     :return:
         a collection of connected components, i.e., a collection of disjoint collections of node ids.
     """
-    parent: Dict[X, X] = dict()
+    parent: dict[X, X] = dict()
     for x, y in pairs:
         parent.setdefault(x, x)
         parent.setdefault(y, y)
@@ -1499,7 +1489,7 @@ def get_edge_index(
 
 def prepare_filter_triples(
     mapped_triples: MappedTriples,
-    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    additional_filter_triples: Union[None, MappedTriples, list[MappedTriples]] = None,
     warn: bool = True,
 ) -> MappedTriples:
     """Prepare the filter triples from the evaluation triples, and additional filter triples."""

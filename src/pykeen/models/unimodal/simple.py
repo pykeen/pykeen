@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of SimplE."""
 
-from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional, Union
 
 from class_resolver import OptionalKwargs
 
@@ -54,13 +54,13 @@ class SimplE(ERModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
+    loss_default: ClassVar[type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
     #: regularization term by the number of elements, which is 200.
-    regularizer_default: ClassVar[Type[Regularizer]] = PowerSumRegularizer
+    regularizer_default: ClassVar[type[Regularizer]] = PowerSumRegularizer
     #: The power sum settings used by [trouillon2016]_ for SimplE
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=20,
@@ -72,7 +72,7 @@ class SimplE(ERModel):
         self,
         *,
         embedding_dim: int = 200,
-        clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
+        clamp_score: Optional[Union[float, tuple[float, float]]] = None,
         entity_initializer: Hint[Initializer] = None,
         relation_initializer: Hint[Initializer] = None,
         regularizer: Hint[Regularizer] = None,

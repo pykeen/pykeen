@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of RESCAL."""
 
-from typing import Any, ClassVar, Mapping, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.init import uniform_
@@ -48,7 +48,7 @@ class RESCAL(ERModel):
     #: The regularizer used by [nickel2011]_ for for RESCAL
     #: According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py
     #: a normalized weight of 10 is used.
-    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
+    regularizer_default: ClassVar[type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nickel2011]_ for for RESCAL
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=10,

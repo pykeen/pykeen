@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Learning Rate Schedulers available in PyKEEN."""
 
-from typing import Any, Mapping, Type
+from collections.abc import Mapping
+from typing import Any
 
 from class_resolver.contrib.torch import lr_scheduler_resolver
 from torch.optim.lr_scheduler import (
@@ -36,7 +36,7 @@ __all__ = [
 
 
 #: The default strategy for optimizing the lr_schedulers' hyper-parameters
-lr_schedulers_hpo_defaults: Mapping[Type[LRScheduler], Mapping[str, Any]] = {
+lr_schedulers_hpo_defaults: Mapping[type[LRScheduler], Mapping[str, Any]] = {
     CosineAnnealingLR: dict(
         T_max=dict(type=int, low=10, high=1000, step=50),
     ),

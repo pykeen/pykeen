@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """YAGO3 datasets."""
 

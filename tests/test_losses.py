@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Test the PyKEEN custom loss functions."""
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Test the integrity of the reproduction experiment scripts."""
 

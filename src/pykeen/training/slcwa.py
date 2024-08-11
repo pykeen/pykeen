@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Training KGE models based on the sLCWA."""
 

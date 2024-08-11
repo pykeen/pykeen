@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Regularization in PyKEEN."""
 
@@ -6,7 +5,8 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional
+from collections.abc import Iterable, Mapping
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import ClassResolver, normalize_string
@@ -57,7 +57,7 @@ class Regularizer(nn.Module, ABC):
         self,
         weight: float = 1.0,
         apply_only_once: bool = False,
-        parameters: Optional[Iterable[nn.Parameter]] = None,
+        parameters: Iterable[nn.Parameter] | None = None,
     ):
         """Instantiate the regularizer.
 
@@ -152,7 +152,7 @@ class LpRegularizer(Regularizer):
     """A simple L_p norm based regularizer."""
 
     #: The dimension along which to compute the vector-based regularization terms.
-    dim: Optional[int]
+    dim: int | None
 
     #: Whether to normalize the regularization term by the dimension of the vectors.
     #: This allows dimensionality-independent weight tuning.
@@ -165,7 +165,7 @@ class LpRegularizer(Regularizer):
         weight: float = 1.0,
         # could be moved into kwargs, but needs to stay for experiment integrity check
         apply_only_once: bool = False,
-        dim: Optional[int] = -1,
+        dim: int | None = -1,
         normalize: bool = False,
         p: float = 2.0,
         **kwargs,
@@ -209,7 +209,7 @@ class PowerSumRegularizer(Regularizer):
         weight: float = 1.0,
         # could be moved into kwargs, but needs to stay for experiment integrity check
         apply_only_once: bool = False,
-        dim: Optional[int] = -1,
+        dim: int | None = -1,
         normalize: bool = False,
         p: float = 2.0,
         **kwargs,
@@ -251,7 +251,7 @@ class NormLimitRegularizer(Regularizer):
         # could be moved into kwargs, but needs to stay for experiment integrity check
         apply_only_once: bool = False,
         # regularizer-specific parameters
-        dim: Optional[int] = -1,
+        dim: int | None = -1,
         p: float = 2.0,
         power_norm: bool = True,
         max_norm: float = 1.0,

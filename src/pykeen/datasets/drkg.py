@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """The `DRKG <https://github.com/gnn4dr/DRKG>`_ dataset.
 

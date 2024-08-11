@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 
 """Mock models that return fixed scores.
 
 These are useful for baselines.
 """
 
-from typing import Any, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 import torch
 

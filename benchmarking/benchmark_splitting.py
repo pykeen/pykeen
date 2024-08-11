@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Benchmark the speed for generating new datasets by remixing old ones."""
 

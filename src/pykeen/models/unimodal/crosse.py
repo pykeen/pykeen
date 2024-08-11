@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of CrossE."""
 
-from typing import Any, ClassVar, Mapping, Optional, Tuple
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from class_resolver import HintOrType
 from torch import FloatTensor, nn
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class CrossE(ERModel[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+class CrossE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     r"""An implementation of CrossE from [zhang2019b]_.
 
     ---

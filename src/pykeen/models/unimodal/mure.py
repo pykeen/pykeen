@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of MuRE."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from torch.nn.init import normal_, uniform_, zeros_
 

@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of structured model (SE)."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from class_resolver import Hint
 from torch.nn import functional

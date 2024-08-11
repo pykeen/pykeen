@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 r"""For entities $\mathcal{E}$ and relations $\mathcal{R}$, the set of all possible triples $\mathcal{T}$ is
 constructed through their cartesian product $\mathcal{T} = \mathcal{E} \times \mathcal{R} \times \mathcal{E}$.

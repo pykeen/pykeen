@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """The inductive link prediction datasets from [teru2020]_.
 

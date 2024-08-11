@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 r"""Loss functions integrated in PyKEEN.
 
@@ -164,8 +163,9 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 import logging
 import math
 from abc import abstractmethod
+from collections.abc import Mapping
 from textwrap import dedent
-from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
+from typing import Any, ClassVar, Optional
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -266,7 +266,7 @@ class Loss(_Loss):
     """A loss function."""
 
     #: synonyms of this loss
-    synonyms: ClassVar[Optional[Set[str]]] = None
+    synonyms: ClassVar[Optional[set[str]]] = None
 
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
@@ -708,7 +708,7 @@ class DoubleMarginLoss(PointwiseLoss):
         positive_margin: Optional[float],
         negative_margin: Optional[float],
         offset: Optional[float],
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Resolve margins from multiple methods how to specify them.
 
         The method supports three combinations:

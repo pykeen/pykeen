@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Tests for the :mod:`pykeen.nn.sim` submodule."""
 
@@ -23,7 +22,7 @@ class KullbackLeiblerTests(unittest.TestCase):
 
     def setUp(self) -> None:  # noqa: D102
         dims = dict(h=self.num_heads, r=self.num_relations, t=self.num_tails)
-        (self.h_mean, self.r_mean, self.t_mean), (self.h_var, self.r_var, self.t_var) = [
+        (self.h_mean, self.r_mean, self.t_mean), (self.h_var, self.r_var, self.t_var) = (
             [
                 # TODO this is the only place this function is used.
                 #  Is there an alternative so we can remove it?
@@ -36,9 +35,9 @@ class KullbackLeiblerTests(unittest.TestCase):
                 for dim, num in dims.items()
             ]
             for _ in ("mean", "diagonal_covariance")
-        ]
+        )
         # ensure positivity
-        self.h_var, self.r_var, self.t_var = [x.exp() for x in (self.h_var, self.r_var, self.t_var)]
+        self.h_var, self.r_var, self.t_var = (x.exp() for x in (self.h_var, self.r_var, self.t_var))
 
     def _get(self, name: str):
         if name == "h":
@@ -85,7 +84,7 @@ class KullbackLeiblerTests(unittest.TestCase):
     def test_against_torch_builtin(self):
         """Compare value against torch.distributions."""
         # compute using pykeen
-        h, r, t = [self._get(name=name) for name in "hrt"]
+        h, r, t = (self._get(name=name) for name in "hrt")
         sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
         sim2 = _torch_kl_similarity(h=h, r=r, t=t)
         self.assertTrue(torch.allclose(sim, sim2), msg=f"Difference: {(sim - sim2).abs()}")
@@ -106,6 +105,6 @@ class KullbackLeiblerTests(unittest.TestCase):
         """Check the value range."""
         # https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Properties
         # divergence >= 0 => similarity = -divergence <= 0
-        h, r, t = [self._get(name=name) for name in "hrt"]
+        h, r, t = (self._get(name=name) for name in "hrt")
         sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
         self.assertTrue((sim <= 0).all())

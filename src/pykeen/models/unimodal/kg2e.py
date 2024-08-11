@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of KG2E."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 import torch
 import torch.autograd

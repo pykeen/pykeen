@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Tracking results in local files."""
 
@@ -7,7 +6,8 @@ import datetime
 import json
 import logging
 import pathlib
-from typing import Any, ClassVar, Mapping, Optional, TextIO, Union
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional, TextIO, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS

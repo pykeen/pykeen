@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """A simple AutoSF-based model."""
 
-from typing import Any, ClassVar, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any, ClassVar, Optional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -13,7 +13,7 @@ __all__ = [
     "AutoSF",
 ]
 
-YAGO310_COEFFICIENTS: Sequence[Tuple[int, int, int, Sign]] = [
+YAGO310_COEFFICIENTS: Sequence[tuple[int, int, int, Sign]] = [
     # diagonal entries
     (0, 0, 0, 1),
     (1, 1, 1, 1),
@@ -50,7 +50,7 @@ class AutoSF(ERModel):
         self,
         embedding_dim: int = 256,
         num_components: int = 4,
-        coefficients: Sequence[Tuple[int, int, int, Sign]] = YAGO310_COEFFICIENTS,
+        coefficients: Sequence[tuple[int, int, int, Sign]] = YAGO310_COEFFICIENTS,
         embedding_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:

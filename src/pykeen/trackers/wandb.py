@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 
 """An adapter for Weights and Biases."""
 
 import os
-from typing import TYPE_CHECKING, Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Optional
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary

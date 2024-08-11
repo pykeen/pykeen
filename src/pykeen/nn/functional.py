@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Functional forms of interaction methods.
 
@@ -9,7 +8,6 @@ as well as broadcasting and thus naturally support slicing and 1:n scoring.
 from __future__ import annotations
 
 import functools
-from typing import Optional, Tuple, Union
 
 import numpy
 import torch
@@ -65,7 +63,7 @@ __all__ = [
 def _apply_optional_bn_to_tensor(
     x: torch.FloatTensor,
     output_dropout: nn.Dropout,
-    batch_norm: Optional[nn.BatchNorm1d] = None,
+    batch_norm: nn.BatchNorm1d | None = None,
 ) -> torch.FloatTensor:
     """Apply optional batch normalization and dropout layer. Supports multiple batch dimensions."""
     if batch_norm is not None:
@@ -541,7 +539,7 @@ def simple_interaction(
     h_inv: torch.FloatTensor,
     r_inv: torch.FloatTensor,
     t_inv: torch.FloatTensor,
-    clamp: Optional[Tuple[float, float]] = None,
+    clamp: tuple[float, float] | None = None,
 ) -> torch.FloatTensor:
     """Evaluate the SimplE interaction function.
 
@@ -612,7 +610,7 @@ def toruse_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-    p: Union[int, str] = 2,
+    p: int | str = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate the TorusE interaction function from [ebisu2018].
@@ -690,7 +688,7 @@ def transe_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-    p: Union[int, str] = 2,
+    p: int | str = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate the TransE interaction function.
@@ -815,8 +813,8 @@ def tucker_interaction(
     do_h: nn.Dropout,
     do_r: nn.Dropout,
     do_hr: nn.Dropout,
-    bn_h: Optional[nn.BatchNorm1d],
-    bn_hr: Optional[nn.BatchNorm1d],
+    bn_h: nn.BatchNorm1d | None,
+    bn_hr: nn.BatchNorm1d | None,
 ) -> torch.FloatTensor:
     r"""Evaluate the TuckEr interaction function.
 
@@ -884,7 +882,7 @@ def mure_interaction(
     r_mat: torch.FloatTensor,
     t: torch.FloatTensor,
     b_t: torch.FloatTensor,
-    p: Union[int, float, str] = 2,
+    p: int | float | str = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     r"""Evaluate the MuRE interaction function from [balazevic2019b]_.
@@ -953,7 +951,7 @@ def pair_re_interaction(
     t: torch.FloatTensor,
     r_h: torch.FloatTensor,
     r_t: torch.FloatTensor,
-    p: Union[int, str] = 2,
+    p: int | str = 2,
     power_norm: bool = True,
 ) -> torch.FloatTensor:
     r"""Evaluate the PairRE interaction function.
@@ -1018,7 +1016,7 @@ def cross_e_interaction(
     t: torch.FloatTensor,
     bias: torch.FloatTensor,
     activation: nn.Module,
-    dropout: Optional[nn.Dropout] = None,
+    dropout: nn.Dropout | None = None,
 ) -> torch.FloatTensor:
     r"""
     Evaluate the interaction function of CrossE for the given representations from [zhang2019b]_.
@@ -1101,7 +1099,7 @@ def triple_re_interaction(
     # tail
     t: torch.FloatTensor,
     # version 2: relation factor offset
-    u: Optional[float] = None,
+    u: float | None = None,
     # extension: negative (power) norm
     p: int = 2,
     power_norm: bool = False,

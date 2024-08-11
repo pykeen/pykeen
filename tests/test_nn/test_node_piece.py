@@ -1,7 +1,8 @@
 """Tests for node piece."""
 
 import random
-from typing import Any, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any
 
 import numpy
 import numpy.testing

@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Tests for filterers."""
 
-from typing import Any, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any
 
 import torch
 import unittest_templates

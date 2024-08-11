@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Stateful interaction functions."""
 
@@ -9,22 +8,13 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from collections import Counter
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from operator import itemgetter
 from typing import (
     Any,
     Callable,
     ClassVar,
-    Collection,
     Generic,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
     cast,
 )
 
@@ -161,16 +151,16 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     #: The symbolic shapes for entity representations for tail entities, if different.
     #: Otherwise, the entity_shape is used for head & tail entities
-    _tail_entity_shape: Optional[Sequence[str]] = None
+    _tail_entity_shape: Sequence[str] | None = None
 
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
 
     # if the interaction function's head parameter should only receive a subset of entity representations
-    _head_indices: Optional[Sequence[int]] = None
+    _head_indices: Sequence[int] | None = None
 
     # if the interaction function's tail parameter should only receive a subset of entity representations
-    _tail_indices: Optional[Sequence[int]] = None
+    _tail_indices: Sequence[int] | None = None
 
     #: the interaction's value range (for unrestricted input)
     value_range: ClassVar[ValueRange] = ValueRange()
@@ -202,7 +192,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     def full_entity_shapes(self) -> Sequence[str]:
         """Return all entity shapes (head & tail)."""
-        shapes: List[Optional[str]] = [None] * (max(itt.chain(self.head_indices(), self.tail_indices())) + 1)
+        shapes: list[str | None] = [None] * (max(itt.chain(self.head_indices(), self.tail_indices())) + 1)
         for hi, hs in zip(self.head_indices(), self.entity_shape):
             shapes[hi] = hs
         for ti, ts in zip(self.tail_indices(), self.tail_entity_shape):
@@ -211,10 +201,10 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             shapes[ti] = ts
         if None in shapes:
             raise AssertionError("Unused shape.")
-        return cast(List[str], shapes)
+        return cast(list[str], shapes)
 
     @classmethod
-    def get_dimensions(cls) -> Set[str]:
+    def get_dimensions(cls) -> set[str]:
         """Get all of the relevant dimension keys.
 
         This draws from :data:`Interaction.entity_shape`, :data:`Interaction.relation_shape`, and in the case of
@@ -250,7 +240,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
         slice_dim: int = 1,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores with optional slicing.
@@ -310,7 +300,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         all_entities: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> torch.FloatTensor:
         """Score all head entities.
 
@@ -338,7 +328,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         h: HeadRepresentation,
         all_relations: RelationRepresentation,
         t: TailRepresentation,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> torch.FloatTensor:
         """Score all relations.
 
@@ -366,7 +356,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         h: HeadRepresentation,
         r: RelationRepresentation,
         all_entities: TailRepresentation,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> torch.FloatTensor:
         """Score all tail entities.
 
@@ -578,10 +568,10 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
 
 def _calculate_missing_shape_information(
     embedding_dim: int,
-    input_channels: Optional[int] = None,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-) -> Tuple[int, int, int]:
+    input_channels: int | None = None,
+    width: int | None = None,
+    height: int | None = None,
+) -> tuple[int, int, int]:
     """Automatically calculates missing dimensions for ConvE.
 
     :param embedding_dim:
@@ -634,7 +624,7 @@ def _calculate_missing_shape_information(
 
 @parse_docdata
 class ConvEInteraction(
-    FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]],
+    FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor]],
 ):
     """A stateful module for the ConvE interaction function.
 
@@ -662,12 +652,12 @@ class ConvEInteraction(
 
     def __init__(
         self,
-        input_channels: Optional[int] = None,
+        input_channels: int | None = None,
         output_channels: int = 32,
-        embedding_height: Optional[int] = None,
-        embedding_width: Optional[int] = None,
+        embedding_height: int | None = None,
+        embedding_width: int | None = None,
         kernel_width: int = 3,
-        kernel_height: Optional[int] = None,
+        kernel_height: int | None = None,
         input_dropout: float = 0.2,
         feature_map_dropout: float = 0.2,
         output_dropout: float = 0.3,
@@ -899,7 +889,7 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
     def __init__(
         self,
         embedding_dim: int,
-        hidden_dim: Optional[int] = None,
+        hidden_dim: int | None = None,
     ):
         """Initialize the interaction module.
 
@@ -973,8 +963,8 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         self,
         embedding_dim: int = 256,
         input_dropout: float = 0.2,
-        hidden_dim: Optional[int] = None,
-        hidden_dropout: Optional[float] = None,
+        hidden_dim: int | None = None,
+        hidden_dropout: float | None = None,
     ):
         """
         Initialize the interaction module.
@@ -1012,7 +1002,7 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 class TransRInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
-        Tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
     ],
 ):
@@ -1207,7 +1197,7 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 class SEInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
-        Tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
     ],
 ):
@@ -1261,7 +1251,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     def __init__(
         self,
         embedding_dim: int = 200,
-        relation_dim: Optional[int] = None,
+        relation_dim: int | None = None,
         head_dropout: float = 0.3,
         relation_dropout: float = 0.4,
         head_relation_dropout: float = 0.5,
@@ -1414,9 +1404,9 @@ class TorusEInteraction(NormBasedInteraction[torch.FloatTensor, torch.FloatTenso
 @parse_docdata
 class TransDInteraction(
     NormBasedInteraction[
-        Tuple[torch.FloatTensor, torch.FloatTensor],
-        Tuple[torch.FloatTensor, torch.FloatTensor],
-        Tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
     ],
 ):
     """A stateful module for the TransD interaction function.
@@ -1448,9 +1438,9 @@ class TransDInteraction(
     # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: Tuple[torch.FloatTensor, torch.FloatTensor],
-        r: Tuple[torch.FloatTensor, torch.FloatTensor],
-        t: Tuple[torch.FloatTensor, torch.FloatTensor],
+        h: tuple[torch.FloatTensor, torch.FloatTensor],
+        r: tuple[torch.FloatTensor, torch.FloatTensor],
+        t: tuple[torch.FloatTensor, torch.FloatTensor],
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         h, h_p = h
         r, r_p = r
@@ -1462,7 +1452,7 @@ class TransDInteraction(
 class NTNInteraction(
     FunctionalInteraction[
         torch.FloatTensor,
-        Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
     ],
 ):
@@ -1484,7 +1474,7 @@ class NTNInteraction(
     def __init__(
         self,
         activation: HintOrType[nn.Module] = None,
-        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        activation_kwargs: Mapping[str, Any] | None = None,
     ):
         """Initialize NTN with the given non-linear activation function.
 
@@ -1503,7 +1493,7 @@ class NTNInteraction(
     @staticmethod
     def _prepare_hrt_for_functional(
         h: torch.FloatTensor,
-        r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
+        r: tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         t: torch.FloatTensor,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         w, vh, vt, b, u = r
@@ -1517,9 +1507,9 @@ class NTNInteraction(
 @parse_docdata
 class KG2EInteraction(
     FunctionalInteraction[
-        Tuple[torch.FloatTensor, torch.FloatTensor],
-        Tuple[torch.FloatTensor, torch.FloatTensor],
-        Tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
     ],
 ):
     """A stateful module for the KG2E interaction function.
@@ -1539,7 +1529,7 @@ class KG2EInteraction(
     exact: bool
     func = pkf.kg2e_interaction
 
-    def __init__(self, similarity: Optional[str] = None, exact: bool = True):
+    def __init__(self, similarity: str | None = None, exact: bool = True):
         """
         Initialize the interaction module.
 
@@ -1557,9 +1547,9 @@ class KG2EInteraction(
     # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: Tuple[torch.FloatTensor, torch.FloatTensor],
-        r: Tuple[torch.FloatTensor, torch.FloatTensor],
-        t: Tuple[torch.FloatTensor, torch.FloatTensor],
+        h: tuple[torch.FloatTensor, torch.FloatTensor],
+        r: tuple[torch.FloatTensor, torch.FloatTensor],
+        t: tuple[torch.FloatTensor, torch.FloatTensor],
     ) -> MutableMapping[str, torch.FloatTensor]:
         h_mean, h_var = h
         r_mean, r_var = r
@@ -1581,7 +1571,7 @@ class KG2EInteraction(
 
 
 @parse_docdata
-class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+class TransHInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the TransH interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transh_interaction`
@@ -1609,9 +1599,9 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, Flo
 @parse_docdata
 class MuREInteraction(
     NormBasedInteraction[
-        Tuple[FloatTensor, FloatTensor, FloatTensor],
-        Tuple[FloatTensor, FloatTensor],
-        Tuple[FloatTensor, FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor, FloatTensor],
     ],
 ):
     """A stateful module for the MuRE interaction function from [balazevic2019b]_.
@@ -1634,9 +1624,9 @@ class MuREInteraction(
     # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: Tuple[FloatTensor, FloatTensor, FloatTensor],
-        r: Tuple[FloatTensor, FloatTensor],
-        t: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        h: tuple[FloatTensor, FloatTensor, FloatTensor],
+        r: tuple[FloatTensor, FloatTensor],
+        t: tuple[FloatTensor, FloatTensor, FloatTensor],
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         h, b_h, _ = h
         t, _, b_t = t
@@ -1647,9 +1637,9 @@ class MuREInteraction(
 @parse_docdata
 class SimplEInteraction(
     FunctionalInteraction[
-        Tuple[torch.FloatTensor, torch.FloatTensor],
-        Tuple[torch.FloatTensor, torch.FloatTensor],
-        Tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
+        tuple[torch.FloatTensor, torch.FloatTensor],
     ],
 ):
     """A module wrapper for the SimplE interaction function.
@@ -1668,7 +1658,7 @@ class SimplEInteraction(
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
 
-    def __init__(self, clamp_score: Union[None, float, Tuple[float, float]] = None):
+    def __init__(self, clamp_score: None | float | tuple[float, float] = None):
         """
         Initialize the interaction module.
 
@@ -1695,7 +1685,7 @@ class SimplEInteraction(
 
 
 @parse_docdata
-class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the PairRE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.pair_re_interaction`
@@ -1846,7 +1836,7 @@ class MonotonicAffineTransformationInteraction(
 
 
 @parse_docdata
-class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+class CrossEInteraction(FunctionalInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A module wrapper for the CrossE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.cross_e_interaction`
@@ -1866,8 +1856,8 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         self,
         embedding_dim: int = 50,
         combination_activation: HintOrType[nn.Module] = nn.Tanh,
-        combination_activation_kwargs: Optional[Mapping[str, Any]] = None,
-        combination_dropout: Optional[float] = 0.5,
+        combination_activation_kwargs: Mapping[str, Any] | None = None,
+        combination_dropout: float | None = 0.5,
     ):
         """
         Instantiate the interaction module.
@@ -1902,7 +1892,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
     @staticmethod
     def _prepare_hrt_for_functional(
         h: FloatTensor,
-        r: Tuple[FloatTensor, FloatTensor],
+        r: tuple[FloatTensor, FloatTensor],
         t: FloatTensor,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         r, c_r = r
@@ -1912,9 +1902,9 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
 @parse_docdata
 class BoxEInteraction(
     NormBasedInteraction[
-        Tuple[FloatTensor, FloatTensor],
-        Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
-        Tuple[FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor],
     ]
 ):
     """
@@ -1964,9 +1954,9 @@ class BoxEInteraction(
     # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: Tuple[FloatTensor, FloatTensor],
-        r: Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
-        t: Tuple[FloatTensor, FloatTensor],
+        h: tuple[FloatTensor, FloatTensor],
+        r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
+        t: tuple[FloatTensor, FloatTensor],
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
         h_pos, h_bump = h
@@ -2065,7 +2055,7 @@ class BoxEInteraction(
         cls,
         entity_pos: torch.FloatTensor,
         other_entity_bump: torch.FloatTensor,
-        relation_box: Tuple[torch.FloatTensor, torch.FloatTensor],
+        relation_box: tuple[torch.FloatTensor, torch.FloatTensor],
         tanh_map: bool,
         p: int,
         power_norm: bool,
@@ -2125,7 +2115,7 @@ class BoxEInteraction(
         base: torch.FloatTensor,
         delta: torch.FloatTensor,
         size: torch.FloatTensor,
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
         r"""Compute the lower and upper corners of a resulting box.
 
         :param base: shape: ``(*, d)``
@@ -2264,7 +2254,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
 
 @parse_docdata
 class MultiLinearTuckerInteraction(
-    FunctionalInteraction[Tuple[FloatTensor, FloatTensor], FloatTensor, Tuple[FloatTensor, FloatTensor]]
+    FunctionalInteraction[tuple[FloatTensor, FloatTensor], FloatTensor, tuple[FloatTensor, FloatTensor]]
 ):
     """
     An implementation of the original (multi-linear) TuckER interaction as described [tucker1966]_.
@@ -2288,8 +2278,8 @@ class MultiLinearTuckerInteraction(
     def __init__(
         self,
         head_dim: int = 64,
-        relation_dim: Optional[int] = None,
-        tail_dim: Optional[int] = None,
+        relation_dim: int | None = None,
+        tail_dim: int | None = None,
     ):
         """
         Initialize the Tucker interaction function.
@@ -2325,9 +2315,9 @@ class MultiLinearTuckerInteraction(
     # docstr-coverage: inherited
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: Tuple[FloatTensor, FloatTensor],
+        h: tuple[FloatTensor, FloatTensor],
         r: FloatTensor,
-        t: Tuple[FloatTensor, FloatTensor],
+        t: tuple[FloatTensor, FloatTensor],
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h[0], r=r, t=t[1])
 
@@ -2402,7 +2392,7 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
 class TripleREInteraction(
     NormBasedInteraction[
         FloatTensor,
-        Tuple[FloatTensor, FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor, FloatTensor],
         FloatTensor,
     ]
 ):
@@ -2435,7 +2425,7 @@ class TripleREInteraction(
 
     func = pkf.triple_re_interaction
 
-    def __init__(self, u: Optional[float] = 1.0, p: int = 1, power_norm: bool = False):
+    def __init__(self, u: float | None = 1.0, p: int = 1, power_norm: bool = False):
         """
         Initialize the module.
 
@@ -2460,7 +2450,7 @@ class TripleREInteraction(
     @staticmethod
     def _prepare_hrt_for_functional(
         h: FloatTensor,
-        r: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        r: tuple[FloatTensor, FloatTensor, FloatTensor],
         t: FloatTensor,
     ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
         r_head, r_mid, r_tail = r
@@ -2475,7 +2465,7 @@ class TripleREInteraction(
 
 # type alias for AutoSF block description
 # head_index, relation_index, tail_index, sign
-AutoSFBlock = Tuple[int, int, int, Sign]
+AutoSFBlock = tuple[int, int, int, Sign]
 
 
 @parse_docdata
@@ -2518,7 +2508,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     """
 
     #: a description of the block structure
-    coefficients: Tuple[AutoSFBlock, ...]
+    coefficients: tuple[AutoSFBlock, ...]
 
     @staticmethod
     def _check_coefficients(
@@ -2560,7 +2550,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         :yields: the used indices
         """
         indices = (0, 2) if entities else (1,)
-        yield from itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in indices))
+        yield from itt.chain.from_iterable(map(itemgetter(i), coefficients) for i in indices)
 
     @staticmethod
     def _infer_number(coefficients: Collection[AutoSFBlock], entities: bool) -> int:
@@ -2580,9 +2570,9 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         self,
         coefficients: Iterable[AutoSFBlock],
         *,
-        num_blocks: Optional[int] = None,
-        num_entity_representations: Optional[int] = None,
-        num_relation_representations: Optional[int] = None,
+        num_blocks: int | None = None,
+        num_entity_representations: int | None = None,
+        num_relation_representations: int | None = None,
     ) -> None:
         """
         Initialize the interaction function.
@@ -2625,7 +2615,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         self.relation_shape = tuple(["d"] * num_relation_representations)
 
     @classmethod
-    def from_searched_sf(cls, coefficients: Sequence[int], **kwargs) -> "AutoSFInteraction":
+    def from_searched_sf(cls, coefficients: Sequence[int], **kwargs) -> AutoSFInteraction:
         """
         Instantiate AutoSF interaction from the "official" serialization format.
 
@@ -2684,7 +2674,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(zip("hrt", ensure_tuple(h, r, t)))
 
-    def extend(self, *new_coefficients: Tuple[int, int, int, Sign]) -> "AutoSFInteraction":
+    def extend(self, *new_coefficients: tuple[int, int, int, Sign]) -> AutoSFInteraction:
         """Extend AutoSF function, as described in the greedy search algorithm in the paper."""
         return AutoSFInteraction(coefficients=self.coefficients + tuple(new_coefficients))
 
@@ -2746,7 +2736,7 @@ class LineaREInteraction(NormBasedInteraction):
     @staticmethod
     def _prepare_hrt_for_functional(
         h: FloatTensor,
-        r: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        r: tuple[FloatTensor, FloatTensor, FloatTensor],
         t: FloatTensor,
     ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
         r_head, r_mid, r_tail = r

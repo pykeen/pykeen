@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """Implementation of NTN."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from class_resolver import Hint, HintOrType
 from torch import nn

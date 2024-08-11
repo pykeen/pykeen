@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Ablation studies in PyKEEN."""
 

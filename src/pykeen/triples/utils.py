@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 
 """Instance creation utilities."""
 
 import pathlib
-from typing import Callable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Callable, Optional, TextIO, Union
 
 import numpy as np
 import pandas
@@ -89,12 +89,12 @@ def load_triples(
     return df.to_numpy()
 
 
-def get_entities(triples: torch.LongTensor) -> Set[int]:
+def get_entities(triples: torch.LongTensor) -> set[int]:
     """Get all entities from the triples."""
     return set(triples[:, [0, 2]].flatten().tolist())
 
 
-def get_relations(triples: torch.LongTensor) -> Set[int]:
+def get_relations(triples: torch.LongTensor) -> set[int]:
     """Get all relations from the triples."""
     return set(triples[:, 1].tolist())
 
@@ -148,7 +148,7 @@ def tensor_to_df(
 def compute_compressed_adjacency_list(
     mapped_triples: MappedTriples,
     num_entities: Optional[int] = None,
-) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
+) -> tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
     """Compute compressed undirected adjacency list representation for efficient sampling.
 
     The compressed adjacency list format is inspired by CSR sparse matrix format.
@@ -172,7 +172,7 @@ def compute_compressed_adjacency_list(
     """
     num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
     num_triples = mapped_triples.shape[0]
-    adj_lists: List[List[Tuple[int, float]]] = [[] for _ in range(num_entities)]
+    adj_lists: list[list[tuple[int, float]]] = [[] for _ in range(num_entities)]
     for i, (s, _, o) in enumerate(mapped_triples):
         adj_lists[s].append((i, o.item()))
         adj_lists[o].append((i, s.item()))
