@@ -7,8 +7,8 @@
 </h1>
 
 <p align="center">
-  <a href="https://github.com/pykeen/pykeen/actions">
-    <img src="https://github.com/pykeen/pykeen/workflows/Tests%20master/badge.svg"
+  <a href="https://github.com/pykeen/pykeen/actions/workflows/tests.yml">
+    <img src="https://github.com/pykeen/pykeen/actions/workflows/tests.yml/badge.svg"
          alt="GitHub Actions">
   </a>
 
@@ -54,7 +54,7 @@
 
 ## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-The latest stable version of PyKEEN requires Python 3.8+. It can be downloaded
+The latest stable version of PyKEEN requires Python 3.9+. It can be downloaded
 and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
