@@ -7,8 +7,8 @@
 </h1>
 
 <p align="center">
-  <a href="https://github.com/pykeen/pykeen/actions">
-    <img src="https://github.com/pykeen/pykeen/workflows/Tests%20master/badge.svg"
+  <a href="https://github.com/pykeen/pykeen/actions/workflows/tests.yml">
+    <img src="https://github.com/pykeen/pykeen/actions/workflows/tests.yml/badge.svg"
          alt="GitHub Actions">
   </a>
 
