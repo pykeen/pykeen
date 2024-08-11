@@ -410,7 +410,7 @@ def fix_dataclass_init_docs(cls: type) -> type:
 
     .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
     """
-    cls.__init__.__qualname__ = f"{cls.__name__}.__init__"
+    cls.__init__.__qualname__ = f"{cls.__name__}.__init__"  # type:ignore
     return cls
 
 
