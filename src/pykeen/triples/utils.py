@@ -3,12 +3,12 @@
 """Instance creation utilities."""
 
 import pathlib
-from typing import Callable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Callable, List, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
 import torch
-from pkg_resources import iter_entry_points
+from class_resolver import FunctionResolver
 
 from ..typing import LabeledTriples, MappedTriples
 
@@ -22,18 +22,17 @@ __all__ = [
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
 
-
-def _load_importers(group_subname: str) -> Mapping[str, Callable[[str], LabeledTriples]]:
-    return {
-        entry_point.name: entry_point.load()
-        for entry_point in iter_entry_points(group=f"pykeen.triples.{group_subname}")
-    }
-
+Importer = Callable[[str], LabeledTriples]
 
 #: Functions for specifying exotic resources with a given prefix
-PREFIX_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers("prefix_importer")
+PREFIX_IMPORTER_RESOLVER: FunctionResolver[Importer] = FunctionResolver.from_entrypoint(
+    "pykeen.triples.prefix_importer"
+)
+
 #: Functions for specifying exotic resources based on their file extension
-EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers("extension_importer")
+EXTENSION_IMPORTER_RESOLVER: FunctionResolver[Importer] = FunctionResolver.from_entrypoint(
+    "pykeen.triples.extension_importer"
+)
 
 
 def load_triples(
@@ -53,7 +52,7 @@ def load_triples(
         For example, if the order is head-tail-relation, pass ``(0, 2, 1)``
     :returns: A numpy array representing "labeled" triples.
 
-    :raises ValueError: if a column remapping was passed but it was not a length 3 sequence
+    :raises ValueError: if a column remapping was passed, but it was not a length 3 sequence
 
     Besides TSV handling, PyKEEN does not come with any importers pre-installed. A few can be found at:
 
@@ -62,11 +61,11 @@ def load_triples(
     """
     if isinstance(path, (str, pathlib.Path)):
         path = str(path)
-        for extension, handler in EXTENSION_IMPORTERS.items():
+        for extension, handler in EXTENSION_IMPORTER_RESOLVER.lookup_dict.items():
             if path.endswith(f".{extension}"):
                 return handler(path)
 
-        for prefix, handler in PREFIX_IMPORTERS.items():
+        for prefix, handler in PREFIX_IMPORTER_RESOLVER.lookup_dict.items():
             if path.startswith(f"{prefix}:"):
                 return handler(path[len(f"{prefix}:") :])
 
