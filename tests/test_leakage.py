@@ -58,11 +58,11 @@ class TestLeakage(unittest.TestCase):
             ["-2", test_relation_inverse, "-1"],  # this one was leaked!
         ]
         train_factory = TriplesFactory.from_labeled_triples(
-            triples=np.array(train, dtype=np.str),
+            triples=np.array(train, dtype=str),
             filter_out_candidate_inverse_relations=False,
         )
         test_factory = TriplesFactory.from_labeled_triples(
-            triples=np.array(test, dtype=np.str),
+            triples=np.array(test, dtype=str),
             entity_to_id=train_factory.entity_to_id,
             relation_to_id=train_factory.relation_to_id,
             filter_out_candidate_inverse_relations=False,

@@ -250,7 +250,7 @@ extend-select = [
     "T20", # print
     "N", # pep8 naming
     # "ERA", # eradicate commented out code
-    # "NPY", # numpy checks
+    "NPY", # numpy checks
     "RUF", # ruff rules
 ]
 ignore = [
@@ -260,6 +260,7 @@ ignore = [
     "D102", # Missing docstring in init TODO remove
     "RUF012",
     "RUF100",
+    "NPY002", # TODO Replace legacy `np.random.set_state` call with `np.random.Generator`
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
