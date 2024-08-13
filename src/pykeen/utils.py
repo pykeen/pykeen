@@ -1,7 +1,10 @@
 """Utilities for PyKEEN."""
 
+from __future__ import annotations
+
 import ftplib
 import functools
+import hashlib
 import itertools as itt
 import json
 import logging
@@ -23,7 +26,6 @@ from typing import (
     Any,
     Callable,
     Generic,
-    Optional,
     TextIO,
     TypeVar,
     Union,
@@ -110,6 +112,7 @@ __all__ = [
     "ExtraReprMixin",
     "einsum",
     "isin_many_dim",
+    "triple_hash",
 ]
 
 logger = logging.getLogger(__name__)
@@ -195,7 +198,7 @@ def get_until_first_blank(s: str) -> str:
 
 def flatten_dictionary(
     dictionary: Mapping[str, Any],
-    prefix: Optional[str] = None,
+    prefix: str | None = None,
     sep: str = ".",
 ) -> dict[str, Any]:
     """Flatten a nested dictionary."""
@@ -222,8 +225,8 @@ def _flatten_dictionary(
 def clamp_norm(
     x: torch.Tensor,
     maxnorm: float,
-    p: Union[str, int] = "fro",
-    dim: Union[None, int, Iterable[int]] = None,
+    p: str | int = "fro",
+    dim: None | int | Iterable[int] = None,
 ) -> torch.Tensor:
     """Ensure that a tensor's norm does not exceeds some threshold.
 
@@ -287,8 +290,8 @@ class NoRandomSeedNecessary:
 
 def all_in_bounds(
     x: torch.Tensor,
-    low: Optional[float] = None,
-    high: Optional[float] = None,
+    low: float | None = None,
+    high: float | None = None,
     a_tol: float = 0.0,
 ) -> bool:
     """Check if tensor values respect lower and upper bound.
@@ -617,7 +620,7 @@ def tensor_product(*tensors: torch.FloatTensor) -> torch.FloatTensor:
 
 def negative_norm_of_sum(
     *x: torch.FloatTensor,
-    p: Union[str, int, float] = 2,
+    p: str | int | float = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a sum of vectors on already broadcasted representations.
@@ -637,7 +640,7 @@ def negative_norm_of_sum(
 
 def negative_norm(
     x: torch.FloatTensor,
-    p: Union[str, int, float] = 2,
+    p: str | int | float = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a vector.
@@ -708,7 +711,7 @@ CANONICAL_DIMENSIONS = dict(h=1, r=2, t=3)
 
 
 # TODO delete when deleting convert_to_canonical_shape (below)
-def _normalize_dim(dim: Union[int, str]) -> int:
+def _normalize_dim(dim: int | str) -> int:
     """Normalize the dimension selection."""
     if isinstance(dim, int):
         return dim
@@ -718,10 +721,10 @@ def _normalize_dim(dim: Union[int, str]) -> int:
 # TODO delete? See note in test_sim.py on its only usage
 def convert_to_canonical_shape(
     x: torch.FloatTensor,
-    dim: Union[int, str],
-    num: Optional[int] = None,
+    dim: int | str,
+    num: int | None = None,
     batch_size: int = 1,
-    suffix_shape: Union[int, Sequence[int]] = -1,
+    suffix_shape: int | Sequence[int] = -1,
 ) -> torch.FloatTensor:
     """Convert a tensor to canonical shape.
 
@@ -748,7 +751,7 @@ def convert_to_canonical_shape(
     return x.view(*shape, *suffix_shape)
 
 
-def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
+def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
     """Ensure that the input is a sequence.
 
     .. note ::
@@ -781,7 +784,7 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
 
 
-def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+def broadcast_upgrade_to_sequences(*xs: X | Sequence[X]) -> Sequence[Sequence[X]]:
     """Apply upgrade_to_sequence to each input, and afterwards repeat singletons to match the maximum length.
 
     :param xs: length: m
@@ -813,7 +816,7 @@ def broadcast_upgrade_to_sequences(*xs: Union[X, Sequence[X]]) -> Sequence[Seque
     return tuple(xs_)
 
 
-def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+def ensure_tuple(*x: X | Sequence[X]) -> Sequence[Sequence[X]]:
     """Ensure that all elements in the sequence are upgraded to sequences.
 
     :param x: A sequence of sequences or literals
@@ -825,7 +828,7 @@ def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
     return tuple(upgrade_to_sequence(xx) for xx in x)
 
 
-def unpack_singletons(*xs: tuple[X]) -> Sequence[Union[X, tuple[X]]]:
+def unpack_singletons(*xs: tuple[X]) -> Sequence[X | tuple[X]]:
     """Unpack sequences of length one.
 
     :param xs: A sequence of tuples of length 1 or more
@@ -841,7 +844,7 @@ def extend_batch(
     batch: MappedTriples,
     max_id: int,
     dim: int,
-    ids: Optional[torch.LongTensor] = None,
+    ids: torch.LongTensor | None = None,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
@@ -879,7 +882,7 @@ def extend_batch(
 
 
 def check_shapes(
-    *x: tuple[Union[torch.Tensor, tuple[int, ...]], str],
+    *x: tuple[torch.Tensor | tuple[int, ...], str],
     raise_on_errors: bool = True,
 ) -> bool:
     """Verify that a sequence of tensors are of matching shapes.
@@ -923,7 +926,7 @@ def check_shapes(
 
 @functools.lru_cache(maxsize=1)
 def get_expected_norm(
-    p: Union[int, float, str],
+    p: int | float | str,
     d: int,
 ) -> float:
     r"""Compute the expected value of the L_p norm.
@@ -996,7 +999,7 @@ class Bias(nn.Module):
         return x + self.bias.unsqueeze(dim=0)
 
 
-def lp_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
+def lp_norm(x: torch.FloatTensor, p: float, dim: int | None, normalize: bool) -> torch.FloatTensor:
     """Return the $L_p$ norm."""
     value = x.norm(p=p, dim=dim)
     if not normalize:
@@ -1004,7 +1007,7 @@ def lp_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool)
     return value / get_expected_norm(p=p, d=x.shape[-1])
 
 
-def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
+def powersum_norm(x: torch.FloatTensor, p: float, dim: int | None, normalize: bool) -> torch.FloatTensor:
     """Return the power sum norm."""
     value = x.abs().pow(p).sum(dim=dim)
     if not normalize:
@@ -1050,7 +1053,7 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
 CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
 
 
-def load_configuration(path: Union[str, pathlib.Path, os.PathLike]) -> Mapping[str, Any]:
+def load_configuration(path: str | pathlib.Path | os.PathLike) -> Mapping[str, Any]:
     """Load a configuration from a JSON or YAML file."""
     # ensure pathlib
     path = pathlib.Path(path)
@@ -1193,11 +1196,11 @@ PathType = Union[str, pathlib.Path, TextIO]
 
 
 def normalize_path(
-    path: Optional[PathType],
-    *other: Union[str, pathlib.Path],
+    path: PathType | None,
+    *other: str | pathlib.Path,
     mkdir: bool = False,
     is_file: bool = False,
-    default: Optional[PathType] = None,
+    default: PathType | None = None,
 ) -> pathlib.Path:
     """
     Normalize a path.
@@ -1351,7 +1354,7 @@ def _weisfeiler_lehman_iteration_approx(
 def iter_weisfeiler_lehman(
     edge_index: torch.LongTensor,
     max_iter: int = 2,
-    num_nodes: Optional[int] = None,
+    num_nodes: int | None = None,
     approximate: bool = False,
 ) -> Iterable[torch.Tensor]:
     """
@@ -1453,9 +1456,9 @@ def iter_weisfeiler_lehman(
 def get_edge_index(
     *,
     # cannot use Optional[pykeen.triples.CoreTriplesFactory] due to cyclic imports
-    triples_factory: Optional[Any] = None,
-    mapped_triples: Optional[MappedTriples] = None,
-    edge_index: Optional[torch.LongTensor] = None,
+    triples_factory: Any | None = None,
+    mapped_triples: MappedTriples | None = None,
+    edge_index: torch.LongTensor | None = None,
 ) -> torch.LongTensor:
     """
     Get the edge index from a number of different sources.
@@ -1488,7 +1491,7 @@ def get_edge_index(
 
 def prepare_filter_triples(
     mapped_triples: MappedTriples,
-    additional_filter_triples: Union[None, MappedTriples, list[MappedTriples]] = None,
+    additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
     warn: bool = True,
 ) -> MappedTriples:
     """Prepare the filter triples from the evaluation triples, and additional filter triples."""
@@ -1616,6 +1619,12 @@ def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int 
         return_counts=True, return_inverse=True, dim=dim
     )[1:]
     return counts[inverse[: elements.shape[dim]]] > 1
+
+
+def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
+    """Slow triple hash using sha512 and conversion to Python."""
+    s = str(sorted(itt.chain.from_iterable(triple.tolist() for triple in triples)))
+    return dict(sha512=hashlib.sha512(s.encode("utf8")).hexdigest())
 
 
 if __name__ == "__main__":

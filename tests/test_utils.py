@@ -1,6 +1,7 @@
 """Tests for the :mod:`pykeen.utils` module."""
 
 import functools
+import hashlib
 import itertools
 import operator
 import random
@@ -32,6 +33,7 @@ from pykeen.utils import (
     split_complex,
     tensor_product,
     tensor_sum,
+    triple_hash,
 )
 
 
@@ -383,3 +385,15 @@ class TestUtils(unittest.TestCase):
         sim_ref = reference[None, :] == reference[:, None]
         sim_approx = approx[None, :] == approx[:, None]
         assert torch.allclose(sim_ref, sim_approx)
+
+    def test_triples_hash(self):
+        """Test hashing triples."""
+        triples = [
+            torch.randint(0, 300, size=(3, 150)),
+            torch.randint(0, 300, size=(3, 150)),
+            torch.randint(0, 300, size=(3, 150)),
+        ]
+
+        old = sum((t.tolist() for t in triples), [])  # noqa:RUF017
+        old_hash = dict(sha512=hashlib.sha512(str(sorted(old)).encode("utf8")).hexdigest())
+        self.assertEqual(old_hash, triple_hash(*triples))

@@ -184,7 +184,6 @@ the :class:`pykeen.datasets.Nations`
 from __future__ import annotations
 
 import ftplib
-import hashlib
 import json
 import logging
 import os
@@ -234,6 +233,7 @@ from ..utils import (
     random_non_negative_int,
     resolve_device,
     set_random_seed,
+    triple_hash,
 )
 from ..version import get_git_hash, get_version
 
@@ -247,11 +247,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
-    """Slow triple hash using sha512 and conversion to Python."""
-    return dict(sha512=hashlib.sha512(str(sorted(sum((t.tolist() for t in triples), []))).encode("utf8")).hexdigest())
 
 
 @fix_dataclass_init_docs
