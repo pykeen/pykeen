@@ -6,7 +6,8 @@ Generally requires :module:`torchvision` to be installed.
 
 import functools
 import pathlib
-from typing import Any, Callable, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any, Callable, Optional, Union
 
 import torch
 import torch.nn

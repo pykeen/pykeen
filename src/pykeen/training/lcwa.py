@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Training KGE models based on the LCWA."""
 
 import logging
 from math import ceil
-from typing import Callable, ClassVar, Optional, Tuple, Union
+from typing import Callable, ClassVar, Optional, Union
 
 import torch
 from torch.nn import functional
@@ -230,7 +228,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
-class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedTriples]]):
+class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedTriples]]):
     r"""A "symmetric" LCWA scoring heads *and* tails at once.
 
     This objective was introduced by [lacroix2018]_ as
@@ -255,14 +253,14 @@ class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedT
     # docstr-coverage: inherited
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: Optional[str], **kwargs
-    ) -> DataLoader[Tuple[MappedTriples]]:  # noqa: D102
+    ) -> DataLoader[tuple[MappedTriples]]:  # noqa: D102
         assert sampler is None
         return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
 
     # docstr-coverage: inherited
     def _process_batch(
         self,
-        batch: Tuple[MappedTriples],
+        batch: tuple[MappedTriples],
         start: int,
         stop: int,
         label_smoothing: float = 0,
@@ -297,7 +295,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedT
 
     @staticmethod
     # docstr-coverage: inherited
-    def _get_batch_size(batch: Tuple[MappedTriples]) -> int:  # noqa: D102
+    def _get_batch_size(batch: tuple[MappedTriples]) -> int:  # noqa: D102
         assert len(batch) == 1
         return batch[0].shape[0]
 

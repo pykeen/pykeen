@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Inductive models in PyKEEN."""
 
 from class_resolver import ClassResolver

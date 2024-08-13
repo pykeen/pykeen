@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Prediction workflows.
 
@@ -270,8 +268,9 @@ import dataclasses
 import logging
 import math
 from abc import ABC, abstractmethod
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import Collection, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Optional, Union, cast
 
 import numpy
 import pandas
@@ -420,7 +419,7 @@ class TargetPredictions(Predictions):
     target: Target
 
     #: the other column's fixed IDs
-    other_columns_fixed_ids: Tuple[int, int]
+    other_columns_fixed_ids: tuple[int, int]
 
     # docstr-coverage: inherited
     def __post_init__(self):  # noqa: D105
@@ -464,7 +463,7 @@ def _get_targets(
     triples_factory: Optional[TriplesFactory],
     device: torch.device,
     entity: bool = True,
-) -> Tuple[Optional[Iterable[str]], Optional[Iterable[int]], Optional[torch.Tensor]]:
+) -> tuple[Optional[Iterable[str]], Optional[Iterable[int]], Optional[torch.Tensor]]:
     """
     Prepare prediction targets for restricted target prediction.
 
@@ -529,7 +528,7 @@ def _get_input_batch(
     head: Union[None, int, str] = None,
     relation: Union[None, int, str] = None,
     tail: Union[None, int, str] = None,
-) -> Tuple[Target, torch.LongTensor, Tuple[int, int]]:
+) -> tuple[Target, torch.LongTensor, tuple[int, int]]:
     """Prepare input batch for prediction.
 
     :param factory:
@@ -548,7 +547,7 @@ def _get_input_batch(
         a 3-tuple (target, batch, batch_tuple) of the prediction target, the input batch, and the input batch as tuple.
     """
     # create input batch
-    batch_ids: List[int] = []
+    batch_ids: list[int] = []
     target: Optional[Target] = None
     if head is None:
         target = LABEL_HEAD
@@ -737,7 +736,7 @@ class AllScoreConsumer(ScoreConsumer):
         scores: torch.FloatTensor,
     ) -> None:  # noqa: D102
         j = 0
-        selectors: List[Union[slice, torch.LongTensor]] = []
+        selectors: list[Union[slice, torch.LongTensor]] = []
         for col in COLUMN_LABELS:
             if col == target:
                 selector = slice(None)
@@ -849,7 +848,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
     """
 
     #: the choices for the first and second component of the input batch
-    parts: Tuple[torch.LongTensor, torch.LongTensor]
+    parts: tuple[torch.LongTensor, torch.LongTensor]
 
     def __init__(
         self,
@@ -875,7 +874,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
             if the target position is restricted, or any non-target position is not restricted
         """
         super().__init__(target=target)
-        parts: List[torch.LongTensor] = []
+        parts: list[torch.LongTensor] = []
         for restriction, on in zip((heads, relations, tails), COLUMN_LABELS):
             if on == target:
                 if restriction is not None:
@@ -1106,7 +1105,7 @@ def predict_target(
 def predict_triples(
     model: Model,
     *,
-    triples: Union[None, MappedTriples, LabeledTriples, Union[Tuple[str, str, str], Sequence[Tuple[str, str, str]]]],
+    triples: Union[None, MappedTriples, LabeledTriples, Union[tuple[str, str, str], Sequence[tuple[str, str, str]]]],
     triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
     mode: Optional[InductiveMode] = None,

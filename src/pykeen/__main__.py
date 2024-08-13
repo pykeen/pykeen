@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Entrypoint module, in case you use ``python -m pykeen``.
 
 Why does this file exist, and why ``__main__``? For more info, read:

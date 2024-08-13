@@ -1,7 +1,8 @@
 """Tests for training callbacks."""
 
 import unittest
-from typing import Any, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any
 from unittest import mock
 
 import torch

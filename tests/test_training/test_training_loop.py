@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Test for sLCWA and LCWA."""
 
 from pykeen.losses import CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss

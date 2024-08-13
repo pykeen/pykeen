@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Test the evaluators."""
 
 from __future__ import annotations
@@ -7,7 +5,8 @@ from __future__ import annotations
 import itertools
 import unittest
 from collections import Counter
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
+from collections.abc import Collection, Iterable, Mapping, MutableMapping
+from typing import Any
 
 import numpy
 import numpy.random
@@ -84,7 +83,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
     def _validate_result(
         self,
         result: MetricResults,
-        data: Dict[str, torch.Tensor],
+        data: dict[str, torch.Tensor],
     ):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
@@ -174,7 +173,7 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
     def _validate_result(
         self,
         result: MetricResults,
-        data: Dict[str, torch.Tensor],
+        data: dict[str, torch.Tensor],
     ):
         # Check for correct class
         assert isinstance(result, ClassificationMetricResults)
@@ -398,8 +397,8 @@ class DummyEvaluator(Evaluator[Target]):
         hrt_batch: MappedTriples,
         target: Target,
         scores: torch.FloatTensor,
-        true_scores: Optional[torch.FloatTensor] = None,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
+        true_scores: torch.FloatTensor | None = None,
+        dense_positive_mask: torch.FloatTensor | None = None,
     ) -> None:  # noqa: D102
         self.counter.update((target,))
 
@@ -578,10 +577,10 @@ class CandidateSetSizeTests(unittest.TestCase):
     def _test_get_candidate_set_size(
         self,
         mapped_triples: MappedTriples,
-        restrict_entities_to: Optional[Collection[int]],
-        restrict_relations_to: Optional[Collection[int]],
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]],
-        num_entities: Optional[int],
+        restrict_entities_to: Collection[int] | None,
+        restrict_relations_to: Collection[int] | None,
+        additional_filter_triples: None | MappedTriples | list[MappedTriples],
+        num_entities: int | None,
     ):
         """Test get_candidate_set_size."""
         df = get_candidate_set_size(
@@ -690,7 +689,7 @@ class CandidateSetSizeTests(unittest.TestCase):
 class ExpectedMetricsTests(unittest.TestCase):
     """Tests for expected metrics."""
 
-    def _iter_num_candidates(self) -> Iterable[Tuple[Tuple[int, ...], int]]:
+    def _iter_num_candidates(self) -> Iterable[tuple[tuple[int, ...], int]]:
         """Generate number of ranking candidate arrays of different shapes."""
         generator: numpy.random.Generator = numpy.random.default_rng(seed=42)
         # test different shapes

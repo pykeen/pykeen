@@ -3,7 +3,8 @@
 import logging
 import string
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Callable, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Tests for the :mod:`pykeen.utils` module."""
 
 import functools
@@ -9,7 +7,7 @@ import random
 import string
 import timeit
 import unittest
-from typing import Iterable, Tuple
+from collections.abc import Iterable
 
 import numpy
 import pytest
@@ -147,7 +145,7 @@ def _generate_shapes(
     iterations: int = 64,
     *,
     generator: torch.Generator,
-) -> Iterable[Tuple[Tuple[int, ...], ...]]:
+) -> Iterable[tuple[tuple[int, ...], ...]]:
     """Generate shapes."""
     max_shape = torch.randint(low=2, high=32, size=(128,), generator=generator)
     for _ in range(iterations):

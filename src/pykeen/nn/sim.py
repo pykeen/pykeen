@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Similarity functions."""
 
 import itertools

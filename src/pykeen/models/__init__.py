@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 r"""
 A knowledge graph embedding model is capable of computing real-valued scores representing the plausibility
 of a triple $(h,r,t) \in \mathbb{K}$, where a larger score indicates a higher plausibility. The interpretation

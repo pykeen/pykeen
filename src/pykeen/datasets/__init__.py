@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Built-in datasets for PyKEEN.
 
 New datasets (inheriting from :class:`pykeen.datasets.Dataset`) can be registered with PyKEEN using the

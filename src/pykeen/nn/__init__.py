@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """PyKEEN internal "nn" module."""
 
 from class_resolver import ClassResolver

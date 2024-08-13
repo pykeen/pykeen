@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """An adapter for Neptune.ai."""
 
-from typing import TYPE_CHECKING, Any, Collection, Mapping, Optional
+from collections.abc import Collection, Mapping
+from typing import TYPE_CHECKING, Any, Optional
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary

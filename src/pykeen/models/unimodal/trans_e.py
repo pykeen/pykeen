@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """TransE."""
 
-from typing import Any, ClassVar, Mapping
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch.nn import functional

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """A command line interface for PyKEEN.
 
 Why does this file exist, and why not put this in ``__main__``? You might be tempted to import things from ``__main__``
@@ -17,8 +15,9 @@ import importlib
 import inspect
 import os
 import sys
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Iterable, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 import click
 from class_resolver import ClassResolver
@@ -87,7 +86,7 @@ def models(tablefmt: str):
     click.echo(_help_models(tablefmt=tablefmt)[0])
 
 
-def format_class(cls: Type, module: Optional[str] = None) -> str:
+def format_class(cls: type, module: Optional[str] = None) -> str:
     """
     Generate the fully-qualified class name.
 
@@ -134,9 +133,9 @@ def _format_reference(reference: Optional[str], link_fmt: Optional[str], alt_ref
 def _get_resolver_lines2(
     resolver: ClassResolver[X],
     link_fmt: Optional[str] = None,
-    skip: Optional[Set[Type[X]]] = None,
+    skip: Optional[set[type[X]]] = None,
     top_k: int = 2,
-) -> Iterable[Tuple[str, str, Optional[str]]]:
+) -> Iterable[tuple[str, str, Optional[str]]]:
     for _, clsx in sorted(resolver.lookup_dict.items()):
         if skip and clsx in skip:
             continue
@@ -165,7 +164,7 @@ def _get_resolver_lines2(
         yield name, reference, citation
 
 
-def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
+def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> tuple[str, int]:
     lines = sorted(_get_resolver_lines2(resolver=model_resolver, link_fmt=link_fmt))
     headers = ["Name", "Model", "Citation"]
     return (
@@ -178,7 +177,7 @@ def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None) ->
     )
 
 
-def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
+def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> tuple[str, int]:
     lines = list(
         _get_resolver_lines2(
             resolver=interaction_resolver,
@@ -196,7 +195,7 @@ def _help_interactions(tablefmt: str = "github", *, link_fmt: Optional[str] = No
     )
 
 
-def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> Tuple[str, int]:
+def _help_representations(tablefmt: str = "github", *, link_fmt: Optional[str] = None) -> tuple[str, int]:
     lines = list(
         line[:2]
         for line in _get_resolver_lines2(
@@ -485,7 +484,7 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-METRIC_NAMES: Mapping[Type[MetricResults], str] = {
+METRIC_NAMES: Mapping[type[MetricResults], str] = {
     ClassificationMetricResults: "Classification",
     RankBasedMetricResults: "Ranking",
 }
@@ -514,8 +513,8 @@ def _get_metrics_lines(tablefmt: str):
 
 
 def _get_resolver_lines(
-    d: Mapping[str, Type[X]], tablefmt: str, submodule: str, link_fmt: Optional[str] = None
-) -> Union[Iterable[Tuple[str, str]], Iterable[Tuple[str, str, Optional[str]]]]:
+    d: Mapping[str, type[X]], tablefmt: str, submodule: str, link_fmt: Optional[str] = None
+) -> Union[Iterable[tuple[str, str]], Iterable[tuple[str, str, Optional[str]]]]:
     for name, value in sorted(d.items()):
         if tablefmt == "rst":
             if isinstance(value, type):
@@ -623,7 +622,7 @@ def _link(text: str, link: str, fmt: str) -> str:
         return f"[{text}]({link})"
 
 
-def get_metric_list() -> List[Tuple[str, Type[Metric], Type[MetricResults]]]:
+def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:
     """Get info about all metrics across all evaluators."""
     return [
         (metric_key, metric_cls, resolver_cls)

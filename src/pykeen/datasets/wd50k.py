@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The Wikidata-based WD50K dataset (triple-only version) from [galkin2020]_.
 
 - GitHub Repository: https://github.com/migalkin/StarE/tree/master/data/clean/wd50k/

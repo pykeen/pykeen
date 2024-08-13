@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
-
 """Unit tests for triples factories."""
 
 import itertools as itt
 import os
 import tempfile
 import unittest
+from collections.abc import Collection, Iterable, Mapping
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Any, Collection, Iterable, Mapping, Optional, Tuple
+from typing import Any, Optional
 from unittest.mock import patch
 
 import numpy as np
@@ -554,7 +553,7 @@ class TestUtils(unittest.TestCase):
         (torch.bool, (11, 3), does_not_raise()),
     ],
 )
-def test_core_triples_factory_error_handling(dtype: torch.dtype, size: Tuple[int, ...], expectation):
+def test_core_triples_factory_error_handling(dtype: torch.dtype, size: tuple[int, ...], expectation):
     """Test error handling in init method of CoreTriplesFactory."""
     with expectation:
         CoreTriplesFactory(
@@ -562,7 +561,7 @@ def test_core_triples_factory_error_handling(dtype: torch.dtype, size: Tuple[int
         )
 
 
-def _iter_get_mapped_triples_inputs() -> Iterable[Tuple[Any, Mapping[str, Any]]]:
+def _iter_get_mapped_triples_inputs() -> Iterable[tuple[Any, Mapping[str, Any]]]:
     """Iterate valid test inputs for get_mapped_triples."""
     factory = Nations().training
     # >>> positional argument

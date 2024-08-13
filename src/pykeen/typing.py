@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """Type hints for PyKEEN."""
 
 from __future__ import annotations
 
-from typing import Callable, Collection, Literal, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
+from collections.abc import Collection, Mapping, Sequence
+from typing import Callable, Literal, NamedTuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -135,7 +134,7 @@ RANK_OPTIMISTIC: RankType = "optimistic"
 RANK_REALISTIC: RankType = "realistic"
 RANK_PESSIMISTIC: RankType = "pessimistic"
 # RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
-RANK_TYPES: Tuple[RankType, ...] = (RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC)
+RANK_TYPES: tuple[RankType, ...] = (RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC)
 RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
     "best": RANK_OPTIMISTIC,
     "worst": RANK_PESSIMISTIC,
@@ -175,4 +174,4 @@ def normalize_target(target: str | None) -> ExtendedTarget:
 EASide = Literal["left", "right"]
 EA_SIDE_LEFT: EASide = "left"
 EA_SIDE_RIGHT: EASide = "right"
-EA_SIDES: Tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)
+EA_SIDES: tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)

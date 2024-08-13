@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Composition modules."""
 
 from abc import ABC, abstractmethod

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Training callbacks.
 
 Training callbacks allow for arbitrary extension of the functionality of the :class:`pykeen.training.TrainingLoop`
@@ -54,7 +52,8 @@ to implement a gradient clipping callback:
 from __future__ import annotations
 
 import pathlib
-from typing import Any, List, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
@@ -139,7 +138,7 @@ class TrainingCallback:
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         """Call after epoch."""
 
-    def post_train(self, losses: List[float], **kwargs: Any) -> None:
+    def post_train(self, losses: list[float], **kwargs: Any) -> None:
         """Call after training."""
 
 
@@ -158,7 +157,7 @@ class TrackerTrainingCallback(TrainingCallback):
 class GradientNormClippingTrainingCallback(TrainingCallback):
     """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_norm_`."""
 
-    def __init__(self, max_norm: float, norm_type: Optional[float] = None):
+    def __init__(self, max_norm: float, norm_type: float | None = None):
         """
         Initialize the callback.
 
@@ -236,7 +235,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         frequency: int = 1,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         **kwargs,
     ):
         """
@@ -284,7 +283,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         self,
         factory: CoreTriplesFactory,
         frequency: int = 1,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         additional_filter_triples: AdditionalFilterTriplesHint = None,
@@ -347,8 +346,8 @@ class StopperTrainingCallback(TrainingCallback):
         stopper: Stopper,
         *,
         triples_factory: CoreTriplesFactory,
-        last_best_epoch: Optional[int] = None,
-        best_epoch_model_file_path: Optional[pathlib.Path],
+        last_best_epoch: int | None = None,
+        best_epoch_model_file_path: pathlib.Path | None,
     ):
         """
         Initialize the callback.
@@ -572,7 +571,7 @@ class MultiTrainingCallback(TrainingCallback):
     """A wrapper for calling multiple training callbacks together."""
 
     #: A collection of callbacks
-    callbacks: List[TrainingCallback]
+    callbacks: list[TrainingCallback]
 
     def __init__(
         self,
@@ -633,7 +632,7 @@ class MultiTrainingCallback(TrainingCallback):
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
 
     # docstr-coverage: inherited
-    def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
+    def post_train(self, losses: list[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses, **kwargs)
 
