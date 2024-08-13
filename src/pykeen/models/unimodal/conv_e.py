@@ -112,9 +112,9 @@ class ConvE(ERModel):
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
-    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,L)
+    #: If batch normalization is enabled, this is: num_features - C from an expected input of size (N,C,L)
     bn0: Optional[torch.nn.BatchNorm2d]
-    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,H,W)
+    #: If batch normalization is enabled, this is: num_features - C from an expected input of size (N,C,H,W)
     bn1: Optional[torch.nn.BatchNorm2d]
     bn2: Optional[torch.nn.BatchNorm1d]
 

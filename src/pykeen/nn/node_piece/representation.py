@@ -96,7 +96,7 @@ class TokenizationRepresentation(Representation):
             token_representation_kwargs,
             max_id=self.vocabulary_size,
         )
-        shape = ShapeError.verify(shape=(num_chosen_tokens,) + token_representation.shape, reference=shape)
+        shape = ShapeError.verify(shape=(num_chosen_tokens, *token_representation.shape), reference=shape)
         super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # input validation

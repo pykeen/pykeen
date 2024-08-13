@@ -154,7 +154,7 @@ class OpenEA(EADataset):
 @verbose_option
 def _main():
     for size, version, graph_pair, side in itertools.product(
-        GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, EA_SIDES + (None,)
+        GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, (*EA_SIDES, None)
     ):
         ds = OpenEA(graph_pair=graph_pair, side=side, size=size, version=version)
         ds.summarize()

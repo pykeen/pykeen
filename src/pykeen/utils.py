@@ -211,7 +211,7 @@ def _flatten_dictionary(
     """Help flatten a nested dictionary."""
     result = {}
     for k, v in dictionary.items():
-        new_prefix = prefix + (k,)
+        new_prefix = (*prefix, k)
         if isinstance(v, dict):
             result.update(_flatten_dictionary(dictionary=v, prefix=new_prefix))
         else:
@@ -530,7 +530,7 @@ def estimate_cost_of_sequence(
             np.prod,
             itt.islice(
                 itt.accumulate(
-                    (shape,) + other_shapes,
+                    (shape, *other_shapes),
                     calculate_broadcasted_elementwise_result_shape,
                 ),
                 1,

@@ -244,7 +244,7 @@ class CN3l(MTransEDataset):
 @click.command()
 @verbose_option
 def _main():
-    for cls, graph_pair, side in itertools.product((WK3l15k, WK3l120k, CN3l), GRAPH_PAIRS, EA_SIDES + (None,)):
+    for cls, graph_pair, side in itertools.product((WK3l15k, WK3l120k, CN3l), GRAPH_PAIRS, (*EA_SIDES, None)):
         ds = cls(graph_pair=graph_pair, side=side)
         ds.summarize()
 

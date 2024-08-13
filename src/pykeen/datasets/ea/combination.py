@@ -117,7 +117,7 @@ def merge_label_to_id_mapping(
     result: dict[str, int] = {}
     for value, keys in value_to_keys.items():
         if len(keys) == 1:
-            key = list(keys)[0]
+            key = next(iter(keys))
         else:
             key = str(set(keys))
         result[key] = value
@@ -447,7 +447,7 @@ def iter_entity_mappings(
     :yields: explicit id remappings
     """
     old, new = (torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs))
-    offsets = offsets.tolist() + [old.max().item() + 1]
+    offsets = [*offsets.tolist(), old.max().item() + 1]
     for low, high in zip(offsets, offsets[1:]):
         mask = (low <= old) & (old < high)
         this_old = old[mask] - low

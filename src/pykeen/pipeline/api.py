@@ -617,7 +617,7 @@ class _ResultAccumulator:
             the pipeline result
         """
         row: list[Any] = [result.get_metric(key=key) for key in self.keys]
-        self.data.append([False] + row)
+        self.data.append([False, *row])
 
     def is_non_empty(self) -> bool:
         """Return whether there are keys."""
@@ -639,7 +639,7 @@ class _ResultAccumulator:
         :return: original | metric1 | metric2 ...
             a dataframe with the results of the original model and each replicate
         """
-        return pd.DataFrame(data=self.data, columns=["original"] + self.keys)
+        return pd.DataFrame(data=self.data, columns=["original", *self.keys])
 
 
 def compare_results(df: pd.DataFrame, significance_level: float = 0.01) -> pd.DataFrame:

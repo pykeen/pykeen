@@ -387,7 +387,7 @@ def get_relation_functionality_df(
     .. [wang2018]
         Wang, Z., *et al.* (2018). `Cross-lingual Knowledge Graph Alignment via Graph Convolutional Networks
         <https://doi.org/10.18653/v1/D18-1032>`_. Proceedings of the 2018 Conference on Empirical Methods in
-        Natural Language Processing, 349–357.
+        Natural Language Processing, 349-357.
     """
     # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)

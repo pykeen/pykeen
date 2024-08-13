@@ -236,7 +236,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
     .. math ::
 
         l_{i,j,k}(X) = - X_{i,j,k} + \log \left(
-            \sum_{k'} \exp(X_{i,j,k′})
+            \sum_{k'} \exp(X_{i,j,k'})
         \right) - X_{k,j+P,i} + \log \left(
             \sum_{i'} \exp (X_{k, j+P, i'})
         \right)

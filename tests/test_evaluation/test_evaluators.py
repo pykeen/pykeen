@@ -250,7 +250,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
         # check that all found positives are positive
         for batch_id, entity_id in sparse_positives:
             same = batch[batch_id, 1:]
-            assert (int(entity_id),) + tuple(map(int, same)) in triples
+            assert (int(entity_id), *map(int, same)) in triples
 
     def test_create_dense_positive_mask_(self):
         """Test method create_dense_positive_mask_."""

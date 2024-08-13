@@ -59,13 +59,10 @@ class LiteralModel(
         """
         literals = triples_factory.get_numeric_literals_tensor()
         _max_id, *shape = literals.shape
-        entity_representations = tuple(upgrade_to_sequence(entity_representations)) + (Embedding,)
-        entity_representations_kwargs = tuple(upgrade_to_sequence(entity_representations_kwargs)) + (
-            dict(
-                shape=shape,
-                initializer=PretrainedInitializer(tensor=literals),
-                trainable=False,
-            ),
+        entity_representations = (*upgrade_to_sequence(entity_representations), Embedding)
+        entity_representations_kwargs = (
+            *upgrade_to_sequence(entity_representations_kwargs),
+            dict(shape=shape, initializer=PretrainedInitializer(tensor=literals), trainable=False),
         )
         super().__init__(
             triples_factory=triples_factory,

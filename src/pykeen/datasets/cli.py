@@ -305,9 +305,8 @@ def expected_metrics(
                 tqdm.write(f"wrote {output_path}")
 
                 # expected metrics
-                ks = (1, 3, 5, 10) + tuple(
-                    10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
-                )
+                max_power_of_ten = int(math.ceil(math.log(dataset_instance.num_entities)))
+                ks = (1, 3, 5, 10, *(10**i for i in range(2, max_power_of_ten)))
                 metrics = [
                     ArithmeticMeanRank(),
                     *(HitsAtK(k) for k in ks),

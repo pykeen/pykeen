@@ -388,7 +388,7 @@ class Embedding(Representation):
         self.is_complex = dtype.is_complex
         _shape = shape
         if self.is_complex:
-            _shape = tuple(shape[:-1]) + (shape[-1], 2)
+            _shape = (*shape[:-1], shape[-1], 2)
             _embedding_dim = _embedding_dim * 2
             # note: this seems to work, as finfo returns the datatype of the underlying floating
             # point dtype, rather than the combined complex one

@@ -54,7 +54,7 @@
 .. [shi2019] Shi, X. *et al.* (2019). `Modeling Multi-mapping Relations for Precise Cross-lingual Entity Alignment
              <https://www.aclweb.org/anthology/D19-1075>`_. EMNLP-IJCNLP 2019.
 .. [vashishth2020] Vashishth, S., *et al.* (2020). `Composition-based multi-relational graph convolutional
-   networks <https://arxiv.org/abs/1911.03082>`_. *arXiv*, 1–15.
+   networks <https://arxiv.org/abs/1911.03082>`_. *arXiv*, 1-15.
 .. [zhang2019] Zhang, Shuai, *et al.* (2019). `Quaternion knowledge graph embeddings
                 <https://openreview.net/forum?id=cZbk98eY_WwC>`_ NeurIPS'19.
 .. [zhang2019b] Zhang, W., *et al.* (2019). `Interaction Embeddings for Prediction and Explanation in Knowledge
@@ -62,16 +62,16 @@
    Conference on Web Search and Data Mining.
 .. [abboud2020] Abboud, R., *et al.* (2020). `BoxE: A box embedding model for knowledge base completion
    <https://proceedings.neurips.cc/paper/2020/file/6dbbe6abe5f14af882ff977fc3f35501-Paper.pdf>`_.
-   *Advances in Neural Information Processing Systems*, 2020-December(NeurIPS), 1–13.
+   *Advances in Neural Information Processing Systems*, 2020-December(NeurIPS), 1-13.
 .. [galkin2021] Galkin, M., *et al.* (2021) `NodePiece: Compositional and Parameter-Efficient Representations
    of Large Knowledge Graphs <https://arxiv.org/abs/2106.12144>`_. *arXiv*, 2106.12144.
 .. [zaheer2017] Zaheer, M., *et al.* (2017). `Deep sets
    <https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html>`_.
-   *Advances in Neural Information Processing Systems*, 2017-December(ii), 3392–3402.
+   *Advances in Neural Information Processing Systems*, 2017-December(ii), 3392-3402.
 .. [lacroix2018] Lacroix, T., Usunier, N., & Obozinski, G. (2018). `Canonical Tensor Decomposition for Knowledge Base
    Completion <http://arxiv.org/abs/1806.07297>`_. *arXiv*, 1806.07297.
 .. [hitchcock1927] Hitchcock, F. L. `The expression of a tensor or a polyadic as a sum of
-   products <https://doi.org/10.1002/sapm192761164>`_. Studies in Applied Mathematics, 6 (1-4):164–189, 1927.
+   products <https://doi.org/10.1002/sapm192761164>`_. Studies in Applied Mathematics, 6 (1-4):164-189, 1927.
 """
 
 from .auto_sf import AutoSF

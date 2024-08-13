@@ -1243,7 +1243,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", NATIONS_TRAIN_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, *self._cli_extras])
 
     @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):
@@ -1268,12 +1268,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_cli_training_kinships(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", KINSHIPS_TRAIN_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", KINSHIPS_TRAIN_PATH, *self._cli_extras])
 
     @pytest.mark.slow
     def test_cli_training_nations_testing(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, "-q", NATIONS_TEST_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, "-q", NATIONS_TEST_PATH, *self._cli_extras])
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
@@ -1742,7 +1742,7 @@ class InitializerTestCase(unittest.TestCase):
         """Test whether the initializer returns a modified tensor."""
         shape = (self.num_entities, *self.shape)
         if self.dtype.is_complex:
-            shape = shape + (2,)
+            shape = (*shape, 2)
         x = torch.rand(size=shape)
         # initializers *may* work in-place => clone
         y = self.initializer(x.clone())
@@ -1831,7 +1831,7 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
 
     def test_call(self):
         """Test call."""
-        triples_groups = [self.reference] + list(torch.split(self.other, split_size_or_sections=3, dim=0))
+        triples_groups = [self.reference, *torch.split(self.other, split_size_or_sections=3, dim=0)]
         clean_groups = self.instance(triples_groups=triples_groups, random_state=42)
         assert all(torch.is_tensor(triples) and triples.dtype for triples in clean_groups)
 
@@ -2643,7 +2643,7 @@ class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinati
         """Iterate over test input shapes."""
         for prefix_shape in [tuple(), (2,), (2, 3)]:
             for input_dims in self.input_dims:
-                yield [prefix_shape + (input_dim,) for input_dim in input_dims]
+                yield [(*prefix_shape, input_dim) for input_dim in input_dims]
 
     def _create_input(self, input_shapes: Sequence[tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
         return [torch.empty(size=size) for size in input_shapes]

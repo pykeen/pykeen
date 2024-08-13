@@ -251,13 +251,15 @@ extend-select = [
     "N", # pep8 naming
     # "ERA", # eradicate commented out code
     # "NPY", # numpy checks
-    # "RUF", # ruff rules
+    "RUF", # ruff rules
 ]
 ignore = [
     "D105", # Missing docstring in magic method
     "E203", # Black conflicts with the following
     "S101", # Asserts, TODO remove
     "D102", # Missing docstring in init TODO remove
+    "RUF012",
+    "RUF100",
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores

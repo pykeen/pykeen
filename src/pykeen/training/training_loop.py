@@ -765,7 +765,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 if only_size_probing:
                     raise e
 
-                logger.warning(f"The training loop just failed during epoch {epoch} due to error {str(e)}.")
+                logger.warning("The training loop failed during epoch %d due to error %s.", epoch, e)
                 if checkpoint_on_failure_file_path:
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file_path is not None:

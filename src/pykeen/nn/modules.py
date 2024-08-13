@@ -121,9 +121,9 @@ def parallel_slice_batches(
     rs: Sequence[Sequence[torch.FloatTensor]] = ensure_tuple(*representations)
     # get number of head/relation/tail representations
     length = list(map(len, rs))
-    splits = numpy.cumsum([0] + length)
+    splits = numpy.cumsum([0, *length])
     # flatten list
-    rsl: Sequence[torch.FloatTensor] = sum(map(list, rs), [])
+    rsl: Sequence[torch.FloatTensor] = list(itt.chain.from_iterable(rs))
     # split tensors
     parts = [r.split(split_size, dim=dim) for r in rsl]
     # broadcasting

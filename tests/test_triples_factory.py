@@ -132,7 +132,7 @@ class TestTriplesFactory(unittest.TestCase):
         assert labeled_triples == re_labeled_triples
 
         # check column order
-        assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ("scores",)
+        assert tuple(df.columns) == (*TRIPLES_DF_COLUMNS, "scores")
 
     def _test_restriction(
         self,
