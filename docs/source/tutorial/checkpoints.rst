@@ -62,7 +62,7 @@ Here we have defined a pipeline that will save training loop checkpoints in the 
 ``my_checkpoint.pt`` every time an epoch finishes and at least `5` minutes have passed since saving previously.
 Assuming that e.g. this pipeline crashes after 200 epochs, you can simply execute **the same code** and the
 pipeline will load the last state from the checkpoint file and continue training as if nothing happened. The results
-will be exactly same as if you ran the pipeline for `1000` epoch without interruption.
+will be exactly same as if you ran the pipeline for `1000` epochs without interruption.
 
 Another nice feature is that using checkpoints the training loop will save the state whenever the training loop finishes
 or the early stopper stops it. Assuming that you successfully trained the KGEM above for `1000` epochs, but now decide
@@ -191,14 +191,14 @@ saves the checkpoint in ``~/.data/pykeen/checkpoints/my_checkpoint.pt``.
 When you are sure that your datasets shown above are the same, you can simply rerun that code and PyKEEN will
 automatically resume the training where it has left. However, if you only have changed the dataset or you sample it, you
 need to make sure that the mappings are correct when resuming training from the checkpoint. This can be done by loading
-the mappings from the checkpoint in the following way.
+the mappings from the checkpoint in the following way:
 
 >>> import torch
 >>> from pykeen.constants import PYKEEN_CHECKPOINTS
->>> checkpoint = torch.load(PYKEEN_CHECKPOINTS.joinpath('my_checkpoint.pt')
+>>> checkpoint = torch.load(PYKEEN_CHECKPOINTS.joinpath('my_checkpoint.pt'))
 
 You have now loaded the checkpoint that contains the mappings, which now can be used to create mappings that match the
-model saved in the checkpoint in the following way
+model saved in the checkpoint in the following way:
 
 >>> from pykeen.triples import TriplesFactory
 >>> from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
