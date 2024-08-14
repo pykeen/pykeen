@@ -6,7 +6,7 @@ all progress made so far. To avoid this PyKEEN supports built-in check-points th
 the current training loop state and resumption of a saved state from saved checkpoints shown in
 :ref:`regular_checkpoints_how_to`, as well as checkpoints on failure that are only saved when the training loop fails
 shown in :ref:`failure_checkpoints_how_to`.
-For understanding in more detail how the checkpoints work and how they can be used programmatically, please
+To understand in more detail how the checkpoints work and how they can be used programmatically, please
 look at :ref:`checkpoints_beyond_the_pipeline`.
 For fixing possible errors and safety fallbacks please also look at :ref:`word_of_caution`.
 
