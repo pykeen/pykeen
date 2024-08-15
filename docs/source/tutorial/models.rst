@@ -3,7 +3,7 @@ Knowledge Graph Embedding Models
 In PyKEEN, the base class for Knowledge Graph Embedding Models is :class:`pykeen.models.ERModel`.
 
 It combines entity and relation representations with an interaction function.
-On a very-high level, triple scores are obtained by first extracting the representations
+On a very high-level, triple scores are obtained by first extracting the representations
 corresponding to the head and tail entity and relation (given as integer indices), and then
 uses the interaction function to calculate a scalar score from them.
 
