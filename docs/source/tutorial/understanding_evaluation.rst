@@ -44,7 +44,7 @@ As an example, consider we trained a KGEM on the countries dataset, e.g., using
     from pykeen.datasets import get_dataset
     from pykeen.pipeline import pipeline
     dataset = get_dataset(dataset="countries")
-    result = pipeline(dataset=dataset, model="mure")
+    result = pipeline(dataset=dataset, model="mure", random_seed=42, training_kwargs=dict(num_epochs=100))
 
 During evaluation time, we now evaluate head and tail prediction, i.e., whether we can predict the correct
 head/tail entity from the remainder of a triple. The first triple in the test split of this dataset is
@@ -53,18 +53,28 @@ We can see the results using the prediction workflow:
 
 .. code-block:: python
 
-    from pykeen.models.predict import get_tail_prediction_df
+    from pykeen.predict import predict_target
 
-    df = get_tail_prediction_df(
+    df = predict_target(
         model=result.model,
-        head_label="belgium",
-        relation_label="locatedin",
+        head="belgium",
+        relation="locatedin",
         triples_factory=result.training,
-        add_novelties=False,
     )
 
 which returns a dataframe of all tail candidate entities sorted according to the predicted score.
 The index in this sorted list is essentially the *rank* of the correct answer.
+Here is what the first 5 rows of this table look like:
+
+=======  ========  ===================
+tail_id  score     tail_label
+=======  ========  ===================
+265      -1.02144  western_europe
+77       -1.7295   europe
+69       -2.21642  eastern_europe
+216      -2.32269  south-eastern_asia
+173      -2.39417  northern_europe
+=======  ========  ===================
 
 Rank-Based Metrics
 ~~~~~~~~~~~~~~~~~~
@@ -86,7 +96,8 @@ variants have been implemented, which yield different results in the presence of
   tie breaking mechanism of the sort algorithm's implementation.
 
 PyKEEN supports the first three: optimistic, pessimistic and realistic. When only using a single score, the
-realistic score should be reported. The pessimistic and optimistic rank, or more specifically the deviation between both,
+realistic score should be reported.
+The pessimistic and optimistic rank, or more specifically the deviation between both,
 can be used to detect whether a model predicts exactly equal scores for many choices. There are a few causes such as:
 
 * finite-precision arithmetic in conjunction with explicitly using sigmoid activation
