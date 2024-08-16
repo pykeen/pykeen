@@ -96,7 +96,8 @@ variants have been implemented, which yield different results in the presence of
   tie breaking mechanism of the sort algorithm's implementation.
 
 PyKEEN supports the first three: optimistic, pessimistic and realistic. When only using a single score, the
-realistic score should be reported. The pessimistic and optimistic rank, or more specifically the deviation between both,
+realistic score should be reported.
+The pessimistic and optimistic rank, or more specifically the deviation between both,
 can be used to detect whether a model predicts exactly equal scores for many choices. There are a few causes such as:
 
 * finite-precision arithmetic in conjunction with explicitly using sigmoid activation
