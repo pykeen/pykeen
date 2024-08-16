@@ -66,13 +66,14 @@ which returns a dataframe of all tail candidate entities sorted according to the
 The index in this sorted list is essentially the *rank* of the correct answer.
 Here is what the first 5 rows of this table look like:
 
-tail_id     score  tail_label
----------  --------  ------------------
-      265  -1.02144  western_europe
-       77  -1.7295   europe
-       69  -2.21642  eastern_europe
-      216  -2.32269  south-eastern_asia
-      173  -2.39417  northern_europe
+=======  ========  ===================
+tail_id  score     tail_label
+=======  ========  ===================
+265      -1.02144  western_europe
+77       -1.7295   europe
+69       -2.21642  eastern_europe
+216      -2.32269  south-eastern_asia
+173      -2.39417  northern_europe
 
 Rank-Based Metrics
 ~~~~~~~~~~~~~~~~~~
