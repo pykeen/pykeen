@@ -74,6 +74,7 @@ tail_id  score     tail_label
 69       -2.21642  eastern_europe
 216      -2.32269  south-eastern_asia
 173      -2.39417  northern_europe
+=======  ========  ===================
 
 Rank-Based Metrics
 ~~~~~~~~~~~~~~~~~~
