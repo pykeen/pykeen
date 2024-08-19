@@ -138,8 +138,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         :param requires_positive_mask: Does the evaluator need access to the masks?
         :param batch_size: >0. Evaluation batch size.
         :param slice_size: >0. The divisor for the scoring function when using slicing
-        :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
-            evaluation with regards to the hardware at hand.
         :param mode:
             the inductive mode, or None for transductive evaluation
         """
@@ -147,7 +145,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
-        self.automatic_memory_optimization = automatic_memory_optimization
         self.mode = mode
 
     @classmethod
