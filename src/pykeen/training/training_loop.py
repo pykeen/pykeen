@@ -22,6 +22,7 @@ from class_resolver import HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import lr_scheduler_resolver, optimizer_resolver
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
+from torch_max_mem.api import is_oom_error
 from tqdm.autonotebook import tqdm, trange
 
 from .callbacks import (
@@ -43,14 +44,7 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import InductiveMode
-from ..utils import (
-    format_relative_comparison,
-    get_batchnorm_modules,
-    get_preferred_device,
-    is_cuda_oom_error,
-    is_cudnn_error,
-    normalize_string,
-)
+from ..utils import format_relative_comparison, get_batchnorm_modules, get_preferred_device, normalize_string
 
 __all__ = [
     "TrainingLoop",
@@ -956,7 +950,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 )
             except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
-                if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                if not is_oom_error(runtime_error):
                     raise runtime_error
                 if batch_size == 1:
                     logger.debug(f"{batch_size=:_} does not fit into your memory with these parameters.")
@@ -1083,7 +1077,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
-            if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+            if not is_oom_error(runtime_error):
                 raise runtime_error
             logger.debug(f"The batch_size {batch_size=:_} was too big, sub_batching is required.")
             sub_batch_size //= 2
@@ -1112,7 +1106,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         )
                     except RuntimeError as runtime_error:
                         self._free_graph_and_cache()
-                        if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                        if not is_oom_error(runtime_error):
                             raise runtime_error
                         if sub_batch_size == 1:
                             logger.info(f"Even {sub_batch_size=:_} does not fit in memory with these parameters")

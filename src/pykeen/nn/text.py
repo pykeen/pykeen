@@ -14,8 +14,8 @@ from torch import nn
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 
-from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 from ..evaluation.evaluator import determine_maximum_batch_size
+from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
 
 if TYPE_CHECKING:
     from .representation import Representation

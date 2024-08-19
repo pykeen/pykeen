@@ -54,7 +54,6 @@ __all__ = [
     "ensure_torch_random_state",
     "format_relative_comparison",
     "invert_mapping",
-    "is_cuda_oom_error",
     "random_non_negative_int",
     "resolve_device",
     "split_complex",
@@ -315,26 +314,9 @@ def all_in_bounds(
     return True
 
 
-def is_cuda_oom_error(runtime_error: RuntimeError) -> bool:
-    """Check whether the caught RuntimeError was due to CUDA being out of memory."""
-    return _CUDA_OOM_ERROR in runtime_error.args[0]
-
-
 def is_cudnn_error(runtime_error: RuntimeError) -> bool:
     """Check whether the caught RuntimeError was due to a CUDNN error."""
     return _CUDNN_ERROR in runtime_error.args[0]
-
-
-def is_nonzero_larger_than_maxint_error(runtime_error: RuntimeError) -> bool:
-    """Check if the runtime error was caused by applying nonzero to a GPU tensor with more than ``MAX_INT`` elements.
-
-    :param runtime_error: The exception to check
-    :returns: if the exception is a runtime error caused by func:`torch.nonzero` being applied to a GPU tensor with
-        more than ``MAX_INT`` elements
-
-    .. seealso:: https://github.com/pytorch/pytorch/issues/51871
-    """
-    return _CUDA_NONZERO_ERROR in runtime_error.args[0]
 
 
 def compact_mapping(

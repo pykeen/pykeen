@@ -63,8 +63,8 @@ from torch_max_mem import maximize_memory_utilization
 
 from .. import training  # required for type annotations
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.evaluator import determine_maximum_batch_size
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
+from ..evaluation.evaluator import determine_maximum_batch_size
 from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
