@@ -116,10 +116,6 @@ logger = logging.getLogger(__name__)
 #: An error that occurs because the input in CUDA is too big. See ConvE for an example.
 _CUDNN_ERROR = "cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input."
 
-_CUDA_OOM_ERROR = "CUDA out of memory."
-
-_CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
-
 
 def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
     """Make sure a tensor is greater than zero."""
@@ -1604,3 +1600,32 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod()
+
+
+def determine_maximum_batch_size(batch_size: int | None, device: torch.device, maximum_batch_size: int) -> int:
+    """Normalize choice of maximum batch size.
+
+    On non-CUDA devices, excessive batch sizes might cause out of memory errors from which the program cannot recover.
+
+    :param batch_size:
+        The chosen (maximum) batch size, or `None` when the largest possible one should be used.
+    :param device:
+        The device on which the evaluation runs.
+    :param maximum_batch_size:
+        The actual maximum batch size, e.g., the size of the evaluation set.
+
+    :return:
+        A maximum batch size.
+    """
+    if batch_size is None:
+        if device.type == "cuda":
+            batch_size = maximum_batch_size
+        else:
+            batch_size = 32
+            logger.warning(
+                f"Using automatic batch size on {device.type=} can cause unexplained out-of-memory crashes. "
+                f"Therefore, we use a conservative small {batch_size=:_}. "
+                f"Performance may be improved by explicitly specifying a larger batch size."
+            )
+        logger.debug(f"Automatically set maximum batch size to {batch_size=:_}")
+    return batch_size

@@ -64,13 +64,13 @@ from torch_max_mem import maximize_memory_utilization
 from .. import training  # required for type annotations
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
-from ..evaluation.evaluator import determine_maximum_batch_size
 from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
+from ..utils import determine_maximum_batch_size
 
 __all__ = [
     "TrainingCallbackHint",

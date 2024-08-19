@@ -281,7 +281,6 @@ from tqdm.auto import tqdm
 from typing_extensions import TypeAlias  # Python <=3.9
 
 from .constants import COLUMN_LABELS, TARGET_TO_INDEX
-from .evaluation.evaluator import determine_maximum_batch_size
 from .models import Model
 from .triples import AnyTriples, CoreTriplesFactory, TriplesFactory, get_mapped_triples
 from .triples.utils import tensor_to_df
@@ -295,7 +294,7 @@ from .typing import (
     MappedTriples,
     Target,
 )
-from .utils import invert_mapping, isin_many_dim, resolve_device
+from .utils import determine_maximum_batch_size, invert_mapping, isin_many_dim, resolve_device
 
 __all__ = [
     # high-level

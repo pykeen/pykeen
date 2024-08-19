@@ -28,7 +28,13 @@ from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
-from ..utils import flatten_dictionary, format_relative_comparison, normalize_string, prepare_filter_triples
+from ..utils import (
+    determine_maximum_batch_size,
+    flatten_dictionary,
+    format_relative_comparison,
+    normalize_string,
+    prepare_filter_triples,
+)
 
 __all__ = [
     "Evaluator",
@@ -111,35 +117,6 @@ class MetricResults(Generic[MetricKeyType]):
         one_key_nt = cast(NamedTuple, one_key)
         columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
-
-
-def determine_maximum_batch_size(batch_size: int | None, device: torch.device, maximum_batch_size: int) -> int:
-    """Normalize choice of maximum batch size.
-
-    On non-CUDA devices, excessive batch sizes might cause out of memory errors from which the program cannot recover.
-
-    :param batch_size:
-        The chosen (maximum) batch size, or `None` when the largest possible one should be used.
-    :param device:
-        The device on which the evaluation runs.
-    :param maximum_batch_size:
-        The actual maximum batch size, e.g., the size of the evaluation set.
-
-    :return:
-        A maximum batch size.
-    """
-    if batch_size is None:
-        if device.type == "cuda":
-            batch_size = maximum_batch_size
-        else:
-            batch_size = 32
-            logger.warning(
-                f"Using automatic batch size on {device.type=} can cause unexplained out-of-memory crashes. "
-                f"Therefore, we use a conservative small {batch_size=:_}. "
-                f"Performance may be improved by explicitly specifying a larger batch size."
-            )
-        logger.debug(f"Automatically set maximum batch size to {batch_size=:_}")
-    return batch_size
 
 
 class Evaluator(ABC, Generic[MetricKeyType]):
