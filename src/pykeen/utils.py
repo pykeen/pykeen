@@ -1,5 +1,7 @@
 """Utilities for PyKEEN."""
 
+from __future__ import annotations
+
 import ftplib
 import functools
 import itertools as itt
