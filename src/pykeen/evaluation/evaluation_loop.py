@@ -5,7 +5,7 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping
-from typing import Any, Generic, Optional, TypeAlias, TypeVar, Union, cast
+from typing import Any, Generic, Optional, TypeVar, Union, cast
 
 import numpy
 import pandas
@@ -15,6 +15,7 @@ from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
+from typing_extensions import TypeAlias
 
 from .evaluator import Evaluator, MetricResults, determine_maximum_batch_size, filter_scores_
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
