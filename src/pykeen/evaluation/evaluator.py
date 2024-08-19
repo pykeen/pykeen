@@ -113,6 +113,35 @@ class MetricResults(Generic[MetricKeyType]):
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 
 
+def normalize_maximum_batch_size(batch_size: int | None, device: torch.device, maximum_batch_size: int) -> int:
+    """Normalize choice of maximum batch size.
+
+    On non-CUDA devices, excessive batch sizes might cause out of memory errors from which the program cannot recover.
+
+    :param batch_size:
+        The chosen (maximum) batch size, or `None` when the largest possible one should be used.
+    :param device:
+        The device on which the evaluation runs.
+    :param maximum_batch_size:
+        The actual maximum batch size, e.g., the size of the evaluation set.
+
+    :return:
+        A maximum batch size.
+    """
+    if batch_size is None:
+        if device.type == "cuda":
+            batch_size = maximum_batch_size
+        else:
+            logger.warning(
+                f"Using automatic batch size on {device.type=} can cause unexplained out-of-memory crashes. "
+                f"Therefore, we use a conservative small batch size. "
+                f"Performance may be improved by explicitly specifying a larger batch size."
+            )
+            batch_size = 32
+        logger.debug(f"Automatically set maximum batch size to {batch_size=}")
+    return batch_size
+
+
 class Evaluator(ABC, Generic[MetricKeyType]):
     """An abstract evaluator for KGE models.
 
@@ -354,17 +383,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         mapped_triples = mapped_triples.to(device=device)
         num_triples = mapped_triples.shape[0]
         # no batch size -> automatic memory optimization
-        if batch_size is None:
-            if device.type == "cuda":
-                batch_size = num_triples
-            else:
-                logger.warning(
-                    f"Using automatic batch size on {device.type=} can cause unexplained out-of-memory crashes. "
-                    f"Therefore, we use a conservative small batch size. "
-                    f"Performance may be improved by explicitly specifying a larger batch size."
-                )
-                batch_size = 32
-            logger.debug(f"Automatically set maximum batch size to {batch_size=}")
+        batch_size = normalize_maximum_batch_size(batch_size, device, num_triples)
         # no slice size -> automatic memory optimization
         if slice_size is None:
             nums: set[int] = set()
