@@ -359,7 +359,15 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         num_triples = mapped_triples.shape[0]
         # no batch size -> automatic memory optimization
         if batch_size is None:
-            batch_size = 32 if device.type == "cpu" else num_triples
+            if device.type == "cuda":
+                batch_size = num_triples
+            else:
+                logger.warning(
+                    f"Using automatic batch size on {device.type=} can cause unexplained out-of-memory crashes. "
+                    f"Therefore, we use a conservative small batch size. "
+                    f"Performance may be improved by explicitly specifying a larger batch size."
+                )
+                batch_size = 32
             logger.debug(f"Automatically set maximum batch size to {batch_size=}")
         # no slice size -> automatic memory optimization
         if slice_size is None:
@@ -386,7 +394,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 evaluator=self,
                 mapped_triples=mapped_triples,
                 # note: we provide the *maximum* batch and slice size here; it is reduced if necessary
-                batch_size=num_triples,
+                batch_size=batch_size,
                 slice_size=slice_size,
                 progress_bar=progress_bar,
                 targets=targets,
