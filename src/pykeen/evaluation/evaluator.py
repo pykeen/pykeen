@@ -455,7 +455,7 @@ def evaluate(
     Evaluate a model with the given evaluator.
 
     .. note ::
-        this method is wrapped into two memory utilization maximizer, which reduce the parameters `batch_size` and
+        This method is decorated by maximize_memory_utilization, which reduce the parameters `batch_size` and
         `slice_size`, if necessary due to memory constraints.
 
     :param evaluator:
