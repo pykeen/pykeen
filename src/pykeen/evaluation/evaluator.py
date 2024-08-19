@@ -434,7 +434,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             )
 
 
-def _hasher(kwargs: Mapping[str, Any]) -> int:
+def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
     """Share optimal batch size whenever this hash matches."""
     ignored_keys = {
         # we ignore keys which clearly do not have an effect on the memory consumptions
@@ -458,7 +458,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
     return hash(values)
 
 
-@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_optimal_batch_size_group_id)
 @torch.inference_mode()
 def evaluate(
     *,
