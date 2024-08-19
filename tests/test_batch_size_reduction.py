@@ -56,6 +56,9 @@ def test_predict_all(model: MockModel) -> None:
     assert score_pack
 
 
+# TODO: predict_target
+
+
 def test_predict_triples(model: MockModel, triples_factory: CoreTriplesFactory) -> None:
     """Test triples scoring batch size reduction."""
     score_pack = predict.predict_triples(model=model, triples=triples_factory.mapped_triples)
