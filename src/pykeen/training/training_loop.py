@@ -603,7 +603,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     batch_size, batch_size_sufficient = self.batch_size_search(triples_factory=triples_factory)
             else:
                 batch_size = 256
-                logger.info(f"No batch_size provided. Setting batch_size to '{batch_size}'.")
+                logger.info(f"No batch_size provided. Setting {batch_size=:_}.")
 
         # This will find necessary parameters to optimize the use of the hardware at hand
         if (
@@ -935,7 +935,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             If a runtime error is raised during training
         """
         if batch_size is None:
-            batch_size = 8192
+            batch_size = 8_192
 
         # Set upper bound
         batch_size = min(batch_size, triples_factory.num_triples)
@@ -944,7 +944,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         evaluated_once = False
         logger.info("Starting batch_size search for training now...")
         while True:
-            logger.debug(f"Trying batch_size={batch_size}.")
+            logger.debug(f"Trying {batch_size=:_}.")
             try:
                 self._free_graph_and_cache()
                 self._train(
@@ -959,23 +959,23 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
                     raise runtime_error
                 if batch_size == 1:
-                    logger.debug(f"batch_size={batch_size} does not fit into your memory with these parameters.")
+                    logger.debug(f"{batch_size=:_} does not fit into your memory with these parameters.")
                     break
 
                 reached_max = True
                 batch_size //= 2
 
                 if evaluated_once:
-                    logger.info(f"Concluded batch_size search with batch_size={batch_size}.")
+                    logger.info(f"Concluded batch_size search with {batch_size=:_}.")
                     break
 
-                logger.debug(f"batch_size={batch_size} was too big, trying less now.")
+                logger.debug(f"{batch_size=:_} was too big, trying less now.")
             else:
                 self._free_graph_and_cache()
                 if not reached_max and batch_size <= triples_factory.num_triples:
                     batch_size *= 2
                 else:
-                    logger.info(f"Concluded batch_size search with batch_size={batch_size}.")
+                    logger.info(f"Concluded batch_size search with {batch_size=:_}.")
                     evaluated_once = True
                     break
 
@@ -1072,7 +1072,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         try:
             # The cache of the previous run has to be freed to allow accurate memory availability estimates
             self._free_graph_and_cache()
-            logger.debug(f"Trying batch_size {batch_size} for training now.")
+            logger.debug(f"Trying {batch_size=:_} for training now.")
             self._train(
                 triples_factory=triples_factory,
                 num_epochs=1,
@@ -1085,7 +1085,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             self._free_graph_and_cache()
             if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
                 raise runtime_error
-            logger.debug(f"The batch_size {batch_size} was too big, sub_batching is required.")
+            logger.debug(f"The batch_size {batch_size=:_} was too big, sub_batching is required.")
             sub_batch_size //= 2
         else:
             finished_search = True
@@ -1099,7 +1099,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 sub_batch_size = batch_size
             else:
                 while True:
-                    logger.debug(f"Trying sub_batch_size {sub_batch_size} now.")
+                    logger.debug(f"Trying {sub_batch_size=:_} now.")
                     try:
                         self._free_graph_and_cache()
                         self._train(
@@ -1115,15 +1115,13 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
                             raise runtime_error
                         if sub_batch_size == 1:
-                            logger.info(
-                                f"Even sub_batch_size={sub_batch_size} does not fit in memory with these parameters",
-                            )
+                            logger.info(f"Even {sub_batch_size=:_} does not fit in memory with these parameters")
                             break
-                        logger.debug(f"The sub_batch_size {sub_batch_size} was too big, trying less now.")
+                        logger.debug(f"The {sub_batch_size=:_} was too big, trying less now.")
                         sub_batch_size //= 2
                     else:
                         finished_search = True
-                        logger.info(f"Concluded search with sub_batch_size {sub_batch_size}.")
+                        logger.info(f"Concluded search with {sub_batch_size=:_}.")
                         break
 
         self._free_graph_and_cache()
