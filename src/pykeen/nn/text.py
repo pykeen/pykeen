@@ -15,6 +15,7 @@ from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 
 from ..utils import get_preferred_device, resolve_device, upgrade_to_sequence
+from ..evaluation.evaluator import determine_maximum_batch_size
 
 if TYPE_CHECKING:
     from .representation import Representation
@@ -31,7 +32,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-@maximize_memory_utilization()
+@maximize_memory_utilization(keys="encoder")
 def _encode_all_memory_utilization_optimized(
     encoder: "TextEncoder",
     labels: Sequence[str],
@@ -109,9 +110,8 @@ class TextEncoder(nn.Module):
         :returns: shape: (len(labels), dim)
             a tensor representing the encodings for all labels
         """
-        return _encode_all_memory_utilization_optimized(
-            encoder=self, labels=labels, batch_size=batch_size or len(labels)
-        ).detach()
+        determine_maximum_batch_size(batch_size=batch_size, device="TODO", maximum_batch_size=len(labels))
+        return _encode_all_memory_utilization_optimized(encoder=self, labels=labels, batch_size=batch_size).detach()
 
 
 class CharacterEmbeddingTextEncoder(TextEncoder):

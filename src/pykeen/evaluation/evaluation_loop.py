@@ -17,7 +17,7 @@ from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 from typing_extensions import TypeAlias
 
-from .evaluator import Evaluator, MetricResults, filter_scores_
+from .evaluator import Evaluator, MetricResults, determine_maximum_batch_size, filter_scores_
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..models import Model
 from ..triples import CoreTriplesFactory, get_mapped_triples
@@ -69,7 +69,7 @@ def _evaluate(
     Run the evaluation loop for a given batch size.
 
     .. note::
-        this method is wrapped into a `MemoryUtilizationMaximizer` instance to automatically tune the `batch_size`.
+        This method is wrapped into a `MemoryUtilizationMaximizer` instance to automatically tune the `batch_size`.
 
     :param loop:
         the evaluation loop instance.
@@ -192,11 +192,9 @@ class EvaluationLoop(Generic[BatchType]):
             the evaluation results.
         """
         # set upper limit of batch size for automatic memory optimization
-        if not batch_size:
-            if self.model.device.type == "cpu":
-                batch_size = 32
-            else:
-                batch_size = len(self.dataset)
+        batch_size = determine_maximum_batch_size(
+            batch_size=batch_size, device=self.model.device, maximum_batch_size=len(self.dataset)
+        )
         # set model to evaluation mode
         self.model.eval()
         # delegate to AMO wrapper

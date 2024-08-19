@@ -113,7 +113,7 @@ class MetricResults(Generic[MetricKeyType]):
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 
 
-def normalize_maximum_batch_size(batch_size: int | None, device: torch.device, maximum_batch_size: int) -> int:
+def determine_maximum_batch_size(batch_size: int | None, device: torch.device, maximum_batch_size: int) -> int:
     """Normalize choice of maximum batch size.
 
     On non-CUDA devices, excessive batch sizes might cause out of memory errors from which the program cannot recover.
@@ -383,7 +383,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         mapped_triples = mapped_triples.to(device=device)
         num_triples = mapped_triples.shape[0]
         # no batch size -> automatic memory optimization
-        batch_size = normalize_maximum_batch_size(batch_size, device, num_triples)
+        batch_size = determine_maximum_batch_size(batch_size, device, num_triples)
         # no slice size -> automatic memory optimization
         if slice_size is None:
             nums: set[int] = set()
