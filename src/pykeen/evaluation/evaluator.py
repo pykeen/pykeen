@@ -129,7 +129,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         requires_positive_mask: bool = False,
         batch_size: int | None = None,
         slice_size: int | None = None,
-        automatic_memory_optimization: bool = True,
         mode: InductiveMode | None = None,
     ):
         """Initialize the evaluator.
