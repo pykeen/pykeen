@@ -270,7 +270,7 @@ import math
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import Optional, Union, cast
+from typing import Optional, TypeAlias, Union, cast
 
 import numpy
 import pandas
@@ -278,7 +278,6 @@ import torch
 import torch.utils.data
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
-from typing_extensions import TypeAlias  # Python <=3.9
 
 from .constants import COLUMN_LABELS, TARGET_TO_INDEX
 from .evaluation.evaluator import determine_maximum_batch_size
