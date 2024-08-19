@@ -7,7 +7,7 @@ import timeit
 import warnings
 from abc import ABC, abstractmethod
 from collections import ChainMap
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Hashable, Mapping
 from typing import (
     Any,
     ClassVar,
@@ -436,7 +436,26 @@ class Evaluator(ABC, Generic[MetricKeyType]):
 
 def _hasher(kwargs: Mapping[str, Any]) -> int:
     """Share optimal batch size whenever this hash matches."""
-    return hash((id(kwargs["evaluator"]), kwargs["mapped_triples"].shape[0], kwargs["targets"]))
+    ignored_keys = {
+        # we ignore keys which clearly do not have an effect on the memory consumptions
+        "progress_bar",
+        # we ignore batch_size and slice_size as those are optimized
+        "batch_size",
+        "slice_size",
+        # we use mapped_triples' shape instead
+        "mapped_triples",
+        # we want to separate optimize for each evaluator instance
+        "evaluator",
+    }
+    values: tuple[Hashable, ...] = (kwargs["mapped_triples"].shape[0], id(kwargs["evaluator"]))
+    for key, value in kwargs.items():
+        if key in ignored_keys:
+            continue
+        if not isinstance(value, Hashable):
+            warnings.warn(f"Encountered {type(value)=} which cannot be hashed", category=UserWarning, stacklevel=3)
+            continue
+        values += (value,)
+    return hash(values)
 
 
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
