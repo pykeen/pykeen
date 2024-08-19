@@ -9,6 +9,7 @@ from torch import FloatTensor
 from pykeen import predict
 from pykeen.datasets.nations import Nations
 from pykeen.evaluation.evaluation_loop import LCWAEvaluationLoop
+from pykeen.evaluation.rank_based_evaluator import RankBasedEvaluator
 from pykeen.models.mocks import FixedModel
 from pykeen.triples.triples_factory import CoreTriplesFactory
 
@@ -63,3 +64,15 @@ def test_predict_triples(model: MockModel, triples_factory: CoreTriplesFactory) 
     """Test triples scoring batch size reduction."""
     score_pack = predict.predict_triples(model=model, triples=triples_factory.mapped_triples)
     assert score_pack
+
+
+@pytest.fixture()
+def evaluator() -> RankBasedEvaluator:
+    """Return a fixture for an evaluator."""
+    return RankBasedEvaluator()
+
+
+def test_evaluate(model: MockModel, triples_factory: CoreTriplesFactory, evaluator: RankBasedEvaluator) -> None:
+    """Test evaluation batch size reduction."""
+    result = evaluator.evaluate(model=model, mapped_triples=triples_factory.mapped_triples, batch_size=None)
+    assert result
