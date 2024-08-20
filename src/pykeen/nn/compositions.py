@@ -26,7 +26,7 @@ Composition = Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor
 
 
 class CompositionModule(nn.Module, ABC):
-    """An (elementwise) composition function for vectors."""
+    """An (element-wise) composition function for vectors."""
 
     @abstractmethod
     def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
@@ -43,8 +43,9 @@ class CompositionModule(nn.Module, ABC):
 
 
 class FunctionalCompositionModule(CompositionModule):
-    """Composition by a function (i.e. stateless)."""
+    """Composition by a function (i.e. state-less)."""
 
+    #: The stateless function that gets composed
     func: ClassVar[Composition]
 
     # docstr-coverage: inherited
@@ -52,16 +53,21 @@ class FunctionalCompositionModule(CompositionModule):
         return self.__class__.func(a, b)
 
 
-class SubtractionCompositionModule(FunctionalCompositionModule):
-    """Composition by elementwise subtraction."""
+# NOTE: wrapping torch.sub and torch.mul since their docstrings cause an issue...
 
-    func: ClassVar[Composition] = torch.sub
+
+class SubtractionCompositionModule(FunctionalCompositionModule):
+    """Composition by element-wise subtraction."""
+
+    #: Subtracts with :func:`torch.sub`
+    func: ClassVar[Composition] = lambda a, b: torch.sub(a, b)
 
 
 class MultiplicationCompositionModule(FunctionalCompositionModule):
-    """Composition by elementwise multiplication."""
+    """Composition by element-wise multiplication."""
 
-    func: ClassVar[Composition] = torch.mul
+    #: Multiplies with :func:`torch.mul`
+    func: ClassVar[Composition] = lambda a, b: torch.mul(a, b)
 
 
 class CircularCorrelationCompositionModule(FunctionalCompositionModule):

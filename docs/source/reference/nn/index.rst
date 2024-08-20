@@ -15,6 +15,7 @@
    pyg_message_passing
    weighting
    combinations
+   compositions
    perceptron
    utils
    node_piece
