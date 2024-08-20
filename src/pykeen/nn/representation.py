@@ -359,9 +359,9 @@ class Embedding(Representation):
             Additional keyword arguments passed to the initializer
         :param constrainer:
             A function which is applied to the weights after each parameter update, without tracking gradients.
-            It may be used to enforce model constraints outside of gradient-based training. The function does not need
+            It may be used to enforce model constraints outside gradient-based training. The function does not need
             to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string
-            corresponding to a key in :data:`pykeen.nn.representation.constrainers` such as:
+            corresponding to a key in :data:`pykeen.nn.representation.constrainer_resolver` such as:
 
             - ``'normalize'``
             - ``'complex_normalize'``
@@ -577,8 +577,17 @@ def process_max_id(max_id: int | None, num_embeddings: int | None) -> int:
     return max_id
 
 
+#: Constrainers
+#:
+#: - :func:`torch.nn.functional.normalize`
+#: - :func:`complex_normalize`
+#: - :func:`torch.clamp`
+#: - :func:`clamp_norm`
 constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
 
+#: Normalizers, which has by default:
+#:
+#: - :func:`torch.nn.functional.normalize`
 normalizer_resolver = FunctionResolver([functional.normalize])
 
 
@@ -1040,7 +1049,11 @@ class TextRepresentation(Representation):
         :param shape:
             The shape of an individual representation.
         :param encoder:
-            the text encoder, or a hint thereof
+            the text encoder, or a hint thereof. This can be one of:
+
+            - `'characterembedding'` for :class:`pykeen.nn.text.CharacterEmbeddingTextEncoder`
+            - `'transformer'` for :class:`pykeen.nn.text.TransformerTextEncoder`
+            - or any other loaded via :data:`pykeen.nn.text.text_encoder_resolver`
         :param encoder_kwargs:
             keyword-based parameters used to instantiate the text encoder
         :param missing_action:
