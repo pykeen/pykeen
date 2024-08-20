@@ -195,9 +195,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
                 automatic_memory_optimization=automatic_memory_optimization,
             ),
             evaluator=evaluator,
-            evaluator_kwargs=dict(
-                automatic_memory_optimization=automatic_memory_optimization,
-            ),
+            evaluator_kwargs=dict(),
             training_kwargs=dict(
                 num_epochs=number_epochs,
                 batch_size=batch_size,
