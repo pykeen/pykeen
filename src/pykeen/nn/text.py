@@ -230,6 +230,9 @@ class TransformerTextEncoder(TextEncoder):
         ).pooler_output
 
 
+#: A resolver for text encoders. By default, can use 'characterembedding'
+#: for :class:`CharacterEmbeddingTextEncoder` or 'transformer' for
+#: :class:`TransformerTextEncoder`.
 text_encoder_resolver: ClassResolver[TextEncoder] = ClassResolver.from_subclasses(
     base=TextEncoder,
     default=CharacterEmbeddingTextEncoder,
