@@ -1,7 +1,7 @@
 """
 A module of vision related components.
 
-Generally requires :module:`torchvision` to be installed.
+Generally requires :mod:`torchvision` to be installed.
 """
 
 import functools
@@ -60,7 +60,7 @@ class VisionDataset(torch.utils.data.Dataset):
         :param images: the images, either as (relative) path, or preprocessed tensors.
         :param transforms:
             a sequence of transformations to apply to the images,
-            cf. :module:`torchvision.transforms`
+            cf. :mod:`torchvision.transforms`
         :param root:
             the root directory for images
         """
@@ -121,7 +121,7 @@ class VisualRepresentation(Representation):
         :param images:
             the images, either as tensors, or paths to image files.
         :param encoder:
-            the encoder to use. If given as a string, lookup in :module:`torchvision.models`
+            the encoder to use. If given as a string, lookup in :mod:`torchvision.models`
         :param layer_name:
             the model's layer name to use for extracting the features, cf.
             :func:`torchvision.models.feature_extraction.create_feature_extractor`
@@ -215,7 +215,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
 
     If no image could be found for a certain Wikidata ID, a plain (trainable) embedding will be used instead.
 
-    Example usage::
+    Example usage
 
     .. code-block:: python
 

@@ -18,3 +18,5 @@
    perceptron
    utils
    node_piece
+   text
+   vision
