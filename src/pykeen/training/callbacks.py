@@ -681,7 +681,7 @@ class CheckpointTrainingCallback(TrainingCallback):
         self.name_template = name_template
         self.root.mkdir(parents=True, exist_ok=True)
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         # use 1-based epochs
         epoch += 1
         if not self.schedule(epoch):
