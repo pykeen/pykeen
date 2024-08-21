@@ -659,7 +659,7 @@ class CheckpointTrainingCallback(TrainingCallback):
 
         :param schedule:
             a selection of the checkpoint schedule, cf. :ref:`pykeen.checkpoints.scheduler_resolver`
-        :param schedule:
+        :param schedule_kwargs:
             keyword-based parameters to instantiate the checkpoint schedule, if necessary,
             cf. :ref:`pykeen.checkpoints.scheduler_resolver`
         :param root:

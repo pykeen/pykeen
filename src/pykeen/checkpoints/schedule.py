@@ -113,7 +113,7 @@ class ResultListenerAdapterResultTracker(ResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:
+    ) -> None:  # noqa: D102
         self.last_step = step
 
         # prefix filter

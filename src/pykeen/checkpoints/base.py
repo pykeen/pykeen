@@ -41,6 +41,11 @@ def save_model(model: Model, file: pathlib.Path | str | BinaryIO) -> None:
     """
     Save a model to a file.
 
+    :param model:
+        the model to save
+    :param file:
+        the file to save to, either as a path, or a binary file-like object
+
     Example::
 
         from pykeen.pipeline import pipeline
