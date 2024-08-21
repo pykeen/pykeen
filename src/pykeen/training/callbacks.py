@@ -645,18 +645,31 @@ class MultiTrainingCallback(TrainingCallback):
 
 
 class CheckpointTrainingCallback(TrainingCallback):
-    """Save checkpoints."""
+    """
+    Save checkpoints.
+
+    :param schedule:
+        a selection of the checkpoint schedule, cf. :ref:`pykeen.checkpoints.scheduler_resolver`
+    :param schedule:
+        keyword-based parameters to instantiate the checkpoint schedule, if necessary,
+        cf. :ref:`pykeen.checkpoints.scheduler_resolver`
+    :param root:
+        the checkpoint root directory. Defaults to a fresh sub-directory of :ref:`pykeen.constants.PYKEEN_CHECKPOINTS`
+    :param name_template:
+        a name template for the checkpoint file. Can contain a format key `{epoch}` which is replaced by the actual
+        epoch. This callback does not take care of overwriting existing files, i.e., if you want to keep multiple
+        checkpoints make sure to choose unique filenames.
+    """
 
     def __init__(
         self,
-        predicate: HintOrType[CheckpointSchedule] = None,
-        predicate_kwargs: OptionalKwargs = None,
+        schedule: HintOrType[CheckpointSchedule] = None,
+        schedule_kwargs: OptionalKwargs = None,
         root: pathlib.Path | str | None = None,
         name_template: str = "checkpoint_{epoch:07d}.pt",
-        **kwargs,
     ):
-        super().__init__(**kwargs)
-        self.predicate = schedule_resolver.make(predicate, predicate_kwargs)
+        super().__init__()
+        self.schedule = schedule_resolver.make(schedule, schedule_kwargs)
         if root is None:
             while (path := PYKEEN_CHECKPOINTS.joinpath(str(uuid.uuid4()))).exists():
                 continue
@@ -669,7 +682,7 @@ class CheckpointTrainingCallback(TrainingCallback):
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         # use 1-based epochs
         epoch += 1
-        if not self.predicate(epoch):
+        if not self.schedule(epoch):
             return
         path = self.root.joinpath(self.name_template.format(epoch=epoch))
         save_model(self.training_loop.model, path)
