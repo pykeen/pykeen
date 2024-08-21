@@ -1,14 +1,11 @@
 """Methods around reading and writing of checkpoints."""
 
-import logging
 import pathlib
 from typing import Any, BinaryIO, TypedDict
 
 import torch
 
 from ..models.base import Model
-
-logger = logging.getLogger(__name__)
 
 
 class ModelState(TypedDict, total=False):
@@ -30,13 +27,11 @@ def get_model_state(model: Model) -> ModelState:
 def save_state_torch(state: ModelState, file: pathlib.Path | str | BinaryIO) -> None:
     """Write a state using PyTorch."""
     torch.save(state, file)
-    logger.info(f"Written state to {file=}")
 
 
 def load_state_torch(file: pathlib.Path | str | BinaryIO) -> ModelState:
     """Read a state using PyTorch."""
     state = torch.load(file)
-    logger.info(f"Loaded state from {file=}")
     return state
 
 
