@@ -1,5 +1,7 @@
 """Methods around reading and writing of checkpoints."""
 
+from __future__ import annotations
+
 import pathlib
 from typing import Any, BinaryIO, TypedDict
 
