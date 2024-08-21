@@ -645,21 +645,7 @@ class MultiTrainingCallback(TrainingCallback):
 
 
 class CheckpointTrainingCallback(TrainingCallback):
-    """
-    Save checkpoints.
-
-    :param schedule:
-        a selection of the checkpoint schedule, cf. :ref:`pykeen.checkpoints.scheduler_resolver`
-    :param schedule:
-        keyword-based parameters to instantiate the checkpoint schedule, if necessary,
-        cf. :ref:`pykeen.checkpoints.scheduler_resolver`
-    :param root:
-        the checkpoint root directory. Defaults to a fresh sub-directory of :ref:`pykeen.constants.PYKEEN_CHECKPOINTS`
-    :param name_template:
-        a name template for the checkpoint file. Can contain a format key `{epoch}` which is replaced by the actual
-        epoch. This callback does not take care of overwriting existing files, i.e., if you want to keep multiple
-        checkpoints make sure to choose unique filenames.
-    """
+    """Save checkpoints at user-specific epochs."""
 
     def __init__(
         self,
@@ -668,6 +654,22 @@ class CheckpointTrainingCallback(TrainingCallback):
         root: pathlib.Path | str | None = None,
         name_template: str = "checkpoint_{epoch:07d}.pt",
     ):
+        """
+        Create callback.
+
+        :param schedule:
+            a selection of the checkpoint schedule, cf. :ref:`pykeen.checkpoints.scheduler_resolver`
+        :param schedule:
+            keyword-based parameters to instantiate the checkpoint schedule, if necessary,
+            cf. :ref:`pykeen.checkpoints.scheduler_resolver`
+        :param root:
+            the checkpoint root directory. Defaults to a fresh sub-directory of
+            :ref:`pykeen.constants.PYKEEN_CHECKPOINTS`
+        :param name_template:
+            a name template for the checkpoint file. Can contain a format key `{epoch}` which is replaced by the actual
+            epoch. This callback does not take care of overwriting existing files, i.e., if you want to keep multiple
+            checkpoints make sure to choose unique filenames.
+        """
         super().__init__()
         self.schedule = schedule_resolver.make(schedule, schedule_kwargs)
         if root is None:

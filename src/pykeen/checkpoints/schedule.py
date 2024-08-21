@@ -136,7 +136,8 @@ class BestCheckpointSchedule(CheckpointSchedule):
     """Create a checkpoint whenever a metric improves."""
 
     #: the result tracker which receives updates on metrics
-    #: since the same tracker instance needs to receive results from the training loop, we do require a pre-instantiated one
+    #: since the same tracker instance needs to receive results from the training loop, we do require a pre-instantiated
+    #: one rather than offering to provide hints, too
     result_tracker: ResultTracker
 
     #: the metric name
