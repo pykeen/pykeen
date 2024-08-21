@@ -72,7 +72,6 @@ from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
-from ..training.callbacks import TrainingCallback
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
 
@@ -85,6 +84,7 @@ __all__ = [
     "TrackerTrainingCallback",
     "EvaluationLoopTrainingCallback",
     "EvaluationTrainingCallback",
+    "CheckpointTrainingCallback",
     "MultiTrainingCallback",
     "GradientNormClippingTrainingCallback",
     "GradientAbsClippingTrainingCallback",
@@ -644,8 +644,8 @@ class MultiTrainingCallback(TrainingCallback):
             callback.post_train(losses=losses, **kwargs)
 
 
-class CheckpointCallback(TrainingCallback):
-    """Save checkpoint."""
+class CheckpointTrainingCallback(TrainingCallback):
+    """Save checkpoints."""
 
     def __init__(
         self,
