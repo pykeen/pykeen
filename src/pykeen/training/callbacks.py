@@ -64,7 +64,7 @@ from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from torch_max_mem import maximize_memory_utilization
 
 from .. import training  # required for type annotations
-from ..checkpoints import StepPredicate, save_model, schedule_resolver
+from ..checkpoints import CheckpointSchedule, save_model, schedule_resolver
 from ..constants import PYKEEN_CHECKPOINTS
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
@@ -649,7 +649,7 @@ class CheckpointTrainingCallback(TrainingCallback):
 
     def __init__(
         self,
-        predicate: HintOrType[StepPredicate] = None,
+        predicate: HintOrType[CheckpointSchedule] = None,
         predicate_kwargs: OptionalKwargs = None,
         root: pathlib.Path | str | None = None,
         name_template: str = "checkpoint_{epoch:07d}.pt",
