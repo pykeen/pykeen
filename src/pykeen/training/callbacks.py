@@ -51,7 +51,9 @@ to implement a gradient clipping callback:
 
 from __future__ import annotations
 
+import logging
 import pathlib
+import uuid
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -62,14 +64,19 @@ from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from torch_max_mem import maximize_memory_utilization
 
 from .. import training  # required for type annotations
+from ..checkpoints import StepPredicate, save_model, schedule_resolver
+from ..constants import PYKEEN_CHECKPOINTS
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
 from ..losses import Loss
 from ..models import Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
+from ..training.callbacks import TrainingCallback
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "TrainingCallbackHint",
@@ -635,6 +642,38 @@ class MultiTrainingCallback(TrainingCallback):
     def post_train(self, losses: list[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses, **kwargs)
+
+
+class CheckpointCallback(TrainingCallback):
+    """Save checkpoint."""
+
+    def __init__(
+        self,
+        predicate: HintOrType[StepPredicate] = None,
+        predicate_kwargs: OptionalKwargs = None,
+        root: pathlib.Path | str | None = None,
+        name_template: str = "checkpoint_{epoch:07d}.pt",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.predicate = schedule_resolver.make(predicate, predicate_kwargs)
+        if root is None:
+            while (path := PYKEEN_CHECKPOINTS.joinpath(str(uuid.uuid4()))).exists():
+                continue
+            logger.info(f"Inferred checkpoint {path= !s}")
+            root = path
+        self.root = pathlib.Path(root)
+        self.name_template = name_template
+        self.root.mkdir(parents=True, exist_ok=True)
+
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+        # use 1-based epochs
+        epoch += 1
+        if not self.predicate(epoch):
+            return
+        path = self.root.joinpath(self.name_template.format(epoch=epoch))
+        save_model(self.training_loop.model, path)
+        logger.info(f"Saved checkpoint for {epoch=:_} to {path= !s}")
 
 
 callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
