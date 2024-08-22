@@ -75,7 +75,7 @@ Write a checkpoint every 10 steps, but keep only the last one and one every 50 s
 """
 
 from .base import save_model
-from .inspection import inspect_schedule
+from .inspection import final_checkpoints, simulate_checkpoints
 from .keeper import (
     BestCheckpointKeeper,
     CheckpointKeeper,
@@ -111,5 +111,6 @@ __all__ = [
     "BestCheckpointKeeper",
     "UnionCheckpointKeeper",
     "MetricSelection",
-    "inspect_schedule",
+    "simulate_checkpoints",
+    "final_checkpoints",
 ]
