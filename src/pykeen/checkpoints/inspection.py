@@ -1,4 +1,4 @@
-"""Tools for inspection schedules."""
+"""Tools for examining schedules."""
 
 from class_resolver import HintOrType, OptionalKwargs
 
@@ -14,7 +14,7 @@ def inspect_schedule(
     keeper_kwargs: OptionalKwargs = None,
 ) -> list[int]:
     """
-    Simulate a checkpoint schedule and return the epochs for which a checkpoint would be written.
+    Simulate a checkpoint schedule and return the set of epochs for which a checkpoint remains.
 
     >>> inspect_schedule(50)
     [10, 20, 30, 40, 50]
@@ -51,17 +51,19 @@ def inspect_schedule(
     :param num_epochs:
         the number of epochs
     :param schedule:
-        a checkpoint schedule instance or selection
+        a checkpoint schedule instance or selection, cf. :const:`pykeen.checkpoints.scheduler_resolver`
     :param schedule_kwargs:
-        additional keyword-based parameters when the schedule needs to instantiated first from a selection
+        additional keyword-based parameters when the schedule needs to instantiated first from a selection,
+        cf. :const:`pykeen.checkpoints.scheduler_resolver`
     :param keeper:
-        a checkpoint retention policy instance or selection.
+        a checkpoint retention policy instance or selection, cf. :const:`pykeen.checkpoints.keeper_resolver`
         `None` corresponds to keeping everything that was checkpointed.
     :param keeper_kwargs:
-        additional keyword-based parameters when the retention policy needs to instantiated first from a selection
+        additional keyword-based parameters when the retention policy needs to instantiated first from a selection,
+        cf. :const:`pykeen.checkpoints.keeper_resolver`
 
     :return:
-        a sorted list of epochs at which a checkpoint would be made
+        a sorted list of epochs at which a checkpoint remains after clean-up.
     """
     schedule_instance = schedule_resolver.make(schedule, schedule_kwargs)
     keeper_instance = keeper_resolver.make_safe(keeper, keeper_kwargs)
