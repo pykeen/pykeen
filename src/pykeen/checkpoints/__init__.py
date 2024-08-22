@@ -1,8 +1,8 @@
 """Checkpointing."""
 
 from .base import save_model
-from .cleaning import CheckpointKeeper, keeper_resolver
 from .inspection import inspect_schedule
+from .keeper import CheckpointKeeper, keeper_resolver
 from .schedule import CheckpointSchedule, schedule_resolver
 from .utils import MetricSelection
 

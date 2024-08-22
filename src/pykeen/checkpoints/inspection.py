@@ -2,7 +2,7 @@
 
 from class_resolver import HintOrType, OptionalKwargs
 
-from .cleaning import CheckpointKeeper, keeper_resolver
+from .keeper import CheckpointKeeper, keeper_resolver
 from .schedule import CheckpointSchedule, schedule_resolver
 
 
