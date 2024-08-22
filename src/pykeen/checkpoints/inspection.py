@@ -54,6 +54,11 @@ def inspect_schedule(
         a checkpoint schedule instance or selection
     :param schedule_kwargs:
         additional keyword-based parameters when the schedule needs to instantiated first from a selection
+    :param keeper:
+        a checkpoint retention policy instance or selection.
+        `None` corresponds to keeping everything that was checkpointed.
+    :param keeper_kwargs:
+        additional keyword-based parameters when the retention policy needs to instantiated first from a selection
 
     :return:
         a sorted list of epochs at which a checkpoint would be made
