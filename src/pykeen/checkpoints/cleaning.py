@@ -34,7 +34,7 @@ class LastCheckpointKeeper(CheckpointKeeper):
 
     keep: int = 1
 
-    def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102
+    def __call__(self, steps: Sequence[int]) -> Iterator[int]:
         yield from steps[-self.keep :]
 
 
@@ -44,7 +44,7 @@ class ModuloCheckpointKeeper(CheckpointKeeper):
 
     modulo: int = 10
 
-    def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102
+    def __call__(self, steps: Sequence[int]) -> Iterator[int]:
         for step in steps:
             if step % self.modulo == 0:
                 yield step
@@ -60,7 +60,7 @@ class ExplicitCheckpointKeeper(CheckpointKeeper):
         # convert to set for better lookup speed
         self.keep = set(self.keep)
 
-    def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102
+    def __call__(self, steps: Sequence[int]) -> Iterator[int]:
         keep = self.keep
         if not isinstance(keep, set):
             keep = set(keep)
