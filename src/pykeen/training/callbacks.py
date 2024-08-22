@@ -685,8 +685,8 @@ class CheckpointTrainingCallback(TrainingCallback):
         if root is None:
             while (path := PYKEEN_CHECKPOINTS.joinpath(str(uuid.uuid4()))).exists():
                 continue
-            logger.info(f"Inferred checkpoint {path= !s}")
             root = path
+            logger.info(f"Inferred checkpoint {path= !s}")
         self.root = pathlib.Path(root)
         self.name_template = name_template
         self.root.mkdir(parents=True, exist_ok=True)
