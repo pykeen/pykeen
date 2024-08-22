@@ -22,11 +22,11 @@ __all__ = [
 
 
 class CheckpointSchedule(abc.ABC):
-    """Determine whether to create a checkpoint at the given epoch."""
+    """Interface for checkpoint schedules."""
 
     @abc.abstractmethod
     def __call__(self, step: int) -> bool:
-        """Determine whether to create a checkpoint at the given epoch."""
+        """Decide whether to create a checkpoint at the specified epoch."""
 
 
 @dataclasses.dataclass
@@ -151,7 +151,7 @@ class BestCheckpointSchedule(CheckpointSchedule):
 @dataclasses.dataclass
 class UnionCheckpointSchedule(CheckpointSchedule):
     """
-    Create a checkpoint whenever one of the base schedules requests it.
+    Create a checkpoint whenever one of the base schedules requires it.
 
     Example::
 

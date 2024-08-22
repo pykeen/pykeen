@@ -29,7 +29,7 @@ class MetricSelection:
 
 @dataclasses.dataclass
 class ResultListenerAdapter(ResultTracker):
-    """An adapter to maintain the best value and step for a given metric."""
+    """An adapter to keep track of the best value and step for a given metric."""
 
     base: ResultTracker
 

@@ -1,4 +1,9 @@
-"""Method to clean up checkpoints."""
+"""
+Checkpoint cleanup methods.
+
+The cleanup methods determine, for any given set of existing checkpoints, which of them can be pruned.
+We provide a set of basic rules that can be easily combined into more complex logic.
+"""
 
 import abc
 import dataclasses
@@ -21,7 +26,7 @@ __all__ = [
 
 
 class CheckpointKeeper(abc.ABC):
-    """An interface for checkpoint cleanup."""
+    """A checkpoint cleanup interface."""
 
     @abc.abstractmethod
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:
@@ -29,6 +34,9 @@ class CheckpointKeeper(abc.ABC):
 
         :param steps:
             the sorted list of steps at which checkpoints were written.
+
+        :yields:
+            the steps for which checkpoints should be kept
         """
         raise NotImplementedError
 
@@ -37,6 +45,7 @@ class CheckpointKeeper(abc.ABC):
 class LastCheckpointKeeper(CheckpointKeeper):
     """Keep the last $n$ checkpoints."""
 
+    #: the number of checkpoints to keep
     keep: int = 1
 
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:
@@ -45,19 +54,19 @@ class LastCheckpointKeeper(CheckpointKeeper):
 
 @dataclasses.dataclass
 class ModuloCheckpointKeeper(CheckpointKeeper):
-    """Keep a checkpoint at regularly placed steps."""
+    """Keep checkpoints if the step is divisible by a number."""
 
-    modulo: int = 10
+    modulus: int = 10
 
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:
         for step in steps:
-            if step % self.modulo == 0:
+            if step % self.modulus == 0:
                 yield step
 
 
 @dataclasses.dataclass
 class ExplicitCheckpointKeeper(CheckpointKeeper):
-    """Keep the checkpoints at explicitly given steps."""
+    """Keep checkpoints at explicit steps."""
 
     keep: Collection[int]
 
@@ -66,15 +75,13 @@ class ExplicitCheckpointKeeper(CheckpointKeeper):
         self.keep = set(self.keep)
 
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:
-        keep = self.keep
-        if not isinstance(keep, set):
-            keep = set(keep)
-        yield from keep.intersection(steps)
+        # the set operation should be a nop of sets
+        yield from set(self.keep).intersection(steps)
 
 
 @dataclasses.dataclass
 class BestCheckpointKeeper(CheckpointKeeper):
-    """Keep checkpoints for the best value in a given metric."""
+    """Keep checkpoints for steps that achieved the best value for a metric."""
 
     #: the result tracker which receives updates on metrics
     #: since the same tracker instance needs to receive results from the training loop, we do require a pre-instantiated
@@ -96,7 +103,7 @@ class BestCheckpointKeeper(CheckpointKeeper):
 
 @dataclasses.dataclass
 class UnionCheckpointKeeper(CheckpointKeeper):
-    """Keep checkpoint where any of the criteria is fulfilled."""
+    """Keep a checkpoint where one of the criteria is met."""
 
     bases: OneOrManyHintOrType[CheckpointKeeper]
     bases_kwargs: OneOrManyOptionalKwargs = None

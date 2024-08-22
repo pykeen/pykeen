@@ -1,4 +1,4 @@
-"""Tools for examining schedules."""
+"""Tools for investigating schedules outside of a training session."""
 
 from class_resolver import HintOrType, OptionalKwargs
 
