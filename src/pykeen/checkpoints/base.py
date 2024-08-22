@@ -1,4 +1,4 @@
-"""Methods around reading and writing of checkpoints."""
+"""Methods for reading and writing checkpoints."""
 
 from __future__ import annotations
 
@@ -15,17 +15,18 @@ __all__ = [
 ]
 
 
-class ModelState(TypedDict, total=False):
+class ModelState(TypedDict):
     """A model state."""
 
     state_dict: dict[str, Any]
+    version: int
 
 
 def get_model_state(model: Model) -> ModelState:
     """Get a serializable representation of the model's state."""
     # TODO: without label to id mapping a model might be pretty use-less
     # TODO: it would be nice to get a configuration to re-construct the model
-    return {"state_dict": model.state_dict()}
+    return {"state_dict": model.state_dict(), "version": 1}
 
 
 def save_state_torch(state: ModelState, file: pathlib.Path | str | BinaryIO) -> None:
@@ -36,6 +37,8 @@ def save_state_torch(state: ModelState, file: pathlib.Path | str | BinaryIO) -> 
 def load_state_torch(file: pathlib.Path | str | BinaryIO) -> ModelState:
     """Read a state using PyTorch."""
     state = torch.load(file)
+    if state["version"] != 1:
+        raise ValueError(state["version"])
     return state
 
 
