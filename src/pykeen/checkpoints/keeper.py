@@ -12,6 +12,11 @@ from ..trackers.base import ResultTracker
 __all__ = [
     "CheckpointKeeper",
     "keeper_resolver",
+    "LastCheckpointKeeper",
+    "ModuloCheckpointKeeper",
+    "ExplicitCheckpointKeeper",
+    "BestCheckpointKeeper",
+    "UnionCheckpointKeeper",
 ]
 
 

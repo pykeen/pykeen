@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import abc
 import dataclasses
 from collections.abc import Collection, Sequence
-from typing import Protocol
 
 from class_resolver import ClassResolver, OneOrManyHintOrType, OneOrManyOptionalKwargs
 
@@ -14,13 +14,19 @@ from ..trackers.base import ResultTracker
 __all__ = [
     "CheckpointSchedule",
     "schedule_resolver",
+    "EveryCheckpointSchedule",
+    "ExplicitCheckpointSchedule",
+    "BestCheckpointSchedule",
+    "UnionCheckpointSchedule",
 ]
 
 
-class CheckpointSchedule(Protocol):
+class CheckpointSchedule(abc.ABC):
     """Determine whether to create a checkpoint at the given epoch."""
 
-    def __call__(self, step: int) -> bool: ...
+    @abc.abstractmethod
+    def __call__(self, step: int) -> bool:
+        """Determine whether to create a checkpoint at the given epoch."""
 
 
 @dataclasses.dataclass
