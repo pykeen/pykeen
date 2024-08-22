@@ -73,7 +73,7 @@ def inspect_schedule(
         return list(checkpoint_epochs)
 
     # simulate cleanup
-    remaining = []
+    remaining: list[int] = []
     for epoch in checkpoint_epochs:
         remaining = sorted(keeper_instance(steps=remaining + [epoch]))
     return list(remaining)
