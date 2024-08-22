@@ -660,19 +660,19 @@ class CheckpointTrainingCallback(TrainingCallback):
         Create callback.
 
         :param schedule:
-            a selection of the checkpoint schedule, cf. :ref:`pykeen.checkpoints.scheduler_resolver`
+            a selection of the checkpoint schedule, cf. :const:`pykeen.checkpoints.scheduler_resolver`
         :param schedule_kwargs:
             keyword-based parameters to instantiate the checkpoint schedule, if necessary,
-            cf. :ref:`pykeen.checkpoints.scheduler_resolver`
+            cf. :const:`pykeen.checkpoints.scheduler_resolver`
         :param keeper:
-            a selection of the checkpoint retention logic, cf. :ref:`pykeen.checkpoints.keeper_resolver`.
+            a selection of the checkpoint retention logic, cf. :const:`pykeen.checkpoints.keeper_resolver`.
             `None` corresponds to keeping all checkpoints (which were created).
         :param keeper_kwargs:
             keyword-based parameters to instantiate the retention policy, if necessary,
-            cf. :ref:`pykeen.checkpoints.keeper_resolver`
+            cf. :const:`pykeen.checkpoints.keeper_resolver`
         :param root:
             the checkpoint root directory. Defaults to a fresh sub-directory of
-            :ref:`pykeen.constants.PYKEEN_CHECKPOINTS`
+            :const:`pykeen.constants.PYKEEN_CHECKPOINTS`
         :param name_template:
             a name template for the checkpoint file. Can contain a format key `{epoch}` which is replaced by the actual
             epoch. This callback does not take care of overwriting existing files, i.e., if you want to keep multiple
