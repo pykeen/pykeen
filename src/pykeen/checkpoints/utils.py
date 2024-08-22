@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from ..trackers.base import ResultTracker
 
 __all__ = [
-    "ResultListenerAdapterResultTracker",
+    "ResultListenerAdapter",
     "MetricSelection",
 ]
 
@@ -28,7 +28,7 @@ class MetricSelection:
 
 
 @dataclasses.dataclass
-class ResultListenerAdapterResultTracker(ResultTracker):
+class ResultListenerAdapter(ResultTracker):
     """An adapter to maintain the best value and step for a given metric."""
 
     base: ResultTracker
@@ -42,12 +42,13 @@ class ResultListenerAdapterResultTracker(ResultTracker):
     def __post_init__(self):
         self.best = float("-inf") if self.metric_selection.maximize else float("+inf")
 
+    # docstr-coverage: inherited
     def log_metrics(
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self.last_step = step
 
         # prefix filter

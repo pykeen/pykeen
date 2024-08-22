@@ -6,7 +6,7 @@ from collections.abc import Collection, Iterator, Sequence
 
 from class_resolver import ClassResolver, OneOrManyHintOrType, OneOrManyOptionalKwargs
 
-from .utils import MetricSelection, ResultListenerAdapterResultTracker
+from .utils import MetricSelection, ResultListenerAdapter
 from ..trackers.base import ResultTracker
 
 __all__ = [
@@ -80,10 +80,10 @@ class BestCheckpointKeeper(CheckpointKeeper):
     metric_selection: MetricSelection
 
     # note: internal detail
-    _adapter: ResultListenerAdapterResultTracker = dataclasses.field(init=False)
+    _adapter: ResultListenerAdapter = dataclasses.field(init=False)
 
     def __post_init__(self):
-        self._adapter = ResultListenerAdapterResultTracker(self.result_tracker, metric_selection=self.metric_selection)
+        self._adapter = ResultListenerAdapter(self.result_tracker, metric_selection=self.metric_selection)
 
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:
         return filter(self._adapter.is_best, steps)
