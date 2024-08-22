@@ -38,7 +38,6 @@ class CheckpointKeeper(abc.ABC):
         :yields:
             the steps for which checkpoints should be kept
         """
-        raise NotImplementedError
 
 
 @dataclasses.dataclass
