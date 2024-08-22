@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Sequence
 from typing import Protocol
 
-from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver import ClassResolver, OneOrManyHintOrType, OneOrManyOptionalKwargs
 
+from .utils import MetricSelection, ResultListenerAdapterResultTracker
 from ..trackers.base import ResultTracker
 
 __all__ = [
     "CheckpointSchedule",
     "schedule_resolver",
-    "inspect_schedule",
 ]
 
 
@@ -24,7 +24,7 @@ class CheckpointSchedule(Protocol):
 
 
 @dataclasses.dataclass
-class RegularCheckpointSchedule(CheckpointSchedule):
+class EveryCheckpointSchedule(CheckpointSchedule):
     """
     Create a checkpoint every $n$ steps.
 
@@ -40,8 +40,8 @@ class RegularCheckpointSchedule(CheckpointSchedule):
                 callbacks="checkpoint",
                 # create one checkpoint every 3 epochs
                 callbacks_kwargs=dict(
-                    predicate="regular",
-                    predicate_kwargs=dict(
+                    schedule="every",
+                    schedule_kwargs=dict(
                         frequency=3,
                     ),
                 )
@@ -73,8 +73,8 @@ class ExplicitCheckpointSchedule(CheckpointSchedule):
                 callbacks="checkpoint",
                 # create checkpoints at epoch 1, 7, and 10
                 callbacks_kwargs=dict(
-                    predicate="explicit",
-                    predicate_kwargs=dict(
+                    schedule="explicit",
+                    schedule_kwargs=dict(
                         steps=(1, 7, 10)
                     ),
                 )
@@ -89,88 +89,87 @@ class ExplicitCheckpointSchedule(CheckpointSchedule):
 
 
 @dataclasses.dataclass
-class ResultListenerAdapterResultTracker(ResultTracker):
-    """A listener on a result tracker."""
-
-    # note: this is an internal utility class
-
-    base: ResultTracker
-
-    metric: str
-    prefix: str | None = None
-
-    maximize: bool = True
-
-    best: float = dataclasses.field(init=False)
-    best_step: None | int = dataclasses.field(default=None, init=False)
-    last_step: None | int = dataclasses.field(default=None, init=False)
-
-    def __post_init__(self):
-        self.best = float("-inf") if self.maximize else float("+inf")
-
-    def log_metrics(
-        self,
-        metrics: Mapping[str, float],
-        step: int | None = None,
-        prefix: str | None = None,
-    ) -> None:  # noqa: D102
-        self.last_step = step
-
-        # prefix filter
-        if self.prefix and not prefix == self.prefix:
-            return
-        # metric filter
-        if self.metric not in metrics:
-            return
-        value = metrics[self.metric]
-        if self.maximize and value > self.best:
-            self.best_step = step
-            self.best = value
-        elif not self.maximize and value < self.best:
-            self.best_step = step
-            self.best = value
-
-
-@dataclasses.dataclass
 class BestCheckpointSchedule(CheckpointSchedule):
-    """Create a checkpoint whenever a metric improves."""
+    """
+    Create a checkpoint whenever a metric improves.
+
+    Example::
+
+        from pykeen.checkpoints import MetricSelection
+        from pykeen.pipeline import pipeline
+        from pykeen.trackers import tracker_resolver
+
+        # create a default result tracker (or use a proper one)
+        result_tracker = tracker_resolver.make(None)
+        result = pipeline(
+            dataset="nations",
+            model="mure",
+            training_kwargs=dict(
+                num_epochs=10,
+                callbacks="checkpoint",
+                callbacks_kwargs=dict(
+                    schedule="best",
+                    schedule_kwargs=dict(
+                        result_tracker=result_tracker,
+                        # in this example, we just use the training loss
+                        metric_selection=MetricSelection(
+                            metric="loss,
+                            maximize=False,
+                        )
+                    ),
+                ),
+            ),
+            # Important: use the same result tracker instance as in the checkpoint callback
+            result_tracker=result_tracker
+        )
+    """
 
     #: the result tracker which receives updates on metrics
     #: since the same tracker instance needs to receive results from the training loop, we do require a pre-instantiated
     #: one rather than offering to provide hints, too
     result_tracker: ResultTracker
 
-    #: the metric name
-    metric: str
-
-    #: the metric prefix; if None, do not check prefix
-    prefix: str | None = None
-
-    #: whether to maximize or minimize the metric
-    maximize: bool = True
+    #: the metric selection
+    metric_selection: MetricSelection
 
     # note: internal detail
     _adapter: ResultListenerAdapterResultTracker = dataclasses.field(init=False)
 
     def __post_init__(self):
-        self._adapter = ResultListenerAdapterResultTracker(
-            self.result_tracker, metric=self.metric, prefix=self.prefix, maximize=self.maximize
-        )
+        self._adapter = ResultListenerAdapterResultTracker(self.result_tracker, metric_selection=self.metric_selection)
 
     def __call__(self, step: int) -> bool:
-        if self._adapter.last_step is None:
-            raise ValueError(
-                "The result tracker did not receive any results so far. Did you forget to use the same result "
-                "tracker instance that is running in training?",
-            )
-        return step == self._adapter.best_step
+        return self._adapter.is_best(step)
 
 
 @dataclasses.dataclass
 class UnionCheckpointSchedule(CheckpointSchedule):
-    """Create a checkpoint whenever one of the base schedules requests it."""
+    """
+    Create a checkpoint whenever one of the base schedules requests it.
 
-    bases: OneOrManyHintOrType
+    Example::
+
+        from pykeen.pipeline import
+
+        result = pipeline(
+            dataset="nations",
+            model="mure",
+            training_kwargs=dict(
+                num_epochs=10,
+                callbacks="checkpoint",
+                callbacks_kwargs=dict(
+                    schedule="union",
+                    # create checkpoints every 5 epochs, and at epoch 7
+                    schedule_kwargs=dict(
+                        bases=["every", "explicit"],
+                        bases_kwargs=[dict(frequency=5), dict(steps=[7])]
+                    ),
+                )
+            ),
+        )
+    """
+
+    bases: OneOrManyHintOrType[CheckpointSchedule]
     bases_kwargs: OneOrManyOptionalKwargs = None
 
     _bases: Sequence[CheckpointSchedule] = dataclasses.field(init=False)
@@ -183,41 +182,4 @@ class UnionCheckpointSchedule(CheckpointSchedule):
 
 
 #: a resolver for checkpoint schedules
-schedule_resolver = ClassResolver.from_subclasses(base=CheckpointSchedule, default=RegularCheckpointSchedule)
-
-
-def inspect_schedule(
-    num_epochs: int = 100, schedule: HintOrType[CheckpointSchedule] = None, schedule_kwargs: OptionalKwargs = None
-) -> list[int]:
-    """
-    Simulate a checkpoint schedule and return the epochs for which a checkpoint would be written.
-
-    >>> inspect_schedule(50)
-    [10, 20, 30, 40, 50]
-    >>> inspect_schedule(50, schedule="explicit", schedule_kwargs=dict(steps=[30, 35]))
-    [30, 35]
-    >>> inspect_schedule(
-    ...     50,
-    ...     schedule="union",
-    ...     schedule_kwargs=dict(
-    ...         bases=["regular", "explicit"],
-    ...         bases_kwargs=[dict(frequency=15), dict(steps=[7,])],
-    ...     ),
-    ... )
-    [7, 15, 30, 45]
-
-    ..warning::
-        You cannot easily inspect schedules which depend on training dynamics, e.g., :class:`BestCheckpointSchedule`.
-
-    :param num_epochs:
-        the number of epochs
-    :param schedule:
-        a checkpoint schedule instance or selection
-    :param schedule_kwargs:
-        additional keyword-based parameters when the schedule needs to instantiated first from a selection
-
-    :return:
-        a sorted list of epochs at which a checkpoint would be made
-    """
-    schedule_instance = schedule_resolver.make(schedule, schedule_kwargs)
-    return list(filter(schedule_instance, range(1, num_epochs + 1)))
+schedule_resolver = ClassResolver.from_subclasses(base=CheckpointSchedule, default=EveryCheckpointSchedule)
