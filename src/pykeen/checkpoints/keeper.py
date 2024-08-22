@@ -55,11 +55,11 @@ class LastCheckpointKeeper(CheckpointKeeper):
 class ModuloCheckpointKeeper(CheckpointKeeper):
     """Keep checkpoints if the step is divisible by a number."""
 
-    modulus: int = 10
+    divisor: int = 10
 
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:
         for step in steps:
-            if step % self.modulus == 0:
+            if step % self.divisor == 0:
                 yield step
 
 

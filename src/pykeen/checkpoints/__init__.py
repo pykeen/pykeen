@@ -67,7 +67,7 @@ Write a checkpoint every 10 steps, but keep only the last one and one every 50 s
                 keeper="union",
                 keeper_kwargs=dict(
                     bases=["modulo", "last"],
-                    bases_kwargs=[dict(modulus=50), None],
+                    bases_kwargs=[dict(divisor=50), None],
                 )
             )
         ),

@@ -83,7 +83,7 @@ def final_checkpoints(
     ...     keeper="union",
     ...     keeper_kwargs=dict(
     ...         bases=["last", "modulo"],
-    ...         bases_kwargs=[None, dict(modulo=20)],
+    ...         bases_kwargs=[None, dict(divisor=20)],
     ...     ),
     ... )
     [20, 40, 50]
