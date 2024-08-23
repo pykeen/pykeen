@@ -6,7 +6,6 @@ import logging
 import typing
 from abc import abstractmethod
 from collections.abc import Collection, Sequence
-from typing import Optional, Union
 
 import numpy
 import pandas
@@ -256,7 +255,7 @@ class Cleaner:
 def _prepare_cleanup(
     training: MappedTriples,
     testing: MappedTriples,
-    max_ids: Tuple[int, int] | None = None,
+    max_ids: tuple[int, int] | None = None,
 ) -> torch.BoolTensor:
     """
     Calculate a mask for the test triples with triples containing test-only entities or relations.
@@ -481,7 +480,7 @@ def split(
     ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
     randomize_cleanup: bool = False,
-    method: Optional[str] = None,
+    method: str | None = None,
 ) -> Sequence[MappedTriples]:
     """Split triples into clean groups.
 
