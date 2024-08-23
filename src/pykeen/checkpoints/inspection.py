@@ -16,7 +16,7 @@ def simulate_checkpoints(
     """
     Simulate a checkpoint schedule and print information about checkpointing.
 
-    ..warning::
+    .. warning::
         You cannot easily simulate schedules which depend on training dynamics, e.g., :class:`BestCheckpointSchedule`.
 
     :param num_epochs:
@@ -88,7 +88,7 @@ def final_checkpoints(
     ... )
     [20, 40, 50]
 
-    ..warning::
+    .. warning::
         You cannot easily inspect schedules which depend on training dynamics, e.g., :class:`BestCheckpointSchedule`.
 
     :param num_epochs:
