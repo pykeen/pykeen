@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """Basic stoppers."""
 
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Union
+from collections.abc import Mapping
+from typing import Any, Union
 
 import torch
 
@@ -55,7 +54,7 @@ class Stopper(ABC):
         relative_delta: float,
         metric: str,
         larger_is_better: bool,
-        results: List[float],
+        results: list[float],
         stopped: bool,
         best_epoch: int,
         best_metric: float,

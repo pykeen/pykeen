@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
-
 """Training KGE models based on the LCWA."""
 
 import logging
 from math import ceil
-from typing import Callable, ClassVar, Optional, Tuple, Union
+from typing import Callable, ClassVar, Optional, Union
 
 import torch
 from torch.nn import functional
 from torch.utils.data import DataLoader, TensorDataset
+from torch_max_mem.api import is_oom_error
 
 from .training_loop import TrainingLoop
 from ..losses import Loss
@@ -174,7 +173,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         slice_size = ceil(self.model.num_entities / 2)
         while True:
             try:
-                logger.debug(f"Trying slice size {slice_size} now.")
+                logger.debug(f"Trying {slice_size=:_} now.")
                 self._train(
                     triples_factory=triples_factory,
                     num_epochs=1,
@@ -183,28 +182,26 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                     slice_size=slice_size,
                     only_size_probing=True,
                 )
-            except RuntimeError as e:
+            except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
-                if "CUDA out of memory." not in e.args[0]:
-                    raise e
+                if not is_oom_error(runtime_error):
+                    raise runtime_error
                 if evaluated_once:
                     slice_size //= 2
-                    logger.info(f"Concluded search with slice_size {slice_size}.")
+                    logger.info(f"Concluded search with {slice_size=:_}.")
                     break
                 if slice_size == 1:
                     raise MemoryError(
-                        f"Even slice_size={slice_size} doesn't fit into your memory with these" f" parameters.",
-                    ) from e
+                        f"Even {slice_size=:_} doesn't fit into your memory with these parameters."
+                    ) from runtime_error
 
-                logger.debug(
-                    f"The slice_size {slice_size} was too big, trying less now.",
-                )
+                logger.debug(f"The {slice_size=:_} was too big, trying less now.")
                 slice_size //= 2
                 reached_max = True
             else:
                 self._free_graph_and_cache()
                 if reached_max:
-                    logger.info(f"Concluded search with slice_size {slice_size}.")
+                    logger.info(f"Concluded search with {slice_size=:_}.")
                     break
                 slice_size *= 2
                 evaluated_once = True
@@ -230,7 +227,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
-class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedTriples]]):
+class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedTriples]]):
     r"""A "symmetric" LCWA scoring heads *and* tails at once.
 
     This objective was introduced by [lacroix2018]_ as
@@ -255,14 +252,14 @@ class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedT
     # docstr-coverage: inherited
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: Optional[str], **kwargs
-    ) -> DataLoader[Tuple[MappedTriples]]:  # noqa: D102
+    ) -> DataLoader[tuple[MappedTriples]]:  # noqa: D102
         assert sampler is None
         return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
 
     # docstr-coverage: inherited
     def _process_batch(
         self,
-        batch: Tuple[MappedTriples],
+        batch: tuple[MappedTriples],
         start: int,
         stop: int,
         label_smoothing: float = 0,
@@ -297,7 +294,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[Tuple[MappedTriples], Tuple[MappedT
 
     @staticmethod
     # docstr-coverage: inherited
-    def _get_batch_size(batch: Tuple[MappedTriples]) -> int:  # noqa: D102
+    def _get_batch_size(batch: tuple[MappedTriples]) -> int:  # noqa: D102
         assert len(batch) == 1
         return batch[0].shape[0]
 

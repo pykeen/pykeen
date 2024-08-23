@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Hyper-parameter optimiziation in PyKEEN."""
 
 import dataclasses
@@ -9,8 +7,9 @@ import json
 import logging
 import os
 import pathlib
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 
 import torch
 from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
@@ -70,14 +69,14 @@ class ExtraKeysError(ValueError):
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
 
-    dataset: Union[None, str, Dataset, Type[Dataset]]  # 1.
-    model: Type[Model]  # 2.
-    loss: Type[Loss]  # 3.
-    optimizer: Type[Optimizer]  # 5.
-    training_loop: Type[TrainingLoop]  # 6.
-    stopper: Type[Stopper]  # 7.
-    evaluator: Type[Evaluator]  # 8.
-    result_tracker: Union[ResultTracker, Type[ResultTracker]]  # 9.
+    dataset: Union[None, str, Dataset, type[Dataset]]  # 1.
+    model: type[Model]  # 2.
+    loss: type[Loss]  # 3.
+    optimizer: type[Optimizer]  # 5.
+    training_loop: type[TrainingLoop]  # 6.
+    stopper: type[Stopper]  # 7.
+    evaluator: type[Evaluator]  # 8.
+    result_tracker: Union[ResultTracker, type[ResultTracker]]  # 9.
     metric: str
 
     # 1. Dataset
@@ -94,19 +93,19 @@ class Objective:
     loss_kwargs: Optional[Mapping[str, Any]] = None
     loss_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 4. Regularizer
-    regularizer: Optional[Type[Regularizer]] = None
+    regularizer: Optional[type[Regularizer]] = None
     regularizer_kwargs: Optional[Mapping[str, Any]] = None
     regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 5. Optimizer
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 5.1 Learning Rate Scheduler
-    lr_scheduler: Optional[Type[LRScheduler]] = None
+    lr_scheduler: Optional[type[LRScheduler]] = None
     lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
     lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 6. Training Loop
     training_loop_kwargs: Optional[Mapping[str, Any]] = None
-    negative_sampler: Optional[Type[NegativeSampler]] = None
+    negative_sampler: Optional[type[NegativeSampler]] = None
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 7. Training
@@ -125,7 +124,7 @@ class Objective:
 
     @staticmethod
     def _update_stopper_callbacks(
-        stopper_kwargs: Dict[str, Any],
+        stopper_kwargs: dict[str, Any],
         trial: Trial,
         metric: str,
         result_tracker: ResultTracker,
@@ -508,7 +507,7 @@ def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipeline
 def hpo_pipeline(
     *,
     # 1. Dataset
-    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+    dataset: Union[None, str, Dataset, type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Hint[CoreTriplesFactory] = None,
     testing: Hint[CoreTriplesFactory] = None,
@@ -516,7 +515,7 @@ def hpo_pipeline(
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
-    model: Union[str, Type[Model]],
+    model: Union[str, type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 3. Loss
@@ -754,15 +753,15 @@ def hpo_pipeline(
     )
 
     # 2. Model
-    model_cls: Type[Model] = model_resolver.lookup(model)
+    model_cls: type[Model] = model_resolver.lookup(model)
     study.set_user_attr("model", model_resolver.normalize_cls(model_cls))
     logger.info(f"Using model: {model_cls}")
     # 3. Loss
-    loss_cls: Type[Loss] = model_cls.loss_default if loss is None else loss_resolver.lookup(loss)
+    loss_cls: type[Loss] = model_cls.loss_default if loss is None else loss_resolver.lookup(loss)
     study.set_user_attr("loss", loss_resolver.normalize_cls(loss_cls))
     logger.info(f"Using loss: {loss_cls}")
     # 4. Regularizer
-    regularizer_cls: Optional[Type[Regularizer]]
+    regularizer_cls: Optional[type[Regularizer]]
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
     elif getattr(model_cls, "regularizer_default", None):
@@ -773,20 +772,20 @@ def hpo_pipeline(
         study.set_user_attr("regularizer", regularizer_cls.get_normalized_name())
         logger.info(f"Using regularizer: {regularizer_cls}")
     # 5. Optimizer
-    optimizer_cls: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
+    optimizer_cls: type[Optimizer] = optimizer_resolver.lookup(optimizer)
     study.set_user_attr("optimizer", optimizer_resolver.normalize_cls(optimizer_cls))
     logger.info(f"Using optimizer: {optimizer_cls}")
     # 5.1 Learning Rate Scheduler
-    lr_scheduler_cls: Optional[Type[LRScheduler]] = None
+    lr_scheduler_cls: Optional[type[LRScheduler]] = None
     if lr_scheduler is not None:
         lr_scheduler_cls = lr_scheduler_resolver.lookup(lr_scheduler)
         study.set_user_attr("lr_scheduler", lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
         logger.info(f"Using lr_scheduler: {lr_scheduler_cls}")
     # 6. Training Loop
-    training_loop_cls: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
+    training_loop_cls: type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
     study.set_user_attr("training_loop", training_loop_cls.get_normalized_name())
     logger.info(f"Using training loop: {training_loop_cls}")
-    negative_sampler_cls: Optional[Type[NegativeSampler]]
+    negative_sampler_cls: Optional[type[NegativeSampler]]
     if training_loop_cls is SLCWATrainingLoop:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
         assert negative_sampler_cls is not None
@@ -798,7 +797,7 @@ def hpo_pipeline(
     if epochs is not None:
         training_kwargs = {} if training_kwargs is None else dict(training_kwargs)
         training_kwargs["num_epochs"] = epochs
-    stopper_cls: Type[Stopper] = stopper_resolver.lookup(stopper)
+    stopper_cls: type[Stopper] = stopper_resolver.lookup(stopper)
     if stopper_cls is EarlyStopper and training_kwargs_ranges and "epochs" in training_kwargs_ranges:
         raise ValueError("can not use early stopping while optimizing epochs")
 
@@ -927,7 +926,7 @@ def suggest_kwargs(
     :return:
         a dictionary with fixed and sampled parameters
     """
-    _kwargs: Dict[str, Any] = {}
+    _kwargs: dict[str, Any] = {}
     if kwargs:
         _kwargs.update(kwargs)
 
@@ -995,7 +994,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
 def _set_study_dataset(
     study: Study,
     *,
-    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+    dataset: Union[None, str, Dataset, type[Dataset]] = None,
     training: Union[None, str, CoreTriplesFactory] = None,
     testing: Union[None, str, CoreTriplesFactory] = None,
     validation: Union[None, str, CoreTriplesFactory] = None,

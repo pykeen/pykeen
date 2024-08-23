@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of TransR."""
 
-from typing import Any, ClassVar, Mapping
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 import torch
 import torch.autograd

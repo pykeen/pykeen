@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of the DistMultLiteral model."""
 
-from typing import Any, ClassVar, Mapping, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 import torch.nn as nn
 
@@ -35,7 +34,7 @@ class DistMultLiteral(LiteralModel):
     )
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(margin=0.0)
-    interaction_cls: ClassVar[Type[Interaction]] = DistMultInteraction
+    interaction_cls: ClassVar[type[Interaction]] = DistMultInteraction
 
     def __init__(
         self,

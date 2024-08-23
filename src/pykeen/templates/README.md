@@ -7,8 +7,8 @@
 </h1>
 
 <p align="center">
-  <a href="https://github.com/pykeen/pykeen/actions/workflows/tests.yml">
-    <img src="https://github.com/pykeen/pykeen/actions/workflows/tests.yml/badge.svg"
+  <a href="https://github.com/pykeen/pykeen/actions/workflows/common.yml">
+    <img src="https://github.com/pykeen/pykeen/actions/workflows/common.yml/badge.svg"
          alt="GitHub Actions">
   </a>
 
@@ -28,8 +28,8 @@
     <img src="https://img.shields.io/badge/-Lightning-792ee5?logo=pytorchlightning&logoColor=white" alt="PyTorch Lightning">
   </a>
 
-  <a href="https://github.com/psf/black">
-    <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
+  <a href="https://github.com/astral-sh/ruff">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff" style="max-width:100%;">
   </a>
 
   <a href=".github/CODE_OF_CONDUCT.md">

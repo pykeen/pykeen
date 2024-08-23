@@ -28,7 +28,7 @@ triples are stored in a tensor :data:``pykeen.triples.TriplesFactory.mapped_trip
 Tuple Broadcasting
 ------------------
 Interaction functions are usually only given for the standard case of scoring a single triple $(h, r, t)$. This function
-is in PyKEEN implemented in the :func:`pykeen.models.base.Model.score_hrt` method of each model, e.g.
+is implemented in PyKEEN in the :func:`pykeen.models.base.Model.score_hrt` method of each model, e.g.
 :func:`pykeen.models.DistMult.score_hrt` for :class:`pykeen.models.DistMult`. When training under the local closed
 world assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score all
 entities/relations for a given tuple, i.e. $(h, r)$, $(r, t)$ or $(h, t)$. In these cases a single tuple is used
@@ -174,17 +174,18 @@ above described process :ref:`sub_batching`. The batch sizes are determined usin
 consideration the `CUDA architecture <https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9926-tensor-core-performance-the-ultimate-guide.pdf>`_
 which ensures that the chosen batch size is the most CUDA efficient one.
 
-Evaluation Fallback
--------------------
-Usually the evaluation is performed on the GPU for faster speeds. In addition, users might choose a batch size upfront
+Usually the evaluation is performed on the GPU for faster speeds. Thanks for `torch_max_mem`, you can fully leave
+finding a maximal batch size to PyKEEN.
+In addition, users might choose a batch size upfront
 in their evaluation configuration to fully utilize the GPU to achieve the fastest evaluation speeds possible.
 However, during larger setups testing different model configurations and dataset partitions such as e.g. HPO the
 hardware requirements might change drastically, which might cause that the evaluation no longer can be run with the
 pre-set batch size or not on the GPU at all for larger datasets and memory intense models.
-Since PyKEEN will abide by the user configurations, the evaluation will crash in these cases even though the training
-finished successfully and thus loose the progress achieved and/or leave trials unfinished.
-Given that the batch size and the device have no impact on the evaluation results, PyKEEN offers a way to overcome this
-problem through the evaluation fallback option of the pipeline. This will cause the evaluation to fall back to using a
-smaller batch size in cases where the evaluation failed using the GPU with a set batch size and in the last instance to
-evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+In these cases, `torch_max_mem` will take care of lowering the actual batch size until no more out of memory errors
+occur.
+
+Evaluation Fallback
+-------------------
+In some cases, it is possible that evaluation cannot succeed on GPU even with minimal batch size and slicing.
+In these rare cases, PyKEEN offers to fall back to CPU.
 Note: This can lead to significantly longer evaluation times in cases where the evaluation falls back to using the CPU.

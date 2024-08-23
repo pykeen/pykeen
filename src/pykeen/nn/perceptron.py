@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Perceptron-like modules."""
 
 from typing import Optional, Union

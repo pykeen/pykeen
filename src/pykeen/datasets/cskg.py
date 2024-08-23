@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The `Common Sense Knowledge Graph <https://github.com/usc-isi-i2/cskg>`_ dataset.
 
 - GitHub Repository: https://github.com/usc-isi-i2/cskg

@@ -3,18 +3,12 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     Any,
     ClassVar,
-    DefaultDict,
-    Dict,
-    Iterable,
-    Mapping,
     NamedTuple,
     Optional,
-    Sequence,
-    Set,
-    Tuple,
     Union,
 )
 
@@ -43,7 +37,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tuple[MappedTriples, torch.LongTensor]:
+def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> tuple[MappedTriples, torch.LongTensor]:
     """
     Concatenate (shifted) triples.
 
@@ -78,11 +72,11 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> Tup
 
 
 def merge_label_to_id_mapping(
-    *pairs: Tuple[str, Mapping[str, int]],
+    *pairs: tuple[str, Mapping[str, int]],
     offsets: torch.LongTensor = None,
     mappings: Optional[Sequence[Mapping[int, int]]] = None,
     extra: Optional[Mapping[str, int]] = None,
-) -> Dict[str, int]:
+) -> dict[str, int]:
     """
     Merge label-to-id mappings.
 
@@ -105,7 +99,7 @@ def merge_label_to_id_mapping(
     if (offsets is None and mappings is None) or (offsets is not None and mappings is not None):
         raise ValueError("Exactly one of `offsets` or `mappings` has to be provided")
     # merge labels with same ID
-    value_to_keys: DefaultDict[int, Set[str]] = defaultdict(set)
+    value_to_keys: defaultdict[int, set[str]] = defaultdict(set)
     for i, (prefix, mapping) in enumerate(pairs):
         for key, value in mapping.items():
             key = f"{prefix}:{key}"
@@ -120,7 +114,7 @@ def merge_label_to_id_mapping(
         for k, v in extra.items():
             value_to_keys[v].add(k)
     # reconstruct label-to-id
-    result: Dict[str, int] = {}
+    result: dict[str, int] = {}
     for value, keys in value_to_keys.items():
         if len(keys) == 1:
             key = list(keys)[0]
@@ -138,7 +132,7 @@ def merge_label_to_id_mappings(
     entity_offsets: Optional[torch.LongTensor] = None,
     entity_mappings: Optional[Sequence[Mapping[int, int]]] = None,
     extra_relations: Optional[Mapping[str, int]] = None,
-) -> Tuple[Mapping[str, int], Mapping[str, int]]:
+) -> tuple[Mapping[str, int], Mapping[str, int]]:
     """
     Merge entity-to-id and relation-to-id mappings.
 
@@ -275,7 +269,7 @@ class GraphPairCombinator(ABC):
         right: TriplesFactory,
         alignment: pandas.DataFrame,
         **kwargs,
-    ) -> Tuple[TriplesFactory, torch.LongTensor]:
+    ) -> tuple[TriplesFactory, torch.LongTensor]:
         """
         Combine two graphs using the alignment information.
 
@@ -440,7 +434,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
 
 
 def iter_entity_mappings(
-    *old_new_ids_pairs: Tuple[torch.LongTensor, torch.LongTensor], offsets: torch.LongTensor
+    *old_new_ids_pairs: tuple[torch.LongTensor, torch.LongTensor], offsets: torch.LongTensor
 ) -> Iterable[Mapping[int, int]]:
     """
     Create explicit Id mappings.
@@ -452,7 +446,7 @@ def iter_entity_mappings(
 
     :yields: explicit id remappings
     """
-    old, new = [torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs)]
+    old, new = (torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs))
     offsets = offsets.tolist() + [old.max().item() + 1]
     for low, high in zip(offsets, offsets[1:]):
         mask = (low <= old) & (old < high)

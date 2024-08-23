@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Utilities for ablation study configurations."""
 
 from __future__ import annotations
@@ -9,7 +7,8 @@ import json
 import logging
 import pathlib
 import time
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, TypedDict, Union
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any, TypedDict
 from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
@@ -40,45 +39,45 @@ class SplitToPathDict(TypedDict):
 
 def ablation_pipeline(
     datasets: OneOrSequence[str | SplitToPathDict],
-    directory: Union[str, pathlib.Path],
-    models: Union[str, List[str]],
-    losses: Union[str, List[str]],
-    optimizers: Union[str, List[str]],
-    training_loops: Union[str, List[str]],
+    directory: str | pathlib.Path,
+    models: str | list[str],
+    losses: str | list[str],
+    optimizers: str | list[str],
+    training_loops: str | list[str],
     *,
-    epochs: Optional[int] = None,
-    create_inverse_triples: Union[bool, List[bool]] = False,
-    regularizers: Union[None, str, List[str]] = None,
-    negative_sampler: Union[str, None] = None,
-    evaluator: Optional[str] = None,
-    stopper: Optional[str] = "NopStopper",
-    model_to_model_kwargs: Optional[Mapping2D] = None,
-    model_to_model_kwargs_ranges: Optional[Mapping2D] = None,
-    model_to_loss_to_loss_kwargs: Optional[Mapping3D] = None,
-    model_to_loss_to_loss_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_optimizer_to_optimizer_kwargs: Optional[Mapping3D] = None,
-    model_to_optimizer_to_optimizer_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_negative_sampler_to_negative_sampler_kwargs: Optional[Mapping3D] = None,
-    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_training_loop_to_training_loop_kwargs: Optional[Mapping3D] = None,
-    model_to_training_loop_to_training_kwargs: Optional[Mapping3D] = None,
-    model_to_training_loop_to_training_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
-    model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
-    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
-    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    stopper_kwargs: Optional[Mapping[str, Any]] = None,
-    n_trials: Optional[int] = 5,
-    timeout: Optional[int] = 3600,
-    metric: Optional[str] = "hits@10",
-    direction: Optional[str] = "maximize",
-    sampler: Optional[str] = "random",
-    pruner: Optional[str] = "nop",
-    metadata: Optional[Mapping] = None,
+    epochs: int | None = None,
+    create_inverse_triples: bool | list[bool] = False,
+    regularizers: None | str | list[str] = None,
+    negative_sampler: str | None = None,
+    evaluator: str | None = None,
+    stopper: str | None = "NopStopper",
+    model_to_model_kwargs: Mapping2D | None = None,
+    model_to_model_kwargs_ranges: Mapping2D | None = None,
+    model_to_loss_to_loss_kwargs: Mapping3D | None = None,
+    model_to_loss_to_loss_kwargs_ranges: Mapping3D | None = None,
+    model_to_optimizer_to_optimizer_kwargs: Mapping3D | None = None,
+    model_to_optimizer_to_optimizer_kwargs_ranges: Mapping3D | None = None,
+    model_to_negative_sampler_to_negative_sampler_kwargs: Mapping3D | None = None,
+    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Mapping3D | None = None,
+    model_to_training_loop_to_training_loop_kwargs: Mapping3D | None = None,
+    model_to_training_loop_to_training_kwargs: Mapping3D | None = None,
+    model_to_training_loop_to_training_kwargs_ranges: Mapping3D | None = None,
+    model_to_regularizer_to_regularizer_kwargs: Mapping3D | None = None,
+    model_to_regularizer_to_regularizer_kwargs_ranges: Mapping3D | None = None,
+    evaluator_kwargs: Mapping[str, Any] | None = None,
+    evaluation_kwargs: Mapping[str, Any] | None = None,
+    stopper_kwargs: Mapping[str, Any] | None = None,
+    n_trials: int | None = 5,
+    timeout: int | None = 3600,
+    metric: str | None = "hits@10",
+    direction: str | None = "maximize",
+    sampler: str | None = "random",
+    pruner: str | None = "nop",
+    metadata: Mapping | None = None,
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
     dry_run: bool = False,
-    best_replicates: Optional[int] = None,
+    best_replicates: int | None = None,
     discard_replicates: bool = False,
     create_unique_subdir: bool = False,
 ):
@@ -204,8 +203,8 @@ def ablation_pipeline(
 
 
 def _run_ablation_experiments(
-    directories: Sequence[Tuple[Union[str, pathlib.Path], Union[str, pathlib.Path]]],
-    best_replicates: Optional[int] = None,
+    directories: Sequence[tuple[str | pathlib.Path, str | pathlib.Path]],
+    best_replicates: int | None = None,
     dry_run: bool = False,
     move_to_cpu: bool = True,
     discard_replicates: bool = False,
@@ -249,7 +248,7 @@ def ablation_pipeline_from_config(
     directory: str,
     *,
     dry_run: bool = False,
-    best_replicates: Optional[int] = None,
+    best_replicates: int | None = None,
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
     discard_replicates: bool = False,
@@ -282,10 +281,10 @@ def ablation_pipeline_from_config(
 
 
 def prepare_ablation_from_path(
-    path: Union[str, pathlib.Path],
-    directory: Union[str, pathlib.Path],
+    path: str | pathlib.Path,
+    directory: str | pathlib.Path,
     save_artifacts: bool,
-) -> List[Tuple[pathlib.Path, pathlib.Path]]:
+) -> list[tuple[pathlib.Path, pathlib.Path]]:
     """Prepare a set of ablation study directories.
 
     :param path: Path to configuration file defining the ablation studies.
@@ -303,9 +302,9 @@ def prepare_ablation_from_path(
 
 def prepare_ablation_from_config(
     config: Mapping[str, Any],
-    directory: Union[str, pathlib.Path],
+    directory: str | pathlib.Path,
     save_artifacts: bool,
-) -> List[Tuple[pathlib.Path, pathlib.Path]]:
+) -> list[tuple[pathlib.Path, pathlib.Path]]:
     """Prepare a set of ablation study directories.
 
     :param config: Dictionary defining the ablation studies.
@@ -342,39 +341,39 @@ def prepare_ablation(  # noqa:C901
     losses: OneOrSequence[str],
     optimizers: OneOrSequence[str],
     training_loops: OneOrSequence[str],
-    directory: Union[str, pathlib.Path],
+    directory: str | pathlib.Path,
     *,
     create_inverse_triples: OneOrSequence[bool] = False,
     regularizers: OneOrSequence[None | str] = None,
-    epochs: Optional[int] = None,
-    negative_sampler: Optional[str] = None,
-    evaluator: Optional[str] = None,
-    model_to_model_kwargs: Optional[Mapping2D] = None,
-    model_to_model_kwargs_ranges: Optional[Mapping2D] = None,
-    model_to_loss_to_loss_kwargs: Optional[Mapping3D] = None,
-    model_to_loss_to_loss_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_optimizer_to_optimizer_kwargs: Optional[Mapping3D] = None,
-    model_to_optimizer_to_optimizer_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_training_loop_to_training_loop_kwargs: Optional[Mapping3D] = None,
-    model_to_neg_sampler_to_neg_sampler_kwargs: Optional[Mapping3D] = None,
-    model_to_neg_sampler_to_neg_sampler_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_training_loop_to_training_kwargs: Optional[Mapping3D] = None,
-    model_to_training_loop_to_training_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
-    model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
-    n_trials: Optional[int] = 5,
-    timeout: Optional[int] = 3600,
-    metric: Optional[str] = "hits@10",
-    direction: Optional[str] = "maximize",
-    sampler: Optional[str] = "random",
-    pruner: Optional[str] = "nop",
-    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
-    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    stopper: Optional[str] = "NopStopper",
-    stopper_kwargs: Optional[Mapping[str, Any]] = None,
-    metadata: Optional[Mapping] = None,
+    epochs: int | None = None,
+    negative_sampler: str | None = None,
+    evaluator: str | None = None,
+    model_to_model_kwargs: Mapping2D | None = None,
+    model_to_model_kwargs_ranges: Mapping2D | None = None,
+    model_to_loss_to_loss_kwargs: Mapping3D | None = None,
+    model_to_loss_to_loss_kwargs_ranges: Mapping3D | None = None,
+    model_to_optimizer_to_optimizer_kwargs: Mapping3D | None = None,
+    model_to_optimizer_to_optimizer_kwargs_ranges: Mapping3D | None = None,
+    model_to_training_loop_to_training_loop_kwargs: Mapping3D | None = None,
+    model_to_neg_sampler_to_neg_sampler_kwargs: Mapping3D | None = None,
+    model_to_neg_sampler_to_neg_sampler_kwargs_ranges: Mapping3D | None = None,
+    model_to_training_loop_to_training_kwargs: Mapping3D | None = None,
+    model_to_training_loop_to_training_kwargs_ranges: Mapping3D | None = None,
+    model_to_regularizer_to_regularizer_kwargs: Mapping3D | None = None,
+    model_to_regularizer_to_regularizer_kwargs_ranges: Mapping3D | None = None,
+    n_trials: int | None = 5,
+    timeout: int | None = 3600,
+    metric: str | None = "hits@10",
+    direction: str | None = "maximize",
+    sampler: str | None = "random",
+    pruner: str | None = "nop",
+    evaluator_kwargs: Mapping[str, Any] | None = None,
+    evaluation_kwargs: Mapping[str, Any] | None = None,
+    stopper: str | None = "NopStopper",
+    stopper_kwargs: Mapping[str, Any] | None = None,
+    metadata: Mapping | None = None,
     save_artifacts: bool = True,
-) -> List[Tuple[pathlib.Path, pathlib.Path]]:
+) -> list[tuple[pathlib.Path, pathlib.Path]]:
     """Prepare an ablation directory.
 
     :param datasets:
@@ -516,7 +515,7 @@ def prepare_ablation(  # noqa:C901
             save_model_directory.mkdir(exist_ok=True, parents=True)
             _experiment_optuna_config["save_model_directory"] = save_model_directory.as_posix()
 
-        hpo_config: Dict[str, Any] = dict()
+        hpo_config: dict[str, Any] = dict()
         hpo_config["stopper"] = stopper
 
         if stopper_kwargs is not None:
@@ -527,7 +526,7 @@ def prepare_ablation(  # noqa:C901
         #    random_seed=random_non_negative_int(),
         # ),
 
-        def _set_arguments(config: Optional[Mapping3D], key: str, value: str) -> None:
+        def _set_arguments(config: Mapping3D | None, key: str, value: str) -> None:
             """Set argument and its values."""
             d = {}
             d[key] = {} if config is None else config.get(model, {}).get(value, {})  # noqa:B023

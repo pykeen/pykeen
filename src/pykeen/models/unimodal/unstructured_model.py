@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of UM."""
 
-from typing import Any, ClassVar, Mapping
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE

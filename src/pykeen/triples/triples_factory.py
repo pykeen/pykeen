@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 import dataclasses
@@ -7,21 +5,13 @@ import logging
 import pathlib
 import re
 import warnings
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
     Callable,
     ClassVar,
-    Collection,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
     Optional,
-    Sequence,
-    Set,
     TextIO,
-    Tuple,
     Union,
     cast,
 )
@@ -498,7 +488,7 @@ class CoreTriplesFactory(KGInfo):
             target=target,
         )
 
-    def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
+    def get_most_frequent_relations(self, n: Union[int, float]) -> set[int]:
         """Get the IDs of the n most frequent relations.
 
         :param n:
@@ -522,7 +512,7 @@ class CoreTriplesFactory(KGInfo):
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[Dict[str, Any]] = None,
+        extra_metadata: Optional[dict[str, Any]] = None,
         keep_metadata: bool = True,
         create_inverse_triples: Optional[bool] = None,
     ) -> "CoreTriplesFactory":
@@ -565,7 +555,7 @@ class CoreTriplesFactory(KGInfo):
         random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
         method: Optional[str] = None,
-    ) -> List["CoreTriplesFactory"]:
+    ) -> list["CoreTriplesFactory"]:
         """Split a triples factory into a training part and a variable number of (transductive) evaluation parts.
 
         .. warning::
@@ -882,7 +872,7 @@ class TriplesFactory(CoreTriplesFactory):
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> "TriplesFactory":
         """
         Create a new triples factory from label-based triples.
@@ -960,7 +950,7 @@ class TriplesFactory(CoreTriplesFactory):
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> "TriplesFactory":
@@ -1063,7 +1053,7 @@ class TriplesFactory(CoreTriplesFactory):
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[Dict[str, Any]] = None,
+        extra_metadata: Optional[dict[str, Any]] = None,
         keep_metadata: bool = True,
         create_inverse_triples: Optional[bool] = None,
     ) -> "TriplesFactory":  # noqa: D102
@@ -1323,7 +1313,7 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
 
 
 AnyTriples = Union[
-    Tuple[str, str, str], Sequence[Tuple[str, str, str]], LabeledTriples, MappedTriples, CoreTriplesFactory
+    tuple[str, str, str], Sequence[tuple[str, str, str]], LabeledTriples, MappedTriples, CoreTriplesFactory
 ]
 
 
@@ -1331,7 +1321,7 @@ def get_mapped_triples(
     x: Optional[AnyTriples] = None,
     *,
     mapped_triples: Optional[MappedTriples] = None,
-    triples: Union[None, LabeledTriples, Tuple[str, str, str], Sequence[Tuple[str, str, str]]] = None,
+    triples: Union[None, LabeledTriples, tuple[str, str, str], Sequence[tuple[str, str, str]]] = None,
     factory: Optional[CoreTriplesFactory] = None,
 ) -> MappedTriples:
     """

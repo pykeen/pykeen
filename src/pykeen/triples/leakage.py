@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Tools for removing the leakage from datasets.
 
 Leakage is when the inverse of a given training triple appears in either
@@ -10,7 +8,8 @@ novel triples.
 """
 
 import logging
-from typing import Collection, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
+from collections.abc import Collection, Iterable, Mapping
+from typing import Optional, TypeVar, Union, cast
 
 import click
 import numpy
@@ -38,7 +37,7 @@ def _select_by_most_pairs(
     size: Mapping[int, int],
 ) -> Collection[int]:
     """Select relations to keep with the most associated pairs."""
-    result: Set[int] = set()
+    result: set[int] = set()
     for component in components:
         keep = max(component, key=size.__getitem__)
         result.update(r for r in component if r != keep)
@@ -76,7 +75,7 @@ def jaccard_similarity_scipy(
 
 def triples_factory_to_sparse_matrices(
     triples_factory: CoreTriplesFactory,
-) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
+) -> tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
     """Compute relation representations as sparse matrices of entity pairs.
 
     .. note ::
@@ -98,7 +97,7 @@ def triples_factory_to_sparse_matrices(
 def _to_one_hot(
     rows: torch.LongTensor,
     cols: torch.LongTensor,
-    shape: Tuple[int, int],
+    shape: tuple[int, int],
 ) -> scipy.sparse.spmatrix:
     """Create a one-hot matrix given indices of non-zero elements (potentially containing duplicates)."""
     rows, cols = torch.stack([rows, cols], dim=0).unique(dim=1).numpy()
@@ -113,7 +112,7 @@ def _to_one_hot(
 def mapped_triples_to_sparse_matrices(
     mapped_triples: MappedTriples,
     num_relations: int,
-) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
+) -> tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
     """Compute relation representations as sparse matrices of entity pairs.
 
     .. note ::
@@ -152,7 +151,7 @@ def get_candidate_pairs(
     b: Optional[scipy.sparse.spmatrix] = None,
     threshold: float,
     no_self: bool = True,
-) -> Set[Tuple[int, int]]:
+) -> set[tuple[int, int]]:
     """Find pairs of sets with Jaccard similarity above threshold using :func:`jaccard_similarity_scipy`.
 
     :param a:
@@ -185,7 +184,7 @@ class Sealant:
     triples_factory: CoreTriplesFactory
     minimum_frequency: float
     inverses: Mapping[int, int]
-    inverse_relations_to_delete: Set[int]
+    inverse_relations_to_delete: set[int]
 
     def __init__(
         self,
@@ -277,7 +276,7 @@ def unleak(
 def _generate_compact_vectorized_lookup(
     ids: torch.LongTensor,
     label_to_id: Mapping[str, int],
-) -> Tuple[Mapping[str, int], torch.LongTensor]:
+) -> tuple[Mapping[str, int], torch.LongTensor]:
     """
     Given a tensor of IDs and a label to ID mapping, retain only occurring IDs, and compact the mapping.
 
@@ -338,18 +337,18 @@ def _translate_triples(
     return triples
 
 
-def reindex(*triples_factories: CoreTriplesFactory) -> List[CoreTriplesFactory]:
+def reindex(*triples_factories: CoreTriplesFactory) -> list[CoreTriplesFactory]:
     """Reindex a set of triples factories."""
     # get entities and relations occurring in triples
     all_triples = cat_triples(*triples_factories)
 
     if not all(isinstance(f, TriplesFactory) for f in triples_factories):
         raise NotImplementedError("reindex has not been updated for non-TriplesFactory yet.")
-    triples_factories = cast(Tuple[TriplesFactory, ...], triples_factories)
+    triples_factories = cast(tuple[TriplesFactory, ...], triples_factories)
 
     # generate ID translation and new label to Id mappings
     one_factory = triples_factories[0]
-    (entity_to_id, entity_id_translation), (relation_to_id, relation_id_translation) = [
+    (entity_to_id, entity_id_translation), (relation_to_id, relation_id_translation) = (
         _generate_compact_vectorized_lookup(
             ids=all_triples[:, cols],
             label_to_id=label_to_id,
@@ -358,7 +357,7 @@ def reindex(*triples_factories: CoreTriplesFactory) -> List[CoreTriplesFactory]:
             ([0, 2], one_factory.entity_to_id),
             (1, one_factory.relation_to_id),
         )
-    ]
+    )
 
     return [
         TriplesFactory(

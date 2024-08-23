@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The Countries dataset."""
 
 from docdata import parse_docdata

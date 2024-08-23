@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """A script for splitting triples into a dataset."""
 
 import json
 import pathlib
-from typing import Sequence, cast
+from collections.abc import Sequence
+from typing import cast
 
 import click
 import numpy as np

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """PyTorch Lightning integration.
 
 PyTorch Lightning poses an alternative way to implement a training

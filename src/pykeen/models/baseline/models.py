@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Non-parametric baseline models."""
 
 from typing import Optional
@@ -105,25 +103,25 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         super().__init__(triples_factory=triples_factory)
         h, r, t = numpy.asarray(triples_factory.mapped_triples).T
         if relation_margin:
-            self.head_per_relation, self.tail_per_relation = [
+            self.head_per_relation, self.tail_per_relation = (
                 get_csr_matrix(
                     row_indices=r,
                     col_indices=col_indices,
                     shape=(triples_factory.num_relations, triples_factory.num_entities),
                 )
                 for col_indices in (h, t)
-            ]
+            )
         else:
             self.head_per_relation = self.tail_per_relation = None
         if entity_margin:
-            self.head_per_tail, self.tail_per_head = [
+            self.head_per_tail, self.tail_per_head = (
                 get_csr_matrix(
                     row_indices=row_indices,
                     col_indices=col_indices,
                     shape=(triples_factory.num_entities, triples_factory.num_entities),
                 )
                 for row_indices, col_indices in ((t, h), (h, t))
-            ]
+            )
         else:
             self.head_per_tail = self.tail_per_head = None
 
@@ -176,14 +174,14 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         self.sim, self.sim_inv = get_relation_similarity(triples_factory, threshold=threshold)
         # mapping from relations to head/tail entities
         h, r, t = numpy.asarray(triples_factory.mapped_triples).T
-        self.rel_to_head, self.rel_to_tail = [
+        self.rel_to_head, self.rel_to_tail = (
             get_csr_matrix(
                 row_indices=r,
                 col_indices=col_indices,
                 shape=(triples_factory.num_relations, triples_factory.num_entities),
             )
             for col_indices in (h, t)
-        ]
+        )
 
     # docstr-coverage: inherited
     def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102

@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """An implementation of the extension to ERMLP."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from torch.nn.init import uniform_
 
@@ -54,7 +53,7 @@ class ERMLPE(ERModel):
         hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 

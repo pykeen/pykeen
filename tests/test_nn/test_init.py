@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Tests for initializers."""
 
 from typing import ClassVar

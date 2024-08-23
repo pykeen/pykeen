@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Functions for building magical KGE model CLIs."""
 
 import inspect
@@ -7,7 +5,8 @@ import json
 import logging
 import pathlib
 import sys
-from typing import Any, Mapping, Optional, Type, Union
+from collections.abc import Mapping
+from typing import Any, Optional, Union
 
 import click
 from class_resolver import HintOrType
@@ -57,7 +56,7 @@ _SKIP_HINTS = {
 }
 
 
-def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
+def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
     """Build a :mod:`click` command line interface for a KGE model.
 
     Allows users to specify all of the (hyper)parameters to the
@@ -196,9 +195,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 automatic_memory_optimization=automatic_memory_optimization,
             ),
             evaluator=evaluator,
-            evaluator_kwargs=dict(
-                automatic_memory_optimization=automatic_memory_optimization,
-            ),
+            evaluator_kwargs=dict(),
             training_kwargs=dict(
                 num_epochs=number_epochs,
                 batch_size=batch_size,

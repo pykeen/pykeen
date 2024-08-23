@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Tests for leakage analysis."""
 
 import itertools as itt
@@ -83,9 +81,9 @@ class TestLeakage(unittest.TestCase):
         )
 
         sealant = Sealant(train_factory, symmetric=False, minimum_frequency=min_frequency)
-        test_relation_id, test_relation_inverse_id = [
+        test_relation_id, test_relation_inverse_id = (
             train_factory.relation_to_id[r] for r in (test_relation, test_relation_inverse)
-        ]
+        )
         self.assertNotEqual(
             0,
             len(sealant.candidate_inverse_relations),

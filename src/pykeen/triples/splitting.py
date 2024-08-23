@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of triples splitting functions."""
 
 from __future__ import annotations
@@ -7,7 +5,8 @@ from __future__ import annotations
 import logging
 import typing
 from abc import abstractmethod
-from typing import Collection, Optional, Sequence, Set, Tuple, Type
+from collections.abc import Collection, Sequence
+from typing import Optional, Union
 
 import numpy
 import pandas
@@ -93,11 +92,11 @@ def _split_triples(
     return triples_groups
 
 
-def _get_cover_for_column(df: pandas.DataFrame, column: Target, index_column: str = "index") -> Set[int]:
+def _get_cover_for_column(df: pandas.DataFrame, column: Target, index_column: str = "index") -> set[int]:
     return set(df.groupby(by=column).agg({index_column: "min"})[index_column].values)
 
 
-def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> Set[int]:
+def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> set[int]:
     return set(numpy.unique(df.loc[df["index"].isin(chosen), [LABEL_HEAD, LABEL_TAIL]]))
 
 
@@ -160,7 +159,7 @@ class TripleCoverageError(RuntimeError):
 def normalize_ratios(
     ratios: float | Sequence[float],
     epsilon: float = 1.0e-06,
-) -> Tuple[float, ...]:
+) -> tuple[float, ...]:
     """Normalize relative sizes.
 
     If the sum is smaller than 1, adds (1 - sum)
@@ -191,7 +190,7 @@ def normalize_ratios(
 def get_absolute_split_sizes(
     n_total: int,
     ratios: Sequence[float],
-) -> Tuple[int, ...]:
+) -> tuple[int, ...]:
     """
     Compute absolute sizes of splits from given relative sizes.
 
@@ -224,7 +223,7 @@ class Cleaner:
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> Tuple[MappedTriples, MappedTriples]:
+    ) -> tuple[MappedTriples, MappedTriples]:
         """
         Clean up one set of triples with respect to a reference set.
 
@@ -282,7 +281,7 @@ def _prepare_cleanup(
     to_move_mask = torch.zeros(1, dtype=torch.bool)
     if max_ids is None:
         max_ids = typing.cast(
-            Tuple[int, int],
+            tuple[int, int],
             tuple(max(training[:, col].max().item(), testing[:, col].max().item()) + 1 for col in columns),
         )
     for col, max_id in zip(columns, max_ids):
@@ -310,7 +309,7 @@ class RandomizedCleaner(Cleaner):
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D102
+    ) -> tuple[MappedTriples, MappedTriples]:  # noqa: D102
         generator = ensure_torch_random_state(random_state)
         move_id_mask = _prepare_cleanup(reference, other)
 
@@ -342,7 +341,7 @@ class DeterministicCleaner(Cleaner):
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D102
+    ) -> tuple[MappedTriples, MappedTriples]:  # noqa: D102
         move_id_mask = _prepare_cleanup(reference, other)
         reference = torch.cat([reference, other[move_id_mask]])
         other = other[~move_id_mask]
@@ -521,7 +520,7 @@ def split(
         train, test, val = split(triples, ratios)
     """
     # backwards compatibility
-    splitter_cls: Type[Splitter] = splitter_resolver.lookup(method)
+    splitter_cls: type[Splitter] = splitter_resolver.lookup(method)
     kwargs = dict()
     if splitter_cls is CleanupSplitter and randomize_cleanup:
         kwargs["cleaner"] = cleaner_resolver.normalize_cls(RandomizedCleaner)

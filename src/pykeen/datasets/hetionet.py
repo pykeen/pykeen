@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The Hetionet dataset.
 
 Get a summary with ``python -m pykeen.datasets.hetionet``

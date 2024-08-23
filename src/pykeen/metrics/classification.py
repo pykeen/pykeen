@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Classification metrics.
 
@@ -17,7 +15,8 @@ from __future__ import annotations
 import abc
 import math
 import warnings
-from typing import ClassVar, Collection, Literal
+from collections.abc import Collection
+from typing import ClassVar, Literal
 
 import numpy
 from class_resolver import ClassResolver

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Test that samplers can be executed."""
 
 import numpy.testing

@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """Loaders for pre-computed NodePiece tokenizations."""
 
 import logging
 import pathlib
 import pickle
 from abc import ABC, abstractmethod
-from typing import Collection, Mapping, Tuple
+from collections.abc import Collection, Mapping
 
 import numpy
 import torch
@@ -30,7 +28,7 @@ class PrecomputedTokenizerLoader(ABC):
     """A loader for precomputed tokenization."""
 
     @abstractmethod
-    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:
+    def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:
         """Load tokenization from the given path."""
         raise NotImplementedError
 
@@ -45,7 +43,7 @@ class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
     """
 
     # docstr-coverage: inherited
-    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
+    def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         with path.open(mode="rb") as pickle_file:
             # contains: anchor_ids, entity_ids, mapping {entity_id -> {"ancs": anchors, "dists": distances}}
             anchor_ids, mapping = pickle.load(pickle_file)[0::2]  # noqa:S301
@@ -87,7 +85,7 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         )
 
     # docstr-coverage: inherited
-    def __call__(self, path: pathlib.Path) -> Tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
+    def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         c = torch.load(path)
         order = c["order"]
         logger.info(f"Loaded precomputed pools of shape {order.shape}.")
