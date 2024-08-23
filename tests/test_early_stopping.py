@@ -118,7 +118,7 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         # Set automatic_memory_optimization to false during testing
         nations = Nations()
         model: Model = TransE(triples_factory=nations.training)
-        evaluator = RankBasedEvaluator(automatic_memory_optimization=False)
+        evaluator = RankBasedEvaluator()
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,

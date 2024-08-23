@@ -416,7 +416,7 @@ class TestEvaluationStructure(unittest.TestCase):
 
     def setUp(self):
         """Prepare for testing the evaluation structure."""
-        self.evaluator = DummyEvaluator(filtered=True, automatic_memory_optimization=False)
+        self.evaluator = DummyEvaluator(filtered=True)
         self.dataset = Nations()
         self.model = FixedModel(triples_factory=self.dataset.training)
 
@@ -440,7 +440,7 @@ class TestEvaluationFiltering(unittest.TestCase):
 
     def setUp(self):
         """Prepare for testing the evaluation filtering."""
-        self.evaluator = RankBasedEvaluator(filtered=True, automatic_memory_optimization=False)
+        self.evaluator = RankBasedEvaluator(filtered=True)
         self.triples_factory = Nations().training
         self.model = FixedModel(triples_factory=self.triples_factory)
 

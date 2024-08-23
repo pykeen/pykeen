@@ -22,7 +22,7 @@ from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..models import Model
 from ..triples import CoreTriplesFactory, get_mapped_triples
 from ..typing import LABEL_HEAD, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
-from ..utils import upgrade_to_sequence
+from ..utils import determine_maximum_batch_size, upgrade_to_sequence
 
 __all__ = [
     "AdditionalFilterTriplesHint",
@@ -69,7 +69,7 @@ def _evaluate(
     Run the evaluation loop for a given batch size.
 
     .. note::
-        this method is wrapped into a `MemoryUtilizationMaximizer` instance to automatically tune the `batch_size`.
+        This method is wrapped into a `MemoryUtilizationMaximizer` instance to automatically tune the `batch_size`.
 
     :param loop:
         the evaluation loop instance.
@@ -192,11 +192,9 @@ class EvaluationLoop(Generic[BatchType]):
             the evaluation results.
         """
         # set upper limit of batch size for automatic memory optimization
-        if not batch_size:
-            if self.model.device.type == "cpu":
-                batch_size = 32
-            else:
-                batch_size = len(self.dataset)
+        batch_size = determine_maximum_batch_size(
+            batch_size=batch_size, device=self.model.device, maximum_batch_size=len(self.dataset)
+        )
         # set model to evaluation mode
         self.model.eval()
         # delegate to AMO wrapper
