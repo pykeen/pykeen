@@ -74,6 +74,7 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
+from ..utils import determine_maximum_batch_size
 
 logger = logging.getLogger(__name__)
 
@@ -549,15 +550,16 @@ class EvaluationLossTrainingCallback(TrainingCallback):
         self.model.eval()
 
         # determine maximum batch size
-        maximum_batch_size = self.maximum_batch_size or self.triples_factory.num_triples
-        if self.model.device.type != "cuda":
-            # try to avoid OOM kills on cpu for large datasets
-            maximum_batch_size = min(maximum_batch_size, 2**16)
+        maximum_batch_size = determine_maximum_batch_size(
+            batch_size=self.maximum_batch_size,
+            device=self.model.device,
+            # TODO: this should be num_instances rather than num_triples
+            maximum_batch_size=self.triples_factory.num_triples,
+        )
 
         loss = _validation_loss_amo_wrapper(
             training_loop=self.training_loop,
             triples_factory=self.triples_factory,
-            # TODO: this should be num_instances rather than num_triples; also for cpu, we may want to reduce this
             batch_size=maximum_batch_size,
             # note: slicing is only effective for LCWA training
             slice_size=self.training_loop.num_targets if isinstance(self.training_loop, LCWATrainingLoop) else 1,

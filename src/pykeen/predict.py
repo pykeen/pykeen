@@ -294,7 +294,7 @@ from .typing import (
     MappedTriples,
     Target,
 )
-from .utils import invert_mapping, isin_many_dim, resolve_device
+from .utils import determine_maximum_batch_size, invert_mapping, isin_many_dim, resolve_device
 
 __all__ = [
     # high-level
@@ -394,7 +394,9 @@ class TriplePredictions(Predictions):
             raise ValueError(f"df must have a columns named {columns}, but df.columns={self.df.columns}")
 
     # docstr-coverage: inherited
-    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:  # noqa: D102
+    def _contains(
+        self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False
+    ) -> numpy.ndarray:  # noqa: D102
         contained = (
             isin_many_dim(
                 elements=torch.as_tensor(
@@ -428,7 +430,9 @@ class TargetPredictions(Predictions):
             raise ValueError(f"df must have a column named '{self.target}_id', but df.columns={self.df.columns}")
 
     # docstr-coverage: inherited
-    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:  # noqa: D102
+    def _contains(
+        self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False
+    ) -> numpy.ndarray:  # noqa: D102
         col = TARGET_TO_INDEX[self.target]
         other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
         device = mapped_triples.device
@@ -929,7 +933,7 @@ def consume_scores(
     :param consumers:
         the consumers of score batches
     :param batch_size:
-        the batch size to use. Will automatically be lowered, if the hardware cannot handle this large batch sizes
+        The batch size to use. Will automatically be lowered, if the hardware cannot handle this large batch sizes.
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
@@ -992,7 +996,7 @@ def predict_all(
     :param k:
         The number of triples to return. Set to ``None`` to keep all.
     :param batch_size:
-        The batch size to use for calculating scores; set to `None` to determine largest possible batch size
+        The batch size to use for calculating scores; set to `None` to determine largest possible batch size.
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
@@ -1025,7 +1029,10 @@ def predict_all(
     else:
         consumer = TopKScoreConsumer(k=k, device=model.device)
     dataset = AllPredictionDataset(num_entities=num_entities, num_relations=model.num_real_relations, target=target)
-    consume_scores(model, dataset, consumer, batch_size=batch_size or len(dataset), mode=mode)
+    batch_size = determine_maximum_batch_size(
+        batch_size=batch_size, device=model.device, maximum_batch_size=len(dataset)
+    )
+    consume_scores(model, dataset, consumer, batch_size=batch_size, mode=mode)
     return consumer.finalize()
 
 
@@ -1071,6 +1078,7 @@ def predict_target(
     :return:
         The predictions, containing either the $k$ highest scoring targets, or all targets if $k$ is `None`.
     """
+    # TODO: add support for (automatic) slicing
     # note: the models' predict method takes care of setting the model to evaluation mode
 
     # get input & target
@@ -1128,7 +1136,7 @@ def predict_triples(
         The triples factory. Must be given if triples are label-based. If provided and triples are ID-based, add labels
         to result.
     :param batch_size:
-        The batch size to use. Use None for automatic memory optimization.
+        The batch size to use. Use `None` to use the largest possible.
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
@@ -1140,7 +1148,10 @@ def predict_triples(
     # normalize input
     triples = get_mapped_triples(triples, factory=triples_factory)
     # calculate scores (with automatic memory optimization)
-    scores = _predict_triples_batched(
-        model=model, mapped_triples=triples, batch_size=batch_size or len(triples), mode=mode
-    ).squeeze(dim=1)
+    batch_size = determine_maximum_batch_size(
+        batch_size=batch_size, device=model.device, maximum_batch_size=len(triples)
+    )
+    scores = _predict_triples_batched(model=model, mapped_triples=triples, batch_size=batch_size, mode=mode).squeeze(
+        dim=1
+    )
     return ScorePack(result=triples, scores=scores)

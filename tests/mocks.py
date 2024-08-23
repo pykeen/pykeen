@@ -34,10 +34,9 @@ class MockEvaluator(Evaluator):
         self,
         key: Optional[tuple[str, ExtendedTarget, RankType]] = None,
         values: Optional[Iterable[float]] = None,
-        automatic_memory_optimization: bool = True,
         random_state: Optional[int] = None,
     ) -> None:
-        super().__init__(automatic_memory_optimization=automatic_memory_optimization)
+        super().__init__()
         self.key = RankBasedMetricResults.key_from_string(s=None if key is None else ".".join((*key[1:], key[0])))
         self.random_state = random_state
         if values is None:
