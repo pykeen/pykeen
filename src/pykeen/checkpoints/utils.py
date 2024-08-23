@@ -17,6 +17,7 @@ __all__ = [
 class MetricSelection:
     """The selection of the metric to monitor."""
 
+    # TODO: for some reason, this field is missing in the documentation
     #: the normalized metric name (as seen by the result tracker)
     metric: str
 
