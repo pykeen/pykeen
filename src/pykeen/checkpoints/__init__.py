@@ -128,7 +128,7 @@ Write a checkpoint whenever a metric improves (here, just the training loss).
     )
 
 
-    
+
 Example 5
 ~~~~~~~~~
 Write a checkpoint every 10 steps, but keep only the last one and one every 50 steps.
