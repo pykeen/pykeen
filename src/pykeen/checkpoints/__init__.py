@@ -22,24 +22,23 @@ and :meth:`pykeen.checkpoints.simulate_checkpoints`.
 
 Example 1
 ~~~~~~~~~
-.. literalinclude:: ../examples/checkpoints_01.py
+.. literalinclude:: ../examples/checkpoints/ex_01.py
 
 Example 2
 ~~~~~~~~~
-.. literalinclude:: ../examples/checkpoints_02.py
+.. literalinclude:: ../examples/checkpoints/ex_02.py
 
 Example 3
 ~~~~~~~~~
-.. literalinclude:: ../examples/checkpoints_03.py
+.. literalinclude:: ../examples/checkpoints/ex_03.py
 
 Example 4
 ~~~~~~~~~
-.. literalinclude:: ../examples/checkpoints_04.py
-
+.. literalinclude:: ../examples/checkpoints/ex_04.py
 
 Example 5
 ~~~~~~~~~
-.. literalinclude:: ../examples/checkpoints_05.py
+.. literalinclude:: ../examples/checkpoints/ex_05.py
 """
 
 from .base import save_model
