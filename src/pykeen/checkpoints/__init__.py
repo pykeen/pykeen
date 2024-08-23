@@ -26,7 +26,7 @@ Write a checkpoint every 10 steps and keep them all.
 
 .. code-block::
 
-    from pykeen.pipeline import
+    from pykeen.pipeline import pipeline
 
     result = pipeline(
         dataset="nations",
@@ -50,7 +50,7 @@ Write a checkpoint at epoch 1, 7, and 10 and keep them all.
 
 .. code-block::
 
-    from pykeen.pipeline import
+    from pykeen.pipeline import pipeline
 
     result = pipeline(
         dataset="nations",
@@ -72,26 +72,26 @@ Example 3
 ~~~~~~~~~
 Write a checkpoint avery 5 epochs, but also at epoch 7.
 
-    Example::
+.. code-block::
 
-        from pykeen.pipeline import
+    from pykeen.pipeline import pipeline
 
-        result = pipeline(
-            dataset="nations",
-            model="mure",
-            training_kwargs=dict(
-                num_epochs=10,
-                callbacks="checkpoint",
-                callbacks_kwargs=dict(
-                    schedule="union",
-                    # create checkpoints every 5 epochs, and at epoch 7
-                    schedule_kwargs=dict(
-                        bases=["every", "explicit"],
-                        bases_kwargs=[dict(frequency=5), dict(steps=[7])]
-                    ),
-                )
-            ),
-        )
+    result = pipeline(
+        dataset="nations",
+        model="mure",
+        training_kwargs=dict(
+            num_epochs=10,
+            callbacks="checkpoint",
+            callbacks_kwargs=dict(
+                schedule="union",
+                # create checkpoints every 5 epochs, and at epoch 7
+                schedule_kwargs=dict(
+                    bases=["every", "explicit"],
+                    bases_kwargs=[dict(frequency=5), dict(steps=[7])]
+                ),
+            )
+        ),
+    )
 
 Example 4
 ~~~~~~~~~
@@ -135,7 +135,7 @@ Write a checkpoint every 10 steps, but keep only the last one and one every 50 s
 
 .. code-block::
 
-    from pykeen.pipeline import
+    from pykeen.pipeline import pipeline
 
     result = pipeline(
         dataset="nations",
