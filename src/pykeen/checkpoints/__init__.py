@@ -46,6 +46,91 @@ Write a checkpoint every 10 steps and keep them all.
 
 Example 2
 ~~~~~~~~~
+Write a checkpoint at epoch 1, 7, and 10 and keep them all.
+
+.. code-block::
+
+    from pykeen.pipeline import
+
+    result = pipeline(
+        dataset="nations",
+        model="mure",
+        training_kwargs=dict(
+            num_epochs=10,
+            callbacks="checkpoint",
+            # create checkpoints at epoch 1, 7, and 10
+            callbacks_kwargs=dict(
+                schedule="explicit",
+                schedule_kwargs=dict(
+                    steps=(1, 7, 10)
+                ),
+            )
+        ),
+    )
+
+Example 3
+~~~~~~~~~
+Write a checkpoint avery 5 epochs, but also at epoch 7.
+
+    Example::
+
+        from pykeen.pipeline import
+
+        result = pipeline(
+            dataset="nations",
+            model="mure",
+            training_kwargs=dict(
+                num_epochs=10,
+                callbacks="checkpoint",
+                callbacks_kwargs=dict(
+                    schedule="union",
+                    # create checkpoints every 5 epochs, and at epoch 7
+                    schedule_kwargs=dict(
+                        bases=["every", "explicit"],
+                        bases_kwargs=[dict(frequency=5), dict(steps=[7])]
+                    ),
+                )
+            ),
+        )
+
+Example 4
+~~~~~~~~~
+Write a checkpoint whenever a metric improves (here, just the training loss).
+
+.. code-block::
+
+    from pykeen.checkpoints import MetricSelection
+    from pykeen.pipeline import pipeline
+    from pykeen.trackers import tracker_resolver
+
+    # create a default result tracker (or use a proper one)
+    result_tracker = tracker_resolver.make(None)
+    result = pipeline(
+        dataset="nations",
+        model="mure",
+        training_kwargs=dict(
+            num_epochs=10,
+            callbacks="checkpoint",
+            callbacks_kwargs=dict(
+                schedule="best",
+                schedule_kwargs=dict(
+                    result_tracker=result_tracker,
+                    # in this example, we just use the training loss
+                    metric_selection=MetricSelection(
+                        metric="loss",
+                        maximize=False,
+                    )
+                ),
+            ),
+        ),
+        # Important: use the same result tracker instance as in the checkpoint callback
+        result_tracker=result_tracker
+    )
+
+
+    
+Example 5
+~~~~~~~~~
 Write a checkpoint every 10 steps, but keep only the last one and one every 50 steps.
 
 .. code-block::

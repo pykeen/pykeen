@@ -31,29 +31,7 @@ class CheckpointSchedule(abc.ABC):
 
 @dataclasses.dataclass
 class EveryCheckpointSchedule(CheckpointSchedule):
-    """
-    Create a checkpoint every $n$ steps.
-
-    Example::
-
-        from pykeen.pipeline import
-
-        result = pipeline(
-            dataset="nations",
-            model="mure",
-            training_kwargs=dict(
-                num_epochs=10,
-                callbacks="checkpoint",
-                # create one checkpoint every 3 epochs
-                callbacks_kwargs=dict(
-                    schedule="every",
-                    schedule_kwargs=dict(
-                        frequency=3,
-                    ),
-                )
-            ),
-        )
-    """
+    """Create a checkpoint every $n$ steps."""
 
     #: The checkpoint frequency
     frequency: int = 10
@@ -64,29 +42,7 @@ class EveryCheckpointSchedule(CheckpointSchedule):
 
 @dataclasses.dataclass
 class ExplicitCheckpointSchedule(CheckpointSchedule):
-    """
-    Create a checkpoint for explicitly chosen steps.
-
-    Example::
-
-        from pykeen.pipeline import
-
-        result = pipeline(
-            dataset="nations",
-            model="mure",
-            training_kwargs=dict(
-                num_epochs=10,
-                callbacks="checkpoint",
-                # create checkpoints at epoch 1, 7, and 10
-                callbacks_kwargs=dict(
-                    schedule="explicit",
-                    schedule_kwargs=dict(
-                        steps=(1, 7, 10)
-                    ),
-                )
-            ),
-        )
-    """
+    """Create a checkpoint for explicitly chosen steps."""
 
     steps: Collection[int]
 
@@ -96,39 +52,7 @@ class ExplicitCheckpointSchedule(CheckpointSchedule):
 
 @dataclasses.dataclass
 class BestCheckpointSchedule(CheckpointSchedule):
-    """
-    Create a checkpoint whenever a metric improves.
-
-    Example::
-
-        from pykeen.checkpoints import MetricSelection
-        from pykeen.pipeline import pipeline
-        from pykeen.trackers import tracker_resolver
-
-        # create a default result tracker (or use a proper one)
-        result_tracker = tracker_resolver.make(None)
-        result = pipeline(
-            dataset="nations",
-            model="mure",
-            training_kwargs=dict(
-                num_epochs=10,
-                callbacks="checkpoint",
-                callbacks_kwargs=dict(
-                    schedule="best",
-                    schedule_kwargs=dict(
-                        result_tracker=result_tracker,
-                        # in this example, we just use the training loss
-                        metric_selection=MetricSelection(
-                            metric="loss,
-                            maximize=False,
-                        )
-                    ),
-                ),
-            ),
-            # Important: use the same result tracker instance as in the checkpoint callback
-            result_tracker=result_tracker
-        )
-    """
+    """Create a checkpoint whenever a metric improves."""
 
     #: the result tracker which receives updates on metrics
     #: since the same tracker instance needs to receive results from the training loop, we do require a pre-instantiated
@@ -150,30 +74,7 @@ class BestCheckpointSchedule(CheckpointSchedule):
 
 @dataclasses.dataclass
 class UnionCheckpointSchedule(CheckpointSchedule):
-    """
-    Create a checkpoint whenever one of the base schedules requires it.
-
-    Example::
-
-        from pykeen.pipeline import
-
-        result = pipeline(
-            dataset="nations",
-            model="mure",
-            training_kwargs=dict(
-                num_epochs=10,
-                callbacks="checkpoint",
-                callbacks_kwargs=dict(
-                    schedule="union",
-                    # create checkpoints every 5 epochs, and at epoch 7
-                    schedule_kwargs=dict(
-                        bases=["every", "explicit"],
-                        bases_kwargs=[dict(frequency=5), dict(steps=[7])]
-                    ),
-                )
-            ),
-        )
-    """
+    """Create a checkpoint whenever one of the base schedules requires it."""
 
     bases: OneOrManyHintOrType[CheckpointSchedule]
     bases_kwargs: OneOrManyOptionalKwargs = None
