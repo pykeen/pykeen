@@ -1,3 +1,4 @@
+"""Write a checkpoint whenever a metric improves (here, just the training loss)."""
 from pykeen.checkpoints import MetricSelection
 from pykeen.pipeline import pipeline
 from pykeen.trackers import tracker_resolver

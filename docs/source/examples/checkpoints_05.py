@@ -1,3 +1,4 @@
+"""Write a checkpoint every 10 steps, but keep only the last one and one every 50 steps."""
 from pykeen.pipeline import pipeline
 
 result = pipeline(

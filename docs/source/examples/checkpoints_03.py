@@ -1,3 +1,4 @@
+"""Write a checkpoint avery 5 epochs, but also at epoch 7."""
 from pykeen.pipeline import pipeline
 
 result = pipeline(

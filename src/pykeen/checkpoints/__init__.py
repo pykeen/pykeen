@@ -22,33 +22,23 @@ and :meth:`pykeen.checkpoints.simulate_checkpoints`.
 
 Example 1
 ~~~~~~~~~
-Write a checkpoint every 10 steps and keep them all.
-
 .. literalinclude:: ../examples/checkpoints_01.py
 
 Example 2
 ~~~~~~~~~
-Write a checkpoint at epoch 1, 7, and 10 and keep them all.
-
 .. literalinclude:: ../examples/checkpoints_02.py
 
 Example 3
 ~~~~~~~~~
-Write a checkpoint avery 5 epochs, but also at epoch 7.
-
 .. literalinclude:: ../examples/checkpoints_03.py
 
 Example 4
 ~~~~~~~~~
-Write a checkpoint whenever a metric improves (here, just the training loss).
-
 .. literalinclude:: ../examples/checkpoints_04.py
 
 
 Example 5
 ~~~~~~~~~
-Write a checkpoint every 10 steps, but keep only the last one and one every 50 steps.
-
 .. literalinclude:: ../examples/checkpoints_05.py
 """
 
