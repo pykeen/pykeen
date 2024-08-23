@@ -17,7 +17,7 @@ __all__ = [
 class MetricSelection:
     """The selection of the metric to monitor."""
 
-    #: the metric name
+    #: the normalized metric name (as seen by the result tracker)
     metric: str
 
     #: the metric prefix; if None, do not check prefix
