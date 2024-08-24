@@ -13,11 +13,8 @@ file. Because all PyKEEN models inherit from :class:`torch.nn.Module`,
 we use the PyTorch mechanisms for saving and loading them. This means
 that you can use :func:`torch.load` to load a model like:
 
-.. code-block:: python
-
-    import torch
-
-    my_pykeen_model = torch.load('trained_model.pkl')
+.. literalinclude:: ../examples/first_steps/load_pretrained.py
+    :lines: 3-5
 
 More information on PyTorch's model persistence can be found at:
 https://pytorch.org/tutorials/beginner/saving_loading_models.html.
@@ -33,22 +30,15 @@ We can map a triples factory's entities to identifiers using
 :func:`TriplesFactory.entities_to_ids` like in the following
 example:
 
-.. code-block:: python
-
-    from pykeen.datasets import Nations
-
-    triples_factory = Nations().training
-
-    # Get tensor of entity identifiers
-    entity_ids = torch.as_tensor(triples_factory.entities_to_ids(["china", "egypt"]))
+.. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
+    :lines: 6-13,40-41
 
 Similarly, we can map a triples factory's relations to identifiers
 using :data:`TriplesFactory.relations_to_ids` like in the following
 example:
 
-.. code-block:: python
-
-    relation_ids = torch.as_tensor(triples_factory.relations_to_ids(["independence", "embassy"]))
+.. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
+    :lines: 42
 
 .. warning::
 

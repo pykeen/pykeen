@@ -33,7 +33,7 @@ relation_embedding_tensor = relation_embeddings()
 entity_embedding_tensor = entity_embeddings(indices=None)
 relation_embedding_tensor = relation_embeddings(indices=None)
 
-#%%
+# %%
 import torch  # noqa: E402
 
 entity_embedding_tensor = entity_embeddings(indices=torch.as_tensor([1, 3]))
