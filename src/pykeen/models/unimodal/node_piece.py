@@ -141,6 +141,11 @@ class NodePiece(ERModel):
                 token_representations.append(None)  # Embedding
                 token_representations_kwargs.append(anchor_kwargs)
 
+        # Inverse triples are required
+        if 'create_inverse_triples' in kwargs and not kwargs['create_inverse_triples']:
+            raise ValueError(f"{self.__class__.__name__} requires inverse triples to be True")
+        kwargs['create_inverse_triples'] = True
+
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
@@ -159,6 +164,5 @@ class NodePiece(ERModel):
                 # max_id=triples_factory.num_relations,  # will get added by ERModel
                 base=relation_representations,
             ),
-            create_inverse_triples=True,
             **kwargs,
         )
