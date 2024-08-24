@@ -115,6 +115,7 @@ tuned or subclassed. Below is an example of code that might have been
 executed with one of the previous examples.
 
 .. literalinclude:: ../examples/first_steps/beyond_pipeline.py
+    :lines: 7-13,17-21,23-27,29-37,39-44,47-51,53-62
 
 
 Preview: Evaluation Loops
@@ -123,6 +124,7 @@ PyKEEN is currently in the transition to use torch's data-loaders for evaluation
 While not being active for the high-level `pipeline`, you can already use it explicitly:
 
 .. literalinclude:: ../examples/first_steps/evaluation_loop.py
+    :lines: 3-
 
 
 Training Callbacks
@@ -133,6 +135,7 @@ The following example shows how to evaluate on the training triples on every
 tenth epoch
 
 .. literalinclude:: ../examples/first_steps/callbacks.py
+    :lines: 3-
 
 For further information about different result trackers, take a look at the section
 on :ref:`trackers`.
