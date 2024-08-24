@@ -20,6 +20,7 @@ from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import _map_triples_elements_to_ids, get_mapped_triples
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
+from tests.utils import needs_packages
 
 triples = np.array(
     [
@@ -207,6 +208,18 @@ class TestTriplesFactory(unittest.TestCase):
             assert x.dtype == torch.long
             assert y.shape == (batch_size, factory.num_entities)
             assert y.dtype == torch.get_default_dtype()
+
+    @needs_packages("wordcloud", "IPython")
+    def test_entity_word_cloud(self):
+        """Test word cloud generation."""
+        wc = self.factory.entity_word_cloud(top=3)
+        self.assertIsNotNone(wc)
+
+    @needs_packages("wordcloud", "IPython")
+    def test_relation_word_cloud(self):
+        """Test word cloud generation."""
+        wc = self.factory.relation_word_cloud(top=3)
+        self.assertIsNotNone(wc)
 
 
 class TestSplit(unittest.TestCase):
