@@ -56,6 +56,8 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             Additional keyword-based parameters passed to TrainingLoop.__init__
         :raises ValueError:
             If an invalid target column is given
+        :raises NotImplementedError:
+            For inverse triple configurations that aren't yet implemented
         """
         super().__init__(**kwargs)
 
@@ -68,18 +70,26 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
-        if self.target == 0 and not self.model.use_inverse_triples:
-            self.score_method = self.model.score_h  # type: ignore
-            self.can_slice = self.model.can_slice_h
-        elif self.target == 0 and self.model.use_inverse_triples:
-            self.score_method = self.model.score_h_inverse  # type: ignore
-            self.can_slice = self.model.can_slice_t
+        if self.target == 0:
+            if self.model.use_inverse_triples:
+                self.score_method = self.model.score_h_inverse  # type: ignore
+                self.can_slice = self.model.can_slice_t
+            else:
+                self.score_method = self.model.score_h  # type: ignore
+                self.can_slice = self.model.can_slice_h
         elif self.target == 1:
-            self.score_method = self.model.score_r  # type: ignore
-            self.can_slice = self.model.can_slice_r
-        elif self.target == 2:  # TODO: inverse relations?
-            self.score_method = self.model.score_t  # type: ignore
-            self.can_slice = self.model.can_slice_t
+            if self.model.use_inverse_triples:
+                raise NotImplementedError
+            else:
+                self.score_method = self.model.score_r  # type: ignore
+                self.can_slice = self.model.can_slice_r
+        elif self.target == 2:
+            if self.model.use_inverse_triples:
+                self.score_method = self.model.score_t_inverse  # type: ignore
+                self.can_slice = self.model.can_slice_h
+            else:
+                self.score_method = self.model.score_t  # type: ignore
+                self.can_slice = self.model.can_slice_t
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
 
