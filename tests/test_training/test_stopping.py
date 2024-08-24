@@ -74,11 +74,7 @@ class TestTrainingEarlyStopping(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the early stopper."""
         # Set automatic_memory_optimization to false for tests
-        self.mock_evaluator = MockEvaluator(
-            key=None,
-            values=self.mock_losses,
-            automatic_memory_optimization=False,
-        )
+        self.mock_evaluator = MockEvaluator(key=None, values=self.mock_losses)
         self.triples_factory = Nations()
         self.model = FixedModel(triples_factory=self.triples_factory.training)
         self.stopper = EarlyStopper(

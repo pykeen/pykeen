@@ -7,7 +7,7 @@ import timeit
 import warnings
 from abc import ABC, abstractmethod
 from collections import ChainMap
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Hashable, Mapping
 from typing import (
     Any,
     ClassVar,
@@ -28,7 +28,13 @@ from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
-from ..utils import flatten_dictionary, format_relative_comparison, normalize_string, prepare_filter_triples
+from ..utils import (
+    determine_maximum_batch_size,
+    flatten_dictionary,
+    format_relative_comparison,
+    normalize_string,
+    prepare_filter_triples,
+)
 
 __all__ = [
     "Evaluator",
@@ -129,7 +135,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         requires_positive_mask: bool = False,
         batch_size: int | None = None,
         slice_size: int | None = None,
-        automatic_memory_optimization: bool = True,
         mode: InductiveMode | None = None,
     ):
         """Initialize the evaluator.
@@ -138,8 +143,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         :param requires_positive_mask: Does the evaluator need access to the masks?
         :param batch_size: >0. Evaluation batch size.
         :param slice_size: >0. The divisor for the scoring function when using slicing
-        :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
-            evaluation with regards to the hardware at hand.
         :param mode:
             the inductive mode, or None for transductive evaluation
         """
@@ -147,7 +150,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
-        self.automatic_memory_optimization = automatic_memory_optimization
         self.mode = mode
 
     @classmethod
@@ -358,9 +360,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         mapped_triples = mapped_triples.to(device=device)
         num_triples = mapped_triples.shape[0]
         # no batch size -> automatic memory optimization
-        if batch_size is None:
-            batch_size = 32 if device.type == "cpu" else num_triples
-            logger.debug(f"Automatically set maximum batch size to {batch_size=}")
+        batch_size = determine_maximum_batch_size(batch_size, device, num_triples)
         # no slice size -> automatic memory optimization
         if slice_size is None:
             nums: set[int] = set()
@@ -386,7 +386,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 evaluator=self,
                 mapped_triples=mapped_triples,
                 # note: we provide the *maximum* batch and slice size here; it is reduced if necessary
-                batch_size=num_triples,
+                batch_size=batch_size,
                 slice_size=slice_size,
                 progress_bar=progress_bar,
                 targets=targets,
@@ -434,12 +434,31 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             )
 
 
-def _hasher(kwargs: Mapping[str, Any]) -> int:
+def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
     """Share optimal batch size whenever this hash matches."""
-    return hash((id(kwargs["evaluator"]), kwargs["mapped_triples"].shape[0], kwargs["targets"]))
+    ignored_keys = {
+        # we ignore keys which clearly do not have an effect on the memory consumptions
+        "progress_bar",
+        # we ignore batch_size and slice_size as those are optimized
+        "batch_size",
+        "slice_size",
+        # we use mapped_triples' shape instead
+        "mapped_triples",
+        # we want to separate optimize for each evaluator instance
+        "evaluator",
+    }
+    values: tuple[Hashable, ...] = (kwargs["mapped_triples"].shape[0], id(kwargs["evaluator"]))
+    for key, value in kwargs.items():
+        if key in ignored_keys:
+            continue
+        if not isinstance(value, Hashable):
+            warnings.warn(f"Encountered {type(value)=} which cannot be hashed", category=UserWarning, stacklevel=3)
+            continue
+        values += (value,)
+    return hash(values)
 
 
-@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_optimal_batch_size_group_id)
 @torch.inference_mode()
 def evaluate(
     *,
@@ -455,7 +474,7 @@ def evaluate(
     Evaluate a model with the given evaluator.
 
     .. note ::
-        this method is wrapped into two memory utilization maximizer, which reduce the parameters `batch_size` and
+        This method is decorated by maximize_memory_utilization, which reduce the parameters `batch_size` and
         `slice_size`, if necessary due to memory constraints.
 
     :param evaluator:

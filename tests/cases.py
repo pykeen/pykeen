@@ -2561,12 +2561,7 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         nations = Nations()
         kwargs.update(
             dict(
-                evaluator=MockEvaluator(
-                    key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC),
-                    values=self.mock_losses,
-                    # Set automatic_memory_optimization to false for tests
-                    automatic_memory_optimization=False,
-                ),
+                evaluator=MockEvaluator(key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC), values=self.mock_losses),
                 model=FixedModel(triples_factory=nations.training),
                 training_triples_factory=nations.training,
                 evaluation_triples_factory=nations.validation,

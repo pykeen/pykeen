@@ -65,6 +65,7 @@ PyKEEN
    reference/uncertainty
    reference/sealant
    reference/constants
+   reference/checkpoints
    reference/nn/index
    reference/utils
 
