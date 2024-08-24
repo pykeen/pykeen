@@ -1249,7 +1249,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):
         """Test running the pipeline with early stopping."""
-        model_kwargs: Dict[str, Any] = dict(self.instance_kwargs)
+        model_kwargs: dict[str, Any] = dict(self.instance_kwargs)
         # triples factory is added by the pipeline
         model_kwargs.pop("triples_factory")
         model_kwargs.setdefault("create_inverse_triples", self.create_inverse_triples)
