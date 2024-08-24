@@ -647,12 +647,13 @@ class ERModel(
         h: torch.LongTensor | None,
         r: torch.LongTensor | None,
         t: torch.LongTensor | None,
-        invert_relation: bool = False,  # TODO: do we need this here?
         *,
+        invert_relation: bool = False,
         mode: InductiveMode | None,
     ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         if invert_relation:
+            # This would be necessary if we had a separate Representation module for inverse relations
             raise NotImplementedError
         head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
         head_representations = [head_representations[i] for i in self.interaction.head_indices()]
