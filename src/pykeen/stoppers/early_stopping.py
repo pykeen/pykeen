@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of early stopping."""
 
 import dataclasses
 import logging
 import math
 import pathlib
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Callable, List, Mapping, Optional, Union
+from typing import Any, Callable, Optional, Union
 from uuid import uuid4
 
 import torch
@@ -155,24 +154,28 @@ class EarlyStopper(Stopper):
     #: The minimum relative improvement necessary to consider it an improved result
     relative_delta: float = 0.01
     #: The metric results from all evaluations
-    results: List[float] = dataclasses.field(default_factory=list, repr=False)
+    results: list[float] = dataclasses.field(default_factory=list, repr=False)
     #: Whether a larger value is better, or a smaller
     larger_is_better: bool = True
     #: The result tracker
     result_tracker: Optional[ResultTracker] = None
     #: Callbacks when after results are calculated
-    result_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
+    result_callbacks: list[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Callbacks when training gets continued
-    continue_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
+    continue_callbacks: list[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Callbacks when training is stopped early
-    stopped_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
+    stopped_callbacks: list[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Did the stopper ever decide to stop?
     stopped: bool = False
-    #: the path to the weights of the best model
+    #: The path to the weights of the best model
     best_model_path: Optional[pathlib.Path] = None
-    #: whether to delete the file with the best model weights after termination
+    #: Whether to delete the file with the best model weights after termination
     #: note: the weights will be re-loaded into the model before
     clean_up_checkpoint: bool = True
+    #: Whether to use a tqdm progress bar for evaluation
+    use_tqdm: bool = False
+    #: Keyword arguments for the tqdm progress bar
+    tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -228,7 +231,8 @@ class EarlyStopper(Stopper):
             model=self.model,
             additional_filter_triples=self.training_triples_factory.mapped_triples,
             mapped_triples=self.evaluation_triples_factory.mapped_triples,
-            use_tqdm=False,
+            use_tqdm=self.use_tqdm,
+            tqdm_kwargs=self.tqdm_kwargs,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
             # Only perform time-consuming checks for the first call.
@@ -301,7 +305,7 @@ class EarlyStopper(Stopper):
         relative_delta: float,
         metric: str,
         larger_is_better: bool,
-        results: List[float],
+        results: list[float],
         stopped: bool,
         best_epoch: int,
         best_metric: float,

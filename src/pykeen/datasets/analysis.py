@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Dataset analysis utilities."""
 
 import logging
-from typing import Callable, Collection, Optional, Tuple, Union
+from collections.abc import Collection
+from typing import Callable, Optional, Union
 
 import pandas as pd
 import torch
@@ -29,7 +28,7 @@ __all__ = [
 SUBSET_COLUMN_NAME = "subset"
 
 
-def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[Tuple[int, int, int]]:
+def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[tuple[int, int, int]]:
     return torch.cat([dataset.factory_dict[part].mapped_triples for part in parts], dim=0).tolist()
 
 

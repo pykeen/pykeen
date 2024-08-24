@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """Test the PyKEEN pipeline function."""
 
 import itertools
 import pathlib
 import tempfile
 import unittest
-from typing import Type
 from unittest import mock
 
 import pytest
@@ -409,7 +406,7 @@ def test_negative_sampler_kwargs():
 
 
 @pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])
-def test_loading_training_triples_factory(tf_cls: Type[CoreTriplesFactory]):
+def test_loading_training_triples_factory(tf_cls: type[CoreTriplesFactory]):
     """Test re-loading the training triples factory."""
     result = pipeline(model="rescal", dataset="nations", training_kwargs=dict(num_epochs=0))
     with tempfile.TemporaryDirectory() as directory:

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Iterable, Optional, Tuple, cast
+from collections.abc import Iterable
+from typing import Optional, cast
 
 import torch
 from torch import nn
@@ -108,7 +107,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         t: Optional[torch.LongTensor],
         invert_relation: bool = False,  # TODO: do we need this here?
         mode: Optional[InductiveMode] = None,
-    ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+    ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape with a GNN encoder."""
         if invert_relation:
             raise NotImplementedError
@@ -137,6 +136,6 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
         # normalization
         return cast(
-            Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
+            tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
             tuple(x[0] if len(x) == 1 else x for x in (hh, rr, tt)),
         )

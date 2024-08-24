@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of CP model."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE

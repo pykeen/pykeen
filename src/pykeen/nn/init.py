@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """Embedding weight initialization routines."""
 
 import functools
 import logging
 import math
-from typing import Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -270,12 +269,17 @@ class LabelBasedInitializer(PretrainedInitializer):
         from pykeen.models import ERMLPE
 
         dataset = get_dataset(dataset="nations")
+        entity_initializer = LabelBasedInitializer.from_triples_factory(
+            triples_factory=dataset.training,
+            encoder="transformer",
+        )
         model = ERMLPE(
-            embedding_dim=768,  # for BERT base
-            entity_initializer=LabelBasedInitializer.from_triples_factory(
-                triples_factory=dataset.training,
-                encoder="transformer",
-            ),
+            triples_factory=dataset.training,
+            embedding_dim=entity_initializer.tensor.shape[-1],  # 768 for BERT base
+            entity_initializer=entity_initializer,
+            # note: we explicitly need to provide a relation initializer here,
+            # since ERMLPE shares initializers between entities and relations by default
+            relation_initializer="uniform",
         )
     """
 
@@ -299,7 +303,8 @@ class LabelBasedInitializer(PretrainedInitializer):
             the (maximum) batch size to use while encoding. If None, use `len(labels)`, i.e., only a single batch.
         """
         super().__init__(
-            tensor=text_encoder_resolver.make(encoder, encoder_kwargs).encode_all(
+            tensor=text_encoder_resolver.make(encoder, encoder_kwargs)
+            .encode_all(
                 labels=labels,
                 batch_size=batch_size,
             )

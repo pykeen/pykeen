@@ -14,14 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # no need to check documentation wit multiple python versions
-        # python-version: [ "3.8", "3.10" ]
-        python-version: [ "3.10" ]
+        # no need to check documentation with multiple python versions
+        python-version: [ "3.12" ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
@@ -29,10 +28,7 @@ jobs:
           cache-dependency-path: './setup.cfg'
       
       - name: Install dependencies
-        run: pip install tox
-
-      - name: Check RST conformity with doc8
-        run: tox -e doc8
+        run: pip install tox tox-uv
       
       # - name: Check RST format
       #   run: tox -e doclint
@@ -49,13 +45,21 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: [ "3.8", "3.10" ]
+        python-version: [ "3.9", "3.12" ]
+        # cannot use macos-latest for now, cf.
+        # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners
+        # cannot use Python 3.8
+        # cannot use M1 at all, since PyG does not provide M1 packages...
+        # include:
+        #   - os: macos-14
+        #     python-version: "3.11"
+
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
@@ -63,7 +67,7 @@ jobs:
           cache-dependency-path: './setup.cfg'
       
       - name: Install dependencies
-        run: pip install tox
+        run: pip install tox tox-uv
       
       - name: Run fast tests
         run: tox -e py
@@ -76,3 +80,7 @@ jobs:
       
       # - name: Test notebooks
       #   run: tox -e treon
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

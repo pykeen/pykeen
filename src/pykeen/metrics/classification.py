@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Classification metrics.
 
@@ -17,7 +15,8 @@ from __future__ import annotations
 import abc
 import math
 import warnings
-from typing import ClassVar, Collection, Literal
+from collections.abc import Collection
+from typing import ClassVar, Literal
 
 import numpy
 from class_resolver import ClassResolver
@@ -55,7 +54,9 @@ def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisio
     if zero_division == "warn":
         zero_division = 0
         warnings.warn(
-            message=f"Division by zero. Result set to {zero_division} according to policy.", category=UserWarning
+            message=f"Division by zero. Result set to {zero_division} according to policy.",
+            category=UserWarning,
+            stacklevel=2,
         )
     return zero_division
 
@@ -142,7 +143,9 @@ class ClassificationMetric(Metric, abc.ABC):
 
         :return:
             a scalar metric value
-        """  # noqa: DAR202
+
+        # noqa:DAR202
+        """
 
 
 @parse_docdata
@@ -162,9 +165,7 @@ class NumScores(ClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("score_count",)
 
     # docstr-coverage: inherited
-    def forward(
-        self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None
-    ) -> float:  # noqa: D102
+    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
         return y_score.size
 
 
@@ -174,9 +175,7 @@ class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
     binarize: ClassVar[bool] = True
 
     # docstr-coverage: inherited
-    def __call__(
-        self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None
-    ) -> float:  # noqa: D102
+    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
         return super().__call__(
             y_true=y_true, y_score=construct_indicator(y_score=y_score, y_true=y_true), weights=weights
         )
@@ -275,13 +274,13 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
 
         :return:
             the scalar metric
-        """  # noqa: DAR202
+
+        # noqa: DAR202
+        """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
     # docstr-coverage: inherited
-    def forward(
-        self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None
-    ) -> float:  # noqa: D102
+    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
         return self.extract_from_confusion_matrix(matrix=matrix)

@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
-
-r"""For entities $\mathcal{E}$ and relations $\mathcal{R}$, the set of all possible triples $\mathcal{T}$ is 
+r"""For entities $\mathcal{E}$ and relations $\mathcal{R}$, the set of all possible triples $\mathcal{T}$ is
 constructed through their cartesian product $\mathcal{T} = \mathcal{E} \times \mathcal{R} \times \mathcal{E}$.
 A given knowledge graph $\mathcal{K}$ is a subset of all possible triples $\mathcal{K} \subseteq \mathcal{T}$.
 
 Construction of Knowledge Graphs
 --------------------------------
-When constructing a knowledge graph $\mathcal{K}_{\text{closed}}$ under the closed world assumption, the labels of the 
-remaining triples $(h,r,t) \in \mathcal{T} \setminus \mathcal{K}_{\text{closed}}$ are defined as negative. 
+When constructing a knowledge graph $\mathcal{K}_{\text{closed}}$ under the closed world assumption, the labels of the
+remaining triples $(h,r,t) \in \mathcal{T} \setminus \mathcal{K}_{\text{closed}}$ are defined as negative.
 When constructing a knowledge graph $\mathcal{K}_{\text{open}}$ under the open world assumption, the labels of the
 remaining triples $(h,r,t) \in \mathcal{T} \setminus \mathcal{K}_{\text{open}}$ are unknown.
 
@@ -70,7 +68,7 @@ It can be set explicitly with:
         training_loop='sLCWA',
         negative_sampler='basic',
     )
-    
+
 In general, the behavior of the negative sampler can be modified when using the :func:`pykeen.pipeline.pipeline` by
 passing the ``negative_sampler_kwargs`` argument. In order to explicitly specifiy which of the head, relation, and
 tail corruption methods are used, the ``corruption_schema`` argument can be used. For example, to use all three,

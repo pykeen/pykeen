@@ -28,7 +28,7 @@ triples are stored in a tensor :data:``pykeen.triples.TriplesFactory.mapped_trip
 Tuple Broadcasting
 ------------------
 Interaction functions are usually only given for the standard case of scoring a single triple $(h, r, t)$. This function
-is in PyKEEN implemented in the :func:`pykeen.models.base.Model.score_hrt` method of each model, e.g.
+is implemented in PyKEEN in the :func:`pykeen.models.base.Model.score_hrt` method of each model, e.g.
 :func:`pykeen.models.DistMult.score_hrt` for :class:`pykeen.models.DistMult`. When training under the local closed
 world assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score all
 entities/relations for a given tuple, i.e. $(h, r)$, $(r, t)$ or $(h, t)$. In these cases a single tuple is used

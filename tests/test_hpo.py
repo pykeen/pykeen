@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """Test hyper-parameter optimization."""
+
 import inspect
 import tempfile
 import unittest
-from typing import Collection, Type
+from collections.abc import Collection
 from unittest.mock import MagicMock, patch
 
 import optuna
@@ -59,7 +58,7 @@ class TestInvalidConfigurations(unittest.TestCase):
 class TestHPOObjective(unittest.TestCase):
     """Test HPO objective."""
 
-    def _test_re_raise(self, MockTrial, exception: Type[Exception]):  # noqa: N803
+    def _test_re_raise(self, MockTrial, exception: type[Exception]):  # noqa: N803
         """Test whether the given exception is raised when evaluating with the mocked trial."""
         objective = Objective(
             dataset=Nations,
@@ -385,10 +384,23 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
         (TrainingLoop, []),
     ],
 )
-def test_hpo_defaults(base_cls: Type, ignore: Collection[Type]):
+def test_hpo_defaults(base_cls: type, ignore: Collection[type]):
     """Test HPO defaults for components that are used in the HPO pipeline."""
-    assert set(ignore) == {
-        cls
-        for cls in get_subclasses(base_cls)
-        if not (inspect.isabstract(cls) or isinstance(getattr(cls, "hpo_default", None), dict))
-    }
+    classes = set(get_subclasses(base_cls))
+
+    assert classes.issuperset(ignore)
+    classes.difference_update(ignore)
+
+    # ignore abstract classes
+    abstract_classes = {cls for cls in classes if inspect.isabstract(cls)}
+    classes.difference_update(abstract_classes)
+
+    # verify that all classes have the hpo_default dictionary
+    assert all(isinstance(getattr(cls, "hpo_default", None), dict) for cls in classes)
+
+    # verify that we can bind the keys to the __init__'s signature
+    # note: this is only of limited use since many have **kwargs which
+    for cls in classes:
+        signature = inspect.signature(cls.__init__)
+        assert hasattr(cls, "hpo_default")
+        signature.bind_partial({key: None for key in cls.hpo_default})

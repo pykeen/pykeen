@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Relation inversion logic."""
 
 from abc import ABC, abstractmethod

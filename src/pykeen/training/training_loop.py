@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Training loops for KGE models using multi-modal information."""
 
 import gc
+import inspect
 import logging
 import os
 import pathlib
@@ -10,11 +9,12 @@ import pickle
 import random
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
+from typing import IO, Any, ClassVar, Generic, Optional, TypeVar, Union
 
 import numpy as np
 import torch
@@ -115,13 +115,13 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
 
 
 def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
-    lr_scheduler_kwargs = lr_scheduler.state_dict()
-    lr_scheduler_kwargs = {
+    # note: this seems to be a pretty unsafe method to derive __init__ kwargs...
+    init_parameters = inspect.signature(lr_scheduler.__init__).parameters
+    return {
         key: value
-        for key, value in lr_scheduler_kwargs.items()
-        if not key.startswith("_") and key not in ["base_lrs", "last_epoch"]
+        for key, value in lr_scheduler.state_dict().items()
+        if key not in {"last_epoch", "optimizer"} and key in init_parameters
     }
-    return lr_scheduler_kwargs
 
 
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
@@ -131,7 +131,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     model: Model
     optimizer: Optimizer
 
-    losses_per_epochs: List[float]
+    losses_per_epochs: list[float]
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -209,7 +209,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     @property
     def checksum(self) -> str:  # noqa: D401
         """The checksum of the model and optimizer the training loop was configured with."""
-        h = md5()  # noqa: S303
+        h = md5()  # noqa: S303,S324
         h.update(str(self.model).encode("utf-8"))
         h.update(str(self.optimizer).encode("utf-8"))
         return h.hexdigest()
@@ -242,7 +242,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
         pin_memory: bool = True,
-    ) -> Optional[List[float]]:
+    ) -> Optional[list[float]]:
         """Train the KGE model.
 
         .. note ::
@@ -377,7 +377,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         # If the stopper loaded from the training loop checkpoint stopped the training, we return those results
         if getattr(stopper, "stopped", False):
-            result: Optional[List[float]] = self.losses_per_epochs
+            result: Optional[list[float]] = self.losses_per_epochs
         else:
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
@@ -552,7 +552,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
         pin_memory: bool = True,
-    ) -> Optional[List[float]]:
+    ) -> Optional[list[float]]:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         if self.optimizer is None:
             raise ValueError("optimizer must be set before running _train()")
@@ -646,7 +646,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             if self.lr_scheduler is not None:
                 # Create a new lr scheduler and add the optimizer
                 lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
-                self.lr_scheduler = self.lr_scheduler.__class__(self.optimizer, **lr_scheduler_kwargs)
+                self.lr_scheduler = self.lr_scheduler.__class__(optimizer=self.optimizer, **lr_scheduler_kwargs)
         elif not self.optimizer.state:
             raise ValueError("Cannot continue_training without being trained once.")
 
@@ -691,7 +691,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
 
         # optimizer callbacks
-        pre_step_callbacks: List[TrainingCallback] = []
+        pre_step_callbacks: list[TrainingCallback] = []
         if gradient_clipping_max_norm is not None:
             pre_step_callbacks.append(
                 GradientNormClippingTrainingCallback(
@@ -704,7 +704,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         callback.register_callback(
             OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
         )
-        callback.register_callback(LearningRateSchedulerTrainingCallback())
+        if self.lr_scheduler is not None:
+            callback.register_callback(LearningRateSchedulerTrainingCallback())
 
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
@@ -913,7 +914,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         *,
         triples_factory: CoreTriplesFactory,
         batch_size: Optional[int] = None,
-    ) -> Tuple[int, bool]:
+    ) -> tuple[int, bool]:
         """Find the maximum batch size for training with the current setting.
 
         This method checks how big the batch size can be for the current model with the given training data and the
@@ -986,7 +987,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size: int,
         sampler: Optional[str],
         triples_factory: CoreTriplesFactory,
-    ) -> Tuple[int, Optional[int]]:
+    ) -> tuple[int, Optional[int]]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
         sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(
             batch_size=batch_size,
@@ -1043,7 +1044,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size: int,
         sampler: Optional[str],
         triples_factory: CoreTriplesFactory,
-    ) -> Tuple[int, bool, bool]:
+    ) -> tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
 
         This method checks if it is possible to train the model with the given training data and the desired batch size
@@ -1215,7 +1216,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         path: Union[str, pathlib.Path],
         triples_factory: Optional[CoreTriplesFactory] = None,
-    ) -> Tuple[Optional[pathlib.Path], Optional[int]]:
+    ) -> tuple[Optional[pathlib.Path], Optional[int]]:
         """Load the state of the training loop from a checkpoint.
 
         :param path:

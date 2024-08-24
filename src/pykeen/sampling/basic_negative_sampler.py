@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
 import math
-from typing import Collection, Optional
+from collections.abc import Collection
+from typing import Optional
 
 import torch
 

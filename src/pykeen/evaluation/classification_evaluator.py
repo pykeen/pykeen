@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of wrapper around sklearn metrics."""
 
 from __future__ import annotations
 
 import itertools
 from collections import defaultdict
-from typing import Iterable, Mapping, MutableMapping, NamedTuple, Optional, Tuple, cast
+from collections.abc import Iterable, Mapping, MutableMapping
+from typing import NamedTuple, cast
 
 import numpy
 import numpy as np
@@ -66,8 +65,8 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
 
 
 def _iter_scores(
-    all_scores: Mapping[Target, Mapping[Tuple[int, int], numpy.ndarray]],
-    all_positives: Mapping[Target, Mapping[Tuple[int, int], numpy.ndarray]],
+    all_scores: Mapping[Target, Mapping[tuple[int, int], numpy.ndarray]],
+    all_positives: Mapping[Target, Mapping[tuple[int, int], numpy.ndarray]],
 ) -> Iterable[ScorePack]:
     sides = sorted(all_scores.keys())
     y_score_for_side = dict()
@@ -97,8 +96,8 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
     """An evaluator that uses a classification metrics."""
 
     metric_result_cls = ClassificationMetricResults
-    all_scores: MutableMapping[Target, MutableMapping[Tuple[int, int], np.ndarray]]
-    all_positives: MutableMapping[Target, MutableMapping[Tuple[int, int], np.ndarray]]
+    all_scores: MutableMapping[Target, MutableMapping[tuple[int, int], np.ndarray]]
+    all_positives: MutableMapping[Target, MutableMapping[tuple[int, int], np.ndarray]]
 
     def __init__(self, **kwargs):
         """
@@ -125,8 +124,8 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
         hrt_batch: MappedTriples,
         target: Target,
         scores: torch.FloatTensor,
-        true_scores: Optional[torch.FloatTensor] = None,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
+        true_scores: torch.FloatTensor | None = None,
+        dense_positive_mask: torch.FloatTensor | None = None,
     ) -> None:  # noqa: D102
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
@@ -141,7 +140,7 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
         for i in range(keys.shape[0]):
             key = tuple(map(int, keys[i]))
             assert len(key) == 2
-            key = cast(Tuple[int, int], key)
+            key = cast(tuple[int, int], key)
             self.all_scores[target][key] = scores[i]
             self.all_positives[target][key] = dense_positive_mask[i]
 

@@ -12,7 +12,7 @@ loss function-specific hyper-parameters such as the margin value in the margin r
 This is accomplished by a process called hyper-parameter optimization. Different approaches have been proposed, of
 which random search and grid search are very popular.
 
-In PyKEEN, we can define execute an ablation study within our own program or from the command line interface using a
+In PyKEEN, we can define and execute an ablation study within our own program or from the command line interface using a
 configuration file (``file_name.json``).
 
 First, we show how to run an ablation study within your program. For this purpose, we provide the function

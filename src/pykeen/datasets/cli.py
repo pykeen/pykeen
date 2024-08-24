@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Run dataset CLI."""
 
 import itertools as itt
@@ -7,8 +5,9 @@ import json
 import logging
 import math
 import pathlib
+from collections.abc import Iterable, Mapping, MutableMapping
 from textwrap import dedent
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
+from typing import Optional, Union
 
 import click
 import docdata
@@ -199,7 +198,7 @@ def _get_plotting_libraries():
                 pip install matplotlib seaborn
         """
             )
-        )
+        ) from None
     return plt, sns
 
 
@@ -271,7 +270,7 @@ def expected_metrics(
 ):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
-    df_data: List[Tuple[str, str, str, str, float]] = []
+    df_data: list[tuple[str, str, str, str, float]] = []
     for dataset_name, dataset_instance in iter_dataset_instances(
         regex_name_filter=dataset_regex, max_triples=max_triples, min_triples=min_triples
     ):
@@ -365,7 +364,7 @@ def expected_metrics(
             click.secho(f"Updated Zenodo record {zenodo_record}: {rv}", fg="green")
 
 
-def _summarize_degree_distribution(factory: CoreTriplesFactory) -> Iterable[List]:
+def _summarize_degree_distribution(factory: CoreTriplesFactory) -> Iterable[list]:
     df = pd.DataFrame(data=factory.mapped_triples.numpy(), columns=COLUMN_LABELS)
     for target in [LABEL_HEAD, LABEL_TAIL]:
         key = [LABEL_TAIL if target == LABEL_HEAD else LABEL_HEAD, LABEL_RELATION]

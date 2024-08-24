@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Evaluation."""
 
 from class_resolver import ClassResolver

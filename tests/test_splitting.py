@@ -1,4 +1,5 @@
 """Tests for splitting of triples."""
+
 import numpy
 import pytest
 import torch
@@ -164,9 +165,9 @@ class RandomizedCleanerTests(CleanerTestCase):
             (1, 1000, 4),
         }
 
-        new_training, new_testing = [
+        new_training, new_testing = (
             triple_tensor_to_set(arr) for arr in self.instance.cleanup_pair(training, testing, random_state=None)
-        ]
+        )
 
         if expected_training_1 == new_training:
             self.assertEqual(expected_testing_1, new_testing)

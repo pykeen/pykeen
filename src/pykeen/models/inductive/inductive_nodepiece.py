@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, Callable, ClassVar, Optional
 
 import more_itertools
 import torch

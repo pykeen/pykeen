@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Basic structure of a evaluator."""
 
 from __future__ import annotations
@@ -9,19 +7,13 @@ import timeit
 import warnings
 from abc import ABC, abstractmethod
 from collections import ChainMap
+from collections.abc import Collection, Mapping
 from typing import (
     Any,
     ClassVar,
-    Collection,
     Generic,
-    List,
-    Mapping,
     NamedTuple,
-    Optional,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -49,13 +41,13 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 # TODO: maybe move into separate module?
-MetricKeyType = TypeVar("MetricKeyType", bound=Tuple)
+MetricKeyType = TypeVar("MetricKeyType", bound=tuple)
 
 
 class MetricResults(Generic[MetricKeyType]):
     """Results from computing metrics."""
 
-    metrics: ClassVar[Mapping[str, Type[Metric]]]
+    metrics: ClassVar[Mapping[str, type[Metric]]]
     data: Mapping[MetricKeyType, float]
 
     def __init__(self, data: Mapping[MetricKeyType | str, float]):
@@ -129,16 +121,16 @@ class Evaluator(ABC, Generic[MetricKeyType]):
     intermediate results in its state, and offers a method to obtain the final results once finished.
     """
 
-    metric_result_cls: Type[MetricResults[MetricKeyType]]
+    metric_result_cls: type[MetricResults[MetricKeyType]]
 
     def __init__(
         self,
         filtered: bool = False,
         requires_positive_mask: bool = False,
-        batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
+        batch_size: int | None = None,
+        slice_size: int | None = None,
         automatic_memory_optimization: bool = True,
-        mode: Optional[InductiveMode] = None,
+        mode: InductiveMode | None = None,
     ):
         """Initialize the evaluator.
 
@@ -169,8 +161,8 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         hrt_batch: MappedTriples,
         target: Target,
         scores: torch.FloatTensor,
-        true_scores: Optional[torch.FloatTensor] = None,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
+        true_scores: torch.FloatTensor | None = None,
+        dense_positive_mask: torch.FloatTensor | None = None,
     ) -> None:
         """Process a batch of triples with their computed scores for all entities.
 
@@ -198,15 +190,15 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
+        batch_size: int | None = None,
+        slice_size: int | None = None,
+        device: torch.device | None = None,
         use_tqdm: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-        restrict_entities_to: Optional[Collection[int]] = None,
-        restrict_relations_to: Optional[Collection[int]] = None,
+        tqdm_kwargs: Mapping[str, Any] | None = None,
+        restrict_entities_to: Collection[int] | None = None,
+        restrict_relations_to: Collection[int] | None = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults[MetricKeyType]:
@@ -309,7 +301,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         device = device or model.device
         tqdm_kwargs = dict(tqdm_kwargs or {})
         if not use_tqdm:
-            tqdm_kwargs.update(dict(disable=False))
+            tqdm_kwargs["disable"] = True
         try:
             result = self._evaluate_on_device(
                 model=model,
@@ -515,7 +507,7 @@ def create_sparse_positive_filter_(
     all_pos_triples: torch.LongTensor,
     relation_filter: torch.BoolTensor | None = None,
     filter_col: int = 0,
-) -> Tuple[torch.LongTensor, torch.BoolTensor]:
+) -> tuple[torch.LongTensor, torch.BoolTensor]:
     """Compute indices of all positives.
 
     For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
@@ -616,12 +608,12 @@ def _evaluate_batch(
     model: Model,
     target: Target,
     evaluator: Evaluator,
-    slice_size: Optional[int],
-    all_pos_triples: Optional[MappedTriples],
-    relation_filter: Optional[torch.BoolTensor],
-    restrict_entities_to: Optional[torch.LongTensor],
+    slice_size: int | None,
+    all_pos_triples: MappedTriples | None,
+    relation_filter: torch.BoolTensor | None,
+    restrict_entities_to: torch.LongTensor | None,
     *,
-    mode: Optional[InductiveMode],
+    mode: InductiveMode | None,
 ) -> torch.BoolTensor:
     """
     Evaluate ranking for batch.
@@ -711,10 +703,10 @@ def _evaluate_batch(
 
 def get_candidate_set_size(
     mapped_triples: MappedTriples,
-    restrict_entities_to: Optional[Collection[int]] = None,
-    restrict_relations_to: Optional[Collection[int]] = None,
-    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-    num_entities: Optional[int] = None,
+    restrict_entities_to: Collection[int] | None = None,
+    restrict_relations_to: Collection[int] | None = None,
+    additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+    num_entities: int | None = None,
 ) -> pandas.DataFrame:
     """
     Calculate the candidate set sizes for head/tail prediction for the given triples.
@@ -786,7 +778,7 @@ def get_candidate_set_size(
 
 
 def normalize_flattened_metric_results(
-    result: Mapping[str, Any], metric_result_cls: Type[MetricResults] | None = None
+    result: Mapping[str, Any], metric_result_cls: type[MetricResults] | None = None
 ) -> Mapping[str, Any]:
     """
     Flatten metric result dictionary and normalize metric keys.
@@ -804,7 +796,7 @@ def normalize_flattened_metric_results(
 
     # normalize keys
     if metric_result_cls is None:
-        warnings.warn("Please explicitly provide a metric result class.", category=DeprecationWarning)
+        warnings.warn("Please explicitly provide a metric result class.", category=DeprecationWarning, stacklevel=2)
         metric_result_cls = RankBasedMetricResults
     # TODO: find a better way to handle this
     flat_result = flatten_dictionary(result)

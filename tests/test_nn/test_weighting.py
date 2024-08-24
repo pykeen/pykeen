@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 """Tests for edge weightings."""
-
 
 import unittest_templates
 

@@ -57,7 +57,8 @@ relation representations and a DistMult interaction function.
 """
 
 from abc import ABC, abstractmethod
-from typing import Collection, Literal, Optional, Sequence
+from collections.abc import Collection, Sequence
+from typing import Literal, Optional
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -116,7 +117,7 @@ def _extract_flow(layers: Sequence[MessagePassing]) -> FlowDirection:
                 raise AssertionError(f"Invalid flow: {layer.flow}. Valid flows: {FLOW_DIRECTIONS}")
             flow = layer.flow
         elif flow != layer.flow:
-            raise ValueError(f"Different flow directions across layers: {[l.flow for l in layers]}")
+            raise ValueError(f"Different flow directions across layers: {[layer.flow for layer in layers]}")
     # default flow
     return flow or "source_to_target"
 

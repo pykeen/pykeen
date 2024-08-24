@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
-
 """Utility classes for constructing inductive datasets."""
 
 from __future__ import annotations
 
 import logging
 import pathlib
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping, Optional, Union
+from typing import Any
 
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
@@ -40,7 +39,7 @@ class InductiveDataset:
     #: A factory wrapping the testing triples, that share indices with the INDUCTIVE INFERENCE triples
     inductive_testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the INDUCTIVE INFERENCE triples
-    inductive_validation: Optional[CoreTriplesFactory] = None
+    inductive_validation: CoreTriplesFactory | None = None
 
     def _summary_rows(self):
         return [
@@ -56,7 +55,7 @@ class InductiveDataset:
             )
         ]
 
-    def summary_str(self, title: Optional[str] = None, show_examples: Optional[int] = 5, end="\n") -> str:
+    def summary_str(self, title: str | None = None, show_examples: int | None = 5, end="\n") -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
@@ -73,7 +72,7 @@ class InductiveDataset:
             rv += "\n" + examples
         return rv + end
 
-    def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
+    def summarize(self, title: str | None = None, show_examples: int | None = 5, file=None) -> None:
         """Print a summary of the dataset."""
         print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
 
@@ -91,21 +90,21 @@ class EagerInductiveDataset(InductiveDataset):
     transductive_training: CoreTriplesFactory
     inductive_inference: CoreTriplesFactory
     inductive_testing: CoreTriplesFactory
-    inductive_validation: Optional[CoreTriplesFactory] = None
+    inductive_validation: CoreTriplesFactory | None = None
 
 
 class LazyInductiveDataset(InductiveDataset):
     """An inductive dataset that has lazy loading."""
 
     #: The actual instance of the training factory, which is exposed to the user through `transductive_training`
-    _transductive_training: Optional[TriplesFactory] = None
+    _transductive_training: TriplesFactory | None = None
     #: The actual instance of the inductive inference factory,
     #: which is exposed to the user through `inductive_inference`
-    _inductive_inference: Optional[TriplesFactory] = None
+    _inductive_inference: TriplesFactory | None = None
     #: The actual instance of the testing factory, which is exposed to the user through `inductive_testing`
-    _inductive_testing: Optional[TriplesFactory] = None
+    _inductive_testing: TriplesFactory | None = None
     #: The actual instance of the validation factory, which is exposed to the user through `inductive_validation`
-    _inductive_validation: Optional[TriplesFactory] = None
+    _inductive_validation: TriplesFactory | None = None
     #: The directory in which the cached data is stored
     cache_root: pathlib.Path
 
@@ -134,7 +133,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._inductive_testing
 
     @property
-    def inductive_validation(self) -> Optional[TriplesFactory]:  # type:ignore # noqa: D401
+    def inductive_validation(self) -> TriplesFactory | None:  # type:ignore # noqa: D401
         """The validation triples factory that shares indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
@@ -153,8 +152,8 @@ class LazyInductiveDataset(InductiveDataset):
 
     def _help_cache(
         self,
-        cache_root: Union[None, str, pathlib.Path],
-        version: Optional[str] = None,
+        cache_root: None | str | pathlib.Path,
+        version: str | None = None,
         sep_train_inference: bool = False,
     ) -> pathlib.Path:
         """Get the appropriate cache root directory.
@@ -177,7 +176,7 @@ class LazyInductiveDataset(InductiveDataset):
         logger.debug("using cache root at %s", cache_root.as_uri())
         return cache_root
 
-    def _cache_sub_directories(self, version: Optional[str]) -> Iterable[str]:
+    def _cache_sub_directories(self, version: str | None) -> Iterable[str]:
         """Iterate over appropriate cache sub-directory."""
         # TODO: use class-resolver normalize?
         yield self.__class__.__name__.lower()
@@ -195,12 +194,12 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
 
     def __init__(
         self,
-        transductive_training_path: Union[str, pathlib.Path],
-        inductive_inference_path: Union[str, pathlib.Path],
-        inductive_testing_path: Union[str, pathlib.Path],
-        inductive_validation_path: Union[str, str, pathlib.Path],
+        transductive_training_path: str | pathlib.Path,
+        inductive_inference_path: str | pathlib.Path,
+        inductive_testing_path: str | pathlib.Path,
+        inductive_validation_path: str | str | pathlib.Path,
         eager: bool = False,
-        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        load_triples_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -269,12 +268,12 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         inductive_inference_url: str,
         inductive_testing_url: str,
         inductive_validation_url: str,
-        cache_root: Optional[str] = None,
+        cache_root: str | None = None,
         force: bool = False,
         eager: bool = False,
-        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
-        download_kwargs: Optional[Mapping[str, Any]] = None,
-        version: Optional[str] = None,
+        load_triples_kwargs: Mapping[str, Any] | None = None,
+        download_kwargs: Mapping[str, Any] | None = None,
+        version: str | None = None,
     ):
         """Initialize dataset.
 

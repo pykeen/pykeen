@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The PrimeKG dataset.
 
 Get a summary with ``python -m pykeen.datasets.primekg``

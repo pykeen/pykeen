@@ -1,7 +1,17 @@
-# See: https://docs.readthedocs.io/en/stable/config-file/v2.html#formats
+# Read the Docs configuration file for Sphinx projects
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 
 # Required
 version: 2
+
+
+# Set the OS, Python version and other tools you might need
+build:
+  os: ubuntu-lts-latest
+  apt_packages:
+    - graphviz
+  tools:
+    python: "3.12"
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
@@ -12,7 +22,6 @@ formats:
   - htmlzip
 
 python:
-  version: "3.8"
   install:
     - method: pip
       path: .

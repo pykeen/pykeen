@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
-
 """Load the OGB datasets.
 
 Run with ``python -m pykeen.datasets.ogb``
 """
+
 from __future__ import annotations
 
 import abc
 import logging
 import pathlib
 import typing
-from typing import ClassVar, Generic, Literal, Optional, Sequence, TypedDict, TypeVar, Union, cast, overload
+from collections.abc import Sequence
+from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, Union, cast, overload
 
 import click
 import numpy
@@ -50,7 +50,7 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
     #: The name of the dataset to download
     name: ClassVar[str]
 
-    def __init__(self, cache_root: Optional[str] = None):
+    def __init__(self, cache_root: str | None = None):
         """Initialize the OGB loader.
 
         :param cache_root: An optional override for where data should be cached.
@@ -83,7 +83,7 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
             relation_to_id=self.relation_to_id,
         )
 
-    def _load_ogb_dataset(self) -> "LinkPropPredDataset":
+    def _load_ogb_dataset(self) -> LinkPropPredDataset:
         """
         Load the OGB dataset (lazily).
 
@@ -104,12 +104,14 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
         return LinkPropPredDataset(name=self.name, root=self.cache_root)
 
     @overload
-    def _load_data_dict_for_split(self, dataset: "LinkPropPredDataset", which: TrainKey) -> PreprocessedTrainDictType:
-        ...
+    def _load_data_dict_for_split(  # noqa: E704
+        self, dataset: LinkPropPredDataset, which: TrainKey
+    ) -> PreprocessedTrainDictType: ...
 
     @overload
-    def _load_data_dict_for_split(self, dataset: "LinkPropPredDataset", which: EvalKey) -> PreprocessedEvalDictType:
-        ...
+    def _load_data_dict_for_split(  # noqa: E704
+        self, dataset: LinkPropPredDataset, which: EvalKey
+    ) -> PreprocessedEvalDictType: ...
 
     @abc.abstractmethod
     def _load_data_dict_for_split(self, dataset, which):

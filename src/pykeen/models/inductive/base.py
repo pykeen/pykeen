@@ -1,6 +1,8 @@
 """Base classes for inductive models."""
+
 from collections import ChainMap
-from typing import Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Optional
 
 from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch import nn

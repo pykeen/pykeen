@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The inductive link prediction datasets from [teru2020]_.
 
 - GitHub Repository: https://github.com/kkteru/grail

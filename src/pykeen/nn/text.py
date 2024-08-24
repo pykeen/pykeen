@@ -1,10 +1,10 @@
 """Modules for text encoding."""
 
-
 import logging
 import string
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Callable, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType
@@ -229,6 +229,9 @@ class TransformerTextEncoder(TextEncoder):
         ).pooler_output
 
 
+#: A resolver for text encoders. By default, can use 'characterembedding'
+#: for :class:`CharacterEmbeddingTextEncoder` or 'transformer' for
+#: :class:`TransformerTextEncoder`.
 text_encoder_resolver: ClassResolver[TextEncoder] = ClassResolver.from_subclasses(
     base=TextEncoder,
     default=CharacterEmbeddingTextEncoder,

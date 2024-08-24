@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
-
 """Utilities and base classes for PyKEEN tracker adapters."""
 
 import logging
 import re
 from collections import defaultdict
-from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Pattern, Union
+from collections.abc import Iterable, Mapping, MutableMapping
+from re import Pattern
+from typing import Any, Optional, Union
 
 from tqdm.auto import tqdm
 
@@ -210,7 +210,7 @@ TrackerHint = Union[None, ResultTracker, Iterable[ResultTracker]]
 class MultiResultTracker(ResultTracker):
     """A result tracker which delegates to multiple different result trackers."""
 
-    trackers: List[ResultTracker]
+    trackers: list[ResultTracker]
 
     def __init__(self, trackers: TrackerHint = None) -> None:
         """

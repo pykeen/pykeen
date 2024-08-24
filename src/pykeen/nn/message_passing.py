@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """Various decompositions for R-GCN."""
 
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Mapping, Optional, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any, Optional
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs

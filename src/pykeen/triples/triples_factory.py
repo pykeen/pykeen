@@ -1,26 +1,16 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 import dataclasses
 import logging
 import pathlib
 import warnings
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
     Callable,
     ClassVar,
-    Collection,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
     Optional,
-    Sequence,
-    Set,
     TextIO,
-    Tuple,
     Union,
     cast,
 )
@@ -427,7 +417,7 @@ class CoreTriplesFactory(KGInfo):
         cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
         if "shuffle" in kwargs:
             if kwargs.pop("shuffle"):
-                warnings.warn("Training instances are always shuffled.", DeprecationWarning)
+                warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
             else:
                 raise AssertionError("If shuffle is provided, it must be True.")
         return cls(
@@ -446,7 +436,7 @@ class CoreTriplesFactory(KGInfo):
             target=target,
         )
 
-    def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
+    def get_most_frequent_relations(self, n: Union[int, float]) -> set[int]:
         """Get the IDs of the n most frequent relations.
 
         :param n:
@@ -470,7 +460,7 @@ class CoreTriplesFactory(KGInfo):
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[Dict[str, Any]] = None,
+        extra_metadata: Optional[dict[str, Any]] = None,
         keep_metadata: bool = True,
     ) -> "CoreTriplesFactory":
         """
@@ -507,8 +497,12 @@ class CoreTriplesFactory(KGInfo):
         random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
         method: Optional[str] = None,
-    ) -> List["CoreTriplesFactory"]:
-        """Split a triples factory into a train/test.
+    ) -> list["CoreTriplesFactory"]:
+        """Split a triples factory into a training part and a variable number of (transductive) evaluation parts.
+
+        .. warning::
+
+            This method is not suitable to create *inductive* splits.
 
         :param ratios:
             There are three options for this argument:
@@ -522,15 +516,17 @@ class CoreTriplesFactory(KGInfo):
         :param random_state:
             The random state used to shuffle and split the triples.
         :param randomize_cleanup:
-            If true, uses the non-deterministic method for moving triples to the training set. This has the
-            advantage that it does not necessarily have to move all of them, but it might be significantly
-            slower since it moves one triple at a time.
+            This parameter is forwarded to the underlying :func:`pykeen.triples.splitting.split`.
         :param method:
-            The name of the method to use, from SPLIT_METHODS. Defaults to "coverage".
+            This parameter is forwarded to the underlying :func:`pykeen.triples.splitting.split`.
+
 
         :return:
             A partition of triples, which are split (approximately) according to the ratios, stored TriplesFactory's
             which share everything else with this root triples factory.
+
+        .. seealso::
+            :func:`pykeen.triples.splitting.split`
 
         .. code-block:: python
 
@@ -807,7 +803,7 @@ class TriplesFactory(CoreTriplesFactory):
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> "TriplesFactory":
         """
         Create a new triples factory from label-based triples.
@@ -862,7 +858,7 @@ class TriplesFactory(CoreTriplesFactory):
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> "TriplesFactory":
@@ -939,9 +935,7 @@ class TriplesFactory(CoreTriplesFactory):
             pd.DataFrame(
                 data=data.items(),
                 columns=["label", "id"],
-            ).sort_values(
-                by="id"
-            ).set_index("id").to_csv(
+            ).sort_values(by="id").set_index("id").to_csv(
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
             )
@@ -972,7 +966,7 @@ class TriplesFactory(CoreTriplesFactory):
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[Dict[str, Any]] = None,
+        extra_metadata: Optional[dict[str, Any]] = None,
         keep_metadata: bool = True,
     ) -> "TriplesFactory":  # noqa: D102
         return TriplesFactory(
@@ -1223,7 +1217,7 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
 
 
 AnyTriples = Union[
-    Tuple[str, str, str], Sequence[Tuple[str, str, str]], LabeledTriples, MappedTriples, CoreTriplesFactory
+    tuple[str, str, str], Sequence[tuple[str, str, str]], LabeledTriples, MappedTriples, CoreTriplesFactory
 ]
 
 
@@ -1231,7 +1225,7 @@ def get_mapped_triples(
     x: Optional[AnyTriples] = None,
     *,
     mapped_triples: Optional[MappedTriples] = None,
-    triples: Union[None, LabeledTriples, Tuple[str, str, str], Sequence[Tuple[str, str, str]]] = None,
+    triples: Union[None, LabeledTriples, tuple[str, str, str], Sequence[tuple[str, str, str]]] = None,
     factory: Optional[CoreTriplesFactory] = None,
 ) -> MappedTriples:
     """

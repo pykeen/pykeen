@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Constants for PyKEEN."""
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping, Tuple
 
 import pystow
 import torch
@@ -67,6 +65,6 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
     LABEL_TAIL: COLUMN_TAIL,
 }
 
-COLUMN_LABELS: Tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
+COLUMN_LABELS: tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
 TARGET_TO_KEY_LABELS = {target: [c for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
 TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in cs] for target, cs in TARGET_TO_KEY_LABELS.items()}
