@@ -19,6 +19,44 @@ class CheckpointScheduleMetaTestCase(unittest_templates.MetaTestCase[schedule.Ch
     base_test: ClassVar = CheckpointScheduleTests
 
 
+class EveryCheckpointScheduleTests(CheckpointScheduleTests):
+    """Test for every."""
+
+    cls = schedule.EveryCheckpointSchedule
+
+
+class ExplicitCheckpointScheduleTests(CheckpointScheduleTests):
+    """Test for explicit."""
+
+    cls = schedule.ExplicitCheckpointSchedule
+    kwargs = dict(steps=(4, 6))
+
+
+class BestCheckpointScheduleTests(CheckpointScheduleTests):
+    """Test for best."""
+
+    cls = schedule.BestCheckpointSchedule
+    kwargs = dict(metric_selection=MetricSelection(metric="loss", prefix="validation"))
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["result_tracker"] = self.result_tracker = PythonResultTracker()
+        return kwargs
+
+    def iter_steps(self) -> Iterator[int]:
+        for step in super().iter_steps():
+            loss = torch.rand(1, generator=self.generator)
+            self.result_tracker.log_metrics(metrics=dict(loss=loss), step=step, prefix="validation")
+            yield step
+
+
+class UnionCheckpointScheduleTests(CheckpointScheduleTests):
+    """Test for union."""
+
+    cls = schedule.UnionCheckpointSchedule
+    kwargs = dict(bases=["every", "explicit"], bases_kwargs=[None, dict(steps=(3,))])
+
+
 class CheckpointKeeperMetaTestCase(unittest_templates.MetaTestCase[keeper.CheckpointKeeper]):
     """Meta test case for checkpoint keepers."""
 
