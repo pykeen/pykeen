@@ -6,10 +6,17 @@ from typing import Any, ClassVar
 import torch
 import unittest_templates
 
-from pykeen.checkpoints import keeper
+from pykeen.checkpoints import keeper, schedule
 from pykeen.checkpoints.utils import MetricSelection
 from pykeen.trackers.base import PythonResultTracker
-from tests.cases import CheckpointKeeperTests
+from tests.cases import CheckpointKeeperTests, CheckpointScheduleTests
+
+
+class CheckpointScheduleMetaTestCase(unittest_templates.MetaTestCase[schedule.CheckpointSchedule]):
+    """Meta test case for checkpoint schedules."""
+
+    base_cls: ClassVar = schedule.CheckpointSchedule
+    base_test: ClassVar = CheckpointScheduleTests
 
 
 class CheckpointKeeperMetaTestCase(unittest_templates.MetaTestCase[keeper.CheckpointKeeper]):

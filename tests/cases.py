@@ -37,7 +37,6 @@ from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
-from pykeen.checkpoints.keeper import CheckpointKeeper
 import pykeen.evaluation.evaluation_loop
 import pykeen.models
 import pykeen.nn.combination
@@ -47,6 +46,7 @@ import pykeen.nn.representation
 import pykeen.nn.text
 import pykeen.nn.weighting
 import pykeen.predict
+from pykeen.checkpoints import CheckpointKeeper, CheckpointSchedule
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
@@ -2732,6 +2732,19 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
     def check(self):
         """Perform additional verification."""
         pass
+
+
+class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule]):
+    """Generic tests for checkpoint schedules."""
+
+    def test_call(self) -> None:
+        """Smoke-test for calling."""
+        for step in self.iter_steps():
+            _result = self.instance(step=step)
+
+    def iter_steps(self) -> Iterator[int]:
+        """Iterate over steps."""
+        yield from range(20)
 
 
 class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
