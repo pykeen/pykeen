@@ -2734,7 +2734,7 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
         pass
 
 
-class CheckpointKeeperBase(GenericTestCase[CheckpointKeeper]):
+class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
     """Generic tests for checkpoint keepers."""
 
     def test_call(self) -> None:
