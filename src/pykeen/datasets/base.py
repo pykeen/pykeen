@@ -7,7 +7,7 @@ import pathlib
 import tarfile
 import zipfile
 from abc import abstractmethod
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from io import BytesIO
 from typing import Any, ClassVar, cast
 
@@ -19,13 +19,14 @@ import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
+from typing_extensions import Self
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
-from ..typing import TorchRandomHint
+from ..typing import MappedTriples, TorchRandomHint
 from ..utils import ExtraReprMixin, normalize_path, normalize_string
 
 __all__ = [
@@ -66,6 +67,57 @@ def dataset_similarity(a: Dataset, b: Dataset, metric: str | None = None) -> flo
     if metric == "tanimoto" or metric is None:
         return splits_similarity(a._tup(), b._tup())
     raise ValueError(f"invalid metric: {metric}")
+
+
+def _map_ids(x: torch.Tensor, kept_old_ids: torch.Tensor) -> torch.Tensor:
+    """Vectorized re-mapping of ids."""
+    # note: this needs `O(old_max_id)` memory.
+    # note: this is quite similar to pykeen.triples.triples_factory._map_triples_elements_to_ids
+    old_max_id = int(x.max())
+    new_max_id = len(kept_old_ids)
+    map_t = torch.full(size=(old_max_id + 1,), fill_value=-1)
+    map_t[kept_old_ids] = torch.arange(new_max_id)
+    return map_t[x]
+
+
+def _update_eval_triples_factory(
+    factory: TriplesFactory,
+    kept_old_entity_ids_t: torch.Tensor,
+    kept_old_relation_ids_t: torch.Tensor,
+    entity_to_id: Mapping[str, int],
+    relation_to_id: Mapping[str, int],
+) -> TriplesFactory:
+    heads, tails = _map_ids(factory.mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
+    relations = _map_ids(factory.mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
+    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    return TriplesFactory(
+        mapped_triples=mapped_triples,
+        entity_to_id=entity_to_id,
+        relation_to_id=relation_to_id,
+        create_inverse_triples=factory.create_inverse_triples,
+        metadata=factory.metadata,
+        num_entities=len(kept_old_entity_ids_t),
+        num_relations=len(kept_old_relation_ids_t),
+    )
+
+
+def _update_eval_core_factory(
+    factory: CoreTriplesFactory, kept_old_entity_ids_t: torch.Tensor, kept_old_relation_ids_t: torch.Tensor
+) -> CoreTriplesFactory:
+    heads, tails = _map_ids(factory.mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
+    relations = _map_ids(factory.mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
+    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    return CoreTriplesFactory(
+        mapped_triples=mapped_triples,
+        create_inverse_triples=factory.create_inverse_triples,
+        metadata=factory.metadata,
+        num_entities=len(kept_old_entity_ids_t),
+        num_relations=len(kept_old_relation_ids_t),
+    )
+
+
+def _restrict_mapping(id_to_label: Mapping[int, str], kept_ids: Sequence[int]) -> Mapping[str, int]:
+    return {id_to_label[old_id]: new_id for new_id, old_id in enumerate(kept_ids)}
 
 
 class Dataset(ExtraReprMixin):
@@ -283,6 +335,122 @@ class Dataset(ExtraReprMixin):
         if self.validation is None:
             return self.training, self.testing
         return self.training, self.testing, self.validation
+
+    def restrict(
+        self,
+        entities: None | Collection[int] | Collection[str] = None,
+        relations: None | Collection[int] | Collection[str] = None,
+        invert_entity_selection: bool = False,
+        invert_relation_selection: bool = False,
+    ) -> EagerDataset | Self:
+        """Restrict a dataset to the given entities/relations.
+
+        :param entities:
+            The entities to keep (or discard, cf. `invert_entity_selection`).
+            `None` corresponds to selecting all entities (but is handled more efficiently).
+        :param relations:
+            The relations to keep (or discard, cf. `invert_relation_selection`).
+            `None` corresponds to selecting all relations (but is handled more efficiently).
+        :param invert_entity_selection:
+            Whether to invert the entity selection, i.e., discard the selected entities rather than all remaining ones.
+        :param invert_relation_selection:
+            Whether to invert the relation selection, i.e., discard the selected relations rather than all remaining
+            ones.
+
+        .. warning ::
+            This is different to :meth:`pykeen.triples.triples_factory.CoreTriplesFactory.new_with_restriction`
+            as it does modify the label to id mapping.
+        """
+        # restrict triples factories (without modifying the entity to id mapping)
+        training = self.training.new_with_restriction(
+            entities=entities,
+            relations=relations,
+            invert_entity_selection=invert_entity_selection,
+            invert_relation_selection=invert_relation_selection,
+        )
+
+        # collapse entity and relation ids
+        kept_entity_ids_t, entity_ids_inv_t = training.mapped_triples[:, 0::2].unique(return_inverse=True)
+        kept_relation_ids_t, relation_ids_inv_t = training.mapped_triples[:, 1].unique(return_inverse=True)
+        num_entities = len(kept_entity_ids_t)
+        num_relations = len(kept_relation_ids_t)
+        new_training_triples = torch.stack([entity_ids_inv_t[:, 0], relation_ids_inv_t, entity_ids_inv_t[:, 1]], dim=-1)
+
+        # update factories
+        if isinstance(training, TriplesFactory):
+            assert isinstance(self.testing, TriplesFactory)
+            assert self.validation is None or isinstance(self.validation, TriplesFactory)
+            entity_to_id = _restrict_mapping(
+                id_to_label=training.entity_id_to_label, kept_ids=kept_entity_ids_t.tolist()
+            )
+            relation_to_id = _restrict_mapping(
+                id_to_label=training.relation_id_to_label, kept_ids=kept_relation_ids_t.tolist()
+            )
+            training = TriplesFactory(
+                mapped_triples=cast(MappedTriples, new_training_triples),
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+                create_inverse_triples=training.create_inverse_triples,
+                metadata=training.metadata,
+                num_entities=num_entities,
+                num_relations=num_relations,
+            )
+            # also update testing and validation
+            testing = _update_eval_triples_factory(
+                factory=self.testing,
+                kept_old_entity_ids_t=kept_entity_ids_t,
+                kept_old_relation_ids_t=kept_relation_ids_t,
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+            )
+            validation = (
+                None
+                if self.validation is None
+                else _update_eval_triples_factory(
+                    factory=self.validation,
+                    kept_old_entity_ids_t=kept_entity_ids_t,
+                    kept_old_relation_ids_t=kept_relation_ids_t,
+                    entity_to_id=entity_to_id,
+                    relation_to_id=relation_to_id,
+                )
+            )
+        else:
+            training = CoreTriplesFactory(
+                mapped_triples=cast(MappedTriples, new_training_triples),
+                create_inverse_triples=training.create_inverse_triples,
+                metadata=training.metadata,
+                num_entities=num_entities,
+                num_relations=num_relations,
+            )
+            testing = _update_eval_core_factory(
+                factory=self.testing,
+                kept_old_entity_ids_t=kept_entity_ids_t,
+                kept_old_relation_ids_t=kept_relation_ids_t,
+            )
+            validation = (
+                None
+                if self.validation is None
+                else _update_eval_core_factory(
+                    factory=self.validation,
+                    kept_old_entity_ids_t=kept_entity_ids_t,
+                    kept_old_relation_ids_t=kept_relation_ids_t,
+                )
+            )
+
+        # update metadata
+        metadata = dict(self.metadata or {})
+        restriction_meta = {"base": metadata.pop("name", None) or self.get_normalized_name()}
+        if entities:
+            # note:
+            # - we convert to list to make sure that the metadata is JSON-serializable
+            # - we sort because the order does not matter for the functionality of this method
+            restriction_meta |= {"entities": sorted(entities), "invert_entity_selection": invert_entity_selection}
+        if relations:
+            restriction_meta |= {"relations": sorted(relations), "invert_relation_selection": invert_relation_selection}
+        metadata["restriction"] = restriction_meta
+
+        # compose restricted dataset
+        return EagerDataset(training=training, testing=testing, validation=validation, metadata=metadata)
 
 
 class EagerDataset(Dataset):
