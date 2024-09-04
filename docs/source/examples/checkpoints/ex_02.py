@@ -1,4 +1,5 @@
 """Write a checkpoint at epoch 1, 7, and 10 and keep them all."""
+
 from pykeen.pipeline import pipeline
 
 result = pipeline(
@@ -10,9 +11,7 @@ result = pipeline(
         # create checkpoints at epoch 1, 7, and 10
         callbacks_kwargs=dict(
             schedule="explicit",
-            schedule_kwargs=dict(
-                steps=(1, 7, 10)
-            ),
-        )
+            schedule_kwargs=dict(steps=(1, 7, 10)),
+        ),
     ),
 )
