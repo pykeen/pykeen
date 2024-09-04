@@ -1,4 +1,5 @@
 """Write a checkpoint whenever a metric improves (here, just the training loss)."""
+
 from pykeen.checkpoints import MetricSelection
 from pykeen.pipeline import pipeline
 from pykeen.trackers import tracker_resolver
@@ -19,10 +20,10 @@ result = pipeline(
                 metric_selection=MetricSelection(
                     metric="loss",
                     maximize=False,
-                )
+                ),
             ),
         ),
     ),
     # Important: use the same result tracker instance as in the checkpoint callback
-    result_tracker=result_tracker
+    result_tracker=result_tracker,
 )
