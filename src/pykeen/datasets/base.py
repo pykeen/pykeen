@@ -357,6 +357,9 @@ class Dataset(ExtraReprMixin):
             Whether to invert the relation selection, i.e., discard the selected relations rather than all remaining
             ones.
 
+        :returns:
+            a new dataset with different entity and relation mappins and a restricted set of triples.
+
         .. warning ::
             This is different to :meth:`pykeen.triples.triples_factory.CoreTriplesFactory.new_with_restriction`
             as it does modify the label to id mapping.
