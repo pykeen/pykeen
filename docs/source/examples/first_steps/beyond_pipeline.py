@@ -7,6 +7,8 @@ dataset = get_dataset(dataset="nations")
 training = dataset.training
 validation = dataset.validation
 testing = dataset.testing
+# The following applies to most packaged datasets,
+# although the dataset class itself makes `validation' optional.
 assert validation is not None
 
 
