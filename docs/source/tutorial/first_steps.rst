@@ -115,7 +115,7 @@ tuned or subclassed. Below is an example of code that might have been
 executed with one of the previous examples.
 
 .. literalinclude:: ../examples/first_steps/beyond_pipeline.py
-    :lines: 7-13,17-21,23-27,29-37,39-44,47-51,53-62
+    :lines: 3-
 
 
 Preview: Evaluation Loops

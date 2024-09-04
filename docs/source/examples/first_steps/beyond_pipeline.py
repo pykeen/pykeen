@@ -1,9 +1,5 @@
 """Beyond the pipeline."""
 
-# do not complain about prints in this file
-# ruff: noqa: E402
-
-# %%
 # Get a training dataset
 from pykeen.datasets import get_dataset
 
@@ -13,19 +9,19 @@ validation = dataset.validation
 testing = dataset.testing
 assert validation is not None
 
-# %%
+
 # Pick a model
 from pykeen.models import TransE
 
 model = TransE(triples_factory=training)
 
-# %%
+
 # Pick an optimizer from PyTorch
 from torch.optim import Adam
 
 optimizer = Adam(params=model.get_grad_params())
 
-# %%
+
 # Pick a training approach (sLCWA or LCWA)
 from pykeen.training import SLCWATrainingLoop
 
@@ -35,7 +31,7 @@ training_loop = SLCWATrainingLoop(
     optimizer=optimizer,
 )
 
-# %%
+
 # Train like Cristiano Ronaldo
 _ = training_loop.train(
     triples_factory=training,
@@ -43,13 +39,13 @@ _ = training_loop.train(
     batch_size=256,
 )
 
-# %%
+
 # Pick an evaluator
 from pykeen.evaluation import RankBasedEvaluator
 
 evaluator = RankBasedEvaluator()
 
-# %%
+
 # Evaluate
 results = evaluator.evaluate(
     model=model,
