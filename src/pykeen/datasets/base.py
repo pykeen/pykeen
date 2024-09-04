@@ -385,6 +385,9 @@ class Dataset(ExtraReprMixin):
         num_relations = len(kept_relation_ids_t)
         new_training_triples = torch.stack([entity_ids_inv_t[:, 0], relation_ids_inv_t, entity_ids_inv_t[:, 1]], dim=-1)
 
+        # help mypy
+        testing: CoreTriplesFactory
+        validation: CoreTriplesFactory | None
         # update factories
         if isinstance(training, TriplesFactory):
             assert isinstance(self.testing, TriplesFactory)
