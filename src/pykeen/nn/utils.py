@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Utilities for neural network components."""
 
 from __future__ import annotations
@@ -10,9 +8,10 @@ import pathlib
 import re
 import subprocess
 from abc import ABC, abstractmethod
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from itertools import chain
 from textwrap import dedent
-from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Mapping, Optional, Sequence, Union, cast
+from typing import Any, Callable, Literal, cast
 
 import more_itertools
 import requests
@@ -128,7 +127,7 @@ def adjacency_tensor_to_stacked_matrix(
     source: torch.LongTensor,
     target: torch.LongTensor,
     edge_type: torch.LongTensor,
-    edge_weights: Optional[torch.FloatTensor] = None,
+    edge_weights: torch.FloatTensor | None = None,
     horizontal: bool = True,
 ) -> torch.Tensor:
     """
@@ -190,7 +189,7 @@ class TextCache(ABC):
     """An interface for looking up text for various flavors of entity identifiers."""
 
     @abstractmethod
-    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:
         """Get text for the given identifiers for the cache."""
 
 
@@ -202,7 +201,7 @@ class IdentityCache(TextCache):
     """
 
     # docstr-coverage: inherited
-    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:  # noqa: D102
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:  # noqa: D102
         return identifiers
 
 
@@ -212,7 +211,7 @@ class WikidataCache(TextCache):
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
     WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
 
-    HEADERS: Dict[str, str] = {
+    HEADERS: dict[str, str] = {
         # cf. https://meta.wikimedia.org/wiki/User-Agent_policy
         "User-Agent": (
             f"PyKEEN-Bot/{get_version()} (https://pykeen.github.io; pykeen2019@gmail.com) "
@@ -245,9 +244,10 @@ class WikidataCache(TextCache):
     @classmethod
     def query(
         cls,
-        sparql: Union[str, Callable[..., str]],
+        sparql: str | Callable[..., str],
         wikidata_ids: Sequence[str],
         batch_size: int = 256,
+        timeout=None,
     ) -> Iterable[Mapping[str, Any]]:
         """
         Batched SPARQL query execution for the given IDS.
@@ -258,6 +258,8 @@ class WikidataCache(TextCache):
             the Wikidata IDs
         :param batch_size:
             the batch size, i.e., maximum number of IDs per query
+        :param timeout:
+            the timeout for the GET request to the SPARQL endpoint
 
         :return:
             an iterable over JSON results, where the keys correspond to query variables,
@@ -277,10 +279,13 @@ class WikidataCache(TextCache):
             sparql = sparql.format
         sparql = sparql(ids=" ".join(f"wd:{i}" for i in wikidata_ids))
         logger.debug("running query: %s", sparql)
+        if timeout is None:
+            timeout = 60.0
         res = requests.get(
             cls.WIKIDATA_ENDPOINT,
             params={"query": sparql, "format": "json"},
             headers=cls.HEADERS,
+            timeout=timeout,
         )
         res.raise_for_status()
         bindings = res.json()["results"]["bindings"]
@@ -331,7 +336,7 @@ class WikidataCache(TextCache):
             result[wikidata_id] = dict(label=label, description=description)
         return result
 
-    def _load(self, wikidata_id: str, component: str) -> Optional[str]:
+    def _load(self, wikidata_id: str, component: str) -> str | None:
         """Load information about a Wikidata ID from JSON file."""
         name = f"{wikidata_id}.json"
         if not self.module.join(name=name).is_file():
@@ -362,7 +367,7 @@ class WikidataCache(TextCache):
         """
         self.verify_ids(ids=ids)
         # try to load cached first
-        result: List[Optional[str]] = [None] * len(ids)
+        result: list[str | None] = [None] * len(ids)
         for i, wikidata_id in enumerate(ids):
             result[i] = self._load(wikidata_id=wikidata_id, component=component)
         # determine missing entries
@@ -432,7 +437,7 @@ class WikidataCache(TextCache):
         ids: Sequence[str],
         extensions: Collection[str] = ("jpeg", "jpg", "gif", "png", "svg", "tif"),
         progress: bool = False,
-    ) -> Sequence[Optional[pathlib.Path]]:
+    ) -> Sequence[pathlib.Path | None]:
         """Get paths to images for the given IDs.
 
         :param ids:
@@ -469,7 +474,7 @@ class WikidataCache(TextCache):
             wikidata_ids=missing,
         )
         # we can have multiple images per entity -> collect image URLs per image
-        images: Dict[str, Dict[str, List[str]]] = {}
+        images: dict[str, dict[str, list[str]]] = {}
         for entry in res_json:
             # entity ID
             wikidata_id = nested_get(entry, "item", "value", default="")
@@ -527,12 +532,12 @@ class PyOBOCache(TextCache):
         try:
             import pyobo
         except ImportError:
-            raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.")
+            raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.") from None
         else:
             self._get_name = pyobo.get_name
         super().__init__(*args, **kwargs)
 
-    def get_texts(self, identifiers: Sequence[str]) -> Sequence[Optional[str]]:
+    def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:
         """Get text for the given CURIEs.
 
         :param identifiers:
@@ -546,7 +551,7 @@ class PyOBOCache(TextCache):
         # requirement of PyOBO
         import bioregistry
 
-        res: List[Optional[str]] = []
+        res: list[str | None] = []
         for curie in identifiers:
             try:
                 prefix, identifier = curie.split(":", maxsplit=1)
@@ -588,7 +593,7 @@ class ShapeError(ValueError):
         super().__init__(f"shape {shape} does not match expected shape {reference}")
 
     @classmethod
-    def verify(cls, shape: OneOrSequence[int], reference: Optional[OneOrSequence[int]]) -> Sequence[int]:
+    def verify(cls, shape: OneOrSequence[int], reference: OneOrSequence[int] | None) -> Sequence[int]:
         """
         Raise an exception if the shape does not match the reference.
 

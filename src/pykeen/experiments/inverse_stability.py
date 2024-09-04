@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Inverse Stability Workflow.
 
 This experiment investigates the differences between
@@ -8,7 +6,7 @@ This experiment investigates the differences between
 
 import itertools as itt
 import logging
-from typing import Optional, Type
+from typing import Optional
 
 import click
 import matplotlib.pyplot as plt
@@ -68,7 +66,7 @@ def run_inverse_stability_workflow(
         ),
     )
     dataset_name = dataset_instance.get_normalized_name()
-    model_cls: Type[Model] = model_resolver.lookup(model)
+    model_cls: type[Model] = model_resolver.lookup(model)
     model_name = model_cls.__name__.lower()
 
     dataset_dir = INVERSE_STABILITY / dataset_name

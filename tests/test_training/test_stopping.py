@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Test that training loops work correctly."""
 
 import unittest
-from typing import List, Optional
+from typing import Optional
 
 import torch
 from torch import optim
@@ -20,7 +18,7 @@ from tests.mocks import MockEvaluator
 class DummyTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop."""
 
-    def __init__(
+    def __init__(  # noqa:D107
         self,
         model: Model,
         triples_factory: TriplesFactory,
@@ -65,22 +63,18 @@ class TestTrainingEarlyStopping(unittest.TestCase):
     #: The window size used by the early stopper
     patience: int = 2
     #: The mock losses the mock evaluator will return
-    mock_losses: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0, 8.0]
+    mock_losses: list[float] = [10.0, 9.0, 8.0, 8.0, 8.0, 8.0]
     #: The (zeroed) index  - 1 at which stopping will occur
     stop_constant: int = 4
     #: The minimum improvement
     delta: float = 0.0
     #: The best results
-    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+    best_results: list[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
     def setUp(self):
         """Prepare for testing the early stopper."""
         # Set automatic_memory_optimization to false for tests
-        self.mock_evaluator = MockEvaluator(
-            key=None,
-            values=self.mock_losses,
-            automatic_memory_optimization=False,
-        )
+        self.mock_evaluator = MockEvaluator(key=None, values=self.mock_losses)
         self.triples_factory = Nations()
         self.model = FixedModel(triples_factory=self.triples_factory.training)
         self.stopper = EarlyStopper(

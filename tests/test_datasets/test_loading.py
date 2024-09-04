@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Test that datasets can be loaded."""
 
 import pathlib
@@ -55,7 +53,7 @@ class TestAnnotated(unittest.TestCase):
 class MockSingleTabbedDataset(SingleTabbedDataset):
     """Mock downloading a single file."""
 
-    def __init__(self, cache_root: str):
+    def __init__(self, cache_root: str):  # noqa:D107
         super().__init__(url=..., name=..., cache_root=cache_root)
 
     def _get_path(self) -> str:
@@ -65,7 +63,7 @@ class MockSingleTabbedDataset(SingleTabbedDataset):
 class MockTarFileSingleDataset(TarFileSingleDataset):
     """Mock downloading a tar.gz archive with a single file."""
 
-    def __init__(self, cache_root: str):
+    def __init__(self, cache_root: str):  # noqa:D107
         super().__init__(
             url=...,
             name=...,
@@ -80,7 +78,7 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
 class MockTarFileRemoteDataset(TarFileRemoteDataset):
     """Mock downloading a tar.gz archive with three pre-stratified files."""
 
-    def __init__(self, cache_root: str):
+    def __init__(self, cache_root: str):  # noqa:D107
         super().__init__(
             url=constants.RESOURCES.joinpath("nations.tar.gz").as_uri(),
             cache_root=cache_root,
@@ -96,7 +94,7 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
 class MockUnpackedRemoteDataset(UnpackedRemoteDataset):
     """Mock downloading three pre-stratified files."""
 
-    def __init__(self):
+    def __init__(self):  # noqa:D107
         super().__init__(
             training_url=NATIONS_TRAIN_PATH.as_uri(),
             testing_url=NATIONS_TEST_PATH.as_uri(),
@@ -107,7 +105,7 @@ class MockUnpackedRemoteDataset(UnpackedRemoteDataset):
 class MockZipFileRemoteDataset(PackedZipRemoteDataset):
     """Mock downloading a zip archive with three pre-stratified files."""
 
-    def __init__(self, cache_root: str):
+    def __init__(self, cache_root: str):  # noqa:D107
         super().__init__(
             url=constants.RESOURCES.joinpath("nations.zip").as_uri(),
             cache_root=cache_root,

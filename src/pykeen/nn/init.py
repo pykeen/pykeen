@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """Embedding weight initialization routines."""
 
 import functools
 import logging
 import math
-from typing import Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any, Optional, cast
 
 import numpy as np
 import torch
@@ -158,10 +157,13 @@ normal_norm_ = compose(
     functional.normalize,
     name="normal_norm_",
 )
-uniform_norm_p1_ = compose(
-    torch.nn.init.uniform_,
-    functools.partial(functional.normalize, p=1),
-    name="uniform_norm_p1_",
+uniform_norm_p1_: Initializer = cast(
+    Initializer,
+    compose(
+        torch.nn.init.uniform_,
+        functools.partial(functional.normalize, p=1),
+        name="uniform_norm_p1_",
+    ),
 )
 
 
@@ -270,12 +272,17 @@ class LabelBasedInitializer(PretrainedInitializer):
         from pykeen.models import ERMLPE
 
         dataset = get_dataset(dataset="nations")
+        entity_initializer = LabelBasedInitializer.from_triples_factory(
+            triples_factory=dataset.training,
+            encoder="transformer",
+        )
         model = ERMLPE(
-            embedding_dim=768,  # for BERT base
-            entity_initializer=LabelBasedInitializer.from_triples_factory(
-                triples_factory=dataset.training,
-                encoder="transformer",
-            ),
+            triples_factory=dataset.training,
+            embedding_dim=entity_initializer.tensor.shape[-1],  # 768 for BERT base
+            entity_initializer=entity_initializer,
+            # note: we explicitly need to provide a relation initializer here,
+            # since ERMLPE shares initializers between entities and relations by default
+            relation_initializer="uniform",
         )
     """
 

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
 import logging
 import pathlib
-from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
+from collections.abc import Iterable, Mapping, MutableMapping
+from typing import Any, ClassVar, Optional, TextIO, Union
 
 import numpy as np
 import pandas
@@ -24,10 +23,10 @@ logger = logging.getLogger(__name__)
 def create_matrix_of_literals(
     numeric_triples: np.array,
     entity_to_id: EntityMapping,
-) -> Tuple[np.ndarray, Dict[str, int]]:
+) -> tuple[np.ndarray, dict[str, int]]:
     """Create matrix of literals where each row corresponds to an entity and each column to a literal."""
     data_relations = np.unique(np.ndarray.flatten(numeric_triples[:, 1:2]))
-    data_rel_to_id: Dict[str, int] = {value: key for key, value in enumerate(data_relations)}
+    data_rel_to_id: dict[str, int] = {value: key for key, value in enumerate(data_relations)}
     # Prepare literal matrix, set every literal to zero, and afterwards fill in the corresponding value if available
     num_literals = np.zeros([len(entity_to_id), len(data_rel_to_id)], dtype=np.float32)
 
@@ -113,7 +112,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 
     @property
-    def literal_shape(self) -> Tuple[int, ...]:
+    def literal_shape(self) -> tuple[int, ...]:
         """Return the shape of the literals."""
         return self.numeric_literals.shape[1:]
 
@@ -126,7 +125,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[Dict[str, Any]] = None,
+        extra_metadata: Optional[dict[str, Any]] = None,
         keep_metadata: bool = True,
         create_inverse_triples: Optional[bool] = None,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
@@ -152,9 +151,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         pandas.DataFrame(
             data=self.literals_to_id.items(),
             columns=["label", "id"],
-        ).sort_values(
-            by="id"
-        ).set_index("id").to_csv(
+        ).sort_values(by="id").set_index("id").to_csv(
             path.joinpath(f"{self.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )

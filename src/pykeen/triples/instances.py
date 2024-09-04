@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from __future__ import annotations
 
 import math
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, Iterable, Iterator, List, NamedTuple, Optional, Tuple, TypeVar
+from collections.abc import Iterable, Iterator
+from typing import Callable, Generic, NamedTuple, Optional, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -27,9 +26,9 @@ __all__ = [
 # TODO: the same
 SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
-LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
-LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
-SLCWASampleType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+LCWASampleType = tuple[MappedTriples, torch.FloatTensor]
+LCWABatchType = tuple[MappedTriples, torch.FloatTensor]
+SLCWASampleType = tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
 class SLCWABatch(NamedTuple):
@@ -42,17 +41,17 @@ class SLCWABatch(NamedTuple):
     negatives: torch.LongTensor
 
     #: filtering masks for negative triples, shape: (batch_size, num_negatives_per_positive)
-    masks: Optional[torch.BoolTensor]
+    masks: torch.BoolTensor | None
 
 
 class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
     """Base class for training instances."""
 
     def __len__(self):  # noqa:D401
-        """The number of instances."""
+        """Get the number of instances."""
         raise NotImplementedError
 
-    def get_collator(self) -> Optional[Callable[[List[SampleType]], BatchType]]:
+    def get_collator(self) -> Callable[[list[SampleType]], BatchType] | None:
         """Get a collator."""
         return None
 
@@ -64,7 +63,7 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         num_entities: int,
         num_relations: int,
         **kwargs,
-    ) -> "Instances":
+    ) -> Instances:
         """Create instances from mapped triples.
 
         :param mapped_triples: shape: (num_triples, 3)
@@ -92,8 +91,8 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
         self,
         *,
         mapped_triples: MappedTriples,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
+        num_entities: int | None = None,
+        num_relations: int | None = None,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
     ):
@@ -146,7 +145,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
         return SLCWABatch(positives, negatives, mask_batch)
 
     # docstr-coverage: inherited
-    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatch]]:  # noqa: D102
+    def get_collator(self) -> Callable[[list[SLCWASampleType]], SLCWABatch] | None:  # noqa: D102
         return self.collate
 
     # docstr-coverage: inherited
@@ -176,8 +175,8 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         mapped_triples: MappedTriples,
         batch_size: int = 1,
         drop_last: bool = True,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
+        num_entities: int | None = None,
+        num_relations: int | None = None,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
     ):
@@ -210,7 +209,7 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
             num_relations=num_relations,
         )
 
-    def __getitem__(self, item: List[int]) -> SLCWABatch:
+    def __getitem__(self, item: list[int]) -> SLCWABatch:
         """Get a batch from the given list of positive triple IDs."""
         positive_batch = self.mapped_triples[item]
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
@@ -231,7 +230,7 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         return workload
 
     @abstractmethod
-    def iter_triple_ids(self) -> Iterable[List[int]]:
+    def iter_triple_ids(self) -> Iterable[list[int]]:
         """Iterate over batches of IDs of positive triples."""
         raise NotImplementedError
 
@@ -252,7 +251,7 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     """Random pre-batched training instances for the sLCWA training loop."""
 
     # docstr-coverage: inherited
-    def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
+    def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from data.BatchSampler(
             sampler=data.RandomSampler(data_source=self.split_workload(len(self.mapped_triples))),
             batch_size=self.batch_size,
@@ -276,7 +275,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
             mapped_triples=self.mapped_triples
         )
 
-    def subgraph_sample(self) -> List[int]:
+    def subgraph_sample(self) -> list[int]:
         """Sample one subgraph."""
         # initialize
         node_weights = self.degrees.detach().clone()
@@ -329,7 +328,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         return result
 
     # docstr-coverage: inherited
-    def iter_triple_ids(self) -> Iterable[List[int]]:  # noqa: D102
+    def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from (self.subgraph_sample() for _ in self.split_workload(n=len(self)))
 
 
@@ -352,7 +351,7 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
         *,
         num_entities: int,
         num_relations: int,
-        target: Optional[int] = None,
+        target: int | None = None,
         **kwargs,
     ) -> Instances:
         """

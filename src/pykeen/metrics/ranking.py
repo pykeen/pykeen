@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Ranking metrics.
 
@@ -84,9 +82,11 @@ density function of the standard Gaussian distribution to retrieve a *p*-value. 
 - :class:`pykeen.metrics.ranking.ZHitsAtK`
 - :class:`pykeen.metrics.ranking.ZInverseHarmonicMeanRank`
 """
+
 import math
 from abc import ABC, abstractmethod
-from typing import Callable, ClassVar, Collection, Iterable, NamedTuple, Optional, Tuple, Type, Union
+from collections.abc import Collection, Iterable
+from typing import Callable, ClassVar, NamedTuple, Optional, Union
 
 import numpy as np
 from class_resolver import ClassResolver, HintOrType
@@ -156,9 +156,9 @@ EPSILON = 1.0e-12
 
 def generate_ranks(
     num_candidates: np.ndarray,
-    prefix_shape: Tuple[int, ...] = tuple(),
+    prefix_shape: tuple[int, ...] = tuple(),
     seed: Union[None, int, np.random.Generator] = None,
-    dtype: Optional[Type[np.number]] = None,
+    dtype: Optional[type[np.number]] = None,
 ) -> np.ndarray:
     """
     Generate random ranks from a given array of the number of candidates for each ranking task.
@@ -185,7 +185,7 @@ def generate_num_candidates_and_ranks(
     num_ranks: int,
     max_num_candidates: int,
     seed: Optional[int] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Generate random number of candidates, and coherent ranks.
 
@@ -520,7 +520,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
     needs_candidates: ClassVar[bool] = True
 
     #: The rank-based metric class that this derived metric extends
-    base_cls: ClassVar[Optional[Type[RankBasedMetric]]] = None
+    base_cls: ClassVar[Optional[type[RankBasedMetric]]] = None
 
     def __init__(
         self,
@@ -1006,7 +1006,7 @@ class GeometricMeanRank(RankBasedMetric):
     @classmethod
     def _individual_expectation(
         cls, num_candidates: np.ndarray, weights: Optional[np.ndarray]
-    ) -> Tuple[bool, np.ndarray]:
+    ) -> tuple[bool, np.ndarray]:
         if weights is None:
             return True, cls._log_individual_expectation_no_weight(num_candidates=num_candidates)
         return False, cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)
@@ -1679,4 +1679,4 @@ rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_
 deriving from :class:`RankBasedMetric` via the :mod:`class_resolver`.
 """
 
-HITS_METRICS: Tuple[Type[RankBasedMetric], ...] = (HitsAtK, ZHitsAtK, AdjustedHitsAtK)
+HITS_METRICS: tuple[type[RankBasedMetric], ...] = (HitsAtK, ZHitsAtK, AdjustedHitsAtK)

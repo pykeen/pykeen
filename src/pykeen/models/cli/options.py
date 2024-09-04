@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Click options for building magical KGE model CLIs."""
 
 import click

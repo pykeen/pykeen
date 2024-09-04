@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Pseudo-Typed negative sampling."""
 
 import itertools
 import logging
-from typing import Tuple
 
 import torch
 
@@ -22,7 +19,7 @@ logger = logging.getLogger(__name__)
 def create_index(
     mapped_triples: MappedTriples,
     num_relations: int,
-) -> Tuple[torch.LongTensor, torch.LongTensor]:
+) -> tuple[torch.LongTensor, torch.LongTensor]:
     """
     Create an index for efficient vectorized pseudo-type negative sampling.
 

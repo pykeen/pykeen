@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """WordNet datasets."""
 
 import pathlib

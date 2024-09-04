@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Early stoppers.
 
 The following code will create a scenario in which training will stop

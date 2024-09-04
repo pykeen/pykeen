@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-
 """Test cases for PyKEEN."""
+
 import inspect
 import itertools
 import logging
@@ -12,20 +11,12 @@ import traceback
 import unittest
 from abc import ABC, abstractmethod
 from collections import ChainMap, Counter
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
     Callable,
     ClassVar,
-    Collection,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
     Optional,
-    Sequence,
-    Tuple,
-    Type,
     TypeVar,
     Union,
 )
@@ -146,7 +137,7 @@ class DatasetTestCase(unittest.TestCase):
     exp_num_triples_tolerance: ClassVar[Optional[int]] = None
 
     #: The dataset to test
-    dataset_cls: ClassVar[Type[LazyDataset]]
+    dataset_cls: ClassVar[type[LazyDataset]]
     #: The instantiated dataset
     dataset: LazyDataset
 
@@ -481,7 +472,7 @@ class InteractionTestCase(
 
     def _get_hrt(
         self,
-        *shapes: Tuple[int, ...],
+        *shapes: tuple[int, ...],
     ):
         shape_kwargs = dict(self.shape_kwargs)
         shape_kwargs.setdefault("d", self.dim)
@@ -501,7 +492,7 @@ class InteractionTestCase(
         )
         return unpack_singletons(*result)
 
-    def _check_scores(self, scores: torch.FloatTensor, exp_shape: Tuple[int, ...]):
+    def _check_scores(self, scores: torch.FloatTensor, exp_shape: tuple[int, ...]):
         """Check shape, dtype and gradients of scores."""
         assert torch.is_tensor(scores)
         assert scores.dtype == torch.float32
@@ -614,7 +605,7 @@ class InteractionTestCase(
         self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f"Slice scores had nan\n\t{scores}")
         self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f"Differences: {scores - scores_no_slice}")
 
-    def _get_test_shapes(self) -> Collection[Tuple[Tuple[int, ...], Tuple[int, ...], Tuple[int, ...]]]:
+    def _get_test_shapes(self) -> Collection[tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]]]:
         """Return a set of test shapes for (h, r, t)."""
         return (
             (  # single score
@@ -641,10 +632,10 @@ class InteractionTestCase(
 
     def _get_output_shape(
         self,
-        hs: Tuple[int, ...],
-        rs: Tuple[int, ...],
-        ts: Tuple[int, ...],
-    ) -> Tuple[int, ...]:
+        hs: tuple[int, ...],
+        rs: tuple[int, ...],
+        ts: tuple[int, ...],
+    ) -> tuple[int, ...]:
         components = []
         if self.instance.entity_shape:
             components.extend((hs, ts))
@@ -1064,7 +1055,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             torch.save(self.instance, os.path.join(temp_directory, "model.pickle"))
 
     def _test_score(
-        self, score: Callable, columns: Union[Sequence[int], slice], shape: Tuple[int, ...], **kwargs
+        self, score: Callable, columns: Union[Sequence[int], slice], shape: tuple[int, ...], **kwargs
     ) -> None:
         """Test score functions."""
         batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
@@ -1361,7 +1352,7 @@ Traceback
     def _check_constraints(self):
         """Check model constraints."""
 
-    def _test_score_equality(self, columns: Union[slice, List[int]], name: str) -> None:
+    def _test_score_equality(self, columns: Union[slice, list[int]], name: str) -> None:
         """Migration tests for non-ERModel models testing for consistent optimized score implementations."""
         if isinstance(self.instance, ERModel):
             raise SkipTest("ERModel fulfils this by design.")
@@ -1518,7 +1509,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         kwargs.update(dict(max_id=self.max_id))
         return kwargs
 
-    def _check_result(self, x: torch.FloatTensor, prefix_shape: Tuple[int, ...]):
+    def _check_result(self, x: torch.FloatTensor, prefix_shape: tuple[int, ...]):
         """Check the result."""
         # check type
         assert torch.is_tensor(x)
@@ -1635,7 +1626,7 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
         # TODO: separation message vs. entity dim?
         self.x_e = torch.rand(self.num_entities, self.message_dim)
 
-    def _test(self, weights: torch.FloatTensor, shape: Tuple[int, ...]):
+    def _test(self, weights: torch.FloatTensor, shape: tuple[int, ...]):
         """Perform common tests."""
         # check shape
         assert weights.shape == shape
@@ -1738,7 +1729,7 @@ class InitializerTestCase(unittest.TestCase):
     num_entities: ClassVar[int] = 33
 
     #: the shape of the tensor to initialize
-    shape: ClassVar[Tuple[int, ...]] = (3,)
+    shape: ClassVar[tuple[int, ...]] = (3,)
 
     #: to be initialized / set in subclass
     initializer: Initializer
@@ -1781,7 +1772,7 @@ class PredictBaseTestCase(unittest.TestCase):
     """Base test for prediction workflows."""
 
     batch_size: ClassVar[int] = 2
-    model_cls: ClassVar[Type[Model]]
+    model_cls: ClassVar[type[Model]]
     model_kwargs: ClassVar[Mapping[str, Any]]
 
     factory: TriplesFactory
@@ -1896,7 +1887,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     def _get_input(
         self,
         inverse: bool = False,
-    ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
+    ) -> tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
         # Get batch
         hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
 
@@ -1983,7 +1974,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     def _validate_result(
         self,
         result: MetricResults,
-        data: Dict[str, torch.Tensor],
+        data: dict[str, torch.Tensor],
     ):
         logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
 
@@ -2232,7 +2223,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_increasing(self):
         """Test correct increasing annotation."""
-        x, y = [
+        x, y = (
             self.instance(ranks=ranks, num_candidates=self.num_candidates)
             for ranks in [
                 # original ranks
@@ -2240,7 +2231,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
                 # better ranks
                 numpy.clip(self.ranks - 1, a_min=1, a_max=None),
             ]
-        ]
+        )
         if self.instance.increasing:
             self.assertLessEqual(x, y)
         else:
@@ -2440,10 +2431,8 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
         """Test data loader with multiple workers."""
         self.assertEqual(
             sum(
-                (
-                    batch.positives.shape[0]
-                    for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
-                )
+                batch.positives.shape[0]
+                for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
             ),
             self.factory.num_triples,
         )
@@ -2481,14 +2470,14 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
 
     def _test_combination(self, labels: bool):
         # generate random triples factories
-        left, right = [generation.generate_triples_factory(random_state=random_state) for random_state in (0, 1)]
+        left, right = (generation.generate_triples_factory(random_state=random_state) for random_state in (0, 1))
         # generate random alignment
         left_idx, right_idx = torch.stack([torch.arange(left.num_entities), torch.randperm(left.num_entities)])[
             : left.num_entities // 2
         ].numpy()
         # add label information if necessary
         if labels:
-            left, right = [self._add_labels(tf) for tf in (left, right)]
+            left, right = (self._add_labels(tf) for tf in (left, right))
             left_idx = [left.entity_id_to_label[i] for i in left_idx]
             right_idx = [right.entity_id_to_label[i] for i in right_idx]
         # prepare alignment data frame
@@ -2562,25 +2551,20 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
     #: The window size used by the early stopper
     patience: int = 2
     #: The mock losses the mock evaluator will return
-    mock_losses: List[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
+    mock_losses: list[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
     #: The (zeroed) index  - 1 at which stopping will occur
     stop_constant: int = 4
     #: The minimum improvement
     delta: float = 0.0
     #: The best results
-    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+    best_results: list[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
         nations = Nations()
         kwargs.update(
             dict(
-                evaluator=MockEvaluator(
-                    key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC),
-                    values=self.mock_losses,
-                    # Set automatic_memory_optimization to false for tests
-                    automatic_memory_optimization=False,
-                ),
+                evaluator=MockEvaluator(key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC), values=self.mock_losses),
                 model=FixedModel(triples_factory=nations.training),
                 training_triples_factory=nations.training,
                 evaluation_triples_factory=nations.validation,
@@ -2650,13 +2634,13 @@ class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinati
 
     input_dims: Sequence[Sequence[int]] = [[5, 7], [5, 7, 11]]
 
-    def _iter_input_shapes(self) -> Iterable[Sequence[Tuple[int, ...]]]:
+    def _iter_input_shapes(self) -> Iterable[Sequence[tuple[int, ...]]]:
         """Iterate over test input shapes."""
         for prefix_shape in [tuple(), (2,), (2, 3)]:
             for input_dims in self.input_dims:
                 yield [prefix_shape + (input_dim,) for input_dim in input_dims]
 
-    def _create_input(self, input_shapes: Sequence[Tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
+    def _create_input(self, input_shapes: Sequence[tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
         return [torch.empty(size=size) for size in input_shapes]
 
     def test_inputs(self):

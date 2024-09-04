@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of the ComplEx model."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar, Optional
 
 import torch
 from class_resolver.api import HintOrType
@@ -39,7 +38,7 @@ class ComplEx(ERModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
+    loss_default: ClassVar[type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
     #: The LP settings used by [trouillon2016]_ for ComplEx.

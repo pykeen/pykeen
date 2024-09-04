@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
-#
-# Configuration file for the Sphinx documentation builder.
-#
-# This file does only contain a selection of the most common options. For a
-# full list see the documentation:
-# http://www.sphinx-doc.org/en/master/config
+"""Configuration file for the Sphinx documentation builder.
 
-# -- Path setup --------------------------------------------------------------
+This file does only contain a selection of the most common options. For a
+full list see the documentation:
+http://www.sphinx-doc.org/en/master/config
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
+-- Path setup --------------------------------------------------------------
+
+If extensions (or modules to document with autodoc) are in another directory,
+add these directories to sys.path here. If the directory is relative to the
+documentation root, use os.path.abspath to make it absolute, like shown here.
+"""
 
 import os
 import re
@@ -56,13 +54,13 @@ release = "1.10.3-dev"
 
 # The short X.Y version.
 parsed_version = re.match(
-    "(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(?P<build>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?",
+    r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(?P<build>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?",
     release,
 )
-version = parsed_version.expand("\g<major>.\g<minor>.\g<patch>")
+version = parsed_version.expand(r"\g<major>.\g<minor>.\g<patch>")
 
 if parsed_version.group("release"):
-    tags.add("prerelease")
+    tags.add("prerelease")  # noqa:F821
 
 # -- General configuration ---------------------------------------------------
 
@@ -88,7 +86,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
-    "sphinx_autodoc_typehints",
+    # "sphinx_autodoc_typehints",
     "sphinx_click.ext",
     "sphinx_automodapi.automodapi",
     "texext",
@@ -255,21 +253,18 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "torch": ("https://pytorch.org/docs/stable", None),
     "torchvision": ("https://pytorch.org/vision/stable", None),
-    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest/", None),
+    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "optuna": ("https://optuna.readthedocs.io/en/latest", None),
-    "pybel": ("https://pybel.readthedocs.io/en/latest/", None),
-    "pyobo": ("https://pyobo.readthedocs.io/en/stable/", None),
-    "class_resolver": ("https://class-resolver.readthedocs.io/en/latest/", None),
-    "rexmex": ("https://rexmex.readthedocs.io/en/latest/", None),
-    "bio2bel": ("https://bio2bel.readthedocs.io/en/latest/", None),
-    "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest/", None),
+    "pybel": ("https://pybel.readthedocs.io/en/latest", None),
+    "pyobo": ("https://pyobo.readthedocs.io/en/stable", None),
+    "class_resolver": ("https://class-resolver.readthedocs.io/en/latest", None),
+    "bio2bel": ("https://bio2bel.readthedocs.io/en/latest", None),
+    "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
-    # See discussion for adding huggingface intersphinx docs at
-    # https://github.com/huggingface/transformers/issues/14728#issuecomment-1133521776
-    "datasets": ("https://huggingface.co/docs/datasets/master/en/", None),
-    "transformers": ("https://huggingface.co/docs/transformers/master/en/", None),
+    "datasets": ("https://huggingface.co/docs/datasets/main/en", None),
+    "transformers": ("https://huggingface.co/docs/transformers/main/en", None),
 }
 
 autoclass_content = "both"

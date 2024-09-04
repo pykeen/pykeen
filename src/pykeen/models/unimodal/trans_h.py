@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """An implementation of TransH."""
 
 import itertools
-from typing import Any, ClassVar, Mapping, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn import functional, init
@@ -60,7 +59,7 @@ class TransH(ERModel):
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default: ClassVar[Type[Regularizer]] = NormLimitRegularizer
+    regularizer_default: ClassVar[type[Regularizer]] = NormLimitRegularizer
     #: The settings used by [wang2014]_ for TransH
     # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
     # Therefore, apply_only_once is always set to True.
@@ -68,7 +67,7 @@ class TransH(ERModel):
         weight=0.05, apply_only_once=True, dim=-1, p=2, power_norm=True, max_norm=1.0
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    relation_regularizer_default: ClassVar[Type[Regularizer]] = OrthogonalityRegularizer
+    relation_regularizer_default: ClassVar[type[Regularizer]] = OrthogonalityRegularizer
     #: The settings used by [wang2014]_ for TransH
     relation_regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.05, apply_only_once=True, epsilon=1e-5

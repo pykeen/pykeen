@@ -20,6 +20,7 @@ PyKEEN
    tutorial/representations
    tutorial/node_piece
    tutorial/inductive_lp
+   tutorial/splitting
    contrib/lightning
    tutorial/using_resolvers
    tutorial/troubleshooting
@@ -64,6 +65,7 @@ PyKEEN
    reference/uncertainty
    reference/sealant
    reference/constants
+   reference/checkpoints
    reference/nn/index
    reference/utils
 

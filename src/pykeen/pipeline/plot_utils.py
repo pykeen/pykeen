@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Plotting utilities for the pipeline results."""
 
 import logging
-from typing import Callable, Mapping, Optional, Set
+from collections.abc import Mapping
+from typing import Callable, Optional
 
 from ..losses import loss_resolver
 from ..models.nbase import ERModel
@@ -90,8 +89,8 @@ def plot_er(  # noqa: C901
     pipeline_result,
     *,
     model: Optional[str] = None,
-    entities: Optional[Set[str]] = None,
-    relations: Optional[Set[str]] = None,
+    entities: Optional[set[str]] = None,
+    relations: Optional[set[str]] = None,
     apply_limits: bool = True,
     margin: float = 0.4,
     plot_entities: bool = True,

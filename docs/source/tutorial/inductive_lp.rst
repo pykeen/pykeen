@@ -1,3 +1,5 @@
+.. _inductive_lp:
+
 Inductive Link Prediction
 =========================
 
@@ -204,7 +206,7 @@ in the sLCWA mode with 32 negative samples per positive, with NSSALoss, and Samp
     from pykeen.training import SLCWATrainingLoop
     from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator
     from pykeen.stoppers import EarlyStopper
-
+    from pykeen.losses import NSSALoss
     from torch.optim import Adam
 
     dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
@@ -225,7 +227,7 @@ in the sLCWA mode with 32 negative samples per positive, with NSSALoss, and Samp
         triples_factory=dataset.transductive_training,  # training triples
         model=model,
         optimizer=optimizer,
-        negative_sampler_kwargs=dict(num_negs_per_pos=32)
+        negative_sampler_kwargs=dict(num_negs_per_pos=32),
         mode="training",   # necessary to specify for the inductive mode - training has its own set of nodes
     )
 

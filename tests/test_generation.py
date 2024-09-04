@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """Tests for generating triples."""
 
 import unittest
-from typing import Set
 
 from pykeen.triples.generation import generate_triples, generate_triples_factory
 from pykeen.triples.utils import get_entities, get_relations
@@ -16,7 +13,7 @@ class TestGenerate(unittest.TestCase):
     num_relations: int = 7
     num_triples: int = 101
 
-    def assert_consecutive(self, x: Set[int], msg=None):
+    def assert_consecutive(self, x: set[int], msg=None):
         """Assert that all of the things in the collection are consecutive integers."""
         self.assertEqual(set(range(len(x))), x, msg=msg)
 
