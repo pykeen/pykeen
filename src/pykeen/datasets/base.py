@@ -345,6 +345,12 @@ class Dataset(ExtraReprMixin):
     ) -> EagerDataset | Self:
         """Restrict a dataset to the given entities/relations.
 
+        Example::
+
+        >>> from pykeen.datasets import get_dataset
+        >>> full_dataset = get_dataset(dataset="nations")
+        >>> restricted_dataset = dataset.restrict(entities={"burma", "china", "india", "indonesia"})
+
         :param entities:
             The entities to keep (or discard, cf. `invert_entity_selection`).
             `None` corresponds to selecting all entities (but is handled more efficiently).
