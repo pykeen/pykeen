@@ -82,7 +82,7 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> tup
 
 def merge_label_to_id_mapping(
     *pairs: tuple[str, Mapping[str, int]],
-    offsets: LongTensor | None = None,
+    offsets: Optional[LongTensor] = None,
     mappings: Optional[Sequence[Mapping[int, int]]] = None,
     extra: Optional[Mapping[str, int]] = None,
 ) -> dict[str, int]:
