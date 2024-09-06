@@ -370,6 +370,10 @@ class Dataset(ExtraReprMixin):
             This is different to :meth:`pykeen.triples.triples_factory.CoreTriplesFactory.new_with_restriction`
             as it does modify the label to id mapping.
         """
+        # early termination for simple case
+        if entities is None and relations is None:
+            return self
+
         # restrict triples factories (without modifying the entity to id mapping)
         training = self.training.new_with_restriction(
             entities=entities,
