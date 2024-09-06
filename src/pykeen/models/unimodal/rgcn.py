@@ -14,7 +14,7 @@ from ...nn.representation import Representation
 from ...nn.weighting import EdgeWeighting
 from ...regularizers import Regularizer
 from ...triples import CoreTriplesFactory
-from ...typing import Initializer, RelationRepresentation, FloatTensor
+from ...typing import FloatTensor, Initializer, RelationRepresentation
 
 __all__ = [
     "RGCN",

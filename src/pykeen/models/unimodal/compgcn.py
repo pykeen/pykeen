@@ -9,7 +9,7 @@ from ..nbase import ERModel
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.representation import CombinedCompGCNRepresentations
 from ...triples import CoreTriplesFactory
-from ...typing import RelationRepresentation, FloatTensor
+from ...typing import FloatTensor, RelationRepresentation
 
 __all__ = [
     "CompGCN",

@@ -1,7 +1,7 @@
 """Compute kernels for common sub-tasks."""
 
-from ..utils import einsum
 from ..typing import FloatTensor
+from ..utils import einsum
 
 __all__ = [
     "batched_dot",

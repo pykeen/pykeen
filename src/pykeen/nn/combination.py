@@ -10,8 +10,8 @@ from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
-from ..utils import ExtraReprMixin, combine_complex, split_complex
 from ..typing import FloatTensor
+from ..utils import ExtraReprMixin, combine_complex, split_complex
 
 __all__ = [
     "Combination",

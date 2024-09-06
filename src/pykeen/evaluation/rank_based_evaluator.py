@@ -14,7 +14,6 @@ from typing import (
     Callable,
     NamedTuple,
     TypeVar,
-    cast,
 )
 
 import numpy as np

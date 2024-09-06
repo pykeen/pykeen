@@ -3,6 +3,7 @@
 from typing import Optional, Union
 
 from torch import nn
+
 from ..typing import FloatTensor
 
 __all__ = [

@@ -17,8 +17,8 @@ from .representation import LowRankRepresentation, Representation
 from .utils import ShapeError, adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
-from ..utils import ExtraReprMixin, einsum
 from ..typing import FloatTensor, LongTensor
+from ..utils import ExtraReprMixin, einsum
 
 __all__ = [
     "RGCNRepresentation",
