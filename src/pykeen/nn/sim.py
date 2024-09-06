@@ -8,6 +8,7 @@ import torch
 from .compute_kernel import batched_dot
 from ..typing import GaussianDistribution
 from ..utils import at_least_eps, calculate_broadcasted_elementwise_result_shape, tensor_sum
+from ...typing import FloatTensor
 
 __all__ = [
     "expected_likelihood",
@@ -22,7 +23,7 @@ def expected_likelihood(
     r: GaussianDistribution,
     t: GaussianDistribution,
     exact: bool = True,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Compute the similarity based on expected likelihood.
 
     .. math::
@@ -74,7 +75,7 @@ def kullback_leibler_similarity(
     r: GaussianDistribution,
     t: GaussianDistribution,
     exact: bool = True,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Compute the negative KL divergence.
 
     This is done between two Gaussian distributions given by mean `mu_*` and diagonal covariance matrix `sigma_*`.
@@ -122,7 +123,7 @@ def _vectorized_kl_divergence(
     r: GaussianDistribution,
     t: GaussianDistribution,
     exact: bool = True,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Vectorized implementation of KL-divergence.
 
     Computes the divergence between :math:`\mathcal{N}(\mu_e, \Sigma_e)` and :math:`\mathcal{N}(\mu_r, \Sigma_r)`
@@ -207,7 +208,7 @@ def _torch_kl_similarity(
     h: GaussianDistribution,
     r: GaussianDistribution,
     t: GaussianDistribution,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Compute KL similarity using torch.distributions.
 
     :param h: shape: (batch_size, num_heads, 1, 1, d)

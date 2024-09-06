@@ -11,6 +11,7 @@ from class_resolver.contrib.torch import activation_resolver, aggregation_resolv
 from torch import nn
 
 from ..utils import ExtraReprMixin, combine_complex, split_complex
+from ..typing import FloatTensor
 
 __all__ = [
     "Combination",
@@ -29,7 +30,7 @@ class Combination(nn.Module, ExtraReprMixin, ABC):
     """Base class for combinations."""
 
     @abstractmethod
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:
         """
         Combine a sequence of individual representations.
 
@@ -72,7 +73,7 @@ class ConcatCombination(Combination):
         self.dim = dim
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return torch.cat(xs, dim=self.dim)
 
     # docstr-coverage: inherited
@@ -123,7 +124,7 @@ class ConcatProjectionCombination(ConcatCombination):
         )
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return self.projection(super().forward(xs))
 
 
@@ -132,7 +133,7 @@ class ConcatAggregationCombination(ConcatCombination):
 
     def __init__(
         self,
-        aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+        aggregation: Hint[Callable[[FloatTensor], FloatTensor]] = None,
         dim: int = -1,
     ) -> None:
         """
@@ -148,7 +149,7 @@ class ConcatAggregationCombination(ConcatCombination):
         self.aggregation = aggregation_resolver.make(aggregation)
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return self.aggregation(super().forward(xs=xs), dim=self.dim)
 
     # docstr-coverage: inherited
@@ -191,7 +192,7 @@ class ComplexSeparatedCombination(Combination):
         self.imag_combination = combination_resolver.make(imag_combination, imag_combination_kwargs)
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         if not any(x.is_complex() for x in xs):
             raise ValueError(
                 f"{self.__class__} is a combination for complex representations, but none of the inputs was of "
@@ -302,7 +303,7 @@ class GatedCombination(Combination):
         )
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         assert len(xs) == 2
         z = self.gate(xs)
         h = self.combination(xs)
