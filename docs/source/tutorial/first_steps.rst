@@ -31,14 +31,14 @@ We can map a triples factory's entities to identifiers using
 example:
 
 .. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
-    :lines: 6-13,40-41
+    :lines: 4-11,38-39
 
 Similarly, we can map a triples factory's relations to identifiers
 using :data:`TriplesFactory.relations_to_ids` like in the following
 example:
 
 .. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
-    :lines: 42
+    :lines: 40
 
 .. warning::
 

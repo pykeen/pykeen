@@ -1,7 +1,5 @@
 """Mapping Entity and Relation Identifiers to their Names."""
 
-# do not complain about prints in this file
-# ruff: noqa: T201
 # %%
 import torch
 
