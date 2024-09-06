@@ -27,7 +27,7 @@ from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, InductiveMode, MappedTriples, Target
 from ..utils import (
     FloatTensor,
     LongTensor,

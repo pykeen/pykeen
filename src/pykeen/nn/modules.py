@@ -23,7 +23,7 @@ import torch
 from class_resolver import ClassResolver, Hint, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
-from torch import FloatTensor, nn
+from torch import nn
 from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
