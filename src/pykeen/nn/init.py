@@ -306,7 +306,8 @@ class LabelBasedInitializer(PretrainedInitializer):
             the (maximum) batch size to use while encoding. If None, use `len(labels)`, i.e., only a single batch.
         """
         super().__init__(
-            tensor=text_encoder_resolver.make(encoder, encoder_kwargs).encode_all(
+            tensor=text_encoder_resolver.make(encoder, encoder_kwargs)
+            .encode_all(
                 labels=labels,
                 batch_size=batch_size,
             )

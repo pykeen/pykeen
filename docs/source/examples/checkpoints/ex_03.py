@@ -1,4 +1,5 @@
 """Write a checkpoint avery 5 epochs, but also at epoch 7."""
+
 from pykeen.pipeline import pipeline
 
 result = pipeline(
@@ -10,10 +11,7 @@ result = pipeline(
         callbacks_kwargs=dict(
             schedule="union",
             # create checkpoints every 5 epochs, and at epoch 7
-            schedule_kwargs=dict(
-                bases=["every", "explicit"],
-                bases_kwargs=[dict(frequency=5), dict(steps=[7])]
-            ),
-        )
+            schedule_kwargs=dict(bases=["every", "explicit"], bases_kwargs=[dict(frequency=5), dict(steps=[7])]),
+        ),
     ),
 )

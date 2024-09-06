@@ -1,4 +1,5 @@
 """Write a checkpoint every 10 steps and keep them all."""
+
 from pykeen.pipeline import pipeline
 
 result = pipeline(
@@ -13,6 +14,6 @@ result = pipeline(
             schedule_kwargs=dict(
                 frequency=10,
             ),
-        )
+        ),
     ),
 )
