@@ -43,7 +43,7 @@ def test_trivial(dataset: Dataset) -> None:
 @pytest.fixture()
 def rng() -> random.Random:
     """Fixture for random seed."""
-    return random.Random(x=42)
+    return random.Random(x=42)  # noqa: S311
 
 
 class PartialCase(NamedTuple):
