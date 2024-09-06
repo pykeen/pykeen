@@ -270,7 +270,7 @@ import math
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import Optional, Union, cast
+from typing import Optional, Union
 
 import numpy
 import pandas
@@ -580,7 +580,7 @@ def _get_input_batch(
             f"Exactly one of {{head, relation, tail}} must be None, but got {head}, {relation}, {tail}",
         )
 
-    batch = cast(LongTensor, torch.as_tensor([batch_ids], dtype=torch.long))
+    batch = torch.as_tensor([batch_ids], dtype=torch.long)
     return target, batch, (batch_ids[0], batch_ids[1])
 
 
