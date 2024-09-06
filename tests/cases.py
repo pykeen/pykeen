@@ -11,7 +11,7 @@ import traceback
 import unittest
 from abc import ABC, abstractmethod
 from collections import ChainMap, Counter
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Collection, Iterable, Iterator, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
     Callable,
@@ -46,6 +46,7 @@ import pykeen.nn.representation
 import pykeen.nn.text
 import pykeen.nn.weighting
 import pykeen.predict
+from pykeen.checkpoints import CheckpointKeeper, CheckpointSchedule
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
@@ -2731,3 +2732,40 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
     def check(self):
         """Perform additional verification."""
         pass
+
+
+class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule]):
+    """Generic tests for checkpoint schedules."""
+
+    def test_call(self) -> None:
+        """Smoke-test for calling."""
+        for step in self.iter_steps():
+            _result = self.instance(step=step)
+
+    def iter_steps(self) -> Iterator[int]:
+        """Iterate over steps."""
+        yield from range(20)
+
+
+class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
+    """Generic tests for checkpoint keepers."""
+
+    def test_call(self) -> None:
+        """Test calling."""
+        for steps in self.iter_steps():
+            steps_copy = [s for s in steps]
+            kept = list(self.instance(steps=steps))
+            # check for unique values
+            assert len(kept) == len(set(kept))
+            # check for subset property
+            assert set(kept).issubset(steps_copy)
+            # maybe additional checks
+            self.check_result(steps=steps_copy, kept=kept)
+
+    def check_result(self, steps: list[int], kept: list[int]) -> None:
+        """Check result."""
+
+    def iter_steps(self) -> Iterator[list[int]]:
+        """Iterate over steps."""
+        yield list(range(10))
+        yield list(range(20))
