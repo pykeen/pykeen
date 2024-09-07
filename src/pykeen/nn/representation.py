@@ -1512,45 +1512,7 @@ class PartitionRepresentation(Representation):
 class BackfillRepresentation(PartitionRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
 
-    Similarly to the :class:`PartitionRepresentation` representation example, we start by
-    creating the representation for those entities where we have labels:
-
-    >>> from pykeen.nn import Embedding, init
-    >>> num_entities = 5
-    >>> labels = {1: "a first description", 4: "a second description"}
-    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
-    >>> shape = label_initializer.tensor.shape[1:]
-    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
-
-    Next, we directly create representations for the remaining ones using the backfill representation.
-    To do this, we need to create an iterable (e.g., a set) of all of the entity IDs that are in the base
-    representation. Then, the assignments to the base representation and an auxillary representation are
-    automatically generated for the base class
-
-    >>> from pykeen.nn import BackfillRepresentation
-    >>> entity_repr = BackfillRepresentation(base_ids=set(labels), max_id=num_entities, base=label_repr)
-
-    For brevity, we use here randomly generated triples factories instead of the actual data
-
-    >>> from pykeen.triples.generation import generate_triples_factory
-    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
-    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
-
-    The combined representation can now be used as any other representation, e.g., to train a model with
-    :class:`pykeen.nn.modules.DistMultInteraction` interaction:
-
-    >>> from pykeen.pipeline import pipeline
-    >>> from pykeen.models import ERModel
-    >>> pipeline(
-    ...     model=ERModel,
-    ...     interaction="distmult",
-    ...     model_kwargs=dict(
-    ...         entity_representation=entity_repr,
-    ...         relation_representation_kwargs=dict(shape=shape),
-    ...     ),
-    ...     training=training,
-    ...     testing=testing,
-    ... )
+    .. literalinclude:: ../examples/nn/representation/backfill.py
 
     ---
     name: Backfill
