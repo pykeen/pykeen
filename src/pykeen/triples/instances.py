@@ -10,7 +10,7 @@ from typing import Callable, Generic, NamedTuple, Optional, TypeVar
 import numpy as np
 import scipy.sparse
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch.utils import data
 
 from .utils import compute_compressed_adjacency_list
@@ -29,6 +29,20 @@ BatchType = TypeVar("BatchType")
 LCWASampleType = tuple[MappedTriples, torch.FloatTensor]
 LCWABatchType = tuple[MappedTriples, torch.FloatTensor]
 SLCWASampleType = tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+
+
+class InstanceWeighting:
+    def calculate_weights(self, mapped_triples: MappedTriples) -> torch.FloatTensor:
+        raise NotImplementedError
+
+
+class RelationBalancedInstanceWeighting(InstanceWeighting):
+    def calculate_weights(self, mapped_triples: MappedTriples) -> torch.FloatTensor:
+        inverse, counts = mapped_triples[:, 1].unique(return_inverse=True, return_counts=True)[1:]
+        return counts.reciprocal()[inverse]
+
+
+instance_weighting_resolver = ClassResolver.from_subclasses(InstanceWeighting)
 
 
 class SLCWABatch(NamedTuple):

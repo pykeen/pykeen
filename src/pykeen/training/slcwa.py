@@ -55,6 +55,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             dataset=triples_factory.create_slcwa_instances(
                 batch_size=batch_size,
                 shuffle=kwargs.pop("shuffle", True),
+                instance_weighting="test",
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
@@ -81,6 +82,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         stop: Optional[int],
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
+        relation_weights: dict = None,
     ) -> torch.FloatTensor:
         # Slicing is not possible in sLCWA training loops
         if slice_size is not None:
@@ -101,12 +103,24 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         negative_batch = negative_batch.view(-1, 3)
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
-        # BasicNegativeSampler, BernoulliNegativeSampler
+        # BasicNegativeSampler, BernoulliNegativeSampler)
         negative_batch = negative_batch.to(model.device)
 
         # Compute negative and positive scores
         positive_scores = model.score_hrt(positive_batch, mode=mode)
         negative_scores = model.score_hrt(negative_batch, mode=mode).view(*negative_score_shape)
+
+        # Compute the weights the both the positive and negative triples
+        if loss.reweight_triples:
+            pos_triple_weights = torch.stack(
+                [relation_weights[x] for x in list(positive_batch[:, 1].cpu().numpy())]
+            ).to(model.device)
+            neg_triple_weights = torch.stack(
+                [relation_weights[x] for x in list(negative_batch[:, 1].cpu().numpy())]
+            ).to(model.device)
+        else:
+            pos_triple_weights = None
+            neg_triple_weights = None
 
         return (
             loss.process_slcwa_scores(
@@ -115,6 +129,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
                 label_smoothing=label_smoothing,
                 batch_filter=positive_filter,
                 num_entities=model._get_entity_len(mode=mode),
+                pos_triple_weights=pos_triple_weights,
+                neg_triple_weights=neg_triple_weights,
             )
             + model.collect_regularization_term()
         )
@@ -137,6 +153,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             stop=stop,
             label_smoothing=label_smoothing,
             slice_size=slice_size,
+            relation_weights=self.relation_weights,
         )
 
     # docstr-coverage: inherited

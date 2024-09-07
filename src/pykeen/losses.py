@@ -270,15 +270,18 @@ class Loss(_Loss):
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, reduction: str = "mean"):
+    def __init__(self, reduction: str = "mean", reweight_triples: bool = False):
         """
         Initialize the loss.
 
         :param reduction:
             the reduction, cf. `_Loss.__init__`
+        :param reweight_triples:
+            Parameter to enable the reweighting of triple loss values.
         """
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
+        self.reweight_triples = reweight_triples
 
     def process_slcwa_scores(
         self,
@@ -287,6 +290,8 @@ class Loss(_Loss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
         num_entities: Optional[int] = None,
+        pos_triple_weights: Optional[torch.FloatTensor] = None,
+        neg_triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """
         Process scores from sLCWA training loop.
@@ -303,6 +308,10 @@ class Loss(_Loss):
             pre-filtered.
         :param num_entities:
             The number of entities. Only required if label smoothing is enabled.
+        :param pos_triple_weights: (num_pos_triples, 1)
+            The weights for the positive triples.
+        :param neg_triple_weights: (num_neg_triples, 1)
+            The weights for the negative triples.
 
         :return:
             A scalar loss term.
@@ -320,7 +329,10 @@ class Loss(_Loss):
             num_classes=num_entities,
         )
 
-        return self(predictions, labels)
+        if self.reweight_triples:
+            return self(predictions, labels, pos_triple_weights, neg_triple_weights)
+        else:
+            return self(predictions, labels)
 
     def process_lcwa_scores(
         self,
@@ -415,8 +427,15 @@ class BCEWithLogitsLoss(PointwiseLoss):
         self,
         scores: torch.FloatTensor,
         labels: torch.FloatTensor,
+        pos_triple_weights: Optional[torch.FloatTensor] = None,
+        neg_triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
+        loss = functional.binary_cross_entropy_with_logits(scores, labels, reduction="none")
+
+        if pos_triple_weights is not None and neg_triple_weights is not None:
+            triple_weights = torch.cat([pos_triple_weights, neg_triple_weights], dim=0)
+            loss = loss * triple_weights
+        return self._reduction_method(loss)
 
 
 @parse_docdata
@@ -467,6 +486,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         margin: float = 1.0,
         margin_activation: Hint[nn.Module] = None,
         reduction: str = "mean",
+        reweight_triples: bool = False,
     ):
         r"""Initialize the margin loss instance.
 
@@ -483,6 +503,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         super().__init__(reduction=reduction)
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
+        self.reweight_triples = reweight_triples
 
     # docstr-coverage: inherited
     def process_slcwa_scores(
@@ -492,6 +513,8 @@ class MarginPairwiseLoss(PairwiseLoss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
         num_entities: Optional[int] = None,
+        pos_triple_weights: Optional[torch.FloatTensor] = None,
+        neg_triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -503,7 +526,10 @@ class MarginPairwiseLoss(PairwiseLoss):
             positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
             # shape: (nnz,)
 
-        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+        if self.reweight_triples:
+            return self(pos_scores=positive_scores, neg_scores=negative_scores, pos_triple_weights=pos_triple_weights)
+        else:
+            return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
     # docstr-coverage: inherited
     def process_lcwa_scores(
@@ -540,6 +566,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
+        pos_triple_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """
         Compute the margin loss.
@@ -554,11 +581,14 @@ class MarginPairwiseLoss(PairwiseLoss):
         :return:
             A scalar loss term.
         """
-        return self._reduction_method(
-            self.margin_activation(
-                neg_scores - pos_scores + self.margin,
-            )
+
+        loss = self.margin_activation(
+            neg_scores - pos_scores + self.margin,
         )
+        if pos_triple_weights is not None:
+            loss = loss * pos_triple_weights.unsqueeze(dim=1)
+
+        return self._reduction_method(loss)
 
 
 @parse_docdata
@@ -593,7 +623,12 @@ class MarginRankingLoss(MarginPairwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+    def __init__(
+        self,
+        margin: float = 1.0,
+        reduction: str = "mean",
+        reweight_triples: bool = False,
+    ):
         r"""Initialize the margin loss instance.
 
         :param margin:
@@ -602,7 +637,9 @@ class MarginRankingLoss(MarginPairwiseLoss):
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
         """
-        super().__init__(margin=margin, margin_activation="relu", reduction=reduction)
+        super().__init__(
+            margin=margin, margin_activation="relu", reduction=reduction, reweight_triples=reweight_triples
+        )
 
 
 @parse_docdata
