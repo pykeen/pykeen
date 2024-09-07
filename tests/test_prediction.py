@@ -117,7 +117,7 @@ def test_consume_scores(num_entities: int, num_relations: int):
     """Test for consume_scores."""
     dataset = pykeen.predict.AllPredictionDataset(num_entities=num_entities, num_relations=num_relations)
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations)
     )
     consumer = pykeen.predict.CountScoreConsumer()
     pykeen.predict.consume_scores(model, dataset, consumer)
@@ -130,7 +130,7 @@ def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, Optional[i
     # use a small model, since operation is expensive
     num_entities, num_relations = 3, 2
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations)
     )
     # all scores, automatic batch size
     yield model, None, pykeen.typing.LABEL_TAIL, None
@@ -144,7 +144,7 @@ def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, Optional[i
     yield model, 3, pykeen.typing.LABEL_RELATION, None
     # model with inverse relations
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=True)
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations)
     )
     yield model, None, pykeen.typing.LABEL_TAIL, None
 
@@ -171,16 +171,14 @@ def test_predict_all(model: pykeen.models.Model, k: Optional[int], target: pykee
     """Test the predict method."""
     pack = pykeen.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
     _check_score_pack(
-        pack=pack, model=model, num_triples=model.num_entities**2 * model.num_real_relations if k is None else k
+        pack=pack, model=model, num_triples=model.num_entities**2 * model.num_relations if k is None else k
     )
 
 
 def test_predict_top_k_consistency():
     """Test consistency of top-k scoring."""
     ks = [5, 10]
-    model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=3, num_relations=5, create_inverse_triples=False)
-    )
+    model = pykeen.models.mocks.FixedModel(triples_factory=KGInfo(num_entities=3, num_relations=5))
     dfs = [
         pykeen.predict.predict_all(model=model, k=k)
         .process()
@@ -214,7 +212,7 @@ def _iter_predict_triples_inputs() -> (
     # single labeled triple
     yield model, labeled_list[0], factory, None
     # model with inverse relations
-    dataset = Nations(create_inverse_triples=True)
+    dataset = Nations()
     factory = dataset.training
     model = pykeen.models.mocks.FixedModel(triples_factory=factory)
     yield model, factory.mapped_triples[:3], None, None

@@ -11,9 +11,8 @@ has some nice features:
 
     model = LitLCWAModule(
         dataset="fb15k237",
-        dataset_kwargs=dict(create_inverse_triples=True),
         model="mure",
-        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits"),
+        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits", create_inverse_triples=True),
         batch_size=128,
     )
     trainer = pytorch_lightning.Trainer(
@@ -324,9 +323,8 @@ def _main(
         training_loop=training_loop,
         training_loop_kwargs=dict(
             dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
             model=model,
-            model_kwargs=dict(embedding_dim=embedding_dim, loss=loss),
+            model_kwargs=dict(embedding_dim=embedding_dim, loss=loss, create_inverse_triples=create_inverse_triples),
             batch_size=batch_size,
         ),
         trainer_kwargs=dict(

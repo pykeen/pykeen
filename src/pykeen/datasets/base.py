@@ -89,7 +89,6 @@ class Dataset(ExtraReprMixin):
             and (self.training == __o.training)
             and (self.testing == __o.testing)
             and ((self.validation is None and __o.validation is None) or (self.validation == __o.validation))
-            and (self.create_inverse_triples == __o.create_inverse_triples)
         )
 
     @property
@@ -127,11 +126,6 @@ class Dataset(ExtraReprMixin):
         """The number of relations."""
         return self.training.num_relations
 
-    @property
-    def create_inverse_triples(self):
-        """Return whether inverse triples are created *for the training factory*."""
-        return self.training.create_inverse_triples
-
     @classmethod
     def docdata(cls, *parts: str) -> Any:
         """Get docdata for this class."""
@@ -164,7 +158,7 @@ class Dataset(ExtraReprMixin):
         n_triples = sum(count for *_, count in rows)
         rows.append(("Total", "-", "-", n_triples))
         t = tabulate(rows, headers=["Name", "Entities", "Relations", "Triples"])
-        rv = f"{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}"
+        rv = f"{title or self.__class__.__name__} ()\n{t}"
         if show_examples:
             if not isinstance(self.training, TriplesFactory):
                 raise AttributeError(f"{self.training.__class__} does not have labeling information.")
@@ -183,7 +177,6 @@ class Dataset(ExtraReprMixin):
         """Yield extra entries for the instance's string representation."""
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
-        yield f"create_inverse_triples={self.create_inverse_triples}"
 
     @classmethod
     def from_path(cls, path: str | pathlib.Path, ratios: list[float] | None = None) -> Dataset:
@@ -393,7 +386,6 @@ class PathDataset(LazyDataset):
         testing_path: str | pathlib.Path,
         validation_path: None | str | pathlib.Path,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the dataset.
@@ -402,7 +394,6 @@ class PathDataset(LazyDataset):
         :param testing_path: Path to the testing triples file or testing triples file.
         :param validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
@@ -410,7 +401,6 @@ class PathDataset(LazyDataset):
         self.testing_path = pathlib.Path(testing_path)
         self.validation_path = pathlib.Path(validation_path) if validation_path else None
 
-        self._create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
 
         if eager:
@@ -420,15 +410,12 @@ class PathDataset(LazyDataset):
     def _load(self) -> None:
         self._training = TriplesFactory.from_path(
             path=self.training_path,
-            create_inverse_triples=self._create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
         self._testing = TriplesFactory.from_path(
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
             load_triples_kwargs=self.load_triples_kwargs,
         )
 
@@ -443,8 +430,6 @@ class PathDataset(LazyDataset):
                 path=self.validation_path,
                 entity_to_id=self._training.entity_to_id,  # share entity index with training
                 relation_to_id=self._training.relation_to_id,  # share relation index with training
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
                 load_triples_kwargs=self.load_triples_kwargs,
             )
 
@@ -466,7 +451,6 @@ class UnpackedRemoteDataset(PathDataset):
         cache_root: str | None = None,
         force: bool = False,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
         download_kwargs: Mapping[str, Any] | None = None,
     ):
@@ -480,7 +464,6 @@ class UnpackedRemoteDataset(PathDataset):
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
@@ -511,7 +494,6 @@ class UnpackedRemoteDataset(PathDataset):
             testing_path=testing_path,
             validation_path=validation_path,
             eager=eager,
-            create_inverse_triples=create_inverse_triples,
             load_triples_kwargs=load_triples_kwargs,
         )
 
@@ -527,7 +509,6 @@ class RemoteDataset(PathDataset):
         relative_validation_path: str | pathlib.PurePath,
         cache_root: str | None = None,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         timeout=None,
     ):
         """Initialize dataset.
@@ -541,7 +522,6 @@ class RemoteDataset(PathDataset):
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param timeout: The timeout number of seconds for waiting to download the dataset. Defaults to 60.
         """
         self.cache_root = self._help_cache(cache_root)
@@ -558,7 +538,6 @@ class RemoteDataset(PathDataset):
             testing_path=testing_path,
             validation_path=validation_path,
             eager=eager,
-            create_inverse_triples=create_inverse_triples,
         )
 
     def _get_paths(self) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
@@ -619,7 +598,6 @@ class PackedZipRemoteDataset(LazyDataset):
         name: str | None = None,
         cache_root: str | None = None,
         eager: bool = False,
-        create_inverse_triples: bool = False,
     ):
         """Initialize dataset.
 
@@ -634,7 +612,6 @@ class PackedZipRemoteDataset(LazyDataset):
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
 
         :raises ValueError: if there's no URL specified and there is no data already at the calculated path
         """
@@ -651,7 +628,6 @@ class PackedZipRemoteDataset(LazyDataset):
         self.relative_training_path = pathlib.PurePath(relative_training_path)
         self.relative_testing_path = pathlib.PurePath(relative_testing_path)
         self.relative_validation_path = pathlib.PurePath(relative_validation_path)
-        self._create_inverse_triples = create_inverse_triples
         if eager:
             self._load()
             self._load_validation()
@@ -697,7 +673,6 @@ class PackedZipRemoteDataset(LazyDataset):
                 )
                 return TriplesFactory.from_labeled_triples(
                     triples=df.values,
-                    create_inverse_triples=self._create_inverse_triples,
                     metadata={"path": relative_path},
                     entity_to_id=entity_to_id,
                     relation_to_id=relation_to_id,
@@ -716,7 +691,6 @@ class CompressedSingleDataset(LazyDataset):
         name: str | None = None,
         cache_root: str | None = None,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         delimiter: str | None = None,
         random_state: TorchRandomHint = None,
         read_csv_kwargs: dict[str, Any] | None = None,
@@ -732,7 +706,6 @@ class CompressedSingleDataset(LazyDataset):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param delimiter:
@@ -745,7 +718,6 @@ class CompressedSingleDataset(LazyDataset):
         self.random_state = random_state
         self.delimiter = delimiter or "\t"
         self.url = url
-        self._create_inverse_triples = create_inverse_triples
         self._relative_path = pathlib.PurePosixPath(relative_path)
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", self.delimiter)
@@ -761,7 +733,6 @@ class CompressedSingleDataset(LazyDataset):
         tf_path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
-            create_inverse_triples=self._create_inverse_triples,
             metadata={"path": tf_path},
         )
         self._training, self._testing, self._validation = cast(
@@ -834,7 +805,6 @@ class TabbedDataset(LazyDataset):
         self,
         cache_root: str | None = None,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
     ):
         """Initialize dataset.
@@ -843,14 +813,12 @@ class TabbedDataset(LazyDataset):
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         """
         self.cache_root = self._help_cache(cache_root)
 
         self._triples_factory = None
         self.random_state = random_state
-        self._create_inverse_triples = create_inverse_triples
         self._training = None
         self._testing = None
         self._validation = None
@@ -869,7 +837,6 @@ class TabbedDataset(LazyDataset):
         path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
-            create_inverse_triples=self._create_inverse_triples,
             metadata=dict(path=path) if path else None,
         )
         self._training, self._testing, self._validation = cast(
@@ -899,7 +866,6 @@ class SingleTabbedDataset(TabbedDataset):
         name: str | None = None,
         cache_root: str | None = None,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
         download_kwargs: dict[str, Any] | None = None,
         read_csv_kwargs: dict[str, Any] | None = None,
@@ -914,7 +880,6 @@ class SingleTabbedDataset(TabbedDataset):
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param download_kwargs: Keyword arguments to pass through to :func:`pystow.utils.download`.
         :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
@@ -923,7 +888,6 @@ class SingleTabbedDataset(TabbedDataset):
         """
         super().__init__(
             cache_root=cache_root,
-            create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             eager=False,  # because it gets hooked below
         )
