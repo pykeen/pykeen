@@ -1476,7 +1476,7 @@ class PartitionRepresentation(Representation):
         super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
 
         # assign modules / buffers *after* super init
-        self.bases = bases
+        self.bases = nn.ModuleList(bases)
         self.register_buffer(name="assignment", tensor=assignment)
 
     # docstr-coverage: inherited
