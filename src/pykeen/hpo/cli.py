@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 """A command line interface for hyper-parameter optimization in PyKEEN."""
 
 import sys

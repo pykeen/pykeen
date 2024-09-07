@@ -318,7 +318,7 @@ def _main(
     embedding_dim: int,
     mixed_precision: bool,
     number_epochs: int,
-):
+) -> None:
     """Run PyTorch lightning model."""
     lit_pipeline(
         training_loop=training_loop,

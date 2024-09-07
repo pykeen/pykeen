@@ -380,7 +380,7 @@ def combine_complex(
     return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
-def fix_dataclass_init_docs(cls: type) -> type:
+def fix_dataclass_init_docs(cls: type[X]) -> type[X]:
     """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
 
     :param cls: The class whose docstring needs fixing

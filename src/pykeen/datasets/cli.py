@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 """Run dataset CLI."""
 
 import itertools as itt

@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 """Run landmark experiments."""
 
 import logging
@@ -68,7 +70,7 @@ keep_seed_option = click.option(
 
 
 @click.group()
-def experiments():
+def experiments() -> None:
     """Run landmark experiments."""
 
 
@@ -93,7 +95,7 @@ def reproduce(
     discard_replicates: bool,
     extra_config: Optional[pathlib.Path],
     keep_seed: bool,
-):
+) -> None:
     """Reproduce a pre-defined experiment included in PyKEEN.
 
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
@@ -138,7 +140,7 @@ def run(
     discard_replicates: bool,
     extra_config: Optional[pathlib.Path],
     keep_seed: bool,
-):
+) -> None:
     """Run a single reproduction experiment."""
     _help_reproduce(
         path=path,
@@ -209,7 +211,7 @@ def _help_reproduce(
 @click.argument("path")
 @verbose_option
 @click.option("-d", "--directory", type=click.Path(file_okay=False, dir_okay=True))
-def optimize(path: str, directory: str):
+def optimize(path: str, directory: str) -> None:
     """Run a single HPO experiment."""
     from pykeen.hpo import hpo_pipeline_from_path
 
@@ -255,7 +257,7 @@ def ablation(
 
 
 @experiments.command()
-def validate():
+def validate() -> None:
     """Validate configurations."""
     from .validate import get_configuration_errors, iterate_config_paths
 
@@ -278,7 +280,7 @@ def _iter_configurations() -> Iterable[pathlib.Path]:
 
 
 @experiments.command()
-def list():
+def list() -> None:
     """List experiment configurations."""
     data = set()
     for path in tqdm(_iter_configurations(), unit="configuration", unit_scale=True, leave=False):

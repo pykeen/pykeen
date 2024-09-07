@@ -4,7 +4,10 @@ import os
 import sys
 from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import IPython.display
 
 __all__ = [
     "VERSION",
@@ -93,14 +96,14 @@ def env_table(tablefmt: str = "github", headers: tuple[str, str] = ("Key", "Valu
     return tabulate(rows, tablefmt=tablefmt, headers=headers)
 
 
-def env_html():
+def env_html() -> "IPython.display.HTML":
     """Output the environment table as HTML for usage in Jupyter."""
     from IPython.display import HTML
 
     return HTML(env_table(tablefmt="html"))
 
 
-def env(file=None):
+def env(file=None) -> Optional["IPython.display.HTML"]:
     """Print the env or output as HTML if in Jupyter.
 
     :param file: The file to print to if not in a Jupyter setting. Defaults to sys.stdout
@@ -114,7 +117,7 @@ def env(file=None):
 
 def _in_jupyter() -> bool:
     try:
-        get_ipython = sys.modules["IPython"].get_ipython  # type: ignore
+        get_ipython = sys.modules["IPython"].get_ipython
         if "IPKernelApp" not in get_ipython().config:
             raise ImportError("console")
         if "VSCODE_PID" in os.environ:

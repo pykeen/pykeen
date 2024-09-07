@@ -78,7 +78,7 @@ Normalizer = Mutation[torch.FloatTensor]
 Constrainer = Mutation[torch.FloatTensor]
 
 
-def cast_constrainer(f) -> Constrainer:
+def cast_constrainer(f: Callable) -> Constrainer:
     """Cast a constrainer function with :func:`typing.cast`."""
     return cast(Constrainer, f)
 
