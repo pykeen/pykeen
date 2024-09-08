@@ -13,11 +13,8 @@ file. Because all PyKEEN models inherit from :class:`torch.nn.Module`,
 we use the PyTorch mechanisms for saving and loading them. This means
 that you can use :func:`torch.load` to load a model like:
 
-.. code-block:: python
-
-    import torch
-
-    my_pykeen_model = torch.load('trained_model.pkl')
+.. literalinclude:: ../examples/first_steps/load_pretrained.py
+    :lines: 3-5
 
 More information on PyTorch's model persistence can be found at:
 https://pytorch.org/tutorials/beginner/saving_loading_models.html.
@@ -33,22 +30,15 @@ We can map a triples factory's entities to identifiers using
 :func:`TriplesFactory.entities_to_ids` like in the following
 example:
 
-.. code-block:: python
-
-    from pykeen.datasets import Nations
-
-    triples_factory = Nations().training
-
-    # Get tensor of entity identifiers
-    entity_ids = torch.as_tensor(triples_factory.entities_to_ids(["china", "egypt"]))
+.. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
+    :lines: 4-11,38-39
 
 Similarly, we can map a triples factory's relations to identifiers
 using :data:`TriplesFactory.relations_to_ids` like in the following
 example:
 
-.. code-block:: python
-
-    relation_ids = torch.as_tensor(triples_factory.relations_to_ids(["independence", "embassy"]))
+.. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
+    :lines: 40
 
 .. warning::
 
@@ -75,52 +65,38 @@ such as :class:`pykeen.models.RGCN` to be implemented and used.
 
 The entity representations and relation representations can be accessed like this:
 
-.. code-block:: python
-
-    from typing import List
-
-    import pykeen.nn
-    from pykeen.pipeline import pipeline
-
-    result = pipeline(model='TransE', dataset='UMLS')
-    model = result.model
-
-    entity_representation_modules: List['pykeen.nn.Representation'] = model.entity_representations
-    relation_representation_modules: List['pykeen.nn.Representation'] = model.relation_representations
+.. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
+    :lines: 4-14
 
 Most models, like :class:`pykeen.models.TransE`, only have one representation for entities and one
 for relations. This means that the ``entity_representations`` and ``relation_representations``
 lists both have a length of 1. All of the entity embeddings can be accessed like:
 
-.. code-block:: python
-
-    entity_embeddings: pykeen.nn.Embedding = entity_representation_modules[0]
-    relation_embeddings: pykeen.nn.Embedding = relation_representation_modules[0]
+.. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
+    :lines: 17-24
 
 Since all representations are subclasses of :class:`torch.nn.Module`, you need to call them like functions
 to invoke the `forward()` and get the values.
 
-.. code-block:: python
-
-    entity_embedding_tensor: torch.FloatTensor = entity_embeddings()
-    relation_embedding_tensor: torch.FloatTensor = relation_embeddings()
+.. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
+    :lines: 28-29
 
 The `forward()` function of all :class:`pykeen.nn.representation.Representation` takes an ``indices`` parameter.
 By default, it is ``None`` and returns all values. More explicitly, this looks like:
 
-.. code-block:: python
-
-    entity_embedding_tensor: torch.FloatTensor = entity_embeddings(indices=None)
-    relation_embedding_tensor: torch.FloatTensor = relation_embeddings(indices=None)
+.. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
+    :lines: 33-34
 
 If you'd like to only look up certain embeddings, you can use the ``indices`` parameter
 and pass a :class:`torch.LongTensor` with their corresponding indices.
 
+.. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
+    :lines: 37-39
+
 You might want to detach them from the GPU and convert to a :class:`numpy.ndarray` with
 
-.. code-block:: python
-
-    entity_embedding_tensor = model.entity_representations[0](indices=None).detach().numpy()
+.. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
+    :lines: 43
 
 .. warning::
 
@@ -138,54 +114,8 @@ training process is encapsulated in classes that can be more finely
 tuned or subclassed. Below is an example of code that might have been
 executed with one of the previous examples.
 
-.. code-block:: python
-
-    >>> # Get a training dataset
-    >>> from pykeen.datasets import Nations
-    >>> dataset = Nations()
-    >>> training_triples_factory = dataset.training
-
-    >>> # Pick a model
-    >>> from pykeen.models import TransE
-    >>> model = TransE(triples_factory=training_triples_factory)
-
-    >>> # Pick an optimizer from Torch
-    >>> from torch.optim import Adam
-    >>> optimizer = Adam(params=model.get_grad_params())
-
-    >>> # Pick a training approach (sLCWA or LCWA)
-    >>> from pykeen.training import SLCWATrainingLoop
-    >>> training_loop = SLCWATrainingLoop(
-    ...     model=model,
-    ...     triples_factory=training_triples_factory,
-    ...     optimizer=optimizer,
-    ... )
-
-    >>> # Train like Cristiano Ronaldo
-    >>> _ = training_loop.train(
-    ...     triples_factory=training_triples_factory,
-    ...     num_epochs=5,
-    ...     batch_size=256,
-    ... )
-
-    >>> # Pick an evaluator
-    >>> from pykeen.evaluation import RankBasedEvaluator
-    >>> evaluator = RankBasedEvaluator()
-
-    >>> # Get triples to test
-    >>> mapped_triples = dataset.testing.mapped_triples
-
-    >>> # Evaluate
-    >>> results = evaluator.evaluate(
-    ...     model=model,
-    ...     mapped_triples=mapped_triples,
-    ...     batch_size=1024,
-    ...     additional_filter_triples=[
-    ...         dataset.training.mapped_triples,
-    ...         dataset.validation.mapped_triples,
-    ...     ],
-    ... )
-    >>> # print(results)
+.. literalinclude:: ../examples/first_steps/beyond_pipeline.py
+    :lines: 3-
 
 
 Preview: Evaluation Loops
@@ -193,46 +123,8 @@ Preview: Evaluation Loops
 PyKEEN is currently in the transition to use torch's data-loaders for evaluation, too.
 While not being active for the high-level `pipeline`, you can already use it explicitly:
 
-.. code-block:: python
-
-    >>> # get a dataset
-    >>> from pykeen.datasets import Nations
-    >>> dataset = Nations()
-
-    >>> # Pick a model
-    >>> from pykeen.models import TransE
-    >>> model = TransE(triples_factory=dataset.training)
-
-    >>> # Pick a training approach (sLCWA or LCWA)
-    >>> from pykeen.training import SLCWATrainingLoop
-    >>> training_loop = SLCWATrainingLoop(
-    ...     model=model,
-    ...     triples_factory=dataset.training,
-    ... )
-
-    >>> # Train like Cristiano Ronaldo
-    >>> _ = training_loop.train(
-    ...     triples_factory=training_triples_factory,
-    ...     num_epochs=5,
-    ...     batch_size=256,
-    ...     # NEW: validation evaluation callback
-    ...     callbacks="evaluation-loop",
-    ...     callbacks_kwargs=dict(
-    ...         prefix="validation",
-    ...         factory=dataset.validation,
-    ...     ),
-    ... )
-
-    >>> # Pick an evaluation loop (NEW)
-    >>> from pykeen.evaluation import LCWAEvaluationLoop
-    >>> evaluation_loop = LCWAEvaluationLoop(
-    ...     model=model,
-    ...     triples_factory=dataset.testing,
-    ... )
-
-    >>> # Evaluate
-    >>> results = evaluation_loop.evaluate()
-    >>> # print(results)
+.. literalinclude:: ../examples/first_steps/evaluation_loop.py
+    :lines: 3-
 
 
 Training Callbacks
@@ -242,25 +134,8 @@ One particular use case is regular evaluation (outside of an early stopper).
 The following example shows how to evaluate on the training triples on every
 tenth epoch
 
-.. code-block:: python
-
-    from pykeen.datasets import get_dataset
-    from pykeen.pipeline import pipeline
-
-    dataset = get_dataset(dataset="nations")
-    result = pipeline(
-        dataset=dataset,
-        model="mure",
-        training_kwargs=dict(
-            num_epochs=100,
-            callbacks="evaluation",
-            callbacks_kwargs=dict(
-                evaluation_triples=dataset.training.mapped_triples,
-                tracker="console",
-                prefix="training",
-            ),
-        ),
-    )
+.. literalinclude:: ../examples/first_steps/callbacks.py
+    :lines: 3-
 
 For further information about different result trackers, take a look at the section
 on :ref:`trackers`.

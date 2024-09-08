@@ -265,6 +265,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Ignore commented out code in Sphinx configuration file
 "docs/source/conf.py" = ["ERA001"]
+"docs/source/examples/**/*.py" = [
+    "E402",  # allow imports not at top for narrative purposes
+    "T201",  # allow prints
+]
 "notebooks/**/*.ipynb" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]
