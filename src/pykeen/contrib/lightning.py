@@ -26,13 +26,14 @@ has some nice features:
 """
 
 from abc import abstractmethod
-from typing import Optional
+from typing import Any, Generic, Optional
 
 import click
 import pytorch_lightning
 import torch
 import torch.utils.data
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from torch.optim import Optimizer
 
 from pykeen.datasets import dataset_resolver, get_dataset
 from pykeen.datasets.base import Dataset
@@ -42,6 +43,7 @@ from pykeen.models.cli import options
 from pykeen.optimizers import optimizer_resolver
 from pykeen.sampling import NegativeSampler
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
+from pykeen.triples.instances import BatchType, LCWABatchType, SLCWABatch
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.typing import InductiveMode, OneOrSequence
 
@@ -53,7 +55,7 @@ __all__ = [
 ]
 
 
-class LitModule(pytorch_lightning.LightningModule):
+class LitModule(pytorch_lightning.LightningModule, Generic[BatchType]):  # type:ignore
     """
     A base module for training models with PyTorch Lightning.
 
@@ -70,7 +72,7 @@ class LitModule(pytorch_lightning.LightningModule):
         # model
         model: HintOrType[Model] = "distmult",
         model_kwargs: OptionalKwargs = None,
-        # stored outside of the training loop / optimizer to give access to auto-tuning from Lightning
+        # stored outside the training loop / optimizer to give access to auto-tuning from Lightning
         batch_size: int = 32,
         learning_rate: float = 1.0e-03,
         label_smoothing: float = 0.0,
@@ -131,15 +133,15 @@ class LitModule(pytorch_lightning.LightningModule):
         return self.model.predict_t(hr_batch)
 
     @abstractmethod
-    def _step(self, batch, prefix: str):
+    def _step(self, batch: BatchType, prefix: str) -> torch.FloatTensor:
         """Perform a step and log with the given prefix."""
         raise NotImplementedError
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: BatchType, batch_idx: int) -> torch.FloatTensor:
         """Perform a training step."""
         return self._step(batch, prefix="train")
 
-    def validation_step(self, batch, batch_idx, *args, **kwargs):
+    def validation_step(self, batch: BatchType, batch_idx: int, *args: Any, **kwargs: Any) -> torch.FloatTensor:
         """Perform a validation step."""
         return self._step(batch, prefix="val")
 
@@ -159,7 +161,7 @@ class LitModule(pytorch_lightning.LightningModule):
             return []
         return self._dataloader(triples_factory=self.dataset.validation, shuffle=False)
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> Optimizer:
         """Configure the optimizers."""
         return optimizer_resolver.make(
             self.optimizer, self.optimizer_kwargs, params=self.parameters(), lr=self.learning_rate
@@ -171,7 +173,7 @@ class LitModule(pytorch_lightning.LightningModule):
         self.model.post_parameter_update()
 
 
-class SLCWALitModule(LitModule):
+class SLCWALitModule(LitModule[SLCWABatch]):
     """A PyTorch Lightning module for training a model with sLCWA training loop."""
 
     def __init__(
@@ -179,7 +181,7 @@ class SLCWALitModule(LitModule):
         *,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         Initialize the lightning module.
@@ -197,7 +199,7 @@ class SLCWALitModule(LitModule):
         self.negative_sampler_kwargs = negative_sampler_kwargs
 
     # docstr-coverage: inherited
-    def _step(self, batch, prefix: str):  # noqa: D102
+    def _step(self, batch: SLCWABatch, prefix: str) -> torch.FloatTensor:  # noqa: D102
         loss = SLCWATrainingLoop._process_batch_static(
             model=self.model,
             loss=self.loss,
@@ -231,14 +233,14 @@ class SLCWALitModule(LitModule):
         )
 
 
-class LCWALitModule(LitModule):
+class LCWALitModule(LitModule[LCWABatchType]):
     """A PyTorch Lightning module for training a model with LCWA training loop.
 
     .. seealso:: https://github.com/pykeen/pykeen/pull/905
     """
 
     # docstr-coverage: inherited
-    def _step(self, batch, prefix: str):  # noqa: D102
+    def _step(self, batch: LCWABatchType, prefix: str) -> torch.FloatTensor:  # noqa: D102
         loss = LCWATrainingLoop._process_batch_static(
             model=self.model,
             score_method=self.model.score_t,
@@ -298,11 +300,11 @@ def lit_pipeline(
 
 
 @click.command()
-@lit_module_resolver.get_option("-tl", "--training-loop")
-@dataset_resolver.get_option("--dataset", default="nations")
+@lit_module_resolver.get_option("-tl", "--training-loop")  # type:ignore
+@dataset_resolver.get_option("--dataset", default="nations")  # type:ignore
 @options.inverse_triples_option
-@model_resolver.get_option("-m", "--model", default="mure")
-@loss_resolver.get_option("-l", "--loss", default="bcewithlogits")
+@model_resolver.get_option("-m", "--model", default="mure")  # type:ignore
+@loss_resolver.get_option("-l", "--loss", default="bcewithlogits")  # type:ignore
 @options.batch_size_option
 @click.option("--embedding-dim", type=int, default=128)
 @click.option("-b", "--batch-size", type=int, default=128)

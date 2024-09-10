@@ -2,8 +2,8 @@
 
 import inspect
 import pathlib
-from collections.abc import Iterable
-from typing import Callable, Optional, Union
+from collections.abc import Iterable, Mapping
+from typing import Any, Callable, Optional, TypeVar, Union, cast
 
 import torch
 from class_resolver import Hint
@@ -20,6 +20,8 @@ from ..regularizers import regularizer_resolver
 from ..sampling import negative_sampler_resolver
 from ..training import training_loop_resolver
 from ..utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_string
+
+X = TypeVar("X")
 
 _SKIP_NAMES = {
     "loss",
@@ -67,7 +69,7 @@ def iterate_config_paths() -> Iterable[tuple[str, pathlib.Path, pathlib.Path]]:
             yield model_directory.name, config, path
 
 
-def _should_skip_because_type(x):
+def _should_skip_because_type(x: Any) -> bool:
     # don't worry about functions because they can't be specified by JSON.
     # Could make a better mo
     if inspect.isfunction(x):
@@ -76,7 +78,7 @@ def _should_skip_because_type(x):
     return False
 
 
-def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
+def get_configuration_errors(path: Union[str, pathlib.Path]) -> list[str]:  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     configuration = load_configuration(path)
 
@@ -84,12 +86,12 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
     if pipeline is None:
         raise ValueError("No pipeline")
 
-    errors = []
+    errors: list[str] = []
 
     def _check(
-        test_dict,
-        key,
-        choices,
+        test_dict: Mapping[str, Any],
+        key: str,
+        choices: list[X],
         *,
         required: bool = True,
         normalize: bool = False,
@@ -97,27 +99,27 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
         check_kwargs: bool = False,
         required_kwargs: Optional[set[str]] = None,
         allowed_missing_kwargs: Optional[set[str]] = None,
-    ):
+    ) -> Optional[X]:
         value = test_dict.get(key)
         if value is None:
             if not required:
-                return
+                return None
             errors.append(f"No key: {key}")
-            return
+            return None
         if normalize:
             value = normalize_string(value, suffix=suffix)
         if value not in choices:
             errors.append(f"Invalid {key}: {value}. Should be one of {sorted(choices)}")
-            return
+            return None
 
         if not check_kwargs:
-            return
+            return None
 
         kwargs_key = f"{key}_kwargs"
         kwargs_value = test_dict.get(kwargs_key)
         if kwargs_value is None:
             errors.append(f'Missing "{kwargs_key}" entry for {value}')
-            return
+            return None
 
         choice = choices[value]
         signature = inspect.signature(choice.__init__)
@@ -142,11 +144,7 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
 
         missing_kwargs = []
         for name, parameter in signature.parameters.items():
-            if (
-                name == "self"
-                or parameter.default is inspect._empty  # type:ignore
-                or parameter.default is None
-            ):
+            if name == "self" or parameter.default is inspect._empty or parameter.default is None:
                 continue
 
             annotation = choice.__init__.__annotations__.get(name)
@@ -167,9 +165,9 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
             errors.append(f"Missing {kwargs_key} for {choice}:\n{_x}")
 
         if extraneous_kwargs or missing_kwargs:
-            return
+            return None
 
-        return value
+        return cast(X, value)
 
     _check(
         pipeline,

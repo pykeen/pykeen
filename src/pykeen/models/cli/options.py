@@ -1,5 +1,7 @@
 """Click options for building magical KGE model CLIs."""
 
+from typing import Callable, TypeVar
+
 import click
 
 from .. import model_resolver
@@ -12,16 +14,19 @@ from ...stoppers import stopper_resolver
 from ...training import training_loop_resolver
 from ...utils import random_non_negative_int, resolve_device
 
+X = TypeVar("X")
+Y = TypeVar("Y")
 
-def _make_callback(f):
-    def _callback(_, __, value):
+
+def _make_callback(f: Callable[[X], Y]) -> Callable[[click.Context, str, X], Y]:
+    def _callback(_: click.Context, __: str, value: X) -> Y:
         return f(value)
 
     return _callback
 
 
-def _make_instantiation_callback(f):
-    def _callback(_, __, value):
+def _make_instantiation_callback(f: Callable[[X], Callable[[], Y]]) -> Callable[[click.Context, str, X], Y]:
+    def _callback(_: click.Context, __: str, value: X) -> Y:
         return f(value)()
 
     return _callback

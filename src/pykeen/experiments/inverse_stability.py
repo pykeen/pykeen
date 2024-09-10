@@ -6,12 +6,15 @@ This experiment investigates the differences between
 
 import itertools as itt
 import logging
+import typing
 from typing import Optional
 
 import click
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import torch
+from class_resolver import Hint
 
 import pykeen.evaluation.evaluator
 from pykeen.constants import PYKEEN_EXPERIMENTS
@@ -29,8 +32,8 @@ pykeen.evaluation.evaluator.logger.setLevel(logging.CRITICAL)
 @click.command()
 @click.option("--force", is_flag=True)
 @click.option("--clip", type=int, default=10)
-@click.option("--mode")
-def main(force: bool, clip: int, mode):
+@click.option("--mode", type=click.Choice(typing.get_args(InductiveMode)))
+def main(force: bool, clip: int, mode: Optional[InductiveMode]) -> None:
     """Run the inverse stability experiments."""
     results_path = INVERSE_STABILITY / "results.tsv"
     if results_path.exists() and not force:
@@ -56,8 +59,14 @@ def main(force: bool, clip: int, mode):
 
 
 def run_inverse_stability_workflow(
-    dataset: str, model: str, training_loop: str, random_seed=0, device="cpu", *, mode: Optional[InductiveMode]
-):
+    dataset: str,
+    model: str,
+    training_loop: str,
+    random_seed: int = 0,
+    device: Hint[torch.device] = "cpu",
+    *,
+    mode: Optional[InductiveMode],
+) -> pd.DataFrame:
     """Run an inverse stability experiment."""
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,

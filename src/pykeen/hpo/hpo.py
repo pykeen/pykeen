@@ -9,7 +9,7 @@ import os
 import pathlib
 from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union, cast
 
 import torch
 from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
@@ -36,6 +36,9 @@ from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
 from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io, normalize_path
 from ..version import get_git_hash, get_version
+
+if TYPE_CHECKING:
+    import boto3
 
 __all__ = [
     "hpo_pipeline_from_path",
@@ -67,7 +70,7 @@ class ExtraKeysError(ValueError):
 
 @dataclass
 class Objective:
-    """A dataclass containing all of the information to make an objective function."""
+    """A dataclass containing all the information to make an objective function."""
 
     dataset: Union[None, str, Dataset, type[Dataset]]  # 1.
     model: type[Model]  # 2.
@@ -337,7 +340,7 @@ class HpoPipelineResult(Result):
     #: The objective class, containing information on preset hyper-parameters and those to optimize
     objective: Objective
 
-    def _get_best_study_config(self):
+    def _get_best_study_config(self) -> Mapping[str, Any]:
         metadata = {
             "best_trial_number": self.study.best_trial.number,
             "best_trial_evaluation": self.study.best_value,
@@ -393,7 +396,7 @@ class HpoPipelineResult(Result):
             pipeline_config["training_kwargs"]["num_epochs"] = int(stopped_epoch)
         return dict(metadata=metadata, pipeline=pipeline_config)
 
-    def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
+    def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs: Any) -> None:
         """Dump the results of a study to the given directory."""
         directory = normalize_path(directory, mkdir=True)
 
@@ -411,7 +414,7 @@ class HpoPipelineResult(Result):
         with best_pipeline_directory.joinpath("pipeline_config.json").open("w") as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
-    def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save the results to the directory in an FTP server.
 
         :param directory: The directory in the FTP server to save to
@@ -431,7 +434,7 @@ class HpoPipelineResult(Result):
         best_config_path = os.path.join(best_pipeline_directory, "pipeline_config.json")
         ftp.storbinary(f"STOR {best_config_path}", get_json_bytes_io(self._get_best_study_config()))
 
-    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+    def save_to_s3(self, directory: str, bucket: str, s3: Optional["boto3.client"] = None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
         :param directory: The directory in the S3 bucket
@@ -488,14 +491,14 @@ class HpoPipelineResult(Result):
         )
 
 
-def hpo_pipeline_from_path(path: Union[str, pathlib.Path], **kwargs) -> HpoPipelineResult:
+def hpo_pipeline_from_path(path: Union[str, pathlib.Path], **kwargs: Any) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
     with open(path) as file:
         config = json.load(file)
     return hpo_pipeline_from_config(config, **kwargs)
 
 
-def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipelineResult:
+def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs: Any) -> HpoPipelineResult:
     """Run the HPO pipeline using a properly formatted configuration dictionary."""
     return hpo_pipeline(
         **config["pipeline"],
@@ -765,7 +768,7 @@ def hpo_pipeline(
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
     elif getattr(model_cls, "regularizer_default", None):
-        regularizer_cls = model_cls.regularizer_default  # type:ignore
+        regularizer_cls = model_cls.regularizer_default
     else:
         regularizer_cls = None
     if regularizer_cls:
@@ -998,7 +1001,7 @@ def _set_study_dataset(
     training: Union[None, str, CoreTriplesFactory] = None,
     testing: Union[None, str, CoreTriplesFactory] = None,
     validation: Union[None, str, CoreTriplesFactory] = None,
-):
+) -> None:
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:
             raise ValueError("Cannot specify dataset and training, testing and validation")

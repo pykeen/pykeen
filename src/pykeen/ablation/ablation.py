@@ -73,14 +73,14 @@ def ablation_pipeline(
     direction: str | None = "maximize",
     sampler: str | None = "random",
     pruner: str | None = "nop",
-    metadata: Mapping | None = None,
+    metadata: Mapping[str, Any] | None = None,
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
     dry_run: bool = False,
     best_replicates: int | None = None,
     discard_replicates: bool = False,
     create_unique_subdir: bool = False,
-):
+) -> None:
     """Run ablation study.
 
     :param datasets:
@@ -252,7 +252,7 @@ def ablation_pipeline_from_config(
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
     discard_replicates: bool = False,
-):
+) -> None:
     """Generate a set of HPO configurations.
 
     A sample file can be run with``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
@@ -269,7 +269,7 @@ def ablation_pipeline_from_config(
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
     :return: None.
     """
-    return ablation_pipeline(
+    ablation_pipeline(
         **config,
         directory=directory,
         dry_run=dry_run,
@@ -371,7 +371,7 @@ def prepare_ablation(  # noqa:C901
     evaluation_kwargs: Mapping[str, Any] | None = None,
     stopper: str | None = "NopStopper",
     stopper_kwargs: Mapping[str, Any] | None = None,
-    metadata: Mapping | None = None,
+    metadata: Mapping[str, Any] | None = None,
     save_artifacts: bool = True,
 ) -> list[tuple[pathlib.Path, pathlib.Path]]:
     """Prepare an ablation directory.
@@ -470,7 +470,7 @@ def prepare_ablation(  # noqa:C901
             str,
         ]
     ]
-    it = itt.product(  # type: ignore
+    it = itt.product(
         datasets,
         create_inverse_triples,
         models,
