@@ -13,6 +13,7 @@ from typing import (
     Any,
     Callable,
     ClassVar,
+    Final,
     Generic,
     cast,
 )
@@ -1844,15 +1845,12 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
 
     .. note ::
         The CrossE paper described an additional sigmoid activation as part of the interaction function. Since using a
-        log-likelihood loss can cause numerical problems (due to explicitly calling sigmoid before log), we do not
-        apply this in our implementation but rather opt for the numerically stable variant. However, the model itself
-        has an option ``predict_with_sigmoid``, which can be used to enforce application of sigmoid during inference.
-        This can also have an impact of rank-based evaluation, since limited numerical precision can lead to exactly
-        equal scores for multiple choices. The definition of a rank is not unambiguous in such case, and there exist
-        multiple competing variants how to break the ties. More information on this can be found in the documentation of
-        rank-based evaluation.
-
-    .. seealso:: https://github.com/wencolani/CrossE
+        log-likelihood loss can cause numerical problems (due to explicitly calling sigmoid before log), we do not use
+        it in our implementation, but opt for the numerically stable variant. However, the model itself has an option
+        ``predict_with_sigmoid``, which can be used to force the use of sigmoid during inference. This can also affect
+        rank-based scoring, since limited numerical precision can lead to exactly equal scores for multiple choices.
+        The definition of a rank is not unambiguous in this case, and there are several competing ways to break ties.
+        See :ref:`understanding-evaluation` for more information.
 
     ---
     citation:
@@ -1860,6 +1858,7 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
         year: 2019
         link: https://arxiv.org/abs/1903.04750
         arxiv: 1903.04750
+        github: https://github.com/wencolani/CrossE
     """
 
     relation_shape = ("d", "d")
@@ -1874,6 +1873,11 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
         """
         Instantiate the interaction module.
 
+        .. note ::
+            The parameters ``combination_activation`` and ``combination_activation_kwargs`` are passed to
+            :data:`class_resolver.contrib.torch.activation_resolver`. An explanation of resolvers and how to use them
+            is given in :ref:`using_resolvers`.
+
         :param embedding_dim:
             The embedding dimension.
         :param combination_activation:
@@ -1882,7 +1886,7 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
             Additional keyword-based arguments passed to the constructor of the combination activation function (if
             not already instantiated).
         :param combination_dropout:
-            An optional dropout applied to the combination.
+            An optional dropout applied after the combination.
         """
         super().__init__()
         self.combination_activation = activation_resolver.make(
@@ -1900,6 +1904,9 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
     ) -> torch.FloatTensor:
         r"""
         Evaluate the interaction function.
+
+        .. todo::
+            link to a document describing the generic batched form of the interaction function.
 
         :param h: shape: (`*batch_dims`, dim)
             The head representations.
