@@ -679,10 +679,10 @@ class ConvEShapeInformation:
     def make(
         cls,
         embedding_dim: int | None,
+        image_width: int | None = None,
+        image_height: int | None = None,
         input_channels: int | None = None,
         output_channels: int = 32,
-        image_height: int | None = None,
-        image_width: int | None = None,
         kernel_width: int = 3,
         kernel_height: int | None = None,
     ) -> Self:
@@ -690,15 +690,20 @@ class ConvEShapeInformation:
 
         :param embedding_dim:
             The embedding dimension.
+        :param image_width:
+            The width of the embedding "image".
+        :param image_height:
+            The height of the embedding "image".
         :param input_channels:
             The number of input channels for the convolution.
-        :param width:
-            The width of the embedding "image".
-        :param height:
-            The height of the embedding "image".
+        :param output_channels:
+            The number of output channels for the convolution.
+        :param kernel_width:
+            The width of the convolution kernel.
+        :param kernel_height:
+            The height of the convolution kernel.
 
-        :return: (input_channels, width, height), such that
-                `embedding_dim = input_channels * width * height`
+        :return: Fully resolve shapes.
 
         :raises ValueError:
             If no factorization could be found.
@@ -807,6 +812,7 @@ class ConvEInteraction(
             image_height=embedding_height,
             kernel_width=kernel_width,
             kernel_height=kernel_height,
+            output_channels=output_channels,
         )
 
         # encoders
