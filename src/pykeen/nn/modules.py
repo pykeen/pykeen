@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import itertools as itt
 import logging
 import math
@@ -45,6 +46,7 @@ from ..utils import (
     ensure_complex,
     ensure_tuple,
     estimate_cost_of_sequence,
+    is_cudnn_error,
     negative_norm,
     unpack_singletons,
     upgrade_to_sequence,
@@ -621,6 +623,25 @@ def _calculate_missing_shape_information(
     return input_channels, width, height  # type: ignore
 
 
+def _add_cuda_warning(func):
+    # docstr-coverage: excused `wrapped`
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except RuntimeError as e:
+            if not is_cudnn_error(e):
+                raise e
+            raise RuntimeError(
+                "\nThis code crash might have been caused by a CUDA bug, see "
+                "https://github.com/allenai/allennlp/issues/2888, "
+                "which causes the code to crash during evaluation mode.\n"
+                "To avoid this error, the batch size has to be reduced.",
+            ) from e
+
+    return wrapped
+
+
 @parse_docdata
 class ConvEInteraction(
     FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor]],
@@ -645,9 +666,6 @@ class ConvEInteraction(
 
     #: The head-relation encoder operating on the 1D flattened version
     hr1d: nn.Module
-
-    #: The interaction function
-    func = pkf.conve_interaction
 
     def __init__(
         self,
@@ -747,6 +765,72 @@ class ConvEInteraction(
         self.embedding_height = embedding_height
         self.embedding_width = embedding_width
         self.input_channels = input_channels
+
+    @_add_cuda_warning
+    @staticmethod
+    def func(
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        t_bias: torch.FloatTensor,
+        input_channels: int,
+        embedding_height: int,
+        embedding_width: int,
+        hr2d: nn.Module,
+        hr1d: nn.Module,
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The relation representations.
+        :param t: shape: (`*batch_dims`, dim)
+            The tail representations.
+        :param t_bias: shape: (`*batch_dims`)
+            The tail entity bias.
+        :param input_channels:
+            The number of input channels.
+        :param embedding_height:
+            The height of the reshaped embedding.
+        :param embedding_width:
+            The width of the reshaped embedding.
+        :param hr2d:
+            The first module, transforming the 2D stacked head-relation "image".
+        :param hr1d:
+            The second module, transforming the 1D flattened output of the 2D module.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        # repeat if necessary, and concat head and relation
+        # shape: -1, num_input_channels, 2*height, width
+        x = torch.cat(
+            torch.broadcast_tensors(
+                h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
+                r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
+            ),
+            dim=-2,
+        )
+        prefix_shape = x.shape[:-3]
+        x = x.view(-1, input_channels, 2 * embedding_height, embedding_width)
+
+        # shape: -1, num_input_channels, 2*height, width
+        x = hr2d(x)
+
+        # -1, num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
+        x = x.view(-1, numpy.prod(x.shape[-3:]))
+        x = hr1d(x)
+
+        # reshape: (-1, dim) -> (*batch_dims, dim)
+        x = x.view(*prefix_shape, h.shape[-1])
+
+        # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
+        # output_shape: batch_dims
+        x = einsum("...d, ...d -> ...", x, t)
+
+        # add bias term
+        return x + t_bias
 
     # docstr-coverage: inherited
     @staticmethod
