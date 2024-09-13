@@ -40,6 +40,7 @@ from ..typing import (
     TailRepresentation,
 )
 from ..utils import (
+    add_doc_note_about_resolvers,
     at_least_eps,
     einsum,
     ensure_complex,
@@ -1862,6 +1863,9 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
 
     relation_shape = ("d", "d")
 
+    @add_doc_note_about_resolvers(
+        "combination_activation", resolver_name="class_resolver.contrib.torch.activation_resolver"
+    )
     def __init__(
         self,
         embedding_dim: int = 50,
@@ -1871,11 +1875,6 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
     ):
         """
         Instantiate the interaction module.
-
-        .. note ::
-            The parameters ``combination_activation`` and ``combination_activation_kwargs`` are passed to
-            :data:`class_resolver.contrib.torch.activation_resolver`. An explanation of resolvers and how to use them
-            is given in :ref:`using_resolvers`.
 
         :param embedding_dim:
             The embedding dimension.

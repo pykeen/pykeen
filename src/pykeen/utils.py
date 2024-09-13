@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ftplib
 import functools
+import inspect
 import itertools as itt
 import json
 import logging
@@ -13,6 +14,7 @@ import os
 import pathlib
 import random
 import re
+import textwrap
 import time
 import warnings
 from abc import ABC, abstractmethod
@@ -1630,3 +1632,56 @@ def determine_maximum_batch_size(batch_size: int | None, device: torch.device, m
             )
         logger.debug(f"Automatically set maximum batch size to {batch_size=:_}")
     return batch_size
+
+
+F = TypeVar("F", bound=Callable)
+
+
+def add_doc_note_about_resolvers(
+    *params: str,
+    resolver_name: str,
+) -> Callable[[F], F]:
+    """
+    Build a decorator to add information about resolved parameter pairs.
+
+    :param params:
+        the name of the parameterss. Will be automatically completed to include all the ``_kwargs`` suffixed parts, too.
+    :param resolver_name:
+        the fully qualified path of the resolver used to construct a reference via the ``:data:`` role.
+
+    :return:
+        a decorator for function.
+    """
+
+    def add_note(func: F) -> F:
+        """
+        Extend the function's docstring with a note about resolved parameters.
+
+        :param func:
+            the function to decorate.
+
+        :return:
+            the function with extended docstring.
+
+        :raises ValueError:
+            when the signature does not contain the resolved parameter names.
+        """
+        signature = inspect.signature(func)
+        if missing := set(f"{p}{suffix}" for p in params for suffix in ("", "_kwargs")).difference(
+            signature.parameters
+        ):
+            raise ValueError(f"{missing=} parameters in {signature=}.")
+        old_doc = func.__doc__
+        assert old_doc is not None
+        pairs_str = ", ".join(f"``({param}, {param}_kwargs)``" for param in params)
+        func.__doc__ = textwrap.dedent(
+            f"""
+            {old_doc}
+
+            .. note ::
+                The parameter pairs {pairs_str} are passed to :data:`{resolver_name}`.
+                An explanation of resolvers and how to use them is given in :ref:`using_resolvers`."""
+        )
+        return func
+
+    return add_note
