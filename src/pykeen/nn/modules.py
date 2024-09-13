@@ -2225,7 +2225,7 @@ class BoxEInteraction(
 @parse_docdata
 class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """
-    An implementation of the CP interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
+    The Canonical Tensor Decomposition interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
 
     .. note ::
         For $k=1$, this interaction is the same as DistMult (but consider the note below).
@@ -2244,11 +2244,30 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
         github: facebookresearch/kbc
     """
 
-    func = pkf.cp_interaction
     entity_shape = ("kd",)
     relation_shape = ("kd",)
     _head_indices = (0,)
     _tail_indices = (1,)
+
+    @staticmethod
+    def func(
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function.
+
+        :param h: shape: (`*batch_dims`, rank, dim)
+            The head representations.
+        :param r: shape: (`*batch_dims`, rank, dim)
+            The relation representations.
+        :param t: shape: (`*batch_dims`, rank, dim)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        return (h * r * t).sum(dim=(-2, -1))
 
 
 @parse_docdata

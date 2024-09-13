@@ -30,7 +30,6 @@ from ..utils import (
 __all__ = [
     "conve_interaction",
     "convkb_interaction",
-    "cp_interaction",
     "cross_e_interaction",
     "dist_ma_interaction",
     "distmult_interaction",
@@ -1066,26 +1065,6 @@ def cross_e_interaction(
         x = dropout(x)
     # similarity
     return (x * t).sum(dim=-1)
-
-
-def cp_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Evaluate the Canonical Tensor Decomposition interaction function.
-
-    :param h: shape: (`*batch_dims`, rank, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, rank, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, rank, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return (h * r * t).sum(dim=(-2, -1))
 
 
 def triple_re_interaction(
