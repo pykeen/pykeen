@@ -572,8 +572,8 @@ class ConvEShapeInformation(NamedTuple):
 
     embedding_dim: int
     input_channels: int
-    embedding_height: int
-    embedding_width: int
+    height: int
+    width: int
 
 
 @parse_docdata
@@ -647,7 +647,7 @@ class ConvEInteraction(
 
         # Parameter need to fulfil:
         #   input_channels * embedding_height * embedding_width = embedding_dim
-        shape_info = self.calculate_missing_shape_information(
+        self.shape_info = self.calculate_missing_shape_information(
             embedding_dim=embedding_dim,
             input_channels=input_channels,
             width=embedding_width,
@@ -660,11 +660,11 @@ class ConvEInteraction(
         # encoders
         # 1: 2D encoder: BN?, DO, Conv, BN?, Act, DO
         hr2d_layers = [
-            nn.BatchNorm2d(shape_info.input_channels) if apply_batch_normalization else None,
+            nn.BatchNorm2d(self.shape_info.input_channels) if apply_batch_normalization else None,
             nn.Dropout(input_dropout),
             nn.Conv2d(
-                in_channels=shape_info.input_channels,
-                out_channels=shape_info.output_channels,
+                in_channels=self.shape_info.input_channels,
+                out_channels=output_channels,
                 kernel_size=(kernel_height, kernel_width),
                 stride=1,
                 padding=0,
@@ -677,23 +677,18 @@ class ConvEInteraction(
         self.hr2d = nn.Sequential(*(layer for layer in hr2d_layers if layer is not None))
 
         # 2: 1D encoder: FC, DO, BN?, Act
-        num_in_features = (
+        self.num_in_features = (
             output_channels
-            * (2 * shape_info.embedding_height - kernel_height + 1)
-            * (shape_info.embedding_width - kernel_width + 1)
+            * (2 * self.shape_info.height - kernel_height + 1)
+            * (self.shape_info.width - kernel_width + 1)
         )
         hr1d_layers = [
-            nn.Linear(num_in_features, embedding_dim),
+            nn.Linear(self.num_in_features, embedding_dim),
             nn.Dropout(output_dropout),
             nn.BatchNorm1d(embedding_dim) if apply_batch_normalization else None,
             nn.ReLU(),
         ]
         self.hr1d = nn.Sequential(*(layer for layer in hr1d_layers if layer is not None))
-
-        # store reshaping dimensions
-        self.embedding_height = shape_info.embedding_height
-        self.embedding_width = shape_info.embedding_width
-        self.input_channels = shape_info.input_channels
 
     @staticmethod
     def calculate_missing_shape_information(
@@ -767,7 +762,7 @@ class ConvEInteraction(
         logger.info(f"Resolved to {input_channels} * {width} * {height} = {embedding_dim}.")
 
         return ConvEShapeInformation(
-            embedding_dim=embedding_dim, input_channels=input_channels, embedding_width=width, embedding_height=height
+            embedding_dim=embedding_dim, input_channels=input_channels, width=width, height=height
         )
 
     @add_cudnn_error_hint
@@ -789,25 +784,25 @@ class ConvEInteraction(
         :return: shape: batch_dims
             The scores.
         """
-        t, t_bias = t
+        t_emb, t_bias = t
 
         # repeat if necessary, and concat head and relation
         # shape: -1, num_input_channels, 2*height, width
         x = torch.cat(
             torch.broadcast_tensors(
-                h.view(*h.shape[:-1], self.input_channels, self.embedding_height, self.embedding_width),
-                r.view(*r.shape[:-1], self.input_channels, self.embedding_height, self.embedding_width),
+                h.view(*h.shape[:-1], self.shape_info.input_channels, self.shape_info.height, self.shape_info.width),
+                r.view(*r.shape[:-1], self.shape_info.input_channels, self.shape_info.height, self.shape_info.width),
             ),
             dim=-2,
         )
         prefix_shape = x.shape[:-3]
-        x = x.view(-1, self.input_channels, 2 * self.embedding_height, self.embedding_width)
+        x = x.view(-1, self.shape_info.input_channels, 2 * self.shape_info.height, self.shape_info.width)
 
         # shape: -1, num_input_channels, 2*height, width
         x = self.hr2d(x)
 
         # -1, num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
-        x = x.view(-1, numpy.prod(x.shape[-3:]))
+        x = x.view(-1, self.num_in_features)
         x = self.hr1d(x)
 
         # reshape: (-1, dim) -> (*batch_dims, dim)
@@ -815,7 +810,7 @@ class ConvEInteraction(
 
         # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
         # output_shape: batch_dims
-        x = einsum("...d, ...d -> ...", x, t)
+        x = einsum("...d, ...d -> ...", x, t_emb)
 
         # add bias term
         return x + t_bias
