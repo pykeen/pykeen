@@ -28,6 +28,7 @@ from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .algebra import quaterion_multiplication_table
+from .compute_kernel import batched_dot
 from .init import initializer_resolver
 from ..metrics.utils import ValueRange
 from ..typing import (
@@ -852,9 +853,10 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
 
 @parse_docdata
 class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless DistMA interaction function.
+    r"""The stateless DistMA interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+    .. math ::
+        \langle h, r\rangle + \langle r, t\rangle + \langle h, t\rangle
 
     ---
     citation:
@@ -863,7 +865,25 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://www.aclweb.org/anthology/D19-1075.pdf
     """
 
-    func = pkf.dist_ma_interaction
+    @staticmethod
+    def func(
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        r"""Evaluate the DistMA interaction function from [shi2019]_.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The relation representations.
+        :param t: shape: (`*batch_dims`, dim)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
 
 
 @parse_docdata
