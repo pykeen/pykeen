@@ -45,6 +45,7 @@ from ..utils import (
     ensure_complex,
     ensure_tuple,
     estimate_cost_of_sequence,
+    make_ones_like,
     negative_norm,
     unpack_singletons,
     upgrade_to_sequence,
@@ -1835,10 +1836,23 @@ class MonotonicAffineTransformationInteraction(
 
 
 @parse_docdata
-class CrossEInteraction(FunctionalInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
-    """A module wrapper for the CrossE interaction function.
+class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
+    r"""The CrossE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.cross_e_interaction`
+    .. math ::
+        Dropout(Activation(c_r \odot h + c_r \odot h \odot r + b))^T t)
+
+    .. note ::
+        The CrossE paper described an additional sigmoid activation as part of the interaction function. Since using a
+        log-likelihood loss can cause numerical problems (due to explicitly calling sigmoid before log), we do not
+        apply this in our implementation but rather opt for the numerically stable variant. However, the model itself
+        has an option ``predict_with_sigmoid``, which can be used to enforce application of sigmoid during inference.
+        This can also have an impact of rank-based evaluation, since limited numerical precision can lead to exactly
+        equal scores for multiple choices. The definition of a rank is not unambiguous in such case, and there exist
+        multiple competing variants how to break the ties. More information on this can be found in the documentation of
+        rank-based evaluation.
+
+    .. seealso:: https://github.com/wencolani/CrossE
 
     ---
     citation:
@@ -1848,7 +1862,6 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, tuple[FloatTensor, Fl
         arxiv: 1903.04750
     """
 
-    func = pkf.cross_e_interaction
     relation_shape = ("d", "d")
 
     def __init__(
@@ -1879,23 +1892,36 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, tuple[FloatTensor, Fl
         self.combination_bias = nn.Parameter(data=torch.zeros(embedding_dim))
         self.combination_dropout = nn.Dropout(combination_dropout) if combination_dropout else None
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            bias=self.combination_bias,
-            activation=self.combination_activation,
-            dropout=self.combination_dropout,
-        )
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: tuple[torch.FloatTensor, torch.FloatTensor],
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        r"""
+        Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: FloatTensor,
-        r: tuple[FloatTensor, FloatTensor],
-        t: FloatTensor,
-    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        r, c_r = r
-        return dict(h=h, r=r, c_r=c_r, t=t)
+        :param h: shape: (`*batch_dims`, dim)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The relation representations and relation-specific interaction vector.
+        :param t: shape: (`*batch_dims`, dim)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        r_emb, c_r = r
+        # head interaction
+        h = c_r * h
+        # relation interaction (notice that h has been updated)
+        r_emb = h * r_emb
+        # combination
+        x = self.activation(h + r_emb + self.combination_bias.view(*make_ones_like(h.shape[:-1]), -1))
+        if self.combination_dropout is not None:
+            x = self.combination_dropout(x)
+        # similarity
+        return (x * t).sum(dim=-1)
 
 
 @parse_docdata
