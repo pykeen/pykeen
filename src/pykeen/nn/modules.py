@@ -1917,7 +1917,7 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
         # relation interaction (notice that h has been updated)
         r_emb = h * r_emb
         # combination
-        x = self.combination_activation(h + r_emb + self.combination_bias.view(*make_ones_like(h.shape[:-1]), -1))
+        x = self.combination_activation(self.combination_bias.view(*make_ones_like(h.shape[:-1]), -1) + h + r_emb)
         if self.combination_dropout is not None:
             x = self.combination_dropout(x)
         # similarity
