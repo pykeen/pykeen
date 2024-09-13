@@ -769,10 +769,8 @@ class ConvEInteraction(
 
 
 @parse_docdata
-class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ConvKB interaction function.
-
-    .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
 
     ---
     citation:
@@ -821,44 +819,21 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            conv=self.conv,
-            activation=self.activation,
-            hidden_dropout=self.hidden_dropout,
-            linear=self.linear,
-        )
-
-    @staticmethod
-    def func(
+    @abstractmethod
+    def forward(
+        self,
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        conv: nn.Conv2d,
-        activation: nn.Module,
-        hidden_dropout: nn.Dropout,
-        linear: nn.Linear,
     ) -> torch.FloatTensor:
-        r"""Evaluate the interaction function.
+        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        .. math::
-            W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
-
-        :param h: shape: (`*batch_dims`, dim)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (`*batch_dims`, dim)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (`*batch_dims`, dim)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
-        :param conv:
-            The 3x1 convolution.
-        :param activation:
-            The activation function.
-        :param hidden_dropout:
-            The dropout layer applied to the hidden activations.
-        :param linear:
-            The final linear layer.
 
         :return: shape: batch_dims
             The scores.
@@ -867,15 +842,15 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         x = torch.stack(torch.broadcast_tensors(h, r, t), dim=-1).unsqueeze(dim=-3)
         s = x.shape
         x = x.view(-1, *s[-3:])
-        x = conv(x)
+        x = self.conv(x)
         x = x.view(*s[:-3], -1)
-        x = activation(x)
+        x = self.activation(x)
 
         # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
-        x = hidden_dropout(x)
+        x = self.hidden_dropout(x)
 
         # Linear layer for final scores; use flattened representations, shape: (*batch_dims, d * f)
-        x = linear(x)
+        x = self.linear(x)
         return x.squeeze(dim=-1)
 
 
