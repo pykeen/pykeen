@@ -1638,7 +1638,7 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
     """
     Decorate a function to add explanations for CUDNN errors.
 
-    :param f:
+    :param func:
         the function to decorate
 
     :return:
