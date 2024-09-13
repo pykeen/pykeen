@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import functools
 import itertools as itt
 import logging
 import math
@@ -41,12 +40,12 @@ from ..typing import (
     TailRepresentation,
 )
 from ..utils import (
+    add_cudnn_error_hint,
     at_least_eps,
     einsum,
     ensure_complex,
     ensure_tuple,
     estimate_cost_of_sequence,
-    is_cudnn_error,
     negative_norm,
     unpack_singletons,
     upgrade_to_sequence,
@@ -623,25 +622,6 @@ def _calculate_missing_shape_information(
     return input_channels, width, height  # type: ignore
 
 
-def _add_cuda_warning(func):
-    # docstr-coverage: excused `wrapped`
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except RuntimeError as e:
-            if not is_cudnn_error(e):
-                raise e
-            raise RuntimeError(
-                "\nThis code crash might have been caused by a CUDA bug, see "
-                "https://github.com/allenai/allennlp/issues/2888, "
-                "which causes the code to crash during evaluation mode.\n"
-                "To avoid this error, the batch size has to be reduced.",
-            ) from e
-
-    return wrapped
-
-
 @parse_docdata
 class ConvEInteraction(
     FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor]],
@@ -766,7 +746,7 @@ class ConvEInteraction(
         self.embedding_width = embedding_width
         self.input_channels = input_channels
 
-    @_add_cuda_warning
+    @add_cudnn_error_hint
     @staticmethod
     def func(
         h: torch.FloatTensor,
