@@ -638,7 +638,7 @@ class ConvEInteraction(
     """
 
     # vector & scalar offset
-    tail_entity_shape = ("d", "")
+    _tail_entity_shape = ("d", "")
 
     #: The head-relation encoder operating on 2D "images"
     hr2d: nn.Module
