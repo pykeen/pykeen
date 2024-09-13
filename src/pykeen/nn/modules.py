@@ -579,6 +579,7 @@ class ConvEResolvedImageShape:
 
     @property
     def is_valid(self) -> bool:
+        """Determine whether the given shape is a valid factorization of the embedding dimension."""
         return self.channels * self.width * self.height == self.dim
 
     @classmethod
