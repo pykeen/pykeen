@@ -624,11 +624,10 @@ def _calculate_missing_shape_information(
 
 @parse_docdata
 class ConvEInteraction(
-    FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor]],
+    Interaction[torch.FloatTensor, torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor]],
 ):
     """A stateful module for the ConvE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.conve_interaction`
     ---
     citation:
         author: Dettmers
@@ -747,60 +746,44 @@ class ConvEInteraction(
         self.input_channels = input_channels
 
     @add_cudnn_error_hint
-    @staticmethod
-    def func(
+    def forward(
+        self,
         h: torch.FloatTensor,
         r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        t_bias: torch.FloatTensor,
-        input_channels: int,
-        embedding_height: int,
-        embedding_width: int,
-        hr2d: nn.Module,
-        hr1d: nn.Module,
-    ) -> FloatTensor:
+        t: tuple[torch.FloatTensor, torch.FloatTensor],
+    ) -> torch.FloatTensor:
         """Evaluate the interaction function.
 
-        :param h: shape: (`*batch_dims`, dim)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (`*batch_dims`, dim)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (`*batch_dims`, dim)
-            The tail representations.
-        :param t_bias: shape: (`*batch_dims`)
-            The tail entity bias.
-        :param input_channels:
-            The number of input channels.
-        :param embedding_height:
-            The height of the reshaped embedding.
-        :param embedding_width:
-            The width of the reshaped embedding.
-        :param hr2d:
-            The first module, transforming the 2D stacked head-relation "image".
-        :param hr1d:
-            The second module, transforming the 1D flattened output of the 2D module.
+        :param t: two vectors of shape: (`*batch_dims`, `*dims`) and (`*batch_dims`)
+            The tail representations, comprising the tail entity embedding and bias.
 
         :return: shape: batch_dims
             The scores.
         """
+        t, t_bias = t
+
         # repeat if necessary, and concat head and relation
         # shape: -1, num_input_channels, 2*height, width
         x = torch.cat(
             torch.broadcast_tensors(
-                h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
-                r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
+                h.view(*h.shape[:-1], self.input_channels, self.embedding_height, self.embedding_width),
+                r.view(*r.shape[:-1], self.input_channels, self.embedding_height, self.embedding_width),
             ),
             dim=-2,
         )
         prefix_shape = x.shape[:-3]
-        x = x.view(-1, input_channels, 2 * embedding_height, embedding_width)
+        x = x.view(-1, self.input_channels, 2 * self.embedding_height, self.embedding_width)
 
         # shape: -1, num_input_channels, 2*height, width
-        x = hr2d(x)
+        x = self.hr2d(x)
 
         # -1, num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
         x = x.view(-1, numpy.prod(x.shape[-3:]))
-        x = hr1d(x)
+        x = self.hr1d(x)
 
         # reshape: (-1, dim) -> (*batch_dims, dim)
         x = x.view(*prefix_shape, h.shape[-1])
@@ -811,25 +794,6 @@ class ConvEInteraction(
 
         # add bias term
         return x + t_bias
-
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        return dict(h=h, r=r, t=t[0], t_bias=t[1])
-
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            input_channels=self.input_channels,
-            embedding_height=self.embedding_height,
-            embedding_width=self.embedding_width,
-            hr2d=self.hr2d,
-            hr1d=self.hr1d,
-        )
 
 
 @parse_docdata
