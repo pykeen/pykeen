@@ -583,7 +583,26 @@ class ConvEResolvedImageShape:
 
     @classmethod
     def make(cls, channels: int | None, dim: int | None, height: int | None, width: int | None) -> Self:
-        """Automatically calculates missing dimensions for ConvE."""
+        """
+        Automatically calculates missing dimensions for ConvE.
+
+        The dimensions need to fulfil $channels * height * width = dim$.
+
+        :param channels:
+            the number of input channels
+        :param dim:
+            the embedding dimension
+        :param height:
+            the "image" height
+        :param width:
+            the "image" width
+
+        :return:
+            a resolve shape information.
+
+        :raises ValueError:
+            when the constraints cannot be satisfied.
+        """
         if dim is None:
             if channels is None or width is None or height is None:
                 raise ValueError(
