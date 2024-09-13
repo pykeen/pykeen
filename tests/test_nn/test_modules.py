@@ -110,7 +110,7 @@ class CrossETests(cases.InteractionTestCase):
     )
 
     def _exp_score(self, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = [kwargs[key] for key in ("h", "r", "t")]
+        h, r, t = (kwargs[key] for key in ("h", "r", "t"))
         r, c_r = r
         instance = self.instance
         assert isinstance(instance, pykeen.nn.modules.CrossEInteraction)
