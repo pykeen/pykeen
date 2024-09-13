@@ -14,6 +14,7 @@ from typing import (
     Callable,
     ClassVar,
     Generic,
+    NamedTuple,
     cast,
 )
 
@@ -566,60 +567,13 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
         return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
 
 
-def _calculate_missing_shape_information(
-    embedding_dim: int,
-    input_channels: int | None = None,
-    width: int | None = None,
-    height: int | None = None,
-) -> tuple[int, int, int]:
-    """Automatically calculates missing dimensions for ConvE.
+class ConvEShapeInformation(NamedTuple):
+    """Information about the embedding 'image'."""
 
-    :param embedding_dim:
-        The embedding dimension.
-    :param input_channels:
-        The number of input channels for the convolution.
-    :param width:
-        The width of the embedding "image".
-    :param height:
-        The height of the embedding "image".
-
-    :return: (input_channels, width, height), such that
-            `embedding_dim = input_channels * width * height`
-
-    :raises ValueError:
-        If no factorization could be found.
-    """
-    # Store initial input for error message
-    original = (input_channels, width, height)
-
-    # All are None -> try and make closest to square
-    if input_channels is None and width is None and height is None:
-        input_channels = 1
-        result_sqrt = math.floor(math.sqrt(embedding_dim))
-        height = max(factor for factor in range(1, result_sqrt + 1) if embedding_dim % factor == 0)
-        width = embedding_dim // height
-    # Only input channels is None
-    elif input_channels is None and width is not None and height is not None:
-        input_channels = embedding_dim // (width * height)
-    # Only width is None
-    elif input_channels is not None and width is None and height is not None:
-        width = embedding_dim // (height * input_channels)
-    # Only height is none
-    elif height is None and width is not None and input_channels is not None:
-        height = embedding_dim // (width * input_channels)
-    # Width and input_channels are None -> set input_channels to 1 and calculage height
-    elif input_channels is None and height is None and width is not None:
-        input_channels = 1
-        height = embedding_dim // width
-    # Width and input channels are None -> set input channels to 1 and calculate width
-    elif input_channels is None and height is not None and width is None:
-        input_channels = 1
-        width = embedding_dim // height
-
-    if input_channels * width * height != embedding_dim:  # type: ignore
-        raise ValueError(f"Could not resolve {original} to a valid factorization of {embedding_dim}.")
-
-    return input_channels, width, height  # type: ignore
+    embedding_dim: int
+    input_channels: int
+    embedding_height: int
+    embedding_width: int
 
 
 @parse_docdata
@@ -691,20 +645,14 @@ class ConvEInteraction(
         """
         super().__init__()
 
-        # Automatic calculation of remaining dimensions
-        logger.info(f"Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
-        if embedding_dim is None:
-            embedding_dim = input_channels * embedding_width * embedding_height
-
         # Parameter need to fulfil:
         #   input_channels * embedding_height * embedding_width = embedding_dim
-        input_channels, embedding_width, embedding_height = _calculate_missing_shape_information(
+        shape_info = self.calculate_missing_shape_information(
             embedding_dim=embedding_dim,
             input_channels=input_channels,
             width=embedding_width,
             height=embedding_height,
         )
-        logger.info(f"Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
 
         # normalize kernel height
         kernel_height = kernel_height or kernel_width
@@ -712,11 +660,11 @@ class ConvEInteraction(
         # encoders
         # 1: 2D encoder: BN?, DO, Conv, BN?, Act, DO
         hr2d_layers = [
-            nn.BatchNorm2d(input_channels) if apply_batch_normalization else None,
+            nn.BatchNorm2d(shape_info.input_channels) if apply_batch_normalization else None,
             nn.Dropout(input_dropout),
             nn.Conv2d(
-                in_channels=input_channels,
-                out_channels=output_channels,
+                in_channels=shape_info.input_channels,
+                out_channels=shape_info.output_channels,
                 kernel_size=(kernel_height, kernel_width),
                 stride=1,
                 padding=0,
@@ -730,7 +678,9 @@ class ConvEInteraction(
 
         # 2: 1D encoder: FC, DO, BN?, Act
         num_in_features = (
-            output_channels * (2 * embedding_height - kernel_height + 1) * (embedding_width - kernel_width + 1)
+            output_channels
+            * (2 * shape_info.embedding_height - kernel_height + 1)
+            * (shape_info.embedding_width - kernel_width + 1)
         )
         hr1d_layers = [
             nn.Linear(num_in_features, embedding_dim),
@@ -741,9 +691,84 @@ class ConvEInteraction(
         self.hr1d = nn.Sequential(*(layer for layer in hr1d_layers if layer is not None))
 
         # store reshaping dimensions
-        self.embedding_height = embedding_height
-        self.embedding_width = embedding_width
-        self.input_channels = input_channels
+        self.embedding_height = shape_info.embedding_height
+        self.embedding_width = shape_info.embedding_width
+        self.input_channels = shape_info.input_channels
+
+    @staticmethod
+    def calculate_missing_shape_information(
+        embedding_dim: int | None,
+        input_channels: int | None = None,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> ConvEShapeInformation:
+        """Automatically calculates missing dimensions for ConvE.
+
+        :param embedding_dim:
+            The embedding dimension.
+        :param input_channels:
+            The number of input channels for the convolution.
+        :param width:
+            The width of the embedding "image".
+        :param height:
+            The height of the embedding "image".
+
+        :return: (input_channels, width, height), such that
+                `embedding_dim = input_channels * width * height`
+
+        :raises ValueError:
+            If no factorization could be found.
+        """
+        # Automatic calculation of remaining dimensions
+        logger.info(f"Resolving {input_channels} * {width} * {height} = {embedding_dim}.")
+        if embedding_dim is None:
+            if input_channels is None or width is None or height is None:
+                raise ValueError(
+                    f"When {embedding_dim=} none of the other dimensions may be None, "
+                    f"but {input_channels=}, {width=}, and {height=}"
+                )
+            embedding_dim = input_channels * width * height
+
+        # Store initial input for error message
+        original = (input_channels, width, height)
+
+        # All are None -> try and make closest to square
+        if input_channels is None and width is None and height is None:
+            input_channels = 1
+            result_sqrt = math.floor(math.sqrt(embedding_dim))
+            height = max(factor for factor in range(1, result_sqrt + 1) if embedding_dim % factor == 0)
+            width = embedding_dim // height
+        # Only input channels is None
+        elif input_channels is None and width is not None and height is not None:
+            input_channels = embedding_dim // (width * height)
+        # Only width is None
+        elif input_channels is not None and width is None and height is not None:
+            width = embedding_dim // (height * input_channels)
+        # Only height is none
+        elif height is None and width is not None and input_channels is not None:
+            height = embedding_dim // (width * input_channels)
+        # Width and input_channels are None -> set input_channels to 1 and calculage height
+        elif input_channels is None and height is None and width is not None:
+            input_channels = 1
+            height = embedding_dim // width
+        # Width and input channels are None -> set input channels to 1 and calculate width
+        elif input_channels is None and height is not None and width is None:
+            input_channels = 1
+            width = embedding_dim // height
+
+        # this is too complicated for mypy
+        assert input_channels is not None
+        assert width is not None
+        assert height is not None
+
+        if input_channels * width * height != embedding_dim:
+            raise ValueError(f"Could not resolve {original} to a valid factorization of {embedding_dim}.")
+
+        logger.info(f"Resolved to {input_channels} * {width} * {height} = {embedding_dim}.")
+
+        return ConvEShapeInformation(
+            embedding_dim=embedding_dim, input_channels=input_channels, embedding_width=width, embedding_height=height
+        )
 
     @add_cudnn_error_hint
     def forward(
