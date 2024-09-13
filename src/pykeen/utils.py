@@ -25,7 +25,6 @@ from typing import (
     Any,
     Callable,
     Generic,
-    ParamSpec,
     TextIO,
     TypeVar,
     Union,
@@ -40,6 +39,7 @@ import yaml
 from class_resolver import normalize_string
 from docdata import get_docdata
 from torch import nn
+from typing_extensions import ParamSpec
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
