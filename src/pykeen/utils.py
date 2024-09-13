@@ -73,7 +73,6 @@ __all__ = [
     "extend_batch",
     "check_shapes",
     "all_in_bounds",
-    "is_cudnn_error",
     "view_complex",
     "combine_complex",
     "get_model_io",
