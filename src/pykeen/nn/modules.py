@@ -996,17 +996,17 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (`*batch_dims`, `*dims`)
+        :param h: shape: ``(*batch_dims, d)``
             The head representations.
-        :param r: shape: (`*batch_dims`, `*dims`)
+        :param r: shape: ``(*batch_dims, d)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, `*dims`)
+        :param t: shape: ``(*batch_dims, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
-        # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
+        # repeat if necessary, and concat head and relation, (*batch_dims, 2 * embedding_dim)
         x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
 
         # Predict t embedding, shape: (*batch_dims, d)
