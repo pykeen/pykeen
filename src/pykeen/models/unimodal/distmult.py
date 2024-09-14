@@ -21,10 +21,10 @@ __all__ = [
 class DistMult(ERModel):
     r"""An implementation of DistMult from [yang2014]_.
 
-    In this work, both entities and relations are represented by d-dimensional vectors stored in an
+    In this work, both entities and relations are represented by $d$-dimensional vectors stored in an
     :class:`~pykeen.nn.representation.Embedding` matrix.
-    The entity representation vectors are further constrained to the unit norm.
-    For the relation representations, a (soft) regularization term on the vector norm is used instead.
+    The entity representation vectors are further constrained to have unit $L_2$ norm.
+    For the relation representations, a (soft) regularization term on the vector $L_2$ norm is used instead.
 
     The representations are then passed to the :class:`~pykeen.nn.modules.DistMultInteraction` function to obtain
     scores.

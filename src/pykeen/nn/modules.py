@@ -847,6 +847,8 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^{d}$ are the representations for the head entity,
     the relation, and the tail entity.
 
+    For a single triple of $d$-dimensional vectors, the computational complexity is given as $\mathcal{O}(d)$.
+
     The interaction function is symmetric in the entities, i.e.,
 
     .. math::
