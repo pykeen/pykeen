@@ -19,34 +19,21 @@ __all__ = [
 
 
 class DistMult(ERModel):
-    r"""An implementation of DistMult from [yang2014]_.
+    r"""An implementation of DistMult from [yang2014].
 
-    This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
+    In this work, both entities and relations are represented by d-dimensional vectors stored in an
+    :class:`~pykeen.nn.representation.Embedding` matrix.
+    The entity representation vectors are further constrained to the unit norm.
+    For the relation representations, a (soft) regularization term on the vector norm is used instead.
 
-    DistMult is a simplification of :class:`pykeen.models.RESCAL` where the relation matrices
-    $\textbf{W}_{r} \in \mathbb{R}^{d \times d}$ are restricted to diagonal matrices:
+    The representations are then passed to the :class:`~pykeen.nn.modules.DistMultInteraction` function to obtain
+    scores.
 
-    .. math::
-
-        f(h,r,t) = \textbf{e}_h^{T} \textbf{W}_r \textbf{e}_t = \sum_{i=1}^{d}(\textbf{e}_h)_i \cdot
-        diag(\textbf{W}_r)_i \cdot (\textbf{e}_t)_i
-
-    Because of its restriction to diagonal matrices, DistMult is more computationally than RESCAL, but at the same
-    time it is less expressive. For instance, it is not able to model anti-symmetric relations,
-    since $f(h,r, t) = f(t,r,h)$. This can alternatively be formulated with relation vectors
-    $\textbf{r}_r \in \mathbb{R}^d$ and the Hadamard operator and the $l_1$ norm.
-
-    .. note::
-
-        DistMult uses a hard constraint on the embedding norm, but applies a (soft) regularization term on the
-        relation vector norms
-
-    .. math::
-
-        f(h,r,t) = \|\textbf{e}_h \odot \textbf{r}_r \odot \textbf{e}_t\|_1
-
-    Note:
-      - For FB15k, Yang *et al.* report 2 negatives per each positive.
+    This DistMult model can be seen as a simplification of the :class:`~pykeen.models.RESCAL` model,
+    where the relation matrices are restricted to diagonal matrices:
+    Because of its restriction to diagonal matrices, :class:`~pykeen.models.DistMult` is computationally cheaper than
+    :class:`~pykeen.models.RESCAL`, but at the same time it is less expressive. For example, it is not able to
+    model anti-symmetric relations.
 
     .. seealso::
 
