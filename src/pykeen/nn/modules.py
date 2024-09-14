@@ -739,7 +739,7 @@ class ConvEShapeInformation:
 class ConvEInteraction(
     Interaction[torch.FloatTensor, torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor]],
 ):
-    r"""A stateful module for the ConvE interaction function.
+    r"""The stateful ConvE interaction function.
 
     ConvE is a CNN-based approach. For input representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$,
     it first combines $\mathbf{h}$ and $\mathbf{r}$ into a matrix matrix $\mathbf{A} \in \mathbb{R}^{2 \times d}$,
