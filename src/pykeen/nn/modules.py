@@ -870,10 +870,19 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 @parse_docdata
 class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
-    """The ER-MLP stateful interaction function.
+    r"""The ER-MLP stateful interaction function.
 
-    .. math ::
-        f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
+    ER-MLP uses a multi-layer perceptron based approach with a single hidden layer.
+    The $d$-dimensional representations of head entity, relation, and tail entity are concatenated
+    and passed to the hidden layer. The output-layer consists of a single neuron that computes the plausibility score:
+
+    .. math::
+
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \mathbf{w}^{T} g(\mathbf{W} [\mathbf{h}; \mathbf{r}; \mathbf{t}]),
+
+    where $\textbf{W} \in \mathbb{R}^{k \times 3d}$ represents the weight matrix of the hidden layer,
+    $\textbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
+    as the hyperbolic tangent.
 
     ---
     name: ER-MLP
@@ -887,6 +896,8 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         self,
         embedding_dim: int,
         hidden_dim: int | None = None,
+        activation: HintOrType[nn.Module] = nn.ReLU,
+        activation_kwargs: OptionalKwargs = None,
     ):
         """Initialize the interaction module.
 
@@ -894,12 +905,20 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             The embedding vector dimension for entities and relations.
         :param hidden_dim:
             The hidden dimension of the MLP. Defaults to `embedding_dim`.
+        :param activation:
+            The activation function or a hint thereof.
+        :param activation_kwargs:
+            Additional keyword-based parameters passed to the activation's constructor, if the activation is not
+            pre-instantiated.
+
+        .. todo::
+            add resolver decorator for activation
         """
         super().__init__()
         # normalize hidden_dim
         hidden_dim = hidden_dim or embedding_dim
         self.hidden = nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True)
-        self.activation = nn.ReLU()
+        self.activation = activation_resolver.make(activation, activation_kwargs)
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
     def forward(
