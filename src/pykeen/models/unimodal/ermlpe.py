@@ -19,20 +19,11 @@ __all__ = [
 class ERMLPE(ERModel):
     r"""An extension of :class:`pykeen.models.ERMLP` proposed by [sharifzadeh2019]_.
 
-    This model uses a neural network-based approach similar to ER-MLP and with slight modifications.
-    In ER-MLP, the model is:
+    This model represents both entities and relations as $d$-dimensional vectors stored in an
+    :class:`~pykeen.nn.representation.Embedding` matrix.
+    The representations are then passed to the :class:`~pykeen.nn.modules.ERMLPEInteraction` function to obtain
+    scores.
 
-    .. math::
-
-        f(h, r, t) = \textbf{w}^{T} g(\textbf{W} [\textbf{h}; \textbf{r}; \textbf{t}])
-
-    whereas in ER-MLP (E) the model is:
-
-    .. math::
-
-        f(h, r, t) = \textbf{t}^{T} f(\textbf{W} (g(\textbf{W} [\textbf{h}; \textbf{r}]))
-
-    including dropouts and batch-norms between each two hidden layers.
     ConvE can be seen as a special case of ER-MLP (E) that contains the unnecessary inductive bias of convolutional
     filters. The aim of this model is to show that lifting this bias from :class:`pykeen.models.ConvE` (which simply
     leaves us with a modified ER-MLP model), not only reduces the number of parameters but also improves performance.
