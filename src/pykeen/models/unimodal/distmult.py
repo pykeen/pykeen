@@ -19,7 +19,7 @@ __all__ = [
 
 
 class DistMult(ERModel):
-    r"""An implementation of DistMult from [yang2014].
+    r"""An implementation of DistMult from [yang2014]_.
 
     In this work, both entities and relations are represented by d-dimensional vectors stored in an
     :class:`~pykeen.nn.representation.Embedding` matrix.
