@@ -819,7 +819,6 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
 
-    @abstractmethod
     def forward(
         self,
         h: torch.FloatTensor,
