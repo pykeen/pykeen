@@ -926,7 +926,7 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
 
 
 @parse_docdata
-class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""A stateful module for the ER-MLP (E) interaction function.
 
     This interaction uses a neural network-based approach similar to ER-MLP and with slight modifications.
@@ -945,8 +945,6 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     including dropouts and batch-norms between each two hidden layers. Thus, the ConvE interaction can be seen as a
     special case of ERMLP (E).
 
-    .. seealso:: :func:`pykeen.nn.functional.ermlpe_interaction`
-
     ---
     name: ER-MLP (E)
     citation:
@@ -955,8 +953,6 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://github.com/pykeen/pykeen
         github: pykeen/pykeen
     """
-
-    func = pkf.ermlpe_interaction
 
     def __init__(
         self,
@@ -992,9 +988,33 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             nn.ReLU(),
         )
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(mlp=self.mlp)
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
+
+        :param h: shape: (`*batch_dims`, `*dims`)
+            The head representations.
+        :param r: shape: (`*batch_dims`, `*dims`)
+            The relation representations.
+        :param t: shape: (`*batch_dims`, `*dims`)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
+        x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
+
+        # Predict t embedding, shape: (*batch_dims, d)
+        *batch_dims, dim = x.shape
+        x = self.mlp(x.view(-1, dim)).view(*batch_dims, -1)
+
+        # dot product
+        return einsum("...d,...d->...", x, t)
 
 
 @parse_docdata
