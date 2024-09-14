@@ -838,12 +838,14 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateless DistMult interaction function.
 
-    This interaction function acts on three $d$-dimensional vectors (one each for the head entity, the relation,
-    and the tail entity). Its formula is given by
+    This interaction is given by
 
     .. math::
 
-        f(h,r,t) = \sum \limits_{i} (\textbf{e}_h)_i \cdot (\textbf{r}_r)_{i} \cdot (\textbf{e}_t)_i
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \sum \limits_{i} \mathbf{h}_i \cdot \mathbf{r}_{i} \cdot \mathbf{t}_i
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^{d}$ are the representations for the head entity,
+    the relation, and the tail entity.
 
     The interaction function is symmetric in the entities, i.e.,
 
