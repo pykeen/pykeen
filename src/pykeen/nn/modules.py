@@ -739,7 +739,36 @@ class ConvEShapeInformation:
 class ConvEInteraction(
     Interaction[torch.FloatTensor, torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor]],
 ):
-    """A stateful module for the ConvE interaction function.
+    r"""A stateful module for the ConvE interaction function.
+
+    ConvE is a CNN-based approach. For input representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$,
+    it first combines $\mathbf{h}$ and $\mathbf{r}$ into a matrix matrix $\mathbf{A} \in \mathbb{R}^{2 \times d}$,
+    where the first row of $\mathbf{A}$ represents $\mathbf{h}$ and the second row represents $\mathbf{r}$.
+    $\mathbf{A}$ is reshaped to a matrix $\mathbf{B} \in \mathbb{R}^{m \times n}$
+    where the first $m/2$ half rows represent $\mathbf{h}$ and the remaining $m/2$ half rows represent $\mathbf{r}$.
+    In the convolution layer, a set of *2-dimensional* convolutional filters
+    $\Omega = \{\omega_i \mid \omega_i \in \mathbb{R}^{r \times c}\}$ are applied on $\mathbf{B}$
+    that capture interactions between $\mathbf{h}$ and $\mathbf{r}$.
+    The resulting feature maps are reshaped and concatenated in order to create a feature vector
+    $\mathbf{v} \in \mathbb{R}^{|\Omega|rc}$.
+    In the next step, $\mathbf{v}$ is mapped into the entity space using a linear transformation
+    $\mathbf{W} \in \mathbb{R}^{|\Omega|rc \times d}$, that is $\mathbf{e}_{h,r} = \mathbf{v}^{T} \mathbf{W}$.
+    The  score is then obtained by:
+
+    .. math::
+
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \mathbf{e}_{h,r} \mathbf{t}
+
+    Since the interaction model can be decomposed into
+    $f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \left\langle f'(\mathbf{h}, \mathbf{r}), \mathbf{t} \right\rangle$
+    the model is particularly designed to 1-N scoring, i.e. efficient computation of scores for
+    $(h,r,t)$ for fixed $h,r$ and many different $t$.
+
+    The default setting uses batch normalization. Batch normalization normalizes the output of the activation functions,
+    in order to ensure that the weights of the NN don't become imbalanced and to speed up training.
+    However, batch normalization is not the only way to achieve more robust and effective training [santurkar2018]_.
+    Therefore, we added the flag ``apply_batch_normalization`` to turn batch normalization on/off (it's turned on as
+    default).
 
     ---
     citation:
