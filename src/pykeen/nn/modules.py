@@ -45,7 +45,9 @@ from ..utils import (
     ensure_complex,
     ensure_tuple,
     estimate_cost_of_sequence,
+    make_ones_like,
     negative_norm,
+    tensor_sum,
     unpack_singletons,
     upgrade_to_sequence,
 )
@@ -867,10 +869,8 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 @parse_docdata
-class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ER-MLP interaction.
-
-    .. seealso:: :func:`pykeen.nn.functional.ermlp_interaction`
+class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    """The ER-MLP stateful interaction function.
 
     .. math ::
         f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
@@ -882,8 +882,6 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         year: 2014
         link: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/45634.pdf
     """
-
-    func = pkf.ermlp_interaction
 
     def __init__(
         self,
@@ -904,13 +902,38 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         self.activation = nn.ReLU()
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            hidden=self.hidden,
-            activation=self.activation,
-            final=self.hidden_to_score,
-        )
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
+
+        :param h: shape: (`*batch_dims`, `*dims`)
+            The head representations.
+        :param r: shape: (`*batch_dims`, `*dims`)
+            The relation representations.
+        :param t: shape: (`*batch_dims`, `*dims`)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        # shortcut for same shape
+        if h.shape == r.shape and h.shape == t.shape:
+            x = self.hidden(torch.cat([h, r, t], dim=-1))
+        else:
+            # split weight into head-/relation-/tail-specific sub-matrices
+            *prefix, dim = h.shape
+            x = tensor_sum(
+                self.hidden.bias.view(*make_ones_like(prefix), -1),
+                *(
+                    einsum("...i, ji -> ...j", xx, weight)
+                    for xx, weight in zip([h, r, t], self.hidden.weight.split(split_size=dim, dim=-1))
+                ),
+            )
+        return self.final(self.activation(x)).squeeze(dim=-1)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
