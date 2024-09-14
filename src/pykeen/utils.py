@@ -1674,15 +1674,16 @@ def add_doc_note_about_resolvers(
         if not func.__doc__:
             raise ValueError("docstring is empty")
         pairs_str = ", ".join(f"``({param}, {param}_kwargs)``" for param in params)
-        func.__doc__ = func.__doc__.lstrip()  + textwrap.dedent(
+        note_str = textwrap.dedent(
             f"""\
-
             .. note ::
-    
+
                 The parameter pairs {pairs_str} are passed to :data:`{resolver_name}`.
                 An explanation of resolvers and how to use them is given in :ref:`using_resolvers`.
-                """
+            """
         )
+        note_str = textwrap.indent(text=note_str, prefix="        ", predicate=bool)
+        func.__doc__ = f"{func.__doc__}\n\n{note_str}"
         return func
 
     return add_note
