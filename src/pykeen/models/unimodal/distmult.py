@@ -102,7 +102,7 @@ class DistMult(ERModel[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor])
         :param entity_representations_kwargs:
             Additional parameters to ``entity_representations_kwargs`` passed to :class:`pykeen.models.ERModel`.
             Note that those take precedence of those which are filled in by this class.
-        :param entity_representations_kwargs:
+        :param relation_representations_kwargs:
             Additional parameters to ``relation_representations_kwargs`` passed to :class:`pykeen.models.ERModel`.
             Note that those take precedence of those which are filled in by this class.
         :param kwargs:
