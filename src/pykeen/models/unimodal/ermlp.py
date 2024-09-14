@@ -42,13 +42,31 @@ class ERMLP(ERModel):
         *,
         embedding_dim: int = 64,
         hidden_dim: Optional[int] = None,
-        entity_initializer: Hint[Initializer] = nn.init.uniform_,
-        relation_initializer: Hint[Initializer] = nn.init.uniform_,
         activation: HintOrType[nn.Module] = nn.ReLU,
         activation_kwargs: OptionalKwargs = None,
+        entity_initializer: Hint[Initializer] = nn.init.uniform_,
+        relation_initializer: Hint[Initializer] = nn.init.uniform_,
         **kwargs,
     ) -> None:
-        """Initialize the model."""
+        """
+        Initialize the model.
+
+        :param embedding_dim:
+            The embedding vector dimension for entities and relations.
+        :param hidden_dim:
+            The hidden dimension of the MLP. Defaults to `embedding_dim`.
+        :param activation:
+            The activation function or a hint thereof.
+        :param activation_kwargs:
+            Additional keyword-based parameters passed to the activation's constructor, if the activation is not
+            pre-instantiated.
+        :param entity_initializer:
+            the method to initialize the entity embeddings
+        :param relation_initializer:
+            the method to initialize the entity embeddings
+        :param kwargs:
+            additional keyword-based parameters passed to :class:`pykeen.models.ERModel`
+        """
         super().__init__(
             interaction=ERMLPInteraction,
             interaction_kwargs=dict(
