@@ -1645,7 +1645,7 @@ def add_doc_note_about_resolvers(
     Build a decorator to add information about resolved parameter pairs.
 
     :param params:
-        the name of the parameterss. Will be automatically completed to include all the ``_kwargs`` suffixed parts, too.
+        the name of the parameters. Will be automatically completed to include all the ``_kwargs`` suffixed parts, too.
     :param resolver_name:
         the fully qualified path of the resolver used to construct a reference via the ``:data:`` role.
 
@@ -1671,16 +1671,17 @@ def add_doc_note_about_resolvers(
             signature.parameters
         ):
             raise ValueError(f"{missing=} parameters in {signature=}.")
-        old_doc = func.__doc__
-        assert old_doc is not None
+        if not func.__doc__:
+            raise ValueError("docstring is empty")
         pairs_str = ", ".join(f"``({param}, {param}_kwargs)``" for param in params)
-        func.__doc__ = textwrap.dedent(
-            f"""
-            {old_doc}
+        func.__doc__ = func.__doc__.lstrip()  + textwrap.dedent(
+            f"""\
 
             .. note ::
+    
                 The parameter pairs {pairs_str} are passed to :data:`{resolver_name}`.
-                An explanation of resolvers and how to use them is given in :ref:`using_resolvers`."""
+                An explanation of resolvers and how to use them is given in :ref:`using_resolvers`.
+                """
         )
         return func
 
