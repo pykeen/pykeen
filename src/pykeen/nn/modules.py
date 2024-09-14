@@ -46,6 +46,7 @@ from ..utils import (
     ensure_tuple,
     estimate_cost_of_sequence,
     negative_norm,
+    tensor_product,
     unpack_singletons,
     upgrade_to_sequence,
 )
@@ -835,9 +836,12 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 @parse_docdata
 class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless DistMult interaction function.
+    r"""The stateless DistMult interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.distmult_interaction`
+    .. math::
+
+        f(h,r,t) = \textbf{e}_h^{T} \textbf{W}_r \textbf{e}_t = \sum_{i=1}^{d}(\textbf{e}_h)_i \cdot
+        diag(\textbf{W}_r)_i \cdot (\textbf{e}_t)_i
 
     ---
     citation:
@@ -847,7 +851,25 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
         arxiv: 1412.6575
     """
 
-    func = pkf.distmult_interaction
+    @staticmethod
+    def func(
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The relation representations.
+        :param t: shape: (`*batch_dims`, dim)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        return tensor_product(h, r, t).sum(dim=-1)
 
 
 @parse_docdata
