@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
+import torch
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn import functional
 
@@ -18,7 +19,7 @@ __all__ = [
 ]
 
 
-class DistMult(ERModel):
+class DistMult(ERModel[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     r"""An implementation of DistMult from [yang2014]_.
 
     In this work, both entities and relations are represented by $d$-dimensional vectors stored in an
@@ -70,39 +71,61 @@ class DistMult(ERModel):
         relation_initializer: Hint[Initializer] = xavier_normal_norm_,
         regularizer: HintOrType[Regularizer] = LpRegularizer,
         regularizer_kwargs: OptionalKwargs = None,
+        entity_representations_kwargs: OptionalKwargs = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize DistMult.
 
-        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        :param entity_initializer: Default: xavier uniform, c.f.
-            https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
-        :param entity_constrainer: Default: constrain entity embeddings to unit length
-        :param relation_initializer: Default: relations are initialized to unit length (but not constrained)
+        :param embedding_dim:
+            The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param entity_initializer:
+            The method used to initialize the entity embedding. Defaults to Xavier/Glorot uniform, c.f.
+            `OpenKE <https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17>`_
+        :param entity_constrainer:
+            The constrainer for entity embeddings. Defaults to unit L2 norm.
+
+                .. todo::
+                    Link to explanation about constrainer vs. regularizer.
+
+        :param relation_initializer:
+            The method used to initialize the relation embedding. Defaults to using Xavier/Glorot uniform first and
+            then normalizing te unit L2 length.
         :param regularizer:
-            the *relation* representation regularizer
+            The *relation* representation regularizer.
         :param regularizer_kwargs:
-            additional keyword-based parameters. defaults to :attr:`DistMult.regularizer_default_kwargs` for the
+            Additional keyword-based parameters. defaults to :attr:`DistMult.regularizer_default_kwargs` for the
             default regularizer
+
+            .. todo:: use resolver docstring decorator
+
+        :param entity_representations_kwargs:
+            Additional parameters to ``entity_representations_kwargs`` passed to :class:`pykeen.models.ERModel`.
+            Note that those take precedence of those which are filled in by this class.
+        :param entity_representations_kwargs:
+            Additional parameters to ``relation_representations_kwargs`` passed to :class:`pykeen.models.ERModel`.
+            Note that those take precedence of those which are filled in by this class.
         :param kwargs:
             Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
         """
         if regularizer is LpRegularizer and regularizer_kwargs is None:
             regularizer_kwargs = DistMult.regularizer_default_kwargs
+        resolved_entity_representations_kwargs = dict(
+            shape=embedding_dim,
+            initializer=entity_initializer,
+            constrainer=entity_constrainer,
+            # note: DistMult only regularizes the relation embeddings;
+            #       entity embeddings are hard constrained instead
+        ).update(entity_representations_kwargs or {})
+        resolved_relation_representations_kwargs = dict(
+            shape=embedding_dim,
+            initializer=relation_initializer,
+            regularizer=regularizer,
+            regularizer_kwargs=regularizer_kwargs,
+        ).update(relation_representations_kwargs or {})
         super().__init__(
             interaction=DistMultInteraction,
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                constrainer=entity_constrainer,
-                # note: DistMult only regularizes the relation embeddings;
-                #       entity embeddings are hard constrained instead
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
+            entity_representations_kwargs=resolved_entity_representations_kwargs,
+            relation_representations_kwargs=resolved_relation_representations_kwargs,
             **kwargs,
         )
