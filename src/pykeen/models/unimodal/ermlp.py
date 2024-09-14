@@ -3,7 +3,8 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar, Optional
 
-from torch.nn.init import uniform_
+from class_resolver import HintOrType, OptionalKwargs
+from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -41,19 +42,20 @@ class ERMLP(ERModel):
         *,
         embedding_dim: int = 64,
         hidden_dim: Optional[int] = None,
-        entity_initializer: Hint[Initializer] = uniform_,
-        relation_initializer: Hint[Initializer] = uniform_,
+        entity_initializer: Hint[Initializer] = nn.init.uniform_,
+        relation_initializer: Hint[Initializer] = nn.init.uniform_,
+        activation: HintOrType[nn.Module] = nn.ReLU,
+        activation_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         """Initialize the model."""
-        # input normalization
-        if hidden_dim is None:
-            hidden_dim = embedding_dim
         super().__init__(
             interaction=ERMLPInteraction,
             interaction_kwargs=dict(
                 embedding_dim=embedding_dim,
                 hidden_dim=hidden_dim,
+                activation=activation,
+                activation_kwargs=activation_kwargs,
             ),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
