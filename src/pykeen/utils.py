@@ -1683,7 +1683,7 @@ def add_doc_note_about_resolvers(
             """
         )
         note_str = textwrap.indent(text=note_str, prefix="        ", predicate=bool)
-        func.__doc__ = f"{func.__doc__}\n\n{note_str}"
+        func.__doc__ = f"{func.__doc__.lstrip()}\n\n{note_str}"
         return func
 
     return add_note
