@@ -1109,6 +1109,7 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
         year: 2016
         link: https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828
         github: mnick/holographic-embeddings
+        arxiv: 1510.04935
     """
 
     @staticmethod
