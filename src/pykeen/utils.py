@@ -89,7 +89,6 @@ __all__ = [
     "negative_norm_of_sum",
     "negative_norm",
     "project_entity",
-    "CANONICAL_DIMENSIONS",
     "get_expected_norm",
     "Bias",
     "complex_normalize",
@@ -679,18 +678,6 @@ def project_entity(
     e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
     return e_bot
-
-
-# TODO delete when deleting _normalize_dim (below)
-CANONICAL_DIMENSIONS = dict(h=1, r=2, t=3)
-
-
-# TODO delete when deleting convert_to_canonical_shape (below)
-def _normalize_dim(dim: int | str) -> int:
-    """Normalize the dimension selection."""
-    if isinstance(dim, int):
-        return dim
-    return CANONICAL_DIMENSIONS[dim.lower()[0]]
 
 
 def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
