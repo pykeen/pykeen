@@ -61,19 +61,15 @@ class KG2ESimilarity(nn.Module, abc.ABC):
 class ExpectedLikelihood(KG2ESimilarity):
     r"""Compute the similarity based on expected likelihood.
 
+    Denoting :math:`\mu = \mu_e - \mu_r` and :math:`\Sigma = \Sigma_e + \Sigma_t`, it is given by
+
     .. math::
 
-        D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
-        = \frac{1}{2} \left(
-            (\mu_e - \mu_r)^T(\Sigma_e + \Sigma_r)^{-1}(\mu_e - \mu_r)
-            + \log \det (\Sigma_e + \Sigma_r) + d \log (2 \pi)
-        \right)\\
+        sim(\mathcal{N}(\mu_e, \Sigma_e),~\mathcal{N}(\mu_r, \Sigma_r)))
         = \frac{1}{2} \left(
             \mu^T\Sigma^{-1}\mu
             + \log \det \Sigma + d \log (2 \pi)
         \right)
-
-    with :math:`\mu = \mu_e - \mu_r` and :math:`\Sigma = \Sigma_e + \Sigma_t`.
     """
 
     def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> torch.FloatTensor:
@@ -94,30 +90,16 @@ class ExpectedLikelihood(KG2ESimilarity):
 class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
     r"""Compute the negative KL divergence.
 
-    The divergence between :math:`\mathcal{N}(\mu_e, \Sigma_e)` and :math:`\mathcal{N}(\mu_r, \Sigma_r)` with
-
-    .. math ::
-        \mu_e &=& \mu_h - \mu_t \\
-        \Sigma_e &=& \Sigma_h + \Sigma_t
-
-    is given by
+    Denoting :math:`\mu = \mu_e - \mu_r`, the similarity is given by
 
     .. math::
 
-        D(\mathcal{N}(\mu_e, \Sigma_e),~\mathcal{N}(\mu_r, \Sigma_r)) = \frac{1}{2} \left(
+        sim(\mathcal{N}(\mu_e, \Sigma_e),~\mathcal{N}(\mu_r, \Sigma_r)) = -\frac{1}{2} \left(
             tr\left(\Sigma_r^{-1} \Sigma_e\right)
             + \mu^T \Sigma_r^{-1} \mu
             - k
             + \ln \left(\det(\Sigma_r) / \det(\Sigma_e)\right)
         \right)
-
-    where 
-
-    .. math ::
-        \mu
-        &=& \mu_r - \mu_e \\
-        &=& \mu_r - (\mu_h - \mu_t) \\
-        &=& \mu_r - \mu_h + \mu_t
 
     Since all covariance matrices are diagonal, we can further simplify:
 
