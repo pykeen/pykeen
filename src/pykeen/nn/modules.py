@@ -17,12 +17,10 @@ from typing import (
     cast,
 )
 
-from class_resolver import ResolverKey, update_docstring_with_resolver_keys
-
 import more_itertools
 import numpy
 import torch
-from class_resolver import ClassResolver, Hint, OptionalKwargs
+from class_resolver import ClassResolver, Hint, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
@@ -42,7 +40,6 @@ from ..typing import (
     TailRepresentation,
 )
 from ..utils import (
-    add_doc_note_about_resolvers,
     at_least_eps,
     einsum,
     ensure_complex,
