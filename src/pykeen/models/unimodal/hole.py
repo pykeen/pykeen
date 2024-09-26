@@ -25,11 +25,16 @@ class HolE(ERModel):
     The representations are then passed to the :class:`~pykeen.nn.modules.HolEInteraction` function to obtain
     scores.
 
+    .. note ::
+        The original paper describes modelling the probability as $\sigma(f(h, r, t))$, however, since the margin
+        ranking loss is used for all experiments, the implementation of the score function does not include the
+        $\sigma$.
+
     .. seealso::
 
        - `author's implementation of HolE <https://github.com/mnick/holographic-embeddings>`_
        - `scikit-kge implementation of HolE <https://github.com/mnick/scikit-kge>`_
-       - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
+       - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/64c4ec8157abfc39112772e9825a349091da45f1/openke/module/model/HolE.py>`_
     ---
     citation:
         author: Nickel
