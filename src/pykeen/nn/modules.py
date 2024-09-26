@@ -17,6 +17,8 @@ from typing import (
     cast,
 )
 
+from class_resolver import ResolverKey, update_docstring_with_resolver_keys
+
 import more_itertools
 import numpy
 import torch
@@ -1863,8 +1865,8 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
 
     relation_shape = ("d", "d")
 
-    @add_doc_note_about_resolvers(
-        "combination_activation", resolver_name="class_resolver.contrib.torch.activation_resolver"
+    @update_docstring_with_resolver_keys(
+        ResolverKey("combination_activation", "class_resolver.contrib.torch.activation_resolver")
     )
     def __init__(
         self,
