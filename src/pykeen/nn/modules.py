@@ -1557,7 +1557,7 @@ class KG2EInteraction(
 
         :param similarity:
             The similarity measures for gaussian distributions. Defaults to
-            :class:`pykeen.nn.sim.KullbackLeiblerDivergenceKG2ESimilarity`.
+            :class:`~pykeen.nn.sim.NegativeKullbackLeiblerDivergence`.
         :param similarity_kwargs:
             Additional keyword-based parameters used to instantiate the similarity.
         """
