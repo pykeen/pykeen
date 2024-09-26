@@ -45,6 +45,8 @@ class KG2ESimilarity(nn.Module, abc.ABC):
         """
         Calculate the similarity.
 
+        # noqa: DAR401
+
         :param h: shape: (`*batch_dims`, `d`)
             The head entity Gaussian distribution.
         :param r: shape: (`*batch_dims`, `d`)
@@ -52,7 +54,7 @@ class KG2ESimilarity(nn.Module, abc.ABC):
         :param t: shape: (`*batch_dims`, `d`)
             The tail entity Gaussian distribution.
 
-        :return: torch.Tensor, shape: (`*batch_dims`)
+        :return: torch.Tensor, shape: (`*batch_dims`)  # noqa: DAR202
             The similarity.
         """
         raise NotImplementedError
