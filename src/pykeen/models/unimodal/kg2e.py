@@ -4,12 +4,13 @@ from collections.abc import Mapping
 from typing import Any, ClassVar, Optional
 
 import torch
-import torch.autograd
+from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import KG2EInteraction
+from ...nn.sim import KG2ESimilarity
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
@@ -23,9 +24,9 @@ class KG2E(ERModel):
 
     KG2E aims to explicitly model (un)certainties in entities and relations (e.g. influenced by the number of triples
     observed for these entities and relations). Therefore, entities and relations are represented by probability
-    distributions, in particular by multi-variate Gaussian distributions $\mathcal{N}_i(\mu_i,\Sigma_i)$
-    where the mean $\mu_i \in \mathbb{R}^d$ denotes the position in the vector space and the diagonal variance
-    $\Sigma_i \in \mathbb{R}^{d \times d}$ models the uncertainty.
+    distributions, in particular by multi-variate Gaussian distributions $\mathcal{N}(\mu, \Sigma)$
+    where the mean $\mu \in \mathbb{R}^d$ denotes the position in the vector space and the *diagonal* variance
+    $\Sigma = diag(\sigma_1, \ldots, \sigma_d) \in \mathbb{R}^{d \times d}$ models the uncertainty.
 
     Thus, we have two $d$-dimensional vectors each stored in an :class:`~pykeen.nn.representation.Embedding` matrix for
     entities and also relations. The representations are then passed to the :class:`~pykeen.nn.modules.KG2EInteraction`
@@ -51,7 +52,8 @@ class KG2E(ERModel):
         self,
         *,
         embedding_dim: int = 50,
-        dist_similarity: Optional[str] = None,
+        dist_similarity: HintOrType[KG2ESimilarity] = None,
+        dist_similarity_kwargs: OptionalKwargs = None,
         c_min: float = 0.05,
         c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
@@ -65,7 +67,11 @@ class KG2E(ERModel):
         r"""Initialize KG2E.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
-        :param dist_similarity: Either 'KL' for Kullback-Leibler or 'EL' for expected likelihood. Defaults to KL.
+        :param dist_similarity:
+            The similarity measures for gaussian distributions. Defaults to
+            :class:`~pykeen.nn.sim.NegativeKullbackLeiblerDivergence`.
+        :param dist_similarity_kwargs:
+            Additional keyword-based parameters used to instantiate the similarity.
         :param c_min: covariance clamp minimum bound
         :param c_max: covariance clamp maximum bound
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
@@ -80,6 +86,7 @@ class KG2E(ERModel):
             interaction=KG2EInteraction,
             interaction_kwargs=dict(
                 similarity=dist_similarity,
+                similarity_kwargs=dist_similarity_kwargs,
             ),
             entity_representations_kwargs=[
                 # mean
