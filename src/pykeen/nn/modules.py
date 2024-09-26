@@ -2228,11 +2228,9 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     The Canonical Tensor Decomposition interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
 
     .. note ::
-        For $k=1$, this interaction is the same as DistMult (but consider the note below).
-
-    .. note ::
-        For equivalence to CP, entities should have different representations for head & tail role. This is different
-        to DistMult.
+        For $k=1$, this interaction is the same as :class:`~pykeen.nn.modules.DistMultInteraction`.
+        However, in contrast to :class:`~pykeen.models.DistMult`, entities should have different representations for the
+        head and the tail role.
 
     ---
     name: Canonical Tensor Decomposition
