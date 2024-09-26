@@ -29,8 +29,10 @@ from torch.nn.init import xavier_normal_
 from . import functional as pkf
 from .algebra import quaterion_multiplication_table
 from .init import initializer_resolver
+from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from ..metrics.utils import ValueRange
 from ..typing import (
+    GaussianDistribution,
     HeadRepresentation,
     HintOrType,
     Initializer,
@@ -1505,15 +1507,33 @@ class NTNInteraction(
 
 @parse_docdata
 class KG2EInteraction(
-    FunctionalInteraction[
+    Interaction[
         tuple[torch.FloatTensor, torch.FloatTensor],
         tuple[torch.FloatTensor, torch.FloatTensor],
         tuple[torch.FloatTensor, torch.FloatTensor],
     ],
 ):
-    """A stateful module for the KG2E interaction function.
+    r"""The stateful KG2E interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.kg2e_interaction`
+    Inspired by :class:`pykeen.nn.modules.TransEInteraction`, relations are modeled as transformations
+    from head to tail entities $\mathcal{H} - \mathcal{T} \approx \mathcal{R}$, where
+
+    .. math ::
+
+        \mathcal{H} \sim \mathcal{N}(\mu_h, \Sigma_h)\\
+        \mathcal{T} \sim \mathcal{N}(\mu_t, \Sigma_t)\\
+        \mathcal{R} \sim \mathcal{N}(\mu_r, \Sigma_r)
+
+    and thus, since head and tail entities are considered independent with respect to the relations,
+
+    .. math ::
+
+        \mathcal{P}_e = \mathcal{H} - \mathcal{T} \sim \mathcal{N}(\mu_h - \mu_t, \Sigma_h + \Sigma_t)
+
+    To obtain scores, the interaction measures the similarity between $\mathcal{P}_e$ and
+    $\mathcal{P}_r = \mathcal{N}(\mu_r, \Sigma_r)$, either by means of the (asymmetric) Kullback-Leibler Divergence,
+    :class:`pykeen.nn.sim.KullbackLeiblerDivergenceKG2ESimilarity`, or a symmetric variant which uses the expected
+    likelihood, :class:`pykeen.nn.sim.ExpectedLikelihoodKG2ESimilarity`.
 
     ---
     citation:
@@ -1524,48 +1544,47 @@ class KG2EInteraction(
 
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
-    similarity: str
-    exact: bool
-    func = pkf.kg2e_interaction
+    similarity: KG2ESimilarity
 
-    def __init__(self, similarity: str | None = None, exact: bool = True):
+    def __init__(self, similarity: HintOrType[KG2ESimilarity] | None = None, similarity_kwargs: OptionalKwargs = None):
         """
         Initialize the interaction module.
 
         :param similarity:
-            the distribution similarity to use. Defaults to KL divergence.
-        :param exact:
-            whether to compute the exact similarity, or leave out constant terms
+            The similarity measures for gaussian distributions. Defaults to
+            :class:`pykeen.nn.sim.KullbackLeiblerDivergenceKG2ESimilarity`.
+        :param similarity_kwargs:
+            Additional keyword-based parameters used to instantiate the similarity.
         """
         super().__init__()
-        if similarity is None:
-            similarity = "KL"
-        self.similarity = similarity
-        self.exact = exact
+        self.similarity = kg2e_similarity_resolver.make(similarity, similarity_kwargs)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
+    @abstractmethod
+    def forward(
+        self,
         h: tuple[torch.FloatTensor, torch.FloatTensor],
         r: tuple[torch.FloatTensor, torch.FloatTensor],
         t: tuple[torch.FloatTensor, torch.FloatTensor],
-    ) -> MutableMapping[str, torch.FloatTensor]:
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function.
+
+        :param h: both shape: (`*batch_dims`, `d`)
+            The head representations, mean and (diagonal) variance.
+        :param r: shape: (`*batch_dims`, `d`)
+            The relation representations, mean and (diagonal) variance.
+        :param t: shape: (`*batch_dims`, `d`)
+            The tail representations, mean and (diagonal) variance.
+
+        :return: shape: batch_dims
+            The scores.
+        """
         h_mean, h_var = h
         r_mean, r_var = r
         t_mean, t_var = t
-        return dict(
-            h_mean=h_mean,
-            h_var=h_var,
-            r_mean=r_mean,
-            r_var=r_var,
-            t_mean=t_mean,
-            t_var=t_var,
-        )
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(
-            similarity=self.similarity,
-            exact=self.exact,
+        return self.similarity(
+            h=GaussianDistribution(mean=h_mean, diagonal_covariance=h_var),
+            r=GaussianDistribution(mean=r_mean, diagonal_covariance=r_var),
+            t=GaussianDistribution(mean=t_mean, diagonal_covariance=t_var),
         )
 
 

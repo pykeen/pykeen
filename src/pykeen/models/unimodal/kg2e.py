@@ -26,23 +26,10 @@ class KG2E(ERModel):
     distributions, in particular by multi-variate Gaussian distributions $\mathcal{N}_i(\mu_i,\Sigma_i)$
     where the mean $\mu_i \in \mathbb{R}^d$ denotes the position in the vector space and the diagonal variance
     $\Sigma_i \in \mathbb{R}^{d \times d}$ models the uncertainty.
-    Inspired by the :class:`pykeen.models.TransE` model, relations are modeled as transformations from head to tail
-    entities: $\mathcal{H} - \mathcal{T} \approx \mathcal{R}$ where
-    $\mathcal{H} \sim \mathcal{N}_h(\mu_h,\Sigma_h)$, $\mathcal{H} \sim \mathcal{N}_t(\mu_t,\Sigma_t)$,
-    $\mathcal{R} \sim \mathcal{P}_r = \mathcal{N}_r(\mu_r,\Sigma_r)$, and
-    $\mathcal{H} - \mathcal{T} \sim \mathcal{P}_e = \mathcal{N}_{h-t}(\mu_h - \mu_t,\Sigma_h + \Sigma_t)$
-    (since head and tail entities are considered to be independent with regards to the relations).
-    The interaction model measures the similarity between $\mathcal{P}_e$ and $\mathcal{P}_r$ by
-    means of the Kullback-Liebler Divergence (:meth:`KG2E.kullback_leibler_similarity`).
 
-    .. math::
-            f(h,r,t) = \mathcal{D_{KL}}(\mathcal{P}_e, \mathcal{P}_r)
-
-    Besides the asymmetric KL divergence, the authors propose a symmetric variant which uses the expected
-    likelihood (:meth:`KG2E.expected_likelihood`)
-
-    .. math::
-            f(h,r,t) = \mathcal{D_{EL}}(\mathcal{P}_e, \mathcal{P}_r)
+    Thus, we have two $d$-dimensional vectors each stored in an :class:`~pykeen.nn.representation.Embedding` matrix for
+    entities and also relations. The representations are then passed to the :class:`~pykeen.nn.modules.KG2EInteraction`
+    function to obtain scores.
     ---
     citation:
         author: He

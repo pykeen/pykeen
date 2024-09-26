@@ -13,8 +13,6 @@ import torch
 from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
-from .sim import KG2E_SIMILARITIES
-from ..typing import GaussianDistribution
 from ..utils import (
     clamp_norm,
     einsum,
@@ -37,7 +35,6 @@ __all__ = [
     "ermlp_interaction",
     "ermlpe_interaction",
     "hole_interaction",
-    "kg2e_interaction",
     "multilinear_tucker_interaction",
     "mure_interaction",
     "ntn_interaction",
@@ -373,46 +370,6 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def kg2e_interaction(
-    h_mean: torch.FloatTensor,
-    h_var: torch.FloatTensor,
-    r_mean: torch.FloatTensor,
-    r_var: torch.FloatTensor,
-    t_mean: torch.FloatTensor,
-    t_var: torch.FloatTensor,
-    similarity: str = "KL",
-    exact: bool = True,
-) -> torch.FloatTensor:
-    """Evaluate the KG2E interaction function.
-
-    :param h_mean: shape: (`*batch_dims`, d)
-        The head entity distribution mean.
-    :param h_var: shape: (`*batch_dims`, d)
-        The head entity distribution variance.
-    :param r_mean: shape: (`*batch_dims`, d)
-        The relation distribution mean.
-    :param r_var: shape: (`*batch_dims`, d)
-        The relation distribution variance.
-    :param t_mean: shape: (`*batch_dims`, d)
-        The tail entity distribution mean.
-    :param t_var: shape: (`*batch_dims`, d)
-        The tail entity distribution variance.
-    :param similarity:
-        The similarity measures for gaussian distributions. From {"KL", "EL"}.
-    :param exact:
-        Whether to leave out constants to accelerate similarity computation.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return KG2E_SIMILARITIES[similarity](
-        h=GaussianDistribution(mean=h_mean, diagonal_covariance=h_var),
-        r=GaussianDistribution(mean=r_mean, diagonal_covariance=r_var),
-        t=GaussianDistribution(mean=t_mean, diagonal_covariance=t_var),
-        exact=exact,
-    )
 
 
 def ntn_interaction(
