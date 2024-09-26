@@ -36,7 +36,6 @@ __all__ = [
     "distmult_interaction",
     "ermlp_interaction",
     "ermlpe_interaction",
-    "hole_interaction",
     "kg2e_interaction",
     "multilinear_tucker_interaction",
     "mure_interaction",
@@ -320,30 +319,6 @@ def ermlpe_interaction(
 
     # dot product
     return einsum("...d,...d->...", x, t)
-
-
-def hole_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Evaluate the HolE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # composite: (*batch_dims, d)
-    composite = circular_correlation(h, t)
-
-    # inner product with relation embedding
-    return (r * composite).sum(dim=-1)
 
 
 def circular_correlation(

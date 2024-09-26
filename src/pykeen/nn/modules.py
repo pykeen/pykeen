@@ -1101,9 +1101,7 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 @parse_docdata
 class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless HolE interaction function.
-
-    .. seealso:: :func:`pykeen.nn.functional.hole_interaction`
+    """The stateless HolE interaction function.
 
     ---
     citation:
@@ -1113,7 +1111,29 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
         github: mnick/holographic-embeddings
     """
 
-    func = pkf.hole_interaction
+    @staticmethod
+    def func(
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The relation representations.
+        :param t: shape: (`*batch_dims`, dim)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        # composite: (*batch_dims, d)
+        composite = pkf.circular_correlation(h, t)
+
+        # inner product with relation embedding
+        return (r * composite).sum(dim=-1)
 
 
 @parse_docdata
