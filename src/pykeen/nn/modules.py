@@ -1511,11 +1511,11 @@ class KG2EInteraction(
         tuple[torch.FloatTensor, torch.FloatTensor],
         tuple[torch.FloatTensor, torch.FloatTensor],
         tuple[torch.FloatTensor, torch.FloatTensor],
-    ],
+    ]
 ):
-    r"""The stateful KG2E interaction function.
+    r"""The stateless KG2E interaction function.
 
-    Inspired by :class:`pykeen.nn.modules.TransEInteraction`, relations are modeled as transformations
+    Inspired by :class:`~pykeen.nn.modules.TransEInteraction`, relations are modeled as transformations
     from head to tail entities $\mathcal{H} - \mathcal{T} \approx \mathcal{R}$, where
 
     .. math ::
@@ -1531,9 +1531,14 @@ class KG2EInteraction(
         \mathcal{P}_e = \mathcal{H} - \mathcal{T} \sim \mathcal{N}(\mu_h - \mu_t, \Sigma_h + \Sigma_t)
 
     To obtain scores, the interaction measures the similarity between $\mathcal{P}_e$ and
-    $\mathcal{P}_r = \mathcal{N}(\mu_r, \Sigma_r)$, either by means of the (asymmetric) Kullback-Leibler Divergence,
-    :class:`pykeen.nn.sim.KullbackLeiblerDivergenceKG2ESimilarity`, or a symmetric variant which uses the expected
-    likelihood, :class:`pykeen.nn.sim.ExpectedLikelihoodKG2ESimilarity`.
+    $\mathcal{P}_r = \mathcal{N}(\mu_r, \Sigma_r)$, either by means of the (asymmetric)
+    :class:`~pykeen.nn.sim.NegativeKullbackLeiblerDivergence`, or a symmetric variant with
+    :class:`~pykeen.nn.sim.ExpectedLikelihood`.
+
+    .. note ::
+        This interaction module does *not* sub-class from :class:`~pykeen.nn.modules.FunctionalInteraction`
+        just for the technical reason that the choice of the similarity represents some "state". However, it
+        does not contain any trainable parameters.
 
     ---
     citation:
