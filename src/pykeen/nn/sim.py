@@ -20,14 +20,17 @@ __all__ = [
 
 
 class KG2ESimilarity(nn.Module, abc.ABC):
-    """A similarity of a triple of Gaussian distributions."""
+    """The similarity between the different of head and tail distribution and the relation distribution.
+
+    Only implemented for multi-variate Gaussian distributions with diagonal covariance matrix.
+    """
 
     def __init__(self, exact: bool = True):
         """
         Initialize the similarity module.
 
         :param exact:
-            Whether to return the exact similarity, or leave out constant offsets.
+            Whether to return the exact similarity, or leave out constant offsets for slightly improved speed.
         """
         super().__init__()
         self.exact = exact
@@ -74,7 +77,6 @@ class ExpectedLikelihood(KG2ESimilarity):
     """
 
     def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> torch.FloatTensor:
-        # subtract, shape: (..., dim)
         var = tensor_sum(*(d.diagonal_covariance for d in (h, r, t)))
         mean = tensor_sum(h.mean, -t.mean, -r.mean)
 
@@ -92,53 +94,49 @@ class ExpectedLikelihood(KG2ESimilarity):
 class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
     r"""Compute the negative KL divergence.
 
-    This is done between two Gaussian distributions given by mean `mu_*` and diagonal covariance matrix `sigma_*`.
+    The divergence between :math:`\mathcal{N}(\mu_e, \Sigma_e)` and :math:`\mathcal{N}(\mu_r, \Sigma_r)` with
+
+    .. math ::
+        \mu_e &=& \mu_h - \mu_t \\
+        \Sigma_e &=& \Sigma_h + \Sigma_t
+
+    is given by
 
     .. math::
 
-        D((\mu_0, \Sigma_0), (\mu_1, \Sigma_1)) = 0.5 * (
-        tr(\Sigma_1^-1 \Sigma_0)
-        + (\mu_1 - \mu_0) * \Sigma_1^-1 (\mu_1 - \mu_0)
-        - k
-        + ln (det(\Sigma_1) / det(\Sigma_0))
-        )
+        D(\mathcal{N}(\mu_e, \Sigma_e),~\mathcal{N}(\mu_r, \Sigma_r)) = \frac{1}{2} \left(
+            tr\left(\Sigma_r^{-1} \Sigma_e\right)
+            + \mu^T \Sigma_r^{-1} \mu
+            - k
+            + \ln \left(\det(\Sigma_r) / \det(\Sigma_e)\right)
+        \right)
 
-    with :math:`\mu_e = \mu_h - \mu_t` and :math:`\Sigma_e = \Sigma_h + \Sigma_t`.
-
-    Computes the divergence between :math:`\mathcal{N}(\mu_e, \Sigma_e)` and :math:`\mathcal{N}(\mu_r, \Sigma_r)`
-    given by
+    where 
 
     .. math ::
-        \mu_e = \mu_h - \mu_t
+        \mu
+        &=& \mu_r - \mu_e \\
+        &=& \mu_r - (\mu_h - \mu_t) \\
+        &=& \mu_r - \mu_h + \mu_t
 
-        \Sigma_e = \Sigma_h + \Sigma_t
+    Since all covariance matrices are diagonal, we can further simplify:
 
-    where all covariance matrices are diagonal. Hence we can simplify
-
-    .. math ::
-        D(\mathcal{N}(\mu_e, \Sigma_e), \mathcal{N}(\mu_r, \Sigma_r))
-        =
-        0.5 * (
-          \trace(\Sigma_r^-1 \Sigma_e)
-          + (\mu_r - \mu_e) * \Sigma_r^-1 (\mu_r - \mu_e)
-          - k
-          + \ln (\det(\Sigma_r) / \det(\Sigma_e))
-        )
-        = 0.5 * (
-          \sum_i \Sigma_e[i] / Sigma_r[i]
-          + \sum_i \mu[i]^2 / \Sigma_r[i]
-          + \sum_i \ln Sigma_r[i]
-          - \sum_i \ln Sigma_e[i]
-          - k
-        )
-
-    where :math:`\mu = \mu_r - \mu_e = \mu_r - \mu_h + \mu_t`
-
-    .. note ::
-        This methods assumes diagonal covariance matrices :math:`\Sigma`.
+    .. math::
+        tr\left(\Sigma_r^{-1} \Sigma_e\right)
+        &=&
+        \sum_i \Sigma_e[i] / \Sigma_r[i]
+        \\
+        \mu^T \Sigma_r^{-1} \mu
+        &=&
+        \sum_i \mu[i]^2 / \Sigma_r[i]
+        \\
+        \ln \left(\det(\Sigma_r) / \det(\Sigma_e)\right)
+        &=&
+        \sum_i \ln \Sigma_r[i] - \sum_i \ln \Sigma_e[i]
 
     .. seealso ::
-        https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence
+        `Wikipedia: Multivariate_normal_distribution > Kullback-Leibler Divergence
+        <https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence>`_
     """
 
     def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> torch.FloatTensor:
