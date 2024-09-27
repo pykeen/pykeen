@@ -28,6 +28,7 @@ from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .algebra import quaterion_multiplication_table
+from .compute_kernel import batched_dot
 from .init import initializer_resolver
 from ..metrics.utils import ValueRange
 from ..typing import (
@@ -1837,18 +1838,31 @@ class MonotonicAffineTransformationInteraction(
 
 @parse_docdata
 class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
-    r"""The CrossE interaction function.
+    r"""The stateful interaction function of CrossE.
+
+    The interaction function is given by
 
     .. math ::
-        Dropout(Activation(c_r \odot h + c_r \odot h \odot r + b))^T t)
+
+        \textit{drop}(
+            \textit{act}(
+                \mathbf{c}_r \odot \mathbf{h} + \mathbf{c}_r \odot \mathbf{h} \odot \mathbf{r} + \mathbf{b})
+            )
+        )^T
+        \mathbf{t}
+
+    where $\mathbf{h}, \mathbf{c}_r, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ is the head embedding, the relation
+    interaction vector, the relation embedding, and the tail embedding, respectively.
+    $\mathbf{b} \in \mathbb{R}^d$ is a global bias vector (which makes this interaction function stateful).
+    $\textit{drop}$ denotes dropout, and $\textit{act}$ is the activation function.
 
     .. note ::
-        The CrossE paper described an additional sigmoid activation as part of the interaction function. Since using a
+        The CrossE paper describes an additional sigmoid activation as part of the interaction function. Since using a
         log-likelihood loss can cause numerical problems (due to explicitly calling sigmoid before log), we do not use
         it in our implementation, but opt for the numerically stable variant. However, the model itself has an option
         ``predict_with_sigmoid``, which can be used to force the use of sigmoid during inference. This can also affect
         rank-based scoring, since limited numerical precision can lead to exactly equal scores for multiple choices.
-        The definition of a rank is not unambiguous in this case, and there are several competing ways to break ties.
+        The definition of a rank is not clear in this case, and there are several competing ways to break ties.
         See :ref:`understanding-evaluation` for more information.
 
     ---
@@ -1877,21 +1891,24 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
 
         :param embedding_dim:
             The embedding dimension.
+
         :param combination_activation:
             The combination activation function.
         :param combination_activation_kwargs:
             Additional keyword-based arguments passed to the constructor of the combination activation function (if
             not already instantiated).
+
         :param combination_dropout:
             An optional dropout applied after the combination.
         """
         super().__init__()
-        self.combination_activation = activation_resolver.make(
+        self.activation = activation_resolver.make(
             combination_activation,
             pos_kwargs=combination_activation_kwargs,
         )
-        self.combination_bias = nn.Parameter(data=torch.zeros(embedding_dim))
-        self.combination_dropout = nn.Dropout(combination_dropout) if combination_dropout else None
+        # TODO: expose initialization?
+        self.bias = nn.Parameter(data=torch.zeros(embedding_dim))
+        self.dropout = nn.Dropout(combination_dropout) if combination_dropout else None
 
     def forward(
         self,
@@ -1921,11 +1938,11 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
         # relation interaction (notice that h has been updated)
         r_emb = h * r_emb
         # combination
-        x = self.combination_activation(self.combination_bias.view(*make_ones_like(h.shape[:-1]), -1) + h + r_emb)
-        if self.combination_dropout is not None:
-            x = self.combination_dropout(x)
+        x = self.activation(self.bias.view(*make_ones_like(h.shape[:-1]), -1) + h + r_emb)
+        if self.dropout is not None:
+            x = self.dropout(x)
         # similarity
-        return (x * t).sum(dim=-1)
+        return batched_dot(x, t)
 
 
 @parse_docdata
