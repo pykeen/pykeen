@@ -14,7 +14,7 @@ from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
-from ..typing import GaussianDistribution
+from ..typing import FloatTensor, GaussianDistribution
 from ..utils import (
     clamp_norm,
     einsum,
@@ -26,7 +26,6 @@ from ..utils import (
     tensor_product,
     tensor_sum,
 )
-from ...typing import FloatTensor
 
 __all__ = [
     "conve_interaction",
