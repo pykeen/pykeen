@@ -23,8 +23,8 @@ class CrossE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     CrossE represents each entity by a $d$-dimensional vector.
     Relations are represented by two $d$-dimensional vectors, one of which is a regular embedding vector,
     while the other is relation-specific interaction vector.
-    All are store in :class:`~pykeen.nn.representation.Embedding`.
-    On top, :class:`~pykeen.nn.modules.CrossEInteraction` is used to obtain scores.
+    All are stored in :class:`~pykeen.nn.representation.Embedding`.
+    On top of that, :class:`~pykeen.nn.modules.CrossEInteraction` is used to get the scores.
 
     ---
     citation:
