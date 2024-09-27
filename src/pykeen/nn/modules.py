@@ -1922,7 +1922,7 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
             not already instantiated).
 
         :param combination_dropout:
-            An optional dropout applied after the combination.
+            An optional dropout applied after the combination and before the dot product similarity.
         """
         super().__init__()
         self.activation = activation_resolver.make(

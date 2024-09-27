@@ -63,7 +63,7 @@ class CrossE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
             Additional keyword-based arguments passed to the constructor of the combination activation function (if
             not already instantiated).
         :param combination_dropout:
-            An optional dropout applied to the combination.
+            An optional dropout applied after the combination and before the dot product similarity.
         :param entity_initializer:
             Entity initializer function.
         :param relation_initializer:
