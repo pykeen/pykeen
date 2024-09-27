@@ -1919,8 +1919,9 @@ class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor]
         r"""
         Evaluate the interaction function.
 
-        .. todo::
-            link to a document describing the generic batched form of the interaction function.
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
 
         :param h: shape: (`*batch_dims`, dim)
             The head representations.
