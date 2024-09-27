@@ -57,6 +57,11 @@ class CrossE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
 
         :param embedding_dim:
             The entity and relation embedding dimension $d$. Defaults to 50.
+        :param combination_activation:
+            The combination activation function.
+        :param combination_activation_kwargs:
+            Additional keyword-based arguments passed to the constructor of the combination activation function (if
+            not already instantiated).
         :param combination_dropout:
             An optional dropout applied to the combination.
         :param entity_initializer:
