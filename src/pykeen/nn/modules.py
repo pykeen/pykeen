@@ -225,11 +225,33 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (`*batch_dims`, `*dims`)
+        In general, each interaction function (class) expects a certain format for each of head, relation and
+        tail representations. This format is composed of the *number* and the shape of the representations.
+
+        Many simple interaction functions such as :class:`~pykeen.nn.modules.TransEInteraction`
+        operate on a single representation, however there are also interactions such as
+        :class:`~pykeen.nn.modules.TransDInteraction`, which requires two representations for each slot, or
+        :class:`~pykeen.nn.modules.PairREInteraction`, which requires two relation representations, but only a single
+        representation for head and tail entity respectively.
+
+        Each individual representation has a *shape*. This can be a simple $d$-dimensional vector, but also comprise
+        matrices, or even high-order tensors.
+
+        This method supports the general batched calculation, i.e., each of the representations can have a
+        preceding batch dimensions. Those batch dimensions do not necessarily need to be exactly the same, but they
+        need to be broadcastable. A good explanation of broadcasting rules can be found in
+        `NumPy's documentation <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_.
+
+        .. seealso::
+            - :ref:`representations` for an overview about different ways how to obtain individual representations.
+
+        :param h: shape: ``(*batch_dims, *dims)``
             The head representations.
-        :param r: shape: (`*batch_dims`, `*dims`)
+
+        :param r: shape: ``(*batch_dims, *dims)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, `*dims`)
+
+        :param t: shape: ``(*batch_dims, *dims)``
             The tail representations.
 
         :return: shape: batch_dims
@@ -249,7 +271,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         .. note ::
             At most one of the slice sizes may be not None.
 
-        # TODO: we could change that to slicing along multiple dimensions, if necessary
+        .. todo::
+            we could change that to slicing along multiple dimensions, if necessary
 
         :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
