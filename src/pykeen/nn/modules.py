@@ -1038,12 +1038,7 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::
@@ -2537,11 +2532,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     _tail_indices = (1,)
 
     @staticmethod
-    def func(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::
