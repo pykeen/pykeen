@@ -8,7 +8,7 @@ import torch
 
 from .negative_sampler import NegativeSampler
 from ..constants import LABEL_HEAD, LABEL_TAIL, TARGET_TO_INDEX
-from ..typing import Target
+from ..typing import LongTensor, Target
 
 __all__ = [
     "BasicNegativeSampler",
@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-def random_replacement_(batch: torch.LongTensor, index: int, selection: slice, size: int, max_index: int) -> None:
+def random_replacement_(batch: LongTensor, index: int, selection: slice, size: int, max_index: int) -> None:
     """
     Replace a column of a batch of indices by random indices.
 
@@ -83,7 +83,7 @@ class BasicNegativeSampler(NegativeSampler):
         self._corruption_indices = [TARGET_TO_INDEX[side] for side in self.corruption_scheme]
 
     # docstr-coverage: inherited
-    def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+    def corrupt_batch(self, positive_batch: LongTensor) -> LongTensor:  # noqa: D102
         batch_shape = positive_batch.shape[:-1]
 
         # clone positive batch for corruption (.repeat_interleave creates a copy)

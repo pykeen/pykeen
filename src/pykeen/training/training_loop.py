@@ -43,7 +43,7 @@ from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import InductiveMode
+from ..typing import FloatTensor, InductiveMode
 from ..utils import format_relative_comparison, get_batchnorm_modules, get_preferred_device, normalize_string
 
 __all__ = [
@@ -899,7 +899,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         """Process a single batch and returns the loss."""
         raise NotImplementedError
 

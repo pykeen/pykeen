@@ -17,6 +17,7 @@ from .representation import LowRankRepresentation, Representation
 from .utils import ShapeError, adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..triples import CoreTriplesFactory
+from ..typing import FloatTensor, LongTensor
 from ..utils import ExtraReprMixin, einsum
 
 __all__ = [
@@ -86,13 +87,13 @@ class Decomposition(nn.Module, ExtraReprMixin, ABC):
 
     def forward(
         self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-        accumulator: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:
+        x: FloatTensor,
+        source: LongTensor,
+        target: LongTensor,
+        edge_type: LongTensor,
+        edge_weights: Optional[FloatTensor] = None,
+        accumulator: Optional[FloatTensor] = None,
+    ) -> FloatTensor:
         """Relation-specific message passing from source to target.
 
         :param x: shape: (num_nodes, input_dim)
@@ -456,12 +457,12 @@ class RGCNLayer(nn.Module):
 
     def forward(
         self,
-        x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:
+        x: FloatTensor,
+        source: LongTensor,
+        target: LongTensor,
+        edge_type: LongTensor,
+        edge_weights: Optional[FloatTensor] = None,
+    ) -> FloatTensor:
         """
         Calculate enriched entity representations.
 
@@ -669,7 +670,7 @@ class RGCNRepresentation(Representation):
             elif any(p.requires_grad for p in m.parameters()):
                 logger.warning("Layers %s has parameters, but no reset_parameters.", m)
 
-    def _real_forward_all(self) -> torch.FloatTensor:
+    def _real_forward_all(self) -> FloatTensor:
         if self.enriched_embeddings is not None:
             return self.enriched_embeddings
 
@@ -717,8 +718,8 @@ class RGCNRepresentation(Representation):
 
     def _plain_forward(
         self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
+        indices: Optional[LongTensor] = None,
+    ) -> FloatTensor:
         """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
         x = self._real_forward_all()
         if indices is not None:

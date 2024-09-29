@@ -3,7 +3,6 @@
 import logging
 from typing import Optional
 
-import torch.utils.data
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import DataLoader
 
@@ -13,7 +12,7 @@ from ..models.base import Model
 from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory
 from ..triples.instances import SLCWABatch, SLCWASampleType
-from ..typing import InductiveMode
+from ..typing import FloatTensor, InductiveMode
 
 __all__ = [
     "SLCWATrainingLoop",
@@ -81,7 +80,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         stop: Optional[int],
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         # Slicing is not possible in sLCWA training loops
         if slice_size is not None:
             raise AttributeError("Slicing is not possible for sLCWA training loops.")
@@ -127,7 +126,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> FloatTensor:  # noqa: D102
         return self._process_batch_static(
             model=self.model,
             loss=self.loss,

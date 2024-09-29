@@ -12,7 +12,7 @@ import torch
 from class_resolver.api import ClassResolver, HintOrType
 
 from ..constants import COLUMN_LABELS
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target, TorchRandomHint
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, MappedTriples, Target, TorchRandomHint
 from ..utils import ensure_torch_random_state
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> set[
     return set(numpy.unique(df.loc[df["index"].isin(chosen), [LABEL_HEAD, LABEL_TAIL]]))
 
 
-def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
+def _get_cover_deterministic(triples: MappedTriples) -> BoolTensor:
     """
     Get a coverage mask for all entities and relations.
 
@@ -226,7 +226,7 @@ def _prepare_cleanup(
     training: MappedTriples,
     testing: MappedTriples,
     max_ids: Optional[tuple[int, int]] = None,
-) -> torch.BoolTensor:
+) -> BoolTensor:
     """
     Calculate a mask for the test triples with triples containing test-only entities or relations.
 

@@ -9,6 +9,7 @@ from sklearn.preprocessing import normalize as sklearn_normalize
 
 from ...triples import CoreTriplesFactory
 from ...triples.leakage import jaccard_similarity_scipy, triples_factory_to_sparse_matrices
+from ...typing import FloatTensor, LongTensor
 
 __all__ = [
     "get_csr_matrix",
@@ -53,11 +54,11 @@ def get_csr_matrix(
 
 
 def marginal_score(
-    entity_relation_batch: torch.LongTensor,
+    entity_relation_batch: LongTensor,
     per_entity: Optional[scipy.sparse.csr_matrix],
     per_relation: Optional[scipy.sparse.csr_matrix],
     num_entities: int,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Shared code for computing entity scores from marginals."""
     batch_size = entity_relation_batch.shape[0]
 
