@@ -2255,11 +2255,15 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     ) -> torch.FloatTensor:
         """Evaluate the interaction function.
 
-        :param h: shape: (`*batch_dims`, rank, dim)
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims`, rank, dim)``
             The head representations.
-        :param r: shape: (`*batch_dims`, rank, dim)
+        :param r: shape: ``(*batch_dims`, rank, dim)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, rank, dim)
+        :param t: shape: ``(*batch_dims`, rank, dim)``
             The tail representations.
 
         :return: shape: batch_dims
