@@ -26,7 +26,14 @@ from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
 from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
-from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
+from ..typing import (
+    FloatTensor,
+    HeadRepresentation,
+    InductiveMode,
+    LongTensor,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from ..utils import check_shapes, get_batchnorm_modules
 
 __all__ = [
@@ -222,10 +229,10 @@ def _prepare_representation_module_list(
 
 
 def repeat_if_necessary(
-    scores: torch.FloatTensor,
+    scores: FloatTensor,
     representations: Sequence[Representation],
     num: int | None,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """
     Repeat score tensor if necessary.
 
@@ -408,14 +415,14 @@ class ERModel(
 
     def forward(
         self,
-        h_indices: torch.LongTensor,
-        r_indices: torch.LongTensor,
-        t_indices: torch.LongTensor,
+        h_indices: LongTensor,
+        r_indices: LongTensor,
+        t_indices: LongTensor,
         slice_size: int | None = None,
         slice_dim: int = 0,
         *,
         mode: InductiveMode | None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail indices and calculates the corresponding scores.
@@ -446,7 +453,7 @@ class ERModel(
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: InductiveMode | None = None) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: LongTensor, *, mode: InductiveMode | None = None) -> FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -479,12 +486,12 @@ class ERModel(
     # docstr-coverage: inherited
     def score_t(
         self,
-        hr_batch: torch.LongTensor,
+        hr_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
-        tails: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        tails: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -520,12 +527,12 @@ class ERModel(
     # docstr-coverage: inherited
     def score_h(
         self,
-        rt_batch: torch.LongTensor,
+        rt_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
-        heads: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        heads: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -561,12 +568,12 @@ class ERModel(
     # docstr-coverage: inherited
     def score_r(
         self,
-        ht_batch: torch.LongTensor,
+        ht_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
-        relations: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        relations: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         # normalize before checking
         if slice_size and slice_size >= self.num_relations:
             slice_size = None
@@ -639,9 +646,9 @@ class ERModel(
 
     def _get_representations(
         self,
-        h: torch.LongTensor | None,
-        r: torch.LongTensor | None,
-        t: torch.LongTensor | None,
+        h: LongTensor | None,
+        r: LongTensor | None,
+        t: LongTensor | None,
         *,
         mode: InductiveMode | None,
     ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:

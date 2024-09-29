@@ -9,7 +9,7 @@ import pandas
 import torch
 from class_resolver import FunctionResolver
 
-from ..typing import LabeledTriples, MappedTriples
+from ..typing import LabeledTriples, LongTensor, MappedTriples
 
 __all__ = [
     "compute_compressed_adjacency_list",
@@ -87,18 +87,18 @@ def load_triples(
     return df.to_numpy()
 
 
-def get_entities(triples: torch.LongTensor) -> set[int]:
+def get_entities(triples: LongTensor) -> set[int]:
     """Get all entities from the triples."""
     return set(triples[:, [0, 2]].flatten().tolist())
 
 
-def get_relations(triples: torch.LongTensor) -> set[int]:
+def get_relations(triples: LongTensor) -> set[int]:
     """Get all relations from the triples."""
     return set(triples[:, 1].tolist())
 
 
 def tensor_to_df(
-    tensor: torch.LongTensor,
+    tensor: LongTensor,
     **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
 ) -> pandas.DataFrame:
     """Take a tensor of triples and make a pandas dataframe with labels.
@@ -146,7 +146,7 @@ def tensor_to_df(
 def compute_compressed_adjacency_list(
     mapped_triples: MappedTriples,
     num_entities: Optional[int] = None,
-) -> tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
+) -> tuple[LongTensor, LongTensor, LongTensor]:
     """Compute compressed undirected adjacency list representation for efficient sampling.
 
     The compressed adjacency list format is inspired by CSR sparse matrix format.

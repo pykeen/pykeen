@@ -3,7 +3,6 @@
 from collections.abc import Mapping
 from typing import Any, Optional
 
-import torch
 from class_resolver import Hint, HintOrType
 from torch import nn
 
@@ -15,7 +14,7 @@ from ...nn.representation import Representation
 from ...nn.weighting import EdgeWeighting
 from ...regularizers import Regularizer
 from ...triples import CoreTriplesFactory
-from ...typing import Initializer, RelationRepresentation
+from ...typing import FloatTensor, Initializer, RelationRepresentation
 
 __all__ = [
     "RGCN",
@@ -23,7 +22,7 @@ __all__ = [
 
 
 class RGCN(
-    ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTensor],
+    ERModel[FloatTensor, RelationRepresentation, FloatTensor],
 ):
     r"""An implementation of R-GCN from [schlichtkrull2018]_.
 
@@ -90,7 +89,7 @@ class RGCN(
         relation_representations: HintOrType[Representation] = None,
         relation_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        interaction: HintOrType[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = "DistMult",
+        interaction: HintOrType[Interaction[FloatTensor, RelationRepresentation, FloatTensor]] = "DistMult",
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
