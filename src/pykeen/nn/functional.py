@@ -30,7 +30,6 @@ from ..utils import (
 __all__ = [
     "conve_interaction",
     "convkb_interaction",
-    "cp_interaction",
     "dist_ma_interaction",
     "distmult_interaction",
     "ermlp_interaction",
@@ -1005,26 +1004,6 @@ def quat_e_interaction(
     """
     # TODO: this sign is in the official code, too, but why do we need it?
     return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
-
-
-def cp_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the Canonical Tensor Decomposition interaction function.
-
-    :param h: shape: (`*batch_dims`, rank, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, rank, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, rank, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return (h * r * t).sum(dim=(-2, -1))
 
 
 def triple_re_interaction(
