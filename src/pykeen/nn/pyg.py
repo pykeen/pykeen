@@ -59,7 +59,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection, Sequence
 from typing import Literal, Optional
 
-import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
@@ -68,7 +67,7 @@ from torch import nn
 from .representation import Representation
 from .utils import ShapeError
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import OneOrSequence
+from ..typing import BoolTensor, FloatTensor, LongTensor, OneOrSequence
 from ..utils import get_edge_index, upgrade_to_sequence
 
 __all__ = [
@@ -142,7 +141,7 @@ class MessagePassingRepresentation(Representation, ABC):
     flow: FlowDirection
 
     #: the edge index, shape: (2, num_edges)
-    edge_index: torch.LongTensor
+    edge_index: LongTensor
 
     def __init__(
         self,
@@ -247,7 +246,7 @@ class MessagePassingRepresentation(Representation, ABC):
         #   * keep layers & activations
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: Optional[LongTensor] = None) -> FloatTensor:  # noqa: D102
         if self.restrict_k_hop and indices is not None:
             # we can restrict the message passing to the k-hop neighborhood of the desired indices;
             # this does only make sense if we do not request *all* indices
@@ -281,8 +280,8 @@ class MessagePassingRepresentation(Representation, ABC):
 
     @abstractmethod
     def pass_messages(
-        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: Optional[torch.BoolTensor] = None
-    ) -> torch.FloatTensor:
+        self, x: FloatTensor, edge_index: LongTensor, edge_mask: Optional[BoolTensor] = None
+    ) -> FloatTensor:
         """
         Perform the message passing steps.
 
@@ -330,8 +329,8 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: Optional[torch.BoolTensor] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+        self, x: FloatTensor, edge_index: LongTensor, edge_mask: Optional[BoolTensor] = None
+    ) -> FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=edge_index))
         return x
@@ -371,7 +370,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
     """
 
     #: the edge type, shape: (num_edges,)
-    edge_type: torch.LongTensor
+    edge_type: LongTensor
 
     def __init__(self, triples_factory: CoreTriplesFactory, **kwargs):
         """
@@ -386,7 +385,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
         # register an additional buffer for the categorical edge type
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
-    def _get_edge_type(self, edge_mask: Optional[torch.BoolTensor] = None) -> torch.LongTensor:
+    def _get_edge_type(self, edge_mask: Optional[BoolTensor] = None) -> LongTensor:
         """
         Return the (selected part of the) edge type.
 
@@ -402,8 +401,8 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: Optional[torch.BoolTensor] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+        self, x: FloatTensor, edge_index: LongTensor, edge_mask: Optional[BoolTensor] = None
+    ) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=edge_index, edge_type=edge_type))
@@ -489,8 +488,8 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: Optional[torch.BoolTensor] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+        self, x: FloatTensor, edge_index: LongTensor, edge_mask: Optional[BoolTensor] = None
+    ) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         # get initial relation representations
         x_rel = self.relation_representation(indices=None)

@@ -43,7 +43,7 @@ from pykeen.optimizers import optimizer_resolver
 from pykeen.sampling import NegativeSampler
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from pykeen.triples.triples_factory import CoreTriplesFactory
-from pykeen.typing import InductiveMode, OneOrSequence
+from pykeen.typing import FloatTensor, InductiveMode, LongTensor, OneOrSequence
 
 __all__ = [
     "LitModule",
@@ -116,7 +116,7 @@ class LitModule(pytorch_lightning.LightningModule):
         self.mode = mode
         self.label_smoothing = label_smoothing
 
-    def forward(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+    def forward(self, hr_batch: LongTensor) -> FloatTensor:
         """
         Perform the prediction or inference step by wrapping :meth:`pykeen.models.ERModel.predict_t`.
 
