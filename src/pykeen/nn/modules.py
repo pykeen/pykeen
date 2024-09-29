@@ -964,7 +964,32 @@ class ConvEInteraction(Interaction[FloatTensor, FloatTensor, tuple[FloatTensor, 
 
 @parse_docdata
 class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ConvKB interaction function.
+    r"""The stateful ConvKB interaction function.
+
+    ConvKB uses a convolutional neural network (CNN) whose feature maps capture global interactions of the input.
+    Each triple $(h,r,t) \in \mathbb{K}$ is represented as a input matrix
+    $\mathbf{A} = [\mathbf{h}; \mathbf{r}; \mathbf{t}] \in \mathbb{R}^{d \times 3}$ in which the columns represent
+    the embeddings for $h$, $r$, and $t$. In the convolution layer, a set of convolutional filters
+    $\omega_i \in \mathbb{R}^{1 \times 3}, i=1, \dots, \tau,$ are applied on the input in order to compute for
+    each dimension global interactions of the embedded triple. Each $\omega_i $ is applied on every row of
+    $\mathbf{A}$ creating a feature map $\mathbf{v}_i = [v_{i,1},...,v_{i,d}] \in \mathbb{R}^d$:
+
+    .. math::
+
+        \mathbf{v}_i = g(\omega_j \mathbf{A} + \mathbf{b})
+
+    where $\mathbf{b} \in \mathbb{R}$ denotes a bias term and $g$ an activation function which is employed element-wise.
+    Based on the resulting feature maps $\mathbf{v}_1, \dots, \mathbf{v}_{\tau}$, the plausibility score of a triple
+    is given by:
+
+    .. math::
+
+        f(h,r,t) = [\mathbf{v}_i; \ldots ;\mathbf{v}_\tau] \cdot \mathbf{w}
+
+    where $[\mathbf{v}_i; \ldots ;\mathbf{v}_\tau] \in \mathbb{R}^{\tau d \times 1}$ and
+    $\mathbf{w} \in \mathbb{R}^{\tau d \times 1} $ is a shared weight vector.
+    ConvKB may be seen as a restriction of :class:`pykeen.models.ERMLP` with a certain weight sharing pattern in the
+    first layer.
 
     ---
     citation:
@@ -1019,16 +1044,20 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         r: torch.FloatTensor,
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
+        """Evaluate the interaction function.
 
-        :param h: shape: (`*batch_dims`, `*dims`)
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
             The head representations.
-        :param r: shape: (`*batch_dims`, `*dims`)
+        :param r: shape: ``(*batch_dims, d)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, `*dims`)
+        :param t: shape: ``(*batch_dims, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
         # cat into shape (..., 1, d, 3)
