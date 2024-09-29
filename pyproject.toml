@@ -128,8 +128,7 @@ tests = [
     "pytest",
 ]
 docs = [
-    # Sphinx >= 8.0 not supported by rtd theme, cf. https://github.com/readthedocs/sphinx_rtd_theme/issues/1582
-    "sphinx<8",
+    "sphinx",
     "sphinx-rtd-theme",
     "sphinx-click",
     "sphinx_automodapi",
