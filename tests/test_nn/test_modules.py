@@ -109,7 +109,14 @@ class CrossETests(cases.InteractionTestCase):
         embedding_dim=cases.InteractionTestCase.dim,
     )
 
-    def _exp_score(self, h, r, c_r, t, bias, activation, dropout) -> torch.FloatTensor:  # noqa: D102
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = (kwargs[key] for key in ("h", "r", "t"))
+        r, c_r = r
+        instance = self.instance
+        assert isinstance(instance, pykeen.nn.modules.CrossEInteraction)
+        bias = instance.combination_bias
+        activation = instance.combination_activation
+        dropout = instance.combination_dropout
         return (dropout(activation(h * c_r + h * r * c_r + bias)) * t).sum()
 
 
