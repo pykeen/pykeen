@@ -18,7 +18,7 @@ import torch
 
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import CoreTriplesFactory, TriplesFactory, cat_triples
-from pykeen.typing import MappedTriples
+from pykeen.typing import LongTensor, MappedTriples
 from pykeen.utils import compact_mapping, get_connected_components
 
 __all__ = [
@@ -95,8 +95,8 @@ def triples_factory_to_sparse_matrices(
 
 
 def _to_one_hot(
-    rows: torch.LongTensor,
-    cols: torch.LongTensor,
+    rows: LongTensor,
+    cols: LongTensor,
     shape: tuple[int, int],
 ) -> scipy.sparse.spmatrix:
     """Create a one-hot matrix given indices of non-zero elements (potentially containing duplicates)."""
@@ -274,9 +274,9 @@ def unleak(
 
 
 def _generate_compact_vectorized_lookup(
-    ids: torch.LongTensor,
+    ids: LongTensor,
     label_to_id: Mapping[str, int],
-) -> tuple[Mapping[str, int], torch.LongTensor]:
+) -> tuple[Mapping[str, int], LongTensor]:
     """
     Given a tensor of IDs and a label to ID mapping, retain only occurring IDs, and compact the mapping.
 
@@ -307,8 +307,8 @@ def _generate_compact_vectorized_lookup(
 
 def _translate_triples(
     triples: MappedTriples,
-    entity_translation: torch.LongTensor,
-    relation_translation: torch.LongTensor,
+    entity_translation: LongTensor,
+    relation_translation: LongTensor,
 ) -> MappedTriples:
     """
     Translate triples given vectorized translations for entities and relations.

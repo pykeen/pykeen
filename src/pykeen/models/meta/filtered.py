@@ -12,7 +12,16 @@ from ..base import Model
 from ..baseline.utils import get_csr_matrix
 from ...constants import TARGET_TO_INDEX
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
+from ...typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    FloatTensor,
+    InductiveMode,
+    LongTensor,
+    MappedTriples,
+    Target,
+)
 from ...utils import prepare_filter_triples
 
 __all__ = [
@@ -120,11 +129,11 @@ class CooccurrenceFilteredModel(Model):
 
     def _mask(
         self,
-        scores: torch.FloatTensor,
-        batch: torch.LongTensor,
+        scores: FloatTensor,
+        batch: LongTensor,
         target: Target,
         in_training: bool,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         if in_training and not self.apply_in_training:
             return scores
         fill_value = self.training_fill_value if in_training else self.inference_fill_value
@@ -154,17 +163,17 @@ class CooccurrenceFilteredModel(Model):
         return self.base._reset_parameters_()
 
     # docstr-coverage: inherited
-    def collect_regularization_term(self) -> torch.FloatTensor:  # noqa: D102
+    def collect_regularization_term(self) -> FloatTensor:  # noqa: D102
         return self.base.collect_regularization_term()
 
     # docstr-coverage: inherited
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         if self.apply_in_training:
             raise NotImplementedError
         return self.base.score_hrt(hrt_batch=hrt_batch, **kwargs)
 
     # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_h(rt_batch=rt_batch, **kwargs),
             batch=rt_batch,
@@ -173,7 +182,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def score_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_r(ht_batch=ht_batch, **kwargs),
             batch=ht_batch,
@@ -182,7 +191,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_t(hr_batch=hr_batch, **kwargs),
             batch=hr_batch,
@@ -191,7 +200,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def predict_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def predict_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_h(rt_batch, **kwargs),
             batch=rt_batch,
@@ -200,7 +209,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def predict_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def predict_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_t(hr_batch, **kwargs),
             batch=hr_batch,
@@ -209,7 +218,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def predict_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def predict_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_r(ht_batch, **kwargs),
             batch=ht_batch,

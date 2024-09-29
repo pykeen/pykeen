@@ -8,6 +8,8 @@ import numpy
 import torch
 from tqdm.auto import tqdm
 
+from ...typing import LongTensor
+
 __all__ = [
     "random_sample_no_replacement",
     "ensure_num_entities",
@@ -21,7 +23,7 @@ def random_sample_no_replacement(
     pool: Mapping[int, Collection[int]],
     num_tokens: int,
     num_entities: Optional[int] = None,
-) -> torch.LongTensor:
+) -> LongTensor:
     """Sample randomly without replacement num_tokens relations for each entity.
 
     If a graph has disconnected nodes, then num_entities > number of rows in the pool.
@@ -59,7 +61,7 @@ def ensure_num_entities(edge_index: numpy.ndarray, num_entities: Optional[int] =
     return edge_index.max().item() + 1
 
 
-def prepare_edges_for_metis(edge_index: torch.Tensor) -> torch.LongTensor:
+def prepare_edges_for_metis(edge_index: torch.Tensor) -> LongTensor:
     """Prepare the edge index for METIS partitioning to prevent segfaults."""
     # remove self-loops
     mask = edge_index[0] != edge_index[1]

@@ -19,7 +19,7 @@ from .representation import BackfillRepresentation, Representation
 from .utils import ShapeError, WikidataCache
 from ..datasets import Dataset
 from ..triples import TriplesFactory
-from ..typing import OneOrSequence
+from ..typing import FloatTensor, LongTensor, OneOrSequence
 
 try:
     from PIL import Image
@@ -180,8 +180,8 @@ class VisualRepresentation(Representation):
 
     @staticmethod
     def _encode(
-        images: torch.FloatTensor, encoder: torch.nn.Module, pool: Callable[[torch.FloatTensor], torch.FloatTensor]
-    ) -> torch.FloatTensor:
+        images: FloatTensor, encoder: torch.nn.Module, pool: Callable[[FloatTensor], FloatTensor]
+    ) -> FloatTensor:
         """
         Encode images with the given encoder and pooling methods.
 
@@ -197,7 +197,7 @@ class VisualRepresentation(Representation):
         return pool(encoder(images)["feature"])
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: Optional[LongTensor] = None) -> FloatTensor:  # noqa: D102
         dataset = self.images
         if indices is not None:
             dataset = torch.utils.data.Subset(dataset=dataset, indices=indices)
