@@ -14,7 +14,7 @@ from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
 from .sim import KG2E_SIMILARITIES
-from ..typing import GaussianDistribution
+from ..typing import FloatTensor, GaussianDistribution
 from ..utils import (
     clamp_norm,
     einsum,
@@ -30,7 +30,6 @@ from ..utils import (
 __all__ = [
     "conve_interaction",
     "convkb_interaction",
-    "cross_e_interaction",
     "dist_ma_interaction",
     "distmult_interaction",
     "ermlp_interaction",
@@ -59,10 +58,10 @@ __all__ = [
 
 
 def _apply_optional_bn_to_tensor(
-    x: torch.FloatTensor,
+    x: FloatTensor,
     output_dropout: nn.Dropout,
     batch_norm: nn.BatchNorm1d | None = None,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Apply optional batch normalization and dropout layer. Supports multiple batch dimensions."""
     if batch_norm is not None:
         shape = x.shape
@@ -93,16 +92,16 @@ def _add_cuda_warning(func):
 
 @_add_cuda_warning
 def conve_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    t_bias: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+    t_bias: FloatTensor,
     input_channels: int,
     embedding_height: int,
     embedding_width: int,
     hr2d: nn.Module,
     hr1d: nn.Module,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the ConvE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -158,14 +157,14 @@ def conve_interaction(
 
 
 def convkb_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
     conv: nn.Conv2d,
     activation: nn.Module,
     hidden_dropout: nn.Dropout,
     linear: nn.Linear,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the ConvKB interaction function.
 
     .. math::
@@ -206,10 +205,10 @@ def convkb_interaction(
 
 
 def distmult_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+) -> FloatTensor:
     """Evaluate the DistMult interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -226,10 +225,10 @@ def distmult_interaction(
 
 
 def dist_ma_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+) -> FloatTensor:
     r"""Evaluate the DistMA interaction function from [shi2019]_.
 
     .. math ::
@@ -249,13 +248,13 @@ def dist_ma_interaction(
 
 
 def ermlp_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
     hidden: nn.Linear,
     activation: nn.Module,
     final: nn.Linear,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the ER-MLP interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -291,11 +290,11 @@ def ermlp_interaction(
 
 
 def ermlpe_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
     mlp: nn.Module,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the ER-MLPE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -322,10 +321,10 @@ def ermlpe_interaction(
 
 
 def hole_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+) -> FloatTensor:
     """Evaluate the HolE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -346,9 +345,9 @@ def hole_interaction(
 
 
 def circular_correlation(
-    a: torch.FloatTensor,
-    b: torch.FloatTensor,
-) -> torch.FloatTensor:
+    a: FloatTensor,
+    b: FloatTensor,
+) -> FloatTensor:
     """
     Compute the circular correlation between to vectors.
 
@@ -375,15 +374,15 @@ def circular_correlation(
 
 
 def kg2e_interaction(
-    h_mean: torch.FloatTensor,
-    h_var: torch.FloatTensor,
-    r_mean: torch.FloatTensor,
-    r_var: torch.FloatTensor,
-    t_mean: torch.FloatTensor,
-    t_var: torch.FloatTensor,
+    h_mean: FloatTensor,
+    h_var: FloatTensor,
+    r_mean: FloatTensor,
+    r_var: FloatTensor,
+    t_mean: FloatTensor,
+    t_var: FloatTensor,
     similarity: str = "KL",
     exact: bool = True,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the KG2E interaction function.
 
     :param h_mean: shape: (`*batch_dims`, d)
@@ -415,15 +414,15 @@ def kg2e_interaction(
 
 
 def ntn_interaction(
-    h: torch.FloatTensor,
-    t: torch.FloatTensor,
-    w: torch.FloatTensor,
-    vh: torch.FloatTensor,
-    vt: torch.FloatTensor,
-    b: torch.FloatTensor,
-    u: torch.FloatTensor,
+    h: FloatTensor,
+    t: FloatTensor,
+    w: FloatTensor,
+    vh: FloatTensor,
+    vt: FloatTensor,
+    b: FloatTensor,
+    u: FloatTensor,
     activation: nn.Module,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the NTN interaction function.
 
     .. math::
@@ -464,15 +463,15 @@ def ntn_interaction(
 
 
 def proje_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    d_e: torch.FloatTensor,
-    d_r: torch.FloatTensor,
-    b_c: torch.FloatTensor,
-    b_p: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+    d_e: FloatTensor,
+    d_r: FloatTensor,
+    b_c: FloatTensor,
+    b_p: FloatTensor,
     activation: nn.Module,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the ProjE interaction function.
 
     .. math::
@@ -511,10 +510,10 @@ def proje_interaction(
 
 
 def rescal_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+) -> FloatTensor:
     """Evaluate the RESCAL interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -531,14 +530,14 @@ def rescal_interaction(
 
 
 def simple_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    h_inv: torch.FloatTensor,
-    r_inv: torch.FloatTensor,
-    t_inv: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+    h_inv: FloatTensor,
+    r_inv: FloatTensor,
+    t_inv: FloatTensor,
     clamp: tuple[float, float] | None = None,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the SimplE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -569,13 +568,13 @@ def simple_interaction(
 
 
 def se_interaction(
-    h: torch.FloatTensor,
-    r_h: torch.FloatTensor,
-    r_t: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    r_h: FloatTensor,
+    r_t: FloatTensor,
+    t: FloatTensor,
     p: int,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the Structured Embedding interaction function.
 
     .. math ::
@@ -605,12 +604,12 @@ def se_interaction(
 
 
 def toruse_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
     p: int | str = 2,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the TorusE interaction function from [ebisu2018].
 
     .. note ::
@@ -637,15 +636,15 @@ def toruse_interaction(
 
 
 def transd_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    h_p: torch.FloatTensor,
-    r_p: torch.FloatTensor,
-    t_p: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+    h_p: FloatTensor,
+    r_p: FloatTensor,
+    t_p: FloatTensor,
     p: int,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the TransD interaction function.
 
     :param h: shape: (`*batch_dims`, d_e)
@@ -683,12 +682,12 @@ def transd_interaction(
 
 
 def transe_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
     p: int | str = 2,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the TransE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -709,10 +708,10 @@ def transe_interaction(
 
 
 def transf_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+) -> FloatTensor:
     """Evaluate the TransF interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -729,13 +728,13 @@ def transf_interaction(
 
 
 def transh_interaction(
-    h: torch.FloatTensor,
-    w_r: torch.FloatTensor,
-    d_r: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    w_r: FloatTensor,
+    d_r: FloatTensor,
+    t: FloatTensor,
     p: int,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the DistMult interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -769,13 +768,13 @@ def transh_interaction(
 
 
 def transr_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    m_r: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+    m_r: FloatTensor,
     p: int,
     power_norm: bool = True,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the TransR interaction function.
 
     :param h: shape: (`*batch_dims`, d_e)
@@ -804,16 +803,16 @@ def transr_interaction(
 
 
 def tucker_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    core_tensor: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+    core_tensor: FloatTensor,
     do_h: nn.Dropout,
     do_r: nn.Dropout,
     do_hr: nn.Dropout,
     bn_h: nn.BatchNorm1d | None,
     bn_hr: nn.BatchNorm1d | None,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the TuckEr interaction function.
 
     Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
@@ -874,15 +873,15 @@ def tucker_interaction(
 
 
 def mure_interaction(
-    h: torch.FloatTensor,
-    b_h: torch.FloatTensor,
-    r_vec: torch.FloatTensor,
-    r_mat: torch.FloatTensor,
-    t: torch.FloatTensor,
-    b_t: torch.FloatTensor,
+    h: FloatTensor,
+    b_h: FloatTensor,
+    r_vec: FloatTensor,
+    r_mat: FloatTensor,
+    t: FloatTensor,
+    b_t: FloatTensor,
     p: int | float | str = 2,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the MuRE interaction function from [balazevic2019b]_.
 
     .. math ::
@@ -922,11 +921,11 @@ def mure_interaction(
 
 
 def um_interaction(
-    h: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    t: FloatTensor,
     p: int,
     power_norm: bool = True,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the SimplE interaction function.
 
     :param h: shape: (`*batch_dims`, dim)
@@ -945,13 +944,13 @@ def um_interaction(
 
 
 def pair_re_interaction(
-    h: torch.FloatTensor,
-    t: torch.FloatTensor,
-    r_h: torch.FloatTensor,
-    r_t: torch.FloatTensor,
+    h: FloatTensor,
+    t: FloatTensor,
+    r_h: FloatTensor,
+    r_t: FloatTensor,
     p: int | str = 2,
     power_norm: bool = True,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the PairRE interaction function.
 
     .. math ::
@@ -982,10 +981,10 @@ def pair_re_interaction(
 
 
 def quat_e_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    table: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+    table: FloatTensor,
 ):
     """Evaluate the interaction function of QuatE for given embeddings.
 
@@ -1007,81 +1006,21 @@ def quat_e_interaction(
     return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
 
 
-def cross_e_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    c_r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    bias: torch.FloatTensor,
-    activation: nn.Module,
-    dropout: nn.Dropout | None = None,
-) -> torch.FloatTensor:
-    r"""
-    Evaluate the interaction function of CrossE for the given representations from [zhang2019b]_.
-
-    .. math ::
-        Dropout(Activation(c_r \odot h + c_r \odot h \odot r + b))^T t)
-
-    .. note ::
-        The representations have to be in a broadcastable shape.
-
-    .. note ::
-        The CrossE paper described an additional sigmoid activation as part of the interaction function. Since using a
-        log-likelihood loss can cause numerical problems (due to explicitly calling sigmoid before log), we do not
-        apply this in our implementation but rather opt for the numerically stable variant. However, the model itself
-        has an option ``predict_with_sigmoid``, which can be used to enforce application of sigmoid during inference.
-        This can also have an impact of rank-based evaluation, since limited numerical precision can lead to exactly
-        equal scores for multiple choices. The definition of a rank is not unambiguous in such case, and there exist
-        multiple competing variants how to break the ties. More information on this can be found in the documentation of
-        rank-based evaluation.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param c_r: shape: (`*batch_dims`, dim)
-        The relation-specific interaction vector.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param bias: shape: (dim,)
-        The combination bias.
-    :param activation:
-        The combination activation. Should be :class:`torch.nn.Tanh` for consistency with the CrossE paper.
-    :param dropout:
-        Dropout applied after the combination.
-
-    :return: shape: batch_dims
-        The scores.
-
-    .. seealso:: https://github.com/wencolani/CrossE
-    """
-    # head interaction
-    h = c_r * h
-    # relation interaction (notice that h has been updated)
-    r = h * r
-    # combination
-    x = activation(h + r + bias.view(*make_ones_like(h.shape[:-1]), -1))
-    if dropout is not None:
-        x = dropout(x)
-    # similarity
-    return (x * t).sum(dim=-1)
-
-
 def triple_re_interaction(
     # head
-    h: torch.FloatTensor,
+    h: FloatTensor,
     # relation
-    r_head: torch.FloatTensor,
-    r_mid: torch.FloatTensor,
-    r_tail: torch.FloatTensor,
+    r_head: FloatTensor,
+    r_mid: FloatTensor,
+    r_tail: FloatTensor,
     # tail
-    t: torch.FloatTensor,
+    t: FloatTensor,
     # version 2: relation factor offset
     u: float | None = None,
     # extension: negative (power) norm
     p: int = 2,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the TripleRE interaction function.
 
     .. seealso ::
@@ -1126,13 +1065,13 @@ def triple_re_interaction(
 
 
 def transformer_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
     transformer: nn.TransformerEncoder,
-    position_embeddings: torch.FloatTensor,
+    position_embeddings: FloatTensor,
     final: nn.Module,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     r"""Evaluate the Transformer interaction function, as described in [galkin2020]_..
 
     .. math ::
@@ -1183,11 +1122,11 @@ def transformer_interaction(
 
 
 def multilinear_tucker_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    core_tensor: torch.FloatTensor,
-) -> torch.FloatTensor:
+    h: FloatTensor,
+    r: FloatTensor,
+    t: FloatTensor,
+    core_tensor: FloatTensor,
+) -> FloatTensor:
     r"""Evaluate the (original) multi-linear TuckEr interaction function.
 
     .. math ::
@@ -1211,17 +1150,17 @@ def multilinear_tucker_interaction(
 
 def linea_re_interaction(
     # head
-    h: torch.FloatTensor,
+    h: FloatTensor,
     # relation
-    r_head: torch.FloatTensor,
-    r_mid: torch.FloatTensor,
-    r_tail: torch.FloatTensor,
+    r_head: FloatTensor,
+    r_mid: FloatTensor,
+    r_tail: FloatTensor,
     # tail
-    t: torch.FloatTensor,
+    t: FloatTensor,
     # extension: negative (power) norm
     p: int = 2,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate the LineaRE interaction function.
 
     .. note ::

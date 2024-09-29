@@ -4,7 +4,6 @@ import logging
 from math import ceil
 from typing import Callable, ClassVar, Optional, Union
 
-import torch
 from torch.nn import functional
 from torch.utils.data import DataLoader, TensorDataset
 from torch_max_mem.api import is_oom_error
@@ -14,7 +13,7 @@ from ..losses import Loss
 from ..models import Model
 from ..triples import CoreTriplesFactory
 from ..triples.instances import LCWABatchType, LCWASampleType
-from ..typing import InductiveMode, MappedTriples
+from ..typing import FloatTensor, InductiveMode, MappedTriples
 
 __all__ = [
     "LCWATrainingLoop",
@@ -113,7 +112,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         stop: Optional[int],
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         # Split batch components
         batch_pairs, batch_labels_full = batch
 
@@ -141,7 +140,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> FloatTensor:  # noqa: D102
         return self._process_batch_static(
             model=self.model,
             score_method=self.score_method,
@@ -264,7 +263,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
         stop: int,
         label_smoothing: float = 0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> FloatTensor:  # noqa: D102
         # unpack
         hrt_batch = batch[0]
         # Send batch to device
