@@ -967,11 +967,14 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateful ConvKB interaction function.
 
     ConvKB uses a convolutional neural network (CNN) whose feature maps capture global interactions of the input.
-    Each triple $(h,r,t) \in \mathbb{K}$ is represented as a input matrix
-    $\mathbf{A} = [\mathbf{h}; \mathbf{r}; \mathbf{t}] \in \mathbb{R}^{d \times 3}$ in which the columns represent
-    the embeddings for $h$, $r$, and $t$. In the convolution layer, a set of convolutional filters
-    $\omega_i \in \mathbb{R}^{1 \times 3}, i=1, \dots, \tau,$ are applied on the input in order to compute for
-    each dimension global interactions of the embedded triple. Each $\omega_i $ is applied on every row of
+
+    For given input representations for head entity, relation and tail entity, denoted by
+    $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$, it first combines them to a matrix
+    $\mathbf{A} = [\mathbf{h}; \mathbf{r}; \mathbf{t}] \in \mathbb{R}^{d \times 3}$.
+
+    In the convolution layer, a set of convolutional filters
+    $\omega_i \in \mathbb{R}^{1 \times 3}$, $i=1, \dots, \tau,$ are applied on the input in order to compute for
+    each dimension global interactions of the embedded triple. Each $\omega_i$ is applied on every row of
     $\mathbf{A}$ creating a feature map $\mathbf{v}_i = [v_{i,1},...,v_{i,d}] \in \mathbb{R}^d$:
 
     .. math::
@@ -987,9 +990,10 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         f(h,r,t) = [\mathbf{v}_i; \ldots ;\mathbf{v}_\tau] \cdot \mathbf{w}
 
     where $[\mathbf{v}_i; \ldots ;\mathbf{v}_\tau] \in \mathbb{R}^{\tau d \times 1}$ and
-    $\mathbf{w} \in \mathbb{R}^{\tau d \times 1} $ is a shared weight vector.
-    ConvKB may be seen as a restriction of :class:`pykeen.models.ERMLP` with a certain weight sharing pattern in the
-    first layer.
+    $\mathbf{w} \in \mathbb{R}^{\tau d \times 1}$ is a shared weight vector.
+
+    ConvKB may be seen as a restriction of :class:`~pykeen.nn.modules.ERMLPInteraction` with a certain weight sharing
+    pattern in the first layer.
 
     ---
     citation:
