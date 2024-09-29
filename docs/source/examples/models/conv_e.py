@@ -9,6 +9,7 @@ dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_trip
 from pykeen.models import ConvE
 
 model = ConvE(
+    triples_factory=dataset.training,
     embedding_dim=200,
     input_channels=1,
     output_channels=32,
@@ -30,7 +31,7 @@ from pykeen.training import LCWATrainingLoop
 training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
 
 # Step 4: Train
-losses = training_loop.train(num_epochs=5, batch_size=256)
+losses = training_loop.train(triples_factory=dataset.training, num_epochs=5, batch_size=256)
 
 # Step 5: Evaluate the model
 from pykeen.evaluation import RankBasedEvaluator
