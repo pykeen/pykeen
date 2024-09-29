@@ -31,7 +31,6 @@ __all__ = [
     "conve_interaction",
     "convkb_interaction",
     "cp_interaction",
-    "cross_e_interaction",
     "dist_ma_interaction",
     "distmult_interaction",
     "ermlp_interaction",
@@ -1006,66 +1005,6 @@ def quat_e_interaction(
     """
     # TODO: this sign is in the official code, too, but why do we need it?
     return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
-
-
-def cross_e_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    c_r: FloatTensor,
-    t: FloatTensor,
-    bias: FloatTensor,
-    activation: nn.Module,
-    dropout: nn.Dropout | None = None,
-) -> FloatTensor:
-    r"""
-    Evaluate the interaction function of CrossE for the given representations from [zhang2019b]_.
-
-    .. math ::
-        Dropout(Activation(c_r \odot h + c_r \odot h \odot r + b))^T t)
-
-    .. note ::
-        The representations have to be in a broadcastable shape.
-
-    .. note ::
-        The CrossE paper described an additional sigmoid activation as part of the interaction function. Since using a
-        log-likelihood loss can cause numerical problems (due to explicitly calling sigmoid before log), we do not
-        apply this in our implementation but rather opt for the numerically stable variant. However, the model itself
-        has an option ``predict_with_sigmoid``, which can be used to enforce application of sigmoid during inference.
-        This can also have an impact of rank-based evaluation, since limited numerical precision can lead to exactly
-        equal scores for multiple choices. The definition of a rank is not unambiguous in such case, and there exist
-        multiple competing variants how to break the ties. More information on this can be found in the documentation of
-        rank-based evaluation.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param c_r: shape: (`*batch_dims`, dim)
-        The relation-specific interaction vector.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param bias: shape: (dim,)
-        The combination bias.
-    :param activation:
-        The combination activation. Should be :class:`torch.nn.Tanh` for consistency with the CrossE paper.
-    :param dropout:
-        Dropout applied after the combination.
-
-    :return: shape: batch_dims
-        The scores.
-
-    .. seealso:: https://github.com/wencolani/CrossE
-    """
-    # head interaction
-    h = c_r * h
-    # relation interaction (notice that h has been updated)
-    r = h * r
-    # combination
-    x = activation(h + r + bias.view(*make_ones_like(h.shape[:-1]), -1))
-    if dropout is not None:
-        x = dropout(x)
-    # similarity
-    return (x * t).sum(dim=-1)
 
 
 def cp_interaction(

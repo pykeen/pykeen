@@ -20,7 +20,7 @@ from typing import (
 import more_itertools
 import numpy
 import torch
-from class_resolver import ClassResolver, Hint, OptionalKwargs
+from class_resolver import ClassResolver, Hint, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
@@ -28,6 +28,7 @@ from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .algebra import quaterion_multiplication_table
+from .compute_kernel import batched_dot
 from .init import initializer_resolver
 from ..metrics.utils import ValueRange
 from ..typing import (
@@ -46,6 +47,7 @@ from ..utils import (
     ensure_complex,
     ensure_tuple,
     estimate_cost_of_sequence,
+    make_ones_like,
     negative_norm,
     unpack_singletons,
     upgrade_to_sequence,
@@ -224,11 +226,33 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     ) -> FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (`*batch_dims`, `*dims`)
+        In general, each interaction function (class) expects a certain format for each of head, relation and
+        tail representations. This format is composed of the *number* and the shape of the representations.
+
+        Many simple interaction functions such as :class:`~pykeen.nn.modules.TransEInteraction`
+        operate on a single representation, however there are also interactions such as
+        :class:`~pykeen.nn.modules.TransDInteraction`, which requires two representations for each slot, or
+        :class:`~pykeen.nn.modules.PairREInteraction`, which requires two relation representations, but only a single
+        representation for head and tail entity respectively.
+
+        Each individual representation has a *shape*. This can be a simple $d$-dimensional vector, but also comprise
+        matrices, or even high-order tensors.
+
+        This method supports the general batched calculation, i.e., each of the representations can have a
+        preceding batch dimensions. Those batch dimensions do not necessarily need to be exactly the same, but they
+        need to be broadcastable. A good explanation of broadcasting rules can be found in
+        `NumPy's documentation <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_.
+
+        .. seealso::
+            - :ref:`representations` for an overview about different ways how to obtain individual representations.
+
+        :param h: shape: ``(*batch_dims, *dims)``
             The head representations.
-        :param r: shape: (`*batch_dims`, `*dims`)
+
+        :param r: shape: ``(*batch_dims, *dims)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, `*dims`)
+
+        :param t: shape: ``(*batch_dims, *dims)``
             The tail representations.
 
         :return: shape: batch_dims
@@ -248,7 +272,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         .. note ::
             At most one of the slice sizes may be not None.
 
-        # TODO: we could change that to slicing along multiple dimensions, if necessary
+        .. todo::
+            we could change that to slicing along multiple dimensions, if necessary
 
         :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
@@ -1836,10 +1861,33 @@ class MonotonicAffineTransformationInteraction(
 
 
 @parse_docdata
-class CrossEInteraction(FunctionalInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
-    """A module wrapper for the CrossE interaction function.
+class CrossEInteraction(Interaction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
+    r"""The stateful interaction function of CrossE.
 
-    .. seealso:: :func:`pykeen.nn.functional.cross_e_interaction`
+    The interaction function is given by
+
+    .. math ::
+
+        \textit{drop}(
+            \textit{act}(
+                \mathbf{c}_r \odot \mathbf{h} + \mathbf{c}_r \odot \mathbf{h} \odot \mathbf{r} + \mathbf{b})
+            )
+        )^T
+        \mathbf{t}
+
+    where $\mathbf{h}, \mathbf{c}_r, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ is the head embedding, the relation
+    interaction vector, the relation embedding, and the tail embedding, respectively.
+    $\mathbf{b} \in \mathbb{R}^d$ is a global bias vector (which makes this interaction function stateful).
+    $\textit{drop}$ denotes dropout, and $\textit{act}$ is the activation function.
+
+    .. note ::
+        The CrossE paper describes an additional sigmoid activation as part of the interaction function. Since using a
+        log-likelihood loss can cause numerical problems (due to explicitly calling sigmoid before log), we do not use
+        it in our implementation, but opt for the numerically stable variant. However, the model itself has an option
+        ``predict_with_sigmoid``, which can be used to force the use of sigmoid during inference. This can also affect
+        rank-based scoring, since limited numerical precision can lead to exactly equal scores for multiple choices.
+        The definition of a rank is not clear in this case, and there are several competing ways to break ties.
+        See :ref:`understanding-evaluation` for more information.
 
     ---
     citation:
@@ -1847,11 +1895,14 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, tuple[FloatTensor, Fl
         year: 2019
         link: https://arxiv.org/abs/1903.04750
         arxiv: 1903.04750
+        github: https://github.com/wencolani/CrossE
     """
 
-    func = pkf.cross_e_interaction
     relation_shape = ("d", "d")
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("combination_activation", "class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         embedding_dim: int = 50,
@@ -1864,39 +1915,59 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, tuple[FloatTensor, Fl
 
         :param embedding_dim:
             The embedding dimension.
+
         :param combination_activation:
             The combination activation function.
         :param combination_activation_kwargs:
             Additional keyword-based arguments passed to the constructor of the combination activation function (if
             not already instantiated).
+
         :param combination_dropout:
-            An optional dropout applied to the combination.
+            An optional dropout applied after the combination and before the dot product similarity.
         """
         super().__init__()
-        self.combination_activation = activation_resolver.make(
+        self.activation = activation_resolver.make(
             combination_activation,
             pos_kwargs=combination_activation_kwargs,
         )
-        self.combination_bias = nn.Parameter(data=torch.zeros(embedding_dim))
-        self.combination_dropout = nn.Dropout(combination_dropout) if combination_dropout else None
+        # TODO: expose initialization?
+        self.bias = nn.Parameter(data=torch.zeros(embedding_dim))
+        self.dropout = nn.Dropout(combination_dropout) if combination_dropout else None
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            bias=self.combination_bias,
-            activation=self.combination_activation,
-            dropout=self.combination_dropout,
-        )
-
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
+    def forward(
+        self,
         h: FloatTensor,
         r: tuple[FloatTensor, FloatTensor],
         t: FloatTensor,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        r, c_r = r
-        return dict(h=h, r=r, c_r=c_r, t=t)
+    ) -> FloatTensor:
+        r"""
+        Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim)
+            The relation representations and relation-specific interaction vector.
+        :param t: shape: (`*batch_dims`, dim)
+            The tail representations.
+
+        :return: shape: batch_dims
+            The scores.
+        """
+        r_emb, c_r = r
+        # head interaction
+        h = c_r * h
+        # relation interaction (notice that h has been updated)
+        r_emb = h * r_emb
+        # combination
+        x = self.activation(self.bias.view(*make_ones_like(h.shape[:-1]), -1) + h + r_emb)
+        if self.dropout is not None:
+            x = self.dropout(x)
+        # similarity
+        return batched_dot(x, t)
 
 
 @parse_docdata
