@@ -3,8 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, update_docstring_with_resolver_keys, ResolverKey
 from torch.nn import functional
 
 from ..nbase import ERModel
@@ -12,14 +11,14 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...nn.modules import DistMultInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 
 __all__ = [
     "DistMult",
 ]
 
 
-class DistMult(ERModel[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of DistMult from [yang2014]_.
 
     In this work, both entities and relations are represented by $d$-dimensional vectors stored in an
@@ -62,6 +61,9 @@ class DistMult(ERModel[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor])
         normalize=True,
     )
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="regularizer", resolver="pykeen.regularizers.regularizer_resolver")
+    )
     def __init__(
         self,
         *,
@@ -94,10 +96,8 @@ class DistMult(ERModel[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor])
         :param regularizer:
             The *relation* representation regularizer.
         :param regularizer_kwargs:
-            Additional keyword-based parameters. defaults to :attr:`DistMult.regularizer_default_kwargs` for the
-            default regularizer
-
-            .. todo:: use resolver docstring decorator
+            Additional keyword-based parameters. Defaults to :attr:`DistMult.regularizer_default_kwargs` for the
+            default regularizer.
 
         :param entity_representations_kwargs:
             Additional parameters to ``entity_representations_kwargs`` passed to :class:`pykeen.models.ERModel`.
