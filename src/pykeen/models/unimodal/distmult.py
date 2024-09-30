@@ -87,9 +87,6 @@ class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_constrainer:
             The constrainer for entity embeddings. Defaults to unit L2 norm.
 
-                .. todo::
-                    Link to explanation about constrainer vs. regularizer.
-
         :param relation_initializer:
             The method used to initialize the relation embedding. Defaults to using Xavier/Glorot uniform first and
             then normalizing te unit L2 length.
