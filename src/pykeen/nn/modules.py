@@ -963,10 +963,37 @@ class ConvEInteraction(Interaction[FloatTensor, FloatTensor, tuple[FloatTensor, 
 
 
 @parse_docdata
-class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ConvKB interaction function.
+class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The stateful ConvKB interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
+    ConvKB uses a convolutional neural network (CNN) whose feature maps capture global interactions of the input.
+
+    For given input representations for head entity, relation and tail entity, denoted by
+    $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$, it first combines them to a matrix
+    $\mathbf{A} = [\mathbf{h}; \mathbf{r}; \mathbf{t}] \in \mathbb{R}^{d \times 3}$.
+
+    In the convolution layer, a set of convolutional filters
+    $\omega_i \in \mathbb{R}^{1 \times 3}$, $i=1, \dots, \tau,$ are applied on the input in order to compute for
+    each dimension global interactions of the embedded triple. Each $\omega_i$ is applied on every row of
+    $\mathbf{A}$ creating a feature map $\mathbf{v}_i = [v_{i,1},...,v_{i,d}] \in \mathbb{R}^d$:
+
+    .. math::
+
+        \mathbf{v}_i = g(\omega_j \mathbf{A} + \mathbf{b})
+
+    where $\mathbf{b} \in \mathbb{R}$ denotes a bias term and $g$ an activation function which is employed element-wise.
+    Based on the resulting feature maps $\mathbf{v}_1, \dots, \mathbf{v}_{\tau}$, the plausibility score of a triple
+    is given by:
+
+    .. math::
+
+        f(h,r,t) = [\mathbf{v}_i; \ldots ;\mathbf{v}_\tau] \cdot \mathbf{w}
+
+    where $[\mathbf{v}_i; \ldots ;\mathbf{v}_\tau] \in \mathbb{R}^{\tau d \times 1}$ and
+    $\mathbf{w} \in \mathbb{R}^{\tau d \times 1}$ is a shared weight vector.
+
+    ConvKB may be seen as a restriction of :class:`~pykeen.nn.modules.ERMLPInteraction` with a certain weight sharing
+    pattern in the first layer.
 
     ---
     citation:
@@ -976,8 +1003,6 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         github: daiquocnguyen/ConvKB
         arxiv: 1712.02121
     """
-
-    func = pkf.convkb_interaction
 
     def __init__(
         self,
@@ -1017,14 +1042,37 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            conv=self.conv,
-            activation=self.activation,
-            hidden_dropout=self.hidden_dropout,
-            linear=self.linear,
-        )
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # cat into shape (..., 1, d, 3)
+        x = torch.stack(torch.broadcast_tensors(h, r, t), dim=-1).unsqueeze(dim=-3)
+        s = x.shape
+        x = x.view(-1, *s[-3:])
+        x = self.conv(x)
+        x = x.view(*s[:-3], -1)
+        x = self.activation(x)
+
+        # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
+        x = self.hidden_dropout(x)
+
+        # Linear layer for final scores; use flattened representations, shape: (*batch_dims, d * f)
+        x = self.linear(x)
+        return x.squeeze(dim=-1)
 
 
 @parse_docdata
@@ -2488,11 +2536,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     _tail_indices = (1,)
 
     @staticmethod
-    def func(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::

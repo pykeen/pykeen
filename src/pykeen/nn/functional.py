@@ -24,7 +24,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "convkb_interaction",
     "dist_ma_interaction",
     "distmult_interaction",
     "ermlp_interaction",
@@ -64,54 +63,6 @@ def _apply_optional_bn_to_tensor(
         x = batch_norm(x)
         x = x.view(*shape)
     return output_dropout(x)
-
-
-def convkb_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    conv: nn.Conv2d,
-    activation: nn.Module,
-    hidden_dropout: nn.Dropout,
-    linear: nn.Linear,
-) -> FloatTensor:
-    r"""Evaluate the ConvKB interaction function.
-
-    .. math::
-        W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param conv:
-        The 3x1 convolution.
-    :param activation:
-        The activation function.
-    :param hidden_dropout:
-        The dropout layer applied to the hidden activations.
-    :param linear:
-        The final linear layer.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # cat into shape (..., 1, d, 3)
-    x = torch.stack(torch.broadcast_tensors(h, r, t), dim=-1).unsqueeze(dim=-3)
-    s = x.shape
-    x = x.view(-1, *s[-3:])
-    x = conv(x)
-    x = x.view(*s[:-3], -1)
-    x = activation(x)
-
-    # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
-    x = hidden_dropout(x)
-
-    # Linear layer for final scores; use flattened representations, shape: (*batch_dims, d * f)
-    x = linear(x)
-    return x.squeeze(dim=-1)
 
 
 def distmult_interaction(
