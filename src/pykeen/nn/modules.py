@@ -53,6 +53,7 @@ from ..utils import (
     make_ones_like,
     negative_norm,
     tensor_product,
+    tensor_sum,
     unpack_singletons,
     upgrade_to_sequence,
 )
@@ -1171,13 +1172,20 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 @parse_docdata
-class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ER-MLP interaction.
+class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The ER-MLP stateful interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.ermlp_interaction`
+    ER-MLP uses a multi-layer perceptron based approach with a single hidden layer.
+    The $d$-dimensional representations of head entity, relation, and tail entity are concatenated
+    and passed to the hidden layer. The output-layer consists of a single neuron that computes the plausibility score:
 
-    .. math ::
-        f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
+    .. math::
+
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \mathbf{w}^{T} g(\mathbf{W} [\mathbf{h}; \mathbf{r}; \mathbf{t}]),
+
+    where $\textbf{W} \in \mathbb{R}^{k \times 3d}$ represents the weight matrix of the hidden layer,
+    $\textbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
+    as the hyperbolic tangent.
 
     ---
     name: ER-MLP
@@ -1187,12 +1195,15 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         link: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/45634.pdf
     """
 
-    func = pkf.ermlp_interaction
-
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         embedding_dim: int,
         hidden_dim: int | None = None,
+        activation: HintOrType[nn.Module] = nn.ReLU,
+        activation_kwargs: OptionalKwargs = None,
     ):
         """Initialize the interaction module.
 
@@ -1200,21 +1211,50 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
             The embedding vector dimension for entities and relations.
         :param hidden_dim:
             The hidden dimension of the MLP. Defaults to `embedding_dim`.
+        :param activation:
+            The activation function or a hint thereof.
+        :param activation_kwargs:
+            Additional keyword-based parameters passed to the activation's constructor, if the activation is not
+            pre-instantiated.
         """
         super().__init__()
         # normalize hidden_dim
         hidden_dim = hidden_dim or embedding_dim
         self.hidden = nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True)
-        self.activation = nn.ReLU()
+        self.activation = activation_resolver.make(activation, activation_kwargs)
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            hidden=self.hidden,
-            activation=self.activation,
-            final=self.hidden_to_score,
-        )
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # shortcut for same shape
+        if h.shape == r.shape and h.shape == t.shape:
+            x = self.hidden(torch.cat([h, r, t], dim=-1))
+        else:
+            # split weight into head-/relation-/tail-specific sub-matrices
+            *prefix, dim = h.shape
+            x = tensor_sum(
+                self.hidden.bias.view(*make_ones_like(prefix), -1),
+                *(
+                    einsum("...i, ji -> ...j", xx, weight)
+                    for xx, weight in zip([h, r, t], self.hidden.weight.split(split_size=dim, dim=-1))
+                ),
+            )
+        return self.hidden_to_score(self.activation(x)).squeeze(dim=-1)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102

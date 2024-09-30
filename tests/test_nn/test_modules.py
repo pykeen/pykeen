@@ -146,9 +146,11 @@ class ERMLPTests(cases.InteractionTestCase):
         hidden_dim=2 * cases.InteractionTestCase.dim - 1,
     )
 
-    def _exp_score(self, h, r, t, hidden, activation, final) -> torch.FloatTensor:
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        instance = self.instance
+        assert isinstance(instance, pykeen.nn.modules.ERMLPInteraction)
         x = torch.cat([x.view(-1) for x in (h, r, t)])
-        return final(activation(hidden(x)))
+        return instance.hidden_to_score(instance.activation(instance.hidden(x)))
 
 
 class ERMLPETests(cases.InteractionTestCase):
