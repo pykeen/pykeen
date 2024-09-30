@@ -1109,14 +1109,18 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
-        :param h: shape: (`*batch_dims`, dim)
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
             The head representations.
-        :param r: shape: (`*batch_dims`, dim)
+        :param r: shape: ``(*batch_dims, d)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, dim)
+        :param t: shape: ``(*batch_dims, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
         return tensor_product(h, r, t).sum(dim=-1)
