@@ -19,7 +19,7 @@ import torch
 from tqdm.auto import tqdm
 
 from ..constants import PYKEEN_MODULE
-from ..typing import OneOrSequence
+from ..typing import FloatTensor, LongTensor, OneOrSequence
 from ..utils import nested_get, rate_limited, upgrade_to_sequence
 from ..version import get_version
 
@@ -124,10 +124,10 @@ def use_horizontal_stacking(
 def adjacency_tensor_to_stacked_matrix(
     num_relations: int,
     num_entities: int,
-    source: torch.LongTensor,
-    target: torch.LongTensor,
-    edge_type: torch.LongTensor,
-    edge_weights: torch.FloatTensor | None = None,
+    source: LongTensor,
+    target: LongTensor,
+    edge_type: LongTensor,
+    edge_weights: FloatTensor | None = None,
     horizontal: bool = True,
 ) -> torch.Tensor:
     """

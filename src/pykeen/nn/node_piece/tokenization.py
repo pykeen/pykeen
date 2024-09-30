@@ -17,7 +17,7 @@ from .anchor_selection import AnchorSelection, anchor_selection_resolver
 from .loader import PrecomputedTokenizerLoader, precomputed_tokenizer_loader_resolver
 from .utils import prepare_edges_for_metis, random_sample_no_replacement
 from ...constants import PYKEEN_MODULE
-from ...typing import DeviceHint, MappedTriples
+from ...typing import DeviceHint, LongTensor, MappedTriples
 from ...utils import format_relative_comparison, get_edge_index, resolve_device
 
 __all__ = [
@@ -45,7 +45,7 @@ class Tokenizer:
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, torch.LongTensor]:
+    ) -> tuple[int, LongTensor]:
         """
         Tokenize the entities contained given the triples.
 
@@ -74,7 +74,7 @@ class RelationTokenizer(Tokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, torch.LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:  # noqa: D102
         # tokenize: represent entities by bag of relations
         h, r, t = mapped_triples.t()
 
@@ -134,10 +134,10 @@ class AnchorTokenizer(Tokenizer):
 
     def _call(
         self,
-        edge_index: torch.LongTensor,
+        edge_index: LongTensor,
         num_tokens: int,
         num_entities: int,
-    ) -> tuple[int, torch.LongTensor]:
+    ) -> tuple[int, LongTensor]:
         edge_index = edge_index.numpy()
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
@@ -162,7 +162,7 @@ class AnchorTokenizer(Tokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, torch.LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:  # noqa: D102
         return self._call(
             edge_index=get_edge_index(mapped_triples=mapped_triples),
             num_tokens=num_tokens,
@@ -200,7 +200,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, torch.LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:  # noqa: D102
         try:
             import torch_sparse
         except ImportError as err:
@@ -329,7 +329,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
     # docstr-coverage: inherited
     def __call__(
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
-    ) -> tuple[int, torch.LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:  # noqa: D102
         if num_entities != len(self.pool):
             raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
         if self.randomize_selection:

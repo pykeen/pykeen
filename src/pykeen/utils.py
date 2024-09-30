@@ -39,9 +39,10 @@ import yaml
 from class_resolver import normalize_string
 from docdata import get_docdata
 from torch import nn
+from typing_extensions import ParamSpec
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, MappedTriples, TorchRandomHint
+from .typing import BoolTensor, DeviceHint, FloatTensor, LongTensor, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
@@ -72,7 +73,6 @@ __all__ = [
     "extend_batch",
     "check_shapes",
     "all_in_bounds",
-    "is_cudnn_error",
     "view_complex",
     "combine_complex",
     "get_model_io",
@@ -114,11 +114,15 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+P = ParamSpec("P")
+X = TypeVar("X")
+
+
 #: An error that occurs because the input in CUDA is too big. See ConvE for an example.
 _CUDNN_ERROR = "cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input."
 
 
-def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
+def at_least_eps(x: FloatTensor) -> FloatTensor:
     """Make sure a tensor is greater than zero."""
     # get datatype specific epsilon
     eps = torch.finfo(x.dtype).eps
@@ -173,9 +177,6 @@ def get_preferred_device(module: nn.Module, allow_ambiguity: bool = True) -> tor
     if len(cuda_devices) == 1:
         return next(iter(cuda_devices))
     raise AmbiguousDeviceError(module=module)
-
-
-X = TypeVar("X")
 
 
 def get_until_first_blank(s: str) -> str:
@@ -354,28 +355,28 @@ class Result(ABC):
 
 
 def split_complex(
-    x: torch.FloatTensor,
-) -> tuple[torch.FloatTensor, torch.FloatTensor]:
+    x: FloatTensor,
+) -> tuple[FloatTensor, FloatTensor]:
     """Split a complex tensor into real and imaginary part."""
     x = torch.view_as_real(x)
     return x[..., 0], x[..., 1]
 
 
-def view_complex(x: torch.FloatTensor) -> torch.Tensor:
+def view_complex(x: FloatTensor) -> torch.Tensor:
     """Convert a PyKEEN complex tensor representation into a torch one."""
     real, imag = split_complex(x=x)
     return torch.complex(real=real, imag=imag)
 
 
-def view_complex_native(x: torch.FloatTensor) -> torch.Tensor:
+def view_complex_native(x: FloatTensor) -> torch.Tensor:
     """Convert a PyKEEN complex tensor representation into a torch one using :func:`torch.view_as_complex`."""
     return torch.view_as_complex(x.view(*x.shape[:-1], -1, 2))
 
 
 def combine_complex(
-    x_re: torch.FloatTensor,
-    x_im: torch.FloatTensor,
-) -> torch.FloatTensor:
+    x_re: FloatTensor,
+    x_im: FloatTensor,
+) -> FloatTensor:
     """Combine a complex tensor from real and imaginary part."""
     return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
@@ -560,8 +561,8 @@ def get_optimal_sequence(*shapes: tuple[int, ...]) -> tuple[int, tuple[int, ...]
 
 
 def _reorder(
-    tensors: tuple[torch.FloatTensor, ...],
-) -> tuple[torch.FloatTensor, ...]:
+    tensors: tuple[FloatTensor, ...],
+) -> tuple[FloatTensor, ...]:
     """Re-order tensors for broadcasted element-wise combination of tensors.
 
     The optimal execution plan gets cached so that the optimization is only performed once for a fixed set of shapes.
@@ -583,22 +584,22 @@ def _reorder(
     return tuple(tensors[i] for i in order)
 
 
-def tensor_sum(*tensors: torch.FloatTensor) -> torch.FloatTensor:
+def tensor_sum(*tensors: FloatTensor) -> FloatTensor:
     """Compute element-wise sum of tensors in broadcastable shape."""
     return sum(_reorder(tensors=tensors))
 
 
-def tensor_product(*tensors: torch.FloatTensor) -> torch.FloatTensor:
+def tensor_product(*tensors: FloatTensor) -> FloatTensor:
     """Compute element-wise product of tensors in broadcastable shape."""
     head, *rest = _reorder(tensors=tensors)
     return functools.reduce(operator.mul, rest, head)
 
 
 def negative_norm_of_sum(
-    *x: torch.FloatTensor,
+    *x: FloatTensor,
     p: str | int | float = 2,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate negative norm of a sum of vectors on already broadcasted representations.
 
     :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
@@ -615,10 +616,10 @@ def negative_norm_of_sum(
 
 
 def negative_norm(
-    x: torch.FloatTensor,
+    x: FloatTensor,
     p: str | int | float = 2,
     power_norm: bool = False,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Evaluate negative norm of a vector.
 
     :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
@@ -639,10 +640,10 @@ def negative_norm(
 
 
 def project_entity(
-    e: torch.FloatTensor,
-    e_p: torch.FloatTensor,
-    r_p: torch.FloatTensor,
-) -> torch.FloatTensor:
+    e: FloatTensor,
+    e_p: FloatTensor,
+    r_p: FloatTensor,
+) -> FloatTensor:
     r"""Project entity relation-specific.
 
     .. math::
@@ -696,12 +697,12 @@ def _normalize_dim(dim: int | str) -> int:
 
 # TODO delete? See note in test_sim.py on its only usage
 def convert_to_canonical_shape(
-    x: torch.FloatTensor,
+    x: FloatTensor,
     dim: int | str,
     num: int | None = None,
     batch_size: int = 1,
     suffix_shape: int | Sequence[int] = -1,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Convert a tensor to canonical shape.
 
     :param x:
@@ -820,7 +821,7 @@ def extend_batch(
     batch: MappedTriples,
     max_id: int,
     dim: int,
-    ids: torch.LongTensor | None = None,
+    ids: LongTensor | None = None,
 ) -> MappedTriples:
     """Extend batch for 1-to-all scoring by explicit enumeration.
 
@@ -963,7 +964,7 @@ class Bias(nn.Module):
         """Reset the layer's parameters."""
         nn.init.zeros_(self.bias)
 
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, x: FloatTensor) -> FloatTensor:
         """Add the learned bias to the input.
 
         :param x: shape: (n, d)
@@ -975,7 +976,7 @@ class Bias(nn.Module):
         return x + self.bias.unsqueeze(dim=0)
 
 
-def lp_norm(x: torch.FloatTensor, p: float, dim: int | None, normalize: bool) -> torch.FloatTensor:
+def lp_norm(x: FloatTensor, p: float, dim: int | None, normalize: bool) -> FloatTensor:
     """Return the $L_p$ norm."""
     value = x.norm(p=p, dim=dim)
     if not normalize:
@@ -983,7 +984,7 @@ def lp_norm(x: torch.FloatTensor, p: float, dim: int | None, normalize: bool) ->
     return value / get_expected_norm(p=p, d=x.shape[-1])
 
 
-def powersum_norm(x: torch.FloatTensor, p: float, dim: int | None, normalize: bool) -> torch.FloatTensor:
+def powersum_norm(x: FloatTensor, p: float, dim: int | None, normalize: bool) -> FloatTensor:
     """Return the power sum norm."""
     value = x.abs().pow(p).sum(dim=dim)
     if not normalize:
@@ -1058,12 +1059,12 @@ def getattr_or_docdata(cls, key: str) -> str:
     raise KeyError
 
 
-def triple_tensor_to_set(tensor: torch.LongTensor) -> set[tuple[int, ...]]:
+def triple_tensor_to_set(tensor: LongTensor) -> set[tuple[int, ...]]:
     """Convert a tensor of triples to a set of int-tuples."""
     return set(map(tuple, tensor.tolist()))
 
 
-def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+def is_triple_tensor_subset(a: LongTensor, b: LongTensor) -> bool:
     """Check whether one tensor of triples is a subset of another one."""
     return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
 
@@ -1246,7 +1247,7 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
 
 def _weisfeiler_lehman_iteration(
     adj: torch.Tensor,
-    colors: torch.LongTensor,
+    colors: LongTensor,
     dense_dtype: torch.dtype = torch.long,
 ) -> torch.Tensor:
     """
@@ -1283,7 +1284,7 @@ def _weisfeiler_lehman_iteration(
 
 def _weisfeiler_lehman_iteration_approx(
     adj: torch.Tensor,
-    colors: torch.LongTensor,
+    colors: LongTensor,
     dim: int = 32,
     decimals: int = 6,
 ) -> torch.Tensor:
@@ -1328,7 +1329,7 @@ def _weisfeiler_lehman_iteration_approx(
 
 
 def iter_weisfeiler_lehman(
-    edge_index: torch.LongTensor,
+    edge_index: LongTensor,
     max_iter: int = 2,
     num_nodes: int | None = None,
     approximate: bool = False,
@@ -1434,8 +1435,8 @@ def get_edge_index(
     # cannot use Optional[pykeen.triples.CoreTriplesFactory] due to cyclic imports
     triples_factory: Any | None = None,
     mapped_triples: MappedTriples | None = None,
-    edge_index: torch.LongTensor | None = None,
-) -> torch.LongTensor:
+    edge_index: LongTensor | None = None,
+) -> LongTensor:
     """
     Get the edge index from a number of different sources.
 
@@ -1589,7 +1590,7 @@ except ImportError:
     einsum = torch.einsum
 
 
-def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> torch.BoolTensor:
+def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> BoolTensor:
     """Return whether elements are contained in test elements."""
     inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
         return_counts=True, return_inverse=True, dim=dim
@@ -1630,3 +1631,32 @@ def determine_maximum_batch_size(batch_size: int | None, device: torch.device, m
             )
         logger.debug(f"Automatically set maximum batch size to {batch_size=:_}")
     return batch_size
+
+
+def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
+    """
+    Decorate a function to add explanations for CUDNN errors.
+
+    :param func:
+        the function to decorate
+
+    :return:
+        a decorated function
+    """
+
+    # docstr-coverage: excused `wrapped`
+    @functools.wraps(func)
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> X:
+        try:
+            return func(*args, **kwargs)
+        except RuntimeError as e:
+            if not is_cudnn_error(e):
+                raise e
+            raise RuntimeError(
+                "\nThis code crash might have been caused by a CUDA bug, see "
+                "https://github.com/allenai/allennlp/issues/2888, "
+                "which causes the code to crash during evaluation mode.\n"
+                "To avoid this error, the batch size has to be reduced.",
+            ) from e
+
+    return wrapped

@@ -15,7 +15,7 @@ from ..perceptron import ConcatMLP
 from ..representation import CombinedRepresentation, Representation
 from ..utils import ShapeError
 from ...triples import CoreTriplesFactory
-from ...typing import MappedTriples, OneOrSequence
+from ...typing import FloatTensor, LongTensor, MappedTriples, OneOrSequence
 from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
@@ -47,11 +47,11 @@ class TokenizationRepresentation(Representation):
     vocabulary: Representation
 
     #: the assigned tokens for each entity
-    assignment: torch.LongTensor
+    assignment: LongTensor
 
     def __init__(
         self,
-        assignment: torch.LongTensor,
+        assignment: LongTensor,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
         shape: Optional[OneOrSequence[int]] = None,
@@ -173,8 +173,8 @@ class TokenizationRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        indices: Optional[LongTensor] = None,
+    ) -> FloatTensor:  # noqa: D102
         # get token IDs, shape: (*, num_chosen_tokens)
         token_ids = self.assignment
         if indices is not None:
@@ -244,7 +244,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         tokenizers: OneOrManyHintOrType[Tokenizer] = None,
         tokenizers_kwargs: OneOrManyOptionalKwargs = None,
         num_tokens: OneOrSequence[int] = 2,
-        aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
+        aggregation: Union[None, str, Callable[[FloatTensor, int], FloatTensor]] = None,
         max_id: Optional[int] = None,
         **kwargs,
     ):
