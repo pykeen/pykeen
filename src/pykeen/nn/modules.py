@@ -1254,7 +1254,7 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
                     for xx, weight in zip([h, r, t], self.hidden.weight.split(split_size=dim, dim=-1))
                 ),
             )
-        return self.final(self.activation(x)).squeeze(dim=-1)
+        return self.hidden_to_score(self.activation(x)).squeeze(dim=-1)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
