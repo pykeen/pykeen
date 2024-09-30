@@ -24,7 +24,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "dist_ma_interaction",
     "distmult_interaction",
     "ermlp_interaction",
     "ermlpe_interaction",
@@ -83,29 +82,6 @@ def distmult_interaction(
         The scores.
     """
     return tensor_product(h, r, t).sum(dim=-1)
-
-
-def dist_ma_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    r"""Evaluate the DistMA interaction function from [shi2019]_.
-
-    .. math ::
-        \langle h, r\rangle + \langle r, t\rangle + \langle h, t\rangle
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
 
 
 def ermlp_interaction(

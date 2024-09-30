@@ -1094,9 +1094,19 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
 
 @parse_docdata
 class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless DistMA interaction function.
+    r"""The stateless DistMA interaction function from [shi2019]_.
 
-    .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+    For head entity, relation, and tail representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$,
+    the interaction functions is given by
+
+    .. math ::
+          \langle \mathbf{h}, \mathbf{r}\rangle
+        + \langle \mathbf{r}, \mathbf{t}\rangle
+        + \langle \mathbf{h}, \mathbf{t}\rangle
+
+    .. note ::
+        This interaction function is the symmetric part $E_1$ from the respective paper, and not the combination
+        with :class:`~pykeen.nn.modules.ComplExInteraction`.
 
     ---
     citation:
@@ -1105,7 +1115,25 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://www.aclweb.org/anthology/D19-1075.pdf
     """
 
-    func = pkf.dist_ma_interaction
+    @staticmethod
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
 
 
 @parse_docdata
