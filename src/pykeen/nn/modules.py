@@ -53,6 +53,7 @@ from ..utils import (
     make_ones_like,
     negative_norm,
     tensor_product,
+    tensor_sum,
     unpack_singletons,
     upgrade_to_sequence,
 )
