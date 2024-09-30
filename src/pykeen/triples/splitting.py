@@ -20,6 +20,7 @@ from ..typing import (
     LABEL_RELATION,
     LABEL_TAIL,
     BoolTensor,
+    LongTensor,
     MappedTriples,
     Target,
     TorchRandomHint,
@@ -34,10 +35,10 @@ __all__ = [
 
 
 def _random_split_tensor(
-    x: torch.Tensor,
+    x: LongTensor,
     sizes: Sequence[int],
     generator: torch.Generator | None = None,
-) -> Sequence[torch.Tensor]:
+) -> Sequence[LongTensor]:
     """Randomly split a tensor into parts of the given sizes."""
     # input verification
     n = x.shape[0]
@@ -53,10 +54,10 @@ def _random_split_tensor(
 
 
 def _random_split_unique_values(
-    id_tensor: torch.Tensor,
+    id_tensor: LongTensor,
     ratios: Sequence[float],
     generator: torch.Generator | None = None,
-) -> Sequence[torch.Tensor]:
+) -> Sequence[LongTensor]:
     """Randomly split the unique values in a tensor according to the given ratios."""
     unique_ids = id_tensor.unique()
     sizes = get_absolute_split_sizes(n_total=len(unique_ids), ratios=ratios)
