@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar, Optional
 
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch import nn
 
 from ..nbase import ERModel
@@ -37,6 +37,9 @@ class ERMLP(ERModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         *,

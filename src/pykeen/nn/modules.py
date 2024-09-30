@@ -1216,9 +1216,6 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         :param activation_kwargs:
             Additional keyword-based parameters passed to the activation's constructor, if the activation is not
             pre-instantiated.
-
-        .. todo::
-            add resolver decorator for activation
         """
         super().__init__()
         # normalize hidden_dim
