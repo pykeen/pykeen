@@ -52,6 +52,7 @@ from ..utils import (
     estimate_cost_of_sequence,
     make_ones_like,
     negative_norm,
+    tensor_product,
     unpack_singletons,
     upgrade_to_sequence,
 )
@@ -1077,9 +1078,24 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 @parse_docdata
 class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless DistMult interaction function.
+    r"""The stateless DistMult interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.distmult_interaction`
+    This interaction is given by
+
+    .. math::
+
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \sum \limits_{i} \mathbf{h}_i \cdot \mathbf{r}_{i} \cdot \mathbf{t}_i
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^{d}$ are the representations for the head entity,
+    the relation, and the tail entity.
+
+    For a single triple of $d$-dimensional vectors, the computational complexity is given as $\mathcal{O}(d)$.
+
+    The interaction function is symmetric in the entities, i.e.,
+
+    .. math::
+
+        f(h, r, t) = f(t, r, h)
 
     ---
     citation:
@@ -1089,7 +1105,25 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
         arxiv: 1412.6575
     """
 
-    func = pkf.distmult_interaction
+    @staticmethod
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return tensor_product(h, r, t).sum(dim=-1)
 
 
 @parse_docdata

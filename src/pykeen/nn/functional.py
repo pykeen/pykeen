@@ -24,7 +24,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "distmult_interaction",
     "ermlp_interaction",
     "ermlpe_interaction",
     "hole_interaction",
@@ -62,26 +61,6 @@ def _apply_optional_bn_to_tensor(
         x = batch_norm(x)
         x = x.view(*shape)
     return output_dropout(x)
-
-
-def distmult_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the DistMult interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return tensor_product(h, r, t).sum(dim=-1)
 
 
 def ermlp_interaction(
@@ -395,7 +374,7 @@ def simple_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    scores = 0.5 * (distmult_interaction(h=h, r=r, t=t) + distmult_interaction(h=h_inv, r=r_inv, t=t_inv))
+    scores = 0.5 * (tensor_product(h, r, t).sum(dim=-1) + tensor_product(h_inv, r_inv, t_inv).sum(dim=-1))
     # Note: In the code in their repository, the score is clamped to [-20, 20].
     #       That is not mentioned in the paper, so it is made optional here.
     if clamp:
