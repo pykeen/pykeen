@@ -19,7 +19,16 @@ from class_resolver import ClassResolver
 from pandas.api.types import is_numeric_dtype, is_string_dtype
 
 from ...triples import CoreTriplesFactory, TriplesFactory
-from ...typing import COLUMN_HEAD, COLUMN_TAIL, EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, MappedTriples, TargetColumn
+from ...typing import (
+    COLUMN_HEAD,
+    COLUMN_TAIL,
+    EA_SIDE_LEFT,
+    EA_SIDE_RIGHT,
+    EA_SIDES,
+    LongTensor,
+    MappedTriples,
+    TargetColumn,
+)
 from ...utils import format_relative_comparison, get_connected_components
 
 __all__ = [
@@ -37,7 +46,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> tuple[MappedTriples, torch.LongTensor]:
+def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> tuple[MappedTriples, LongTensor]:
     """
     Concatenate (shifted) triples.
 
@@ -73,7 +82,7 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> tup
 
 def merge_label_to_id_mapping(
     *pairs: tuple[str, Mapping[str, int]],
-    offsets: torch.LongTensor = None,
+    offsets: Optional[LongTensor] = None,
     mappings: Optional[Sequence[Mapping[int, int]]] = None,
     extra: Optional[Mapping[str, int]] = None,
 ) -> dict[str, int]:
@@ -127,9 +136,9 @@ def merge_label_to_id_mapping(
 def merge_label_to_id_mappings(
     left: TriplesFactory,
     right: TriplesFactory,
-    relation_offsets: torch.LongTensor,
+    relation_offsets: LongTensor,
     # optional
-    entity_offsets: Optional[torch.LongTensor] = None,
+    entity_offsets: Optional[LongTensor] = None,
     entity_mappings: Optional[Sequence[Mapping[int, int]]] = None,
     extra_relations: Optional[Mapping[str, int]] = None,
 ) -> tuple[Mapping[str, int], Mapping[str, int]]:
@@ -173,8 +182,8 @@ def filter_map_alignment(
     alignment: pandas.DataFrame,
     left: CoreTriplesFactory,
     right: CoreTriplesFactory,
-    entity_offsets: torch.LongTensor,
-) -> torch.LongTensor:
+    entity_offsets: LongTensor,
+) -> LongTensor:
     """
     Convert dataframe with label or ID-based alignment.
 
@@ -220,7 +229,7 @@ def filter_map_alignment(
 
 def swap_index_triples(
     mapped_triples: MappedTriples,
-    dense_map: torch.LongTensor,
+    dense_map: LongTensor,
     index: TargetColumn,
 ) -> MappedTriples:
     """
@@ -254,7 +263,7 @@ class ProcessedTuple(NamedTuple):
     mapped_triples: MappedTriples
 
     #: the updated alignment, shape: (2, m)
-    alignment: torch.LongTensor
+    alignment: LongTensor
 
     #: additional keyword-based parameters for adjusting label-to-id mappings
     translation_kwargs: Mapping[str, Any]
@@ -269,7 +278,7 @@ class GraphPairCombinator(ABC):
         right: TriplesFactory,
         alignment: pandas.DataFrame,
         **kwargs,
-    ) -> tuple[TriplesFactory, torch.LongTensor]:
+    ) -> tuple[TriplesFactory, LongTensor]:
         """
         Combine two graphs using the alignment information.
 
@@ -307,6 +316,7 @@ class GraphPairCombinator(ABC):
                 **kwargs,
             )
         else:
+            # TODO: unreachable code
             max_ids = mapped_triples.max(axis=0).values
             triples_factory = CoreTriplesFactory(
                 mapped_triples=mapped_triples,
@@ -321,8 +331,8 @@ class GraphPairCombinator(ABC):
     def process(
         self,
         mapped_triples: MappedTriples,
-        alignment: torch.LongTensor,
-        offsets: torch.LongTensor,
+        alignment: LongTensor,
+        offsets: LongTensor,
     ) -> ProcessedTuple:
         """
         Process the combined mapped triples.
@@ -347,8 +357,8 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
     def process(
         self,
         mapped_triples: MappedTriples,
-        alignment: torch.LongTensor,
-        offsets: torch.LongTensor,
+        alignment: LongTensor,
+        offsets: LongTensor,
     ) -> ProcessedTuple:  # noqa: D102
         return ProcessedTuple(
             mapped_triples,
@@ -364,8 +374,8 @@ class SwapGraphPairCombinator(GraphPairCombinator):
     def process(
         self,
         mapped_triples: MappedTriples,
-        alignment: torch.LongTensor,
-        offsets: torch.LongTensor,
+        alignment: LongTensor,
+        offsets: LongTensor,
     ) -> ProcessedTuple:  # noqa: D102
         # add swap triples
         # e1 ~ e2 => (e1, r, t) ~> (e2, r, t), or (h, r, e1) ~> (h, r, e2)
@@ -402,8 +412,8 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
     def process(
         self,
         mapped_triples: MappedTriples,
-        alignment: torch.LongTensor,
-        offsets: torch.LongTensor,
+        alignment: LongTensor,
+        offsets: LongTensor,
     ) -> ProcessedTuple:  # noqa: D102
         # add alignment triples with extra relation
         left_id, right_id = alignment
@@ -434,7 +444,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
 
 
 def iter_entity_mappings(
-    *old_new_ids_pairs: tuple[torch.LongTensor, torch.LongTensor], offsets: torch.LongTensor
+    *old_new_ids_pairs: tuple[LongTensor, LongTensor], offsets: LongTensor
 ) -> Iterable[Mapping[int, int]]:
     """
     Create explicit Id mappings.
@@ -462,8 +472,8 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
     def process(
         self,
         mapped_triples: MappedTriples,
-        alignment: torch.LongTensor,
-        offsets: torch.LongTensor,
+        alignment: LongTensor,
+        offsets: LongTensor,
     ) -> ProcessedTuple:  # noqa: D102
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
         entity_id_mapping = torch.arange(mapped_triples[:, 0::2].max().item() + 1)

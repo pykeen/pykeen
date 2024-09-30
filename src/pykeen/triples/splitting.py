@@ -19,6 +19,7 @@ from ..typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
+    BoolTensor,
     MappedTriples,
     Target,
     TorchRandomHint,
@@ -99,7 +100,7 @@ def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> set[
     return set(numpy.unique(df.loc[df["index"].isin(chosen), [LABEL_HEAD, LABEL_TAIL]]))
 
 
-def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
+def _get_cover_deterministic(triples: MappedTriples) -> BoolTensor:
     """
     Get a coverage mask for all entities and relations.
 
@@ -256,7 +257,7 @@ def _prepare_cleanup(
     training: MappedTriples,
     testing: MappedTriples,
     max_ids: tuple[int, int] | None = None,
-) -> torch.BoolTensor:
+) -> BoolTensor:
     """
     Calculate a mask for the test triples with triples containing test-only entities or relations.
 

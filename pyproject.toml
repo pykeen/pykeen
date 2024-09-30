@@ -75,7 +75,7 @@ dependencies = [
     "more_itertools",
     "pystow>=0.4.3",
     "docdata",
-    "class_resolver>0.4.2",
+    "class_resolver>=0.5.1",
     "pyyaml",
     "torch_max_mem>=0.1.1",
     "torch-ppr>=0.0.7",
@@ -265,6 +265,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Ignore commented out code in Sphinx configuration file
 "docs/source/conf.py" = ["ERA001"]
+"docs/source/examples/**/*.py" = [
+    "E402",  # allow imports not at top for narrative purposes
+    "T201",  # allow prints
+]
 "notebooks/**/*.ipynb" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]
