@@ -113,13 +113,15 @@ class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             constrainer=entity_constrainer,
             # note: DistMult only regularizes the relation embeddings;
             #       entity embeddings are hard constrained instead
-        ).update(entity_representations_kwargs or {})
+        )
+        resolved_entity_representations_kwargs.update(entity_representations_kwargs or {})
         resolved_relation_representations_kwargs = dict(
             shape=embedding_dim,
             initializer=relation_initializer,
             regularizer=regularizer,
             regularizer_kwargs=regularizer_kwargs,
-        ).update(relation_representations_kwargs or {})
+        )
+        resolved_relation_representations_kwargs.update(relation_representations_kwargs or {})
         super().__init__(
             interaction=DistMultInteraction,
             entity_representations_kwargs=resolved_entity_representations_kwargs,
