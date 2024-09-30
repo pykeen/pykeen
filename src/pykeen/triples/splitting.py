@@ -43,7 +43,7 @@ def _random_split_tensor(
     # input verification
     n = x.shape[0]
     if sum(sizes) != n:
-        raise ValueError(f"Received {x.shape[0]=}, but the sizes sum up to {sum(sizes)}")
+        raise ValueError(f"Received {x.shape[0]=:_}, but the sizes sum up to {sum(sizes):_}")
 
     # split indices
     permutation = torch.randperm(n, generator=generator)
