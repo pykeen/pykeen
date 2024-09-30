@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-from class_resolver import HintOrType, OptionalKwargs, update_docstring_with_resolver_keys, ResolverKey
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.nn import functional
 
 from ..nbase import ERModel
