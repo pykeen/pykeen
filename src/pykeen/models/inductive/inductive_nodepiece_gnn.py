@@ -9,7 +9,13 @@ from torch import nn
 
 from .inductive_nodepiece import InductiveNodePiece
 from ...nn.representation import CompGCNLayer
-from ...typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
+from ...typing import (
+    HeadRepresentation,
+    InductiveMode,
+    LongTensor,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from ...utils import get_edge_index
 
 __all__ = [
@@ -102,9 +108,9 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
     def _get_representations(
         self,
-        h: Optional[torch.LongTensor],
-        r: Optional[torch.LongTensor],
-        t: Optional[torch.LongTensor],
+        h: Optional[LongTensor],
+        r: Optional[LongTensor],
+        t: Optional[LongTensor],
         mode: Optional[InductiveMode] = None,
     ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape with a GNN encoder."""
