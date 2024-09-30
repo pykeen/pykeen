@@ -15,7 +15,6 @@ from torch import nn
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.models.unimodal.quate import quaternion_normalizer
-from pykeen.nn.functional import distmult_interaction
 from pykeen.typing import Representation, Sign
 from pykeen.utils import clamp_norm, complex_normalize, einsum, ensure_tuple, project_entity
 from tests import cases
@@ -109,7 +108,14 @@ class CrossETests(cases.InteractionTestCase):
         embedding_dim=cases.InteractionTestCase.dim,
     )
 
-    def _exp_score(self, h, r, c_r, t, bias, activation, dropout) -> torch.FloatTensor:  # noqa: D102
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = (kwargs[key] for key in ("h", "r", "t"))
+        r, c_r = r
+        instance = self.instance
+        assert isinstance(instance, pykeen.nn.modules.CrossEInteraction)
+        bias = instance.combination_bias
+        activation = instance.combination_activation
+        dropout = instance.combination_dropout
         return (dropout(activation(h * c_r + h * r * c_r + bias)) * t).sum()
 
 
@@ -429,7 +435,9 @@ class SimplEInteractionTests(cases.InteractionTestCase):
 
     def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
         assert clamp is None
-        return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
+        return 0.5 * pykeen.nn.modules.DistMultInteraction.func(
+            h=h, r=r, t=t
+        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(h=h_inv, r=r_inv, t=t_inv)
 
 
 class MuRETests(cases.TranslationalInteractionTests):
