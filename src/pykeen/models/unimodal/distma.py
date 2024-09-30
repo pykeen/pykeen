@@ -6,14 +6,14 @@ from typing import Any, ClassVar, Optional
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import DistMAInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "DistMA",
 ]
 
 
-class DistMA(ERModel):
+class DistMA(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""The DistMA model from [shi2019]_.
 
     It models entities and relations by $d$-dimensional vectors stored in :class:`~pykeen.nn.representation.Embedding`,
