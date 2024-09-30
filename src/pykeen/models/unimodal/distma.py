@@ -14,7 +14,10 @@ __all__ = [
 
 
 class DistMA(ERModel):
-    r"""An implementation of DistMA from [shi2019]_.
+    r"""The DistMA model from [shi2019]_.
+
+    It models entities and relations by $d$-dimensional vectors stored in :class:`~pykeen.nn.representation.Embedding`,
+    and the :class:`~pykeen.nn.modules.DistMAInteraction` to obtain triple scores.
 
     ---
     citation:
@@ -39,7 +42,7 @@ class DistMA(ERModel):
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
-        r"""Initialize DistMA via the :class:`pykeen.nn.modules.DistMAInteraction` interaction.
+        r"""Initialize the model.
 
         :param embedding_dim: The entity embedding dimension $d$.
         :param entity_initializer: Entity initializer function. Defaults to None
