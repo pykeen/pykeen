@@ -1195,6 +1195,9 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         link: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/45634.pdf
     """
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         embedding_dim: int,
@@ -1224,22 +1227,21 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         self.activation = activation_resolver.make(activation, activation_kwargs)
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
 
-        :param h: shape: (`*batch_dims`, `*dims`)
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
             The head representations.
-        :param r: shape: (`*batch_dims`, `*dims`)
+        :param r: shape: ``(*batch_dims, d)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, `*dims`)
+        :param t: shape: ``(*batch_dims, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
         # shortcut for same shape
