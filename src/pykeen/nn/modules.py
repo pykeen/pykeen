@@ -1106,11 +1106,7 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     """
 
     @staticmethod
-    def func(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         :param h: shape: (`*batch_dims`, dim)
