@@ -1104,6 +1104,10 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         + \langle \mathbf{r}, \mathbf{t}\rangle
         + \langle \mathbf{h}, \mathbf{t}\rangle
 
+    .. note ::
+        This interaction function is the symmetric part $E_1$ from the respective paper, and not the combination
+        with :class:`~pykeen.nn.modules.ComplExInteraction`.
+
     ---
     citation:
         author: Shi
