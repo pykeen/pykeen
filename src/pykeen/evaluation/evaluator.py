@@ -27,8 +27,10 @@ from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, InductiveMode, MappedTriples, Target
 from ..utils import (
+    FloatTensor,
+    LongTensor,
     determine_maximum_batch_size,
     flatten_dictionary,
     format_relative_comparison,
@@ -114,6 +116,7 @@ class MetricResults(Generic[MetricKeyType]):
         """Output the metrics as a pandas dataframe."""
         one_key = next(iter(self.data.keys()))
         # assert isinstance(one_key, NamedTuple)
+        # TODO: should we enforce this?
         one_key_nt = cast(NamedTuple, one_key)
         columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
@@ -162,9 +165,9 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: torch.FloatTensor | None = None,
-        dense_positive_mask: torch.FloatTensor | None = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:
         """Process a batch of triples with their computed scores for all entities.
 
@@ -523,10 +526,10 @@ def evaluate(
 
 def create_sparse_positive_filter_(
     hrt_batch: MappedTriples,
-    all_pos_triples: torch.LongTensor,
-    relation_filter: torch.BoolTensor | None = None,
+    all_pos_triples: LongTensor,
+    relation_filter: BoolTensor | None = None,
     filter_col: int = 0,
-) -> tuple[torch.LongTensor, torch.BoolTensor]:
+) -> tuple[LongTensor, BoolTensor]:
     """Compute indices of all positives.
 
     For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
@@ -575,9 +578,9 @@ def create_sparse_positive_filter_(
 
 
 def create_dense_positive_mask_(
-    zero_tensor: torch.FloatTensor,
-    filter_batch: torch.LongTensor,
-) -> torch.FloatTensor:
+    zero_tensor: FloatTensor,
+    filter_batch: LongTensor,
+) -> FloatTensor:
     """Construct dense positive mask.
 
     :param zero_tensor: shape: (batch_size, num_entities)
@@ -593,9 +596,9 @@ def create_dense_positive_mask_(
 
 
 def filter_scores_(
-    scores: torch.FloatTensor,
-    filter_batch: torch.LongTensor,
-) -> torch.FloatTensor:
+    scores: FloatTensor,
+    filter_batch: LongTensor,
+) -> FloatTensor:
     """Filter scores by setting true scores to NaN.
 
     :param scores: shape: (batch_size, num_entities)
@@ -629,11 +632,11 @@ def _evaluate_batch(
     evaluator: Evaluator,
     slice_size: int | None,
     all_pos_triples: MappedTriples | None,
-    relation_filter: torch.BoolTensor | None,
-    restrict_entities_to: torch.LongTensor | None,
+    relation_filter: BoolTensor | None,
+    restrict_entities_to: LongTensor | None,
     *,
     mode: InductiveMode | None,
-) -> torch.BoolTensor:
+) -> BoolTensor:
     """
     Evaluate ranking for batch.
 
