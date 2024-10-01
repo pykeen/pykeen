@@ -15,7 +15,6 @@ from ..typing import FloatTensor, GaussianDistribution
 from ..utils import (
     clamp_norm,
     einsum,
-    make_ones_like,
     negative_norm,
     negative_norm_of_sum,
     project_entity,
@@ -24,8 +23,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "distmult_interaction",
-    "ermlp_interaction",
     "ermlpe_interaction",
     "hole_interaction",
     "kg2e_interaction",
@@ -62,68 +59,6 @@ def _apply_optional_bn_to_tensor(
         x = batch_norm(x)
         x = x.view(*shape)
     return output_dropout(x)
-
-
-def distmult_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the DistMult interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return tensor_product(h, r, t).sum(dim=-1)
-
-
-def ermlp_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    hidden: nn.Linear,
-    activation: nn.Module,
-    final: nn.Linear,
-) -> FloatTensor:
-    r"""Evaluate the ER-MLP interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param hidden:
-        The first linear layer.
-    :param activation:
-        The activation function of the hidden layer.
-    :param final:
-        The second linear layer.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # shortcut for same shape
-    if h.shape == r.shape and h.shape == t.shape:
-        x = hidden(torch.cat([h, r, t], dim=-1))
-    else:
-        # split weight into head-/relation-/tail-specific sub-matrices
-        *prefix, dim = h.shape
-        x = tensor_sum(
-            hidden.bias.view(*make_ones_like(prefix), -1),
-            *(
-                einsum("...i, ji -> ...j", xx, weight)
-                for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1))
-            ),
-        )
-    return final(activation(x)).squeeze(dim=-1)
 
 
 def ermlpe_interaction(
@@ -395,7 +330,7 @@ def simple_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    scores = 0.5 * (distmult_interaction(h=h, r=r, t=t) + distmult_interaction(h=h_inv, r=r_inv, t=t_inv))
+    scores = 0.5 * (tensor_product(h, r, t).sum(dim=-1) + tensor_product(h_inv, r_inv, t_inv).sum(dim=-1))
     # Note: In the code in their repository, the score is clamped to [-20, 20].
     #       That is not mentioned in the paper, so it is made optional here.
     if clamp:

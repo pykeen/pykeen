@@ -15,7 +15,6 @@ from torch import nn
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.models.unimodal.quate import quaternion_normalizer
-from pykeen.nn.functional import distmult_interaction
 from pykeen.typing import Representation, Sign
 from pykeen.utils import clamp_norm, complex_normalize, einsum, ensure_tuple, project_entity
 from tests import cases
@@ -147,9 +146,11 @@ class ERMLPTests(cases.InteractionTestCase):
         hidden_dim=2 * cases.InteractionTestCase.dim - 1,
     )
 
-    def _exp_score(self, h, r, t, hidden, activation, final) -> torch.FloatTensor:
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        instance = self.instance
+        assert isinstance(instance, pykeen.nn.modules.ERMLPInteraction)
         x = torch.cat([x.view(-1) for x in (h, r, t)])
-        return final(activation(hidden(x)))
+        return instance.hidden_to_score(instance.activation(instance.hidden(x)))
 
 
 class ERMLPETests(cases.InteractionTestCase):
@@ -436,7 +437,9 @@ class SimplEInteractionTests(cases.InteractionTestCase):
 
     def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
         assert clamp is None
-        return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
+        return 0.5 * pykeen.nn.modules.DistMultInteraction.func(
+            h=h, r=r, t=t
+        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(h=h_inv, r=r_inv, t=t_inv)
 
 
 class MuRETests(cases.TranslationalInteractionTests):
