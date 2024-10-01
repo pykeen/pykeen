@@ -23,7 +23,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "ermlpe_interaction",
     "hole_interaction",
     "kg2e_interaction",
     "multilinear_tucker_interaction",
@@ -59,37 +58,6 @@ def _apply_optional_bn_to_tensor(
         x = batch_norm(x)
         x = x.view(*shape)
     return output_dropout(x)
-
-
-def ermlpe_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    mlp: nn.Module,
-) -> FloatTensor:
-    r"""Evaluate the ER-MLPE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param mlp:
-        The MLP.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
-    x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
-
-    # Predict t embedding, shape: (*batch_dims, d)
-    *batch_dims, dim = x.shape
-    x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
-
-    # dot product
-    return einsum("...d,...d->...", x, t)
 
 
 def hole_interaction(

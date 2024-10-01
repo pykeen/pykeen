@@ -162,7 +162,8 @@ class ERMLPETests(cases.InteractionTestCase):
         hidden_dim=2 * cases.InteractionTestCase.dim - 1,
     )
 
-    def _exp_score(self, h, r, t, mlp) -> torch.FloatTensor:  # noqa: D102
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        mlp = self.instance.mlp
         x = torch.cat([x.view(1, -1) for x in (h, r)], dim=-1)
         return mlp(x).view(1, -1) @ t.view(-1, 1)
 

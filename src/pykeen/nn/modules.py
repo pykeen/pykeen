@@ -1270,26 +1270,24 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    r"""A stateful module for the ER-MLP (E) interaction function.
+class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The stateful ER-MLP (E) interaction function.
 
     This interaction uses a neural network-based approach similar to ER-MLP and with slight modifications.
-    In ER-MLP, the interaction is:
+    In :class:`~pykeen.nn.modules.ERMLPInteraction`, the interaction is:
 
     .. math::
 
         f(h, r, t) = \textbf{w}^{T} g(\textbf{W} [\textbf{h}; \textbf{r}; \textbf{t}])
 
-    whereas in ER-MLP (E) the interaction is:
+    whereas here it is:
 
     .. math::
 
         f(h, r, t) = \textbf{t}^{T} f(\textbf{W} (g(\textbf{W} [\textbf{h}; \textbf{r}]))
 
-    including dropouts and batch-norms between each two hidden layers. Thus, the ConvE interaction can be seen as a
-    special case of ERMLP (E).
-
-    .. seealso:: :func:`pykeen.nn.functional.ermlpe_interaction`
+    including dropouts and batch-norms between each two hidden layers. Thus,
+    :class:`~pykeen.nn.modules.ConvEInteraction` can be seen as a special case of ERMLP (E).
 
     ---
     name: ER-MLP (E)
@@ -1299,8 +1297,6 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://github.com/pykeen/pykeen
         github: pykeen/pykeen
     """
-
-    func = pkf.ermlpe_interaction
 
     def __init__(
         self,
@@ -1336,9 +1332,33 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             nn.ReLU(),
         )
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(mlp=self.mlp)
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # repeat if necessary, and concat head and relation, (*batch_dims, 2 * embedding_dim)
+        x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
+
+        # Predict t embedding, shape: (*batch_dims, d)
+        *batch_dims, dim = x.shape
+        x = self.mlp(x.view(-1, dim)).view(*batch_dims, -1)
+
+        # dot product
+        return einsum("...d,...d->...", x, t)
 
 
 @parse_docdata
