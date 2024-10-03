@@ -18,7 +18,7 @@ from torch.nn import functional
 from .text import TextEncoder, text_encoder_resolver
 from .utils import iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Initializer, MappedTriples, OneOrSequence
+from ..typing import FloatTensor, Initializer, LongTensor, MappedTriples, OneOrSequence
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman, upgrade_to_sequence
 
 __all__ = [
@@ -168,8 +168,8 @@ uniform_norm_p1_: Initializer = cast(
 
 
 def init_quaternions(
-    x: torch.FloatTensor,
-) -> torch.FloatTensor:
+    x: FloatTensor,
+) -> FloatTensor:
     """
     Initialize quaternion.
 
@@ -227,7 +227,7 @@ class PretrainedInitializer:
         )
     """
 
-    def __init__(self, tensor: torch.FloatTensor) -> None:
+    def __init__(self, tensor: FloatTensor) -> None:
         """
         Initialize the initializer.
 
@@ -356,9 +356,9 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         color_initializer_kwargs: OptionalKwargs = None,
         shape: OneOrSequence[int] = 32,
         # variants for the edge index
-        edge_index: Optional[torch.LongTensor] = None,
+        edge_index: Optional[LongTensor] = None,
         num_entities: Optional[int] = None,
-        mapped_triples: Optional[torch.LongTensor] = None,
+        mapped_triples: Optional[LongTensor] = None,
         triples_factory: Optional[CoreTriplesFactory] = None,
         # additional parameters for iter_weisfeiler_lehman
         **kwargs,

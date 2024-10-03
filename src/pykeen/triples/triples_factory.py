@@ -26,7 +26,15 @@ from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
+from ..typing import (
+    BoolTensor,
+    EntityMapping,
+    LabeledTriples,
+    LongTensor,
+    MappedTriples,
+    RelationMapping,
+    TorchRandomHint,
+)
 from ..utils import (
     ExtraReprMixin,
     compact_mapping,
@@ -140,7 +148,7 @@ def _get_triple_mask(
     columns: Union[int, Collection[int]],
     invert: bool = False,
     max_id: Optional[int] = None,
-) -> torch.BoolTensor:
+) -> BoolTensor:
     # normalize input
     triples = triples[:, columns]
     if isinstance(columns, int):
@@ -188,7 +196,7 @@ class Labeling:
 
     def label(
         self,
-        ids: Union[int, Sequence[int], np.ndarray, torch.LongTensor],
+        ids: Union[int, Sequence[int], np.ndarray, LongTensor],
         unknown_label: str = "unknown",
     ) -> np.ndarray:
         """Convert IDs to labels."""
@@ -649,7 +657,7 @@ class CoreTriplesFactory(KGInfo):
         self,
         relations: Collection[int],
         invert: bool = False,
-    ) -> torch.BoolTensor:
+    ) -> BoolTensor:
         """Get a boolean mask for triples with the given relations."""
         return _get_triple_mask(
             ids=relations,
@@ -661,7 +669,7 @@ class CoreTriplesFactory(KGInfo):
 
     def tensor_to_df(
         self,
-        tensor: torch.LongTensor,
+        tensor: LongTensor,
         **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
     ) -> pd.DataFrame:
         """Take a tensor of triples and make a pandas dataframe with labels.
@@ -1151,7 +1159,7 @@ class TriplesFactory(CoreTriplesFactory):
         self,
         relations: Union[Collection[int], Collection[str]],
         invert: bool = False,
-    ) -> torch.BoolTensor:
+    ) -> BoolTensor:
         """Get a boolean mask for triples with the given relations."""
         return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations), invert=invert)
 
@@ -1187,7 +1195,7 @@ class TriplesFactory(CoreTriplesFactory):
             top=top or 100,
         )
 
-    def _word_cloud(self, *, ids: torch.LongTensor, id_to_label: Mapping[int, str], top: int):
+    def _word_cloud(self, *, ids: LongTensor, id_to_label: Mapping[int, str], top: int):
         try:
             from wordcloud import WordCloud
         except ImportError:
@@ -1219,7 +1227,7 @@ class TriplesFactory(CoreTriplesFactory):
     # docstr-coverage: inherited
     def tensor_to_df(
         self,
-        tensor: torch.LongTensor,
+        tensor: LongTensor,
         **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
     ) -> pd.DataFrame:  # noqa: D102
         data = super().tensor_to_df(tensor=tensor, **kwargs)

@@ -15,7 +15,16 @@ from .rank_based_evaluator import RankBasedMetricKey, RankBasedMetricResults, Sa
 from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
 from ..models import Model
-from ..typing import LABEL_HEAD, LABEL_TAIL, RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, Target
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_TAIL,
+    RANK_REALISTIC,
+    SIDE_BOTH,
+    ExtendedTarget,
+    LongTensor,
+    MappedTriples,
+    Target,
+)
 
 __all__ = [
     "OGBEvaluator",
@@ -226,7 +235,7 @@ def _evaluate_ogb(
     slice_size: int,
     mapped_triples: MappedTriples,
     model: Model,
-    negatives: torch.LongTensor,
+    negatives: LongTensor,
     target: Target,
     progress_bar: tqdm,
 ) -> tuple[torch.Tensor, torch.Tensor]:
