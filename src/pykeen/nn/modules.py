@@ -35,8 +35,8 @@ from .init import initializer_resolver
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from ..metrics.utils import ValueRange
 from ..typing import (
-    GaussianDistribution,
     FloatTensor,
+    GaussianDistribution,
     HeadRepresentation,
     HintOrType,
     Initializer,
@@ -1871,11 +1871,7 @@ class NTNInteraction(
 
 @parse_docdata
 class KG2EInteraction(
-    Interaction[
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor]
-    ]
+    Interaction[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]
 ):
     r"""The stateless KG2E interaction function.
 
@@ -1930,10 +1926,7 @@ class KG2EInteraction(
 
     @abstractmethod
     def forward(
-        self,
-        h: tuple[FloatTensor, FloatTensor],
-        r: tuple[FloatTensor, FloatTensor],
-        t: tuple[FloatTensor, FloatTensor]
+        self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
     ) -> FloatTensor:
         """Evaluate the interaction function.
 

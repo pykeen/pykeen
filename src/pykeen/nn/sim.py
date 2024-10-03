@@ -36,12 +36,7 @@ class KG2ESimilarity(nn.Module, abc.ABC):
         self.exact = exact
 
     @abc.abstractmethod
-    def forward(
-        self,
-        h: GaussianDistribution,
-        r: GaussianDistribution,
-        t: GaussianDistribution
-    ) -> FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
         """
         Calculate the similarity.
 
