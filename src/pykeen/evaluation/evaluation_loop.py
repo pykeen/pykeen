@@ -5,7 +5,7 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping
-from typing import Any, Generic, Optional, TypeVar, Union, cast
+from typing import Any, Generic, Optional, TypeVar, Union
 
 import numpy
 import pandas
@@ -21,7 +21,7 @@ from .evaluator import Evaluator, MetricResults, filter_scores_
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..models import Model
 from ..triples import CoreTriplesFactory, get_mapped_triples
-from ..typing import LABEL_HEAD, LABEL_TAIL, InductiveMode, MappedTriples, OneOrSequence, Target
+from ..typing import LABEL_HEAD, LABEL_TAIL, InductiveMode, LongTensor, MappedTriples, OneOrSequence, Target
 from ..utils import determine_maximum_batch_size, upgrade_to_sequence
 
 __all__ = [
@@ -218,7 +218,7 @@ class FilterIndex:
     bounds: numpy.ndarray
 
     #: the concatenation of unique targets for each key (use bounds to select appropriate sub-array)
-    indices: torch.LongTensor
+    indices: LongTensor
 
     @classmethod
     def from_df(cls, df: pandas.DataFrame, target: Target) -> "FilterIndex":
@@ -254,7 +254,7 @@ class FilterIndex:
             indices.extend(unique_targets)
             bounds.append(len(indices))
         # convert lists to arrays
-        indices = cast(torch.LongTensor, torch.as_tensor(indices))
+        indices = torch.as_tensor(indices)
         bounds = numpy.asarray(bounds)
         # instantiate
         return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=bounds, indices=indices)
@@ -332,7 +332,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, Optiona
     def __len__(self) -> int:  # noqa: D105
         return self.num_triples * self.num_targets
 
-    def __getitem__(self, index: int) -> tuple[Target, MappedTriples, Optional[torch.LongTensor]]:  # noqa: D105
+    def __getitem__(self, index: int) -> tuple[Target, MappedTriples, Optional[LongTensor]]:  # noqa: D105
         # sorted by target -> most of the batches only have a single target
         target_id, index = divmod(index, self.num_triples)
         target = self.targets[target_id]
@@ -342,12 +342,12 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, Optiona
 
     @staticmethod
     def collate(
-        batch: Iterable[tuple[Target, MappedTriples, Optional[torch.LongTensor]]],
+        batch: Iterable[tuple[Target, MappedTriples, Optional[LongTensor]]],
     ) -> Mapping[Target, tuple[MappedTriples, Optional[torch.Tensor]]]:
         """Collate batches by grouping by target."""
         # group by target
-        triples: defaultdict[Target, list[torch.LongTensor]] = defaultdict(list)
-        nnz: defaultdict[Target, list[torch.LongTensor]] = defaultdict(list)
+        triples: defaultdict[Target, list[LongTensor]] = defaultdict(list)
+        nnz: defaultdict[Target, list[LongTensor]] = defaultdict(list)
         for target, triple, opt_nnz in batch:
             triples[target].append(triple)
             if opt_nnz is not None:
@@ -356,7 +356,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, Optiona
         # stack groups into a single tensor
         result = {}
         for target in triples.keys():
-            target_triples = cast(MappedTriples, torch.stack(triples[target]))
+            target_triples = torch.stack(triples[target])
             if target in nnz:
                 batch_ids = []
                 target_nnz = nnz[target]

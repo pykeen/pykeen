@@ -8,7 +8,7 @@ from class_resolver import ClassResolver
 from torch import nn
 
 from .compute_kernel import batched_dot
-from ..typing import GaussianDistribution
+from ..typing import FloatTensor, GaussianDistribution
 from ..utils import at_least_eps, tensor_sum
 
 __all__ = [
@@ -40,8 +40,8 @@ class KG2ESimilarity(nn.Module, abc.ABC):
         self,
         h: GaussianDistribution,
         r: GaussianDistribution,
-        t: GaussianDistribution,
-    ) -> torch.FloatTensor:
+        t: GaussianDistribution
+    ) -> FloatTensor:
         """
         Calculate the similarity.
 
@@ -74,7 +74,7 @@ class ExpectedLikelihood(KG2ESimilarity):
         \right)
     """
 
-    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> torch.FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
         var = tensor_sum(*(d.diagonal_covariance for d in (h, r, t)))
         mean = tensor_sum(h.mean, -t.mean, -r.mean)
 
@@ -123,7 +123,7 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         <https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence>`_
     """
 
-    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> torch.FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
         e_var = h.diagonal_covariance + t.diagonal_covariance
         r_var_safe = at_least_eps(r.diagonal_covariance)
         terms = []

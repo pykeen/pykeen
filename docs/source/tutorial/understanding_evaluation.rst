@@ -1,3 +1,5 @@
+.. _understanding-evaluation:
+
 Understanding the Evaluation
 ============================
 This part of the tutorial is aimed to help you understand the evaluation of knowledge graph embeddings.
