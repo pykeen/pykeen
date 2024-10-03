@@ -9,7 +9,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import HolEInteraction
 from ...nn.init import xavier_uniform_
-from ...typing import Constrainer, Initializer
+from ...typing import Constrainer, FloatTensor, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 
-class HolE(ERModel):
+class HolE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""The HolE model as described in [nickel2016]_.
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an
