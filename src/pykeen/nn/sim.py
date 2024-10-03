@@ -160,5 +160,6 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
 
 kg2e_similarity_resolver: ClassResolver[KG2ESimilarity] = ClassResolver.from_subclasses(
     base=KG2ESimilarity,
-    synonyms={"KL": NegativeKullbackLeiblerDivergence, "EL": ExpectedLikelihood},
+    synonyms={"kl": NegativeKullbackLeiblerDivergence, "el": ExpectedLikelihood},
+    default=NegativeKullbackLeiblerDivergence,
 )
