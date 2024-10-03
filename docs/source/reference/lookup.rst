@@ -10,3 +10,4 @@ Lookup
 .. autodata:: pykeen.training.training_loop_resolver
 .. autodata:: pykeen.evaluation.evaluator_resolver
 .. autodata:: pykeen.evaluation.metric_resolver
+.. autodata:: pykeen.nn.sim.kg2e_similarity_resolver

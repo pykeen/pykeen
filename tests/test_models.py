@@ -161,7 +161,7 @@ class TestKG2EWithKL(cases.BaseKG2ETest):
     """Test the KG2E model with KL similarity."""
 
     kwargs = {
-        "dist_similarity": "KL",
+        "dist_similarity": "negativekullbackleiblerdivergence",
     }
 
 
@@ -176,7 +176,7 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     """Test the KG2E model with EL similarity."""
 
     kwargs = {
-        "dist_similarity": "EL",
+        "dist_similarity": "expectedlikelihood",
     }
 
 

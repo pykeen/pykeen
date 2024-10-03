@@ -89,8 +89,6 @@ __all__ = [
     "negative_norm_of_sum",
     "negative_norm",
     "project_entity",
-    "CANONICAL_DIMENSIONS",
-    "convert_to_canonical_shape",
     "get_expected_norm",
     "Bias",
     "complex_normalize",
@@ -681,51 +679,6 @@ def project_entity(
     e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
     return e_bot
-
-
-# TODO delete when deleting _normalize_dim (below)
-CANONICAL_DIMENSIONS = dict(h=1, r=2, t=3)
-
-
-# TODO delete when deleting convert_to_canonical_shape (below)
-def _normalize_dim(dim: int | str) -> int:
-    """Normalize the dimension selection."""
-    if isinstance(dim, int):
-        return dim
-    return CANONICAL_DIMENSIONS[dim.lower()[0]]
-
-
-# TODO delete? See note in test_sim.py on its only usage
-def convert_to_canonical_shape(
-    x: FloatTensor,
-    dim: int | str,
-    num: int | None = None,
-    batch_size: int = 1,
-    suffix_shape: int | Sequence[int] = -1,
-) -> FloatTensor:
-    """Convert a tensor to canonical shape.
-
-    :param x:
-        The tensor in compatible shape.
-    :param dim:
-        The "num" dimension.
-    :param batch_size:
-        The batch size.
-    :param num:
-        The number.
-    :param suffix_shape:
-        The suffix shape.
-
-    :return: shape: (batch_size, num_heads, num_relations, num_tails, ``*``)
-        A tensor in canonical shape.
-    """
-    if num is None:
-        num = x.shape[0]
-    suffix_shape = upgrade_to_sequence(suffix_shape)
-    shape = [batch_size, 1, 1, 1]
-    dim = _normalize_dim(dim=dim)
-    shape[dim] = num
-    return x.view(*shape, *suffix_shape)
 
 
 def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
