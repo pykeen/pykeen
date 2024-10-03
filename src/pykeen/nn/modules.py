@@ -1911,6 +1911,9 @@ class KG2EInteraction(
     relation_shape = ("d", "d")
     similarity: KG2ESimilarity
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="similarity", resolver="pykeen.nn.sim.kg2e_similarity_resolver")
+    )
     def __init__(self, similarity: HintOrType[KG2ESimilarity] | None = None, similarity_kwargs: OptionalKwargs = None):
         """
         Initialize the interaction module.

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any, ClassVar, Optional
 
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.nn.init import uniform_
 
 from ..nbase import ERModel
@@ -48,6 +48,9 @@ class KG2E(ERModel):
     #: The default settings for the entity constrainer
     constrainer_default_kwargs = dict(maxnorm=1.0, p=2, dim=-1)
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="dist_similarity", resolver="pykeen.nn.sim.kg2e_similarity_resolver")
+    )
     def __init__(
         self,
         *,
