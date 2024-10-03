@@ -22,7 +22,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "hole_interaction",
     "multilinear_tucker_interaction",
     "mure_interaction",
     "ntn_interaction",
@@ -56,30 +55,6 @@ def _apply_optional_bn_to_tensor(
         x = batch_norm(x)
         x = x.view(*shape)
     return output_dropout(x)
-
-
-def hole_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the HolE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # composite: (*batch_dims, d)
-    composite = circular_correlation(h, t)
-
-    # inner product with relation embedding
-    return (r * composite).sum(dim=-1)
 
 
 def circular_correlation(
