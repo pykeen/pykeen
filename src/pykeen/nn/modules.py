@@ -54,6 +54,7 @@ from ..utils import (
     estimate_cost_of_sequence,
     make_ones_like,
     negative_norm,
+    negative_norm_of_sum,
     tensor_product,
     tensor_sum,
     unpack_singletons,
@@ -2024,14 +2025,23 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
 @parse_docdata
 class MuREInteraction(
     NormBasedInteraction[
-        tuple[FloatTensor, FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]
     ],
 ):
-    """A stateful module for the MuRE interaction function from [balazevic2019b]_.
+    r"""The norm-based MuRE interaction function from [balazevic2019b]_.
 
-    .. seealso:: :func:`pykeen.nn.functional.mure_interaction`
+    For $\mathbf{h}, \mathbf{r}, \mathbf{R}, \mathbf{t} \in \mathbb{R}^d$, and $b_h, b_t \in \mathbb{R}$, it is given
+    by
+
+    .. math ::
+        -\|\mathbf{R} \odot \mathbf{h} + \mathbf{r} - \mathbf{t}\| + b_h + b_t
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t}$ are head entity, relation, and tail entity embedding vectors,
+    $\mathbf{R}$ is a diagonal relation matrix, and $b_h, b_t$ are head and tail entity biases.
+
+    .. note::
+        This module implements a slightly more generic function, where the norm $\| \cdot \|_p$ can be chosen,
+        as well as a variant which uses $\| \cdot \|_p^p$, cf. :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
     ---
     citation:
@@ -2043,20 +2053,31 @@ class MuREInteraction(
 
     # there are separate biases for entities in head and tail position
     entity_shape = ("d", "", "")
-    relation_shape = ("d", "d")
-    func = pkf.mure_interaction
+    _head_indices = (0, 1)
+    _tail_indices = (0, 2)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: tuple[FloatTensor, FloatTensor, FloatTensor],
+    relation_shape = ("d", "d")
+
+    def forward(
+        self,
+        h: tuple[FloatTensor, FloatTensor],
         r: tuple[FloatTensor, FloatTensor],
-        t: tuple[FloatTensor, FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        h, b_h, _ = h
-        t, _, b_t = t
+        t: tuple[FloatTensor, FloatTensor],
+    ) -> FloatTensor:
+        h, b_h = h
+        t, b_t = t
         r_vec, r_mat = r
-        return dict(h=h, b_h=b_h, r_vec=r_vec, r_mat=r_mat, t=t, b_t=b_t)
+        return (
+            negative_norm_of_sum(
+                h * r_mat,
+                r_vec,
+                -t,
+                p=self.p,
+                power_norm=self.power_norm,
+            )
+            + b_h
+            + b_t
+        )
 
 
 @parse_docdata
