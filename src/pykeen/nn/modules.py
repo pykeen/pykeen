@@ -1970,7 +1970,6 @@ class KG2EInteraction(
         super().__init__()
         self.similarity = kg2e_similarity_resolver.make(similarity, similarity_kwargs)
 
-    @abstractmethod
     def forward(
         self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
     ) -> FloatTensor:
