@@ -354,32 +354,6 @@ def transd_interaction(
     return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 
-def transe_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    p: int | str = 2,
-    power_norm: bool = False,
-) -> FloatTensor:
-    """Evaluate the TransE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param p:
-        The p for the norm.
-    :param power_norm:
-        Whether to return the powered norm.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
-
-
 def transf_interaction(
     h: FloatTensor,
     r: FloatTensor,
