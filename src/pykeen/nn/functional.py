@@ -31,7 +31,6 @@ __all__ = [
     "simple_interaction",
     "se_interaction",
     "transd_interaction",
-    "transe_interaction",
     "transf_interaction",
     "transh_interaction",
     "transr_interaction",
