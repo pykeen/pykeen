@@ -477,11 +477,7 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
         return dict()
 
 
-class NormBasedInteraction(
-    FunctionalInteraction,
-    Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
-    ABC,
-):
+class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Norm-based interactions use a (powered) $p$-norm in their scoring function."""
 
     def __init__(self, p: int, power_norm: bool = False):
