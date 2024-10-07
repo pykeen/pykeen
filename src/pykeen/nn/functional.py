@@ -10,12 +10,10 @@ import torch
 from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
-from .sim import KG2E_SIMILARITIES
-from ..typing import FloatTensor, GaussianDistribution
+from ..typing import FloatTensor
 from ..utils import (
     clamp_norm,
     einsum,
-    make_ones_like,
     negative_norm,
     negative_norm_of_sum,
     project_entity,
@@ -24,13 +22,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "convkb_interaction",
-    "dist_ma_interaction",
-    "distmult_interaction",
-    "ermlp_interaction",
-    "ermlpe_interaction",
-    "hole_interaction",
-    "kg2e_interaction",
     "multilinear_tucker_interaction",
     "mure_interaction",
     "ntn_interaction",
@@ -66,194 +57,6 @@ def _apply_optional_bn_to_tensor(
     return output_dropout(x)
 
 
-def convkb_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    conv: nn.Conv2d,
-    activation: nn.Module,
-    hidden_dropout: nn.Dropout,
-    linear: nn.Linear,
-) -> FloatTensor:
-    r"""Evaluate the ConvKB interaction function.
-
-    .. math::
-        W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param conv:
-        The 3x1 convolution.
-    :param activation:
-        The activation function.
-    :param hidden_dropout:
-        The dropout layer applied to the hidden activations.
-    :param linear:
-        The final linear layer.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # cat into shape (..., 1, d, 3)
-    x = torch.stack(torch.broadcast_tensors(h, r, t), dim=-1).unsqueeze(dim=-3)
-    s = x.shape
-    x = x.view(-1, *s[-3:])
-    x = conv(x)
-    x = x.view(*s[:-3], -1)
-    x = activation(x)
-
-    # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
-    x = hidden_dropout(x)
-
-    # Linear layer for final scores; use flattened representations, shape: (*batch_dims, d * f)
-    x = linear(x)
-    return x.squeeze(dim=-1)
-
-
-def distmult_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the DistMult interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return tensor_product(h, r, t).sum(dim=-1)
-
-
-def dist_ma_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    r"""Evaluate the DistMA interaction function from [shi2019]_.
-
-    .. math ::
-        \langle h, r\rangle + \langle r, t\rangle + \langle h, t\rangle
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
-
-
-def ermlp_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    hidden: nn.Linear,
-    activation: nn.Module,
-    final: nn.Linear,
-) -> FloatTensor:
-    r"""Evaluate the ER-MLP interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param hidden:
-        The first linear layer.
-    :param activation:
-        The activation function of the hidden layer.
-    :param final:
-        The second linear layer.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # shortcut for same shape
-    if h.shape == r.shape and h.shape == t.shape:
-        x = hidden(torch.cat([h, r, t], dim=-1))
-    else:
-        # split weight into head-/relation-/tail-specific sub-matrices
-        *prefix, dim = h.shape
-        x = tensor_sum(
-            hidden.bias.view(*make_ones_like(prefix), -1),
-            *(
-                einsum("...i, ji -> ...j", xx, weight)
-                for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1))
-            ),
-        )
-    return final(activation(x)).squeeze(dim=-1)
-
-
-def ermlpe_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    mlp: nn.Module,
-) -> FloatTensor:
-    r"""Evaluate the ER-MLPE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param mlp:
-        The MLP.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
-    x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
-
-    # Predict t embedding, shape: (*batch_dims, d)
-    *batch_dims, dim = x.shape
-    x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
-
-    # dot product
-    return einsum("...d,...d->...", x, t)
-
-
-def hole_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the HolE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # composite: (*batch_dims, d)
-    composite = circular_correlation(h, t)
-
-    # inner product with relation embedding
-    return (r * composite).sum(dim=-1)
-
-
 def circular_correlation(
     a: FloatTensor,
     b: FloatTensor,
@@ -281,46 +84,6 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def kg2e_interaction(
-    h_mean: FloatTensor,
-    h_var: FloatTensor,
-    r_mean: FloatTensor,
-    r_var: FloatTensor,
-    t_mean: FloatTensor,
-    t_var: FloatTensor,
-    similarity: str = "KL",
-    exact: bool = True,
-) -> FloatTensor:
-    """Evaluate the KG2E interaction function.
-
-    :param h_mean: shape: (`*batch_dims`, d)
-        The head entity distribution mean.
-    :param h_var: shape: (`*batch_dims`, d)
-        The head entity distribution variance.
-    :param r_mean: shape: (`*batch_dims`, d)
-        The relation distribution mean.
-    :param r_var: shape: (`*batch_dims`, d)
-        The relation distribution variance.
-    :param t_mean: shape: (`*batch_dims`, d)
-        The tail entity distribution mean.
-    :param t_var: shape: (`*batch_dims`, d)
-        The tail entity distribution variance.
-    :param similarity:
-        The similarity measures for gaussian distributions. From {"KL", "EL"}.
-    :param exact:
-        Whether to leave out constants to accelerate similarity computation.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return KG2E_SIMILARITIES[similarity](
-        h=GaussianDistribution(mean=h_mean, diagonal_covariance=h_var),
-        r=GaussianDistribution(mean=r_mean, diagonal_covariance=r_var),
-        t=GaussianDistribution(mean=t_mean, diagonal_covariance=t_var),
-        exact=exact,
-    )
 
 
 def ntn_interaction(
@@ -468,7 +231,7 @@ def simple_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    scores = 0.5 * (distmult_interaction(h=h, r=r, t=t) + distmult_interaction(h=h_inv, r=r_inv, t=t_inv))
+    scores = 0.5 * (tensor_product(h, r, t).sum(dim=-1) + tensor_product(h_inv, r_inv, t_inv).sum(dim=-1))
     # Note: In the code in their repository, the score is clamped to [-20, 20].
     #       That is not mentioned in the paper, so it is made optional here.
     if clamp:

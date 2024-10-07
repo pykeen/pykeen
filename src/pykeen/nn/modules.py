@@ -32,9 +32,11 @@ from . import functional as pkf
 from .algebra import quaterion_multiplication_table
 from .compute_kernel import batched_dot
 from .init import initializer_resolver
+from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from ..metrics.utils import ValueRange
 from ..typing import (
     FloatTensor,
+    GaussianDistribution,
     HeadRepresentation,
     HintOrType,
     Initializer,
@@ -52,6 +54,8 @@ from ..utils import (
     estimate_cost_of_sequence,
     make_ones_like,
     negative_norm,
+    tensor_product,
+    tensor_sum,
     unpack_singletons,
     upgrade_to_sequence,
 )
@@ -963,10 +967,37 @@ class ConvEInteraction(Interaction[FloatTensor, FloatTensor, tuple[FloatTensor, 
 
 
 @parse_docdata
-class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ConvKB interaction function.
+class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The stateful ConvKB interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
+    ConvKB uses a convolutional neural network (CNN) whose feature maps capture global interactions of the input.
+
+    For given input representations for head entity, relation and tail entity, denoted by
+    $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$, it first combines them to a matrix
+    $\mathbf{A} = [\mathbf{h}; \mathbf{r}; \mathbf{t}] \in \mathbb{R}^{d \times 3}$.
+
+    In the convolution layer, a set of convolutional filters
+    $\omega_i \in \mathbb{R}^{1 \times 3}$, $i=1, \dots, \tau,$ are applied on the input in order to compute for
+    each dimension global interactions of the embedded triple. Each $\omega_i$ is applied on every row of
+    $\mathbf{A}$ creating a feature map $\mathbf{v}_i = [v_{i,1},...,v_{i,d}] \in \mathbb{R}^d$:
+
+    .. math::
+
+        \mathbf{v}_i = g(\omega_j \mathbf{A} + \mathbf{b})
+
+    where $\mathbf{b} \in \mathbb{R}$ denotes a bias term and $g$ an activation function which is employed element-wise.
+    Based on the resulting feature maps $\mathbf{v}_1, \dots, \mathbf{v}_{\tau}$, the plausibility score of a triple
+    is given by:
+
+    .. math::
+
+        f(h,r,t) = [\mathbf{v}_i; \ldots ;\mathbf{v}_\tau] \cdot \mathbf{w}
+
+    where $[\mathbf{v}_i; \ldots ;\mathbf{v}_\tau] \in \mathbb{R}^{\tau d \times 1}$ and
+    $\mathbf{w} \in \mathbb{R}^{\tau d \times 1}$ is a shared weight vector.
+
+    ConvKB may be seen as a restriction of :class:`~pykeen.nn.modules.ERMLPInteraction` with a certain weight sharing
+    pattern in the first layer.
 
     ---
     citation:
@@ -976,8 +1007,6 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         github: daiquocnguyen/ConvKB
         arxiv: 1712.02121
     """
-
-    func = pkf.convkb_interaction
 
     def __init__(
         self,
@@ -1017,21 +1046,59 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            conv=self.conv,
-            activation=self.activation,
-            hidden_dropout=self.hidden_dropout,
-            linear=self.linear,
-        )
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # cat into shape (..., 1, d, 3)
+        x = torch.stack(torch.broadcast_tensors(h, r, t), dim=-1).unsqueeze(dim=-3)
+        s = x.shape
+        x = x.view(-1, *s[-3:])
+        x = self.conv(x)
+        x = x.view(*s[:-3], -1)
+        x = self.activation(x)
+
+        # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
+        x = self.hidden_dropout(x)
+
+        # Linear layer for final scores; use flattened representations, shape: (*batch_dims, d * f)
+        x = self.linear(x)
+        return x.squeeze(dim=-1)
 
 
 @parse_docdata
 class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless DistMult interaction function.
+    r"""The stateless DistMult interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.distmult_interaction`
+    This interaction is given by
+
+    .. math::
+
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \sum \limits_{i} \mathbf{h}_i \cdot \mathbf{r}_{i} \cdot \mathbf{t}_i
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^{d}$ are the representations for the head entity,
+    the relation, and the tail entity.
+
+    For a single triple of $d$-dimensional vectors, the computational complexity is given as $\mathcal{O}(d)$.
+
+    The interaction function is symmetric in the entities, i.e.,
+
+    .. math::
+
+        f(h, r, t) = f(t, r, h)
 
     ---
     citation:
@@ -1041,14 +1108,42 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
         arxiv: 1412.6575
     """
 
-    func = pkf.distmult_interaction
+    @staticmethod
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return tensor_product(h, r, t).sum(dim=-1)
 
 
 @parse_docdata
 class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless DistMA interaction function.
+    r"""The stateless DistMA interaction function from [shi2019]_.
 
-    .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+    For head entity, relation, and tail representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$,
+    the interaction functions is given by
+
+    .. math ::
+          \langle \mathbf{h}, \mathbf{r}\rangle
+        + \langle \mathbf{r}, \mathbf{t}\rangle
+        + \langle \mathbf{h}, \mathbf{t}\rangle
+
+    .. note ::
+        This interaction function is the symmetric part $E_1$ from the respective paper, and not the combination
+        with :class:`~pykeen.nn.modules.ComplExInteraction`.
 
     ---
     citation:
@@ -1057,17 +1152,42 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://www.aclweb.org/anthology/D19-1075.pdf
     """
 
-    func = pkf.dist_ma_interaction
+    @staticmethod
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
 
 
 @parse_docdata
-class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ER-MLP interaction.
+class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The ER-MLP stateful interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.ermlp_interaction`
+    ER-MLP uses a multi-layer perceptron based approach with a single hidden layer.
+    The $d$-dimensional representations of head entity, relation, and tail entity are concatenated
+    and passed to the hidden layer. The output-layer consists of a single neuron that computes the plausibility score:
 
-    .. math ::
-        f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
+    .. math::
+
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \mathbf{w}^{T} g(\mathbf{W} [\mathbf{h}; \mathbf{r}; \mathbf{t}]),
+
+    where $\textbf{W} \in \mathbb{R}^{k \times 3d}$ represents the weight matrix of the hidden layer,
+    $\textbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
+    as the hyperbolic tangent.
 
     ---
     name: ER-MLP
@@ -1077,12 +1197,15 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         link: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/45634.pdf
     """
 
-    func = pkf.ermlp_interaction
-
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         embedding_dim: int,
         hidden_dim: int | None = None,
+        activation: HintOrType[nn.Module] = nn.ReLU,
+        activation_kwargs: OptionalKwargs = None,
     ):
         """Initialize the interaction module.
 
@@ -1090,21 +1213,50 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
             The embedding vector dimension for entities and relations.
         :param hidden_dim:
             The hidden dimension of the MLP. Defaults to `embedding_dim`.
+        :param activation:
+            The activation function or a hint thereof.
+        :param activation_kwargs:
+            Additional keyword-based parameters passed to the activation's constructor, if the activation is not
+            pre-instantiated.
         """
         super().__init__()
         # normalize hidden_dim
         hidden_dim = hidden_dim or embedding_dim
         self.hidden = nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True)
-        self.activation = nn.ReLU()
+        self.activation = activation_resolver.make(activation, activation_kwargs)
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            hidden=self.hidden,
-            activation=self.activation,
-            final=self.hidden_to_score,
-        )
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # shortcut for same shape
+        if h.shape == r.shape and h.shape == t.shape:
+            x = self.hidden(torch.cat([h, r, t], dim=-1))
+        else:
+            # split weight into head-/relation-/tail-specific sub-matrices
+            *prefix, dim = h.shape
+            x = tensor_sum(
+                self.hidden.bias.view(*make_ones_like(prefix), -1),
+                *(
+                    einsum("...i, ji -> ...j", xx, weight)
+                    for xx, weight in zip([h, r, t], self.hidden.weight.split(split_size=dim, dim=-1))
+                ),
+            )
+        return self.hidden_to_score(self.activation(x)).squeeze(dim=-1)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
@@ -1120,26 +1272,24 @@ class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
 
 
 @parse_docdata
-class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    r"""A stateful module for the ER-MLP (E) interaction function.
+class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The stateful ER-MLP (E) interaction function.
 
     This interaction uses a neural network-based approach similar to ER-MLP and with slight modifications.
-    In ER-MLP, the interaction is:
+    In :class:`~pykeen.nn.modules.ERMLPInteraction`, the interaction is:
 
     .. math::
 
         f(h, r, t) = \textbf{w}^{T} g(\textbf{W} [\textbf{h}; \textbf{r}; \textbf{t}])
 
-    whereas in ER-MLP (E) the interaction is:
+    whereas here it is:
 
     .. math::
 
         f(h, r, t) = \textbf{t}^{T} f(\textbf{W} (g(\textbf{W} [\textbf{h}; \textbf{r}]))
 
-    including dropouts and batch-norms between each two hidden layers. Thus, the ConvE interaction can be seen as a
-    special case of ERMLP (E).
-
-    .. seealso:: :func:`pykeen.nn.functional.ermlpe_interaction`
+    including dropouts and batch-norms between each two hidden layers. Thus,
+    :class:`~pykeen.nn.modules.ConvEInteraction` can be seen as a special case of ERMLP (E).
 
     ---
     name: ER-MLP (E)
@@ -1149,8 +1299,6 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://github.com/pykeen/pykeen
         github: pykeen/pykeen
     """
-
-    func = pkf.ermlpe_interaction
 
     def __init__(
         self,
@@ -1186,9 +1334,33 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
             nn.ReLU(),
         )
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(mlp=self.mlp)
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # repeat if necessary, and concat head and relation, (*batch_dims, 2 * embedding_dim)
+        x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
+
+        # Predict t embedding, shape: (*batch_dims, d)
+        *batch_dims, dim = x.shape
+        x = self.mlp(x.view(-1, dim)).view(*batch_dims, -1)
+
+        # dot product
+        return einsum("...d,...d->...", x, t)
 
 
 @parse_docdata
@@ -1295,9 +1467,25 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 @parse_docdata
 class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless HolE interaction function.
+    r"""The stateless HolE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.hole_interaction`
+    Holographic embeddings (HolE) make use of the circular correlation operator to compute interactions between
+    latent features of entities and relations:
+
+    .. math::
+
+        f(h,r,t) = \textbf{r}^{T}(\textbf{h} \star \textbf{t})
+
+    where the circular correlation $\star: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}^d$ is defined as:
+
+    .. math::
+
+        [\textbf{a} \star \textbf{b}]_i = \sum_{k=0}^{d-1} \textbf{a}_{k} * \textbf{b}_{(i+k)\ mod \ d}
+
+    By using the correlation operator each component $[\textbf{h} \star \textbf{t}]_i$ represents a sum over a
+    fixed partition over pairwise interactions. This enables the model to put semantic similar interactions into the
+    same partition and share weights through $\textbf{r}$. Similarly irrelevant interactions of features could also
+    be placed into the same partition which could be assigned a small weight in $\textbf{r}$.
 
     ---
     citation:
@@ -1305,9 +1493,36 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
         year: 2016
         link: https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828
         github: mnick/holographic-embeddings
+        arxiv: 1510.04935
     """
 
-    func = pkf.hole_interaction
+    @staticmethod
+    def func(
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # composite: (*batch_dims, d)
+        composite = pkf.circular_correlation(h, t)
+
+        # inner product with relation embedding
+        return (r * composite).sum(dim=-1)
 
 
 @parse_docdata
@@ -1699,15 +1914,34 @@ class NTNInteraction(
 
 @parse_docdata
 class KG2EInteraction(
-    FunctionalInteraction[
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-    ],
+    Interaction[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]
 ):
-    """A stateful module for the KG2E interaction function.
+    r"""The stateless KG2E interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.kg2e_interaction`
+    Inspired by :class:`~pykeen.nn.modules.TransEInteraction`, relations are modeled as transformations
+    from head to tail entities $\mathcal{H} - \mathcal{T} \approx \mathcal{R}$, where
+
+    .. math ::
+
+        \mathcal{H} \sim \mathcal{N}(\mu_h, \Sigma_h)\\
+        \mathcal{T} \sim \mathcal{N}(\mu_t, \Sigma_t)\\
+        \mathcal{R} \sim \mathcal{N}(\mu_r, \Sigma_r)
+
+    and thus, since head and tail entities are considered independent with respect to the relations,
+
+    .. math ::
+
+        \mathcal{P}_e = \mathcal{H} - \mathcal{T} \sim \mathcal{N}(\mu_h - \mu_t, \Sigma_h + \Sigma_t)
+
+    To obtain scores, the interaction measures the similarity between $\mathcal{P}_e$ and
+    $\mathcal{P}_r = \mathcal{N}(\mu_r, \Sigma_r)$, either by means of the (asymmetric)
+    :class:`~pykeen.nn.sim.NegativeKullbackLeiblerDivergence`, or a symmetric variant with
+    :class:`~pykeen.nn.sim.ExpectedLikelihood`.
+
+    .. note ::
+        This interaction module does *not* sub-class from :class:`~pykeen.nn.modules.FunctionalInteraction`
+        just for the technical reason that the choice of the similarity represents some "state". However, it
+        does not contain any trainable parameters.
 
     ---
     citation:
@@ -1718,48 +1952,46 @@ class KG2EInteraction(
 
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
-    similarity: str
-    exact: bool
-    func = pkf.kg2e_interaction
+    similarity: KG2ESimilarity
 
-    def __init__(self, similarity: str | None = None, exact: bool = True):
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="similarity", resolver="pykeen.nn.sim.kg2e_similarity_resolver")
+    )
+    def __init__(self, similarity: HintOrType[KG2ESimilarity] | None = None, similarity_kwargs: OptionalKwargs = None):
         """
         Initialize the interaction module.
 
         :param similarity:
-            the distribution similarity to use. Defaults to KL divergence.
-        :param exact:
-            whether to compute the exact similarity, or leave out constant terms
+            The similarity measures for gaussian distributions. Defaults to
+            :class:`~pykeen.nn.sim.NegativeKullbackLeiblerDivergence`.
+        :param similarity_kwargs:
+            Additional keyword-based parameters used to instantiate the similarity.
         """
         super().__init__()
-        if similarity is None:
-            similarity = "KL"
-        self.similarity = similarity
-        self.exact = exact
+        self.similarity = kg2e_similarity_resolver.make(similarity, similarity_kwargs)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: tuple[FloatTensor, FloatTensor],
-        r: tuple[FloatTensor, FloatTensor],
-        t: tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:
+    def forward(
+        self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        :param h: both shape: (`*batch_dims`, `d`)
+            The head representations, mean and (diagonal) variance.
+        :param r: shape: (`*batch_dims`, `d`)
+            The relation representations, mean and (diagonal) variance.
+        :param t: shape: (`*batch_dims`, `d`)
+            The tail representations, mean and (diagonal) variance.
+
+        :return: shape: batch_dims
+            The scores.
+        """
         h_mean, h_var = h
         r_mean, r_var = r
         t_mean, t_var = t
-        return dict(
-            h_mean=h_mean,
-            h_var=h_var,
-            r_mean=r_mean,
-            r_var=r_var,
-            t_mean=t_mean,
-            t_var=t_var,
-        )
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(
-            similarity=self.similarity,
-            exact=self.exact,
+        return self.similarity(
+            h=GaussianDistribution(mean=h_mean, diagonal_covariance=h_var),
+            r=GaussianDistribution(mean=r_mean, diagonal_covariance=r_var),
+            t=GaussianDistribution(mean=t_mean, diagonal_covariance=t_var),
         )
 
 
@@ -2488,11 +2720,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     _tail_indices = (1,)
 
     @staticmethod
-    def func(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::

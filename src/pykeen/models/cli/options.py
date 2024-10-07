@@ -7,6 +7,7 @@ from ...constants import AGGREGATIONS
 from ...evaluation import evaluator_resolver
 from ...losses import loss_resolver
 from ...nn import tokenizer_resolver
+from ...nn.sim import kg2e_similarity_resolver
 from ...optimizers import optimizer_resolver
 from ...stoppers import stopper_resolver
 from ...training import training_loop_resolver
@@ -105,6 +106,9 @@ CLI_OPTIONS = {
         multiple=True,
         show_default=True,
         help="The number of tokens",
+    ),
+    "dist_similarity": kg2e_similarity_resolver.get_option(
+        "--dist-similarity", default="negativekullbackleiblerdivergence"
     ),
 }
 
