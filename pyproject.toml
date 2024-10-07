@@ -128,8 +128,8 @@ tests = [
     "pytest",
 ]
 docs = [
-    "sphinx",
-    "sphinx-rtd-theme",
+    "sphinx>=8.0",
+    "sphinx-rtd-theme>=3.0",
     "sphinx-click",
     "sphinx_automodapi",
     "texext",
