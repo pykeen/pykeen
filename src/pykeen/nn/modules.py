@@ -477,11 +477,7 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
         return dict()
 
 
-class NormBasedInteraction(
-    FunctionalInteraction,
-    Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
-    ABC,
-):
+class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Norm-based interactions use a (powered) $p$-norm in their scoring function."""
 
     def __init__(self, p: int, power_norm: bool = False):
@@ -504,9 +500,25 @@ class NormBasedInteraction(
 
 @parse_docdata
 class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the TransE interaction function.
+    r"""The state-less norm-based TransE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transe_interaction`
+    TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`:
+
+    .. math::
+
+        \textbf{e}_h + \textbf{e}_r \approx \textbf{e}_t
+
+    This equation is rearranged and the :math:`l_p` norm is applied to create the TransE interaction function.
+
+    .. math::
+
+        f(h, r, t) = - \|\textbf{e}_h + \textbf{e}_r - \textbf{e}_t\|_{p}
+
+    While this formulation is computationally efficient, it inherently cannot model one-to-many, many-to-one, and
+    many-to-many relationships. For triples :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}` where :math:`t_1 \neq t_2`,
+    the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
+    and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
+    :math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
 
     ---
     citation:
@@ -515,7 +527,24 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
         link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
-    func = pkf.transe_interaction
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return pkf.negative_norm_of_sum(h, r, -t, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata

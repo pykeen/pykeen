@@ -19,25 +19,12 @@ __all__ = [
 
 
 class TransE(ERModel):
-    r"""An implementation of TransE [bordes2013]_.
+    r"""
+    An implementation of TransE [bordes2013]_.
 
-    TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`:
-
-    .. math::
-
-        \textbf{e}_h + \textbf{e}_r \approx \textbf{e}_t
-
-    This equation is rearranged and the :math:`l_p` norm is applied to create the TransE interaction function.
-
-    .. math::
-
-        f(h, r, t) = - \|\textbf{e}_h + \textbf{e}_r - \textbf{e}_t\|_{p}
-
-    While this formulation is computationally efficient, it inherently cannot model one-to-many, many-to-one, and
-    many-to-many relationships. For triples :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}` where :math:`t_1 \neq t_2`,
-    the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
-    and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
-    :math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
+    This model represents both entities and relations as $d$-dimensional vectors stored in an
+    :class:`~pykeen.nn.representation.Embedding` matrix. The representations are then passed
+    to the :class:`~pykeen.nn.modules.ERMLPInteraction` function to obtain scores.
     ---
     citation:
         author: Bordes
@@ -73,10 +60,10 @@ class TransE(ERModel):
         :param relation_initializer: Relation initializer function.
         :param relation_constrainer: Relation constrainer function. Defaults to none.
         :param kwargs:
-            Remaining keyword arguments to forward to :meth:`pykeen.models.ERModel.__init__`
+            Remaining keyword arguments to forward to :meth:`~pykeen.models.ERModel.__init__`
         :param regularizer:
             a regularizer, or a hint thereof. Used for both, entity and relation representations;
-            directly use :class:`ERModel` if you need more flexibility
+            directly use :class:`~pykeen.models.ERModel` if you need more flexibility
         :param regularizer_kwargs:
             keyword-based parameters for the regularizer
 
