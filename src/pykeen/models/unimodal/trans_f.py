@@ -16,11 +16,16 @@ __all__ = [
 class TransF(ERModel):
     r"""An implementation of TransF from [feng2016]_.
 
+    This model represents both entities and relations as $d$-dimensional vectors stored in an
+    :class:`~pykeen.nn.representation.Embedding` matrix. The representations are then passed
+    to the :class:`~pykeen.nn.modules.TransFInteraction` function to obtain scores.
+
     ---
     citation:
         author: Feng
         year: 2016
         link: https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887
+        arxiv: 1505.05253
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

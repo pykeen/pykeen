@@ -556,6 +556,7 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         author: Feng
         year: 2016
         link: https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887
+        arxiv: 1505.05253
     """
 
     def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
