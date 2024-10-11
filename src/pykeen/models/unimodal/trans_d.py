@@ -9,7 +9,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_, xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import TransDInteraction
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -17,7 +17,9 @@ __all__ = [
 ]
 
 
-class TransD(ERModel):
+class TransD(
+    ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]
+):
     r"""An implementation of TransD from [ji2015]_.
 
     This model represents both entities as pairs of $d$-dimensional vectors,
