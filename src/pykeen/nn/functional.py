@@ -21,7 +21,6 @@ from ..utils import (
 
 __all__ = [
     "multilinear_tucker_interaction",
-    "mure_interaction",
     "ntn_interaction",
     "pair_re_interaction",
     "proje_interaction",
@@ -457,54 +456,6 @@ def tucker_interaction(
         )
         * t
     ).sum(dim=-1)
-
-
-def mure_interaction(
-    h: FloatTensor,
-    b_h: FloatTensor,
-    r_vec: FloatTensor,
-    r_mat: FloatTensor,
-    t: FloatTensor,
-    b_t: FloatTensor,
-    p: int | float | str = 2,
-    power_norm: bool = False,
-) -> FloatTensor:
-    r"""Evaluate the MuRE interaction function from [balazevic2019b]_.
-
-    .. math ::
-        -\|Rh + r - t\| + b_h + b_t
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param b_h: shape: batch_dims
-        The head entity bias.
-    :param r_vec: shape: (`*batch_dims`, dim)
-        The relation vector.
-    :param r_mat: shape: (`*batch_dims`, dim,)
-        The diagonal relation matrix.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param b_t: shape: batch_dims
-        The tail entity bias.
-    :param p:
-        The parameter p for selecting the norm, cf. :func:`torch.linalg.vector_norm`.
-    :param power_norm:
-        Whether to return the powered norm instead.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return (
-        negative_norm_of_sum(
-            h * r_mat,
-            r_vec,
-            -t,
-            p=p,
-            power_norm=power_norm,
-        )
-        + b_h
-        + b_t
-    )
 
 
 def um_interaction(
