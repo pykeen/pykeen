@@ -22,7 +22,6 @@ from ..utils import (
 __all__ = [
     "multilinear_tucker_interaction",
     "ntn_interaction",
-    "pair_re_interaction",
     "proje_interaction",
     "rescal_interaction",
     "simple_interaction",
@@ -479,43 +478,6 @@ def um_interaction(
         The scores.
     """
     return negative_norm(h - t, p=p, power_norm=power_norm)
-
-
-def pair_re_interaction(
-    h: FloatTensor,
-    t: FloatTensor,
-    r_h: FloatTensor,
-    r_t: FloatTensor,
-    p: int | str = 2,
-    power_norm: bool = True,
-) -> FloatTensor:
-    r"""Evaluate the PairRE interaction function.
-
-    .. math ::
-        -\|h \odot r_h - t \odot r_t \|
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param r_h: shape: (`*batch_dims`, dim)
-        The head part of the relation representations.
-    :param r_t: shape: (`*batch_dims`, dim)
-        The tail part of the relation representations.
-    :param p:
-        The parameter p for selecting the norm.
-    :param power_norm:
-        Whether to return the powered norm instead.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return negative_norm_of_sum(
-        h * r_h,
-        -t * r_t,
-        p=p,
-        power_norm=power_norm,
-    )
 
 
 def quat_e_interaction(

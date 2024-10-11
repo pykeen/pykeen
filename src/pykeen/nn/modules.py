@@ -2223,9 +2223,10 @@ class SimplEInteraction(
 
 @parse_docdata
 class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
-    """A stateful module for the PairRE interaction function.
+    r"""The state-less norm-based PairRE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.pair_re_interaction`
+    .. math ::
+        -\|h \odot r_h - t \odot r_t \|
 
     ---
     citation:
@@ -2237,16 +2238,31 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
     """
 
     relation_shape = ("d", "d")
-    func = pkf.pair_re_interaction
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, r_h=r[0], r_t=r[1], t=t)
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        r_h, r_t = r
+        return negative_norm_of_sum(
+            h * r_h,
+            -t * r_t,
+            p=self.p,
+            power_norm=self.power_norm,
+        )
 
 
 @parse_docdata
