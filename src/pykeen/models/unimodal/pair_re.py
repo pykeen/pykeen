@@ -68,7 +68,7 @@ class PairRE(ERModel):
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
-        r"""Initialize PairRE via the :class:`pykeen.nn.modules.PairREInteraction` interaction.
+        r"""Initialize the model.
 
         :param embedding_dim: The entity embedding dimension $d$.
         :param p: The $l_p$ norm.
