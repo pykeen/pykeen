@@ -8,14 +8,14 @@ from torch.nn.init import normal_, uniform_, zeros_
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import MuREInteraction
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "MuRE",
 ]
 
 
-class MuRE(ERModel):
+class MuRE(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]):
     r"""An implementation of MuRE from [balazevic2019b]_.
 
     This model represents entities as $d$-dimensional vectors, and relations by two $k$-dimensional vectors.
