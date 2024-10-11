@@ -1958,7 +1958,9 @@ class TransDInteraction(
 
     .. math::
 
-        -\|\mathbf{M}_{r, h} \mathbf{h}_v + \mathbf{r}_v - \mathbf{M}_{r, t} \mathbf{t}_v\|_{2}^2
+        -\|c(\mathbf{M}_{r, h} \mathbf{h}_v) + \mathbf{r}_v - c(\mathbf{M}_{r, t} \mathbf{t}_v)\|_{2}^2
+
+    where $c$ enforces the constraint $\|\cdot\| \leq 1$.
 
     ---
     citation:
