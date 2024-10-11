@@ -11,14 +11,14 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransEInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
-from ...typing import Constrainer, Initializer
+from ...typing import Constrainer, FloatTensor, Initializer
 
 __all__ = [
     "TransE",
 ]
 
 
-class TransE(ERModel):
+class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""
     An implementation of TransE [bordes2013]_.
 
