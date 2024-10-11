@@ -24,7 +24,7 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an
     :class:`~pykeen.nn.representation.Embedding` matrix. The representations are then passed
-    to the :class:`~pykeen.nn.modules.ERMLPInteraction` function to obtain scores.
+    to the :class:`~pykeen.nn.modules.TransEInteraction` function to obtain scores.
     ---
     citation:
         author: Bordes
