@@ -2249,7 +2249,7 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
         :return: shape: ``batch_dims``
             The scores.
         """
-        d_r, w_r = r
+        w_r, d_r = r
         return negative_norm_of_sum(
             # h projection to hyperplane
             h,
