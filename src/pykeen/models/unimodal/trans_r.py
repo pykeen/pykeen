@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 import torch
 import torch.autograd
 import torch.nn.init
+from class_resolver import OptionalKwargs
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -64,14 +65,44 @@ class TransR(ERModel):
         *,
         embedding_dim: int = 50,
         relation_dim: int = 30,
+        max_projection_norm: float = 1.0,
+        # interaction function kwargs
         scoring_fct_norm: int = 1,
+        # entity embedding
         entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_initializer_kwargs: OptionalKwargs = None,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        # relation embedding
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
+        relation_initializer_kwargs: OptionalKwargs = None,
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        # relation projection
+        relation_projection_initializer: Hint[Initializer] = torch.nn.init.xavier_uniform_,
+        relation_projection_initializer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
-        """Initialize the model."""
+        """Initialize the model.
+
+        :param embedding_dim: The entity embedding dimension $d$.
+        :param relation_dim: The relation embedding dimension $k$.
+        :param max_projection_norm:
+            The maximum norm to be clamped after projection.
+        :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+
+        :param entity_initializer: Entity initializer function.
+        :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer.
+        :param entity_constrainer: The entity constrainer.
+
+        :param relation_initializer: Relation initializer function.
+        :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer.
+        :param entity_constrainer: The relation constrainer.
+
+        :param relation_initializer: Relation projection initializer function.
+        :param relation_initializer_kwargs:
+            Keyword arguments to be used when calling the relation projection initializer.
+
+        :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
+        """
         # TODO: Initialize from TransE
         super().__init__(
             interaction=TransRInteraction,
@@ -81,21 +112,24 @@ class TransR(ERModel):
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
+                initializer_kwargs=entity_initializer_kwargs,
                 constrainer=entity_constrainer,
-                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
+                constrainer_kwargs=dict(maxnorm=max_projection_norm, p=scoring_fct_norm, dim=-1),
             ),
             relation_representations_kwargs=[
                 # relation embedding
                 dict(
                     shape=(relation_dim,),
                     initializer=relation_initializer,
+                    initializer_kwargs=relation_initializer_kwargs,
                     constrainer=relation_constrainer,
-                    constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
+                    constrainer_kwargs=dict(maxnorm=max_projection_norm, p=scoring_fct_norm, dim=-1),
                 ),
                 # relation projection
                 dict(
                     shape=(embedding_dim, relation_dim),
-                    initializer=torch.nn.init.xavier_uniform_,
+                    initializer=relation_projection_initializer,
+                    initializer_kwargs=relation_projection_initializer_kwargs,
                 ),
             ],
             **kwargs,
