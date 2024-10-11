@@ -3235,6 +3235,38 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, F
         return negative_norm_of_sum(h * r_head, -t * r_tail, r_mid, p=self.p, power_norm=self.power_norm)
 
 
+class LinearREInteraction(TripleREInteraction):
+    r"""The LineaRE interaction function.
+
+    .. note ::
+        the interaction is equivalent to :class:`pykeen.nn.modules.TripleREInteraction` without the `u` term.
+
+    ---
+    name: LinearRE
+    citation:
+        author: Peng
+        year: 2020
+        link: https://arxiv.org/abs/2004.10037
+        arxiv: 2004.10037
+    """
+
+    def __init__(self, p: int = 1, power_norm: bool = False):
+        """
+        Initialize the module.
+
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`.
+        :param power_norm:
+            Whether to use the $p$-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+        """
+        super().__init__(u=None, p=p, power_norm=power_norm)
+
+
 # type alias for AutoSF block description
 # head_index, relation_index, tail_index, sign
 AutoSFBlock = tuple[int, int, int, Sign]
