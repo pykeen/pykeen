@@ -56,6 +56,7 @@ from ..utils import (
     make_ones_like,
     negative_norm,
     negative_norm_of_sum,
+    project_entity,
     tensor_product,
     tensor_sum,
     unpack_singletons,
@@ -1926,14 +1927,34 @@ class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 @parse_docdata
 class TransDInteraction(
     NormBasedInteraction[
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-    ],
+        tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]
+    ]
 ):
-    """A stateful module for the TransD interaction function.
+    r"""The TransD interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transd_interaction`
+    TransD is an extension of :class:`~pykeen.nn.modules.TransRInteraction` that, like TransR,
+    considers entities and relations as objects living in different vector spaces.
+    However, instead of performing the same relation-specific
+    projection for all entity embeddings, entity-relation-specific projection matrices
+    $\textbf{M}_{r,h}, \textbf{M}_{t,h}  \in \mathbb{R}^{k \times d}$ are constructed.
+
+    To do so, all head entities, tail entities, and relations are represented by two vectors,
+    $\textbf{e}_h, \hat{\textbf{e}}_h, \textbf{e}_t, \hat{\textbf{e}}_t \in \mathbb{R}^d$ and
+    $\textbf{r}_r, \hat{\textbf{r}}_r \in \mathbb{R}^k$, respectively. The first set of representations is used for
+    calculating the entity-relation-specific projection matrices:
+
+    .. math::
+
+        \textbf{M}_{r,h} &=& \hat{\textbf{r}}_r \hat{\textbf{e}}_h^{T} + \tilde{\textbf{I}} \\
+        \textbf{M}_{r,t} &=& \hat{\textbf{r}}_r \hat{\textbf{e}}_t^{T} + \tilde{\textbf{I}}
+
+    where $\tilde{\textbf{I}} \in \mathbb{R}^{k \times d}$ is a $k \times d$ matrix with ones on the diagonal and
+    zeros elsewhere. Next, $\textbf{e}_h$ and $\textbf{e}_t$ are projected into the relation space by means of the
+    constructed projection matrices. Finally, the plausibility score for $(h,r,t) \in \mathbb{K}$ is given by:
+
+    .. math::
+
+        -\|\textbf{M}_{r,h} \textbf{e}_h + \textbf{r}_r - \textbf{M}_{r,t} \textbf{e}_t\|_{2}^2
 
     ---
     citation:
@@ -1944,30 +1965,48 @@ class TransDInteraction(
 
     entity_shape = ("d", "d")
     relation_shape = ("e", "e")
-    func = pkf.transd_interaction
 
     def __init__(self, p: int = 2, power_norm: bool = True):
         """
         Initialize the interaction module.
 
+        .. seealso::
+            The parameters ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`
+
         :param p:
-            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+            The $p$ value of the norm to use.
         :param power_norm:
-            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+            Whether to use the $p$th power of the p-norm.
         """
         super().__init__(p=p, power_norm=power_norm)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: tuple[FloatTensor, FloatTensor],
-        r: tuple[FloatTensor, FloatTensor],
-        t: tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        h, h_p = h
-        r, r_p = r
-        t, t_p = t
-        return dict(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p)
+    def forward(
+        self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, e)`` and ``(*batch_dims, e)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h_emb, h_p = h
+        r_emb, r_p = r
+        t_emb, t_p = t
+        # Project entities
+        h_bot = project_entity(e=h_emb, e_p=h_p, r_p=r_p)
+        t_bot = project_entity(e=t_emb, e_p=t_p, r_p=r_p)
+        return negative_norm_of_sum(h_bot, r_emb, -t_bot, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata

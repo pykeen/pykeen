@@ -25,7 +25,6 @@ __all__ = [
     "proje_interaction",
     "rescal_interaction",
     "simple_interaction",
-    "transd_interaction",
     "transh_interaction",
     "transformer_interaction",
     "triple_re_interaction",
@@ -262,52 +261,6 @@ def toruse_interaction(
     d = d - torch.floor(d)
     d = torch.minimum(d, 1.0 - d)
     return negative_norm(d, p=p, power_norm=power_norm)
-
-
-def transd_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    h_p: FloatTensor,
-    r_p: FloatTensor,
-    t_p: FloatTensor,
-    p: int,
-    power_norm: bool = False,
-) -> FloatTensor:
-    """Evaluate the TransD interaction function.
-
-    :param h: shape: (`*batch_dims`, d_e)
-        The head representations.
-    :param r: shape: (`*batch_dims`, d_r)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, d_e)
-        The tail representations.
-    :param h_p: shape: (`*batch_dims`, d_e)
-        The head projections.
-    :param r_p: shape: (`*batch_dims`, d_r)
-        The relation projections.
-    :param t_p: shape: (`*batch_dims`, d_e)
-        The tail projections.
-    :param p:
-        The parameter p for selecting the norm.
-    :param power_norm:
-        Whether to return the powered norm instead.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # Project entities
-    h_bot = project_entity(
-        e=h,
-        e_p=h_p,
-        r_p=r_p,
-    )
-    t_bot = project_entity(
-        e=t,
-        e_p=t_p,
-        r_p=r_p,
-    )
-    return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 
 def transh_interaction(
