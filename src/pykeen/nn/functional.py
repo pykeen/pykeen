@@ -10,14 +10,7 @@ import torch
 from torch import broadcast_tensors, nn
 
 from ..typing import FloatTensor
-from ..utils import (
-    einsum,
-    negative_norm,
-    negative_norm_of_sum,
-    project_entity,
-    tensor_product,
-    tensor_sum,
-)
+from ..utils import einsum, negative_norm, negative_norm_of_sum, tensor_product, tensor_sum
 
 __all__ = [
     "multilinear_tucker_interaction",
