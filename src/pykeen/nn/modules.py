@@ -551,13 +551,13 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The state-less norm-based TransF interaction function.
 
-    The TransF interaction function is given by
+    It is given by
 
     .. math ::
         f(\mathbf{h}, \mathbf{r}, \mathbf{t}) =
             (\mathbf{h} + \mathbf{r})^T \mathbf{t} + \mathbf{h}^T (\mathbf{r} - \mathbf{t})
 
-    for head entity, relation, and tail entity representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}$.
+    for head entity, relation, and tail entity representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$.
     The interaction function can be simplified as
 
     .. math ::
@@ -575,6 +575,10 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     .. note ::
         This is the *balanced* variant from the paper.
+
+    .. todo ::
+        Implement the unbalanced version, too:
+        $f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = (\mathbf{h} + \mathbf{r})^T \mathbf{t}$
 
     ---
     citation:
@@ -603,7 +607,7 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :return: shape: ``batch_dims``
             The scores.
         """
-        return batched_dot(h + r, t) + batched_dot(h, t - r)
+        return tensor_sum(2 * batched_dot(h, t), batched_dot(r, t), -batched_dot(h, r))
 
 
 @parse_docdata
