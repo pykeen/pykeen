@@ -68,6 +68,7 @@ class TransR(ERModel):
         max_projection_norm: float = 1.0,
         # interaction function kwargs
         scoring_fct_norm: int = 1,
+        power_norm: bool = False,
         # entity embedding
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_initializer_kwargs: OptionalKwargs = None,
@@ -87,7 +88,11 @@ class TransR(ERModel):
         :param relation_dim: The relation embedding dimension $k$.
         :param max_projection_norm:
             The maximum norm to be clamped after projection.
+
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
 
         :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer.
@@ -108,9 +113,7 @@ class TransR(ERModel):
         # TODO: Initialize from TransE
         super().__init__(
             interaction=TransRInteraction,
-            interaction_kwargs=dict(
-                p=scoring_fct_norm,
-            ),
+            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
