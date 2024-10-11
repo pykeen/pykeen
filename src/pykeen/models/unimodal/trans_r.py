@@ -22,25 +22,22 @@ __all__ = [
 class TransR(ERModel):
     r"""An implementation of TransR from [lin2015]_.
 
-    TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
-    different objects and therefore represents them in different vector spaces.
+    This model represents entities as $d$-dimensional vectors, and relations as $k$-dimensional vectors.
+    To bring them into the same vector space, a relation-specific projection is learned, too.
+    All representations are stored in :class:`~pykeen.nn.representation.Embedding` matrices.
 
-    For a triple $(h,r,t) \in \mathbb{K}$, the entity embeddings, $\textbf{e}_h, \textbf{e}_t \in \mathbb{R}^d$,
-    are first projected into the relation space by means of a relation-specific projection matrix
-    $\textbf{M}_{r} \in \mathbb{R}^{k \times d}$. With relation embedding $\textbf{r}_r \in \mathbb{R}^k$, the
-    interaction model is defined similarly to TransE with:
-
-    .. math::
-
-        f(h,r,t) = -\|\textbf{M}_{r}\textbf{e}_h + \textbf{r}_r - \textbf{M}_{r}\textbf{e}_t\|_{p}^2
+    The representations are then passed to the :class:`~pykeen.nn.modules.TransRInteraction` function to obtain scores.
 
     The following constraints are applied:
 
-     * $\|\textbf{e}_h\|_2 \leq 1$
-     * $\|\textbf{r}_r\|_2 \leq 1$
-     * $\|\textbf{e}_t\|_2 \leq 1$
-     * $\|\textbf{M}_{r}\textbf{e}_h\|_2 \leq 1$
-     * $\|\textbf{M}_{r}\textbf{e}_t\|_2 \leq 1$
+        - $\|\textbf{e}_h\|_2 \leq 1$
+        - $\|\textbf{r}_r\|_2 \leq 1$
+        - $\|\textbf{e}_t\|_2 \leq 1$
+
+    as well as inside the :class:`~pykeen.nn.modules.TransRInteraction`
+
+        - $\|\textbf{M}_{r}\textbf{e}_h\|_2 \leq 1$
+        - $\|\textbf{M}_{r}\textbf{e}_t\|_2 \leq 1$
 
     .. seealso::
 

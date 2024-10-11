@@ -48,6 +48,7 @@ from ..typing import (
 from ..utils import (
     add_cudnn_error_hint,
     at_least_eps,
+    clamp_norm,
     einsum,
     ensure_complex,
     ensure_tuple,
@@ -1410,12 +1411,7 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             nn.ReLU(),
         )
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
         :param h: shape: ``(*batch_dims, d)``
@@ -1440,46 +1436,73 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class TransRInteraction(
-    NormBasedInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor],
-        FloatTensor,
-    ],
-):
-    """A stateful module for the TransR interaction function.
+class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
+    r"""The state-less norm-based TransR interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transr_interaction`
+    It is given by
+
+    .. math ::
+
+        -\|c(\mathbf{M}_{r}\mathbf{h}) + \mathbf{r} - c(\mathbf{M}_{r}\mathbf{t})\|_{2}^2
+
+    for head and tail entity representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$,
+    relation representation $\mathbf{r} \in \mathbb{R}^k$,
+    and a relation-specific projection matrix $\mathbf{M}_r \in \mathbb{R}^{k \times d}$.
+    $c$ enforces the constraint $\|\cdot\| \leq 1$, cf. :func:`pykeen.utils.clamp_norm`.
+
+    .. note ::
+        :class:`pykeen.models.TransR` additionally also enforces $\|\cdot\| \leq 1$ on all embeddings.
 
     ---
     citation:
         author: Lin
         year: 2015
-        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/
+        link: https://aaai.org/papers/9491-learning-entity-and-relation-embeddings-for-knowledge-graph-completion/
     """
 
     relation_shape = ("e", "de")
-    func = pkf.transr_interaction
 
-    def __init__(self, p: int, power_norm: bool = True):
+    def __init__(self, p: int, power_norm: bool = True, max_projection_norm: float = 1.0):
         """
         Initialize the interaction module.
 
         :param p:
-            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+            The $p$ value of the norm to use.
         :param power_norm:
-            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+            Whether to use the $p$-th power of the $p$-norm.
+        :param max_projection_norm:
+            The maximum norm to be clamped after projection.
+
+        ``p`` and ``power_norm`` are passed to :class:`~pykeen.nn.modules.NormBasedInteraction`.
         """
         super().__init__(p=p, power_norm=power_norm)
+        self.max_projection_norm = max_projection_norm
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, r=r[0], t=t, m_r=r[1])
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, k)`` and ``(*batch_dims, d, k)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        r, m_r = r
+        # project to relation specific subspace
+        h_bot = einsum("...e, ...er -> ...r", h, m_r)
+        t_bot = einsum("...e, ...er -> ...r", t, m_r)
+        # ensure constraints
+        h_bot = clamp_norm(h_bot, p=self.p, dim=-1, maxnorm=self.max_projection_norm)
+        t_bot = clamp_norm(t_bot, p=self.p, dim=-1, maxnorm=self.max_projection_norm)
+        return pkf.negative_norm_of_sum(h_bot, r, -t_bot, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata

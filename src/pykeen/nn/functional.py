@@ -9,10 +9,8 @@ from __future__ import annotations
 import torch
 from torch import broadcast_tensors, nn
 
-from .compute_kernel import batched_dot
 from ..typing import FloatTensor
 from ..utils import (
-    clamp_norm,
     einsum,
     negative_norm,
     negative_norm_of_sum,
@@ -32,7 +30,6 @@ __all__ = [
     "se_interaction",
     "transd_interaction",
     "transh_interaction",
-    "transr_interaction",
     "transformer_interaction",
     "triple_re_interaction",
     "tucker_interaction",
@@ -390,41 +387,6 @@ def transh_interaction(
         p=p,
         power_norm=power_norm,
     )
-
-
-def transr_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    m_r: FloatTensor,
-    p: int,
-    power_norm: bool = True,
-) -> FloatTensor:
-    """Evaluate the TransR interaction function.
-
-    :param h: shape: (`*batch_dims`, d_e)
-        Head embeddings.
-    :param r: shape: (`*batch_dims`, d_r)
-        Relation embeddings.
-    :param m_r: shape: (`*batch_dims`, d_e, d_r)
-        The relation specific linear transformations.
-    :param t: shape: (`*batch_dims`, d_e)
-        Tail embeddings.
-    :param p:
-        The parameter p for selecting the norm.
-    :param power_norm:
-        Whether to return the powered norm instead.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # project to relation specific subspace
-    h_bot = einsum("...e, ...er -> ...r", h, m_r)
-    t_bot = einsum("...e, ...er -> ...r", t, m_r)
-    # ensure constraints
-    h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.0)
-    t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.0)
-    return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 
 def tucker_interaction(
