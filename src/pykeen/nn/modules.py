@@ -2211,11 +2211,24 @@ class MuREInteraction(
     relation_shape = ("d", "d")
 
     def forward(
-        self,
-        h: tuple[FloatTensor, FloatTensor],
-        r: tuple[FloatTensor, FloatTensor],
-        t: tuple[FloatTensor, FloatTensor],
+        self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
     ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
         h_emb, h_bias = h
         t_emb, t_bias = t
         r_vec, r_mat = r
