@@ -89,16 +89,18 @@ class TransR(ERModel):
             The maximum norm to be clamped after projection.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
 
-        :param entity_initializer: Entity initializer function.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer.
-        :param entity_constrainer: The entity constrainer.
+        :param entity_constrainer: The entity constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
 
-        :param relation_initializer: Relation initializer function.
+        :param relation_initializer:
+            Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer.
-        :param entity_constrainer: The relation constrainer.
+        :param relation_constrainer: The relation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
 
-        :param relation_initializer: Relation projection initializer function.
-        :param relation_initializer_kwargs:
+        :param relation_projection_initializer:
+            Relation projection initializer function. Defaults to :func:`torch.nn.init.xavier_uniform_`.
+        :param relation_projection_initializer_kwargs:
             Keyword arguments to be used when calling the relation projection initializer.
 
         :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
