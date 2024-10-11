@@ -10,7 +10,7 @@ import torch
 from torch import broadcast_tensors, nn
 
 from ..typing import FloatTensor
-from ..utils import einsum, negative_norm, negative_norm_of_sum, tensor_product, tensor_sum
+from ..utils import einsum, negative_norm, tensor_product, tensor_sum
 
 __all__ = [
     "multilinear_tucker_interaction",
@@ -19,7 +19,6 @@ __all__ = [
     "rescal_interaction",
     "simple_interaction",
     "transformer_interaction",
-    "triple_re_interaction",
     "tucker_interaction",
     "um_interaction",
     "linea_re_interaction",
@@ -372,64 +371,6 @@ def quat_e_interaction(
     """
     # TODO: this sign is in the official code, too, but why do we need it?
     return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
-
-
-def triple_re_interaction(
-    # head
-    h: FloatTensor,
-    # relation
-    r_head: FloatTensor,
-    r_mid: FloatTensor,
-    r_tail: FloatTensor,
-    # tail
-    t: FloatTensor,
-    # version 2: relation factor offset
-    u: float | None = None,
-    # extension: negative (power) norm
-    p: int = 2,
-    power_norm: bool = False,
-) -> FloatTensor:
-    r"""Evaluate the TripleRE interaction function.
-
-    .. seealso ::
-        :class:`pykeen.nn.modules.TripleREInteraction` for the stateful interaction module
-
-    :param h: shape: (`*batch_dims`, rank, dim)
-        The head representations.
-    :param r_head: shape: (`*batch_dims`, rank, dim)
-        The relation-specific head multiplicator representations.
-    :param r_mid: shape: (`*batch_dims`, rank, dim)
-        The relation representations.
-    :param r_tail: shape: (`*batch_dims`, rank, dim)
-        The relation-specific tail multiplicator representations.
-    :param t: shape: (`*batch_dims`, rank, dim)
-        The tail representations.
-    :param u:
-        the relation factor offset. If u is not None or 0, this corresponds to TripleREv2.
-    :param p:
-        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
-    :param power_norm:
-        Whether to return the powered norm.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # note: normalization should be done from the representations
-    # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328  # noqa: E501
-    # version 2
-    if u is not None:
-        # r_head = r_head + u * torch.ones_like(r_head)
-        # r_tail = r_tail + u * torch.ones_like(r_tail)
-        r_head = r_head + u
-        r_tail = r_tail + u
-
-    return negative_norm_of_sum(
-        h * r_head,
-        -t * r_tail,
-        r_mid,
-        p=p,
-        power_norm=power_norm,
-    )
 
 
 def transformer_interaction(

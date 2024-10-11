@@ -3130,29 +3130,29 @@ class TransformerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, Flo
 
 
 @parse_docdata
-class TripleREInteraction(
-    NormBasedInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor, FloatTensor],
-        FloatTensor,
-    ]
-):
-    """A stateful module for the TripleRE interaction function from [yu2021]_.
+class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor], FloatTensor]):
+    r"""The TripleRE interaction function from [yu2021]_.
+
+    It is given by
 
     .. math ::
-        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
+         \mathbf{h} \odot (\mathbf{r}_h + u) - \mathbf{t} \odot (\mathbf{r}_t + u) + \mathbf{r}
+
+    with head entity, relation and tail entity representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$,
+    relation specific head and tail multipliers $\mathbf{r}_h, \mathbf{r}_t \in \mathbb{R}^d$,
+    and a scalar relation factor offset $u \in \mathbb{R}$.
+
+    .. note ::
+        This interaction is equivalent to :class:`~pykeen.nn.modules.LineaREInteraction` except the $u$ term.
+        The $u$ is only non-zero for the version 2 from the paper.
 
     .. note ::
 
         For equivalence to the paper version, `h` and `t` should be normalized to unit
         Euclidean length, and `p` and `power_norm` be kept at their default values.
 
-    .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
-
     .. seealso:: https://github.com/LongYu-360/TripleRE-Add-NodePiece
 
-    .. note ::
-        this interaction is equivalent to :class:`LineaREInteraction` except the `u` term
     ---
     name: TripleRE
     citation:
@@ -3164,44 +3164,54 @@ class TripleREInteraction(
     # r_head, r_mid, r_tail
     relation_shape = ("d", "d", "d")
 
-    func = pkf.triple_re_interaction
-
     def __init__(self, u: float | None = 1.0, p: int = 1, power_norm: bool = False):
         """
         Initialize the module.
 
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
         :param u:
-            the relation factor offset. can be set to None to disable it.
+            Rhe relation factor offset. Can be set to `None` (or 0) to disable it.
         :param p:
-            The norm used with :func:`torch.linalg.vector_norm`. Defaults to 1 for TripleRE.
+            The norm used with :func:`torch.linalg.vector_norm`.
         :param power_norm:
-            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
-            and numerically more stable. Defaults to False for TripleRE.
+            Whether to use the $p$-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
         self.u = u
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        kwargs = super()._prepare_state_for_functional()
-        kwargs["u"] = self.u
-        return kwargs
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: FloatTensor,
-        r: tuple[FloatTensor, FloatTensor, FloatTensor],
-        t: FloatTensor,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        u = self.u
         r_head, r_mid, r_tail = r
-        return dict(
-            h=h,
-            r_head=r_head,
-            r_mid=r_mid,
-            r_tail=r_tail,
-            t=t,
-        )
+        # note: normalization should be done from the representations
+        # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328  # noqa: E501
+        # version 2
+        if u is not None:
+            # r_head = r_head + u * torch.ones_like(r_head)
+            # r_tail = r_tail + u * torch.ones_like(r_tail)
+            r_head = r_head + u
+            r_tail = r_tail + u
+
+        return negative_norm_of_sum(h * r_head, -t * r_tail, r_mid, p=self.p, power_norm=self.power_norm)
 
 
 # type alias for AutoSF block description
