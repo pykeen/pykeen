@@ -2163,19 +2163,11 @@ class MuREInteraction(
         r: tuple[FloatTensor, FloatTensor],
         t: tuple[FloatTensor, FloatTensor],
     ) -> FloatTensor:
-        h, b_h = h
-        t, b_t = t
+        h_emb, h_bias = h
+        t_emb, t_bias = t
         r_vec, r_mat = r
         return (
-            negative_norm_of_sum(
-                h * r_mat,
-                r_vec,
-                -t,
-                p=self.p,
-                power_norm=self.power_norm,
-            )
-            + b_h
-            + b_t
+            negative_norm_of_sum(h_emb * r_mat, r_vec, -t_emb, p=self.p, power_norm=self.power_norm) + h_bias + t_bias
         )
 
 
