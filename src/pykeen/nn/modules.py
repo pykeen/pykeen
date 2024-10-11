@@ -1962,6 +1962,9 @@ class TransDInteraction(
 
     where $c$ enforces the constraint $\|\cdot\| \leq 1$.
 
+    .. note ::
+        :class:`~pykeen.models.TransD` additionally enforces $\|\mathbf{h}\|, \|\mathbf{r}\|, \|\mathbf{t}\| \leq 1$.
+
     ---
     citation:
         author: Ji
@@ -1984,7 +1987,7 @@ class TransDInteraction(
         :param p:
             The $p$ value of the norm to use.
         :param power_norm:
-            Whether to use the $p$th power of the p-norm.
+            Whether to use the $p$-th power of the $p$-norm.
         """
         super().__init__(p=p, power_norm=power_norm)
 
