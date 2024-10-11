@@ -61,6 +61,7 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         *,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
+        power_norm: bool = False,
         entity_initializer: Hint[Initializer] = init.xavier_normal_,
         # note: this parameter is not named "entity_regularizer" for compatability with the
         #       regularizer-specific HPO code
@@ -77,29 +78,32 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
             the entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm:
             the :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
 
         :param entity_initializer:
-            the entity initializer function
+            The entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_normal_`.
         :param regularizer:
-            the entity regularizer. Defaults to :attr:`pykeen.models.TransH.regularizer_default`
+            The entity regularizer. Defaults to :attr:`pykeen.models.TransH.regularizer_default`.
         :param regularizer_kwargs:
-            keyword-based parameters for the entity regularizer. If `entity_regularizer` is None,
+            Keyword-based parameters for the entity regularizer. If `entity_regularizer` is None,
             the default from :attr:`pykeen.models.TransH.regularizer_default_kwargs` will be used instead
 
         :param relation_initializer:
-            relation initializer function
+            The relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_normal_`.
         :param relation_regularizer:
-            the relation regularizer. Defaults to :attr:`pykeen.models.TransH.relation_regularizer_default`
+            The relation regularizer. Defaults to :attr:`pykeen.models.TransH.relation_regularizer_default`.
         :param relation_regularizer_kwargs:
-            keyword-based parameters for the relation regularizer. If `relation_regularizer` is None,
+            Keyword-based parameters for the relation regularizer. If `relation_regularizer` is None,
             the default from :attr:`pykeen.models.TransH.relation_regularizer_default_kwargs` will be used instead
 
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
+            Remaining keyword arguments are passed to :class:`~pykeen.models.ERModel`
         """
         super().__init__(
             interaction=TransHInteraction,
-            interaction_kwargs=dict(p=scoring_fct_norm),
+            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
