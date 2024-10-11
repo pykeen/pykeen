@@ -549,7 +549,32 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 
 @parse_docdata
 class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """The state-less norm-based TransF interaction function.
+    r"""The state-less norm-based TransF interaction function.
+
+    The TransF interaction function is given by
+
+    .. math ::
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) =
+            (\mathbf{h} + \mathbf{r})^T \mathbf{t} + \mathbf{h}^T (\mathbf{r} - \mathbf{t})
+
+    for head entity, relation, and tail entity representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}$.
+    The interaction function can be simplified as
+
+    .. math ::
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) &=&
+            (\mathbf{h} + \mathbf{r})^T \mathbf{t} + \mathbf{h}^T (\mathbf{t} - \mathbf{r}) \\
+            &=&
+            \langle \mathbf{h}, \mathbf{t}\rangle
+            + \langle \mathbf{r}, \mathbf{t}\rangle
+            + \langle \mathbf{h}, \mathbf{t}\rangle
+            - \langle \mathbf{h}, \mathbf{r}\rangle \\
+            &=&
+            2 \cdot \langle \mathbf{h}, \mathbf{t}\rangle
+            + \langle \mathbf{r}, \mathbf{t}\rangle
+            - \langle \mathbf{h}, \mathbf{r}\rangle
+
+    .. note ::
+        This is the *balanced* variant from the paper.
 
     ---
     citation:
@@ -558,6 +583,8 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887
         arxiv: 1505.05253
     """
+
+    # TODO: implement the unbalanced variant from the paper: f(h, r, t) = (h + r)^T t
 
     def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
@@ -576,10 +603,6 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :return: shape: ``batch_dims``
             The scores.
         """
-        # TODO: it might be faster to decompose this:
-        #   (h+r)^T t + h^T(t - r)
-        # = <h, t> + <r, t> + <h, t> - <h, r>
-        # = 2 * <h, t> + <r, t> - <h, r>
         return batched_dot(h + r, t) + batched_dot(h, t - r)
 
 
