@@ -547,7 +547,7 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
         :return: shape: ``batch_dims``
             The scores.
         """
-        return pkf.negative_norm_of_sum(h, r, -t, p=self.p, power_norm=self.power_norm)
+        return negative_norm_of_sum(h, r, -t, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
@@ -1504,7 +1504,7 @@ class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
         # ensure constraints
         h_bot = clamp_norm(h_bot, p=self.p, dim=-1, maxnorm=self.max_projection_norm)
         t_bot = clamp_norm(t_bot, p=self.p, dim=-1, maxnorm=self.max_projection_norm)
-        return pkf.negative_norm_of_sum(h_bot, r, -t_bot, p=self.p, power_norm=self.power_norm)
+        return negative_norm_of_sum(h_bot, r, -t_bot, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
@@ -3213,7 +3213,7 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, F
 
         :param h: shape: ``(*batch_dims, d)``
             The head representations.
-        :param r: shape: ``(*batch_dims, d)``
+        :param r: shape: ``(*batch_dims, d)``, 3 times
             The relation representations.
         :param t: shape: ``(*batch_dims, d)``
             The tail representations.
@@ -3233,38 +3233,6 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, F
             r_tail = r_tail + u
 
         return negative_norm_of_sum(h * r_head, -t * r_tail, r_mid, p=self.p, power_norm=self.power_norm)
-
-
-class LinearREInteraction(TripleREInteraction):
-    r"""The LineaRE interaction function.
-
-    .. note ::
-        the interaction is equivalent to :class:`pykeen.nn.modules.TripleREInteraction` without the `u` term.
-
-    ---
-    name: LinearRE
-    citation:
-        author: Peng
-        year: 2020
-        link: https://arxiv.org/abs/2004.10037
-        arxiv: 2004.10037
-    """
-
-    def __init__(self, p: int = 1, power_norm: bool = False):
-        """
-        Initialize the module.
-
-        .. seealso::
-            The parameter ``p`` and ``power_norm`` are directly passed to
-            :class:`~pykeen.nn.modules.NormBasedInteraction`.
-
-        :param p:
-            The norm used with :func:`torch.linalg.vector_norm`.
-        :param power_norm:
-            Whether to use the $p$-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
-            and numerically more stable.
-        """
-        super().__init__(u=None, p=p, power_norm=power_norm)
 
 
 # type alias for AutoSF block description
@@ -3501,25 +3469,24 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
 
 @parse_docdata
-class LineaREInteraction(NormBasedInteraction):
+class LineaREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor], FloatTensor]):
     r"""
     The LineaRE interaction described by [peng2020]_.
 
-    The interaction function is given as
+    It is given by
 
     .. math ::
+         \mathbf{h} \odot \mathbf{r}_h - \mathbf{t} \odot \mathbf{r}_t + \mathbf{r}
 
-        \| \mathbf{w}_{r}^{h} \odot \mathbf{x}_{h} + \mathbf{b}_r - \mathbf{w}_{r}^{t} \odot \mathbf{x}_{t} \|
-
-    where $\mathbf{w}_{r}^{h}, \mathbf{b}_r, \mathbf{w}_{r}^{t} \in \mathbb{R}^d$ are relation-specific terms,
-    and $\mathbf{x}_{h}, \mathbf{x}_{t} \in \mathbb{R}$ the head and tail entity representation.
+    where $\mathbf{r}_{h}, \mathbf{r}, \mathbf{r}_{t} \in \mathbb{R}^d$ are relation-specific terms,
+    and $\mathbf{h}, \mathbf{t} \in \mathbb{R}^n$ the head and tail entity representation.
 
     .. note ::
         the original paper only describes the interaction for $L_1$ norm, but we extend it to the general $L_p$
         norm as well as its powered variant.
 
     .. note ::
-        this interaction is equivalent to :class:`TripleREInteraction` without the `u` term
+        This interaction is equivalent to :class:`TripleREInteraction` without the $u$ term.
 
     ---
     name: LineaRE
@@ -3534,17 +3501,25 @@ class LineaREInteraction(NormBasedInteraction):
     # r_head, r_bias, r_tail
     relation_shape = ("d", "d", "d")
 
-    func = pkf.linea_re_interaction
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: FloatTensor,
-        r: tuple[FloatTensor, FloatTensor, FloatTensor],
-        t: FloatTensor,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``, 3 times
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
         r_head, r_mid, r_tail = r
-        return dict(h=h, r_head=r_head, r_mid=r_mid, r_tail=r_tail, t=t)
+        return negative_norm_of_sum(h * r_head, -t * r_tail, r_mid, p=self.p, power_norm=self.power_norm)
 
 
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
