@@ -20,29 +20,10 @@ __all__ = [
 class TransD(ERModel):
     r"""An implementation of TransD from [ji2015]_.
 
-    TransD is an extension of :class:`pykeen.models.TransR` that, like TransR, considers entities and relations
-    as objects living in different vector spaces. However, instead of performing the same relation-specific
-    projection for all entity embeddings, entity-relation-specific projection matrices
-    $\textbf{M}_{r,h}, \textbf{M}_{t,h}  \in \mathbb{R}^{k \times d}$ are constructed.
-
-    To do so, all head entities, tail entities, and relations are represented by two vectors,
-    $\textbf{e}_h, \hat{\textbf{e}}_h, \textbf{e}_t, \hat{\textbf{e}}_t \in \mathbb{R}^d$ and
-    $\textbf{r}_r, \hat{\textbf{r}}_r \in \mathbb{R}^k$, respectively. The first set of embeddings is used for
-    calculating the entity-relation-specific projection matrices:
-
-    .. math::
-
-        \textbf{M}_{r,h} = \hat{\textbf{r}}_r \hat{\textbf{e}}_h^{T} + \tilde{\textbf{I}}
-
-        \textbf{M}_{r,t} = \hat{\textbf{r}}_r \hat{\textbf{e}}_t^{T} + \tilde{\textbf{I}}
-
-    where $\tilde{\textbf{I}} \in \mathbb{R}^{k \times d}$ is a $k \times d$ matrix with ones on the diagonal and
-    zeros elsewhere. Next, $\textbf{e}_h$ and $\textbf{e}_t$ are projected into the relation space by means of the
-    constructed projection matrices. Finally, the plausibility score for $(h,r,t) \in \mathbb{K}$ is given by:
-
-    .. math::
-
-        f(h,r,t) = -\|\textbf{M}_{r,h} \textbf{e}_h + \textbf{r}_r - \textbf{M}_{r,t} \textbf{e}_t\|_{2}^2
+    This model represents both entities as pairs of $d$-dimensional vectors,
+    and relations aspairs of $k$-dimensional vectors.
+    They are stored in an :class:`~pykeen.nn.representation.Embedding` matrix.
+    The representations are then passed to the :class:`~pykeen.nn.modules.TransDInteraction` function to obtain scores.
 
     .. seealso::
 
