@@ -10,14 +10,14 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, NSSALoss
 from ...nn.modules import PairREInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "PairRE",
 ]
 
 
-class PairRE(ERModel):
+class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     r"""An implementation of PairRE from [chao2020]_.
 
     This model represents entities as $d$-dimensional vectors, and relations by a pair of $d$-dimensional vectors,
