@@ -1882,6 +1882,17 @@ class UMInteraction(NormBasedInteraction[FloatTensor, tuple[()], FloatTensor]):
     # shapes
     relation_shape: Sequence[str] = tuple()
 
+    def __init__(self, p: int, power_norm: bool = True):
+        """Initialize the norm-based interaction function.
+
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+        """
+        super().__init__(p=p, power_norm=power_norm)
+
     def forward(self, h: FloatTensor, r: tuple[()], t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
