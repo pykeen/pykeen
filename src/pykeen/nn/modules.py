@@ -1934,27 +1934,31 @@ class TransDInteraction(
 
     TransD is an extension of :class:`~pykeen.nn.modules.TransRInteraction` that, like TransR,
     considers entities and relations as objects living in different vector spaces.
-    However, instead of performing the same relation-specific
-    projection for all entity embeddings, entity-relation-specific projection matrices
-    $\textbf{M}_{r,h}, \textbf{M}_{t,h}  \in \mathbb{R}^{k \times d}$ are constructed.
+    However, instead of performing the same relation-specific projection for all entity embeddings,
+    entity-relation-specific projection matrices
+    $\mathbf{M}_{r, h}, \mathbf{M}_{t, h} \in \mathbb{R}^{k \times d}$
+    are constructed.
 
     To do so, all head entities, tail entities, and relations are represented by two vectors,
-    $\textbf{e}_h, \hat{\textbf{e}}_h, \textbf{e}_t, \hat{\textbf{e}}_t \in \mathbb{R}^d$ and
-    $\textbf{r}_r, \hat{\textbf{r}}_r \in \mathbb{R}^k$, respectively. The first set of representations is used for
-    calculating the entity-relation-specific projection matrices:
+    $\mathbf{h}_v, \mathbf{h}_p, \mathbf{t}_v, \mathbf{t}_p \in \mathbb{R}^d$
+    and $\mathbf{r}_v, \mathbf{r}_v \in \mathbb{R}^k$, respectively.
+
+    The first set of representations is used for calculating the entity-relation-specific projection matrices:
 
     .. math::
 
-        \textbf{M}_{r,h} &=& \hat{\textbf{r}}_r \hat{\textbf{e}}_h^{T} + \tilde{\textbf{I}} \\
-        \textbf{M}_{r,t} &=& \hat{\textbf{r}}_r \hat{\textbf{e}}_t^{T} + \tilde{\textbf{I}}
+        \mathbf{M}_{r, h} &=& \mathbf{r}_p \mathbf{h}_p^{T} + \tilde{\mathbf{I}}
+
+        \mathbf{M}_{r, t} &=& \mathbf{r}_p \mathbf{t}_p^{T} + \tilde{\mathbf{I}}
 
     where $\tilde{\textbf{I}} \in \mathbb{R}^{k \times d}$ is a $k \times d$ matrix with ones on the diagonal and
-    zeros elsewhere. Next, $\textbf{e}_h$ and $\textbf{e}_t$ are projected into the relation space by means of the
-    constructed projection matrices. Finally, the plausibility score for $(h,r,t) \in \mathbb{K}$ is given by:
+    zeros elsewhere. Next, $\mathbf{h}_v$ and $\mathbf{t}_v$ are projected into the relation space by means of the
+    constructed projection matrices, before calculating a distance similar to
+    :class:`~pykeen.nn.modules.TransEInteraction`:
 
     .. math::
 
-        -\|\textbf{M}_{r,h} \textbf{e}_h + \textbf{r}_r - \textbf{M}_{r,t} \textbf{e}_t\|_{2}^2
+        -\|\mathbf{M}_{r, h} \mathbf{h}_v + \mathbf{r}_v - \mathbf{M}_{r, t} \mathbf{t}_v\|_{2}^2
 
     ---
     citation:
@@ -1971,6 +1975,7 @@ class TransDInteraction(
         Initialize the interaction module.
 
         .. seealso::
+
             The parameters ``p`` and ``power_norm`` are directly passed to
             :class:`~pykeen.nn.modules.NormBasedInteraction`
 
