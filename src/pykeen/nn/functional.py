@@ -31,7 +31,6 @@ __all__ = [
     "simple_interaction",
     "se_interaction",
     "transd_interaction",
-    "transf_interaction",
     "transh_interaction",
     "transr_interaction",
     "transformer_interaction",
@@ -351,26 +350,6 @@ def transd_interaction(
         r_p=r_p,
     )
     return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
-
-
-def transf_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the TransF interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return batched_dot(h + r, t) + batched_dot(h, t - r)
 
 
 def transh_interaction(

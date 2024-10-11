@@ -549,9 +549,7 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 
 @parse_docdata
 class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateless module for the TransF interaction function.
-
-    .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
+    """The state-less norm-based TransF interaction function.
 
     ---
     citation:
@@ -560,7 +558,28 @@ class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887
     """
 
-    func = pkf.transf_interaction
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # TODO: it might be faster to decompose this:
+        #   (h+r)^T t + h^T(t - r)
+        # = <h, t> + <r, t> + <h, t> - <h, r>
+        # = 2 * <h, t> + <r, t> - <h, r>
+        return batched_dot(h + r, t) + batched_dot(h, t - r)
 
 
 @parse_docdata
