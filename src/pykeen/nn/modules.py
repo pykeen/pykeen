@@ -1897,9 +1897,10 @@ class UMInteraction(
 
 @parse_docdata
 class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the TorusE interaction function.
+    """The TorusE interaction function from [ebisu2018].
 
-    .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
+    .. note ::
+        This only implements the two L_p norm based variants.
 
     ---
     citation:
@@ -1909,8 +1910,6 @@ class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
         arxiv: 1711.05435
         github: TakumaE/TorusE
     """
-
-    func = pkf.toruse_interaction
 
     def __init__(self, p: int = 2, power_norm: bool = False):
         """
@@ -1922,6 +1921,28 @@ class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
             whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
         """
         super().__init__(p=p, power_norm=power_norm)
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        d = tensor_sum(h, r, -t)
+        d = d - torch.floor(d)
+        d = torch.minimum(d, 1.0 - d)
+        return negative_norm(d, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata

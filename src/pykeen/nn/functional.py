@@ -222,38 +222,6 @@ def simple_interaction(
     return scores
 
 
-def toruse_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    p: int | str = 2,
-    power_norm: bool = False,
-) -> FloatTensor:
-    """Evaluate the TorusE interaction function from [ebisu2018].
-
-    .. note ::
-        This only implements the two L_p norm based variants.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param p:
-        The p for the norm.
-    :param power_norm:
-        Whether to return the powered norm.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    d = tensor_sum(h, r, -t)
-    d = d - torch.floor(d)
-    d = torch.minimum(d, 1.0 - d)
-    return negative_norm(d, p=p, power_norm=power_norm)
-
-
 def tucker_interaction(
     h: FloatTensor,
     r: FloatTensor,
