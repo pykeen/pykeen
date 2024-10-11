@@ -20,6 +20,12 @@ __all__ = [
 class PairRE(ERModel):
     r"""An implementation of PairRE from [chao2020]_.
 
+    This model represents entities as $d$-dimensional vectors, and relations by a pair of $d$-dimensional vectors,
+    all stored in an :class:`~pykeen.nn.representation.Embedding` matrix. Moreover, it enforces unit length for
+    the entity embeddings.
+
+    The representations are then passed to the :class:`~pykeen.nn.modules.PairREInteraction` function to obtain scores.
+
     ---
     citation:
         author: Chao
