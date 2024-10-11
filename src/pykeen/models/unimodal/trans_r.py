@@ -12,7 +12,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransRInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class TransR(ERModel):
+class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     r"""An implementation of TransR from [lin2015]_.
 
     This model represents entities as $d$-dimensional vectors, and relations as $k$-dimensional vectors.
