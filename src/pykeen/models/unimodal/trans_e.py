@@ -64,7 +64,8 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
         :param entity_constrainer: Entity constrainer function. Defaults to :func:`torch.nn.functional.normalize`.
 
-        :param relation_initializer: Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
+        :param relation_initializer:
+            Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_constrainer: Relation constrainer function. Defaults to none.
 
         :param regularizer:
