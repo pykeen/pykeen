@@ -552,7 +552,7 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 
 
 @parse_docdata
-class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class TransFInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The state-less norm-based TransF interaction function.
 
     It is given by
