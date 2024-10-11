@@ -498,7 +498,7 @@ class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepr
 
     # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(p=self.p, power_norm=self.power_norm)
+        raise AssertionError("This is a relic.")
 
 
 @parse_docdata
