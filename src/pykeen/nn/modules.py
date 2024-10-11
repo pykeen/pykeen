@@ -2225,8 +2225,16 @@ class SimplEInteraction(
 class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     r"""The state-less norm-based PairRE interaction function.
 
+    It is given by
+
     .. math ::
-        -\|h \odot r_h - t \odot r_t \|
+        -\|\mathbf{h} \odot \mathbf{r}_h - \mathbf{t} \odot \mathbf{r}_t \|
+
+    where $\mathbf{h}, \mathbf{r}_h, \mathbf{r}_t, \mathbf{t} \in \mathbb{R}$ are representations for head entity,
+    relation-specific head projection, relation-specific tail projection, and tail entity, respectively.
+
+    .. note ::
+        :class:`pykeen.models.PairRE` additionally enforces $\|\mathbf{h}\| = \|\mathbf{t}\| = 1$.
 
     ---
     citation:
