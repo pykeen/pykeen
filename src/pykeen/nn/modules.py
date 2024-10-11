@@ -2160,28 +2160,69 @@ class KG2EInteraction(
 
 @parse_docdata
 class TransHInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
-    """A stateful module for the TransH interaction function.
+    r"""The norm-based TransH interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transh_interaction`
+    This model extends :class:`~pykeen.models.TransEInteraction` by applying the translation from head to tail entity
+    in a relation-specific hyperplane in order to address its inability to model one-to-many, many-to-one, and
+    many-to-many relations.
+
+    In TransH, each relation is represented by a hyperplane, or more specifically a normal vector of this hyperplane
+    $\mathbf{r}_{w} \in \mathbb{R}^d$ and a vector $\mathbf{r}_{d} \in \mathbb{R}^d$ that lies in the hyperplane.
+    To obtain a plausibility score, the head representation $\mathbf{h} \in \mathbb{R}^d$,
+    and the tail embedding $\mathbf{t} \in \mathbb{R}^d$ are first projected onto the relation-specific hyperplane:
+
+    .. math::
+
+        \mathbf{h}_{r} = \mathbf{h} - \mathbf{r}_{w}^T \mathbf{h} \mathbf{r}_w
+
+        \mathbf{t}_{r} = \mathbf{t} - \mathbf{r}_{w}^T \mathbf{t} \mathbf{r}_w
+
+    Then, the projected representations are used to compute the score as in
+    :class:`~pykeen.nn.modules.TransEInteraction`:
+
+    .. math::
+
+        -\|\textbf{h}_{r} + \textbf{r}_d - \textbf{t}_{r}\|_{p}^2
 
     ---
     citation:
         author: Wang
         year: 2014
-        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
+        link: https://aaai.org/papers/8870-knowledge-graph-embedding-by-translating-on-hyperplanes/
     """
 
     relation_shape = ("d", "d")
-    func = pkf.transh_interaction
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, w_r=r[1], d_r=r[0], t=t)
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        d_r, w_r = r
+        return negative_norm_of_sum(
+            # h projection to hyperplane
+            h,
+            -einsum("...i, ...i, ...j -> ...j", h, w_r, w_r),
+            # r
+            d_r,
+            # -t projection to hyperplane
+            -t,
+            einsum("...i, ...i, ...j -> ...j", t, w_r, w_r),
+            p=self.p,
+            power_norm=self.power_norm,
+        )
 
 
 @parse_docdata

@@ -18,7 +18,6 @@ __all__ = [
     "proje_interaction",
     "rescal_interaction",
     "simple_interaction",
-    "transh_interaction",
     "transformer_interaction",
     "triple_re_interaction",
     "tucker_interaction",
@@ -254,46 +253,6 @@ def toruse_interaction(
     d = d - torch.floor(d)
     d = torch.minimum(d, 1.0 - d)
     return negative_norm(d, p=p, power_norm=power_norm)
-
-
-def transh_interaction(
-    h: FloatTensor,
-    w_r: FloatTensor,
-    d_r: FloatTensor,
-    t: FloatTensor,
-    p: int,
-    power_norm: bool = False,
-) -> FloatTensor:
-    """Evaluate the DistMult interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param w_r: shape: (`*batch_dims`, dim)
-        The relation normal vector representations.
-    :param d_r: shape: (`*batch_dims`, dim)
-        The relation difference vector representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param p:
-        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
-    :param power_norm:
-        Whether to return $|x-y|_p^p$.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return negative_norm_of_sum(
-        # h projection to hyperplane
-        h,
-        -einsum("...i, ...i, ...j -> ...j", h, w_r, w_r),
-        # r
-        d_r,
-        # -t projection to hyperplane
-        -t,
-        einsum("...i, ...i, ...j -> ...j", t, w_r, w_r),
-        p=p,
-        power_norm=power_norm,
-    )
 
 
 def tucker_interaction(

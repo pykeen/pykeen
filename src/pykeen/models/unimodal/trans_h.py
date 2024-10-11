@@ -11,37 +11,20 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransHInteraction
 from ...regularizers import NormLimitRegularizer, OrthogonalityRegularizer, Regularizer
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "TransH",
 ]
 
 
-class TransH(ERModel):
+class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     r"""An implementation of TransH [wang2014]_.
 
-    This model extends :class:`pykeen.models.TransE` by applying the translation from head to tail entity in a
-    relational-specific hyperplane in order to address its inability to model one-to-many, many-to-one, and
-    many-to-many relations.
-
-    In TransH, each relation is represented by a hyperplane, or more specifically a normal vector of this hyperplane
-    $\textbf{w}_{r} \in \mathbb{R}^d$ and a vector $\textbf{d}_{r} \in \mathbb{R}^d$ that lies in the hyperplane.
-    To compute the plausibility of a triple $(h,r,t)\in \mathbb{K}$, the head embedding $\textbf{e}_h \in \mathbb{R}^d$
-    and the tail embedding $\textbf{e}_t \in \mathbb{R}^d$ are first projected onto the relation-specific hyperplane:
-
-    .. math::
-
-        \textbf{e'}_{h,r} = \textbf{e}_h - \textbf{w}_{r}^\top \textbf{e}_h \textbf{w}_r
-
-        \textbf{e'}_{t,r} = \textbf{e}_t - \textbf{w}_{r}^\top \textbf{e}_t \textbf{w}_r
-
-    where $\textbf{h}, \textbf{t} \in \mathbb{R}^d$. Then, the projected embeddings are used to compute the score
-    for the triple $(h,r,t)$:
-
-    .. math::
-
-        f(h, r, t) = -\|\textbf{e'}_{h,r} + \textbf{d}_r - \textbf{e'}_{t,r}\|_{p}^2
+    This model represents entities as $d$-dimensional vectors,
+    and relations as pair of a normal vector and translation inside the hyperplane.
+    They are stored in an :class:`~pykeen.nn.representation.Embedding`. The representations are then passed
+    to the :class:`~pykeen.nn.modules.TransHInteraction` function to obtain scores.
 
     .. seealso::
 
@@ -50,7 +33,7 @@ class TransH(ERModel):
     citation:
         author: Wang
         year: 2014
-        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
+        link: https://aaai.org/papers/8870-knowledge-graph-embedding-by-translating-on-hyperplanes/
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
