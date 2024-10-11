@@ -25,7 +25,6 @@ __all__ = [
     "proje_interaction",
     "rescal_interaction",
     "simple_interaction",
-    "se_interaction",
     "transd_interaction",
     "transh_interaction",
     "transformer_interaction",
@@ -231,42 +230,6 @@ def simple_interaction(
         min_, max_ = clamp
         scores = scores.clamp(min=min_, max=max_)
     return scores
-
-
-def se_interaction(
-    h: FloatTensor,
-    r_h: FloatTensor,
-    r_t: FloatTensor,
-    t: FloatTensor,
-    p: int,
-    power_norm: bool = False,
-) -> FloatTensor:
-    r"""Evaluate the Structured Embedding interaction function.
-
-    .. math ::
-        f(h, r, t) = -\|R_h h - R_t t\|
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r_h: shape: (`*batch_dims`, rel_dim, dim)
-        The relation-specific head projection.
-    :param r_t: shape: (`*batch_dims`, rel_dim, dim)
-        The relation-specific tail projection.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param p:
-        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
-    :param power_norm:
-        Whether to return the powered norm.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return negative_norm(
-        einsum("...rd,...d->...r", r_h, h) - einsum("...rd,...d->...r", r_t, t),
-        p=p,
-        power_norm=power_norm,
-    )
 
 
 def toruse_interaction(

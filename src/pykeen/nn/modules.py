@@ -1702,16 +1702,17 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 @parse_docdata
-class SEInteraction(
-    NormBasedInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor],
-        FloatTensor,
-    ],
-):
-    """A stateful module for the Structured Embedding (SE) interaction function.
+class SEInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
+    r"""The Structured Embedding (SE) interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.structured_embedding_interaction`
+    SE applies role- and relation-specific projection matrices
+    $\textbf{M}_{r}^{h}, \textbf{M}_{r}^{t} \in \mathbb{R}^{d \times d}$ to the head and tail
+    entities' representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$ before computing their distance.
+
+    .. math::
+
+        f(\textbf{h}, (\textbf{M}_{r}^{h}, \textbf{M}_{r}^{t}), \textbf{t})
+            = -\|\textbf{M}_{r}^{h} \textbf{h}  - \textbf{M}_{r}^{t} \textbf{t}\|_p
 
     ---
     name: Structured Embedding
@@ -1722,16 +1723,29 @@ class SEInteraction(
     """
 
     relation_shape = ("dd", "dd")
-    func = pkf.se_interaction
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, t=t, r_h=r[0], r_t=r[1])
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d, d)`` and ``(*batch_dims, d, d)``.
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        r_h, r_t = r
+        # projections
+        p_h = einsum("...rd,...d->...r", r_h, h)
+        p_t = einsum("...rd,...d->...r", r_t, t)
+        return negative_norm(p_h - p_t, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
