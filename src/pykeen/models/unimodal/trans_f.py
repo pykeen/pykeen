@@ -6,14 +6,14 @@ from typing import Any, ClassVar, Optional
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import TransFInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "TransF",
 ]
 
 
-class TransF(ERModel):
+class TransF(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of TransF from [feng2016]_.
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an
