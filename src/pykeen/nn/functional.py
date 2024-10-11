@@ -10,7 +10,7 @@ import torch
 from torch import broadcast_tensors, nn
 
 from ..typing import FloatTensor
-from ..utils import einsum, negative_norm, tensor_product, tensor_sum
+from ..utils import einsum, tensor_product, tensor_sum
 
 __all__ = [
     "multilinear_tucker_interaction",
@@ -20,7 +20,6 @@ __all__ = [
     "simple_interaction",
     "transformer_interaction",
     "tucker_interaction",
-    "um_interaction",
 ]
 
 
@@ -289,29 +288,6 @@ def tucker_interaction(
         )
         * t
     ).sum(dim=-1)
-
-
-def um_interaction(
-    h: FloatTensor,
-    t: FloatTensor,
-    p: int,
-    power_norm: bool = True,
-) -> FloatTensor:
-    """Evaluate the SimplE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param p:
-        The parameter p for selecting the norm.
-    :param power_norm:
-        Whether to return the powered norm instead.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return negative_norm(h - t, p=p, power_norm=power_norm)
 
 
 def quat_e_interaction(

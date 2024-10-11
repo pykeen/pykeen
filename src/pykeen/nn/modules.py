@@ -1854,12 +1854,21 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 @parse_docdata
-class UMInteraction(
-    NormBasedInteraction[FloatTensor, None, FloatTensor],
-):
-    """A stateful module for the UnstructuredModel interaction function.
+class UMInteraction(NormBasedInteraction[FloatTensor, tuple[()], FloatTensor]):
+    r"""The Unstructured Model (UM) interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.unstructured_model_interaction`
+    UM calculates the score as the negative distance between head and tail entities:
+
+    .. math::
+
+        -\|\textbf{h}  - \textbf{t}\|_p^2
+
+    It is appropriate for networks with a single relationship type that is undirected.
+
+    .. warning::
+
+        In UM, neither the relations nor the directionality are considered, so it can't distinguish between them.
+        However, it may serve as a baseline for comparison against relation-aware models.
 
     ---
     name: Unstructured Model
@@ -1872,27 +1881,24 @@ class UMInteraction(
     # shapes
     relation_shape: Sequence[str] = tuple()
 
-    func = pkf.um_interaction
+    def forward(self, h: FloatTensor, r: tuple[()], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    def __init__(self, p: int, power_norm: bool = True):
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r:
+            No relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
         """
-        Initialize the interaction module.
-
-        :param p:
-            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
-        :param power_norm:
-            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
-        """
-        super().__init__(p=p, power_norm=power_norm)
-
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, t=t)
+        return negative_norm(h - t, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
