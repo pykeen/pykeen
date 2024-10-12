@@ -1757,8 +1757,6 @@ class InitializerTestCase(unittest.TestCase):
     def test_model(self):
         """Test whether initializer can be used for a model."""
         triples_factory = generation.generate_triples_factory(num_entities=self.num_entities)
-        # actual number may be different...
-        self.num_entities = triples_factory.num_entities
         model = pykeen.models.ERModel(
             triples_factory=triples_factory,
             interaction=self.interaction,

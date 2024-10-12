@@ -31,6 +31,11 @@ def generate_triples(
         ],
         dim=1,
     )
+    # ensure that each entity & relation occurs at least once
+    idx = torch.randperm(num_triples)[:num_entities]
+    rv[idx, 0] = torch.arange(num_entities)
+    idx = torch.randperm(num_triples)[:num_relations]
+    rv[idx, 1] = torch.arange(num_relations)
 
     if compact:
         new_entity_id = {entity: i for i, entity in enumerate(sorted(get_entities(rv)))}
