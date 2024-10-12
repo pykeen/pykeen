@@ -10,8 +10,7 @@ import torch
 from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_dot
-from .sim import KG2E_SIMILARITIES
-from ..typing import FloatTensor, GaussianDistribution
+from ..typing import FloatTensor
 from ..utils import (
     clamp_norm,
     einsum,
@@ -23,9 +22,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "ermlpe_interaction",
-    "hole_interaction",
-    "kg2e_interaction",
     "multilinear_tucker_interaction",
     "mure_interaction",
     "ntn_interaction",
@@ -61,61 +57,6 @@ def _apply_optional_bn_to_tensor(
     return output_dropout(x)
 
 
-def ermlpe_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    mlp: nn.Module,
-) -> FloatTensor:
-    r"""Evaluate the ER-MLPE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param mlp:
-        The MLP.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
-    x = torch.cat(torch.broadcast_tensors(h, r), dim=-1)
-
-    # Predict t embedding, shape: (*batch_dims, d)
-    *batch_dims, dim = x.shape
-    x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
-
-    # dot product
-    return einsum("...d,...d->...", x, t)
-
-
-def hole_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the HolE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # composite: (*batch_dims, d)
-    composite = circular_correlation(h, t)
-
-    # inner product with relation embedding
-    return (r * composite).sum(dim=-1)
-
-
 def circular_correlation(
     a: FloatTensor,
     b: FloatTensor,
@@ -143,46 +84,6 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def kg2e_interaction(
-    h_mean: FloatTensor,
-    h_var: FloatTensor,
-    r_mean: FloatTensor,
-    r_var: FloatTensor,
-    t_mean: FloatTensor,
-    t_var: FloatTensor,
-    similarity: str = "KL",
-    exact: bool = True,
-) -> FloatTensor:
-    """Evaluate the KG2E interaction function.
-
-    :param h_mean: shape: (`*batch_dims`, d)
-        The head entity distribution mean.
-    :param h_var: shape: (`*batch_dims`, d)
-        The head entity distribution variance.
-    :param r_mean: shape: (`*batch_dims`, d)
-        The relation distribution mean.
-    :param r_var: shape: (`*batch_dims`, d)
-        The relation distribution variance.
-    :param t_mean: shape: (`*batch_dims`, d)
-        The tail entity distribution mean.
-    :param t_var: shape: (`*batch_dims`, d)
-        The tail entity distribution variance.
-    :param similarity:
-        The similarity measures for gaussian distributions. From {"KL", "EL"}.
-    :param exact:
-        Whether to leave out constants to accelerate similarity computation.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return KG2E_SIMILARITIES[similarity](
-        h=GaussianDistribution(mean=h_mean, diagonal_covariance=h_var),
-        r=GaussianDistribution(mean=r_mean, diagonal_covariance=r_var),
-        t=GaussianDistribution(mean=t_mean, diagonal_covariance=t_var),
-        exact=exact,
-    )
 
 
 def ntn_interaction(
