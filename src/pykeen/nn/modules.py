@@ -204,17 +204,15 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             return range(len(self.tail_entity_shape))
         return self._tail_indices
 
-    @classmethod
-    def get_dimensions(cls) -> set[str]:
+    @property
+    def dimensions(self) -> set[str]:
         """Get all the relevant dimension keys.
 
-        This draws from :data:`Interaction.entity_shape`, :data:`Interaction.relation_shape`, and in the case of
-        :class:`ConvEInteraction`, the :data:`Interaction.tail_entity_shape`.
+        This draws from :data:`Interaction.entity_shape`, and :data:`Interaction.relation_shape`.
 
-        :returns: a set of strings representting the dimension keys.
+        :returns: a set of strings representing the dimension keys.
         """
-        # TODO: cannot cover dynamic shapes, e.g., AutoSF
-        return set(itt.chain(cls.entity_shape, cls.relation_shape))
+        return set(itt.chain(self.entity_shape, self.relation_shape))
 
     @abstractmethod
     def forward(
