@@ -361,7 +361,7 @@ class ERModel(
             representations=representations,
             representations_kwargs=representations_kwargs,
             max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
-            shapes=self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape,
+            shapes=self.interaction.entity_shape if label == "entity" else self.interaction.relation_shape,
             label=label,
             **kwargs,
         )
@@ -654,8 +654,8 @@ class ERModel(
     ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
-        head_representations = [head_representations[i] for i in self.interaction.head_indices()]
-        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
+        head_representations = [head_representations[i] for i in self.interaction.head_indices]
+        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices]
         hr, rr, tr = (
             [representation(indices=indices) for representation in representations]
             for indices, representations in (
