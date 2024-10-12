@@ -177,14 +177,14 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     is_complex: ClassVar[bool] = False
 
     @property
-    def head_entity_shape(self) -> Sequence[str]:
+    def head_shape(self) -> Sequence[str]:
         """Return the symbolic shape for head entity representations."""
         if self._head_indices is None:
             return self.entity_shape
         return [self.entity_shape[i] for i in self._head_indices]
 
     @property
-    def tail_entity_shape(self) -> Sequence[str]:
+    def tail_shape(self) -> Sequence[str]:
         """Return the symbolic shape for tail entity representations."""
         if self._tail_indices is None:
             return self.entity_shape
@@ -201,7 +201,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     def tail_indices(self) -> Sequence[int]:
         """Return the entity representation indices used for the tail representations."""
         if self._tail_indices is None:
-            return range(len(self.tail_entity_shape))
+            return range(len(self.tail_shape))
         return self._tail_indices
 
     @property
