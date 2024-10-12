@@ -15,7 +15,6 @@ from typing import (
     Callable,
     ClassVar,
     Generic,
-    cast,
 )
 
 import more_itertools
@@ -158,10 +157,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The symbolic shapes for entity representations
     entity_shape: Sequence[str] = ("d",)
 
-    #: The symbolic shapes for entity representations for tail entities, if different.
-    #: Otherwise, the entity_shape is used for head & tail entities
-    _tail_entity_shape: Sequence[str] | None = None
-
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
 
@@ -171,6 +166,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     # if the interaction function's tail parameter should only receive a subset of entity representations
     _tail_indices: Sequence[int] | None = None
 
+    # TODO: does not seem to be used
     #: the interaction's value range (for unrestricted input)
     value_range: ClassVar[ValueRange] = ValueRange()
 
@@ -181,48 +177,42 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     is_complex: ClassVar[bool] = False
 
     @property
-    def tail_entity_shape(self) -> Sequence[str]:
-        """Return the symbolic shape for tail entity representations."""
-        if self._tail_entity_shape is None:
+    def head_shape(self) -> Sequence[str]:
+        """Return the symbolic shape for head entity representations."""
+        if self._head_indices is None:
             return self.entity_shape
-        return self._tail_entity_shape
+        return [self.entity_shape[i] for i in self._head_indices]
 
+    @property
+    def tail_shape(self) -> Sequence[str]:
+        """Return the symbolic shape for tail entity representations."""
+        if self._tail_indices is None:
+            return self.entity_shape
+        return [self.entity_shape[i] for i in self._tail_indices]
+
+    @property
     def head_indices(self) -> Sequence[int]:
         """Return the entity representation indices used for the head representations."""
         if self._head_indices is None:
-            return list(range(len(self.entity_shape)))
+            return range(len(self.entity_shape))
         return self._head_indices
 
+    @property
     def tail_indices(self) -> Sequence[int]:
         """Return the entity representation indices used for the tail representations."""
         if self._tail_indices is None:
-            return list(range(len(self.tail_entity_shape)))
+            return range(len(self.tail_shape))
         return self._tail_indices
 
-    def full_entity_shapes(self) -> Sequence[str]:
-        """Return all entity shapes (head & tail)."""
-        shapes: list[str | None] = [None] * (max(itt.chain(self.head_indices(), self.tail_indices())) + 1)
-        for hi, hs in zip(self.head_indices(), self.entity_shape):
-            shapes[hi] = hs
-        for ti, ts in zip(self.tail_indices(), self.tail_entity_shape):
-            if shapes[ti] is not None and ts != shapes[ti]:
-                raise ValueError("Shape conflict.")
-            shapes[ti] = ts
-        if None in shapes:
-            raise AssertionError("Unused shape.")
-        return cast(list[str], shapes)
+    @property
+    def dimensions(self) -> set[str]:
+        """Get all the relevant dimension keys.
 
-    @classmethod
-    def get_dimensions(cls) -> set[str]:
-        """Get all of the relevant dimension keys.
+        This draws from :data:`Interaction.entity_shape`, and :data:`Interaction.relation_shape`.
 
-        This draws from :data:`Interaction.entity_shape`, :data:`Interaction.relation_shape`, and in the case of
-        :class:`ConvEInteraction`, the :data:`Interaction.tail_entity_shape`.
-
-        :returns: a set of strings representting the dimension keys.
+        :returns: a set of strings representing the dimension keys.
         """
-        # TODO: cannot cover dynamic shapes, e.g., AutoSF
-        return set(itt.chain(cls.entity_shape, cls._tail_entity_shape or set(), cls.relation_shape))
+        return set(itt.chain(self.entity_shape, self.relation_shape))
 
     @abstractmethod
     def forward(
@@ -808,7 +798,9 @@ class ConvEInteraction(Interaction[FloatTensor, FloatTensor, tuple[FloatTensor, 
     """
 
     # vector & scalar offset
-    _tail_entity_shape = ("d", "")
+    entity_shape = ("d", "")
+    # the offset is only used for tails
+    _head_indices = (0,)
 
     #: The head-relation encoder operating on 2D "images"
     hr2d: nn.Module
@@ -2232,7 +2224,8 @@ class MonotonicAffineTransformationInteraction(
         # forward entity/relation shapes
         self.entity_shape = base.entity_shape
         self.relation_shape = base.relation_shape
-        self._tail_entity_shape = base._tail_entity_shape
+        self._head_indices = base._head_indices
+        self._tail_indices = base._tail_indices
 
         # The parameters of the affine transformation: bias
         self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
@@ -2714,7 +2707,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
         github: facebookresearch/kbc
     """
 
-    entity_shape = ("kd",)
+    entity_shape = ("kd", "kd")
     relation_shape = ("kd",)
     _head_indices = (0,)
     _tail_indices = (1,)
