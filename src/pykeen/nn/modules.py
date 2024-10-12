@@ -2707,7 +2707,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
         github: facebookresearch/kbc
     """
 
-    entity_shape = ("kd",)
+    entity_shape = ("kd", "kd")
     relation_shape = ("kd",)
     _head_indices = (0,)
     _tail_indices = (1,)
