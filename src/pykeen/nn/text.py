@@ -110,7 +110,7 @@ class TextEncoder(nn.Module):
         :returns: shape: (len(labels), dim)
             a tensor representing the encodings for all labels
         """
-        determine_maximum_batch_size(
+        batch_size = determine_maximum_batch_size(
             batch_size=batch_size, device=get_preferred_device(self), maximum_batch_size=len(labels)
         )
         return _encode_all_memory_utilization_optimized(encoder=self, labels=labels, batch_size=batch_size).detach()
