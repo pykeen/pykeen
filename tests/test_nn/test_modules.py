@@ -13,6 +13,7 @@ import unittest_templates
 from torch import nn
 
 import pykeen.nn.modules
+import pykeen.nn.sim
 import pykeen.utils
 from pykeen.models.unimodal.quate import quaternion_normalizer
 from pykeen.typing import Representation, Sign
@@ -45,28 +46,28 @@ class ConvETests(cases.InteractionTestCase):
         embedding_dim=cases.InteractionTestCase.dim,
     )
 
-    def _exp_score(
-        self,
-        embedding_height,
-        embedding_width,
-        h,
-        hr1d,
-        hr2d,
-        input_channels,
-        r,
-        t,
-        t_bias,
-    ) -> torch.FloatTensor:
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        t, t_bias = t
         x = torch.cat(
             [
-                h.view(1, input_channels, embedding_height, embedding_width),
-                r.view(1, input_channels, embedding_height, embedding_width),
+                h.view(
+                    1,
+                    self.instance.shape_info.input_channels,
+                    self.instance.shape_info.image_height,
+                    self.instance.shape_info.image_width,
+                ),
+                r.view(
+                    1,
+                    self.instance.shape_info.input_channels,
+                    self.instance.shape_info.image_height,
+                    self.instance.shape_info.image_width,
+                ),
             ],
             dim=2,
         )
-        x = hr2d(x)
+        x = self.instance.hr2d(x)
         x = x.view(-1, numpy.prod(x.shape[-3:]))
-        x = hr1d(x)
+        x = self.instance.hr1d(x)
         return (x.view(1, -1) * t.view(1, -1)).sum() + t_bias
 
 
@@ -79,13 +80,13 @@ class ConvKBTests(cases.InteractionTestCase):
         num_filters=2 * cases.InteractionTestCase.dim - 1,
     )
 
-    def _exp_score(self, h, r, t, conv, activation, hidden_dropout, linear) -> torch.FloatTensor:  # noqa: D102
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         # W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
         # prepare conv input (N, C, H, W)
         x = torch.stack([x.view(-1) for x in (h, r, t)], dim=1).view(1, 1, -1, 3)
-        x = conv(x)
-        x = hidden_dropout(activation(x))
-        return linear(x.view(1, -1))
+        x = self.instance.conv(x)
+        x = self.instance.hidden_dropout(self.instance.activation(x))
+        return self.instance.linear(x.view(1, -1))
 
 
 class CPInteractionTests(cases.InteractionTestCase):
@@ -113,9 +114,9 @@ class CrossETests(cases.InteractionTestCase):
         r, c_r = r
         instance = self.instance
         assert isinstance(instance, pykeen.nn.modules.CrossEInteraction)
-        bias = instance.combination_bias
-        activation = instance.combination_activation
-        dropout = instance.combination_dropout
+        bias = instance.bias
+        activation = instance.activation
+        dropout = instance.dropout
         return (dropout(activation(h * c_r + h * r * c_r + bias)) * t).sum()
 
 
@@ -261,8 +262,11 @@ class KG2ETests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.KG2EInteraction
 
-    def _exp_score(self, exact, h_mean, h_var, r_mean, r_var, similarity, t_mean, t_var):
-        assert similarity == "KL"
+    def _exp_score(self, h, r, t):
+        assert isinstance(self.instance.similarity, pykeen.nn.sim.NegativeKullbackLeiblerDivergence)
+        h_mean, h_var = h
+        r_mean, r_var = r
+        t_mean, t_var = t
         e_mean, e_var = h_mean - t_mean, h_var + t_var
         p = torch.distributions.MultivariateNormal(loc=e_mean, covariance_matrix=torch.diag(e_var))
         q = torch.distributions.MultivariateNormal(loc=r_mean, covariance_matrix=torch.diag(r_var))

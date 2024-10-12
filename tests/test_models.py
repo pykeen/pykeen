@@ -28,6 +28,7 @@ from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
+from tests.test_batch_size_reduction import MockModel
 
 SKIP_MODULES = {
     Model,
@@ -38,6 +39,7 @@ SKIP_MODULES = {
     InductiveERModel,
     FixedModel,
     EvaluationOnlyModel,
+    MockModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
 SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
