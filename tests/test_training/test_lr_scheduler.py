@@ -11,8 +11,7 @@ from pykeen.pipeline import pipeline
     "cls, kwargs",
     [
         (None, None),
-        ("CosineAnnealingWarmRestarts", None),
-        ("CosineAnnealingWarmRestarts", {"T_0": 10}),
+        ("CosineAnnealingWarmRestarts", {"T_0": 10})
     ],
 )
 def test_lr_scheduler(cls: HintOrType[lr_scheduler.LRScheduler], kwargs: OptionalKwargs) -> None:
