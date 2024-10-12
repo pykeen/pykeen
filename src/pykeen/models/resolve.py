@@ -134,7 +134,7 @@ def make_model_cls(
 
     entity_representations_kwargs, relation_representations_kwargs = _normalize_representation_kwargs(
         dimensions=dimensions,
-        interaction=interaction_instance,
+        interaction=interaction_instance, # type: ignore
         entity_representations_kwargs=entity_representations_kwargs,
         relation_representations_kwargs=relation_representations_kwargs,
     )
