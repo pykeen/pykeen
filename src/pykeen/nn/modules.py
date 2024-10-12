@@ -189,7 +189,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     @property
     def tail_shape(self) -> Sequence[str]:
         """Return the symbolic shape for tail entity representations."""
-        # TODO: we should have a single Sequence of shapes, and use head_indices/tail_indices to select from that
         if self._tail_indices is None:
             return self.entity_shape
         return [self.entity_shape[i] for i in self._tail_indices]
