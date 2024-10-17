@@ -1231,11 +1231,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path)
-        if checkpoint["checksum"] != self.checksum:
-            raise CheckpointMismatchError(
-                f"The checkpoint file '{path}' that was provided already exists, but seems to be "
-                f"from a different training loop setup.",
-            )
+        
         # Cuda requires its own random state, which can only be set when a cuda device is available
         torch_cuda_random_state = checkpoint["torch_cuda_random_state"]
         if torch_cuda_random_state is not None and torch.cuda.is_available():
@@ -1299,5 +1295,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         np.random.set_state(checkpoint["np_random_state"])
         torch.random.set_rng_state(checkpoint["torch_random_state"])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
-
+        if checkpoint["checksum"] != self.checksum:
+            raise CheckpointMismatchError(
+                f"The checkpoint file '{path}' that was provided already exists, but seems to be "
+                f"from a different training loop setup.",
+            )
         return best_epoch_model_file_path, best_epoch
