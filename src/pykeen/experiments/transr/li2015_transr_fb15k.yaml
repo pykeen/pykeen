@@ -19,6 +19,7 @@ pipeline:
     relation_initializer: xavier_uniform_norm
     scoring_fct_norm: 1
     power_norm: false
+    max_projection_norm: 1.0
   negative_sampler: bernoulli
   negative_sampler_kwargs:
     num_negs_per_pos: 1
