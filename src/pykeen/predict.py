@@ -694,8 +694,8 @@ class TopKScoreConsumer(ScoreConsumer):
         top_triples = torch.stack(triples, dim=-1)
 
         # append to global top scores
-        self.scores = torch.cat([self.scores, top_scores])
-        self.result = torch.cat([self.result, top_triples])
+        self.scores = torch.cat([self.scores, top_scores.to(device=self.scores.device)])
+        self.result = torch.cat([self.result, top_triples.to(device=self.result.device)])
 
         # reduce size if necessary
         if self.result.shape[0] > self.k:
