@@ -1460,14 +1460,16 @@ class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
         """
         Initialize the interaction module.
 
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
         :param p:
             The $p$ value of the norm to use.
         :param power_norm:
             Whether to use the $p$-th power of the $p$-norm.
         :param max_projection_norm:
             The maximum norm to be clamped after projection.
-
-        ``p`` and ``power_norm`` are passed to :class:`~pykeen.nn.modules.NormBasedInteraction`.
         """
         super().__init__(p=p, power_norm=power_norm)
         self.max_projection_norm = max_projection_norm
@@ -1876,6 +1878,10 @@ class UMInteraction(NormBasedInteraction[FloatTensor, tuple[()], FloatTensor]):
     def __init__(self, p: int, power_norm: bool = True):
         """Initialize the norm-based interaction function.
 
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
         :param p:
             The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
@@ -1923,6 +1929,10 @@ class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
     def __init__(self, p: int = 2, power_norm: bool = False):
         """
         Initialize the interaction module.
+
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
         :param p:
             the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
@@ -2662,24 +2672,25 @@ class BoxEInteraction(
         tuple[FloatTensor, FloatTensor],
     ]
 ):
-    """
+    r"""
     The BoxE interaction from [abboud2020]_.
 
     Entities are represented by two $d$-dimensional vectors describing the *base position* as well
-    as the translational bump, which translates all the entities co-occuring in a fact with this entity
+    as the *translational bump*, which translates all the entities co-occuring in a fact with this entity
     from their base positions to their final embeddings, called "bumping".
 
     Relations are represented as a fixed number of hyper-rectangles corresponding to the relation's arity.
     Since we are only considering single-hop link predition here, the arity is always two, i.e., one box
     for the head position and another one for the tail position. There are different possibilities to
     parametrize a hyper-rectangle, where the most common may be its description as the coordinate of to
-    opposing vertices. BoxE suggests a different parametrization:
+    opposing vertices. BoxE suggests a different parametrization for each box by
 
-    - each box has a base position given by its center
-    - each box has an extent in each dimension. This size is further factored in
+    - a base position given by its center, a $d$-dimensional vector $\mathbf{c} \in \mathbb{R}^d$
+    - an extent in each dimension. This size is further factored in
 
-      - a scalar global scaling factor
-      - a normalized extent in each dimension, i.e., the extents sum to one
+      - a scalar global scalar scaling factor, $s \in \mathbb{R}$
+      - a normalized extent in each dimension, i.e., the extents sum to one, given as $\mathbf{e} \in \mathbb{R}^d$,
+        with $\|\mathbf{e}\| = 1$ and $0 \leq \mathbf{e}_i$ for all $i$.
 
     ---
     citation:
@@ -2696,6 +2707,10 @@ class BoxEInteraction(
         r"""
         Instantiate the interaction module.
 
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
         :param tanh_map:
             Should the hyperbolic tangent be applied to all representations prior to model scoring?
         :param p:
@@ -2706,38 +2721,50 @@ class BoxEInteraction(
         super().__init__(p=p, power_norm=power_norm)
         self.tanh_map = tanh_map
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
+    def forward(
+        self,
         h: tuple[FloatTensor, FloatTensor],
         r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         t: tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
-        h_pos, h_bump = h
-        t_pos, t_bump = t
-        return dict(
-            # head position and bump
-            h_pos=h_pos,
-            h_bump=h_bump,
-            # relation box: head
-            rh_base=rh_base,
-            rh_delta=rh_delta,
-            rh_size=rh_size,
-            # relation box: tail
-            rt_base=rt_base,
-            rt_delta=rt_delta,
-            rt_size=rt_size,
-            # tail position and bump
-            t_pos=t_pos,
-            t_bump=t_bump,
-        )
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        state = super()._prepare_state_for_functional()
-        state["tanh_map"] = self.tanh_map
-        return state
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``, ``(*batch_dims, d)``, ``(*batch_dims, s)``,
+            ``(*batch_dims, d)``, ``(*batch_dims, d)``, and ``(*batch_dims, s)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # relation box head; relation box tail
+        rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
+        # head position and bump
+        h_pos, h_bump = h
+        # tail position and bump
+        t_pos, t_bump = t
+
+        return sum(
+            BoxEInteraction.boxe_kg_arity_position_score(
+                entity_pos=entity_pos,
+                other_entity_bump=other_entity_pos,
+                relation_box=BoxEInteraction.compute_box(base=base, delta=delta, size=size),
+                tanh_map=self.tanh_map,
+                p=self.p,
+                power_norm=self.power_norm,
+            )
+            for entity_pos, other_entity_pos, base, delta, size in (
+                (h_pos, t_bump, rh_base, rh_delta, rh_size),
+                (t_pos, h_bump, rt_base, rt_delta, rt_size),
+            )
+        )
 
     @staticmethod
     def product_normalize(x: FloatTensor, dim: int = -1) -> FloatTensor:
@@ -2903,79 +2930,6 @@ class BoxEInteraction(
         box_high = torch.maximum(first_bound, second_bound)
 
         return box_low, box_high
-
-    @staticmethod
-    def func(
-        # head
-        h_pos: FloatTensor,
-        h_bump: FloatTensor,
-        # relation box: head
-        rh_base: FloatTensor,
-        rh_delta: FloatTensor,
-        rh_size: FloatTensor,
-        # relation box: tail
-        rt_base: FloatTensor,
-        rt_delta: FloatTensor,
-        rt_size: FloatTensor,
-        # tail
-        t_pos: FloatTensor,
-        t_bump: FloatTensor,
-        # power norm
-        tanh_map: bool = True,
-        p: int = 2,
-        power_norm: bool = False,
-    ) -> FloatTensor:
-        """
-        Evaluate the BoxE interaction function from [abboud2020]_.
-
-        :param h_pos: shape: (`*batch_dims`, d)
-            the head entity position
-        :param h_bump: shape: (`*batch_dims`, d)
-            the head entity bump
-
-        :param rh_base: shape: (`*batch_dims`, d)
-            the relation-specific head box base position
-        :param rh_delta: shape: (`*batch_dims`, d)
-            # the relation-specific head box base shape (normalized to have a volume of 1):
-        :param rh_size: shape: (`*batch_dims`, 1)
-            the relation-specific head box size (a scalar)
-
-        :param rt_base: shape: (`*batch_dims`, d)
-            the relation-specific tail box base position
-        :param rt_delta: shape: (`*batch_dims`, d)
-            # the relation-specific tail box base shape (normalized to have a volume of 1):
-        :param rt_size: shape: (`*batch_dims`, d)
-            the relation-specific tail box size
-
-        :param t_pos: shape: (`*batch_dims`, d)
-            the tail entity position
-        :param t_bump: shape: (`*batch_dims`, d)
-            the tail entity bump
-
-        :param tanh_map:
-            whether to apply the tanh mapping
-        :param p:
-            the order of the norm to apply
-        :param power_norm:
-            whether to use the p-th power of the p-norm instead
-
-        :return: shape: batch_dims
-            The scores.
-        """
-        return sum(
-            BoxEInteraction.boxe_kg_arity_position_score(
-                entity_pos=entity_pos,
-                other_entity_bump=other_entity_pos,
-                relation_box=BoxEInteraction.compute_box(base=base, delta=delta, size=size),
-                tanh_map=tanh_map,
-                p=p,
-                power_norm=power_norm,
-            )
-            for entity_pos, other_entity_pos, base, delta, size in (
-                (h_pos, t_bump, rh_base, rh_delta, rh_size),
-                (t_pos, h_bump, rt_base, rt_delta, rt_size),
-            )
-        )
 
 
 @parse_docdata
