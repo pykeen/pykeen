@@ -2750,20 +2750,23 @@ class BoxEInteraction(
         h_pos, h_bump = h
         # tail position and bump
         t_pos, t_bump = t
-
-        return sum(
-            BoxEInteraction.boxe_kg_arity_position_score(
-                entity_pos=entity_pos,
-                other_entity_bump=other_entity_pos,
-                relation_box=BoxEInteraction.compute_box(base=base, delta=delta, size=size),
-                tanh_map=self.tanh_map,
-                p=self.p,
-                power_norm=self.power_norm,
-            )
-            for entity_pos, other_entity_pos, base, delta, size in (
-                (h_pos, t_bump, rh_base, rh_delta, rh_size),
-                (t_pos, h_bump, rt_base, rt_delta, rt_size),
-            )
+        # head score
+        return BoxEInteraction.boxe_kg_arity_position_score(
+            # head box score
+            entity_pos=h_pos,
+            other_entity_bump=t_bump,
+            relation_box=BoxEInteraction.compute_box(base=rh_base, delta=rh_delta, size=rh_size),
+            tanh_map=self.tanh_map,
+            p=self.p,
+            power_norm=self.power_norm,
+        ) + BoxEInteraction.boxe_kg_arity_position_score(
+            # tail box score
+            entity_pos=t_pos,
+            other_entity_bump=h_bump,
+            relation_box=BoxEInteraction.compute_box(base=rt_base, delta=rt_delta, size=rt_size),
+            tanh_map=self.tanh_map,
+            p=self.p,
+            power_norm=self.power_norm,
         )
 
     @staticmethod
