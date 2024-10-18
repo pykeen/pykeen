@@ -16,6 +16,7 @@ pipeline:
     entity_initializer: xavier_uniform
     relation_initializer: xavier_uniform
     scoring_fct_norm: 1
+    power_norm: false
   negative_sampler: bernoulli
   negative_sampler_kwargs:
     num_negs_per_pos: 1

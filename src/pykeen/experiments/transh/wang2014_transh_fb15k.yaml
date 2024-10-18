@@ -7,6 +7,7 @@ pipeline:
     predict_with_sigmoid: false
     embedding_dim: 100
     scoring_fct_norm: 2
+    power_norm: false
     entity_initializer: "xavier_uniform"
     regularizer: "NormLimit"
     regularizer_kwargs:
