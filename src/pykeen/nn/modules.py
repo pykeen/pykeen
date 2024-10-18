@@ -1465,9 +1465,10 @@ class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
             :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
         :param p:
-            The $p$ value of the norm to use.
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            Whether to use the $p$-th power of the $p$-norm.
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         :param max_projection_norm:
             The maximum norm to be clamped after projection.
         """
@@ -1935,9 +1936,10 @@ class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
             :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
         :param p:
-            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
 
@@ -2025,9 +2027,10 @@ class TransDInteraction(
             :class:`~pykeen.nn.modules.NormBasedInteraction`
 
         :param p:
-            The $p$ value of the norm to use.
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            Whether to use the $p$-th power of the $p$-norm.
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
 
@@ -2716,9 +2719,10 @@ class BoxEInteraction(
             restricts the embedding space to the range [-1, 1], and thus this map implicitly
             regularizes the space to prevent loss reduction by growing boxes arbitrarily large.
         :param p:
-            the order of the norm
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the p-th power of the norm instead
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
         self.tanh_map = tanh_map
@@ -2867,9 +2871,10 @@ class BoxEInteraction(
         :param tanh_map:
             whether to apply the tanh map regularizer
         :param p:
-            The norm order to apply across dimensions to compute overall position score.
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the powered norm instead
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
 
         :return: shape: ``*s``
             Arity-position score for the entity relative to the target relation box. Larger is better. The shape is the
@@ -3165,9 +3170,9 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, F
         :param u:
             Rhe relation factor offset. Can be set to `None` (or 0) to disable it.
         :param p:
-            The norm used with :func:`torch.linalg.vector_norm`.
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            Whether to use the $p$-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
