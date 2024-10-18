@@ -509,19 +509,66 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 
 
 @parse_docdata
-class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateless module for the TransF interaction function.
+class TransFInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-less norm-based TransF interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
+    It is given by
+
+    .. math ::
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) =
+            (\mathbf{h} + \mathbf{r})^T \mathbf{t} + \mathbf{h}^T (\mathbf{r} - \mathbf{t})
+
+    for head entity, relation, and tail entity representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$.
+    The interaction function can be simplified as
+
+    .. math ::
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) &=&
+            (\mathbf{h} + \mathbf{r})^T \mathbf{t} + \mathbf{h}^T (\mathbf{t} - \mathbf{r}) \\
+            &=&
+            \langle \mathbf{h}, \mathbf{t}\rangle
+            + \langle \mathbf{r}, \mathbf{t}\rangle
+            + \langle \mathbf{h}, \mathbf{t}\rangle
+            - \langle \mathbf{h}, \mathbf{r}\rangle \\
+            &=&
+            2 \cdot \langle \mathbf{h}, \mathbf{t}\rangle
+            + \langle \mathbf{r}, \mathbf{t}\rangle
+            - \langle \mathbf{h}, \mathbf{r}\rangle
+
+    .. note ::
+        This is the *balanced* variant from the paper.
+
+    .. todo ::
+        Implement the unbalanced version, too:
+        $f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = (\mathbf{h} + \mathbf{r})^T \mathbf{t}$
 
     ---
     citation:
         author: Feng
         year: 2016
         link: https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887
+        arxiv: 1505.05253
     """
 
-    func = pkf.transf_interaction
+    # TODO: implement the unbalanced variant from the paper: f(h, r, t) = (h + r)^T t
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return tensor_sum(2 * batched_dot(h, t), batched_dot(r, t), -batched_dot(h, r))
 
 
 @parse_docdata
