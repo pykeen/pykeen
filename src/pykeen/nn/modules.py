@@ -10,12 +10,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from operator import itemgetter
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Generic,
-)
+from typing import Any, Callable, ClassVar, Generic, cast, overload
 
 import more_itertools
 import numpy
@@ -56,7 +51,6 @@ from ..utils import (
     tensor_product,
     tensor_sum,
     unpack_singletons,
-    upgrade_to_sequence,
 )
 
 # TODO: split file into multiple smaller ones?
@@ -144,11 +138,19 @@ def parallel_slice_batches(
         yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:])))  # type: ignore
 
 
-def parallel_unsqueeze(x: Representation, dim: int) -> Representation:
+@overload
+def parallel_unsqueeze(x: Sequence[FloatTensor], dim: int) -> Sequence[FloatTensor]: ...
+
+
+@overload
+def parallel_unsqueeze(x: FloatTensor, dim: int) -> FloatTensor: ...
+
+
+def parallel_unsqueeze(x: FloatTensor | Sequence[FloatTensor], dim: int) -> FloatTensor | Sequence[FloatTensor]:
     """Unsqueeze all representations along the given dimension."""
-    xs: Sequence[FloatTensor] = upgrade_to_sequence(x)
-    xs = [xx.unsqueeze(dim=dim) for xx in xs]
-    return xs[0] if len(xs) == 1 else xs
+    if not isinstance(x, Sequence):
+        return x.unsqueeze(dim=dim)
+    return cast(Sequence[FloatTensor], [xx.unsqueeze(dim=dim) for xx in x])
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
