@@ -72,9 +72,10 @@ class BoxE(ERModel):
             restricts the embedding space to the range [-1, 1], and thus this map implicitly
             regularizes the space to prevent loss reduction by growing boxes arbitrarily large.
         :param p:
-            order of norm in score computation
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the p-th power of the norm instead
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
 
         :param entity_initializer:
             Entity initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`

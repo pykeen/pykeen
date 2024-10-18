@@ -56,8 +56,11 @@ class MuRE(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
 
         :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
 
-        :param p: The $l_p$ norm. Defaults to 2.
-        :param power_norm: Should the power norm be used? Defaults to true.
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
 
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.normal_`
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer

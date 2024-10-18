@@ -89,7 +89,8 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         :param max_projection_norm:
             The maximum norm to be clamped after projection.
 
-        :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+        :param scoring_fct_norm:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.

@@ -56,7 +56,8 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
 
-        :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+        :param scoring_fct_norm:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.

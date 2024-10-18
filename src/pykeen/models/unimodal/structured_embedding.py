@@ -54,7 +54,9 @@ class SE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
         r"""Initialize SE.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        :param scoring_fct_norm: The $l_p$ norm. Usually 1 for SE.
+
+        :param scoring_fct_norm:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.

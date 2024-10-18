@@ -72,8 +72,11 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
 
         :param embedding_dim: The entity embedding dimension $d$.
 
-        :param p: The $l_p$ norm.
-        :param power_norm: Should the power norm be used?
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
 
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
