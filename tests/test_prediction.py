@@ -334,7 +334,7 @@ def test_get_targets(
     if exp_tensor is None:
         assert ids_tensor is None
     else:
-        assert (ids_tensor == exp_tensor).all()
+        assert (ids_tensor == exp_tensor.to(device=device)).all()
 
 
 def _iter_predict_target_inputs() -> (
