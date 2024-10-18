@@ -2712,7 +2712,9 @@ class BoxEInteraction(
             :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
         :param tanh_map:
-            Should the hyperbolic tangent be applied to all representations prior to model scoring?
+            Whether to use tanh mapping after BoxE computation (defaults to true). The hyperbolic tangent mapping
+            restricts the embedding space to the range [-1, 1], and thus this map implicitly
+            regularizes the space to prevent loss reduction by growing boxes arbitrarily large.
         :param p:
             the order of the norm
         :param power_norm:
