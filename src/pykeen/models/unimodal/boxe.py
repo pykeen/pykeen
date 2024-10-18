@@ -10,14 +10,20 @@ from ...losses import NSSALoss
 from ...models import ERModel
 from ...nn.init import uniform_norm_
 from ...nn.modules import BoxEInteraction
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "BoxE",
 ]
 
 
-class BoxE(ERModel):
+class BoxE(
+    ERModel[
+        tuple[FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor],
+    ]
+):
     r"""An implementation of BoxE from [abboud2020]_.
 
     It combines a number of :class:`~pykeen.nn.representation.Embedding` for both entities and relation representations
