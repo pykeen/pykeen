@@ -9,7 +9,6 @@ from __future__ import annotations
 import torch
 from torch import broadcast_tensors, nn
 
-from .compute_kernel import batched_dot
 from ..typing import FloatTensor
 from ..utils import (
     clamp_norm,
@@ -32,7 +31,6 @@ __all__ = [
     "se_interaction",
     "transd_interaction",
     "transe_interaction",
-    "transf_interaction",
     "transh_interaction",
     "transr_interaction",
     "transformer_interaction",
@@ -378,26 +376,6 @@ def transe_interaction(
         The scores.
     """
     return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
-
-
-def transf_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the TransF interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return batched_dot(h + r, t) + batched_dot(h, t - r)
 
 
 def transh_interaction(
