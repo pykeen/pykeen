@@ -9,7 +9,6 @@ from __future__ import annotations
 import torch
 from torch import broadcast_tensors, nn
 
-from .compute_kernel import batched_dot
 from ..typing import FloatTensor
 from ..utils import (
     clamp_norm,
