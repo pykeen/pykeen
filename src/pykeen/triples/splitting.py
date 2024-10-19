@@ -81,9 +81,6 @@ def _split_triples(
 
     :return:
         The splitted triples.
-
-    :raises ValueError:
-        If the given sizes are different from the number of triples in mapped triples
     """
     triples_groups = _random_split_tensor(mapped_triples, sizes=sizes, generator=generator)
     logger.info(
@@ -479,6 +476,7 @@ splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=
 
 def split(
     mapped_triples: MappedTriples,
+    *,
     ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
     randomize_cleanup: bool = False,
@@ -540,14 +538,11 @@ def _entity_mask(mapped_triples: torch.Tensor, heads: torch.Tensor, tails: torch
 
 def split_semi_inductive(
     mapped_triples: MappedTriples,
+    *,
     ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
-    """
-    Create a semi-inductive split.
-
-    See also: https://arxiv.org/abs/2107.04894
-    """
+    """Create a semi-inductive split, as defined by https://arxiv.org/abs/2107.04894."""
     # normalize input
     generator = ensure_torch_random_state(random_state=random_state)
     ratios = normalize_ratios(ratios=ratios)
@@ -578,15 +573,12 @@ def split_semi_inductive(
 
 def split_fully_inductive(
     mapped_triples: MappedTriples,
+    *,
     entity_split_ratio: float = 0.5,
     evaluation_triples_ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
-    """
-    Create a fully-inductive split.
-
-    See also: https://arxiv.org/abs/2107.04894
-    """
+    """Create a fully-inductive split, as defined by https://arxiv.org/abs/2107.04894."""
     # normalize input
     generator = ensure_torch_random_state(random_state=random_state)
     evaluation_triples_ratios = normalize_ratios(ratios=evaluation_triples_ratios)
