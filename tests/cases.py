@@ -487,8 +487,7 @@ class InteractionTestCase(
                 for weight_shape in weight_shapes
             )
             for prefix_shape, weight_shapes in zip(
-                shapes,
-                [self.instance.entity_shape, self.instance.relation_shape, self.instance.tail_entity_shape],
+                shapes, [self.instance.head_shape, self.instance.relation_shape, self.instance.tail_shape]
             )
         )
         return unpack_singletons(*result)
@@ -1757,8 +1756,6 @@ class InitializerTestCase(unittest.TestCase):
     def test_model(self):
         """Test whether initializer can be used for a model."""
         triples_factory = generation.generate_triples_factory(num_entities=self.num_entities)
-        # actual number may be different...
-        self.num_entities = triples_factory.num_entities
         model = pykeen.models.ERModel(
             triples_factory=triples_factory,
             interaction=self.interaction,
