@@ -2123,7 +2123,7 @@ class NTNInteraction(
         super().__init__()
         if activation is None:
             activation = nn.Tanh()
-        self.non_linearity = activation_resolver.make(activation, activation_kwargs)
+        self.activation = activation_resolver.make(activation, activation_kwargs)
 
     def forward(
         self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], t: FloatTensor
@@ -2148,7 +2148,7 @@ class NTNInteraction(
         w, vh, vt, b, u = r
         return batched_dot(
             u,
-            self.non_linearity(
+            self.activation(
                 tensor_sum(
                     einsum("...d,...kde,...e->...k", h, w, t),
                     einsum("...d, ...kd->...k", h, vh),
