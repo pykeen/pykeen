@@ -2144,17 +2144,17 @@ class NTNInteraction(
             The scores.
         """
         w, vh, vt, b, u = r
-        return (
-            u
-            * self.non_linearity(
+        return batched_dot(
+            u,
+            self.non_linearity(
                 tensor_sum(
                     einsum("...d,...kde,...e->...k", h, w, t),
                     einsum("...d, ...kd->...k", h, vh),
                     einsum("...d, ...kd->...k", t, vt),
                     b,
                 )
-            )
-        ).sum(dim=-1)
+            ),
+        )
 
 
 @parse_docdata
