@@ -14,7 +14,6 @@ from ..utils import einsum, tensor_product, tensor_sum
 
 __all__ = [
     "multilinear_tucker_interaction",
-    "ntn_interaction",
     "proje_interaction",
     "rescal_interaction",
     "simple_interaction",
@@ -64,55 +63,6 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def ntn_interaction(
-    h: FloatTensor,
-    t: FloatTensor,
-    w: FloatTensor,
-    vh: FloatTensor,
-    vt: FloatTensor,
-    b: FloatTensor,
-    u: FloatTensor,
-    activation: nn.Module,
-) -> FloatTensor:
-    r"""Evaluate the NTN interaction function.
-
-    .. math::
-
-        f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param w: shape: (`*batch_dims`, k, dim, dim)
-        The relation specific transformation matrix W_r.
-    :param vh: shape: (`*batch_dims`, k, dim)
-        The head transformation matrix V_h.
-    :param vt: shape: (`*batch_dims`, k, dim)
-        The tail transformation matrix V_h.
-    :param b: shape: (`*batch_dims`, k)
-        The relation specific offset b_r.
-    :param u: shape: (`*batch_dims`, k)
-        The relation specific final linear transformation b_r.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param activation:
-        The activation function.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return (
-        u
-        * activation(
-            tensor_sum(
-                einsum("...d,...kde,...e->...k", h, w, t),  # shape: (*batch_dims, k)
-                einsum("...d, ...kd->...k", h, vh),
-                einsum("...d, ...kd->...k", t, vt),
-                b,
-            )
-        )
-    ).sum(dim=-1)
 
 
 def proje_interaction(

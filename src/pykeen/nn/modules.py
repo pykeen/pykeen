@@ -2068,15 +2068,34 @@ class TransDInteraction(
 
 @parse_docdata
 class NTNInteraction(
-    FunctionalInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
-        FloatTensor,
-    ],
+    Interaction[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], FloatTensor],
 ):
-    """A stateful module for the NTN interaction function.
+    r"""The state-less Neural Tensor Network (NTN) interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.ntn_interaction`
+    It is given by
+
+    .. math::
+
+        \mathbf{r}_{u}^{T} \cdot \sigma(
+            \mathbf{h} \mathbf{R}_{3} \mathbf{t}
+            + \mathbf{R}_{2} [\mathbf{h};\mathbf{t}]
+            + \mathbf{r}_1
+        )
+
+    with $\mathbf{W}_3 \in \mathbb{R}^{d \times d \times k}$, $\textbf{R}_2 \in \mathbb{R}^{k \times 2d}$,
+    the bias vector $\textbf{r}_1$, the final projection $\textbf{r}_u \in \mathbb{R}^k$, and a non-linear activation
+    function $\sigma$ (which defaults to :class:`~torch.nn.Tanh`).
+
+    It can be seen as an extension of a two-layer MLP with relation-specific weights
+    and an additional bi-linear tensor in the input layer.
+    A separately parameterized neural network for each relationship makes the model very expressive,
+    but also computationally expensive ($\mathcal{O}(kd^2)$).
+
+    .. note::
+
+        We split the original $k \times 2d$-dimensional $\mathbf{R}_2$ matrix into two parts of shape $k \times d$ to
+        support more efficient 1:n scoring, e.g., in the :meth:`~pykeen.models.Model.score_h` or
+        :meth:`~pykeen.models.Model.score_t` setting.
 
     ---
     citation:
@@ -2087,8 +2106,10 @@ class NTNInteraction(
     """
 
     relation_shape = ("kdd", "kd", "kd", "k", "k")
-    func = pkf.ntn_interaction
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         activation: HintOrType[nn.Module] = None,
@@ -2097,29 +2118,47 @@ class NTNInteraction(
         """Initialize NTN with the given non-linear activation function.
 
         :param activation: A non-linear activation function. Defaults to the hyperbolic
-            tangent :class:`torch.nn.Tanh` if None, otherwise uses the :data:`pykeen.utils.activation_resolver`
-            for lookup.
+            tangent :class:`torch.nn.Tanh` if ``None``.
         :param activation_kwargs: If the ``activation`` is passed as a class, these keyword arguments
             are used during its instantiation.
         """
         super().__init__()
         if activation is None:
             activation = nn.Tanh()
-        self.non_linearity = activation_resolver.make(activation, activation_kwargs)
+        self.activation = activation_resolver.make(activation, activation_kwargs)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: FloatTensor,
-        r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
-        t: FloatTensor,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+    def forward(
+        self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], t: FloatTensor
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, k, d, d)``, ``(*batch_dims, k, d)``, ``(*batch_dims, k, d)``,
+            ``(*batch_dims, k)``, and ``(*batch_dims, k)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
         w, vh, vt, b, u = r
-        return dict(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt)
-
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(activation=self.non_linearity)
+        return batched_dot(
+            u,
+            self.activation(
+                tensor_sum(
+                    einsum("...d,...kde,...e->...k", h, w, t),
+                    einsum("...d, ...kd->...k", h, vh),
+                    einsum("...d, ...kd->...k", t, vt),
+                    b,
+                )
+            ),
+        )
 
 
 @parse_docdata
