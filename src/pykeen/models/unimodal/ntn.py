@@ -23,8 +23,15 @@ class NTN(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, Floa
     Relations are represented by
 
         - a $k \times d \times d$-dimensional tensor, $\mathbf{W} \in \mathbb{R}^{k \times d \times d}$,
-        - a $2k \times d$-dimensional matrix, $\mathbf{v} \in \mathbb{R}^{k \times 2d}$,
+        - a $2k \times d$-dimensional matrix, $\mathbf{V} \in \mathbb{R}^{k \times 2d}$, and
         - two $k$-dimensional vectors, $\mathbf{b}, \mathbf{u} \in \mathbb{R}^{k}$.
+
+    Denoting the number of entities by $E$ and the number of relations by $R$, the total number of parameters is thus
+    given by
+
+    .. math ::
+
+        dE + k(d^2 + 2d + 2)R
 
     All representations are stored as :class:`~pykeen.nn.representation.Embedding`.
     :class:`~pykeen.nn.modules.NTNInteraction` is used as interaction upon those representations.
