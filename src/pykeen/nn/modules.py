@@ -2082,12 +2082,14 @@ class NTNInteraction(
             + \mathbf{r}_1
         )
 
-    where $\mathbf{W}_3 \in \mathbb{R}^{d \times d \times k}$, $\textbf{R}_2 \in \mathbb{R}^{k \times 2d}$,
-    the bias vector $\textbf{r}_1$, and the final projection $\textbf{r}_u \in \mathbb{R}^k$.
+    with $\mathbf{W}_3 \in \mathbb{R}^{d \times d \times k}$, $\textbf{R}_2 \in \mathbb{R}^{k \times 2d}$,
+    the bias vector $\textbf{r}_1$, the final projection $\textbf{r}_u \in \mathbb{R}^k$, and a non-linear activation
+    function $\sigma$ (which defaults to :class:`~torch.nn.Tanh`).
 
-    It can be seen as an extension of a two-layer MLP with relation-specific weights with an additional bi-linear tensor
-    in the input layer. A separately parametrized neural network for each relation makes the model very expressive,
-    but at the same time also computationally expensive.
+    It can be seen as an extension of a two-layer MLP with relation-specific weights
+    and an additional bi-linear tensor in the input layer.
+    A separately parameterized neural network for each relationship makes the model very expressive,
+    but also computationally expensive ($\mathcal{O}(kd^2)$).
 
     .. note::
 
