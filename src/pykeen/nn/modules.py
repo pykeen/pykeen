@@ -2070,11 +2070,30 @@ class TransDInteraction(
 class NTNInteraction(
     Interaction[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], FloatTensor],
 ):
-    """A stateful module for the NTN interaction function.
+    r"""The state-less Neural Tensor Network (NTN) interaction function.
+
+    It is given by
 
     .. math::
 
-        f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
+        \mathbf{r}_{u}^{T} \cdot \sigma(
+            \mathbf{h} \mathbf{R}_{3} \mathbf{t}
+            + \mathbf{R}_{2} [\mathbf{h};\mathbf{t}]
+            + \mathbf{r}_1
+        )
+
+    where $\mathbf{W}_3 \in \mathbb{R}^{d \times d \times k}$, $\textbf{R}_2 \in \mathbb{R}^{k \times 2d}$,
+    the bias vector $\textbf{r}_1$, and the final projection $\textbf{r}_u \in \mathbb{R}^k$.
+
+    It can be seen as an extension of a two-layer MLP with relation-specific weights with an additional bi-linear tensor
+    in the input layer. A separately parametrized neural network for each relation makes the model very expressive,
+    but at the same time also computationally expensive.
+
+    .. note::
+
+        We split the original $k \times 2d$-dimensional $\mathbf{R}_2$ matrix into two parts of shape $k \times d$ to
+        support more efficient 1:n scoring, e.g., in the :meth:`~pykeen.models.Model.score_h` or
+        :meth:`~pykeen.models.Model.score_t` setting.
 
     ---
     citation:
@@ -2115,7 +2134,8 @@ class NTNInteraction(
 
         :param h: shape: ``(*batch_dims, d)``
             The head representations.
-        :param r: shape: ``(*batch_dims, e)``
+        :param r: shape: ``(*batch_dims, k, d, d)``, ``(*batch_dims, k, d)``, ``(*batch_dims, k, d)``,
+            ``(*batch_dims, k)``, and ``(*batch_dims, k)``
             The relation representations.
         :param t: shape: ``(*batch_dims, d)``
             The tail representations.
