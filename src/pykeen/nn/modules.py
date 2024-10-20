@@ -2068,15 +2068,13 @@ class TransDInteraction(
 
 @parse_docdata
 class NTNInteraction(
-    FunctionalInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
-        FloatTensor,
-    ],
+    Interaction[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], FloatTensor],
 ):
     """A stateful module for the NTN interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.ntn_interaction`
+    .. math::
+
+        f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
 
     ---
     citation:
@@ -2087,7 +2085,6 @@ class NTNInteraction(
     """
 
     relation_shape = ("kdd", "kd", "kd", "k", "k")
-    func = pkf.ntn_interaction
 
     def __init__(
         self,
@@ -2107,19 +2104,37 @@ class NTNInteraction(
             activation = nn.Tanh()
         self.non_linearity = activation_resolver.make(activation, activation_kwargs)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: FloatTensor,
-        r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
-        t: FloatTensor,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        w, vh, vt, b, u = r
-        return dict(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt)
+    def forward(
+        self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], t: FloatTensor
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(activation=self.non_linearity)
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, e)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        w, vh, vt, b, u = r
+        return (
+            u
+            * self.non_linearity(
+                tensor_sum(
+                    einsum("...d,...kde,...e->...k", h, w, t),
+                    einsum("...d, ...kd->...k", h, vh),
+                    einsum("...d, ...kd->...k", t, vt),
+                    b,
+                )
+            )
+        ).sum(dim=-1)
 
 
 @parse_docdata
