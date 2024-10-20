@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar, Optional
 
-from class_resolver import Hint, HintOrType
+from class_resolver import Hint, HintOrType, ResolverKey, update_docstring_with_resolver_keys
 from torch import nn
 
 from ..nbase import ERModel
@@ -54,6 +54,9 @@ class NTN(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, Floa
         num_slices=dict(type=int, low=2, high=4),
     )
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="non_linearity", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         *,
@@ -74,7 +77,7 @@ class NTN(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, Floa
             are used during its instantiation.
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityEmbeddingModel`
+            Remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
         """
         super().__init__(
             interaction=NTNInteraction(

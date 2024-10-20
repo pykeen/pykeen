@@ -2105,6 +2105,9 @@ class NTNInteraction(
 
     relation_shape = ("kdd", "kd", "kd", "k", "k")
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         activation: HintOrType[nn.Module] = None,
@@ -2113,8 +2116,7 @@ class NTNInteraction(
         """Initialize NTN with the given non-linear activation function.
 
         :param activation: A non-linear activation function. Defaults to the hyperbolic
-            tangent :class:`torch.nn.Tanh` if None, otherwise uses the :data:`pykeen.utils.activation_resolver`
-            for lookup.
+            tangent :class:`torch.nn.Tanh` if ``None``.
         :param activation_kwargs: If the ``activation`` is passed as a class, these keyword arguments
             are used during its instantiation.
         """
