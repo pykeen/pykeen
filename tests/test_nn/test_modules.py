@@ -191,16 +191,21 @@ class NTNTests(cases.InteractionTestCase):
         k=11,
     )
 
-    def _exp_score(self, h, t, w, vt, vh, b, u, activation) -> torch.FloatTensor:
-        # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r t + b_r)
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        w, vh, vt, b, u = r
+        # f(h,r,t) = u^T act(h^T W t + V [h; t] + b)
         # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
-        score = 0.0
-        for i in range(u.shape[-1]):
-            first_part = h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1)
-            second_part = (vh[i] * h.view(-1)).sum()
-            third_part = (vt[i] * t.view(-1)).sum()
-            score = score + u[i] * activation(first_part + second_part + third_part + b[i])
-        return score
+        # hidden state:
+        # 1. "h^T W t"
+        x = torch.einsum("d,kde,e", h, w, t)
+        # 2. "V [h; t]"
+        x = x + torch.cat([vh, vt], dim=-1) @ torch.cat([h, t], dim=-1)
+        # 3. "+ b"
+        x = x + b
+        # activation
+        x = self.instance.activation(x)
+        # projection
+        return (u * x).sum()
 
 
 class ProjETests(cases.InteractionTestCase):
