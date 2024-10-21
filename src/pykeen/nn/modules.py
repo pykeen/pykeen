@@ -1668,9 +1668,11 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
         :param embedding_dim:
             the embedding dimension of entities and relations
-        :param inner_non_linearity:
+        :param activation:
             the inner non-linearity, or a hint thereof. Defaults to :class:`nn.Tanh`.
             Disable by passing :class:`nn.Idenity`
+        :param activation_kawrgs:
+            additional keyword-based parameters used to instantiate the activation function.
         """
         super().__init__()
 
