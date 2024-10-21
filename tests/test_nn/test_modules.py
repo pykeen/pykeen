@@ -216,9 +216,15 @@ class ProjETests(cases.InteractionTestCase):
         embedding_dim=cases.InteractionTestCase.dim,
     )
 
-    def _exp_score(self, h, r, t, d_e, d_r, b_c, b_p, activation) -> torch.FloatTensor:
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
-        return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
+        return self.instance.outer_activation(
+            (
+                t
+                * self.instance.inner_activation((self.instance.d_e * h) + (self.instance.d_r * r) + self.instance.b_c)
+            ).sum()
+            + self.instance.b_p
+        )
 
 
 def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:

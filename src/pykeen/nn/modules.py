@@ -23,9 +23,9 @@ from torch.nn.init import xavier_normal_
 from typing_extensions import Self
 
 from . import functional as pkf
+from . import init
 from .algebra import quaterion_multiplication_table
 from .compute_kernel import batched_dot
-from .init import initializer_resolver
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from ..metrics.utils import ValueRange
 from ..typing import (
@@ -1626,34 +1626,95 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
 
 
 @parse_docdata
-class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ProjE interaction function.
+class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-ful ProjE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.proje_interaction`
+    The activation function is given as
+
+    .. math ::
+
+        g(
+            f(
+                \mathbf{d}_h \odot \mathbf{h}
+                + \mathbf{d}_r \odot \mathbf{r}
+                + \mathbf{b}
+            )^T \mathbf{t} + b_p
+        )
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ are the head entity, relation, and tail entity
+    representations, $\mathbf{d}_h, \mathbf{d}_r, \mathbf{b} \in \mathbb{R}^d$ and $b_p \in \mathbb{R}$ are global
+    parameters, and $f, g$ activation functions.
+
+    It can be interpreted as a two-layer neural network with a very special sparsity pattern on the weight matrices.
+    The paper also describes the first operation
+
+    .. math ::
+        \mathbf{y} = f(\mathbf{d}_h \odot \mathbf{h}
+            + \mathbf{d}_r \odot \mathbf{r}
+            + \mathbf{b}
+        )
+
+    as the *combination* operation and the second part
+
+    .. math ::
+        g(\mathbf{y}^T \mathbf{t} + b_p)
+
+    as the *projection* layer.
+
+    .. note ::
+
+        While the original paper describes using either sigmoid or softmax as the final activation,
+        this implementation defaults to no activation on the final layer. This allows the use of numerically stable
+        implementations of merged activation and loss, such as :class:`torch.nn.BCEWithLogitsLoss` (for sigmoid),
+        or :class:`torch.nn.CrossEntropyLoss` (for softmax).
 
     ---
     citation:
         author: Shi
         year: 2017
-        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279
+        link: https://aaai.org/papers/10677-aaai-31-2017/
         github: nddsg/ProjE
+        arxiv: 1611.05425
     """
 
-    func = pkf.proje_interaction
-
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="inner_activation", resolver="class_resolver.contrib.torch.activation_resolver"),
+        ResolverKey(name="outer_activation", resolver="class_resolver.contrib.torch.activation_resolver"),
+    )
     def __init__(
         self,
         embedding_dim: int = 50,
-        inner_non_linearity: HintOrType[nn.Module] = None,
+        inner_activation: HintOrType[nn.Module] = None,
+        inner_activation_kwargs: OptionalKwargs = None,
+        outer_activation: HintOrType[nn.Module] = None,
+        outer_activation_kwargs: OptionalKwargs = None,
+        bias_initializer: Hint[Initializer] = init.xavier_uniform_,
+        bias_initializer_kwargs: OptionalKwargs = None,
+        projection_initializer: Hint[Initializer] = init.xavier_uniform_,
+        projection_initializer_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the interaction module.
 
         :param embedding_dim:
             the embedding dimension of entities and relations
-        :param inner_non_linearity:
+        :param inner_activation:
             the inner non-linearity, or a hint thereof. Defaults to :class:`nn.Tanh`.
             Disable by passing :class:`nn.Idenity`
+        :param inner_activation_kwargs:
+            additional keyword-based parameters used to instantiate the inner activation function.
+        :param outer_activation:
+            the outer non-linearity, or a hint thereof. Defaults to :class:`nn.Identity`, i.e., no activation.
+        :param outer_activation_kwargs:
+            additional keyword-based parameters used to instantiate the outer activation function.
+        :param bias_initializer:
+            the initializer to use for the biases; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param bias_initializer_kwargs:
+            additional keyword-based parameters passed to the bias initializer.
+        :param projection_initializer:
+            the initializer to use for the projection; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param projection_initializer_kwargs:
+            additional keyword-based parameters passed to the projection initializer.
         """
         super().__init__()
 
@@ -1663,25 +1724,58 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         # Global relation projection
         self.d_r = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
+        self.bias_initializer = init.initializer_resolver.make(bias_initializer, bias_initializer_kwargs)
+
         # Global combination bias
         self.b_c = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
         # Global combination bias
         self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
 
-        if inner_non_linearity is None:
-            inner_non_linearity = nn.Tanh
-        self.inner_non_linearity = activation_resolver.make(inner_non_linearity)
+        self.projection_initializer = init.initializer_resolver.make(
+            projection_initializer, projection_initializer_kwargs
+        )
+
+        if inner_activation is None:
+            inner_activation = nn.Tanh
+        if outer_activation is None:
+            outer_activation = nn.Identity
+        self.inner_activation = activation_resolver.make(inner_activation, inner_activation_kwargs)
+        self.outer_activation = activation_resolver.make(outer_activation, outer_activation_kwargs)
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # global projections
+        h = einsum("...d, d -> ...d", h, self.d_e)
+        r = einsum("...d, d -> ...d", r, self.d_r)
+
+        # combination, shape: (*batch_dims, d)
+        x = self.inner_activation(tensor_sum(h, r, self.b_c))
+
+        # dot product with t
+        return self.outer_activation(einsum("...d, ...d -> ...", x, t) + self.b_p)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
-        embedding_dim = self.d_e.shape[0]
-        bound = math.sqrt(6) / embedding_dim
-        for p in self.parameters():
-            nn.init.uniform_(p, a=-bound, b=bound)
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity)
+        self.projection_initializer(self.d_e)
+        self.projection_initializer(self.d_r)
+        self.bias_initializer(self.b_c)
+        self.bias_initializer(self.b_p)
 
 
 @parse_docdata
@@ -1837,7 +1931,9 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # instantiate here to make module easily serializable
-        core_initializer = initializer_resolver.make(self.core_initializer, pos_kwargs=self.core_initializer_kwargs)
+        core_initializer = init.initializer_resolver.make(
+            self.core_initializer, pos_kwargs=self.core_initializer_kwargs
+        )
         core_initializer(self.core_tensor)
         # batch norm gets reset automatically, since it defines reset_parameters
 
