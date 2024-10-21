@@ -1654,10 +1654,14 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         github: nddsg/ProjE
     """
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         embedding_dim: int = 50,
-        inner_non_linearity: HintOrType[nn.Module] = None,
+        activation: HintOrType[nn.Module] = None,
+        activation_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the interaction module.
@@ -1682,9 +1686,9 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         # Global combination bias
         self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
 
-        if inner_non_linearity is None:
-            inner_non_linearity = nn.Tanh
-        self.inner_non_linearity = activation_resolver.make(inner_non_linearity)
+        if activation is None:
+            activation = nn.Tanh
+        self.activation = activation_resolver.make(activation, activation_kwargs)
 
     def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
@@ -1708,7 +1712,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         r = einsum("...d, d -> ...d", r, self.d_r)
 
         # combination, shape: (*batch_dims, d)
-        x = self.inner_non_linearity(tensor_sum(h, r, self.b_c))
+        x = self.activation(tensor_sum(h, r, self.b_c))
 
         # dot product with t
         return einsum("...d, ...d -> ...", x, t) + self.b_p
