@@ -1671,7 +1671,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         :param activation:
             the inner non-linearity, or a hint thereof. Defaults to :class:`nn.Tanh`.
             Disable by passing :class:`nn.Idenity`
-        :param activation_kawrgs:
+        :param activation_kwargs:
             additional keyword-based parameters used to instantiate the activation function.
         """
         super().__init__()
