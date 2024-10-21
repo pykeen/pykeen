@@ -10,11 +10,10 @@ import torch
 from torch import broadcast_tensors, nn
 
 from ..typing import FloatTensor
-from ..utils import einsum, tensor_product, tensor_sum
+from ..utils import einsum, tensor_product
 
 __all__ = [
     "multilinear_tucker_interaction",
-    "proje_interaction",
     "rescal_interaction",
     "simple_interaction",
     "transformer_interaction",
@@ -63,53 +62,6 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def proje_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    d_e: FloatTensor,
-    d_r: FloatTensor,
-    b_c: FloatTensor,
-    b_p: FloatTensor,
-    activation: nn.Module,
-) -> FloatTensor:
-    r"""Evaluate the ProjE interaction function.
-
-    .. math::
-
-        f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param d_e: shape: (dim,)
-        Global entity projection.
-    :param d_r: shape: (dim,)
-        Global relation projection.
-    :param b_c: shape: (dim,)
-        Global combination bias.
-    :param b_p: shape: scalar
-        Final score bias
-    :param activation:
-        The activation function.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    # global projections
-    h = einsum("...d, d -> ...d", h, d_e)
-    r = einsum("...d, d -> ...d", r, d_r)
-
-    # combination, shape: (*batch_dims, d)
-    x = activation(tensor_sum(h, r, b_c))
-
-    # dot product with t
-    return einsum("...d, ...d -> ...", x, t) + b_p
 
 
 def rescal_interaction(
