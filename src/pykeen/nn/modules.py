@@ -1626,10 +1626,25 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
 
 
 @parse_docdata
-class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ProjE interaction function.
+class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-ful ProjE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.proje_interaction`
+    ProjE is a neural network-based approach with a *combination* and a *projection* layer. The interaction model
+    first combines $h$ and $r$ by following combination operator:
+
+    .. math::
+
+        \mathbf{h} \otimes \mathbf{r} = \mathbf{D}_e \mathbf{h} + \mathbf{D}_r \mathbf{r} + \mathbf{b}_c
+
+    where $\mathbf{D}_e, \mathbf{D}_r \in \mathbb{R}^{k \times k}$ are diagonal matrices which are used as shared
+    parameters among all entities and relations, and $\mathbf{b}_c \in \mathbb{R}^{k}$ represents the candidate bias
+    vector shared across all entities.
+
+    .. math::
+
+        g(\mathbf{t} \ z(\mathbf{h} \otimes \mathbf{r}) + \mathbf{b}_p)
+
+    where $g$ and $z$ are activation functions, and $\mathbf{b}_p$ represents the shared projection bias vector.
 
     ---
     citation:
@@ -1638,8 +1653,6 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         link: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279
         github: nddsg/ProjE
     """
-
-    func = pkf.proje_interaction
 
     def __init__(
         self,
@@ -1673,15 +1686,40 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
             inner_non_linearity = nn.Tanh
         self.inner_non_linearity = activation_resolver.make(inner_non_linearity)
 
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # global projections
+        h = einsum("...d, d -> ...d", h, self.d_e)
+        r = einsum("...d, d -> ...d", r, self.d_r)
+
+        # combination, shape: (*batch_dims, d)
+        x = self.inner_non_linearity(tensor_sum(h, r, self.b_c))
+
+        # dot product with t
+        return einsum("...d, ...d -> ...", x, t) + self.b_p
+
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
+        # TODO: use an initializer instead?
         embedding_dim = self.d_e.shape[0]
         bound = math.sqrt(6) / embedding_dim
         for p in self.parameters():
             nn.init.uniform_(p, a=-bound, b=bound)
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity)
 
 
 @parse_docdata
