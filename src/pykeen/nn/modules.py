@@ -1678,10 +1678,8 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     @update_docstring_with_resolver_keys(
-        ResolverKey(name="inner_activation", resolver="class_resolver.contrib.torch.activation_resolver")
-    )
-    @update_docstring_with_resolver_keys(
-        ResolverKey(name="outer_activation", resolver="class_resolver.contrib.torch.activation_resolver")
+        ResolverKey(name="inner_activation", resolver="class_resolver.contrib.torch.activation_resolver"),
+        ResolverKey(name="outer_activation", resolver="class_resolver.contrib.torch.activation_resolver"),
     )
     def __init__(
         self,
