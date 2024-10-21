@@ -78,8 +78,8 @@ class ProjE(ERModel):
             interaction=ProjEInteraction,
             interaction_kwargs=dict(
                 embedding_dim=embedding_dim,
-                inner_non_linearity=inner_non_linearity,
-                inner_non_linearity_kwargs=inner_non_linearity_kwargs,
+                inner_activation=inner_non_linearity,
+                inner_activation_kwargs=inner_non_linearity_kwargs,
             ),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,

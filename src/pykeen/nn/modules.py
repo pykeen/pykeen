@@ -23,9 +23,9 @@ from torch.nn.init import xavier_normal_
 from typing_extensions import Self
 
 from . import functional as pkf
+from . import init
 from .algebra import quaterion_multiplication_table
 from .compute_kernel import batched_dot
-from .init import initializer_resolver
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from ..metrics.utils import ValueRange
 from ..typing import (
@@ -1690,6 +1690,10 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         inner_activation_kwargs: OptionalKwargs = None,
         outer_activation: HintOrType[nn.Module] = None,
         outer_activation_kwargs: OptionalKwargs = None,
+        bias_initializer: Hint[Initializer] = init.xavier_uniform_,
+        bias_initializer_kwargs: OptionalKwargs = None,
+        projection_initializer: Hint[Initializer] = init.xavier_uniform_,
+        projection_initializer_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the interaction module.
@@ -1705,6 +1709,14 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             the outer non-linearity, or a hint thereof. Defaults to :class:`nn.Identity`, i.e., no activation.
         :param outer_activation_kwargs:
             additional keyword-based parameters used to instantiate the outer activation function.
+        :param bias_initializer:
+            the initializer to use for the biases; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param bias_initializer_kwargs:
+            additional keyword-based parameters passed to the bias initializer.
+        :param projection_initializer:
+            the initializer to use for the projection; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param projection_initializer_kwargs:
+            additional keyword-based parameters passed to the projection initializer.
         """
         super().__init__()
 
@@ -1714,11 +1726,17 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         # Global relation projection
         self.d_r = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
+        self.bias_initializer = init.initializer_resolver.make(bias_initializer, bias_initializer_kwargs)
+
         # Global combination bias
         self.b_c = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
         # Global combination bias
         self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
+
+        self.projection_initializer = init.initializer_resolver.make(
+            projection_initializer, projection_initializer_kwargs
+        )
 
         if inner_activation is None:
             inner_activation = nn.Tanh
@@ -1756,11 +1774,10 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
-        # TODO: use an initializer instead?
-        embedding_dim = self.d_e.shape[0]
-        bound = math.sqrt(6) / embedding_dim
-        for p in self.parameters():
-            nn.init.uniform_(p, a=-bound, b=bound)
+        self.projection_initializer(self.d_e)
+        self.projection_initializer(self.d_r)
+        self.bias_initializer(self.b_c)
+        self.bias_initializer(self.b_p)
 
 
 @parse_docdata
@@ -1916,7 +1933,9 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # instantiate here to make module easily serializable
-        core_initializer = initializer_resolver.make(self.core_initializer, pos_kwargs=self.core_initializer_kwargs)
+        core_initializer = init.initializer_resolver.make(
+            self.core_initializer, pos_kwargs=self.core_initializer_kwargs
+        )
         core_initializer(self.core_tensor)
         # batch norm gets reset automatically, since it defines reset_parameters
 
