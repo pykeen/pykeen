@@ -1742,7 +1742,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             inner_activation = nn.Tanh
         if outer_activation is None:
             outer_activation = nn.Identity
-        self.activation = activation_resolver.make(inner_activation, inner_activation_kwargs)
+        self.inner_activation = activation_resolver.make(inner_activation, inner_activation_kwargs)
         self.outer_activation = activation_resolver.make(outer_activation, outer_activation_kwargs)
 
     def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
@@ -1767,7 +1767,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         r = einsum("...d, d -> ...d", r, self.d_r)
 
         # combination, shape: (*batch_dims, d)
-        x = self.activation(tensor_sum(h, r, self.b_c))
+        x = self.inner_activation(tensor_sum(h, r, self.b_c))
 
         # dot product with t
         return self.outer_activation(einsum("...d, ...d -> ...", x, t) + self.b_p)
