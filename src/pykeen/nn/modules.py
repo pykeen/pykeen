@@ -1629,50 +1629,82 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
 class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The state-ful ProjE interaction function.
 
-    ProjE is a neural network-based approach with a *combination* and a *projection* layer. The interaction model
-    first combines $h$ and $r$ by following combination operator:
+    The activation function is given as
 
-    .. math::
+    .. math ::
 
-        \mathbf{h} \otimes \mathbf{r} = \mathbf{D}_e \mathbf{h} + \mathbf{D}_r \mathbf{r} + \mathbf{b}_c
+        g(
+            f(
+                \mathbf{d}_h \odot \mathbf{h}
+                + \mathbf{d}_r \odot \mathbf{r}
+                + \mathbf{b}
+            )^T \mathbf{t} + b_p
+        )
 
-    where $\mathbf{D}_e, \mathbf{D}_r \in \mathbb{R}^{k \times k}$ are diagonal matrices which are used as shared
-    parameters among all entities and relations, and $\mathbf{b}_c \in \mathbb{R}^{k}$ represents the candidate bias
-    vector shared across all entities.
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ are the head entity, relation, and tail entity
+    representations, $\mathbf{d}_h, \mathbf{d}_r, \mathbf{b} \in \mathbb{R}^d$ and $b_p \in \mathbb{R}$ are global
+    parameters, and $f, g$ activation functions.
 
-    .. math::
+    It can be interpreted as a two-layer neural network with a very special sparsity pattern on the weight matrices.
+    The paper also describes the first operation
 
-        g(\mathbf{t} \ z(\mathbf{h} \otimes \mathbf{r}) + \mathbf{b}_p)
+    .. math ::
+        \mathbf{y} = f(\mathbf{d}_h \odot \mathbf{h}
+            + \mathbf{d}_r \odot \mathbf{r}
+            + \mathbf{b}
+        )
 
-    where $g$ and $z$ are activation functions, and $\mathbf{b}_p$ represents the shared projection bias vector.
+    as the *combination* operation and the second part
+
+    .. math ::
+        g(\mathbf{y}^T \mathbf{t} + b_p)
+
+    as the *projection* layer.
+
+    .. note ::
+
+        While the original paper describes using either sigmoid or softmax as the final activation,
+        this implementation defaults to no activation on the final layer. This allows the use of numerically stable
+        implementations of merged activation and loss, such as :class:`torch.nn.BCEWithLogitsLoss` (for sigmoid),
+        or :class:`torch.nn.CrossEntropyLoss` (for softmax).
 
     ---
     citation:
         author: Shi
         year: 2017
-        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279
+        link: https://aaai.org/papers/10677-aaai-31-2017/
         github: nddsg/ProjE
+        arxiv: 1611.05425
     """
 
     @update_docstring_with_resolver_keys(
-        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+        ResolverKey(name="inner_activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="outer_activation", resolver="class_resolver.contrib.torch.activation_resolver")
     )
     def __init__(
         self,
         embedding_dim: int = 50,
-        activation: HintOrType[nn.Module] = None,
-        activation_kwargs: OptionalKwargs = None,
+        inner_activation: HintOrType[nn.Module] = None,
+        inner_activation_kwargs: OptionalKwargs = None,
+        outer_activation: HintOrType[nn.Module] = None,
+        outer_activation_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the interaction module.
 
         :param embedding_dim:
             the embedding dimension of entities and relations
-        :param activation:
+        :param inner_activation:
             the inner non-linearity, or a hint thereof. Defaults to :class:`nn.Tanh`.
             Disable by passing :class:`nn.Idenity`
-        :param activation_kwargs:
-            additional keyword-based parameters used to instantiate the activation function.
+        :param inner_activation_kwargs:
+            additional keyword-based parameters used to instantiate the inner activation function.
+        :param outer_activation:
+            the outer non-linearity, or a hint thereof. Defaults to :class:`nn.Identity`, i.e., no activation.
+        :param outer_activation_kwargs:
+            additional keyword-based parameters used to instantiate the outer activation function.
         """
         super().__init__()
 
@@ -1688,9 +1720,12 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         # Global combination bias
         self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
 
-        if activation is None:
-            activation = nn.Tanh
-        self.activation = activation_resolver.make(activation, activation_kwargs)
+        if inner_activation is None:
+            inner_activation = nn.Tanh
+        if outer_activation is None:
+            outer_activation = nn.Identity
+        self.activation = activation_resolver.make(inner_activation, inner_activation_kwargs)
+        self.outer_activation = activation_resolver.make(outer_activation, outer_activation_kwargs)
 
     def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
@@ -1717,7 +1752,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         x = self.activation(tensor_sum(h, r, self.b_c))
 
         # dot product with t
-        return einsum("...d, ...d -> ...", x, t) + self.b_p
+        return self.outer_activation(einsum("...d, ...d -> ...", x, t) + self.b_p)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
