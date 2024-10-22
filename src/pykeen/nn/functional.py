@@ -14,7 +14,6 @@ from ..utils import einsum, tensor_product
 
 __all__ = [
     "multilinear_tucker_interaction",
-    "rescal_interaction",
     "simple_interaction",
     "transformer_interaction",
     "tucker_interaction",
@@ -62,26 +61,6 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def rescal_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-) -> FloatTensor:
-    """Evaluate the RESCAL interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return einsum("...d,...de,...e->...", h, r, t)
 
 
 def simple_interaction(
