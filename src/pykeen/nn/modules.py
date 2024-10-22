@@ -1780,7 +1780,20 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 @parse_docdata
 class RESCALInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
-    """The state-less RESCAL interaction function.
+    r"""The state-less RESCAL interaction function.
+
+    For head and tail entity representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$
+    and relation representation $\mathbf{R} \in \mathbb{R}^{d \times d}$, the interaction function is given as
+
+    .. math::
+
+        \mathbf{h}^T \textbf{R} \textbf{t}
+        = \sum_{i=1}^{d} \sum_{j=1}^{d} \mathbf{h}_i \mathbf{R}_{i, j} \mathbf{t}_{i}
+
+    Thus, the relation matrices $\textbf{R}$ contain weights $\textbf{R}_{i, j}$ that capture the amount of interaction
+    between the $i$-th latent factor of the head representation and the $j$-th latent factor.
+
+    The computational complexity is given by $\mathcal{O}(d^2)$.
 
     ---
     citation:
