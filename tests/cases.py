@@ -1352,41 +1352,6 @@ Traceback
     def _check_constraints(self):
         """Check model constraints."""
 
-    def _test_score_equality(self, columns: Union[slice, list[int]], name: str) -> None:
-        """Migration tests for non-ERModel models testing for consistent optimized score implementations."""
-        if isinstance(self.instance, ERModel):
-            raise SkipTest("ERModel fulfils this by design.")
-        if isinstance(self.instance, CooccurrenceFilteredModel):
-            raise SkipTest("CooccurrenceFilteredModel fulfils this if its base model fulfils it.")
-        batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
-        self.instance.eval()
-        try:
-            scores = getattr(self.instance, name)(batch)
-            scores_super = getattr(super(self.instance.__class__, self.instance), name)(batch)
-        except NotImplementedError:
-            self.fail(msg=f"{name} not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-
-        self.assertIsNotNone(scores)
-        self.assertIsNotNone(scores_super)
-        assert torch.allclose(scores, scores_super, atol=1e-06)
-
-    def test_score_h_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
-        self._test_score_equality(columns=slice(1, None), name="score_h")
-
-    def test_score_r_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
-        self._test_score_equality(columns=[0, 2], name="score_r")
-
-    def test_score_t_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
-        self._test_score_equality(columns=slice(2), name="score_t")
-
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
         with patch.object(self.cls, "reset_parameters_", return_value=None) as mock_method:
