@@ -10,14 +10,14 @@ from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDD
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import TuckERInteraction
 from ...nn.init import xavier_normal_
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "TuckER",
 ]
 
 
-class TuckER(ERModel):
+class TuckER(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of TuckEr from [balazevic2019]_.
 
     It represents entities by $d_e$-dimensional vectors and relations by $d_r$-dimensional vectors, stored in
