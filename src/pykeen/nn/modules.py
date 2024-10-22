@@ -3204,9 +3204,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
 
 
 @parse_docdata
-class MultiLinearTuckerInteraction(
-    FunctionalInteraction[tuple[FloatTensor, FloatTensor], FloatTensor, tuple[FloatTensor, FloatTensor]]
-):
+class MultiLinearTuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """
     An implementation of the original (multi-linear) TuckER interaction as described [tucker1966]_.
 
@@ -3222,8 +3220,9 @@ class MultiLinearTuckerInteraction(
         link: https://dx.doi.org/10.1007/BF02289464
     """
 
-    func = pkf.multilinear_tucker_interaction
     entity_shape = ("d", "f")
+    _head_indices = (0,)
+    _tail_indices = (1,)
     relation_shape = ("e",)
 
     def __init__(
@@ -3263,17 +3262,25 @@ class MultiLinearTuckerInteraction(
             std=numpy.sqrt(numpy.prod(numpy.reciprocal(numpy.asarray(self.core_tensor.shape)))),
         )
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: tuple[FloatTensor, FloatTensor],
-        r: FloatTensor,
-        t: tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h[0], r=r, t=t[1])
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""
+        Evaluate the interaction function.
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(core_tensor=self.core_tensor)
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, head_dim)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, relation_dim)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, tail_dim)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return einsum("ijk, ...i, ...j, ...k -> ...", self.core_tensor, h, r, t)
 
 
 @parse_docdata
