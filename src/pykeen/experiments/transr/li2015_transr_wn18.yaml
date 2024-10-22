@@ -1,0 +1,38 @@
+metadata:
+  title: Learn WN18 Dataset with TransR as described by Li et al., 2015. For evaluation,
+    the non-deterministic rank is used, cf. https://github.com/Mrlyk423/Relation_Extraction/blob/9f311285abd7e29273be7e4fd8c680dd761f40eb/TransR/Test_TransR.cpp#L177-L206.
+pipeline:
+  dataset: wn18
+  evaluator_kwargs:
+    filtered: true
+  loss: MarginRankingLoss
+  loss_kwargs:
+    margin: 4
+    reduction: mean
+  model: TransR
+  model_kwargs:
+    embedding_dim: 50
+    entity_constrainer: clamp_norm
+    entity_initializer: xavier_uniform
+    relation_constrainer: clamp_norm
+    relation_dim: 50
+    relation_initializer: xavier_uniform_norm
+    scoring_fct_norm: 1
+    power_norm: false
+    max_projection_norm: 1.0
+  negative_sampler: bernoulli
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  optimizer: SGD
+  optimizer_kwargs:
+    lr: 0.001
+  training_kwargs:
+    batch_size: 1440
+    num_epochs: 500
+  training_loop: SLCWA
+results:
+  hits_at_k:
+    nondeterministic:
+      '10': 0.92
+  mean_rank:
+    nondeterministic: 225

@@ -6,12 +6,13 @@ from typing import Any, ClassVar
 import torch
 import torch.autograd
 import torch.nn.init
+from class_resolver import OptionalKwargs
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransRInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -19,28 +20,25 @@ __all__ = [
 ]
 
 
-class TransR(ERModel):
+class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     r"""An implementation of TransR from [lin2015]_.
 
-    TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
-    different objects and therefore represents them in different vector spaces.
+    This model represents entities as $d$-dimensional vectors, and relations as $k$-dimensional vectors.
+    To bring them into the same vector space, a relation-specific projection is learned, too.
+    All representations are stored in :class:`~pykeen.nn.representation.Embedding` matrices.
 
-    For a triple $(h,r,t) \in \mathbb{K}$, the entity embeddings, $\textbf{e}_h, \textbf{e}_t \in \mathbb{R}^d$,
-    are first projected into the relation space by means of a relation-specific projection matrix
-    $\textbf{M}_{r} \in \mathbb{R}^{k \times d}$. With relation embedding $\textbf{r}_r \in \mathbb{R}^k$, the
-    interaction model is defined similarly to TransE with:
-
-    .. math::
-
-        f(h,r,t) = -\|\textbf{M}_{r}\textbf{e}_h + \textbf{r}_r - \textbf{M}_{r}\textbf{e}_t\|_{p}^2
+    The representations are then passed to the :class:`~pykeen.nn.modules.TransRInteraction` function to obtain scores.
 
     The following constraints are applied:
 
-     * $\|\textbf{e}_h\|_2 \leq 1$
-     * $\|\textbf{r}_r\|_2 \leq 1$
-     * $\|\textbf{e}_t\|_2 \leq 1$
-     * $\|\textbf{M}_{r}\textbf{e}_h\|_2 \leq 1$
-     * $\|\textbf{M}_{r}\textbf{e}_t\|_2 \leq 1$
+        - $\|\textbf{e}_h\|_2 \leq 1$
+        - $\|\textbf{r}_r\|_2 \leq 1$
+        - $\|\textbf{e}_t\|_2 \leq 1$
+
+    as well as inside the :class:`~pykeen.nn.modules.TransRInteraction`
+
+        - $\|\textbf{M}_{r}\textbf{e}_h\|_2 \leq 1$
+        - $\|\textbf{M}_{r}\textbf{e}_t\|_2 \leq 1$
 
     .. seealso::
 
@@ -67,38 +65,77 @@ class TransR(ERModel):
         *,
         embedding_dim: int = 50,
         relation_dim: int = 30,
+        max_projection_norm: float = 1.0,
+        # interaction function kwargs
         scoring_fct_norm: int = 1,
+        power_norm: bool = False,
+        # entity embedding
         entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_initializer_kwargs: OptionalKwargs = None,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        # relation embedding
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
+        relation_initializer_kwargs: OptionalKwargs = None,
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        # relation projection
+        relation_projection_initializer: Hint[Initializer] = torch.nn.init.xavier_uniform_,
+        relation_projection_initializer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
-        """Initialize the model."""
+        """Initialize the model.
+
+        :param embedding_dim: The entity embedding dimension $d$.
+        :param relation_dim: The relation embedding dimension $k$.
+        :param max_projection_norm:
+            The maximum norm to be clamped after projection.
+
+        :param scoring_fct_norm:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+
+        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer.
+        :param entity_constrainer: The entity constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+
+        :param relation_initializer:
+            Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
+        :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer.
+        :param relation_constrainer: The relation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+
+        :param relation_projection_initializer:
+            Relation projection initializer function. Defaults to :func:`torch.nn.init.xavier_uniform_`.
+        :param relation_projection_initializer_kwargs:
+            Keyword arguments to be used when calling the relation projection initializer.
+
+        :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
+        """
         # TODO: Initialize from TransE
         super().__init__(
             interaction=TransRInteraction,
-            interaction_kwargs=dict(
-                p=scoring_fct_norm,
-            ),
+            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,
+                initializer_kwargs=entity_initializer_kwargs,
                 constrainer=entity_constrainer,
-                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
+                constrainer_kwargs=dict(maxnorm=max_projection_norm, p=scoring_fct_norm, dim=-1),
             ),
             relation_representations_kwargs=[
                 # relation embedding
                 dict(
                     shape=(relation_dim,),
                     initializer=relation_initializer,
+                    initializer_kwargs=relation_initializer_kwargs,
                     constrainer=relation_constrainer,
-                    constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
+                    constrainer_kwargs=dict(maxnorm=max_projection_norm, p=scoring_fct_norm, dim=-1),
                 ),
                 # relation projection
                 dict(
                     shape=(embedding_dim, relation_dim),
-                    initializer=torch.nn.init.xavier_uniform_,
+                    initializer=relation_projection_initializer,
+                    initializer_kwargs=relation_projection_initializer_kwargs,
                 ),
             ],
             **kwargs,

@@ -28,6 +28,7 @@ from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
+from tests.test_batch_size_reduction import MockModel
 
 SKIP_MODULES = {
     Model,
@@ -38,6 +39,7 @@ SKIP_MODULES = {
     InductiveERModel,
     FixedModel,
     EvaluationOnlyModel,
+    MockModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
 SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
@@ -161,7 +163,7 @@ class TestKG2EWithKL(cases.BaseKG2ETest):
     """Test the KG2E model with KL similarity."""
 
     kwargs = {
-        "dist_similarity": "KL",
+        "dist_similarity": "negativekullbackleiblerdivergence",
     }
 
 
@@ -176,7 +178,7 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     """Test the KG2E model with EL similarity."""
 
     kwargs = {
-        "dist_similarity": "EL",
+        "dist_similarity": "expectedlikelihood",
     }
 
 

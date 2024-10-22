@@ -2,8 +2,9 @@
 
 from typing import Optional, Union
 
-import torch
 from torch import nn
+
+from ..typing import FloatTensor
 
 __all__ = [
     "ConcatMLP",
@@ -50,7 +51,7 @@ class ConcatMLP(nn.Sequential):
         )
         self.flatten_dims = flatten_dims
 
-    def forward(self, xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:
+    def forward(self, xs: FloatTensor, dim: int) -> FloatTensor:
         """Forward the MLP on the given dimension.
 
         :param xs: The tensor to forward
