@@ -1874,15 +1874,33 @@ class SEInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTe
 
 @parse_docdata
 class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
-    """The stateful TuckER interaction function.
+    r"""The stateful TuckER interaction function.
 
-     Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
+    The interaction function is inspired by the `Tucker tensor decomposition <https://en.wikipedia.org/wiki/Tucker_decomposition>`_.
+    The base form is given as
 
     .. math ::
+        \mathbf{Z} \times_1 \mathbf{h} \times_2 \mathbf{r} \times_3 \mathbf{t}
+        = \sum_{1 \leq i, k \leq d_e, 1 \leq j \leq d_r}
+            \mathbf{Z}_{i, j, k} \cdot \mathbf{h}_{i} \cdot \mathbf{r}_{j} \cdot \mathbf{t}_{k}
 
-        DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
+    where $\mathbf{h}, \mathbf{t} \in \mathbb{R}^{d_e}$ are the head and tail entity representation,
+    $\mathbf{r} \in \mathbb{R}^{d_r}$ is the relation representation, and
+    $\mathbf{Z} \in \mathbb{R}^{d_e \times d_r \times d_e}$ is a *global* parameter, and $\times_k$ denotes the tensor
+    product along the $k$-th dimension.
 
-    where BN denotes BatchNorm and DO denotes Dropout
+    The implementation further adds :class:`~torch.nn.BatchNorm1d` and :class:`~torch.nn.Dropout`
+    layers at the following locations:
+
+    .. math ::
+        \textit{DO}_{hr}(\textit{BN}_{hr}(
+            \textit{DO}_h(\textit{BN}_h(\mathbf{h}))
+            \times_1
+            \textit{DO}_r(\mathbf{Z} \times_2 \mathbf{r})
+        ) \times_3 \mathbf{t}
+
+    .. seealso::
+        - https://en.wikipedia.org/wiki/Tucker_decomposition
 
     ---
     citation:
@@ -1914,7 +1932,7 @@ class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         :param embedding_dim:
             The entity embedding dimension.
         :param relation_dim:
-            The relation embedding dimension.
+            The relation embedding dimension. Defaults to ``embedding_dim``.
         :param head_dropout:
             The dropout rate applied to the head representations.
         :param relation_dropout:
@@ -1924,9 +1942,11 @@ class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         :param apply_batch_normalization:
             Whether to use batch normalization on head representations and the combination of head and relation.
         :param core_initializer:
-            the core tensor's initializer, or a hint thereof
+            The core tensor's initializer, or a hint thereof.
+            Defaults to :attr:`~pykeen.nn.modules.TuckerInteraction.default_core_initializer`.
         :param core_initializer_kwargs:
-            additional keyword-based parameters for the initializer
+            Additional keyword-based parameters for the initializer.
+            Defaults to :attr:`~pykeen.nn.modules.TuckerInteraction.default_core_initializer_kwargs`.
         """
         super().__init__()
 
