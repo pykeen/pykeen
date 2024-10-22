@@ -5,7 +5,7 @@ import pytest
 import torch
 
 from pykeen.models import DistMult, ERModel
-from pykeen.models.scoring import Scorer, Batch
+from pykeen.models.scoring import Batch, Scorer
 from pykeen.triples import KGInfo
 
 

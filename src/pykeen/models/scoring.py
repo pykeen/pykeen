@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import Iterable
+from collections.abc import Iterable
 
 import torch
-from torch import broadcast_shapes
+from torch import FloatTensor, LongTensor, broadcast_shapes
 
+from pykeen.inverse import RelationInverter
 from pykeen.models import ERModel
 from pykeen.nn.modules import parallel_unsqueeze
-from pykeen.typing import OneOrSequence, Target, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, OneOrSequence, Target
 from pykeen.utils import upgrade_to_sequence
-from pykeen.inverse import RelationInverter, relation_inverter_resolver
 
 __all__ = [
     "Batch",
@@ -23,15 +23,15 @@ __all__ = [
 
 @dataclasses.dataclass
 class Batch:
-    head: torch.LongTensor | None
-    relation: torch.LongTensor | None
-    tail: torch.LongTensor | None
+    head: LongTensor | None
+    relation: LongTensor | None
+    tail: LongTensor | None
     use_inverse_relation: bool = False
     index_ndim: int = dataclasses.field(init=False)
     all_target: Target | None = None
 
     @staticmethod
-    def maybe_add_trailing_dims(x: torch.LongTensor | None, max_ndim: int) -> torch.LongTensor | None:
+    def maybe_add_trailing_dims(x: LongTensor | None, max_ndim: int) -> LongTensor | None:
         if x is None:
             return x
         missing = max_ndim - x.ndim
@@ -58,7 +58,7 @@ class Batch:
         self.index_ndim = max_ndim
 
     @property
-    def indices(self) -> tuple[torch.FloatTensor | None, torch.FloatTensor | None, torch.FloatTensor | None]:
+    def indices(self) -> tuple[FloatTensor | None, FloatTensor | None, FloatTensor | None]:
         return self.head, self.relation, self.tail
 
     def via_inverse(self, inverter: RelationInverter) -> Batch:
@@ -78,20 +78,14 @@ class Batch:
             tail=self.tail,
             use_inverse_relation=self.use_inverse_relation,
         )
-        if self.all_target == LABEL_HEAD:
-            key = "head"
-        elif self.all_target == LABEL_RELATION:
-            key = "relation"
-        elif self.all_target == LABEL_TAIL:
-            key = "tail"
-        else:
+        if self.all_target is None:
             raise ValueError
         for start in range(0, num, slice_size):
-            kwargs[key] = torch.arange(start=start, end=min(start + slice_size, num))
+            kwargs[self.all_target] = torch.arange(start=start, end=min(start + slice_size, num))
             yield Batch(**kwargs)
 
 
-def parallel_prefix_unsqueeze(x: OneOrSequence[torch.FloatTensor], ndim: int) -> OneOrSequence[torch.FloatTensor]:
+def parallel_prefix_unsqueeze(x: OneOrSequence[FloatTensor], ndim: int) -> OneOrSequence[FloatTensor]:
     """Unsqueeze all representations along the given dimension."""
     if not ndim:
         return x
@@ -109,13 +103,13 @@ class Scorer:
 
     @staticmethod
     def unsqueeze(
-        r: OneOrSequence[torch.FloatTensor], indices: torch.LongTensor | None, index_ndim: int
-    ) -> OneOrSequence[torch.FloatTensor]:
+        r: OneOrSequence[FloatTensor], indices: LongTensor | None, index_ndim: int
+    ) -> OneOrSequence[FloatTensor]:
         if indices is None:
             return parallel_prefix_unsqueeze(r, ndim=index_ndim)
         return parallel_unsqueeze(r, dim=index_ndim)
 
-    def score(self, model: ERModel, batch: Batch, slice_size: int | None = None, mode=None) -> torch.FloatTensor:
+    def score(self, model: ERModel, batch: Batch, slice_size: int | None = None, mode=None) -> FloatTensor:
         if batch.use_inverse_relation and not model.use_inverse_triples:
             raise ValueError
 
@@ -139,9 +133,9 @@ class Scorer:
         # get representations; if None, shape=(num_{entities,relations}, *r.shape), else shape=(*index.shape, *r.shape)
         h, r, t = model._get_representations(h=batch.head, r=batch.relation, t=batch.tail, mode=mode)
         if batch.all_target is not None:
-            h, r, t = [
+            h, r, t = (
                 self.unsqueeze(x, indices=i, index_ndim=batch.index_ndim) for x, i in zip((h, r, t), batch.indices)
-            ]
+            )
 
         scores = model.interaction(h=h, r=r, t=t)
         # expected shape: *index.shape, num?
@@ -149,7 +143,7 @@ class Scorer:
         # repeat if necessary
         return scores.expand(*expected_shape)
 
-    def predict(self, model: ERModel, batch: Batch, **kwargs) -> torch.FloatTensor:
+    def predict(self, model: ERModel, batch: Batch, **kwargs) -> FloatTensor:
         # todo: auto switch to inverse relations?
         model.eval()
         scores = self.score(model, batch, **kwargs)
