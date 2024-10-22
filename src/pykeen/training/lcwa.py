@@ -208,11 +208,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         return slice_size
 
     def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self.target == 0 and self.model.can_slice_h:
+        if self.target == 0:
             return
-        if self.target == 1 and self.model.can_slice_r:
+        if self.target == 1:
             return
-        if self.target == 2 and self.model.can_slice_t:
+        if self.target == 2:
             return
         elif supports_sub_batching:
             report = (

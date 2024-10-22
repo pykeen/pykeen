@@ -72,10 +72,6 @@ class Model(nn.Module, ABC):
     #: after training, but has no effect on the training.
     predict_with_sigmoid: bool
 
-    can_slice_h: ClassVar[bool]
-    can_slice_r: ClassVar[bool]
-    can_slice_t: ClassVar[bool]
-
     def __init__(
         self,
         *,
