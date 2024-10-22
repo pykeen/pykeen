@@ -287,7 +287,7 @@ class KG2ETests(cases.InteractionTestCase):
 class TuckerTests(cases.InteractionTestCase):
     """Tests for Tucker interaction function."""
 
-    cls = pykeen.nn.modules.TuckerInteraction
+    cls = pykeen.nn.modules.TuckERInteraction
     kwargs = dict(
         embedding_dim=cases.InteractionTestCase.dim,
     )

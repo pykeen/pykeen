@@ -100,7 +100,7 @@ __all__ = [
     "TransHInteraction",
     "TransRInteraction",
     "TripleREInteraction",
-    "TuckerInteraction",
+    "TuckERInteraction",
     "UMInteraction",
 ]
 
@@ -1873,7 +1873,7 @@ class SEInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTe
 
 
 @parse_docdata
-class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class TuckERInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateful TuckER interaction function.
 
     The interaction function is inspired by the `Tucker tensor decomposition <https://en.wikipedia.org/wiki/Tucker_decomposition>`_.
