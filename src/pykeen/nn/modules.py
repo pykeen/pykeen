@@ -1779,10 +1779,21 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless RESCAL interaction function.
+class RESCALInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-less RESCAL interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.rescal_interaction`
+    For head and tail entity representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$
+    and relation representation $\mathbf{R} \in \mathbb{R}^{d \times d}$, the interaction function is given as
+
+    .. math::
+
+        \mathbf{h}^T \textbf{R} \textbf{t}
+        = \sum_{i=1}^{d} \sum_{j=1}^{d} \mathbf{h}_i \mathbf{R}_{i, j} \mathbf{t}_{i}
+
+    Thus, the relation matrices $\textbf{R}$ contain weights $\textbf{R}_{i, j}$ that capture the amount of interaction
+    between the $i$-th latent factor of the head representation and the $j$-th latent factor.
+
+    The computational complexity is given by $\mathcal{O}(d^2)$.
 
     ---
     citation:
@@ -1792,7 +1803,25 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     """
 
     relation_shape = ("dd",)
-    func = pkf.rescal_interaction
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return einsum("...d,...de,...e->...", h, r, t)
 
 
 @parse_docdata
