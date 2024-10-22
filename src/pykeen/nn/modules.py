@@ -3158,9 +3158,14 @@ class BoxEInteraction(
 
 
 @parse_docdata
-class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """
+class CPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""
     The Canonical Tensor Decomposition interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
+
+    The interaction function is given as
+
+    .. math::
+        \sum_{1 \leq i \leq k, 1 \leq j \leq d} \mathbf{h}_{i, j} \cdot \mathbf{r}_{i, j} \cdot \mathbf{t}_{i, j}
 
     .. note ::
         For $k=1$, this interaction is the same as :class:`~pykeen.nn.modules.DistMultInteraction`.
@@ -3182,22 +3187,22 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     _head_indices = (0,)
     _tail_indices = (1,)
 
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
-        """Evaluate the interaction function.
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""
+        Evaluate the interaction function.
 
         .. seealso::
             :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
             the generic batched form of the interaction function.
 
-        :param h: shape: ``(*batch_dims`, rank, dim)``
+        :param h: shape: ``(*batch_dims, k, d)``
             The head representations.
-        :param r: shape: ``(*batch_dims`, rank, dim)``
+        :param r: shape: ``(*batch_dims, k, d)``
             The relation representations.
-        :param t: shape: ``(*batch_dims`, rank, dim)``
+        :param t: shape: ``(*batch_dims, k, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
         return (h * r * t).sum(dim=(-2, -1))
