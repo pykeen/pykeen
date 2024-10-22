@@ -27,6 +27,7 @@ from . import init
 from .algebra import quaterion_multiplication_table
 from .compute_kernel import batched_dot
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
+from .utils import apply_optional_bn
 from ..metrics.utils import ValueRange
 from ..typing import (
     FloatTensor,
@@ -1872,10 +1873,16 @@ class SEInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTe
 
 
 @parse_docdata
-class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the stateless Tucker interaction function.
+class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    """The stateful TuckER interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.tucker_interaction`
+     Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
+
+    .. math ::
+
+        DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
+
+    where BN denotes BatchNorm and DO denotes Dropout
 
     ---
     citation:
@@ -1885,8 +1892,6 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://arxiv.org/abs/1901.09590
         github: ibalazevic/TuckER
     """
-
-    func = pkf.tucker_interaction
 
     # default core tensor initialization
     # cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
@@ -1966,14 +1971,36 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         core_initializer(self.core_tensor)
         # batch norm gets reset automatically, since it defines reset_parameters
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(
-            core_tensor=self.core_tensor,
-            do_h=self.head_dropout,
-            do_r=self.relation_dropout,
-            do_hr=self.head_relation_dropout,
-            bn_h=self.head_batch_norm,
-            bn_hr=self.head_relation_batch_norm,
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h = self.head_dropout(apply_optional_bn(x=h, batch_norm=self.head_batch_norm))
+        # x_2 contraction
+        r = einsum("ijk,...j->...ik", self.core_tensor, r)
+        r = self.relation_dropout(r)
+        # x_1 contraction
+        return batched_dot(
+            self.head_relation_dropout(
+                apply_optional_bn(
+                    x=einsum("...ik,...i->...k", r, h),
+                    batch_norm=self.head_relation_batch_norm,
+                )
+            ),
+            t,
         )
 
 

@@ -16,22 +16,7 @@ __all__ = [
     "multilinear_tucker_interaction",
     "simple_interaction",
     "transformer_interaction",
-    "tucker_interaction",
 ]
-
-
-def _apply_optional_bn_to_tensor(
-    x: FloatTensor,
-    output_dropout: nn.Dropout,
-    batch_norm: nn.BatchNorm1d | None = None,
-) -> FloatTensor:
-    """Apply optional batch normalization and dropout layer. Supports multiple batch dimensions."""
-    if batch_norm is not None:
-        shape = x.shape
-        x = x.reshape(-1, shape[-1])
-        x = batch_norm(x)
-        x = x.view(*shape)
-    return output_dropout(x)
 
 
 def circular_correlation(
@@ -99,76 +84,6 @@ def simple_interaction(
         min_, max_ = clamp
         scores = scores.clamp(min=min_, max=max_)
     return scores
-
-
-def tucker_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    core_tensor: FloatTensor,
-    do_h: nn.Dropout,
-    do_r: nn.Dropout,
-    do_hr: nn.Dropout,
-    bn_h: nn.BatchNorm1d | None,
-    bn_hr: nn.BatchNorm1d | None,
-) -> FloatTensor:
-    r"""Evaluate the TuckEr interaction function.
-
-    Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
-
-    .. math ::
-
-        DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
-
-    where BN denotes BatchNorm and DO denotes Dropout
-
-    :param h: shape: (`*batch_dims`, d_e)
-        The head representations.
-    :param r: shape: (`*batch_dims`, d_r)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, d_e)
-        The tail representations.
-    :param core_tensor: shape: (d_e, d_r, d_e)
-        The core tensor.
-    :param do_h:
-        The dropout layer for the head representations.
-    :param do_r:
-        The first hidden dropout.
-    :param do_hr:
-        The second hidden dropout.
-    :param bn_h:
-        The first batch normalization layer.
-    :param bn_hr:
-        The second batch normalization layer.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return (
-        _apply_optional_bn_to_tensor(
-            x=einsum(
-                # x_1 contraction
-                "...ik,...i->...k",
-                _apply_optional_bn_to_tensor(
-                    x=einsum(
-                        # x_2 contraction
-                        "ijk,...j->...ik",
-                        core_tensor,
-                        r,
-                    ),
-                    output_dropout=do_r,
-                ),
-                _apply_optional_bn_to_tensor(
-                    x=h,
-                    batch_norm=bn_h,
-                    output_dropout=do_h,
-                ),
-            ),
-            batch_norm=bn_hr,
-            output_dropout=do_hr,
-        )
-        * t
-    ).sum(dim=-1)
 
 
 def quat_e_interaction(
