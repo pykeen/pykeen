@@ -1899,8 +1899,8 @@ class TuckERInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             \textit{DO}_r(\mathbf{Z} \times_2 \mathbf{r})
         ) \times_3 \mathbf{t}
 
-    .. seealso::
-        - https://en.wikipedia.org/wiki/Tucker_decomposition
+    The implementation a has complexity of $\mathcal{O}(d_e^2 d_r)$, and requires $\mathcal{O}(d_e^2 d_r)$
+    global trainable parameters.
 
     ---
     citation:
