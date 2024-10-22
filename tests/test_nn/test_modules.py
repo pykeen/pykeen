@@ -292,12 +292,16 @@ class TuckerTests(cases.InteractionTestCase):
         embedding_dim=cases.InteractionTestCase.dim,
     )
 
-    def _exp_score(self, bn_h, bn_hr, core_tensor, do_h, do_r, do_hr, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
-        a = do_r((core_tensor * r[None, :, None]).sum(dim=1, keepdims=True))  # shape: (embedding_dim, 1, embedding_dim)
-        b = do_h(bn_h(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
+        a = self.instance.relation_dropout(
+            (self.instance.core_tensor * r[None, :, None]).sum(dim=1, keepdims=True)
+        )  # shape: (embedding_dim, 1, embedding_dim)
+        b = self.instance.head_dropout(self.instance.head_batch_norm(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
         c = (b[:, None, None] * a).sum(dim=0, keepdims=True)  # shape: (1, 1, embedding_dim)
-        d = do_hr(bn_hr(c.view(1, -1))).view(1, 1, -1)  # shape: (1, 1, 1, embedding_dim)
+        d = self.instance.head_relation_dropout(self.instance.head_relation_batch_norm(c.view(1, -1))).view(
+            1, 1, -1
+        )  # shape: (1, 1, 1, embedding_dim)
         return (d * t[None, None, :]).sum()
 
 
@@ -599,8 +603,8 @@ class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
         kwargs["tail_dim"] = self.shape_kwargs["f"]
         return kwargs
 
-    def _exp_score(self, core_tensor, h, r, t) -> torch.FloatTensor:
-        return einsum("ijk,i,j,k", core_tensor, h, r, t)
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        return einsum("ijk,i,j,k", self.instance.core_tensor, h, r, t)
 
 
 class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules.Interaction]):
