@@ -21,10 +21,11 @@ class RESCAL(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of RESCAL from [nickel2011]_.
 
     RESCAL models entities by $d$-dimensional vectors and relations by $d \times d$-dimensional matrices, both stored
-    in :class:`~pykeen.nn.Embedding`. The :class:`~pykeen.nn.RESCALInteraction` function is used to obtain scores from
-    them.
+    in :class:`~pykeen.nn.representation.Embedding`.
+    The :class:`~pykeen.nn.modules.RESCALInteraction` function is used to obtain scores from them.
 
-    For $E$ entities and $R$ relations, this model required $Ed + Rd^2$ parameters.
+    .. note ::
+        For $E$ entities and $R$ relations, this model requires $Ed + Rd^2$ parameters.
 
     ---
     citation:
