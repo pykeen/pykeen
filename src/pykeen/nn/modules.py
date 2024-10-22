@@ -1779,10 +1779,8 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless RESCAL interaction function.
-
-    .. seealso:: :func:`pykeen.nn.functional.rescal_interaction`
+class RESCALInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    """The state-less RESCAL interaction function.
 
     ---
     citation:
@@ -1792,7 +1790,25 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     """
 
     relation_shape = ("dd",)
-    func = pkf.rescal_interaction
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return einsum("...d,...de,...e->...", h, r, t)
 
 
 @parse_docdata
