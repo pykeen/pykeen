@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 from collections.abc import Iterable
+from typing import Any
 
 import torch
 from torch import FloatTensor, LongTensor, broadcast_shapes
@@ -12,7 +13,7 @@ from torch import FloatTensor, LongTensor, broadcast_shapes
 from pykeen.inverse import RelationInverter
 from pykeen.models import ERModel
 from pykeen.nn.modules import parallel_unsqueeze
-from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, OneOrSequence, Target
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, OneOrSequence, Target
 from pykeen.utils import upgrade_to_sequence
 
 __all__ = [
@@ -109,7 +110,13 @@ class Scorer:
             return parallel_prefix_unsqueeze(r, ndim=index_ndim)
         return parallel_unsqueeze(r, dim=index_ndim)
 
-    def score(self, model: ERModel, batch: Batch, slice_size: int | None = None, mode=None) -> FloatTensor:
+    def score(
+        self,
+        model: ERModel,
+        batch: Batch,
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+    ) -> FloatTensor:
         if batch.use_inverse_relation and not model.use_inverse_triples:
             raise ValueError
 
@@ -143,7 +150,7 @@ class Scorer:
         # repeat if necessary
         return scores.expand(*expected_shape)
 
-    def predict(self, model: ERModel, batch: Batch, **kwargs) -> FloatTensor:
+    def predict(self, model: ERModel, batch: Batch, **kwargs: Any) -> FloatTensor:
         # todo: auto switch to inverse relations?
         model.eval()
         scores = self.score(model, batch, **kwargs)
