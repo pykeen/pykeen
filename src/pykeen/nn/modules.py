@@ -2551,11 +2551,7 @@ class MuREInteraction(
 
 @parse_docdata
 class SimplEInteraction(
-    FunctionalInteraction[
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-    ],
+    Interaction[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]],
 ):
     """A module wrapper for the SimplE interaction function.
 
@@ -2585,18 +2581,37 @@ class SimplEInteraction(
             clamp_score = (-clamp_score, clamp_score)
         self.clamp_score = clamp_score
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(clamp=self.clamp_score)
+    def forward(
+        self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h[0], h_inv=h[1], r=r[0], r_inv=r[1], t=t[0], t_inv=t[1])
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h_fwd, h_inv = h
+        r_fwd, r_inv = r
+        t_fwd, t_inv = t
+        scores = 0.5 * (
+            tensor_product(h_fwd, r_fwd, t_fwd).sum(dim=-1) + tensor_product(h_inv, r_inv, t_inv).sum(dim=-1)
+        )
+        # Note: In the code in their repository, the score is clamped to [-20, 20].
+        #       That is not mentioned in the paper, so it is made optional here.
+        if self.clamp_score is None:
+            return scores
+        min_, max_ = self.clamp_score
+        return scores.clamp(min=min_, max=max_)
 
 
 @parse_docdata

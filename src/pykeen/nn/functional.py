@@ -10,10 +10,9 @@ import torch
 from torch import broadcast_tensors, nn
 
 from ..typing import FloatTensor
-from ..utils import einsum, tensor_product
+from ..utils import einsum
 
 __all__ = [
-    "simple_interaction",
     "transformer_interaction",
 ]
 
@@ -45,44 +44,6 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def simple_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    h_inv: FloatTensor,
-    r_inv: FloatTensor,
-    t_inv: FloatTensor,
-    clamp: tuple[float, float] | None = None,
-) -> FloatTensor:
-    """Evaluate the SimplE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param h_inv: shape: (`*batch_dims`, dim)
-        The inverse head representations.
-    :param r_inv: shape: (`*batch_dims`, dim, dim)
-        The relation representations.
-    :param t_inv: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param clamp:
-        Clamp the scores to the given range.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    scores = 0.5 * (tensor_product(h, r, t).sum(dim=-1) + tensor_product(h_inv, r_inv, t_inv).sum(dim=-1))
-    # Note: In the code in their repository, the score is clamped to [-20, 20].
-    #       That is not mentioned in the paper, so it is made optional here.
-    if clamp:
-        min_, max_ = clamp
-        scores = scores.clamp(min=min_, max=max_)
-    return scores
 
 
 def quat_e_interaction(
