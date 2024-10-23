@@ -2563,8 +2563,7 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
 
     clamp_score: Clamp | None
 
-    # TODO: this seems to cause cyclic imports during sphinx
-    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.modules.interaction_resolver"))
+    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="interaction_resolver"))
     def __init__(
         self,
         clamp_score: Clamp | float | None = None,
@@ -2633,8 +2632,7 @@ class SimplEInteraction(
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
 
-    # TODO: this seems to cause cyclic imports during sphinx
-    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.modules.interaction_resolver"))
+    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="interaction_resolver"))
     def __init__(
         self,
         base: HintOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]] = DistMultInteraction,
@@ -3803,6 +3801,7 @@ class LineaREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Fl
         return negative_norm_of_sum(h * r_head, -t * r_tail, r_mid, p=self.p, power_norm=self.power_norm)
 
 
+#: A resolver for stateful interaction functions
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
     Interaction,
     skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
