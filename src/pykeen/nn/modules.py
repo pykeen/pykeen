@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from operator import itemgetter
-from typing import Any, Callable, ClassVar, Generic, cast, overload
+from typing import Any, Callable, ClassVar, Generic, TypeAlias, cast, overload
 
 import more_itertools
 import numpy
@@ -2550,7 +2550,7 @@ class MuREInteraction(
         )
 
 
-Clamp = tuple[float | None, float] | tuple[float, float | None]
+Clamp: TypeAlias = tuple[float | None, float] | tuple[float, float | None]
 
 
 class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
