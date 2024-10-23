@@ -1,14 +1,14 @@
 """Implementation of SimplE."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, ClassVar
 
 from class_resolver import OptionalKwargs
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn.modules import ClampedInteraction, SimplEInteraction
+from ...nn.modules import Clamp, ClampedInteraction, SimplEInteraction
 from ...regularizers import PowerSumRegularizer, Regularizer, regularizer_resolver
 from ...typing import FloatTensor, Hint, Initializer
 
@@ -64,7 +64,7 @@ class SimplE(
         self,
         *,
         embedding_dim: int = 200,
-        clamp_score: Optional[Union[float, tuple[float, float]]] = None,
+        clamp_score: Clamp | float | None = None,
         entity_initializer: Hint[Initializer] = None,
         relation_initializer: Hint[Initializer] = None,
         regularizer: Hint[Regularizer] = None,
