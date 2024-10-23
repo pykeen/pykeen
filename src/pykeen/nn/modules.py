@@ -1916,6 +1916,9 @@ class TuckERInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     default_core_initializer: ClassVar[Initializer] = staticmethod(nn.init.uniform_)  # type: ignore
     default_core_initializer_kwargs: Mapping[str, Any] = {"a": -1.0, "b": 1.0}
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="core_initializer", resolver="pykeen.nn.init.initializer_resolver")
+    )
     def __init__(
         self,
         embedding_dim: int = 200,
