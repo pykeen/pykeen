@@ -2553,9 +2553,7 @@ class MuREInteraction(
 class SimplEInteraction(
     Interaction[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]],
 ):
-    """A module wrapper for the SimplE interaction function.
-
-    .. seealso:: :func:`pykeen.nn.functional.simple_interaction`
+    """The SimplE interaction function.
 
     ---
     citation:
@@ -2569,17 +2567,28 @@ class SimplEInteraction(
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
 
-    def __init__(self, clamp_score: None | float | tuple[float, float] = None):
+    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.modules.interaction_resolver"))
+    def __init__(
+        self,
+        clamp_score: None | float | tuple[float, float] = None,
+        base: HintOrType[Interaction] = DistMultInteraction,
+        base_kwargs: OptionalKwargs = None,
+    ):
         """
         Initialize the interaction module.
 
         :param clamp_score:
             whether to clamp scores into a fixed interval
+        :param base:
+            the base interaction
+        :param base_kwargs:
+            keyword-based parameters used to instantiate the base interaction
         """
         super().__init__()
         if isinstance(clamp_score, float):
             clamp_score = (-clamp_score, clamp_score)
         self.clamp_score = clamp_score
+        self.base = interaction_resolver.make(base, base_kwargs)
 
     def forward(
         self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
@@ -2600,12 +2609,10 @@ class SimplEInteraction(
         :return: shape: ``batch_dims``
             The scores.
         """
-        h_fwd, h_inv = h
-        r_fwd, r_inv = r
-        t_fwd, t_inv = t
-        scores = 0.5 * (
-            tensor_product(h_fwd, r_fwd, t_fwd).sum(dim=-1) + tensor_product(h_inv, r_inv, t_inv).sum(dim=-1)
-        )
+        h_fwd, h_bwd = h
+        r_fwd, r_bwd = r
+        t_fwd, t_bwd = t
+        scores = 0.5 * (self.base(h_fwd, r_fwd, t_fwd) + self.base(h_bwd, r_bwd, t_bwd))
         # Note: In the code in their repository, the score is clamped to [-20, 20].
         #       That is not mentioned in the paper, so it is made optional here.
         if self.clamp_score is None:
