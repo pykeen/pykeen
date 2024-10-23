@@ -27,6 +27,7 @@ from . import init
 from .algebra import quaterion_multiplication_table
 from .compute_kernel import batched_dot
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
+from .utils import apply_optional_bn
 from ..metrics.utils import ValueRange
 from ..typing import (
     FloatTensor,
@@ -99,7 +100,7 @@ __all__ = [
     "TransHInteraction",
     "TransRInteraction",
     "TripleREInteraction",
-    "TuckerInteraction",
+    "TuckERInteraction",
     "UMInteraction",
 ]
 
@@ -1872,10 +1873,34 @@ class SEInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTe
 
 
 @parse_docdata
-class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the stateless Tucker interaction function.
+class TuckERInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The stateful TuckER interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.tucker_interaction`
+    The interaction function is inspired by the `Tucker tensor decomposition <https://en.wikipedia.org/wiki/Tucker_decomposition>`_.
+    The base form is given as
+
+    .. math ::
+        \mathbf{Z} \times_1 \mathbf{h} \times_2 \mathbf{r} \times_3 \mathbf{t}
+        = \sum_{1 \leq i, k \leq d_e, 1 \leq j \leq d_r}
+            \mathbf{Z}_{i, j, k} \cdot \mathbf{h}_{i} \cdot \mathbf{r}_{j} \cdot \mathbf{t}_{k}
+
+    where $\mathbf{h}, \mathbf{t} \in \mathbb{R}^{d_e}$ are the head and tail entity representation,
+    $\mathbf{r} \in \mathbb{R}^{d_r}$ is the relation representation, and
+    $\mathbf{Z} \in \mathbb{R}^{d_e \times d_r \times d_e}$ is a *global* parameter, and $\times_k$ denotes the tensor
+    product along the $k$-th dimension.
+
+    The implementation further adds :class:`~torch.nn.BatchNorm1d` and :class:`~torch.nn.Dropout`
+    layers at the following locations:
+
+    .. math ::
+        \textit{DO}_{hr}(\textit{BN}_{hr}(
+            \textit{DO}_h(\textit{BN}_h(\mathbf{h}))
+            \times_1
+            \textit{DO}_r(\mathbf{Z} \times_2 \mathbf{r})
+        ) \times_3 \mathbf{t}
+
+    The implementation a has complexity of $\mathcal{O}(d_e^2 d_r)$, and requires $\mathcal{O}(d_e^2 d_r)$
+    global trainable parameters.
 
     ---
     citation:
@@ -1886,13 +1911,14 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         github: ibalazevic/TuckER
     """
 
-    func = pkf.tucker_interaction
-
     # default core tensor initialization
     # cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
     default_core_initializer: ClassVar[Initializer] = staticmethod(nn.init.uniform_)  # type: ignore
     default_core_initializer_kwargs: Mapping[str, Any] = {"a": -1.0, "b": 1.0}
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="core_initializer", resolver="pykeen.nn.init.initializer_resolver")
+    )
     def __init__(
         self,
         embedding_dim: int = 200,
@@ -1909,7 +1935,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :param embedding_dim:
             The entity embedding dimension.
         :param relation_dim:
-            The relation embedding dimension.
+            The relation embedding dimension. Defaults to ``embedding_dim``.
         :param head_dropout:
             The dropout rate applied to the head representations.
         :param relation_dropout:
@@ -1919,9 +1945,11 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :param apply_batch_normalization:
             Whether to use batch normalization on head representations and the combination of head and relation.
         :param core_initializer:
-            the core tensor's initializer, or a hint thereof
+            The core tensor's initializer, or a hint thereof.
+            Defaults to :attr:`~pykeen.nn.modules.TuckerInteraction.default_core_initializer`.
         :param core_initializer_kwargs:
-            additional keyword-based parameters for the initializer
+            Additional keyword-based parameters for the initializer.
+            Defaults to :attr:`~pykeen.nn.modules.TuckerInteraction.default_core_initializer_kwargs`.
         """
         super().__init__()
 
@@ -1966,14 +1994,36 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         core_initializer(self.core_tensor)
         # batch norm gets reset automatically, since it defines reset_parameters
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(
-            core_tensor=self.core_tensor,
-            do_h=self.head_dropout,
-            do_r=self.relation_dropout,
-            do_hr=self.head_relation_dropout,
-            bn_h=self.head_batch_norm,
-            bn_hr=self.head_relation_batch_norm,
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h = self.head_dropout(apply_optional_bn(x=h, batch_norm=self.head_batch_norm))
+        # x_2 contraction
+        r = einsum("ijk,...j->...ik", self.core_tensor, r)
+        r = self.relation_dropout(r)
+        # x_1 contraction
+        return batched_dot(
+            self.head_relation_dropout(
+                apply_optional_bn(
+                    x=einsum("...ik,...i->...k", r, h),
+                    batch_norm=self.head_relation_batch_norm,
+                )
+            ),
+            t,
         )
 
 
@@ -3111,9 +3161,14 @@ class BoxEInteraction(
 
 
 @parse_docdata
-class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """
+class CPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""
     The Canonical Tensor Decomposition interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
+
+    The interaction function is given as
+
+    .. math::
+        \sum_{1 \leq i \leq k, 1 \leq j \leq d} \mathbf{h}_{i, j} \cdot \mathbf{r}_{i, j} \cdot \mathbf{t}_{i, j}
 
     .. note ::
         For $k=1$, this interaction is the same as :class:`~pykeen.nn.modules.DistMultInteraction`.
@@ -3135,31 +3190,29 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     _head_indices = (0,)
     _tail_indices = (1,)
 
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
-        """Evaluate the interaction function.
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""
+        Evaluate the interaction function.
 
         .. seealso::
             :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
             the generic batched form of the interaction function.
 
-        :param h: shape: ``(*batch_dims`, rank, dim)``
+        :param h: shape: ``(*batch_dims, k, d)``
             The head representations.
-        :param r: shape: ``(*batch_dims`, rank, dim)``
+        :param r: shape: ``(*batch_dims, k, d)``
             The relation representations.
-        :param t: shape: ``(*batch_dims`, rank, dim)``
+        :param t: shape: ``(*batch_dims, k, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
         return (h * r * t).sum(dim=(-2, -1))
 
 
 @parse_docdata
-class MultiLinearTuckerInteraction(
-    FunctionalInteraction[tuple[FloatTensor, FloatTensor], FloatTensor, tuple[FloatTensor, FloatTensor]]
-):
+class MultiLinearTuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """
     An implementation of the original (multi-linear) TuckER interaction as described [tucker1966]_.
 
@@ -3175,8 +3228,9 @@ class MultiLinearTuckerInteraction(
         link: https://dx.doi.org/10.1007/BF02289464
     """
 
-    func = pkf.multilinear_tucker_interaction
     entity_shape = ("d", "f")
+    _head_indices = (0,)
+    _tail_indices = (1,)
     relation_shape = ("e",)
 
     def __init__(
@@ -3216,17 +3270,25 @@ class MultiLinearTuckerInteraction(
             std=numpy.sqrt(numpy.prod(numpy.reciprocal(numpy.asarray(self.core_tensor.shape)))),
         )
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: tuple[FloatTensor, FloatTensor],
-        r: FloatTensor,
-        t: tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h[0], r=r, t=t[1])
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""
+        Evaluate the interaction function.
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(core_tensor=self.core_tensor)
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, head_dim)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, relation_dim)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, tail_dim)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return einsum("ijk, ...i, ...j, ...k -> ...", self.core_tensor, h, r, t)
 
 
 @parse_docdata
