@@ -67,6 +67,7 @@ __all__ = [
     "NormBasedInteraction",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
+    "ClampedInteraction",
     # Concrete Classes
     "AutoSFInteraction",
     "BoxEInteraction",
