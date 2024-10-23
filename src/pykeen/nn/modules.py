@@ -2550,6 +2550,9 @@ class MuREInteraction(
         )
 
 
+Clamp = tuple[float | None, float] | tuple[float, float | None]
+
+
 class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """An adapter to clamp scores to a minimum or maximum value.
 
@@ -2558,11 +2561,13 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
         Thus, it aggravates gradient-based optimization.
     """
 
+    clamp_score: Clamp | None
+
     # TODO: this seems to cause cyclic imports during sphinx
     # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.modules.interaction_resolver"))
     def __init__(
         self,
-        clamp_score: None | float | tuple[float | None, float | None] = None,
+        clamp_score: Clamp | float | None = None,
         base: HintOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]] = DistMultInteraction,
         base_kwargs: OptionalKwargs = None,
     ):
