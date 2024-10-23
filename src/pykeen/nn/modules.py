@@ -2568,7 +2568,9 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
     def __init__(
         self,
         clamp_score: Clamp | float | None = None,
-        base: HintOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]] = DistMultInteraction,
+        base: HintOrType[
+            Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
+        ] = DistMultInteraction,
         base_kwargs: OptionalKwargs = None,
     ):
         """
