@@ -10,14 +10,16 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import SimplEInteraction
 from ...regularizers import PowerSumRegularizer, Regularizer, regularizer_resolver
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "SimplE",
 ]
 
 
-class SimplE(ERModel):
+class SimplE(
+    ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]
+):
     r"""An implementation of SimplE [kazemi2018]_.
 
     SimplE learns two $d$-dimensional vectors for each entity and each relation, stored in :class:`pykeen.nn.Embedding`,
