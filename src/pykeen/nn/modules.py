@@ -2549,6 +2549,47 @@ class MuREInteraction(
         )
 
 
+class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    """An adapter to clamp scores to a minimum or maximum value.
+
+    .. warning::
+        The used :func:`torch.clamp` function has zero gradient for scores below the minimum of above the maximum value.
+        Thus, it aggravates gradient-based optimization.
+    """
+
+    # TODO: this seems to cause cyclic imports during sphinx
+    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.modules.interaction_resolver"))
+    def __init__(
+        self,
+        clamp_score: None | float | tuple[float | None, float | None] = None,
+        base: HintOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]] = DistMultInteraction,
+        base_kwargs: OptionalKwargs = None,
+    ):
+        """
+        Initialize the interaction module.
+
+        :param clamp_score:
+            whether to clamp scores into a fixed interval
+        :param base:
+            the base interaction. Defaults to :class:`~pykeen.nn.modules.DistMultInteraction`.
+        :param base_kwargs:
+            keyword-based parameters used to instantiate the base interaction
+        """
+        super().__init__()
+        if isinstance(clamp_score, float):
+            clamp_score = (-clamp_score, clamp_score)
+        self.clamp_score = clamp_score
+        self.base = interaction_resolver.make(base, base_kwargs)
+
+    # docstr-coverage: inherited
+    def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:
+        scores = self.base(h, r, t)
+        if self.clamp_score is None:
+            return scores
+        low, high = self.clamp_score
+        return torch.clamp(scores, min=low, max=high)
+
+
 @parse_docdata
 class SimplEInteraction(
     Interaction[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]],
@@ -2561,15 +2602,16 @@ class SimplEInteraction(
     relation by a single vector $\mathbf{r} \in \mathbb{R}^d$. Depending whether an entity participates in a
     triple as the head or tail entity, either $\mathbf{e}_h$ or $\mathbf{e}_t$ is used. Both entity
     representations are learned independently, i.e. observing a triple $(h,r,t)$, the method only updates
-    $\mathbf{e}_h$ and $\mathbf{e}_t$.
-    In contrast to :class:`pykeen.nn.modules.CPInteraction`, SimplE introduces separate weights for each relation:
-    $\textbf{r}$ and $\textbf{r}^{-1}$ for the inverse relation. The interaction model is based on both:
+    $\mathbf{h}_h$ and $\mathbf{t}_t$.
+    In contrast to :class:`~pykeen.nn.modules.CPInteraction`, SimplE introduces separate weights for each relation:
+    $\textbf{r}_{\rightarrow}$ and $\textbf{r}_{\leftarrow}$ for the inverse relation.
+    The interaction model is based on both:
 
     .. math::
 
         \frac{1}{2}\left(
-              \left\langle\textbf{h}_{\rightarrow}, \textbf{r}_{\rightarrow}, \textbf{t}_{\rightarrow}\right\rangle
-            + \left\langle\textbf{h}_{\leftarrow}, \textbf{r'}_{\leftarrow}, \textbf{t}_{\leftarrow}\right\rangle
+              \left\langle\textbf{h}_{h}, \textbf{r}_{\rightarrow}, \textbf{t}_{t}\right\rangle
+            + \left\langle\textbf{t}_{h}, \textbf{r}_{\leftarrow}, \textbf{h}_{t}\right\rangle
         \right)
 
     ---
@@ -2587,24 +2629,18 @@ class SimplEInteraction(
     # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.modules.interaction_resolver"))
     def __init__(
         self,
-        clamp_score: None | float | tuple[float, float] = None,
         base: HintOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]] = DistMultInteraction,
         base_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the interaction module.
 
-        :param clamp_score:
-            whether to clamp scores into a fixed interval
         :param base:
-            the base interaction
+            the base interaction. Defaults to :class:`~pykeen.nn.modules.DistMultInteraction`.
         :param base_kwargs:
             keyword-based parameters used to instantiate the base interaction
         """
         super().__init__()
-        if isinstance(clamp_score, float):
-            clamp_score = (-clamp_score, clamp_score)
-        self.clamp_score = clamp_score
         self.base = interaction_resolver.make(base, base_kwargs)
 
     def forward(
@@ -2629,13 +2665,7 @@ class SimplEInteraction(
         h_fwd, h_bwd = h
         r_fwd, r_bwd = r
         t_fwd, t_bwd = t
-        scores = 0.5 * (self.base(h_fwd, r_fwd, t_fwd) + self.base(h_bwd, r_bwd, t_bwd))
-        # Note: In the code in their repository, the score is clamped to [-20, 20].
-        #       That is not mentioned in the paper, so it is made optional here.
-        if self.clamp_score is None:
-            return scores
-        min_, max_ = self.clamp_score
-        return scores.clamp(min=min_, max=max_)
+        return 0.5 * (self.base(h_fwd, r_fwd, t_fwd) + self.base(t_bwd, r_bwd, h_bwd))
 
 
 @parse_docdata

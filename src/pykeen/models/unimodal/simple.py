@@ -8,7 +8,7 @@ from class_resolver import OptionalKwargs
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn.modules import SimplEInteraction
+from ...nn.modules import ClampedInteraction, SimplEInteraction
 from ...regularizers import PowerSumRegularizer, Regularizer, regularizer_resolver
 from ...typing import FloatTensor, Hint, Initializer
 
@@ -88,9 +88,11 @@ class SimplE(
         """
         # TODO: what about using the default regularizer?
         regularizer = regularizer_resolver.make_safe(regularizer, pos_kwargs=regularizer_kwargs)
+        # Note: In the code in their repository, the score is clamped to [-20, 20].
+        #       That is not mentioned in the paper, so it is made optional here.
         super().__init__(
-            interaction=SimplEInteraction,
-            interaction_kwargs=dict(clamp_score=clamp_score),
+            interaction=ClampedInteraction,
+            interaction_kwargs=dict(base=SimplEInteraction, clamp_score=clamp_score),
             entity_representations_kwargs=[
                 # (head) entity
                 dict(
