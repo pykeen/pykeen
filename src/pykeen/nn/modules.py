@@ -2555,21 +2555,22 @@ class SimplEInteraction(
 ):
     r"""The SimplE interaction function.
 
-    SimplE is an extension of canonical polyadic (CP), an early tensor factorization approach in which each entity
-    $e \in \mathcal{E}$ is represented by two vectors $\textbf{h}_e, \textbf{t}_e \in \mathbb{R}^d$ and each
-    relation by a single vector $\textbf{r}_r \in \mathbb{R}^d$. Depending whether an entity participates in a
-    triple as the head or tail entity, either $\textbf{h}$ or $\textbf{t}$ is used. Both entity
+    SimplE can be regarded as extension of (a special case of) :class:`pykeen.nn.modules.CPInteraction`,
+    an early tensor factorization approach in which each entity
+    $e \in \mathcal{E}$ is represented by two vectors $\mathbf{e}_h, \mathbf{e}_t \in \mathbb{R}^d$ and each
+    relation by a single vector $\mathbf{r} \in \mathbb{R}^d$. Depending whether an entity participates in a
+    triple as the head or tail entity, either $\mathbf{e}_h$ or $\mathbf{e}_t$ is used. Both entity
     representations are learned independently, i.e. observing a triple $(h,r,t)$, the method only updates
-    $\textbf{h}_h$ and $\textbf{t}_t$. In contrast to CP, SimplE introduces for each relation $\textbf{r}_r$
-    the inverse relation $\textbf{r'}_r$, and formulates its the interaction model based on both:
+    $\mathbf{e}_h$ and $\mathbf{e}_t$.
+    In contrast to :class:`pykeen.nn.modules.CPInteraction`, SimplE introduces separate weights for each relation:
+    $\textbf{r}$ and $\textbf{r}^{-1}$ for the inverse relation. The interaction model is based on both:
 
     .. math::
 
-        f(h,r,t) = \frac{1}{2}\left(\left\langle\textbf{h}_h, \textbf{r}_r, \textbf{t}_t\right\rangle
-        + \left\langle\textbf{h}_t, \textbf{r'}_r, \textbf{t}_h\right\rangle\right)
-
-    Therefore, for each triple $(h,r,t) \in \mathbb{K}$, both $\textbf{h}_h$ and $\textbf{h}_t$
-    as well as $\textbf{t}_h$ and $\textbf{t}_t$ are updated.
+        \frac{1}{2}\left(
+              \left\langle\textbf{h}_{\rightarrow}, \textbf{r}_{\rightarrow}, \textbf{t}_{\rightarrow}\right\rangle
+            + \left\langle\textbf{h}_{\leftarrow}, \textbf{r'}_{\leftarrow}, \textbf{t}_{\leftarrow}\right\rangle
+        \right)
 
     ---
     citation:
@@ -2582,7 +2583,8 @@ class SimplEInteraction(
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
 
-    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.modules.interaction_resolver"))
+    # TODO: this seems to cause cyclic imports during sphinx
+    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.modules.interaction_resolver"))
     def __init__(
         self,
         clamp_score: None | float | tuple[float, float] = None,

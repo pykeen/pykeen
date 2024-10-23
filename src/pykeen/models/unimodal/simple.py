@@ -22,8 +22,8 @@ class SimplE(
 ):
     r"""An implementation of SimplE [kazemi2018]_.
 
-    SimplE learns two $d$-dimensional vectors for each entity and each relation, stored in :class:`pykeen.nn.Embedding`,
-    and applies the :class:`pykeen.nn.modules.SimplEInteraction` on top.
+    SimplE learns two $d$-dimensional vectors for each entity and each relation, stored in
+    :class:`~pykeen.nn.representation.Embedding`, and applies the :class:`~pykeen.nn.modules.SimplEInteraction` on top.
 
     .. seealso::
 
@@ -73,7 +73,7 @@ class SimplE(
         :param embedding_dim:
             the embedding dimension
         :param clamp_score:
-            whether to clamp scores, cf. :meth:`SimplEInteraction.__init__`
+            whether to clamp scores, cf. :class:`~pykeen.nn.modules.SimplEInteraction`
         :param entity_initializer:
             the entity representation initializer
         :param relation_initializer:
@@ -86,6 +86,7 @@ class SimplE(
         :param kwargs:
             additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """
+        # TODO: what about using the default regularizer?
         regularizer = regularizer_resolver.make_safe(regularizer, pos_kwargs=regularizer_kwargs)
         super().__init__(
             interaction=SimplEInteraction,
