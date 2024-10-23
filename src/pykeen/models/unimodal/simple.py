@@ -25,6 +25,10 @@ class SimplE(
     SimplE learns two $d$-dimensional vectors for each entity and each relation, stored in
     :class:`~pykeen.nn.representation.Embedding`, and applies the :class:`~pykeen.nn.modules.SimplEInteraction` on top.
 
+    .. note ::
+        In the code in their repository, the score is clamped to $[-20, 20]$.
+        That is not mentioned in the paper, so it is made optional.
+
     .. seealso::
 
        - Official implementation: https://github.com/Mehran-k/SimplE
@@ -73,7 +77,7 @@ class SimplE(
         :param embedding_dim:
             the embedding dimension
         :param clamp_score:
-            whether to clamp scores, cf. :class:`~pykeen.nn.modules.SimplEInteraction`
+            whether to clamp scores, cf. :class:`~pykeen.nn.modules.ClampedInteraction`
         :param entity_initializer:
             the entity representation initializer
         :param relation_initializer:
