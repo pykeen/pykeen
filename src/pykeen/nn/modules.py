@@ -2586,7 +2586,7 @@ class SimplEInteraction(
     def __init__(
         self,
         clamp_score: None | float | tuple[float, float] = None,
-        base: HintOrType[Interaction] = DistMultInteraction,
+        base: HintOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]] = DistMultInteraction,
         base_kwargs: OptionalKwargs = None,
     ):
         """
