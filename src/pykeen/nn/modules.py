@@ -3425,8 +3425,15 @@ class MultiLinearTuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTe
 class TransformerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""Transformer-based interaction, as described in [galkin2020]_.
 
-    This interaction function has been mainly designed to be able to handle additional qualifier pairs found in
+    This interaction function is primarily designed to handle additional qualifier pairs found in
     hyper-relational statements, but can also be used for vanilla link prediction.
+
+    It creates a $2$-element sequence of the head and relation representations,
+    applies a learnable absolute position encoding,
+    applies a Transformer encoder,
+    and subsequently performs sum pooling along the sequence dimension
+    and a final linear projection
+    before determining scores by the dot product with the tail entity representation.
 
     Its interaction function is given by
 
@@ -3436,7 +3443,10 @@ class TransformerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor])
             [\mathbf{h} + \mathbf{pe}[0]; \mathbf{r} + \mathbf{pe}[1]]
         )))^T \mathbf{t}
 
-    Thus, in is particularly well-suited for $1:n$ scoring different tail entities.
+    Since a computationally expensive operation is applied to the concatenated head and relation representations,
+    and a cheap dot product is applied between this encoding and the tail representation,
+    this interaction function is particularly well suited for $1:n$ evaluation
+    of different tail entities for the same head-relation combination.
 
     ---
     name: Transformer
@@ -3459,19 +3469,19 @@ class TransformerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor])
         Initialize the module.
 
         :param input_dim: >0
-            the input dimension
+            The input dimension.
         :param num_layers: >0
-            the number of Transformer layers, cf. :class:`torch.nn.TransformerEncoder`.
+            The number of Transformer layers, cf. :class:`torch.nn.TransformerEncoder`.
         :param num_heads: >0
-            the number of self-attention heads inside each transformer encoder layer,
-            cf. :class:`nn.TransformerEncoderLayer`
+            The number of self-attention heads inside each transformer encoder layer,
+            cf. :class:`nn.TransformerEncoderLayer`.
         :param dropout:
-            the dropout rate on each transformer encoder layer, cf. :class:`torch.nn.TransformerEncoderLayer`
+            The dropout rate on each transformer encoder layer, cf. :class:`torch.nn.TransformerEncoderLayer`.
         :param dim_feedforward:
-            the hidden dimension of the feed-forward layers of the transformer encoder layer,
-            cf. :class:`torch.nn.TransformerEncoderLayer`
+            The hidden dimension of the feed-forward layers of the transformer encoder layer,
+            cf. :class:`torch.nn.TransformerEncoderLayer`.
         :param position_initializer:
-            the initializer to use for positional embeddings
+            The initializer to use for positional embeddings.
         """
         super().__init__()
         self.transformer = nn.TransformerEncoder(
