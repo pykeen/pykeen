@@ -3422,8 +3422,31 @@ class MultiLinearTuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTe
 
 
 @parse_docdata
-class TransformerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """Transformer-based interaction, as described in [galkin2020]_.
+class TransformerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""Transformer-based interaction, as described in [galkin2020]_.
+
+    This interaction function is primarily designed to handle additional qualifier pairs found in
+    hyper-relational statements, but can also be used for vanilla link prediction.
+
+    It creates a $2$-element sequence of the head and relation representations,
+    applies a learnable absolute position encoding,
+    applies a Transformer encoder,
+    and subsequently performs sum pooling along the sequence dimension
+    and a final linear projection
+    before determining scores by the dot product with the tail entity representation.
+
+    Its interaction function is given by
+
+    .. math ::
+
+        \textit{Linear}(\textit{SumPooling}(\textit{Transformer}(
+            [\mathbf{h} + \mathbf{pe}[0]; \mathbf{r} + \mathbf{pe}[1]]
+        )))^T \mathbf{t}
+
+    Since a computationally expensive operation is applied to the concatenated head and relation representations,
+    and a cheap dot product is applied between this encoding and the tail representation,
+    this interaction function is particularly well suited for $1:n$ evaluation
+    of different tail entities for the same head-relation combination.
 
     ---
     name: Transformer
@@ -3432,8 +3455,6 @@ class TransformerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, Flo
         year: 2020
         link: https://doi.org/10.18653/v1/2020.emnlp-main.596
     """
-
-    func = pkf.transformer_interaction
 
     def __init__(
         self,
@@ -3448,19 +3469,19 @@ class TransformerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, Flo
         Initialize the module.
 
         :param input_dim: >0
-            the input dimension
+            The input dimension.
         :param num_layers: >0
-            the number of Transformer layers, cf. :class:`nn.TransformerEncoder`.
+            The number of Transformer layers, cf. :class:`torch.nn.TransformerEncoder`.
         :param num_heads: >0
-            the number of self-attention heads inside each transformer encoder layer,
-            cf. :class:`nn.TransformerEncoderLayer`
+            The number of self-attention heads inside each transformer encoder layer,
+            cf. :class:`nn.TransformerEncoderLayer`.
         :param dropout:
-            the dropout rate on each transformer encoder layer, cf. :class:`nn.TransformerEncoderLayer`
+            The dropout rate on each transformer encoder layer, cf. :class:`torch.nn.TransformerEncoderLayer`.
         :param dim_feedforward:
-            the hidden dimension of the feed-forward layers of the transformer encoder layer,
-            cf. :class:`nn.TransformerEncoderLayer`
+            The hidden dimension of the feed-forward layers of the transformer encoder layer,
+            cf. :class:`torch.nn.TransformerEncoderLayer`.
         :param position_initializer:
-            the initializer to use for positional embeddings
+            The initializer to use for positional embeddings.
         """
         super().__init__()
         self.transformer = nn.TransformerEncoder(
@@ -3475,13 +3496,47 @@ class TransformerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, Flo
         self.position_embeddings = nn.Parameter(position_initializer(torch.empty(2, input_dim)))
         self.final = nn.Linear(input_dim, input_dim, bias=True)
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(
-            transformer=self.transformer,
-            position_embeddings=self.position_embeddings,
-            final=self.final,
-        )
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # stack h & r (+ broadcast) => shape: (2, *batch_dims, dim)
+        x = torch.stack(torch.broadcast_tensors(h, r), dim=0)
+
+        # remember shape for output, but reshape for transformer to (2, prod(batch_dims), dim)
+        hr_shape = x.shape
+        x = x.view(2, -1, hr_shape[-1])
+
+        # get position embeddings, shape: (seq_len, dim)
+        # Now we are position-dependent w.r.t qualifier pairs.
+        x = x + self.position_embeddings.unsqueeze(dim=1)
+
+        # seq_length, batch_size, dim
+        x = self.transformer(src=x)
+
+        # Pool output along sequence dimension, (prod(batch_dims), dim)
+        x = x.sum(dim=0)
+
+        # output shape: (prod(batch_dims), dim)
+        x = self.final(x)
+
+        # reshape
+        x = x.view(*hr_shape[1:-1], x.shape[-1])
+
+        return batched_dot(x, t)
 
 
 @parse_docdata
@@ -3528,7 +3583,7 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, F
             :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
         :param u:
-            Rhe relation factor offset. Can be set to `None` (or 0) to disable it.
+            The relation factor offset. Can be set to `None` (or 0) to disable it.
         :param p:
             The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
