@@ -3573,7 +3573,7 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, F
             :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
         :param u:
-            Rhe relation factor offset. Can be set to `None` (or 0) to disable it.
+            The relation factor offset. Can be set to `None` (or 0) to disable it.
         :param p:
             The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
