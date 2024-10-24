@@ -15,7 +15,14 @@ from typing import Any, Callable, ClassVar, Generic, Optional, Union, cast, over
 import more_itertools
 import numpy
 import torch
-from class_resolver import ClassResolver, Hint, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
+from class_resolver import (
+    ClassResolver,
+    Hint,
+    LookupOrType,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
@@ -68,6 +75,7 @@ __all__ = [
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     "ClampedInteraction",
+    "DirectionAverageInteraction",
     # Concrete Classes
     "AutoSFInteraction",
     "BoxEInteraction",
@@ -2566,21 +2574,19 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
     @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="interaction_resolver"))
     def __init__(
         self,
-        clamp_score: Clamp | float | None = None,
-        base: HintOrType[
-            Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
-        ] = DistMultInteraction,
+        base: LookupOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         base_kwargs: OptionalKwargs = None,
+        clamp_score: Clamp | float | None = None,
     ):
         """
         Initialize the interaction module.
 
-        :param clamp_score:
-            whether to clamp scores into a fixed interval
         :param base:
-            the base interaction. Defaults to :class:`~pykeen.nn.modules.DistMultInteraction`.
+            the base interaction.
         :param base_kwargs:
             keyword-based parameters used to instantiate the base interaction
+        :param clamp_score:
+            whether to clamp scores into a fixed interval
         """
         super().__init__()
         if isinstance(clamp_score, float):
@@ -2597,10 +2603,92 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
         return torch.clamp(scores, min=low, max=high)
 
 
-@parse_docdata
-class SimplEInteraction(
-    Interaction[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]],
+class DirectionAverageInteraction(
+    Interaction[
+        tuple[FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor],
+    ],
 ):
+    r"""The directional average interaction module.
+
+    This can be considered as a generalization of the SimplE interaction module that can be parametrized
+    with any other interaction module, rather than just DistMult.
+
+    A separate representation is learned for each entity $e \in \mathcal{E}$  for when it appears as the
+    subject of a triple $\mathbf{h} \in \mathbb{R}^d$ and as the object of a triple
+    $\mathbf{t} \in \mathbb{R}^d$.
+
+    Two representations are learned for each relationship for a forward $\textbf{r}_{\rightarrow}$
+    and backward triple $\textbf{r}_{\leftarrow}$.
+
+    Depending on whether an entity participates in a
+    triple as the head or tail entity, either $\mathbf{e}_h$ or $\mathbf{e}_t$ is used. Both entity
+    representations are learned independently, i.e. observing a triple $(h,r,t)$, the method only updates
+    $\mathbf{h}_h$ and $\mathbf{t}_t$.
+
+    The interaction model is based on both:
+
+    .. math::
+
+        \frac{
+            f(\textbf{h}_{h}, \textbf{r}_{\rightarrow}, \textbf{t}_{t})
+            + f(\textbf{t}_{h}, \textbf{r}_{\leftarrow}, \textbf{h}_{t})
+        }{2}
+
+    Where ``f`` is the interaction model used. If :class:`DistMultInteraction` is used, then this becomes
+    :class:`SimplEInteraction`.
+
+    .. todo:: can we generalize the type annotations for this from FloatTensor to HeadRepresentation, etc.?
+    """
+
+    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="interaction_resolver"))
+    def __init__(
+        self,
+        base: LookupOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]],
+        base_kwargs: OptionalKwargs = None,
+    ):
+        """
+        Initialize the interaction module.
+
+        :param base:
+            the base interaction.
+        :param base_kwargs:
+            keyword-based parameters used to instantiate the base interaction
+        """
+        super().__init__()
+        self.base = interaction_resolver.make(base, base_kwargs)
+
+    def forward(
+        self,
+        h: tuple[FloatTensor, FloatTensor],
+        r: tuple[FloatTensor, FloatTensor],
+        t: tuple[FloatTensor, FloatTensor],
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h_fwd, h_bwd = h
+        r_fwd, r_bwd = r
+        t_fwd, t_bwd = t
+        return 0.5 * (self.base(h_fwd, r_fwd, t_fwd) + self.base(t_bwd, r_bwd, h_bwd))
+
+
+@parse_docdata
+class SimplEInteraction(DirectionAverageInteraction):
     r"""The SimplE interaction function.
 
     SimplE can be regarded as extension of (a special case of) :class:`pykeen.nn.modules.CPInteraction`,
@@ -2632,46 +2720,9 @@ class SimplEInteraction(
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
 
-    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="interaction_resolver"))
-    def __init__(
-        self,
-        base: HintOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]] = DistMultInteraction,
-        base_kwargs: OptionalKwargs = None,
-    ):
-        """
-        Initialize the interaction module.
-
-        :param base:
-            the base interaction. Defaults to :class:`~pykeen.nn.modules.DistMultInteraction`.
-        :param base_kwargs:
-            keyword-based parameters used to instantiate the base interaction
-        """
-        super().__init__()
-        self.base = interaction_resolver.make(base, base_kwargs)
-
-    def forward(
-        self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
-    ) -> FloatTensor:
-        """Evaluate the interaction function.
-
-        .. seealso::
-            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
-            the generic batched form of the interaction function.
-
-        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
-            The head representations.
-        :param r: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
-            The relation representations.
-        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
-            The tail representations.
-
-        :return: shape: ``batch_dims``
-            The scores.
-        """
-        h_fwd, h_bwd = h
-        r_fwd, r_bwd = r
-        t_fwd, t_bwd = t
-        return 0.5 * (self.base(h_fwd, r_fwd, t_fwd) + self.base(t_bwd, r_bwd, h_bwd))
+    def __init__(self):
+        """Initialize the interaction module."""
+        super().__init__(DistMultInteraction)
 
 
 @parse_docdata
@@ -3804,6 +3855,12 @@ class LineaREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Fl
 #: A resolver for stateful interaction functions
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
     Interaction,
-    skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
+    skip={
+        NormBasedInteraction,
+        FunctionalInteraction,
+        MonotonicAffineTransformationInteraction,
+        ClampedInteraction,
+        DirectionAverageInteraction,
+    },
     default=TransEInteraction,
 )
