@@ -465,11 +465,13 @@ class SimplEInteractionTests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.SimplEInteraction
 
-    def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
-        assert clamp is None
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        h_fwd, h_bwd = h
+        r_fwd, r_bwd = r
+        t_fwd, t_bwd = t
         return 0.5 * pykeen.nn.modules.DistMultInteraction.func(
-            h=h, r=r, t=t
-        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(h=h_inv, r=r_inv, t=t_inv)
+            h_fwd, r_fwd, t_fwd
+        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(t_bwd, r_bwd, h_bwd)
 
 
 class MuRETests(cases.TranslationalInteractionTests):
