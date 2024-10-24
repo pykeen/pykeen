@@ -2570,6 +2570,7 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
     """
 
     clamp_score: Clamp | None
+    base: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
 
     @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="interaction_resolver"))
     def __init__(
@@ -2593,6 +2594,16 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
             clamp_score = (-clamp_score, clamp_score)
         self.clamp_score = clamp_score
         self.base = interaction_resolver.make(base, base_kwargs)
+
+    @property
+    def entity_shape(self) -> Sequence[str]:
+        """Expose the base interaction's entity shape."""
+        return self.base.entity_shape
+
+    @property
+    def relation_shape(self) -> Sequence[str]:
+        """Expose the base interaction's relation shape."""
+        return self.base.relation_shape
 
     # docstr-coverage: inherited
     def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:
