@@ -2596,12 +2596,12 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
         self.base = interaction_resolver.make(base, base_kwargs)
 
     @property
-    def entity_shape(self) -> Sequence[str]:
+    def entity_shape(self) -> Sequence[str]:  # type:ignore[override]
         """Expose the base interaction's entity shape."""
         return self.base.entity_shape
 
     @property
-    def relation_shape(self) -> Sequence[str]:
+    def relation_shape(self) -> Sequence[str]:  # type:ignore[override]
         """Expose the base interaction's relation shape."""
         return self.base.relation_shape
 
