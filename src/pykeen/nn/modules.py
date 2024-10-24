@@ -2624,31 +2624,24 @@ class DirectionAverageInteraction(
     r"""The directional average interaction module.
 
     This can be considered as a generalization of the SimplE interaction module that can be parametrized
-    with any other interaction module, rather than just DistMult.
+    with any other interaction module, rather than just :class:`pykeen.nn.modules.DistMultInteraction`.
 
-    A separate representation is learned for each entity $e \in \mathcal{E}$  for when it appears as the
-    subject of a triple $\mathbf{h} \in \mathbb{R}^d$ and as the object of a triple
-    $\mathbf{t} \in \mathbb{R}^d$.
-
-    Two representations are learned for each relationship for a forward $\textbf{r}_{\rightarrow}$
+    A separate representation is learned for each entity $e \in \mathcal{E}$ for when it appears as the
+    subject of a triple $\mathbf{e}_h \in \mathbb{R}^d$ and as the object of a triple $\mathbf{e}_t \in \mathbb{R}^d$.
+    Similarly, two representations are learned for each relationship for a forward $\textbf{r}_{\rightarrow}$
     and backward triple $\textbf{r}_{\leftarrow}$.
 
-    Depending on whether an entity participates in a
-    triple as the head or tail entity, either $\mathbf{e}_h$ or $\mathbf{e}_t$ is used. Both entity
-    representations are learned independently, i.e. observing a triple $(h,r,t)$, the method only updates
-    $\mathbf{h}_h$ and $\mathbf{t}_t$.
-
-    The interaction model is based on both:
+    The score is then obtained by averaging the *forward* and the *backward* interaction function value:
 
     .. math::
 
         \frac{
-            f(\textbf{h}_{h}, \textbf{r}_{\rightarrow}, \textbf{t}_{t})
+              f(\textbf{h}_{h}, \textbf{r}_{\rightarrow}, \textbf{t}_{t})
             + f(\textbf{t}_{h}, \textbf{r}_{\leftarrow}, \textbf{h}_{t})
         }{2}
 
-    Where ``f`` is the interaction model used. If :class:`DistMultInteraction` is used, then this becomes
-    :class:`SimplEInteraction`.
+    Where ``f`` is the interaction model used. If :class:`pykeen.nn.modules.DistMultInteraction` is used,
+    then this becomes :class:`pykeen.nn.modules.SimplEInteraction`.
 
     .. todo:: can we generalize the type annotations for this from FloatTensor to HeadRepresentation, etc.?
     """
