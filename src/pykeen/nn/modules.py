@@ -10,12 +10,19 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from operator import itemgetter
-from typing import Any, Callable, ClassVar, Generic, cast, overload
+from typing import Any, Callable, ClassVar, Generic, Optional, Union, cast, overload
 
 import more_itertools
 import numpy
 import torch
-from class_resolver import ClassResolver, Hint, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
+from class_resolver import (
+    ClassResolver,
+    Hint,
+    LookupOrType,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
@@ -23,10 +30,11 @@ from torch.nn.init import xavier_normal_
 from typing_extensions import Self
 
 from . import functional as pkf
+from . import init
 from .algebra import quaterion_multiplication_table
 from .compute_kernel import batched_dot
-from .init import initializer_resolver
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
+from .utils import apply_optional_bn
 from ..metrics.utils import ValueRange
 from ..typing import (
     FloatTensor,
@@ -42,12 +50,15 @@ from ..typing import (
 from ..utils import (
     add_cudnn_error_hint,
     at_least_eps,
+    clamp_norm,
     einsum,
     ensure_complex,
     ensure_tuple,
     estimate_cost_of_sequence,
     make_ones_like,
     negative_norm,
+    negative_norm_of_sum,
+    project_entity,
     tensor_product,
     tensor_sum,
     unpack_singletons,
@@ -63,6 +74,8 @@ __all__ = [
     "NormBasedInteraction",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
+    "ClampedInteraction",
+    "DirectionAverageInteraction",
     # Concrete Classes
     "AutoSFInteraction",
     "BoxEInteraction",
@@ -96,7 +109,7 @@ __all__ = [
     "TransHInteraction",
     "TransRInteraction",
     "TripleREInteraction",
-    "TuckerInteraction",
+    "TuckERInteraction",
     "UMInteraction",
 ]
 
@@ -471,11 +484,7 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
         return dict()
 
 
-class NormBasedInteraction(
-    FunctionalInteraction,
-    Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
-    ABC,
-):
+class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Norm-based interactions use a (powered) $p$-norm in their scoring function."""
 
     def __init__(self, p: int, power_norm: bool = False):
@@ -493,14 +502,30 @@ class NormBasedInteraction(
 
     # docstr-coverage: inherited
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(p=self.p, power_norm=self.power_norm)
+        raise AssertionError("This is a relic.")
 
 
 @parse_docdata
 class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the TransE interaction function.
+    r"""The state-less norm-based TransE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transe_interaction`
+    TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`:
+
+    .. math::
+
+        \textbf{e}_h + \textbf{e}_r \approx \textbf{e}_t
+
+    This equation is rearranged and the :math:`l_p` norm is applied to create the TransE interaction function.
+
+    .. math::
+
+        f(h, r, t) = - \|\textbf{e}_h + \textbf{e}_r - \textbf{e}_t\|_{p}
+
+    While this formulation is computationally efficient, it inherently cannot model one-to-many, many-to-one, and
+    many-to-many relationships. For triples :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}` where :math:`t_1 \neq t_2`,
+    the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
+    and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
+    :math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
 
     ---
     citation:
@@ -509,23 +534,87 @@ class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
         link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
-    func = pkf.transe_interaction
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return negative_norm_of_sum(h, r, -t, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
-class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateless module for the TransF interaction function.
+class TransFInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-less norm-based TransF interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
+    It is given by
+
+    .. math ::
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) =
+            (\mathbf{h} + \mathbf{r})^T \mathbf{t} + \mathbf{h}^T (\mathbf{r} - \mathbf{t})
+
+    for head entity, relation, and tail entity representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$.
+    The interaction function can be simplified as
+
+    .. math ::
+        f(\mathbf{h}, \mathbf{r}, \mathbf{t}) &=&
+            (\mathbf{h} + \mathbf{r})^T \mathbf{t} + \mathbf{h}^T (\mathbf{t} - \mathbf{r}) \\
+            &=&
+            \langle \mathbf{h}, \mathbf{t}\rangle
+            + \langle \mathbf{r}, \mathbf{t}\rangle
+            + \langle \mathbf{h}, \mathbf{t}\rangle
+            - \langle \mathbf{h}, \mathbf{r}\rangle \\
+            &=&
+            2 \cdot \langle \mathbf{h}, \mathbf{t}\rangle
+            + \langle \mathbf{r}, \mathbf{t}\rangle
+            - \langle \mathbf{h}, \mathbf{r}\rangle
+
+    .. note ::
+        This is the *balanced* variant from the paper.
+
+    .. todo ::
+        Implement the unbalanced version, too:
+        $f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = (\mathbf{h} + \mathbf{r})^T \mathbf{t}$
 
     ---
     citation:
         author: Feng
         year: 2016
         link: https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887
+        arxiv: 1505.05253
     """
 
-    func = pkf.transf_interaction
+    # TODO: implement the unbalanced variant from the paper: f(h, r, t) = (h + r)^T t
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return tensor_sum(2 * batched_dot(h, t), batched_dot(r, t), -batched_dot(h, r))
 
 
 @parse_docdata
@@ -1330,12 +1419,7 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             nn.ReLU(),
         )
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
         :param h: shape: ``(*batch_dims, d)``
@@ -1360,46 +1444,76 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class TransRInteraction(
-    NormBasedInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor],
-        FloatTensor,
-    ],
-):
-    """A stateful module for the TransR interaction function.
+class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
+    r"""The state-less norm-based TransR interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transr_interaction`
+    It is given by
+
+    .. math ::
+
+        -\|c(\mathbf{M}_{r}\mathbf{h}) + \mathbf{r} - c(\mathbf{M}_{r}\mathbf{t})\|_{2}^2
+
+    for head and tail entity representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$,
+    relation representation $\mathbf{r} \in \mathbb{R}^k$,
+    and a relation-specific projection matrix $\mathbf{M}_r \in \mathbb{R}^{k \times d}$.
+    $c$ enforces the constraint $\|\cdot\| \leq 1$, cf. :func:`pykeen.utils.clamp_norm`.
+
+    .. note ::
+        :class:`pykeen.models.TransR` additionally also enforces $\|\cdot\| \leq 1$ on all embeddings.
 
     ---
     citation:
         author: Lin
         year: 2015
-        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/
+        link: https://aaai.org/papers/9491-learning-entity-and-relation-embeddings-for-knowledge-graph-completion/
     """
 
     relation_shape = ("e", "de")
-    func = pkf.transr_interaction
 
-    def __init__(self, p: int, power_norm: bool = True):
+    def __init__(self, p: int, power_norm: bool = True, max_projection_norm: float = 1.0):
         """
         Initialize the interaction module.
 
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
         :param p:
-            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+        :param max_projection_norm:
+            The maximum norm to be clamped after projection.
         """
         super().__init__(p=p, power_norm=power_norm)
+        self.max_projection_norm = max_projection_norm
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, r=r[0], t=t, m_r=r[1])
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, k)`` and ``(*batch_dims, d, k)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        r, m_r = r
+        # project to relation specific subspace
+        h_bot = einsum("...e, ...er -> ...r", h, m_r)
+        t_bot = einsum("...e, ...er -> ...r", t, m_r)
+        # ensure constraints
+        h_bot = clamp_norm(h_bot, p=self.p, dim=-1, maxnorm=self.max_projection_norm)
+        t_bot = clamp_norm(t_bot, p=self.p, dim=-1, maxnorm=self.max_projection_norm)
+        return negative_norm_of_sum(h_bot, r, -t_bot, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
@@ -1522,34 +1636,95 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
 
 
 @parse_docdata
-class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the ProjE interaction function.
+class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-ful ProjE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.proje_interaction`
+    The activation function is given as
+
+    .. math ::
+
+        g(
+            f(
+                \mathbf{d}_h \odot \mathbf{h}
+                + \mathbf{d}_r \odot \mathbf{r}
+                + \mathbf{b}
+            )^T \mathbf{t} + b_p
+        )
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ are the head entity, relation, and tail entity
+    representations, $\mathbf{d}_h, \mathbf{d}_r, \mathbf{b} \in \mathbb{R}^d$ and $b_p \in \mathbb{R}$ are global
+    parameters, and $f, g$ activation functions.
+
+    It can be interpreted as a two-layer neural network with a very special sparsity pattern on the weight matrices.
+    The paper also describes the first operation
+
+    .. math ::
+        \mathbf{y} = f(\mathbf{d}_h \odot \mathbf{h}
+            + \mathbf{d}_r \odot \mathbf{r}
+            + \mathbf{b}
+        )
+
+    as the *combination* operation and the second part
+
+    .. math ::
+        g(\mathbf{y}^T \mathbf{t} + b_p)
+
+    as the *projection* layer.
+
+    .. note ::
+
+        While the original paper describes using either sigmoid or softmax as the final activation,
+        this implementation defaults to no activation on the final layer. This allows the use of numerically stable
+        implementations of merged activation and loss, such as :class:`torch.nn.BCEWithLogitsLoss` (for sigmoid),
+        or :class:`torch.nn.CrossEntropyLoss` (for softmax).
 
     ---
     citation:
         author: Shi
         year: 2017
-        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279
+        link: https://aaai.org/papers/10677-aaai-31-2017/
         github: nddsg/ProjE
+        arxiv: 1611.05425
     """
 
-    func = pkf.proje_interaction
-
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="inner_activation", resolver="class_resolver.contrib.torch.activation_resolver"),
+        ResolverKey(name="outer_activation", resolver="class_resolver.contrib.torch.activation_resolver"),
+    )
     def __init__(
         self,
         embedding_dim: int = 50,
-        inner_non_linearity: HintOrType[nn.Module] = None,
+        inner_activation: HintOrType[nn.Module] = None,
+        inner_activation_kwargs: OptionalKwargs = None,
+        outer_activation: HintOrType[nn.Module] = None,
+        outer_activation_kwargs: OptionalKwargs = None,
+        bias_initializer: Hint[Initializer] = init.xavier_uniform_,
+        bias_initializer_kwargs: OptionalKwargs = None,
+        projection_initializer: Hint[Initializer] = init.xavier_uniform_,
+        projection_initializer_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the interaction module.
 
         :param embedding_dim:
             the embedding dimension of entities and relations
-        :param inner_non_linearity:
+        :param inner_activation:
             the inner non-linearity, or a hint thereof. Defaults to :class:`nn.Tanh`.
             Disable by passing :class:`nn.Idenity`
+        :param inner_activation_kwargs:
+            additional keyword-based parameters used to instantiate the inner activation function.
+        :param outer_activation:
+            the outer non-linearity, or a hint thereof. Defaults to :class:`nn.Identity`, i.e., no activation.
+        :param outer_activation_kwargs:
+            additional keyword-based parameters used to instantiate the outer activation function.
+        :param bias_initializer:
+            the initializer to use for the biases; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param bias_initializer_kwargs:
+            additional keyword-based parameters passed to the bias initializer.
+        :param projection_initializer:
+            the initializer to use for the projection; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param projection_initializer_kwargs:
+            additional keyword-based parameters passed to the projection initializer.
         """
         super().__init__()
 
@@ -1559,32 +1734,76 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         # Global relation projection
         self.d_r = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
+        self.bias_initializer = init.initializer_resolver.make(bias_initializer, bias_initializer_kwargs)
+
         # Global combination bias
         self.b_c = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
         # Global combination bias
         self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
 
-        if inner_non_linearity is None:
-            inner_non_linearity = nn.Tanh
-        self.inner_non_linearity = activation_resolver.make(inner_non_linearity)
+        self.projection_initializer = init.initializer_resolver.make(
+            projection_initializer, projection_initializer_kwargs
+        )
+
+        if inner_activation is None:
+            inner_activation = nn.Tanh
+        if outer_activation is None:
+            outer_activation = nn.Identity
+        self.inner_activation = activation_resolver.make(inner_activation, inner_activation_kwargs)
+        self.outer_activation = activation_resolver.make(outer_activation, outer_activation_kwargs)
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # global projections
+        h = einsum("...d, d -> ...d", h, self.d_e)
+        r = einsum("...d, d -> ...d", r, self.d_r)
+
+        # combination, shape: (*batch_dims, d)
+        x = self.inner_activation(tensor_sum(h, r, self.b_c))
+
+        # dot product with t
+        return self.outer_activation(einsum("...d, ...d -> ...", x, t) + self.b_p)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
-        embedding_dim = self.d_e.shape[0]
-        bound = math.sqrt(6) / embedding_dim
-        for p in self.parameters():
-            nn.init.uniform_(p, a=-bound, b=bound)
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity)
+        self.projection_initializer(self.d_e)
+        self.projection_initializer(self.d_r)
+        self.bias_initializer(self.b_c)
+        self.bias_initializer(self.b_p)
 
 
 @parse_docdata
-class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the stateless RESCAL interaction function.
+class RESCALInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-less RESCAL interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.rescal_interaction`
+    For head and tail entity representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$
+    and relation representation $\mathbf{R} \in \mathbb{R}^{d \times d}$, the interaction function is given as
+
+    .. math::
+
+        \mathbf{h}^T \textbf{R} \textbf{t}
+        = \sum_{i=1}^{d} \sum_{j=1}^{d} \mathbf{h}_i \mathbf{R}_{i, j} \mathbf{t}_{i}
+
+    Thus, the relation matrices $\textbf{R}$ contain weights $\textbf{R}_{i, j}$ that capture the amount of interaction
+    between the $i$-th latent factor of the head representation and the $j$-th latent factor.
+
+    The computational complexity is given by $\mathcal{O}(d^2)$.
 
     ---
     citation:
@@ -1594,20 +1813,39 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     """
 
     relation_shape = ("dd",)
-    func = pkf.rescal_interaction
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return einsum("...d,...de,...e->...", h, r, t)
 
 
 @parse_docdata
-class SEInteraction(
-    NormBasedInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor],
-        FloatTensor,
-    ],
-):
-    """A stateful module for the Structured Embedding (SE) interaction function.
+class SEInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
+    r"""The Structured Embedding (SE) interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.structured_embedding_interaction`
+    SE applies role- and relation-specific projection matrices
+    $\textbf{M}_{r}^{h}, \textbf{M}_{r}^{t} \in \mathbb{R}^{d \times d}$ to the head and tail
+    entities' representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$ before computing their distance.
+
+    .. math::
+
+        f(\textbf{h}, (\textbf{M}_{r}^{h}, \textbf{M}_{r}^{t}), \textbf{t})
+            = -\|\textbf{M}_{r}^{h} \textbf{h}  - \textbf{M}_{r}^{t} \textbf{t}\|_p
 
     ---
     name: Structured Embedding
@@ -1618,23 +1856,60 @@ class SEInteraction(
     """
 
     relation_shape = ("dd", "dd")
-    func = pkf.se_interaction
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, t=t, r_h=r[0], r_t=r[1])
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d, d)`` and ``(*batch_dims, d, d)``.
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        r_h, r_t = r
+        # projections
+        p_h = einsum("...rd,...d->...r", r_h, h)
+        p_t = einsum("...rd,...d->...r", r_t, t)
+        return negative_norm(p_h - p_t, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
-class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the stateless Tucker interaction function.
+class TuckERInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The stateful TuckER interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.tucker_interaction`
+    The interaction function is inspired by the `Tucker tensor decomposition <https://en.wikipedia.org/wiki/Tucker_decomposition>`_.
+    The base form is given as
+
+    .. math ::
+        \mathbf{Z} \times_1 \mathbf{h} \times_2 \mathbf{r} \times_3 \mathbf{t}
+        = \sum_{1 \leq i, k \leq d_e, 1 \leq j \leq d_r}
+            \mathbf{Z}_{i, j, k} \cdot \mathbf{h}_{i} \cdot \mathbf{r}_{j} \cdot \mathbf{t}_{k}
+
+    where $\mathbf{h}, \mathbf{t} \in \mathbb{R}^{d_e}$ are the head and tail entity representation,
+    $\mathbf{r} \in \mathbb{R}^{d_r}$ is the relation representation, and
+    $\mathbf{Z} \in \mathbb{R}^{d_e \times d_r \times d_e}$ is a *global* parameter, and $\times_k$ denotes the tensor
+    product along the $k$-th dimension.
+
+    The implementation further adds :class:`~torch.nn.BatchNorm1d` and :class:`~torch.nn.Dropout`
+    layers at the following locations:
+
+    .. math ::
+        \textit{DO}_{hr}(\textit{BN}_{hr}(
+            \textit{DO}_h(\textit{BN}_h(\mathbf{h}))
+            \times_1
+            \textit{DO}_r(\mathbf{Z} \times_2 \mathbf{r})
+        ) \times_3 \mathbf{t}
+
+    The implementation a has complexity of $\mathcal{O}(d_e^2 d_r)$, and requires $\mathcal{O}(d_e^2 d_r)$
+    global trainable parameters.
 
     ---
     citation:
@@ -1645,13 +1920,14 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         github: ibalazevic/TuckER
     """
 
-    func = pkf.tucker_interaction
-
     # default core tensor initialization
     # cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
     default_core_initializer: ClassVar[Initializer] = staticmethod(nn.init.uniform_)  # type: ignore
     default_core_initializer_kwargs: Mapping[str, Any] = {"a": -1.0, "b": 1.0}
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="core_initializer", resolver="pykeen.nn.init.initializer_resolver")
+    )
     def __init__(
         self,
         embedding_dim: int = 200,
@@ -1668,7 +1944,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :param embedding_dim:
             The entity embedding dimension.
         :param relation_dim:
-            The relation embedding dimension.
+            The relation embedding dimension. Defaults to ``embedding_dim``.
         :param head_dropout:
             The dropout rate applied to the head representations.
         :param relation_dropout:
@@ -1678,9 +1954,11 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :param apply_batch_normalization:
             Whether to use batch normalization on head representations and the combination of head and relation.
         :param core_initializer:
-            the core tensor's initializer, or a hint thereof
+            The core tensor's initializer, or a hint thereof.
+            Defaults to :attr:`~pykeen.nn.modules.TuckerInteraction.default_core_initializer`.
         :param core_initializer_kwargs:
-            additional keyword-based parameters for the initializer
+            Additional keyword-based parameters for the initializer.
+            Defaults to :attr:`~pykeen.nn.modules.TuckerInteraction.default_core_initializer_kwargs`.
         """
         super().__init__()
 
@@ -1719,28 +1997,61 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # instantiate here to make module easily serializable
-        core_initializer = initializer_resolver.make(self.core_initializer, pos_kwargs=self.core_initializer_kwargs)
+        core_initializer = init.initializer_resolver.make(
+            self.core_initializer, pos_kwargs=self.core_initializer_kwargs
+        )
         core_initializer(self.core_tensor)
         # batch norm gets reset automatically, since it defines reset_parameters
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(
-            core_tensor=self.core_tensor,
-            do_h=self.head_dropout,
-            do_r=self.relation_dropout,
-            do_hr=self.head_relation_dropout,
-            bn_h=self.head_batch_norm,
-            bn_hr=self.head_relation_batch_norm,
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h = self.head_dropout(apply_optional_bn(x=h, batch_norm=self.head_batch_norm))
+        # x_2 contraction
+        r = einsum("ijk,...j->...ik", self.core_tensor, r)
+        r = self.relation_dropout(r)
+        # x_1 contraction
+        return batched_dot(
+            self.head_relation_dropout(
+                apply_optional_bn(
+                    x=einsum("...ik,...i->...k", r, h),
+                    batch_norm=self.head_relation_batch_norm,
+                )
+            ),
+            t,
         )
 
 
 @parse_docdata
-class UMInteraction(
-    NormBasedInteraction[FloatTensor, None, FloatTensor],
-):
-    """A stateful module for the UnstructuredModel interaction function.
+class UMInteraction(NormBasedInteraction[FloatTensor, tuple[()], FloatTensor]):
+    r"""The Unstructured Model (UM) interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.unstructured_model_interaction`
+    UM calculates the score as the negative distance between head and tail entities:
+
+    .. math::
+
+        -\|\textbf{h}  - \textbf{t}\|_p^2
+
+    It is appropriate for networks with a single relationship type that is undirected.
+
+    .. warning::
+
+        In UM, neither the relations nor the directionality are considered, so it can't distinguish between them.
+        However, it may serve as a baseline for comparison against relation-aware models.
 
     ---
     name: Unstructured Model
@@ -1753,34 +2064,47 @@ class UMInteraction(
     # shapes
     relation_shape: Sequence[str] = tuple()
 
-    func = pkf.um_interaction
-
     def __init__(self, p: int, power_norm: bool = True):
-        """
-        Initialize the interaction module.
+        """Initialize the norm-based interaction function.
+
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
         :param p:
-            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, t=t)
+    def forward(self, h: FloatTensor, r: tuple[()], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r:
+            No relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return negative_norm(h - t, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
 class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """A stateful module for the TorusE interaction function.
+    """The TorusE interaction function from [ebisu2018].
 
-    .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
+    .. note ::
+        This only implements the two L_p norm based variants.
 
     ---
     citation:
@@ -1791,31 +2115,85 @@ class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
         github: TakumaE/TorusE
     """
 
-    func = pkf.toruse_interaction
-
     def __init__(self, p: int = 2, power_norm: bool = False):
         """
         Initialize the interaction module.
 
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
         :param p:
-            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        d = tensor_sum(h, r, -t)
+        d = d - torch.floor(d)
+        d = torch.minimum(d, 1.0 - d)
+        return negative_norm(d, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
 class TransDInteraction(
     NormBasedInteraction[
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-    ],
+        tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]
+    ]
 ):
-    """A stateful module for the TransD interaction function.
+    r"""The TransD interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transd_interaction`
+    TransD is an extension of :class:`~pykeen.nn.modules.TransRInteraction` that, like TransR,
+    considers entities and relations as objects living in different vector spaces.
+    However, instead of performing the same relation-specific projection for all entity embeddings,
+    entity-relation-specific projection matrices
+    $\mathbf{M}_{r, h}, \mathbf{M}_{t, h} \in \mathbb{R}^{k \times d}$
+    are constructed.
+
+    To do so, all head entities, tail entities, and relations are represented by two vectors,
+    $\mathbf{h}_v, \mathbf{h}_p, \mathbf{t}_v, \mathbf{t}_p \in \mathbb{R}^d$
+    and $\mathbf{r}_v, \mathbf{r}_v \in \mathbb{R}^k$, respectively.
+
+    The first set of representations is used for calculating the entity-relation-specific projection matrices:
+
+    .. math::
+
+        \mathbf{M}_{r, h} &=& \mathbf{r}_p \mathbf{h}_p^{T} + \tilde{\mathbf{I}}
+
+        \mathbf{M}_{r, t} &=& \mathbf{r}_p \mathbf{t}_p^{T} + \tilde{\mathbf{I}}
+
+    where $\tilde{\textbf{I}} \in \mathbb{R}^{k \times d}$ is a $k \times d$ matrix with ones on the diagonal and
+    zeros elsewhere. Next, $\mathbf{h}_v$ and $\mathbf{t}_v$ are projected into the relation space by means of the
+    constructed projection matrices, before calculating a distance similar to
+    :class:`~pykeen.nn.modules.TransEInteraction`:
+
+    .. math::
+
+        -\|c(\mathbf{M}_{r, h} \mathbf{h}_v) + \mathbf{r}_v - c(\mathbf{M}_{r, t} \mathbf{t}_v)\|_{2}^2
+
+    where $c$ enforces the constraint $\|\cdot\| \leq 1$.
+
+    .. note ::
+        :class:`~pykeen.models.TransD` additionally enforces $\|\mathbf{h}\|, \|\mathbf{r}\|, \|\mathbf{t}\| \leq 1$.
 
     ---
     citation:
@@ -1826,43 +2204,82 @@ class TransDInteraction(
 
     entity_shape = ("d", "d")
     relation_shape = ("e", "e")
-    func = pkf.transd_interaction
 
     def __init__(self, p: int = 2, power_norm: bool = True):
         """
         Initialize the interaction module.
 
+        .. seealso::
+
+            The parameters ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`
+
         :param p:
-            the $p$ value of the norm to use, cf. :meth:`NormBasedInteraction.__init__`
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the $p$th power of the p-norm, cf. :meth:`NormBasedInteraction.__init__`.
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: tuple[FloatTensor, FloatTensor],
-        r: tuple[FloatTensor, FloatTensor],
-        t: tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        h, h_p = h
-        r, r_p = r
-        t, t_p = t
-        return dict(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p)
+    def forward(
+        self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, e)`` and ``(*batch_dims, e)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h_emb, h_p = h
+        r_emb, r_p = r
+        t_emb, t_p = t
+        # Project entities
+        h_bot = project_entity(e=h_emb, e_p=h_p, r_p=r_p)
+        t_bot = project_entity(e=t_emb, e_p=t_p, r_p=r_p)
+        return negative_norm_of_sum(h_bot, r_emb, -t_bot, p=self.p, power_norm=self.power_norm)
 
 
 @parse_docdata
 class NTNInteraction(
-    FunctionalInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
-        FloatTensor,
-    ],
+    Interaction[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], FloatTensor],
 ):
-    """A stateful module for the NTN interaction function.
+    r"""The state-less Neural Tensor Network (NTN) interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.ntn_interaction`
+    It is given by
+
+    .. math::
+
+        \mathbf{r}_{u}^{T} \cdot \sigma(
+            \mathbf{h} \mathbf{R}_{3} \mathbf{t}
+            + \mathbf{R}_{2} [\mathbf{h};\mathbf{t}]
+            + \mathbf{r}_1
+        )
+
+    with $\mathbf{W}_3 \in \mathbb{R}^{d \times d \times k}$, $\textbf{R}_2 \in \mathbb{R}^{k \times 2d}$,
+    the bias vector $\textbf{r}_1$, the final projection $\textbf{r}_u \in \mathbb{R}^k$, and a non-linear activation
+    function $\sigma$ (which defaults to :class:`~torch.nn.Tanh`).
+
+    It can be seen as an extension of a two-layer MLP with relation-specific weights
+    and an additional bi-linear tensor in the input layer.
+    A separately parameterized neural network for each relationship makes the model very expressive,
+    but also computationally expensive ($\mathcal{O}(kd^2)$).
+
+    .. note::
+
+        We split the original $k \times 2d$-dimensional $\mathbf{R}_2$ matrix into two parts of shape $k \times d$ to
+        support more efficient 1:n scoring, e.g., in the :meth:`~pykeen.models.Model.score_h` or
+        :meth:`~pykeen.models.Model.score_t` setting.
 
     ---
     citation:
@@ -1873,8 +2290,10 @@ class NTNInteraction(
     """
 
     relation_shape = ("kdd", "kd", "kd", "k", "k")
-    func = pkf.ntn_interaction
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         activation: HintOrType[nn.Module] = None,
@@ -1883,29 +2302,47 @@ class NTNInteraction(
         """Initialize NTN with the given non-linear activation function.
 
         :param activation: A non-linear activation function. Defaults to the hyperbolic
-            tangent :class:`torch.nn.Tanh` if None, otherwise uses the :data:`pykeen.utils.activation_resolver`
-            for lookup.
+            tangent :class:`torch.nn.Tanh` if ``None``.
         :param activation_kwargs: If the ``activation`` is passed as a class, these keyword arguments
             are used during its instantiation.
         """
         super().__init__()
         if activation is None:
             activation = nn.Tanh()
-        self.non_linearity = activation_resolver.make(activation, activation_kwargs)
+        self.activation = activation_resolver.make(activation, activation_kwargs)
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: FloatTensor,
-        r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
-        t: FloatTensor,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+    def forward(
+        self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], t: FloatTensor
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, k, d, d)``, ``(*batch_dims, k, d)``, ``(*batch_dims, k, d)``,
+            ``(*batch_dims, k)``, and ``(*batch_dims, k)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
         w, vh, vt, b, u = r
-        return dict(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt)
-
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(activation=self.non_linearity)
+        return batched_dot(
+            u,
+            self.activation(
+                tensor_sum(
+                    einsum("...d,...kde,...e->...k", h, w, t),
+                    einsum("...d, ...kd->...k", h, vh),
+                    einsum("...d, ...kd->...k", t, vt),
+                    b,
+                )
+            ),
+        )
 
 
 @parse_docdata
@@ -1993,41 +2430,91 @@ class KG2EInteraction(
 
 @parse_docdata
 class TransHInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
-    """A stateful module for the TransH interaction function.
+    r"""The norm-based TransH interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.transh_interaction`
+    This model extends :class:`~pykeen.models.TransEInteraction` by applying the translation from head to tail entity
+    in a relation-specific hyperplane in order to address its inability to model one-to-many, many-to-one, and
+    many-to-many relations.
+
+    In TransH, each relation is represented by a hyperplane, or more specifically a normal vector of this hyperplane
+    $\mathbf{r}_{w} \in \mathbb{R}^d$ and a vector $\mathbf{r}_{d} \in \mathbb{R}^d$ that lies in the hyperplane.
+    To obtain a plausibility score, the head representation $\mathbf{h} \in \mathbb{R}^d$,
+    and the tail embedding $\mathbf{t} \in \mathbb{R}^d$ are first projected onto the relation-specific hyperplane:
+
+    .. math::
+
+        \mathbf{h}_{r} = \mathbf{h} - \mathbf{r}_{w}^T \mathbf{h} \mathbf{r}_w
+
+        \mathbf{t}_{r} = \mathbf{t} - \mathbf{r}_{w}^T \mathbf{t} \mathbf{r}_w
+
+    Then, the projected representations are used to compute the score as in
+    :class:`~pykeen.nn.modules.TransEInteraction`:
+
+    .. math::
+
+        -\|\textbf{h}_{r} + \textbf{r}_d - \textbf{t}_{r}\|_{p}^2
 
     ---
     citation:
         author: Wang
         year: 2014
-        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
+        link: https://aaai.org/papers/8870-knowledge-graph-embedding-by-translating-on-hyperplanes/
     """
 
     relation_shape = ("d", "d")
-    func = pkf.transh_interaction
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, w_r=r[1], d_r=r[0], t=t)
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        w_r, d_r = r
+        return negative_norm_of_sum(
+            # h projection to hyperplane
+            h,
+            -einsum("...i, ...i, ...j -> ...j", h, w_r, w_r),
+            # r
+            d_r,
+            # -t projection to hyperplane
+            -t,
+            einsum("...i, ...i, ...j -> ...j", t, w_r, w_r),
+            p=self.p,
+            power_norm=self.power_norm,
+        )
 
 
 @parse_docdata
 class MuREInteraction(
     NormBasedInteraction[
-        tuple[FloatTensor, FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor],
-        tuple[FloatTensor, FloatTensor, FloatTensor],
+        tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]
     ],
 ):
-    """A stateful module for the MuRE interaction function from [balazevic2019b]_.
+    r"""The norm-based MuRE interaction function from [balazevic2019b]_.
 
-    .. seealso:: :func:`pykeen.nn.functional.mure_interaction`
+    For $\mathbf{h}, \mathbf{r}, \mathbf{R}, \mathbf{t} \in \mathbb{R}^d$, and $b_h, b_t \in \mathbb{R}$, it is given
+    by
+
+    .. math ::
+        -\|\mathbf{R} \odot \mathbf{h} + \mathbf{r} - \mathbf{t}\| + b_h + b_t
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t}$ are head entity, relation, and tail entity embedding vectors,
+    $\mathbf{R}$ is a diagonal relation matrix, and $b_h, b_t$ are head and tail entity biases.
+
+    .. note::
+        This module implements a slightly more generic function, where the norm $\| \cdot \|_p$ can be chosen,
+        as well as a variant which uses $\| \cdot \|_p^p$, cf. :class:`~pykeen.nn.modules.NormBasedInteraction`.
 
     ---
     citation:
@@ -2039,33 +2526,192 @@ class MuREInteraction(
 
     # there are separate biases for entities in head and tail position
     entity_shape = ("d", "", "")
+    _head_indices = (0, 1)
+    _tail_indices = (0, 2)
+
     relation_shape = ("d", "d")
-    func = pkf.mure_interaction
+
+    def forward(
+        self, h: tuple[FloatTensor, FloatTensor], r: tuple[FloatTensor, FloatTensor], t: tuple[FloatTensor, FloatTensor]
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h_emb, h_bias = h
+        t_emb, t_bias = t
+        r_vec, r_mat = r
+        return (
+            negative_norm_of_sum(h_emb * r_mat, r_vec, -t_emb, p=self.p, power_norm=self.power_norm) + h_bias + t_bias
+        )
+
+
+Clamp = Union[tuple[Optional[float], float], tuple[float, Optional[float]]]
+
+
+class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    """An adapter to clamp scores to a minimum or maximum value.
+
+    .. warning::
+        The used :func:`torch.clamp` function has zero gradient for scores below the minimum of above the maximum value.
+        Thus, it aggravates gradient-based optimization.
+    """
+
+    clamp_score: Clamp | None
+    base: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
+
+    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="interaction_resolver"))
+    def __init__(
+        self,
+        base: LookupOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        base_kwargs: OptionalKwargs = None,
+        clamp_score: Clamp | float | None = None,
+    ):
+        """
+        Initialize the interaction module.
+
+        :param base:
+            the base interaction.
+        :param base_kwargs:
+            keyword-based parameters used to instantiate the base interaction
+        :param clamp_score:
+            whether to clamp scores into a fixed interval
+        """
+        super().__init__()
+        if isinstance(clamp_score, float):
+            clamp_score = (-clamp_score, clamp_score)
+        self.clamp_score = clamp_score
+        self.base = interaction_resolver.make(base, base_kwargs)
+
+    @property
+    def entity_shape(self) -> Sequence[str]:  # type:ignore[override]
+        """Expose the base interaction's entity shape."""
+        return self.base.entity_shape
+
+    @property
+    def relation_shape(self) -> Sequence[str]:  # type:ignore[override]
+        """Expose the base interaction's relation shape."""
+        return self.base.relation_shape
 
     # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: tuple[FloatTensor, FloatTensor, FloatTensor],
-        r: tuple[FloatTensor, FloatTensor],
-        t: tuple[FloatTensor, FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        h, b_h, _ = h
-        t, _, b_t = t
-        r_vec, r_mat = r
-        return dict(h=h, b_h=b_h, r_vec=r_vec, r_mat=r_mat, t=t, b_t=b_t)
+    def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:
+        scores = self.base(h, r, t)
+        if self.clamp_score is None:
+            return scores
+        low, high = self.clamp_score
+        return torch.clamp(scores, min=low, max=high)
 
 
-@parse_docdata
-class SimplEInteraction(
-    FunctionalInteraction[
+class DirectionAverageInteraction(
+    Interaction[
         tuple[FloatTensor, FloatTensor],
         tuple[FloatTensor, FloatTensor],
         tuple[FloatTensor, FloatTensor],
     ],
 ):
-    """A module wrapper for the SimplE interaction function.
+    r"""The directional average interaction module.
 
-    .. seealso:: :func:`pykeen.nn.functional.simple_interaction`
+    This can be considered as a generalization of the SimplE interaction module that can be parametrized
+    with any other interaction module, rather than just :class:`pykeen.nn.modules.DistMultInteraction`.
+
+    A separate representation is learned for each entity $e \in \mathcal{E}$ for when it appears as the
+    subject of a triple $\mathbf{e}_h \in \mathbb{R}^d$ and as the object of a triple $\mathbf{e}_t \in \mathbb{R}^d$.
+    Similarly, two representations are learned for each relationship for a forward $\textbf{r}_{\rightarrow}$
+    and backward triple $\textbf{r}_{\leftarrow}$.
+
+    The score is then obtained by averaging the *forward* and the *backward* interaction function value:
+
+    .. math::
+
+        \frac{
+              f(\textbf{h}_{h}, \textbf{r}_{\rightarrow}, \textbf{t}_{t})
+            + f(\textbf{t}_{h}, \textbf{r}_{\leftarrow}, \textbf{h}_{t})
+        }{2}
+
+    Where ``f`` is the interaction model used. If :class:`pykeen.nn.modules.DistMultInteraction` is used,
+    then this becomes :class:`pykeen.nn.modules.SimplEInteraction`.
+
+    .. todo:: can we generalize the type annotations for this from FloatTensor to HeadRepresentation, etc.?
+    """
+
+    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="interaction_resolver"))
+    def __init__(
+        self,
+        base: LookupOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]],
+        base_kwargs: OptionalKwargs = None,
+    ):
+        """
+        Initialize the interaction module.
+
+        :param base:
+            the base interaction.
+        :param base_kwargs:
+            keyword-based parameters used to instantiate the base interaction
+        """
+        super().__init__()
+        self.base = interaction_resolver.make(base, base_kwargs)
+
+    def forward(
+        self,
+        h: tuple[FloatTensor, FloatTensor],
+        r: tuple[FloatTensor, FloatTensor],
+        t: tuple[FloatTensor, FloatTensor],
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        h_fwd, h_bwd = h
+        r_fwd, r_bwd = r
+        t_fwd, t_bwd = t
+        return 0.5 * (self.base(h_fwd, r_fwd, t_fwd) + self.base(t_bwd, r_bwd, h_bwd))
+
+
+@parse_docdata
+class SimplEInteraction(DirectionAverageInteraction):
+    r"""The SimplE interaction function.
+
+    SimplE can be regarded as extension of (a special case of) :class:`pykeen.nn.modules.CPInteraction`,
+    an early tensor factorization approach in which each entity
+    $e \in \mathcal{E}$ is represented by two vectors $\mathbf{e}_h, \mathbf{e}_t \in \mathbb{R}^d$ and each
+    relation by a single vector $\mathbf{r} \in \mathbb{R}^d$. Depending whether an entity participates in a
+    triple as the head or tail entity, either $\mathbf{e}_h$ or $\mathbf{e}_t$ is used. Both entity
+    representations are learned independently, i.e. observing a triple $(h,r,t)$, the method only updates
+    $\mathbf{h}_h$ and $\mathbf{t}_t$.
+    In contrast to :class:`~pykeen.nn.modules.CPInteraction`, SimplE introduces separate weights for each relation:
+    $\textbf{r}_{\rightarrow}$ and $\textbf{r}_{\leftarrow}$ for the inverse relation.
+    The interaction model is based on both:
+
+    .. math::
+
+        \frac{1}{2}\left(
+              \left\langle\textbf{h}_{h}, \textbf{r}_{\rightarrow}, \textbf{t}_{t}\right\rangle
+            + \left\langle\textbf{t}_{h}, \textbf{r}_{\leftarrow}, \textbf{h}_{t}\right\rangle
+        \right)
 
     ---
     citation:
@@ -2075,41 +2721,28 @@ class SimplEInteraction(
         github: Mehran-k/SimplE
     """
 
-    func = pkf.simple_interaction
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
 
-    def __init__(self, clamp_score: None | float | tuple[float, float] = None):
-        """
-        Initialize the interaction module.
-
-        :param clamp_score:
-            whether to clamp scores into a fixed interval
-        """
-        super().__init__()
-        if isinstance(clamp_score, float):
-            clamp_score = (-clamp_score, clamp_score)
-        self.clamp_score = clamp_score
-
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(clamp=self.clamp_score)
-
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h[0], h_inv=h[1], r=r[0], r_inv=r[1], t=t[0], t_inv=t[1])
+    def __init__(self):
+        """Initialize the interaction module."""
+        super().__init__(DistMultInteraction)
 
 
 @parse_docdata
 class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
-    """A stateful module for the PairRE interaction function.
+    r"""The state-less norm-based PairRE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.pair_re_interaction`
+    It is given by
+
+    .. math ::
+        -\|\mathbf{h} \odot \mathbf{r}_h - \mathbf{t} \odot \mathbf{r}_t \|
+
+    where $\mathbf{h}, \mathbf{r}_h, \mathbf{r}_t, \mathbf{t} \in \mathbb{R}$ are representations for head entity,
+    relation-specific head projection, relation-specific tail projection, and tail entity, respectively.
+
+    .. note ::
+        :class:`pykeen.models.PairRE` additionally enforces $\|\mathbf{h}\| = \|\mathbf{t}\| = 1$.
 
     ---
     citation:
@@ -2121,16 +2754,31 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
     """
 
     relation_shape = ("d", "d")
-    func = pkf.pair_re_interaction
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h, r_h=r[0], r_t=r[1], t=t)
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        r_h, r_t = r
+        return negative_norm_of_sum(
+            h * r_h,
+            -t * r_t,
+            p=self.p,
+            power_norm=self.power_norm,
+        )
 
 
 @parse_docdata
@@ -2375,24 +3023,25 @@ class BoxEInteraction(
         tuple[FloatTensor, FloatTensor],
     ]
 ):
-    """
+    r"""
     The BoxE interaction from [abboud2020]_.
 
     Entities are represented by two $d$-dimensional vectors describing the *base position* as well
-    as the translational bump, which translates all the entities co-occuring in a fact with this entity
+    as the *translational bump*, which translates all the entities co-occuring in a fact with this entity
     from their base positions to their final embeddings, called "bumping".
 
     Relations are represented as a fixed number of hyper-rectangles corresponding to the relation's arity.
     Since we are only considering single-hop link predition here, the arity is always two, i.e., one box
     for the head position and another one for the tail position. There are different possibilities to
     parametrize a hyper-rectangle, where the most common may be its description as the coordinate of to
-    opposing vertices. BoxE suggests a different parametrization:
+    opposing vertices. BoxE suggests a different parametrization for each box by
 
-    - each box has a base position given by its center
-    - each box has an extent in each dimension. This size is further factored in
+    - a base position given by its center, a $d$-dimensional vector $\mathbf{c} \in \mathbb{R}^d$
+    - an extent in each dimension. This size is further factored in
 
-      - a scalar global scaling factor
-      - a normalized extent in each dimension, i.e., the extents sum to one
+      - a scalar global scalar scaling factor, $s \in \mathbb{R}$
+      - a normalized extent in each dimension, i.e., the extents sum to one, given as $\mathbf{e} \in \mathbb{R}^d$,
+        with $\|\mathbf{e}\| = 1$ and $0 \leq \mathbf{e}_i$ for all $i$.
 
     ---
     citation:
@@ -2409,48 +3058,70 @@ class BoxEInteraction(
         r"""
         Instantiate the interaction module.
 
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
         :param tanh_map:
-            Should the hyperbolic tangent be applied to all representations prior to model scoring?
+            Whether to use tanh mapping after BoxE computation (defaults to true). The hyperbolic tangent mapping
+            restricts the embedding space to the range [-1, 1], and thus this map implicitly
+            regularizes the space to prevent loss reduction by growing boxes arbitrarily large.
         :param p:
-            the order of the norm
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the p-th power of the norm instead
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
         self.tanh_map = tanh_map
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
+    def forward(
+        self,
         h: tuple[FloatTensor, FloatTensor],
         r: tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         t: tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
-        h_pos, h_bump = h
-        t_pos, t_bump = t
-        return dict(
-            # head position and bump
-            h_pos=h_pos,
-            h_bump=h_bump,
-            # relation box: head
-            rh_base=rh_base,
-            rh_delta=rh_delta,
-            rh_size=rh_size,
-            # relation box: tail
-            rt_base=rt_base,
-            rt_delta=rt_delta,
-            rt_size=rt_size,
-            # tail position and bump
-            t_pos=t_pos,
-            t_bump=t_bump,
-        )
+    ) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        state = super()._prepare_state_for_functional()
-        state["tanh_map"] = self.tanh_map
-        return state
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``, ``(*batch_dims, d)``, ``(*batch_dims, s)``,
+            ``(*batch_dims, d)``, ``(*batch_dims, d)``, and ``(*batch_dims, s)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)`` and ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        # relation box head; relation box tail
+        rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
+        # head position and bump
+        h_pos, h_bump = h
+        # tail position and bump
+        t_pos, t_bump = t
+        # head score
+        return BoxEInteraction.boxe_kg_arity_position_score(
+            # head box score
+            entity_pos=h_pos,
+            other_entity_bump=t_bump,
+            relation_box=BoxEInteraction.compute_box(base=rh_base, delta=rh_delta, size=rh_size),
+            tanh_map=self.tanh_map,
+            p=self.p,
+            power_norm=self.power_norm,
+        ) + BoxEInteraction.boxe_kg_arity_position_score(
+            # tail box score
+            entity_pos=t_pos,
+            other_entity_bump=h_bump,
+            relation_box=BoxEInteraction.compute_box(base=rt_base, delta=rt_delta, size=rt_size),
+            tanh_map=self.tanh_map,
+            p=self.p,
+            power_norm=self.power_norm,
+        )
 
     @staticmethod
     def product_normalize(x: FloatTensor, dim: int = -1) -> FloatTensor:
@@ -2548,9 +3219,10 @@ class BoxEInteraction(
         :param tanh_map:
             whether to apply the tanh map regularizer
         :param p:
-            The norm order to apply across dimensions to compute overall position score.
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
-            whether to use the powered norm instead
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
 
         :return: shape: ``*s``
             Arity-position score for the entity relative to the target relation box. Larger is better. The shape is the
@@ -2617,84 +3289,16 @@ class BoxEInteraction(
 
         return box_low, box_high
 
-    @staticmethod
-    def func(
-        # head
-        h_pos: FloatTensor,
-        h_bump: FloatTensor,
-        # relation box: head
-        rh_base: FloatTensor,
-        rh_delta: FloatTensor,
-        rh_size: FloatTensor,
-        # relation box: tail
-        rt_base: FloatTensor,
-        rt_delta: FloatTensor,
-        rt_size: FloatTensor,
-        # tail
-        t_pos: FloatTensor,
-        t_bump: FloatTensor,
-        # power norm
-        tanh_map: bool = True,
-        p: int = 2,
-        power_norm: bool = False,
-    ) -> FloatTensor:
-        """
-        Evaluate the BoxE interaction function from [abboud2020]_.
-
-        :param h_pos: shape: (`*batch_dims`, d)
-            the head entity position
-        :param h_bump: shape: (`*batch_dims`, d)
-            the head entity bump
-
-        :param rh_base: shape: (`*batch_dims`, d)
-            the relation-specific head box base position
-        :param rh_delta: shape: (`*batch_dims`, d)
-            # the relation-specific head box base shape (normalized to have a volume of 1):
-        :param rh_size: shape: (`*batch_dims`, 1)
-            the relation-specific head box size (a scalar)
-
-        :param rt_base: shape: (`*batch_dims`, d)
-            the relation-specific tail box base position
-        :param rt_delta: shape: (`*batch_dims`, d)
-            # the relation-specific tail box base shape (normalized to have a volume of 1):
-        :param rt_size: shape: (`*batch_dims`, d)
-            the relation-specific tail box size
-
-        :param t_pos: shape: (`*batch_dims`, d)
-            the tail entity position
-        :param t_bump: shape: (`*batch_dims`, d)
-            the tail entity bump
-
-        :param tanh_map:
-            whether to apply the tanh mapping
-        :param p:
-            the order of the norm to apply
-        :param power_norm:
-            whether to use the p-th power of the p-norm instead
-
-        :return: shape: batch_dims
-            The scores.
-        """
-        return sum(
-            BoxEInteraction.boxe_kg_arity_position_score(
-                entity_pos=entity_pos,
-                other_entity_bump=other_entity_pos,
-                relation_box=BoxEInteraction.compute_box(base=base, delta=delta, size=size),
-                tanh_map=tanh_map,
-                p=p,
-                power_norm=power_norm,
-            )
-            for entity_pos, other_entity_pos, base, delta, size in (
-                (h_pos, t_bump, rh_base, rh_delta, rh_size),
-                (t_pos, h_bump, rt_base, rt_delta, rt_size),
-            )
-        )
-
 
 @parse_docdata
-class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """
+class CPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""
     The Canonical Tensor Decomposition interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
+
+    The interaction function is given as
+
+    .. math::
+        \sum_{1 \leq i \leq k, 1 \leq j \leq d} \mathbf{h}_{i, j} \cdot \mathbf{r}_{i, j} \cdot \mathbf{t}_{i, j}
 
     .. note ::
         For $k=1$, this interaction is the same as :class:`~pykeen.nn.modules.DistMultInteraction`.
@@ -2716,31 +3320,29 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     _head_indices = (0,)
     _tail_indices = (1,)
 
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
-        """Evaluate the interaction function.
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""
+        Evaluate the interaction function.
 
         .. seealso::
             :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
             the generic batched form of the interaction function.
 
-        :param h: shape: ``(*batch_dims`, rank, dim)``
+        :param h: shape: ``(*batch_dims, k, d)``
             The head representations.
-        :param r: shape: ``(*batch_dims`, rank, dim)``
+        :param r: shape: ``(*batch_dims, k, d)``
             The relation representations.
-        :param t: shape: ``(*batch_dims`, rank, dim)``
+        :param t: shape: ``(*batch_dims, k, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
         return (h * r * t).sum(dim=(-2, -1))
 
 
 @parse_docdata
-class MultiLinearTuckerInteraction(
-    FunctionalInteraction[tuple[FloatTensor, FloatTensor], FloatTensor, tuple[FloatTensor, FloatTensor]]
-):
+class MultiLinearTuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """
     An implementation of the original (multi-linear) TuckER interaction as described [tucker1966]_.
 
@@ -2756,8 +3358,9 @@ class MultiLinearTuckerInteraction(
         link: https://dx.doi.org/10.1007/BF02289464
     """
 
-    func = pkf.multilinear_tucker_interaction
     entity_shape = ("d", "f")
+    _head_indices = (0,)
+    _tail_indices = (1,)
     relation_shape = ("e",)
 
     def __init__(
@@ -2797,17 +3400,25 @@ class MultiLinearTuckerInteraction(
             std=numpy.sqrt(numpy.prod(numpy.reciprocal(numpy.asarray(self.core_tensor.shape)))),
         )
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: tuple[FloatTensor, FloatTensor],
-        r: FloatTensor,
-        t: tuple[FloatTensor, FloatTensor],
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(h=h[0], r=r, t=t[1])
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        r"""
+        Evaluate the interaction function.
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(core_tensor=self.core_tensor)
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, head_dim)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, relation_dim)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, tail_dim)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        return einsum("ijk, ...i, ...j, ...k -> ...", self.core_tensor, h, r, t)
 
 
 @parse_docdata
@@ -2874,29 +3485,29 @@ class TransformerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, Flo
 
 
 @parse_docdata
-class TripleREInteraction(
-    NormBasedInteraction[
-        FloatTensor,
-        tuple[FloatTensor, FloatTensor, FloatTensor],
-        FloatTensor,
-    ]
-):
-    """A stateful module for the TripleRE interaction function from [yu2021]_.
+class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor], FloatTensor]):
+    r"""The TripleRE interaction function from [yu2021]_.
+
+    It is given by
 
     .. math ::
-        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
+         \mathbf{h} \odot (\mathbf{r}_h + u) - \mathbf{t} \odot (\mathbf{r}_t + u) + \mathbf{r}
+
+    with head entity, relation and tail entity representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$,
+    relation specific head and tail multipliers $\mathbf{r}_h, \mathbf{r}_t \in \mathbb{R}^d$,
+    and a scalar relation factor offset $u \in \mathbb{R}$.
+
+    .. note ::
+        This interaction is equivalent to :class:`~pykeen.nn.modules.LineaREInteraction` except the $u$ term.
+        The $u$ is only non-zero for the version 2 from the paper.
 
     .. note ::
 
         For equivalence to the paper version, `h` and `t` should be normalized to unit
         Euclidean length, and `p` and `power_norm` be kept at their default values.
 
-    .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
-
     .. seealso:: https://github.com/LongYu-360/TripleRE-Add-NodePiece
 
-    .. note ::
-        this interaction is equivalent to :class:`LineaREInteraction` except the `u` term
     ---
     name: TripleRE
     citation:
@@ -2908,44 +3519,54 @@ class TripleREInteraction(
     # r_head, r_mid, r_tail
     relation_shape = ("d", "d", "d")
 
-    func = pkf.triple_re_interaction
-
     def __init__(self, u: float | None = 1.0, p: int = 1, power_norm: bool = False):
         """
         Initialize the module.
 
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
         :param u:
-            the relation factor offset. can be set to None to disable it.
+            Rhe relation factor offset. Can be set to `None` (or 0) to disable it.
         :param p:
-            The norm used with :func:`torch.linalg.vector_norm`. Defaults to 1 for TripleRE.
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
-            and numerically more stable. Defaults to False for TripleRE.
+            and numerically more stable.
         """
         super().__init__(p=p, power_norm=power_norm)
         self.u = u
 
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        kwargs = super()._prepare_state_for_functional()
-        kwargs["u"] = self.u
-        return kwargs
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: FloatTensor,
-        r: tuple[FloatTensor, FloatTensor, FloatTensor],
-        t: FloatTensor,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``, 3 times
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
+        u = self.u
         r_head, r_mid, r_tail = r
-        return dict(
-            h=h,
-            r_head=r_head,
-            r_mid=r_mid,
-            r_tail=r_tail,
-            t=t,
-        )
+        # note: normalization should be done from the representations
+        # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328  # noqa: E501
+        # version 2
+        if u is not None:
+            # r_head = r_head + u * torch.ones_like(r_head)
+            # r_tail = r_tail + u * torch.ones_like(r_tail)
+            r_head = r_head + u
+            r_tail = r_tail + u
+
+        return negative_norm_of_sum(h * r_head, -t * r_tail, r_mid, p=self.p, power_norm=self.power_norm)
 
 
 # type alias for AutoSF block description
@@ -3182,25 +3803,24 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
 
 @parse_docdata
-class LineaREInteraction(NormBasedInteraction):
+class LineaREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor], FloatTensor]):
     r"""
     The LineaRE interaction described by [peng2020]_.
 
-    The interaction function is given as
+    It is given by
 
     .. math ::
+         \mathbf{h} \odot \mathbf{r}_h - \mathbf{t} \odot \mathbf{r}_t + \mathbf{r}
 
-        \| \mathbf{w}_{r}^{h} \odot \mathbf{x}_{h} + \mathbf{b}_r - \mathbf{w}_{r}^{t} \odot \mathbf{x}_{t} \|
-
-    where $\mathbf{w}_{r}^{h}, \mathbf{b}_r, \mathbf{w}_{r}^{t} \in \mathbb{R}^d$ are relation-specific terms,
-    and $\mathbf{x}_{h}, \mathbf{x}_{t} \in \mathbb{R}$ the head and tail entity representation.
+    where $\mathbf{r}_{h}, \mathbf{r}, \mathbf{r}_{t} \in \mathbb{R}^d$ are relation-specific terms,
+    and $\mathbf{h}, \mathbf{t} \in \mathbb{R}^n$ the head and tail entity representation.
 
     .. note ::
         the original paper only describes the interaction for $L_1$ norm, but we extend it to the general $L_p$
         norm as well as its powered variant.
 
     .. note ::
-        this interaction is equivalent to :class:`TripleREInteraction` without the `u` term
+        This interaction is equivalent to :class:`TripleREInteraction` without the $u$ term.
 
     ---
     name: LineaRE
@@ -3215,21 +3835,36 @@ class LineaREInteraction(NormBasedInteraction):
     # r_head, r_bias, r_tail
     relation_shape = ("d", "d", "d")
 
-    func = pkf.linea_re_interaction
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
 
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: FloatTensor,
-        r: tuple[FloatTensor, FloatTensor, FloatTensor],
-        t: FloatTensor,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``, 3 times
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
+        """
         r_head, r_mid, r_tail = r
-        return dict(h=h, r_head=r_head, r_mid=r_mid, r_tail=r_tail, t=t)
+        return negative_norm_of_sum(h * r_head, -t * r_tail, r_mid, p=self.p, power_norm=self.power_norm)
 
 
+#: A resolver for stateful interaction functions
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
     Interaction,
-    skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
+    skip={
+        NormBasedInteraction,
+        FunctionalInteraction,
+        MonotonicAffineTransformationInteraction,
+        ClampedInteraction,
+        DirectionAverageInteraction,
+    },
     default=TransEInteraction,
 )

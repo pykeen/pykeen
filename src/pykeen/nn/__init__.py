@@ -47,7 +47,7 @@ from .modules import (
     TransHInteraction,
     TransRInteraction,
     TripleREInteraction,
-    TuckerInteraction,
+    TuckERInteraction,
     UMInteraction,
     interaction_resolver,
 )
@@ -142,7 +142,7 @@ __all__ = [
     "TransHInteraction",
     "TransRInteraction",
     "TripleREInteraction",
-    "TuckerInteraction",
+    "TuckERInteraction",
     "UMInteraction",
     "interaction_resolver",
     # combinations
