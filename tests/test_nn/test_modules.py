@@ -287,17 +287,21 @@ class KG2ETests(cases.InteractionTestCase):
 class TuckerTests(cases.InteractionTestCase):
     """Tests for Tucker interaction function."""
 
-    cls = pykeen.nn.modules.TuckerInteraction
+    cls = pykeen.nn.modules.TuckERInteraction
     kwargs = dict(
         embedding_dim=cases.InteractionTestCase.dim,
     )
 
-    def _exp_score(self, bn_h, bn_hr, core_tensor, do_h, do_r, do_hr, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
-        a = do_r((core_tensor * r[None, :, None]).sum(dim=1, keepdims=True))  # shape: (embedding_dim, 1, embedding_dim)
-        b = do_h(bn_h(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
+        a = self.instance.relation_dropout(
+            (self.instance.core_tensor * r[None, :, None]).sum(dim=1, keepdims=True)
+        )  # shape: (embedding_dim, 1, embedding_dim)
+        b = self.instance.head_dropout(self.instance.head_batch_norm(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
         c = (b[:, None, None] * a).sum(dim=0, keepdims=True)  # shape: (1, 1, embedding_dim)
-        d = do_hr(bn_hr(c.view(1, -1))).view(1, 1, -1)  # shape: (1, 1, 1, embedding_dim)
+        d = self.instance.head_relation_dropout(self.instance.head_relation_batch_norm(c.view(1, -1))).view(
+            1, 1, -1
+        )  # shape: (1, 1, 1, embedding_dim)
         return (d * t[None, None, :]).sum()
 
 
@@ -461,11 +465,13 @@ class SimplEInteractionTests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.SimplEInteraction
 
-    def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
-        assert clamp is None
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        h_fwd, h_bwd = h
+        r_fwd, r_bwd = r
+        t_fwd, t_bwd = t
         return 0.5 * pykeen.nn.modules.DistMultInteraction.func(
-            h=h, r=r, t=t
-        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(h=h_inv, r=r_inv, t=t_inv)
+            h_fwd, r_fwd, t_fwd
+        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(t_bwd, r_bwd, h_bwd)
 
 
 class MuRETests(cases.TranslationalInteractionTests):
@@ -599,8 +605,8 @@ class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
         kwargs["tail_dim"] = self.shape_kwargs["f"]
         return kwargs
 
-    def _exp_score(self, core_tensor, h, r, t) -> torch.FloatTensor:
-        return einsum("ijk,i,j,k", core_tensor, h, r, t)
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        return einsum("ijk,i,j,k", self.instance.core_tensor, h, r, t)
 
 
 class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules.Interaction]):
@@ -612,6 +618,8 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
         pykeen.nn.modules.Interaction,
         pykeen.nn.modules.FunctionalInteraction,
         pykeen.nn.modules.NormBasedInteraction,
+        pykeen.nn.modules.ClampedInteraction,
+        pykeen.nn.modules.DirectionAverageInteraction,
         # FIXME
         pykeen.nn.modules.BoxEInteraction,
     }

@@ -10,28 +10,11 @@ import torch
 from torch import broadcast_tensors, nn
 
 from ..typing import FloatTensor
-from ..utils import einsum, tensor_product
+from ..utils import einsum
 
 __all__ = [
-    "multilinear_tucker_interaction",
-    "simple_interaction",
     "transformer_interaction",
-    "tucker_interaction",
 ]
-
-
-def _apply_optional_bn_to_tensor(
-    x: FloatTensor,
-    output_dropout: nn.Dropout,
-    batch_norm: nn.BatchNorm1d | None = None,
-) -> FloatTensor:
-    """Apply optional batch normalization and dropout layer. Supports multiple batch dimensions."""
-    if batch_norm is not None:
-        shape = x.shape
-        x = x.reshape(-1, shape[-1])
-        x = batch_norm(x)
-        x = x.view(*shape)
-    return output_dropout(x)
 
 
 def circular_correlation(
@@ -61,114 +44,6 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def simple_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    h_inv: FloatTensor,
-    r_inv: FloatTensor,
-    t_inv: FloatTensor,
-    clamp: tuple[float, float] | None = None,
-) -> FloatTensor:
-    """Evaluate the SimplE interaction function.
-
-    :param h: shape: (`*batch_dims`, dim)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim, dim)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param h_inv: shape: (`*batch_dims`, dim)
-        The inverse head representations.
-    :param r_inv: shape: (`*batch_dims`, dim, dim)
-        The relation representations.
-    :param t_inv: shape: (`*batch_dims`, dim)
-        The tail representations.
-    :param clamp:
-        Clamp the scores to the given range.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    scores = 0.5 * (tensor_product(h, r, t).sum(dim=-1) + tensor_product(h_inv, r_inv, t_inv).sum(dim=-1))
-    # Note: In the code in their repository, the score is clamped to [-20, 20].
-    #       That is not mentioned in the paper, so it is made optional here.
-    if clamp:
-        min_, max_ = clamp
-        scores = scores.clamp(min=min_, max=max_)
-    return scores
-
-
-def tucker_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    core_tensor: FloatTensor,
-    do_h: nn.Dropout,
-    do_r: nn.Dropout,
-    do_hr: nn.Dropout,
-    bn_h: nn.BatchNorm1d | None,
-    bn_hr: nn.BatchNorm1d | None,
-) -> FloatTensor:
-    r"""Evaluate the TuckEr interaction function.
-
-    Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
-
-    .. math ::
-
-        DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
-
-    where BN denotes BatchNorm and DO denotes Dropout
-
-    :param h: shape: (`*batch_dims`, d_e)
-        The head representations.
-    :param r: shape: (`*batch_dims`, d_r)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, d_e)
-        The tail representations.
-    :param core_tensor: shape: (d_e, d_r, d_e)
-        The core tensor.
-    :param do_h:
-        The dropout layer for the head representations.
-    :param do_r:
-        The first hidden dropout.
-    :param do_hr:
-        The second hidden dropout.
-    :param bn_h:
-        The first batch normalization layer.
-    :param bn_hr:
-        The second batch normalization layer.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return (
-        _apply_optional_bn_to_tensor(
-            x=einsum(
-                # x_1 contraction
-                "...ik,...i->...k",
-                _apply_optional_bn_to_tensor(
-                    x=einsum(
-                        # x_2 contraction
-                        "ijk,...j->...ik",
-                        core_tensor,
-                        r,
-                    ),
-                    output_dropout=do_r,
-                ),
-                _apply_optional_bn_to_tensor(
-                    x=h,
-                    batch_norm=bn_h,
-                    output_dropout=do_h,
-                ),
-            ),
-            batch_norm=bn_hr,
-            output_dropout=do_hr,
-        )
-        * t
-    ).sum(dim=-1)
 
 
 def quat_e_interaction(
@@ -252,30 +127,3 @@ def transformer_interaction(
     x = x.view(*hr_shape[1:-1], x.shape[-1])
 
     return (x * t).sum(dim=-1)
-
-
-def multilinear_tucker_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    core_tensor: FloatTensor,
-) -> FloatTensor:
-    r"""Evaluate the (original) multi-linear TuckEr interaction function.
-
-    .. math ::
-
-        score(h, r, t) = \sum W_{ijk} h_i r_j t_k
-
-    :param h: shape: (`*batch_dims`, d_e)
-        The head representations.
-    :param r: shape: (`*batch_dims`, d_r)
-        The relation representations.
-    :param t: shape: (`*batch_dims`, d_e)
-        The tail representations.
-    :param core_tensor: shape: (d_h, d_r, d_t)
-        The core tensor.
-
-    :return: shape: batch_dims
-        The scores.
-    """
-    return einsum("ijk,...i,...j,...k->...", core_tensor, h, r, t)

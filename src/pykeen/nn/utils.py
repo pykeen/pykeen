@@ -24,6 +24,7 @@ from ..utils import nested_get, rate_limited, upgrade_to_sequence
 from ..version import get_version
 
 __all__ = [
+    "apply_optional_bn",
     "safe_diagonal",
     "adjacency_tensor_to_stacked_matrix",
     "use_horizontal_stacking",
@@ -619,3 +620,24 @@ class ShapeError(ValueError):
             # raise cls(shape=shape, reference=reference)
             raise ShapeError(shape=shape, reference=reference)
         return shape
+
+
+def apply_optional_bn(x: FloatTensor, batch_norm: torch.nn.BatchNorm1d | None = None) -> FloatTensor:
+    """Apply optional batch normalization.
+
+    Supports multiple batch dimensions.
+
+    :param x: shape: ``(..., d)```
+        The input tensor.
+    :param batch_norm:
+        An optional batch normalization layer.
+
+    :return: shape: ``(..., d)```
+        The normalized tensor.
+    """
+    if batch_norm is None:
+        return x
+    shape = x.shape
+    x = x.reshape(-1, shape[-1])
+    x = batch_norm(x)
+    return x.view(*shape)
