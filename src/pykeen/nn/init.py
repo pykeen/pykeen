@@ -468,6 +468,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         )
         # create random walk matrix
         rw = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
+        # TODO replace iter_matrix_power and safe_diagonal with torch_ppr functions?
         # stack diagonal entries of powers of rw
         tensor = torch.stack(
             [
@@ -480,6 +481,8 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         super().__init__(tensor=tensor)
 
 
+#: A resolver for initializers, including both elements of :mod:`torch.nn.init` and
+#: custom additions in :mod:`pykeen.nn.init`
 initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
     [
         getattr(torch.nn.init, func)

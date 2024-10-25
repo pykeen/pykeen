@@ -16,7 +16,15 @@ import numpy
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver import (
+    FunctionResolver,
+    HintOrType,
+    OneOrManyHintOrType,
+    OneOrManyOptionalKwargs,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
@@ -1038,6 +1046,9 @@ class TextRepresentation(Representation):
 
     labels: list[str]
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("encoder", "text_encoder_resolver"),
+    )
     def __init__(
         self,
         labels: Sequence[str | None],
@@ -1046,7 +1057,7 @@ class TextRepresentation(Representation):
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
         missing_action: Literal["blank", "error"] = "error",
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         Initialize the representation.
