@@ -1,7 +1,5 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
-from __future__ import annotations
-
 import dataclasses
 import logging
 import pathlib
@@ -1391,7 +1389,7 @@ def get_mapped_triples(
 def create_slcwa_instances(
     triples_factory: CoreTriplesFactory,
     *,
-    sampler: str | None = None,
+    sampler: Optional[str] = None,
     **kwargs: Any,
 ) -> Dataset:
     """Create sLCWA instances for this factory's triples."""
@@ -1409,7 +1407,7 @@ def create_slcwa_instances(
     )
 
 
-def create_lcwa_instances(tf: CoreTriplesFactory, target: int | None = None) -> Dataset:
+def create_lcwa_instances(tf: CoreTriplesFactory, target: Optional[int] = None) -> Dataset:
     """Create LCWA instances for this factory's triples."""
     return LCWAInstances.from_triples(
         mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
