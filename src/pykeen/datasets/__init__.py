@@ -102,6 +102,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+#: A resolver for datasets
 dataset_resolver: ClassResolver[Dataset] = ClassResolver.from_subclasses(
     base=Dataset,
     skip={

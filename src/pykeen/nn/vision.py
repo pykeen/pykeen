@@ -46,7 +46,7 @@ class VisionDataset(torch.utils.data.Dataset):
     A dataset of images with data augmentation.
 
     .. note ::
-        requires `torchvision` to be installed.
+        requires :mod:`torchvision` to be installed.
     """
 
     def __init__(

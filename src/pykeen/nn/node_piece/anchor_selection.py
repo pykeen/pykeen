@@ -278,6 +278,7 @@ class MixtureAnchorSelection(AnchorSelection):
         return anchors
 
 
+#: A resolver for NodePiece anchor selectors
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
     base=AnchorSelection,
     default=DegreeAnchorSelection,
