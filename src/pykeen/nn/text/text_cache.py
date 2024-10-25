@@ -12,7 +12,13 @@ from itertools import chain
 from textwrap import dedent
 from typing import Any, Callable, Literal, cast
 
+import more_itertools
+import requests
 from class_resolver import ClassResolver
+
+from ...constants import PYKEEN_MODULE
+from ...utils import nested_get
+from ...version import get_version
 
 __all__ = [
     "text_cache_resolver",
@@ -23,12 +29,6 @@ __all__ = [
     "WikidataTextCache",
 ]
 
-import more_itertools
-import requests
-
-from pykeen import get_version
-from pykeen.constants import PYKEEN_MODULE
-from pykeen.utils import nested_get
 
 logger = logging.getLogger(__name__)
 

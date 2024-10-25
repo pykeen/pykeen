@@ -14,11 +14,11 @@ from torch import nn
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 
-from pykeen.typing import FloatTensor
-from pykeen.utils import determine_maximum_batch_size, get_preferred_device, resolve_device, upgrade_to_sequence
+from ...typing import FloatTensor
+from ...utils import determine_maximum_batch_size, get_preferred_device, resolve_device, upgrade_to_sequence
 
 if TYPE_CHECKING:
-    from pykeen.nn.representation import Representation
+    from ..representation import Representation
 
 __all__ = [
     # abstract
