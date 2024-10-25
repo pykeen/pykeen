@@ -25,7 +25,7 @@ __all__ = [
     "TextCache",
     # Concrete classes
     "IdentityCache",
-    "PyOBOCache",
+    "PyOBOTextCache",
     "WikidataTextCache",
 ]
 
@@ -56,7 +56,7 @@ class IdentityCache(TextCache):
 PYOBO_PREFIXES_WARNED = set()
 
 
-class PyOBOCache(TextCache):
+class PyOBOTextCache(TextCache):
     """A cache that looks up labels of biomedical entities based on their CURIEs."""
 
     def __init__(self, *args, **kwargs):
