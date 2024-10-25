@@ -9,11 +9,9 @@ from __future__ import annotations
 import torch
 
 from ..typing import FloatTensor
-from ..utils import einsum
 
 __all__ = [
     "circular_correlation",
-    "quat_e_interaction",
 ]
 
 
@@ -44,29 +42,3 @@ def circular_correlation(
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
-
-
-def quat_e_interaction(
-    h: FloatTensor,
-    r: FloatTensor,
-    t: FloatTensor,
-    table: FloatTensor,
-):
-    """Evaluate the interaction function of QuatE for given embeddings.
-
-    The embeddings have to be in a broadcastable shape.
-
-    :param h: shape: (`*batch_dims`, dim, 4)
-        The head representations.
-    :param r: shape: (`*batch_dims`, dim, 4)
-        The head representations.
-    :param t: shape: (`*batch_dims`, dim, 4)
-        The tail representations.
-    :param table:
-        the quaternion multiplication table.
-
-    :return: shape: (...)
-        The scores.
-    """
-    # TODO: this sign is in the official code, too, but why do we need it?
-    return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
