@@ -63,6 +63,7 @@ class QuatE(ERModel):
     citation:
         author: Zhang
         year: 2019
+        arxiv: 1904.10281
         link: https://arxiv.org/abs/1904.10281
         github: cheungdaven/quate
     """

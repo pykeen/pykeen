@@ -2782,16 +2782,8 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
 
 
 @parse_docdata
-class QuatEInteraction(
-    FunctionalInteraction[
-        FloatTensor,
-        FloatTensor,
-        FloatTensor,
-    ],
-):
+class QuatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the QuatE interaction function.
-
-    .. seealso:: :func:`pykeen.nn.functional.quat_e_interaction`
 
     ---
     citation:
@@ -2805,15 +2797,33 @@ class QuatEInteraction(
     # with k=4
     entity_shape: Sequence[str] = ("dk",)
     relation_shape: Sequence[str] = ("dk",)
-    func = pkf.quat_e_interaction
 
     def __init__(self) -> None:
         """Initialize the interaction module."""
         super().__init__()
         self.register_buffer(name="table", tensor=quaterion_multiplication_table())
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(table=self.table)
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function of QuatE for given embeddings.
+
+        The embeddings have to be in a broadcastable shape.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim, 4)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim, 4)
+            The head representations.
+        :param t: shape: (`*batch_dims`, dim, 4)
+            The tail representations.
+
+        :return: shape: (...)
+            The scores.
+        """
+        # TODO: this sign is in the official code, too, but why do we need it?
+        return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, self.table)
 
 
 class MonotonicAffineTransformationInteraction(
