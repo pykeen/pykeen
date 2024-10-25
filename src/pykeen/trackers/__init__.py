@@ -30,6 +30,7 @@ __all__ = [
     "resolve_result_trackers",
 ]
 
+#: A resolver for result trackers
 tracker_resolver: ClassResolver[ResultTracker] = ClassResolver.from_subclasses(
     base=ResultTracker,
     default=ResultTracker,

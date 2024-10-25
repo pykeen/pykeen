@@ -18,7 +18,7 @@ __all__ = [
 
 
 class HolE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
-    r"""The HolE model as described in [nickel2016]_.
+    r"""An implementation of HolE from [nickel2016]_.
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an
     :class:`~pykeen.nn.representation.Embedding` matrix.

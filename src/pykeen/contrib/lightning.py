@@ -264,6 +264,7 @@ class LCWALitModule(LitModule):
         )
 
 
+#: A resolver for PyTorch Lightning training modules
 lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
     base=LitModule,
     default=SLCWALitModule,

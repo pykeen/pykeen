@@ -55,7 +55,7 @@ class ConcatMLP(nn.Sequential):
         """Forward the MLP on the given dimension.
 
         :param xs: The tensor to forward
-        :param dim: Only a parameter to match the signature of torch.mean / torch.sum
+        :param dim: Only a parameter to match the signature of :func:`torch.mean` / :func:`torch.sum`
             this class is not thought to be usable from outside
         :returns: The tensor after applying this MLP
         """

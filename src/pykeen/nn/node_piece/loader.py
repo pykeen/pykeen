@@ -95,6 +95,7 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         return {i: anchor_ids.tolist() for i, anchor_ids in enumerate(order)}, num_anchors  # type: ignore
 
 
+#: A resolver for NodePiece precomputed tokenizer loaders
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
     base=PrecomputedTokenizerLoader,
     default=GalkinPrecomputedTokenizerLoader,

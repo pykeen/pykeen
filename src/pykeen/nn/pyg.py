@@ -83,6 +83,7 @@ try:
     from torch_geometric.nn.conv import MessagePassing
     from torch_geometric.utils import k_hop_subgraph
 
+    #: A resolver for PyG message passing layers
     layer_resolver: ClassResolver[MessagePassing] = ClassResolver.from_subclasses(
         base=MessagePassing,  # type: ignore
         suffix="Conv",
