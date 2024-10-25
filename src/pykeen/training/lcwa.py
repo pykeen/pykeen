@@ -5,13 +5,13 @@ from math import ceil
 from typing import Callable, ClassVar, Optional, Union
 
 from torch.nn import functional
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torch_max_mem.api import is_oom_error
 
 from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models import Model
-from ..triples import CoreTriplesFactory
+from ..triples import CoreTriplesFactory, LCWAInstances
 from ..triples.instances import LCWABatchType, LCWASampleType
 from ..typing import FloatTensor, InductiveMode, MappedTriples
 
@@ -92,7 +92,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 f"sampler='{sampler}'.",
             )
 
-        dataset = triples_factory.create_lcwa_instances(target=self.target)
+        dataset = create_lcwa_instances(triples_factory, target=self.target)
         return DataLoader(dataset=dataset, collate_fn=dataset.get_collator(), **kwargs)
 
     @staticmethod
@@ -300,3 +300,13 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
     def _slice_size_search(self, **kwargs) -> int:
         # TODO?
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+def create_lcwa_instances(tf: CoreTriplesFactory, target: Optional[int] = None) -> Dataset:
+    """Create LCWA instances for this factory's triples."""
+    return LCWAInstances.from_triples(
+        mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+        num_entities=tf.num_entities,
+        num_relations=tf.num_relations,
+        target=target,
+    )

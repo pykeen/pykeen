@@ -16,9 +16,15 @@ import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+from pykeen.training.lcwa import create_lcwa_instances
+from pykeen.training.slcwa import create_slcwa_instances
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.splitting import splitter_resolver
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids, get_mapped_triples
+from pykeen.triples.triples_factory import (
+    INVERSE_SUFFIX,
+    _map_triples_elements_to_ids,
+    get_mapped_triples,
+)
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
@@ -84,7 +90,7 @@ class TestTriplesFactory(unittest.TestCase):
         ]
         t = np.array(t, dtype=str)
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        instances = factory.create_slcwa_instances()
+        instances = create_slcwa_instances(factory)
         assert len(instances) == 4
 
     def test_automatic_incomplete_inverse_detection(self):
@@ -224,7 +230,7 @@ class TestTriplesFactory(unittest.TestCase):
     def test_create_lcwa_instances(self):
         """Test create_lcwa_instances."""
         factory = Nations().training
-        instances = factory.create_lcwa_instances()
+        instances = create_lcwa_instances(factory)
         assert isinstance(instances, LCWAInstances)
 
         # check compressed triples

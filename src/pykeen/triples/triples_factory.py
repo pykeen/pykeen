@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import pathlib
 import re
-import warnings
 from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
@@ -19,9 +18,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import Dataset
 
-from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
@@ -471,16 +468,6 @@ class CoreTriplesFactory(KGInfo):
                 self.relation_inverter.map(batch=mapped_triples, invert=True).flip(1),
             ]
         )
-
-    def create_slcwa_instances(self, *, sampler: Optional[str] = None, **kwargs: Any) -> Dataset:
-        """Create sLCWA instances for this factory's triples."""
-        warnings.warn("Use create_slcwa_instances directly", DeprecationWarning, stacklevel=2)
-        return create_slcwa_instances(self, sampler=sampler, **kwargs)
-
-    def create_lcwa_instances(self, *, target: Optional[int] = None) -> Dataset:
-        """Create LCWA instances for this factory's triples."""
-        warnings.warn("Use create_lcwa_instances directly", DeprecationWarning, stacklevel=2)
-        return create_lcwa_instances(self, target=target)
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> set[int]:
         """Get the IDs of the n most frequent relations.
@@ -1384,34 +1371,3 @@ def get_mapped_triples(
 
     # only labeled triples are remaining
     return get_mapped_triples(triples=x, factory=factory)
-
-
-def create_slcwa_instances(
-    triples_factory: CoreTriplesFactory,
-    *,
-    sampler: Optional[str] = None,
-    **kwargs: Any,
-) -> Dataset:
-    """Create sLCWA instances for this factory's triples."""
-    cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
-    if "shuffle" in kwargs:
-        if kwargs.pop("shuffle"):
-            warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
-        else:
-            raise AssertionError("If shuffle is provided, it must be True.")
-    return cls(
-        mapped_triples=triples_factory._add_inverse_triples_if_necessary(mapped_triples=triples_factory.mapped_triples),
-        num_entities=triples_factory.num_entities,
-        num_relations=triples_factory.num_relations,
-        **kwargs,
-    )
-
-
-def create_lcwa_instances(tf: CoreTriplesFactory, target: Optional[int] = None) -> Dataset:
-    """Create LCWA instances for this factory's triples."""
-    return LCWAInstances.from_triples(
-        mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
-        num_entities=tf.num_entities,
-        num_relations=tf.num_relations,
-        target=target,
-    )
