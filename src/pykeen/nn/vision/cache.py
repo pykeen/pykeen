@@ -8,7 +8,7 @@ import pathlib
 from collections.abc import Collection, Mapping, Sequence
 from textwrap import dedent
 
-from tqdm.asyncio import tqdm
+from tqdm.auto import tqdm
 
 from ..text.cache import WikidataTextCache
 from ...utils import nested_get, rate_limited
