@@ -246,7 +246,7 @@ class QuatETests(cases.InteractionTestCase):
 
     def _get_hrt(self, *shapes):
         h, r, t = super()._get_hrt(*shapes)
-        r = quaternion.normalizer(r)
+        r = quaternion.normalize(r)
         return h, r, t
 
 

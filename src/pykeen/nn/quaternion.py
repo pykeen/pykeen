@@ -7,13 +7,13 @@ import torch
 from ..typing import FloatTensor
 
 __all__ = [
-    "normalizer",
+    "normalize",
     "hamiltonian_product",
     "multiplication_table",
 ]
 
 
-def normalizer(x: FloatTensor) -> FloatTensor:
+def normalize(x: FloatTensor) -> FloatTensor:
     r"""
     Normalize the length of relation vectors, if the forward constraint has not been applied yet.
 

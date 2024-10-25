@@ -68,7 +68,7 @@ class QuatE(ERModel):
         relation_initializer: Hint[Initializer] = init_quaternions,
         relation_regularizer: Hint[Regularizer] = LpRegularizer,
         relation_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Hint[Constrainer] = quaternion.normalizer,
+        relation_normalizer: Hint[Constrainer] = quaternion.normalize,
         **kwargs,
     ) -> None:
         """Initialize QuatE.

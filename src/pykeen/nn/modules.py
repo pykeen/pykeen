@@ -2782,7 +2782,22 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
 
 @parse_docdata
 class QuatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
-    """A module wrapper for the QuatE interaction function.
+    r"""The state-less QuatE interaction function.
+
+    It is given as
+
+    .. math ::
+        \langle \mathbf{h} \otimes \mathbf{r}, \mathbf{t} \rangle
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{H}^d$ are quanternion representations,
+    $\otimes$ denotes the Hamilton product, and $\langle \cdot, \cdot \rangle$ the inner product.
+
+    .. warning ::
+        In order to representation a rotation, $\mathbf{r}$ must be normalized to unit length,
+        cf. :func:`pykeen.nn.quaternion.normalize`.
+
+    .. seealso::
+        - https://en.wikipedia.org/wiki/Quaternion
 
     ---
     citation:
@@ -2822,6 +2837,7 @@ class QuatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             The scores.
         """
         # TODO: this sign is in the official code, too, but why do we need it?
+        # note: this is a fused kernel for computing the Hamilton product and the inner product at once
         return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, self.table)
 
 
