@@ -90,6 +90,7 @@ __all__ = [
     "TrainingCallback",
 ]
 
+#: A resolver for training loops
 training_loop_resolver: ClassResolver[TrainingLoop] = ClassResolver.from_subclasses(
     base=TrainingLoop,  # type: ignore
     default=SLCWATrainingLoop,

@@ -724,6 +724,7 @@ class CheckpointTrainingCallback(TrainingCallback):
             logger.info(f"Deleted checkpoint for {step=:_} at {path= !s}")
 
 
+#: A resolver for training callbacks
 callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
     base=TrainingCallback,
     skip={MultiTrainingCallback},

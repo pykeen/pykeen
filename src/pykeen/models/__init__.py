@@ -150,6 +150,7 @@ __all__ = [
     "make_model_cls",
 ]
 
+#: A resolver for knowledge graph embedding models
 model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
     base=Model,
     skip={

@@ -349,6 +349,7 @@ class BloomFilterer(Filterer):
         return result
 
 
+#: A resolver for mapping filterers
 filterer_resolver: ClassResolver[Filterer] = ClassResolver.from_subclasses(
     base=Filterer,
     default=BloomFilterer,

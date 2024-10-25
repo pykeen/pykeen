@@ -233,6 +233,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
         return (message_ * alpha.view(-1, self.num_heads, 1)).view(-1, self.num_heads * self.attention_dim)
 
 
+#: A resolver for R-GCN edge weighting implementations
 edge_weight_resolver: ClassResolver[EdgeWeighting] = ClassResolver.from_subclasses(
     base=EdgeWeighting, default=SymmetricEdgeWeighting
 )
