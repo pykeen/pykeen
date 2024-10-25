@@ -29,7 +29,6 @@ from torch import nn
 from torch.nn.init import xavier_normal_
 from typing_extensions import Self
 
-from . import functional as pkf
 from . import init, quaternion
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from .utils import apply_optional_bn
@@ -49,6 +48,7 @@ from ..utils import (
     add_cudnn_error_hint,
     at_least_eps,
     batched_dot,
+    circular_correlation,
     clamp_norm,
     einsum,
     ensure_complex,
@@ -1628,7 +1628,7 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
             The scores.
         """
         # composite: (*batch_dims, d)
-        composite = pkf.circular_correlation(h, t)
+        composite = circular_correlation(h, t)
 
         # inner product with relation embedding
         return (r * composite).sum(dim=-1)
