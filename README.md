@@ -173,30 +173,31 @@ The following 5 inductive datasets are built in to PyKEEN.
 
 ### Representations
 
-The following 20 representations are implemented by PyKEEN.
+The following 21 representations are implemented by PyKEEN.
 
-| Name                       | Reference                                                                                                                                                   |
-|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Backfill                   | [`pykeen.nn.BackfillRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.BackfillRepresentation.html)                      |
-| Text Encoding              | [`pykeen.nn.BiomedicalCURIERepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.BiomedicalCURIERepresentation.html)        |
-| Combined                   | [`pykeen.nn.CombinedRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.CombinedRepresentation.html)                      |
-| Embedding                  | [`pykeen.nn.Embedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.Embedding.html)                                                |
-| Featurized Message Passing | [`pykeen.nn.FeaturizedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.FeaturizedMessagePassingRepresentation.html) |
-| Low Rank Embedding         | [`pykeen.nn.LowRankRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.LowRankRepresentation.html)                        |
-| NodePiece                  | [`pykeen.nn.NodePieceRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representation.NodePieceRepresentation.html)         |
-| Partition                  | [`pykeen.nn.PartitionRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.PartitionRepresentation.html)                    |
-| R-GCN                      | [`pykeen.nn.RGCNRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.message_passing.RGCNRepresentation.html)                             |
-| Simple Message Passing     | [`pykeen.nn.SimpleMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.SimpleMessagePassingRepresentation.html)         |
-| CompGCN                    | [`pykeen.nn.SingleCompGCNRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.SingleCompGCNRepresentation.html)            |
-| Subset Representation      | [`pykeen.nn.SubsetRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.SubsetRepresentation.html)                          |
-| Tensor-Train               | [`pykeen.nn.TensorTrainRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TensorTrainRepresentation.html)                |
-| Text Encoding              | [`pykeen.nn.TextRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TextRepresentation.html)                              |
-| Tokenization               | [`pykeen.nn.TokenizationRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representation.TokenizationRepresentation.html)   |
-| Transformed                | [`pykeen.nn.TransformedRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TransformedRepresentation.html)                |
-| Typed Message Passing      | [`pykeen.nn.TypedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.TypedMessagePassingRepresentation.html)           |
-| Visual                     | [`pykeen.nn.VisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.VisualRepresentation.html)                                  |
-| Wikidata Text Encoding     | [`pykeen.nn.WikidataTextRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.WikidataTextRepresentation.html)              |
-| Wikidata Visual            | [`pykeen.nn.WikidataVisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.WikidataVisualRepresentation.html)                  |
+| Name                       | Reference                                                                                                                                                        |
+|----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Backfill                   | [`pykeen.nn.BackfillRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.BackfillRepresentation.html)                           |
+| Text Encoding              | [`pykeen.nn.BiomedicalCURIERepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.BiomedicalCURIERepresentation.html)             |
+| Combined                   | [`pykeen.nn.CombinedRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.CombinedRepresentation.html)                           |
+| Embedding                  | [`pykeen.nn.Embedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.Embedding.html)                                                     |
+| Featurized Message Passing | [`pykeen.nn.FeaturizedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.FeaturizedMessagePassingRepresentation.html)      |
+| Low Rank Embedding         | [`pykeen.nn.LowRankRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.LowRankRepresentation.html)                             |
+| MessagePassing             | [`pykeen.nn.MessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.MessagePassingRepresentation.html)                          |
+| NodePiece                  | [`pykeen.nn.NodePieceRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representation.NodePieceRepresentation.html)              |
+| Partition                  | [`pykeen.nn.PartitionRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.PartitionRepresentation.html)                         |
+| R-GCN                      | [`pykeen.nn.RGCNRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.message_passing.RGCNRepresentation.html)                                  |
+| Simple Message Passing     | [`pykeen.nn.SimpleMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.SimpleMessagePassingRepresentation.html)              |
+| CompGCN                    | [`pykeen.nn.SingleCompGCNRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.SingleCompGCNRepresentation.html)                 |
+| Subset Representation      | [`pykeen.nn.SubsetRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.SubsetRepresentation.html)                               |
+| Tensor-Train               | [`pykeen.nn.TensorTrainRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TensorTrainRepresentation.html)                     |
+| Text Encoding              | [`pykeen.nn.TextRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TextRepresentation.html)                                   |
+| Tokenization               | [`pykeen.nn.TokenizationRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representation.TokenizationRepresentation.html)        |
+| Transformed                | [`pykeen.nn.TransformedRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TransformedRepresentation.html)                     |
+| Typed Message Passing      | [`pykeen.nn.TypedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.TypedMessagePassingRepresentation.html)                |
+| Visual                     | [`pykeen.nn.VisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.image_representations.VisualRepresentation.html)                 |
+| Wikidata Text Encoding     | [`pykeen.nn.WikidataTextRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.WikidataTextRepresentation.html)                   |
+| Wikidata Visual            | [`pykeen.nn.WikidataVisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.image_representations.WikidataVisualRepresentation.html) |
 
 ### Interactions
 
