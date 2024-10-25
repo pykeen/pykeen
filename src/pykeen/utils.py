@@ -109,6 +109,7 @@ __all__ = [
     "einsum",
     "isin_many_dim",
     "split_workload",
+    "batched_dot",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1623,6 +1624,20 @@ def split_workload(n: int) -> range:
         stop = math.ceil(n / num_workers * (worker_id + 1))
         workload = range(start, stop)
     return workload
+
+
+def batched_dot(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    """Compute "element-wise" dot-product between batched vectors."""
+    return (a * b).sum(dim=-1)
+
+
+def _batched_dot_matmul(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    """Compute "element-wise" dot-product between batched vectors."""
+    return (a.unsqueeze(dim=-2) @ b.unsqueeze(dim=-1)).view(a.shape[:-1])
+
+
+def _batched_dot_einsum(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    return einsum("...i,...i->...", a, b)
 
 
 if __name__ == "__main__":

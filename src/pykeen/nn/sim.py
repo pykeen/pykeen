@@ -7,9 +7,8 @@ import torch
 from class_resolver import ClassResolver
 from torch import nn
 
-from .functional import batched_dot
 from ..typing import FloatTensor, GaussianDistribution
-from ..utils import at_least_eps, tensor_sum
+from ..utils import at_least_eps, batched_dot, tensor_sum
 
 __all__ = [
     "KG2ESimilarity",
