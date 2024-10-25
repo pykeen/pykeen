@@ -1,5 +1,7 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
+from __future__ import annotations
+
 import dataclasses
 import logging
 import pathlib
