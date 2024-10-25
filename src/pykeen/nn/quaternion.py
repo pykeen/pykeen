@@ -28,10 +28,11 @@ def normalizer(x: FloatTensor) -> FloatTensor:
     .. math::
         \|x\|^2 = \sum_{i=1}^d |x_i|^2
                  = \sum_{i=1}^d (x_i.re^2 + x_i.im_1^2 + x_i.im_2^2 + x_i.im_3^2)
-    :param x:
-        The vector.
 
-    :return:
+    :param x: shape: ``(*batch_dims, 4 \cdot d)``
+        The vector in flat form.
+
+    :return: shape: ``(*batch_dims, 4 \cdot d)``
         The normalized vector.
     """
     # Normalize relation embeddings
