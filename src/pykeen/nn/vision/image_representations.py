@@ -15,12 +15,12 @@ import torch.utils.data
 from class_resolver import OptionalKwargs
 from docdata import parse_docdata
 
-from .representation import BackfillRepresentation, Representation
-from .utils import ShapeError
-from .wikidata import WikidataImageCache
-from ..datasets import Dataset
-from ..triples import TriplesFactory
-from ..typing import FloatTensor, LongTensor, OneOrSequence
+from .image_cache import WikidataImageCache
+from ..representation import BackfillRepresentation, Representation
+from ..utils import ShapeError
+from ...datasets import Dataset
+from ...triples import TriplesFactory
+from ...typing import FloatTensor, LongTensor, OneOrSequence
 
 try:
     from PIL import Image
@@ -33,12 +33,20 @@ __all__ = [
     "VisionDataset",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
+    "ImageHint",
+    "ImageHints",
 ]
 
 
 def _ensure_vision(instance: object, module: Optional[Any]):
     if module is None:
         raise ImportError(f"{instance.__class__.__name__} requires `torchvision` to be installed.")
+
+
+#: A path to an image file or a tensor representation of the image
+ImageHint = Union[str, pathlib.Path, torch.Tensor]
+#: A sequence of image hints
+ImageHints = Sequence[ImageHint]
 
 
 class VisionDataset(torch.utils.data.Dataset):
@@ -51,7 +59,7 @@ class VisionDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        images: Sequence[Union[str, pathlib.Path, torch.Tensor]],
+        images: ImageHints,
         transforms: Optional[Sequence] = None,
         root: Optional[pathlib.Path] = None,
     ) -> None:
@@ -105,7 +113,7 @@ class VisualRepresentation(Representation):
 
     def __init__(
         self,
-        images: Sequence,
+        images: ImageHints,
         encoder: Union[str, torch.nn.Module],
         layer_name: str,
         max_id: Optional[int] = None,

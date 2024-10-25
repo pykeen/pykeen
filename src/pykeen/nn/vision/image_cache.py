@@ -28,6 +28,8 @@ WIKIDATA_IMAGE_RELATIONS = [
     "P242",  # locator map image
 ]
 
+# TODO extract out a shared base class if we ever get a second image source
+
 
 class WikidataImageCache(WikidataTextCache):
     """A cache for requests against Wikidata's SPARQL endpoint."""
