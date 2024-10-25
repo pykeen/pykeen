@@ -28,6 +28,9 @@ class QuatE(ERModel):
     $\textbf{e}_i, \textbf{r}_i \in \mathbb{H}^d$, and the plausibility score is computed using the
     quaternion inner product.
 
+    The representations are stored in an :class:`~pykeen.nn.representation.Embedding`.
+    Scores are calculated with :class:`~pykeen.nn.modules.QuatEInteraction`.
+
     .. seealso ::
 
         Official implementation: https://github.com/cheungdaven/QuatE/blob/master/models/QuatE.py
