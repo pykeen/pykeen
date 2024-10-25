@@ -25,7 +25,8 @@ Remixing
 
 Deterioration
 -------------
-.. automodule:: pykeen.triples.deteriorate
+.. automodapi:: pykeen.triples.deteriorate
+    :no-heading:
 
 Generation
 ----------
