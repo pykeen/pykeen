@@ -11,6 +11,11 @@ import torch
 from ..typing import FloatTensor
 from ..utils import einsum
 
+__all__ = [
+    "circular_correlation",
+    "quat_e_interaction",
+]
+
 
 def circular_correlation(
     a: FloatTensor,
