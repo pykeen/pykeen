@@ -10,7 +10,6 @@ import numpy
 import torch
 import torch.nn.functional
 import unittest_templates
-from torch import nn
 
 import pykeen.nn.modules
 import pykeen.nn.sim
@@ -576,19 +575,11 @@ class TransformerTests(cases.InteractionTestCase):
         assert self.dim % kwargs["num_heads"] == 0
         return kwargs
 
-    def _exp_score(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        transformer: nn.TransformerEncoder,
-        position_embeddings: torch.FloatTensor,
-        final: nn.Module,
-    ) -> torch.FloatTensor:  # noqa: D102
-        x = torch.stack([h, r], dim=0) + position_embeddings
-        x = transformer(src=x.unsqueeze(dim=1))
+    def _exp_score(self, h: torch.FloatTensor, r: torch.FloatTensor, t: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+        x = torch.stack([h, r], dim=0) + self.instance.position_embeddings
+        x = self.instance.transformer(src=x.unsqueeze(dim=1))
         x = x.sum(dim=0)
-        x = final(x).squeeze(dim=0)
+        x = self.instance.final(x).squeeze(dim=0)
         return (x * t).sum()
 
 
