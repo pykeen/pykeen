@@ -32,7 +32,7 @@ from typing_extensions import Self
 from . import functional as pkf
 from . import init
 from .algebra import quaterion_multiplication_table
-from .compute_kernel import batched_dot
+from .functional import batched_dot
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from .utils import apply_optional_bn
 from ..metrics.utils import ValueRange

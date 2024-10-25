@@ -12,6 +12,7 @@ import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.pyg
 import pykeen.nn.representation
+import pykeen.nn.text.text_cache
 import pykeen.nn.utils
 import pykeen.nn.vision
 from pykeen.datasets import get_dataset
@@ -204,7 +205,7 @@ class CachedTextRepresentationTests(TextRepresentationTests):
     """Tests for cached text representations."""
 
     cls = pykeen.nn.representation.CachedTextRepresentation
-    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.utils.IdentityCache())
+    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.text.IdentityCache())
     key_labels: str = "identifiers"
 
 

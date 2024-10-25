@@ -16,7 +16,8 @@ from class_resolver import OptionalKwargs
 from docdata import parse_docdata
 
 from .representation import BackfillRepresentation, Representation
-from .utils import ShapeError, WikidataCache
+from .utils import ShapeError
+from .wikidata import WikidataImageCache
 from ..datasets import Dataset
 from ..triples import TriplesFactory
 from ..typing import FloatTensor, LongTensor, OneOrSequence
@@ -254,7 +255,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param max_id:
             the total number of IDs. If provided, must match the length of `wikidata_ids`
         :param image_kwargs:
-            keyword-based parameters passed to :meth:`WikidataCache.get_image_paths`
+            keyword-based parameters passed to :meth:`WikidataImageCache.get_image_paths`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
 
@@ -264,7 +265,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         max_id = max_id or len(wikidata_ids)
         if len(wikidata_ids) != max_id:
             raise ValueError(f"Inconsistent max_id={max_id} vs. len(wikidata_ids)={len(wikidata_ids)}")
-        images = WikidataCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
+        images = WikidataImageCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
         base_ids = [i for i, path in enumerate(images) if path is not None]
         images = [path for path in images if path is not None]
         super().__init__(

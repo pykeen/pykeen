@@ -14,13 +14,11 @@ from ..utils import einsum
 __all__ = [
     "circular_correlation",
     "quat_e_interaction",
+    "batched_dot",
 ]
 
 
-def circular_correlation(
-    a: FloatTensor,
-    b: FloatTensor,
-) -> FloatTensor:
+def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     """
     Compute the circular correlation between to vectors.
 
@@ -70,3 +68,17 @@ def quat_e_interaction(
     """
     # TODO: this sign is in the official code, too, but why do we need it?
     return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, table)
+
+
+def batched_dot(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    """Compute "element-wise" dot-product between batched vectors."""
+    return (a * b).sum(dim=-1)
+
+
+def _batched_dot_matmul(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    """Compute "element-wise" dot-product between batched vectors."""
+    return (a.unsqueeze(dim=-2) @ b.unsqueeze(dim=-1)).view(a.shape[:-1])
+
+
+def _batched_dot_einsum(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    return einsum("...i,...i->...", a, b)
