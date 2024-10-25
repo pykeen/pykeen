@@ -5,6 +5,14 @@ Triples
     :include-all-objects:
     :headings: --
 
+Utilities
+---------
+.. automodule:: pykeen.triples.utils
+    :members:
+
+
+Triples Workflows
+=================
 Splitting
 ---------
 .. automodapi:: pykeen.triples.splitting
@@ -27,9 +35,4 @@ Generation
 Analysis
 ----------
 .. automodule:: pykeen.triples.analysis
-    :members:
-
-Utilities
----------
-.. automodule:: pykeen.triples.utils
     :members:
