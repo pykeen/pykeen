@@ -56,11 +56,11 @@ PyKEEN
    reference/regularizers
    reference/trackers
    reference/negative_sampling
+   reference/optimizers
    reference/evaluation
    reference/metrics
    reference/hpo
    reference/ablation
-   reference/lookup
    reference/predict
    reference/uncertainty
    reference/sealant

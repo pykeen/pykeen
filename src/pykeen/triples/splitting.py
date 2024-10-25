@@ -31,6 +31,20 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "split",
+    # Cleaners
+    "cleaner_resolver",
+    "Cleaner",
+    "RandomizedCleaner",
+    "DeterministicCleaner",
+    # Splitters
+    "splitter_resolver",
+    "Splitter",
+    "CleanupSplitter",
+    "CoverageSplitter",
+    # Utils
+    "TripleCoverageError",
+    "normalize_ratios",
+    "get_absolute_split_sizes",
 ]
 
 
@@ -346,6 +360,7 @@ class DeterministicCleaner(Cleaner):
         return reference, other
 
 
+#: A resolver for triple cleaners
 cleaner_resolver: ClassResolver[Cleaner] = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
 
 
@@ -471,6 +486,7 @@ class CoverageSplitter(Splitter):
         return [torch.cat([train_seed, train], dim=0), *rest]
 
 
+#: A resolver for triple splitters
 splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
 
 

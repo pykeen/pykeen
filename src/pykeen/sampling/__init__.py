@@ -123,6 +123,7 @@ __all__ = [
     "negative_sampler_resolver",
 ]
 
+#: A resolver for negative samplers
 negative_sampler_resolver: ClassResolver[NegativeSampler] = ClassResolver.from_subclasses(
     NegativeSampler,
     default=BasicNegativeSampler,

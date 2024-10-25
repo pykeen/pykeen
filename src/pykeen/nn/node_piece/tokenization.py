@@ -348,6 +348,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         return self.vocabulary_size, assignment
 
 
+#: A resolver for NodePiece tokenizers
 tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
     base=Tokenizer,
     default=RelationTokenizer,

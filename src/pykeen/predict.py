@@ -309,7 +309,6 @@ __all__ = [
     "CountScoreConsumer",
     "TopKScoreConsumer",
     "AllScoreConsumer",
-    "CountScoreConsumer",
     "ScorePack",
     "Predictions",
     "TriplePredictions",

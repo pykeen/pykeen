@@ -14,7 +14,7 @@ __all__ = [
 
 
 class DistMA(ERModel[FloatTensor, FloatTensor, FloatTensor]):
-    r"""The DistMA model from [shi2019]_.
+    r"""An implementation of DistMA from [shi2019]_.
 
     It models entities and relations by $d$-dimensional vectors stored in :class:`~pykeen.nn.representation.Embedding`,
     and the :class:`~pykeen.nn.modules.DistMAInteraction` to obtain triple scores.

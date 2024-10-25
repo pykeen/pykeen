@@ -1,4 +1,3 @@
 Sealant
 =======
-.. automodule:: pykeen.triples.leakage
-    :members:
+.. automodapi:: pykeen.triples.leakage

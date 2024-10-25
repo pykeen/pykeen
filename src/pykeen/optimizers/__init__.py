@@ -1,4 +1,4 @@
-"""Optimizers available in PyKEEN."""
+"""Optimizers available in PyKEEN, based on :class:`pykeen.optim.optimizer.Optimizer`."""
 
 from collections.abc import Mapping
 from typing import Any
