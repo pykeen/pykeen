@@ -16,7 +16,14 @@ import pykeen.nn.sim
 import pykeen.utils
 from pykeen.models.unimodal.quate import quaternion_normalizer
 from pykeen.typing import Representation, Sign
-from pykeen.utils import clamp_norm, complex_normalize, einsum, ensure_tuple, project_entity, quaternion_hamiltonian_product
+from pykeen.utils import (
+    clamp_norm,
+    complex_normalize,
+    einsum,
+    ensure_tuple,
+    project_entity,
+    quaternion_hamiltonian_product,
+)
 from tests import cases
 
 logger = logging.getLogger(__name__)
