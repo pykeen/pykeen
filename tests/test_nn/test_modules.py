@@ -14,9 +14,15 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.nn.sim
 import pykeen.utils
-from pykeen.models.unimodal.quate import quaternion_normalizer
+from pykeen.nn import quaternion
 from pykeen.typing import Representation, Sign
-from pykeen.utils import clamp_norm, complex_normalize, einsum, ensure_tuple, project_entity
+from pykeen.utils import (
+    clamp_norm,
+    complex_normalize,
+    einsum,
+    ensure_tuple,
+    project_entity,
+)
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -226,19 +232,6 @@ class ProjETests(cases.InteractionTestCase):
         )
 
 
-def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
-    # Rotate (=Hamilton product in quaternion space).
-    return torch.stack(
-        [
-            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
-            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
-            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
-            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
-        ],
-        dim=-1,
-    )
-
-
 class QuatETests(cases.InteractionTestCase):
     """Tests for QuatE interaction."""
 
@@ -246,14 +239,14 @@ class QuatETests(cases.InteractionTestCase):
     shape_kwargs = dict(k=4)  # quaternions
     atol = 1.0e-06
 
-    def _exp_score(self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor, table: torch.Tensor) -> torch.FloatTensor:  # noqa: D102
+    def _exp_score(self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor) -> torch.FloatTensor:  # noqa: D102
         # we calculate the scores using the hard-coded formula, instead of utilizing table + einsum
-        x = _rotate_quaternion(*(x.unbind(dim=-1) for x in [h, r]))
+        x = quaternion.hamiltonian_product(*(x.unbind(dim=-1) for x in [h, r]))
         return -(x * t).sum()
 
     def _get_hrt(self, *shapes):
         h, r, t = super()._get_hrt(*shapes)
-        r = quaternion_normalizer(r)
+        r = quaternion.normalize(r)
         return h, r, t
 
 

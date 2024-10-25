@@ -30,8 +30,7 @@ from torch.nn.init import xavier_normal_
 from typing_extensions import Self
 
 from . import functional as pkf
-from . import init
-from .algebra import quaterion_multiplication_table
+from . import init, quaternion
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from .utils import apply_optional_bn
 from ..metrics.utils import ValueRange
@@ -2782,16 +2781,23 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
 
 
 @parse_docdata
-class QuatEInteraction(
-    FunctionalInteraction[
-        FloatTensor,
-        FloatTensor,
-        FloatTensor,
-    ],
-):
-    """A module wrapper for the QuatE interaction function.
+class QuatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-less QuatE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.quat_e_interaction`
+    It is given as
+
+    .. math ::
+        \langle \mathbf{h} \otimes \mathbf{r}, \mathbf{t} \rangle
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{H}^d$ are quanternion representations,
+    $\otimes$ denotes the Hamilton product, and $\langle \cdot, \cdot \rangle$ the inner product.
+
+    .. warning ::
+        In order to representation a rotation, $\mathbf{r}$ must be normalized to unit length,
+        cf. :func:`pykeen.nn.quaternion.normalize`.
+
+    .. seealso::
+        - https://en.wikipedia.org/wiki/Quaternion
 
     ---
     citation:
@@ -2805,15 +2811,34 @@ class QuatEInteraction(
     # with k=4
     entity_shape: Sequence[str] = ("dk",)
     relation_shape: Sequence[str] = ("dk",)
-    func = pkf.quat_e_interaction
 
     def __init__(self) -> None:
         """Initialize the interaction module."""
         super().__init__()
-        self.register_buffer(name="table", tensor=quaterion_multiplication_table())
+        self.register_buffer(name="table", tensor=quaternion.multiplication_table())
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(table=self.table)
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function of QuatE for given embeddings.
+
+        The embeddings have to be in a broadcastable shape.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim, 4)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim, 4)
+            The head representations.
+        :param t: shape: (`*batch_dims`, dim, 4)
+            The tail representations.
+
+        :return: shape: (...)
+            The scores.
+        """
+        # TODO: this sign is in the official code, too, but why do we need it?
+        # note: this is a fused kernel for computing the Hamilton product and the inner product at once
+        return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, self.table)
 
 
 class MonotonicAffineTransformationInteraction(
