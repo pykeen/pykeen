@@ -33,8 +33,8 @@ from torch.nn import functional
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .text.text_cache import PyOBOTextCache, TextCache, WikidataTextCache
-from .text.text_encoder import TextEncoder, text_encoder_resolver
+from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
+from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import ShapeError
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset

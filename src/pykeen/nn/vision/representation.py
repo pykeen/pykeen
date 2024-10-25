@@ -15,7 +15,7 @@ import torch.utils.data
 from class_resolver import OptionalKwargs
 from docdata import parse_docdata
 
-from .image_cache import WikidataImageCache
+from .cache import WikidataImageCache
 from ..representation import BackfillRepresentation, Representation
 from ..utils import ShapeError
 from ...datasets import Dataset

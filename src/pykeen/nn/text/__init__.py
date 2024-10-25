@@ -1,7 +1,7 @@
 """Utilities for text lookup, caching, and encoding."""
 
-from .text_cache import IdentityCache, PyOBOTextCache, TextCache, WikidataTextCache, text_cache_resolver
-from .text_encoder import CharacterEmbeddingTextEncoder, TextEncoder, TransformerTextEncoder, text_encoder_resolver
+from .cache import IdentityCache, PyOBOTextCache, TextCache, WikidataTextCache, text_cache_resolver
+from .encoder import CharacterEmbeddingTextEncoder, TextEncoder, TransformerTextEncoder, text_encoder_resolver
 
 __all__ = [
     # Text Cache

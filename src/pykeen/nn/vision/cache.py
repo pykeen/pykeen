@@ -10,8 +10,8 @@ from textwrap import dedent
 
 from tqdm.asyncio import tqdm
 
-from pykeen.nn.text.text_cache import WikidataTextCache
-from pykeen.utils import nested_get, rate_limited
+from ..text.cache import WikidataTextCache
+from ...utils import nested_get, rate_limited
 
 __all__ = [
     "WikidataImageCache",
