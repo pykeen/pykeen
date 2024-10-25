@@ -1,16 +1,19 @@
 Triples
 =======
-.. automodule:: pykeen.triples
-   :members:
+.. automodapi:: pykeen.triples
+    :members:
 
-.. automodule:: pykeen.triples.splitting
-   :members:
+.. automodapi:: pykeen.triples.splitting
+    :include-all-objects:
+
+.. automodapi:: pykeen.triples.remix
+    :members:
+
+.. automodapi:: pykeen.triples.generation
+    :members:
+
+.. automodapi:: pykeen.triples.deteriorate
+    :members:
 
 .. automodule:: pykeen.triples.utils
-   :members:
-
-.. automodule:: pykeen.triples.remix
-   :members:
-
-.. automodule:: pykeen.triples.deteriorate
-   :members:
+    :members:

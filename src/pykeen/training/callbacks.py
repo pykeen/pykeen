@@ -79,6 +79,7 @@ from ..utils import determine_maximum_batch_size
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "callback_resolver",
     "TrainingCallbackHint",
     "TrainingCallback",
     "StopperTrainingCallback",

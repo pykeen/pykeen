@@ -277,7 +277,7 @@ class Loss(_Loss):
         Initialize the loss.
 
         :param reduction:
-            the reduction, cf. `_Loss.__init__`
+            the reduction, cf. :mod:`pykeen.nn.modules._Loss`
         """
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
