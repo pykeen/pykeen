@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.nn.sim
 import pykeen.utils
-from pykeen.models.unimodal.quate import quaternion_normalizer
+from pykeen.nn import quaternion
 from pykeen.typing import Representation, Sign
 from pykeen.utils import (
     clamp_norm,
@@ -22,7 +22,6 @@ from pykeen.utils import (
     einsum,
     ensure_tuple,
     project_entity,
-    quaternion_hamiltonian_product,
 )
 from tests import cases
 
@@ -242,12 +241,12 @@ class QuatETests(cases.InteractionTestCase):
 
     def _exp_score(self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor) -> torch.FloatTensor:  # noqa: D102
         # we calculate the scores using the hard-coded formula, instead of utilizing table + einsum
-        x = quaternion_hamiltonian_product(*(x.unbind(dim=-1) for x in [h, r]))
+        x = quaternion.hamiltonian_product(*(x.unbind(dim=-1) for x in [h, r]))
         return -(x * t).sum()
 
     def _get_hrt(self, *shapes):
         h, r, t = super()._get_hrt(*shapes)
-        r = quaternion_normalizer(r)
+        r = quaternion.normalizer(r)
         return h, r, t
 
 

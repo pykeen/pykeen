@@ -108,7 +108,6 @@ __all__ = [
     "ExtraReprMixin",
     "einsum",
     "isin_many_dim",
-    "quaternion_hamiltonian_product",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1614,16 +1613,3 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
             ) from e
 
     return wrapped
-
-
-def quaternion_hamiltonian_product(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
-    """Compute the hamiltonian product of two quaternions (which enables rotation)."""
-    return torch.stack(
-        [
-            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
-            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
-            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
-            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
-        ],
-        dim=-1,
-    )

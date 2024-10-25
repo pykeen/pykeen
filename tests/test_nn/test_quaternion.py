@@ -2,7 +2,7 @@
 
 import torch
 
-import pykeen.nn.algebra
+from pykeen.nn import quaternion
 
 
 def _test_multiplication_table(t: torch.Tensor):
@@ -22,4 +22,4 @@ def _test_multiplication_table(t: torch.Tensor):
 
 def test_quaternion_multiplication_table():
     """Test quaternion multiplication table."""
-    _test_multiplication_table(pykeen.nn.algebra.quaterion_multiplication_table())
+    _test_multiplication_table(quaternion.multiplication_table())

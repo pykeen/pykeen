@@ -4,48 +4,20 @@ from collections.abc import Mapping
 from typing import Any, ClassVar, Optional
 
 import torch
-from torch.nn import functional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
+from ...nn import quaternion
 from ...nn.init import init_quaternions
 from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Constrainer, FloatTensor, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer
 from ...utils import get_expected_norm
 
 __all__ = [
     "QuatE",
 ]
-
-
-def quaternion_normalizer(x: FloatTensor) -> FloatTensor:
-    r"""
-    Normalize the length of relation vectors, if the forward constraint has not been applied yet.
-
-    Absolute value of a quaternion
-
-    .. math::
-
-        |a + bi + cj + dk| = \sqrt{a^2 + b^2 + c^2 + d^2}
-
-    L2 norm of quaternion vector:
-
-    .. math::
-        \|x\|^2 = \sum_{i=1}^d |x_i|^2
-                 = \sum_{i=1}^d (x_i.re^2 + x_i.im_1^2 + x_i.im_2^2 + x_i.im_3^2)
-    :param x:
-        The vector.
-
-    :return:
-        The normalized vector.
-    """
-    # Normalize relation embeddings
-    shape = x.shape
-    x = x.view(*shape[:-1], -1, 4)
-    x = functional.normalize(x, p=2, dim=-1)
-    return x.view(*shape)
 
 
 class QuatE(ERModel):
@@ -93,7 +65,7 @@ class QuatE(ERModel):
         relation_initializer: Hint[Initializer] = init_quaternions,
         relation_regularizer: Hint[Regularizer] = LpRegularizer,
         relation_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Hint[Constrainer] = quaternion_normalizer,
+        relation_normalizer: Hint[Constrainer] = quaternion.normalizer,
         **kwargs,
     ) -> None:
         """Initialize QuatE.

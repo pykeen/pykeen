@@ -30,8 +30,7 @@ from torch.nn.init import xavier_normal_
 from typing_extensions import Self
 
 from . import functional as pkf
-from . import init
-from .algebra import quaterion_multiplication_table
+from . import init, quaternion
 from .compute_kernel import batched_dot
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from .utils import apply_optional_bn
@@ -2801,7 +2800,7 @@ class QuatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     def __init__(self) -> None:
         """Initialize the interaction module."""
         super().__init__()
-        self.register_buffer(name="table", tensor=quaterion_multiplication_table())
+        self.register_buffer(name="table", tensor=quaternion.multiplication_table())
 
     def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function of QuatE for given embeddings.
