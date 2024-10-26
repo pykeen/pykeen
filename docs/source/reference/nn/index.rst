@@ -6,7 +6,6 @@
    :caption: nn
    :name: nn
 
-   functional
    modules
    similarity
    representation

@@ -7,8 +7,8 @@ import torch
 from class_resolver import ClassResolver
 from torch import nn
 
-from .functional import circular_correlation
 from ..typing import FloatTensor
+from ..utils import circular_correlation
 
 __all__ = [
     # Base

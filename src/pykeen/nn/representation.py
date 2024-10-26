@@ -33,8 +33,9 @@ from torch.nn import functional
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .text import TextEncoder, text_encoder_resolver
-from .utils import PyOBOCache, ShapeError, TextCache, WikidataCache
+from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
+from .text.encoder import TextEncoder, text_encoder_resolver
+from .utils import ShapeError
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -1322,7 +1323,7 @@ class WikidataTextRepresentation(CachedTextRepresentation):
     name: Wikidata Text Encoding
     """
 
-    cache_cls = WikidataCache
+    cache_cls = WikidataTextCache
 
 
 class BiomedicalCURIERepresentation(CachedTextRepresentation):
@@ -1368,7 +1369,7 @@ class BiomedicalCURIERepresentation(CachedTextRepresentation):
     name: Biomedical CURIE Text Encoding
     """
 
-    cache_cls = PyOBOCache
+    cache_cls = PyOBOTextCache
 
 
 @parse_docdata

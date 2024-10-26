@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import pathlib
 import re
-import warnings
 from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
@@ -19,9 +18,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import Dataset
 
-from .instances import BatchedSLCWAInstances, LCWAInstances, SubGraphSLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
@@ -470,30 +467,6 @@ class CoreTriplesFactory(KGInfo):
                 self.relation_inverter.map(batch=mapped_triples),
                 self.relation_inverter.map(batch=mapped_triples, invert=True).flip(1),
             ]
-        )
-
-    def create_slcwa_instances(self, *, sampler: Optional[str] = None, **kwargs) -> Dataset:
-        """Create sLCWA instances for this factory's triples."""
-        cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
-        if "shuffle" in kwargs:
-            if kwargs.pop("shuffle"):
-                warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
-            else:
-                raise AssertionError("If shuffle is provided, it must be True.")
-        return cls(
-            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
-            num_entities=self.num_entities,
-            num_relations=self.num_relations,
-            **kwargs,
-        )
-
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Dataset:
-        """Create LCWA instances for this factory's triples."""
-        return LCWAInstances.from_triples(
-            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
-            num_entities=self.num_entities,
-            num_relations=self.num_relations,
-            target=target,
         )
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> set[int]:
