@@ -75,7 +75,7 @@ dependencies = [
     "more_itertools",
     "pystow>=0.4.3",
     "docdata",
-    "class_resolver>0.4.2",
+    "class_resolver>=0.5.1",
     "pyyaml",
     "torch_max_mem>=0.1.1",
     "torch-ppr>=0.0.7",
@@ -128,9 +128,8 @@ tests = [
     "pytest",
 ]
 docs = [
-    # Sphinx >= 8.0 not supported by rtd theme, cf. https://github.com/readthedocs/sphinx_rtd_theme/issues/1582
-    "sphinx<8",
-    "sphinx-rtd-theme",
+    "sphinx>=8.0",
+    "sphinx-rtd-theme>=3.0",
     "sphinx-click",
     "sphinx_automodapi",
     "texext",

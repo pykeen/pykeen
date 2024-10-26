@@ -4,17 +4,16 @@ import logging
 from math import ceil
 from typing import Callable, ClassVar, Optional, Union
 
-import torch
 from torch.nn import functional
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torch_max_mem.api import is_oom_error
 
 from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models import Model
-from ..triples import CoreTriplesFactory
+from ..triples import CoreTriplesFactory, LCWAInstances
 from ..triples.instances import LCWABatchType, LCWASampleType
-from ..typing import InductiveMode, MappedTriples
+from ..typing import FloatTensor, InductiveMode, MappedTriples
 
 __all__ = [
     "LCWATrainingLoop",
@@ -93,7 +92,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 f"sampler='{sampler}'.",
             )
 
-        dataset = triples_factory.create_lcwa_instances(target=self.target)
+        dataset = create_lcwa_instances(triples_factory, target=self.target)
         return DataLoader(dataset=dataset, collate_fn=dataset.get_collator(), **kwargs)
 
     @staticmethod
@@ -113,7 +112,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         stop: Optional[int],
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         # Split batch components
         batch_pairs, batch_labels_full = batch
 
@@ -141,7 +140,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> FloatTensor:  # noqa: D102
         return self._process_batch_static(
             model=self.model,
             score_method=self.score_method,
@@ -209,11 +208,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         return slice_size
 
     def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self.target == 0 and self.model.can_slice_h:
+        if self.target == 0:
             return
-        if self.target == 1 and self.model.can_slice_r:
+        if self.target == 1:
             return
-        if self.target == 2 and self.model.can_slice_t:
+        if self.target == 2:
             return
         elif supports_sub_batching:
             report = (
@@ -264,7 +263,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
         stop: int,
         label_smoothing: float = 0,
         slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> FloatTensor:  # noqa: D102
         # unpack
         hrt_batch = batch[0]
         # Send batch to device
@@ -301,3 +300,13 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
     def _slice_size_search(self, **kwargs) -> int:
         # TODO?
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+def create_lcwa_instances(tf: CoreTriplesFactory, target: Optional[int] = None) -> Dataset:
+    """Create LCWA instances for this factory's triples."""
+    return LCWAInstances.from_triples(
+        mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+        num_entities=tf.num_entities,
+        num_relations=tf.num_relations,
+        target=target,
+    )

@@ -16,7 +16,15 @@ import numpy
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver import (
+    FunctionResolver,
+    HintOrType,
+    OneOrManyHintOrType,
+    OneOrManyOptionalKwargs,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
@@ -25,14 +33,24 @@ from torch.nn import functional
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .text import TextEncoder, text_encoder_resolver
-from .utils import PyOBOCache, ShapeError, TextCache, WikidataCache
+from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
+from .text.encoder import TextEncoder, text_encoder_resolver
+from .utils import ShapeError
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.triples_factory import Labeling
-from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer, OneOrSequence
+from ..typing import (
+    Constrainer,
+    FloatTensor,
+    Hint,
+    HintType,
+    Initializer,
+    LongTensor,
+    Normalizer,
+    OneOrSequence,
+)
 from ..utils import (
     Bias,
     ExtraReprMixin,
@@ -152,15 +170,15 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
     @abstractmethod
     def _plain_forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:
         """Get representations for indices, without applying normalization, regularization or output dropout."""
         raise NotImplementedError
 
     def forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:
         """Get representations for indices.
 
         .. note ::
@@ -262,8 +280,8 @@ class SubsetRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         if indices is None:
             indices = torch.arange(self.max_id, device=self.device)
         return self.base._plain_forward(indices=indices)
@@ -425,8 +443,8 @@ class Embedding(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         if indices is None:
             prefix_shape = (self.max_id,)
             x = self._embeddings.weight
@@ -531,8 +549,8 @@ class LowRankRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         # get all base representations, shape: (num_bases, *shape)
         bases = self.bases(indices=None)
         # get base weights, shape: (*batch_dims, num_bases)
@@ -682,12 +700,12 @@ class CompGCNLayer(nn.Module):
 
     def message(
         self,
-        x_e: torch.FloatTensor,
-        x_r: torch.FloatTensor,
-        edge_index: torch.LongTensor,
-        edge_type: torch.LongTensor,
+        x_e: FloatTensor,
+        x_r: FloatTensor,
+        edge_index: LongTensor,
+        edge_type: LongTensor,
         weight: nn.Parameter,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         """
         Perform message passing.
 
@@ -727,11 +745,11 @@ class CompGCNLayer(nn.Module):
 
     def forward(
         self,
-        x_e: torch.FloatTensor,
-        x_r: torch.FloatTensor,
-        edge_index: torch.LongTensor,
-        edge_type: torch.LongTensor,
-    ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
+        x_e: FloatTensor,
+        x_r: FloatTensor,
+        edge_index: LongTensor,
+        edge_type: LongTensor,
+    ) -> tuple[FloatTensor, FloatTensor]:
         r"""
         Update entity and relation representations.
 
@@ -799,7 +817,7 @@ class CombinedCompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers."""
 
     # Buffered enriched entity and relation representations
-    enriched_representations: tuple[torch.FloatTensor, torch.FloatTensor] | None
+    enriched_representations: tuple[FloatTensor, FloatTensor] | None
 
     def __init__(
         self,
@@ -910,7 +928,7 @@ class CombinedCompGCNRepresentations(nn.Module):
 
     def forward(
         self,
-    ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
+    ) -> tuple[FloatTensor, FloatTensor]:
         """Compute enriched representations."""
         if self.enriched_representations is None:
             x_e = self.entity_representations()
@@ -973,8 +991,8 @@ class SingleCompGCNRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         x = self.combined()[self.position]
         if indices is not None:
             x = x[indices.to(self.device)]
@@ -1029,6 +1047,9 @@ class TextRepresentation(Representation):
 
     labels: list[str]
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("encoder", "text_encoder_resolver"),
+    )
     def __init__(
         self,
         labels: Sequence[str | None],
@@ -1037,7 +1058,7 @@ class TextRepresentation(Representation):
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
         missing_action: Literal["blank", "error"] = "error",
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         Initialize the representation.
@@ -1128,8 +1149,8 @@ class TextRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         if indices is None:
             labels = self.labels
         else:
@@ -1211,8 +1232,8 @@ class CombinedRepresentation(Representation):
 
     @staticmethod
     def combine(
-        combination: nn.Module, base: Sequence[Representation], indices: torch.LongTensor | None = None
-    ) -> torch.FloatTensor:
+        combination: nn.Module, base: Sequence[Representation], indices: LongTensor | None = None
+    ) -> FloatTensor:
         """
         Combine base representations for the given indices.
 
@@ -1228,8 +1249,8 @@ class CombinedRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         return self.combine(combination=self.combination, base=self.base, indices=indices)
 
 
@@ -1302,7 +1323,7 @@ class WikidataTextRepresentation(CachedTextRepresentation):
     name: Wikidata Text Encoding
     """
 
-    cache_cls = WikidataCache
+    cache_cls = WikidataTextCache
 
 
 class BiomedicalCURIERepresentation(CachedTextRepresentation):
@@ -1348,7 +1369,7 @@ class BiomedicalCURIERepresentation(CachedTextRepresentation):
     name: Biomedical CURIE Text Encoding
     """
 
-    cache_cls = PyOBOCache
+    cache_cls = PyOBOTextCache
 
 
 @parse_docdata
@@ -1411,11 +1432,11 @@ class PartitionRepresentation(Representation):
     """
 
     #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
-    assignment: torch.LongTensor
+    assignment: LongTensor
 
     def __init__(
         self,
-        assignment: torch.LongTensor,
+        assignment: LongTensor,
         shape: OneOrSequence[int] | None = None,
         bases: OneOrSequence[HintOrType[Representation]] = None,
         bases_kwargs: OneOrSequence[OptionalKwargs] = None,
@@ -1476,11 +1497,11 @@ class PartitionRepresentation(Representation):
         super().__init__(max_id=assignment.shape[0], shape=shape, **kwargs)
 
         # assign modules / buffers *after* super init
-        self.bases = bases
+        self.bases = nn.ModuleList(bases)
         self.register_buffer(name="assignment", tensor=assignment)
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: torch.LongTensor | None = None) -> torch.FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         assignment = self.assignment
         if indices is not None:
             assignment = assignment[indices]
@@ -1512,45 +1533,7 @@ class PartitionRepresentation(Representation):
 class BackfillRepresentation(PartitionRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
 
-    Similarly to the :class:`PartitionRepresentation` representation example, we start by
-    creating the representation for those entities where we have labels:
-
-    >>> from pykeen.nn import Embedding, init
-    >>> num_entities = 5
-    >>> labels = {1: "a first description", 4: "a second description"}
-    >>> label_initializer = init.LabelBasedInitializer(labels=list(labels.values()))
-    >>> shape = label_initializer.tensor.shape[1:]
-    >>> label_repr = Embedding(max_id=len(labels), shape=shape, initializer=label_initializer, trainable=False)
-
-    Next, we directly create representations for the remaining ones using the backfill representation.
-    To do this, we need to create an iterable (e.g., a set) of all of the entity IDs that are in the base
-    representation. Then, the assignments to the base representation and an auxillary representation are
-    automatically generated for the base class
-
-    >>> from pykeen.nn import BackfillRepresentation
-    >>> entity_repr = BackfillRepresentation(base_ids=set(labels), max_id=num_entities, base=label_repr)
-
-    For brevity, we use here randomly generated triples factories instead of the actual data
-
-    >>> from pykeen.triples.generation import generate_triples_factory
-    >>> training = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=31)
-    >>> testing = generate_triples_factory(num_entities=num_entities, num_relations=5, num_triples=17)
-
-    The combined representation can now be used as any other representation, e.g., to train a model with
-    :class:`pykeen.nn.modules.DistMultInteraction` interaction:
-
-    >>> from pykeen.pipeline import pipeline
-    >>> from pykeen.models import ERModel
-    >>> pipeline(
-    ...     model=ERModel,
-    ...     interaction="distmult",
-    ...     model_kwargs=dict(
-    ...         entity_representation=entity_repr,
-    ...         relation_representation_kwargs=dict(shape=shape),
-    ...     ),
-    ...     training=training,
-    ...     testing=testing,
-    ... )
+    .. literalinclude:: ../examples/nn/representation/backfill.py
 
     ---
     name: Backfill
@@ -1699,9 +1682,7 @@ class TransformedRepresentation(Representation):
         self.base = base
 
     @staticmethod
-    def _help_forward(
-        base: Representation, transformation: nn.Module, indices: torch.LongTensor | None
-    ) -> torch.FloatTensor:
+    def _help_forward(base: Representation, transformation: nn.Module, indices: LongTensor | None) -> FloatTensor:
         """
         Obtain base representations and apply the transformation.
 
@@ -1718,7 +1699,7 @@ class TransformedRepresentation(Representation):
         return transformation(base(indices=indices))
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: torch.LongTensor | None = None) -> torch.FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         return self._help_forward(base=self.base, transformation=self.transformation, indices=indices)
 
 
@@ -1753,7 +1734,7 @@ class TensorTrainRepresentation(Representation):
     """
 
     #: shape: (max_id, num_cores)
-    assignment: torch.LongTensor
+    assignment: LongTensor
 
     #: the bases, length: num_cores, with compatible shapes
     bases: Sequence[Representation]
@@ -1856,7 +1837,7 @@ class TensorTrainRepresentation(Representation):
         return eq, [tuple(shape) for shape in shapes]
 
     @staticmethod
-    def create_default_assignment(max_id: int, num_cores: int, ms: Sequence[int]) -> torch.LongTensor:
+    def create_default_assignment(max_id: int, num_cores: int, ms: Sequence[int]) -> LongTensor:
         """
         Create an assignment without using structural information.
 
@@ -1917,7 +1898,7 @@ class TensorTrainRepresentation(Representation):
 
     def __init__(
         self,
-        assignment: torch.LongTensor | None = None,
+        assignment: LongTensor | None = None,
         num_cores: int = 3,
         ranks: OneOrSequence[int] = 2,
         bases: OneOrManyHintOrType = None,
@@ -1981,7 +1962,7 @@ class TensorTrainRepresentation(Representation):
         yield f"eq='{self.eq}'"
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: torch.LongTensor | None = None) -> torch.FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         assignment = self.assignment
         if indices is not None:
             assignment = assignment[indices]

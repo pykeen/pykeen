@@ -8,6 +8,7 @@ from typing import Callable, Literal, NamedTuple, TypeVar, Union, cast
 import numpy as np
 import torch
 from class_resolver import Hint, HintOrType, HintType
+from typing_extensions import TypeAlias  # Python <=3.10
 
 __all__ = [
     # General types
@@ -61,21 +62,28 @@ __all__ = [
 
 X = TypeVar("X")
 
+# some PyTorch functions to not properly propagate types (e.g., float() does not return FloatTensor but Tensor)
+# however it is still useful to distinguish float tensors from long ones
+# to make the switch easier once PyTorch improves typing, we use a global type alias inside PyKEEN.
+BoolTensor: TypeAlias = torch.Tensor  # replace by torch.BoolTensor
+FloatTensor: TypeAlias = torch.Tensor  # replace by torch.FloatTensor
+LongTensor: TypeAlias = torch.Tensor  # replace by torch.LongTensor
+
 #: A function that mutates the input and returns a new object of the same type as output
 Mutation = Callable[[X], X]
 OneOrSequence = Union[X, Sequence[X]]
 
 LabeledTriples = np.ndarray
-MappedTriples = torch.LongTensor
+MappedTriples = LongTensor
 EntityMapping = Mapping[str, int]
 RelationMapping = Mapping[str, int]
 
 #: A function that can be applied to a tensor to initialize it
-Initializer = Mutation[torch.FloatTensor]
+Initializer = Mutation[FloatTensor]
 #: A function that can be applied to a tensor to normalize it
-Normalizer = Mutation[torch.FloatTensor]
+Normalizer = Mutation[FloatTensor]
 #: A function that can be applied to a tensor to constrain it
-Constrainer = Mutation[torch.FloatTensor]
+Constrainer = Mutation[FloatTensor]
 
 
 def cast_constrainer(f: Callable) -> Constrainer:
@@ -88,23 +96,23 @@ DeviceHint = Hint[torch.device]
 #: A hint for a :class:`torch.Generator`
 TorchRandomHint = Union[None, int, torch.Generator]
 
-Representation = TypeVar("Representation", bound=OneOrSequence[torch.FloatTensor])
+Representation = TypeVar("Representation", bound=OneOrSequence[FloatTensor])
 #: A type variable for head representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
-HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[torch.FloatTensor])
+HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[FloatTensor])
 #: A type variable for relation representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
-RelationRepresentation = TypeVar("RelationRepresentation", bound=OneOrSequence[torch.FloatTensor])
+RelationRepresentation = TypeVar("RelationRepresentation", bound=OneOrSequence[FloatTensor])
 #: A type variable for tail representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
-TailRepresentation = TypeVar("TailRepresentation", bound=OneOrSequence[torch.FloatTensor])
+TailRepresentation = TypeVar("TailRepresentation", bound=OneOrSequence[FloatTensor])
 
 
 class GaussianDistribution(NamedTuple):
     """A gaussian distribution with diagonal covariance matrix."""
 
-    mean: torch.FloatTensor
-    diagonal_covariance: torch.FloatTensor
+    mean: FloatTensor
+    diagonal_covariance: FloatTensor
 
 
 Sign = Literal[-1, 1]

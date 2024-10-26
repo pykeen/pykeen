@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from typing import Callable, Generic, NamedTuple, Optional, TypeVar
@@ -15,7 +14,8 @@ from torch.utils import data
 
 from .utils import compute_compressed_adjacency_list
 from ..sampling import NegativeSampler, negative_sampler_resolver
-from ..typing import MappedTriples
+from ..typing import BoolTensor, FloatTensor, LongTensor, MappedTriples
+from ..utils import split_workload
 
 __all__ = [
     "Instances",
@@ -26,22 +26,22 @@ __all__ = [
 # TODO: the same
 SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
-LCWASampleType = tuple[MappedTriples, torch.FloatTensor]
-LCWABatchType = tuple[MappedTriples, torch.FloatTensor]
-SLCWASampleType = tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+LCWASampleType = tuple[MappedTriples, FloatTensor]
+LCWABatchType = tuple[MappedTriples, FloatTensor]
+SLCWASampleType = tuple[MappedTriples, MappedTriples, Optional[BoolTensor]]
 
 
 class SLCWABatch(NamedTuple):
     """A batch for sLCWA training."""
 
     #: the positive triples, shape: (batch_size, 3)
-    positives: torch.LongTensor
+    positives: LongTensor
 
     #: the negative triples, shape: (batch_size, num_negatives_per_positive, 3)
-    negatives: torch.LongTensor
+    negatives: LongTensor
 
     #: filtering masks for negative triples, shape: (batch_size, num_negatives_per_positive)
-    masks: torch.BoolTensor | None
+    masks: BoolTensor | None
 
 
 class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
@@ -132,11 +132,11 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
     def collate(samples: Iterable[SLCWASampleType]) -> SLCWABatch:
         """Collate samples."""
         # each shape: (1, 3), (1, k, 3), (1, k, 3)?
-        masks: torch.LongTensor | None
+        masks: LongTensor | None
         positives, negatives, masks = zip(*samples)
         positives = torch.cat(positives, dim=0)
         negatives = torch.cat(negatives, dim=0)
-        mask_batch: torch.BoolTensor | None
+        mask_batch: BoolTensor | None
         if masks[0] is None:
             assert all(m is None for m in masks)
             mask_batch = None
@@ -215,20 +215,6 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
         return SLCWABatch(positives=positive_batch, negatives=negative_batch, masks=masks)
 
-    def split_workload(self, n: int) -> range:
-        """Split workload for multi-processing."""
-        # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info is None:  # single-process data loading, return the full iterator
-            workload = range(n)
-        else:
-            num_workers = worker_info.num_workers
-            worker_id = worker_info.id  # 1-based
-            start = math.ceil(n / num_workers * worker_id)
-            stop = math.ceil(n / num_workers * (worker_id + 1))
-            workload = range(start, stop)
-        return workload
-
     @abstractmethod
     def iter_triple_ids(self) -> Iterable[list[int]]:
         """Iterate over batches of IDs of positive triples."""
@@ -253,7 +239,7 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from data.BatchSampler(
-            sampler=data.RandomSampler(data_source=self.split_workload(len(self.mapped_triples))),
+            sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
             batch_size=self.batch_size,
             drop_last=self.drop_last,
         )
@@ -329,7 +315,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
 
     # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
-        yield from (self.subgraph_sample() for _ in self.split_workload(n=len(self)))
+        yield from (self.subgraph_sample() for _ in split_workload(len(self)))
 
 
 class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):

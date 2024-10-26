@@ -539,6 +539,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             yield ppr[:, anchors.to(ppr.device)]
 
 
+#: A resolver for NodePiece anchor searchers
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
     base=AnchorSearcher,
     default=CSGraphAnchorSearcher,

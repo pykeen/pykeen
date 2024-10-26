@@ -7,7 +7,8 @@ import torch
 from class_resolver import ClassResolver
 from torch import nn
 
-from .functional import circular_correlation
+from ..typing import FloatTensor
+from ..utils import circular_correlation
 
 __all__ = [
     # Base
@@ -22,14 +23,14 @@ __all__ = [
 ]
 
 
-Composition = Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
+Composition = Callable[[FloatTensor, FloatTensor], FloatTensor]
 
 
 class CompositionModule(nn.Module, ABC):
     """An (element-wise) composition function for vectors."""
 
     @abstractmethod
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:
         """Compose two batches of vectors.
 
         The tensors have to be broadcastable.
@@ -49,7 +50,7 @@ class FunctionalCompositionModule(CompositionModule):
     func: ClassVar[Composition]
 
     # docstr-coverage: inherited
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.__class__.func(a, b)
 
 

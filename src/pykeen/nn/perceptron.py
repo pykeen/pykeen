@@ -2,8 +2,9 @@
 
 from typing import Optional, Union
 
-import torch
 from torch import nn
+
+from ..typing import FloatTensor
 
 __all__ = [
     "ConcatMLP",
@@ -50,11 +51,11 @@ class ConcatMLP(nn.Sequential):
         )
         self.flatten_dims = flatten_dims
 
-    def forward(self, xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:
+    def forward(self, xs: FloatTensor, dim: int) -> FloatTensor:
         """Forward the MLP on the given dimension.
 
         :param xs: The tensor to forward
-        :param dim: Only a parameter to match the signature of torch.mean / torch.sum
+        :param dim: Only a parameter to match the signature of :func:`torch.mean` / :func:`torch.sum`
             this class is not thought to be usable from outside
         :returns: The tensor after applying this MLP
         """
