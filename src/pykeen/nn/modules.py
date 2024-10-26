@@ -1044,7 +1044,7 @@ class ConvEInteraction(Interaction[FloatTensor, FloatTensor, tuple[FloatTensor, 
 
         # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
         # output_shape: batch_dims
-        x = einsum("...d, ...d -> ...", x, t_emb)
+        x = batched_dot(x, t_emb)
 
         # add bias term
         return x + t_bias
@@ -1439,7 +1439,7 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         x = self.mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
         # dot product
-        return einsum("...d,...d->...", x, t)
+        return batched_dot(x, t)
 
 
 @parse_docdata
@@ -1631,7 +1631,7 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
         composite = circular_correlation(h, t)
 
         # inner product with relation embedding
-        return (r * composite).sum(dim=-1)
+        return batched_dot(r, composite)
 
 
 @parse_docdata
@@ -1777,7 +1777,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         x = self.inner_activation(tensor_sum(h, r, self.b_c))
 
         # dot product with t
-        return self.outer_activation(einsum("...d, ...d -> ...", x, t) + self.b_p)
+        return self.outer_activation(batched_dot(x, t) + self.b_p)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
@@ -3363,7 +3363,7 @@ class CPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         :return: shape: ``batch_dims``
             The scores.
         """
-        return (h * r * t).sum(dim=(-2, -1))
+        return einsum("...kd, ...kd, ...kd -> ...", h, r, t)
 
 
 @parse_docdata
@@ -3846,7 +3846,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         :return: shape: `batch_dims`
             The scores
         """
-        return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
+        return sum(sign * tensor_product(h[hi], r[ri], t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(coefficients=self.coefficients)
