@@ -194,9 +194,9 @@ The following 20 representations are implemented by PyKEEN.
 | Tokenization               | [`pykeen.nn.TokenizationRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representation.TokenizationRepresentation.html)   |
 | Transformed                | [`pykeen.nn.TransformedRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TransformedRepresentation.html)                |
 | Typed Message Passing      | [`pykeen.nn.TypedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.TypedMessagePassingRepresentation.html)           |
-| Visual                     | [`pykeen.nn.VisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.VisualRepresentation.html)                                  |
+| Visual                     | [`pykeen.nn.VisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.representation.VisualRepresentation.html)                   |
 | Wikidata Text Encoding     | [`pykeen.nn.WikidataTextRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.WikidataTextRepresentation.html)              |
-| Wikidata Visual            | [`pykeen.nn.WikidataVisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.WikidataVisualRepresentation.html)                  |
+| Wikidata Visual            | [`pykeen.nn.WikidataVisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.representation.WikidataVisualRepresentation.html)   |
 
 ### Interactions
 
