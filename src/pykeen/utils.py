@@ -1640,12 +1640,6 @@ def _batched_dot_einsum(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     return einsum("...i,...i->...", a, b)
 
 
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod()
-
-
 def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     """
     Compute the circular correlation between to vectors.
