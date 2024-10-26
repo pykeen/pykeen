@@ -20,11 +20,7 @@ from pykeen.training.lcwa import create_lcwa_instances
 from pykeen.training.slcwa import create_slcwa_instances
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.splitting import splitter_resolver
-from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX,
-    _map_triples_elements_to_ids,
-    get_mapped_triples,
-)
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids, get_mapped_triples
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
