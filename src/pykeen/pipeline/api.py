@@ -197,7 +197,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
-    Optional,
     cast,
 )
 
@@ -511,7 +510,7 @@ class PipelineResult(Result):
         model_path = os.path.join(directory, "trained_model.pkl")
         ftp.storbinary(f"STOR {model_path}", get_model_io(self.model))
 
-    def save_to_s3(self, directory: str, bucket: str, s3: Optional[boto3.client] = None) -> None:
+    def save_to_s3(self, directory: str, bucket: str, s3: boto3.client | None = None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
         :param directory: The directory in the S3 bucket
