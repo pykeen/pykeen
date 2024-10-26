@@ -2,12 +2,21 @@
 
 import logging
 from collections.abc import Mapping
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
+from .api import PipelineResult
+from .typing import PlotReturn
 from ..losses import loss_resolver
 from ..models.nbase import ERModel
 from ..nn.representation import Representation
 from ..stoppers import EarlyStopper
+
+if TYPE_CHECKING:
+    import matplotlib.axes
+    import matplotlib.figure
+    import matplotlib.pyplot
+    import sklearn.base
+
 
 __all__ = [
     "plot_losses",
@@ -21,7 +30,9 @@ logger = logging.getLogger(__name__)
 REDUCER_RELATION_WHITELIST = {"PCA"}
 
 
-def plot_losses(pipeline_result, *, ax=None):
+def plot_losses(
+    pipeline_result: PipelineResult, *, ax: Optional["matplotlib.axes.Axes"] = None
+) -> "matplotlib.axes.Axes":
     """Plot the losses per epoch."""
     import seaborn as sns
 
@@ -37,7 +48,12 @@ def plot_losses(pipeline_result, *, ax=None):
     return rv
 
 
-def plot_early_stopping(pipeline_result, *, ax=None, lineplot_kwargs=None):
+def plot_early_stopping(
+    pipeline_result: PipelineResult,
+    *,
+    ax: Optional["matplotlib.axes.Axes"] = None,
+    lineplot_kwargs: Mapping[str, Any] | None = None,
+) -> "matplotlib.axes.Axes":
     """Plot the evaluations during early stopping."""
     import seaborn as sns
 
@@ -86,7 +102,7 @@ def build_representation_getter(relation: bool = False, index: int = 0) -> Calla
 
 
 def plot_er(  # noqa: C901
-    pipeline_result,
+    pipeline_result: PipelineResult,
     *,
     model: Optional[str] = None,
     entities: Optional[set[str]] = None,
@@ -99,10 +115,10 @@ def plot_er(  # noqa: C901
     annotation_y_offset: float = 0.03,
     entity_embedding_getter=None,
     relation_embedding_getter=None,
-    ax=None,
+    ax: Optional["matplotlib.axes.Axes"] = None,
     subtitle: Optional[str] = None,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> "matplotlib.axes.Axes":
     """Plot the reduced entities and relation vectors in 2D.
 
     :param pipeline_result: The result returned by :func:`pykeen.pipeline.pipeline`.
@@ -259,7 +275,7 @@ def _reduce_embeddings(embedding: Representation, reducer, fit: bool = False):
         return reducer.transform(embeddings_numpy), True
 
 
-def _get_reducer_cls(model: str, **kwargs):
+def _get_reducer_cls(model: str, **kwargs: Any) -> tuple[type["sklearn.base.TransformerMixin", Mapping[str, Any]]]:
     """Get the model class by name and default kwargs.
 
     :param model: The name of the model. Can choose from: PCA, KPCA, GRP,
@@ -294,7 +310,11 @@ def _get_reducer_cls(model: str, **kwargs):
     return Reducer, kwargs
 
 
-def plot(pipeline_result, er_kwargs: Optional[Mapping[str, str]] = None, figsize=(10, 4)):
+def plot(
+    pipeline_result: PipelineResult,
+    er_kwargs: Optional[Mapping[str, str]] = None,
+    figsize: tuple[float, float] = (10, 4),
+) -> PlotReturn:
     """Plot all plots."""
     import matplotlib.pyplot as plt
 

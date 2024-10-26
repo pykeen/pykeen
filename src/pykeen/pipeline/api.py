@@ -194,8 +194,10 @@ import time
 from collections.abc import Collection, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass, field
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
+    Optional,
     cast,
 )
 
@@ -205,6 +207,7 @@ import torch
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch.optim.optimizer import Optimizer
 
+from .typing import PlotReturn
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
@@ -222,7 +225,15 @@ from ..trackers import ResultTracker, resolve_result_trackers
 from ..trackers.base import MultiResultTracker
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, Hint, HintType, MappedTriples
+from ..typing import (
+    DeviceHint,
+    HeadRepresentation,
+    Hint,
+    HintType,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from ..utils import (
     Result,
     ensure_ftp_directory,
@@ -236,6 +247,9 @@ from ..utils import (
     set_random_seed,
 )
 from ..version import get_git_hash, get_version
+
+if TYPE_CHECKING:
+    import boto3
 
 __all__ = [
     "PipelineResult",
@@ -311,7 +325,7 @@ class PipelineResult(Result):
             return None
         return self.metadata.get("title")
 
-    def plot_losses(self, **kwargs):
+    def plot_losses(self, **kwargs: Any):
         """Plot the losses per epoch.
 
         :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_losses`.
@@ -346,7 +360,7 @@ class PipelineResult(Result):
 
         return plot_er(self, **kwargs)
 
-    def plot(self, **kwargs):
+    def plot(self, **kwargs: Any) -> PlotReturn:
         """Plot all plots.
 
         :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot`
@@ -390,7 +404,7 @@ class PipelineResult(Result):
         save_metadata: bool = True,
         save_replicates: bool = True,
         save_training: bool = True,
-        **_kwargs,
+        **_kwargs: Any,
     ) -> None:
         """
         Save all artifacts in the given directory.
@@ -497,7 +511,7 @@ class PipelineResult(Result):
         model_path = os.path.join(directory, "trained_model.pkl")
         ftp.storbinary(f"STOR {model_path}", get_model_io(self.model))
 
-    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+    def save_to_s3(self, directory: str, bucket: str, s3: Optional[boto3.client] = None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
         :param directory: The directory in the S3 bucket
@@ -537,7 +551,7 @@ class PipelineResult(Result):
 
 def replicate_pipeline_from_path(
     path: str | pathlib.Path,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """Run the same pipeline several times from a configuration file by path.
 
@@ -555,7 +569,7 @@ def replicate_pipeline_from_config(
     save_replicates: bool = True,
     save_training: bool = False,
     keep_seed: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """Run the same pipeline several times from a configuration dictionary.
 
@@ -581,7 +595,7 @@ def replicate_pipeline_from_config(
     )
 
 
-def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
+def _iterate_moved(pipeline_results: Iterable[PipelineResult]) -> Iterable[PipelineResult]:
     for pipeline_result in pipeline_results:
         # note: torch.nn.Module.cpu() is in-place in contrast to torch.Tensor.cpu()
         pipeline_result.model.cpu()
@@ -733,7 +747,7 @@ def save_pipeline_results_to_directory(
 
 def pipeline_from_path(
     path: str | pathlib.Path,
-    **kwargs,
+    **kwargs: Any,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON/YAML file at the given path.
 
@@ -752,7 +766,7 @@ def pipeline_from_path(
 def pipeline_from_config(
     config: Mapping[str, Any],
     discard_seed: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> PipelineResult:
     """Run the pipeline with a configuration dictionary.
 
@@ -793,15 +807,15 @@ def _get_model_defaults(model: Model) -> Mapping[str, Any]:
 
 def _build_model_helper(
     *,
-    model,
-    model_kwargs,
+    model: Model,
+    model_kwargs: Mapping[str, Any] | None,
     loss,
     loss_kwargs,
     _device,
     _random_seed,
     regularizer,
     regularizer_kwargs,
-    training_triples_factory,
+    training_triples_factory: CoreTriplesFactory,
 ) -> tuple[Model, Mapping[str, Any]]:
     """Collate model-specific parameters and initialize the model from it."""
     if model_kwargs is None:
@@ -1309,7 +1323,10 @@ def pipeline(  # noqa: C901
     # 2. Model
     model: None | str | Model | type[Model] = None,
     model_kwargs: Mapping[str, Any] | None = None,
-    interaction: None | str | Interaction | type[Interaction] = None,
+    interaction: None
+    | str
+    | Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
+    | type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]] = None,
     interaction_kwargs: Mapping[str, Any] | None = None,
     dimensions: None | int | Mapping[str, int] = None,
     # 3. Loss
