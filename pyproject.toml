@@ -65,7 +65,7 @@ dependencies = [
     "click",
     "click_default_group",
     "scikit-learn",
-    "torch>=2.0,<2.4",
+    "torch>=2.0",
     "tqdm",
     "requests",
     "optuna>=2.0.0",
