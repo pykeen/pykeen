@@ -108,6 +108,8 @@ __all__ = [
     "ExtraReprMixin",
     "einsum",
     "isin_many_dim",
+    "split_workload",
+    "batched_dot",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1551,12 +1553,6 @@ def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int 
     return counts[inverse[: elements.shape[dim]]] > 1
 
 
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod()
-
-
 def determine_maximum_batch_size(batch_size: int | None, device: torch.device, maximum_batch_size: int) -> int:
     """Normalize choice of maximum batch size.
 
@@ -1613,3 +1609,58 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
             ) from e
 
     return wrapped
+
+
+def split_workload(n: int) -> range:
+    """Split workload for multi-processing."""
+    # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
+    worker_info = torch.utils.data.get_worker_info()
+    if worker_info is None:  # single-process data loading, return the full iterator
+        workload = range(n)
+    else:
+        num_workers = worker_info.num_workers
+        worker_id = worker_info.id  # 1-based
+        start = math.ceil(n / num_workers * worker_id)
+        stop = math.ceil(n / num_workers * (worker_id + 1))
+        workload = range(start, stop)
+    return workload
+
+
+def batched_dot(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    """Compute "element-wise" dot-product between batched vectors."""
+    return (a * b).sum(dim=-1)
+
+
+def _batched_dot_matmul(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    """Compute "element-wise" dot-product between batched vectors."""
+    return (a.unsqueeze(dim=-2) @ b.unsqueeze(dim=-1)).view(a.shape[:-1])
+
+
+def _batched_dot_einsum(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    return einsum("...i,...i->...", a, b)
+
+
+def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
+    """
+    Compute the circular correlation between to vectors.
+
+    .. note ::
+        The implementation uses FFT.
+
+    :param a: shape: s_1
+        The tensor with the first vectors.
+    :param b:
+        The tensor with the second vectors.
+
+    :return:
+        The circular correlation between the vectors.
+    """
+    # Circular correlation of entity embeddings
+    a_fft = torch.fft.rfft(a, dim=-1)
+    b_fft = torch.fft.rfft(b, dim=-1)
+    # complex conjugate
+    a_fft = torch.conj(a_fft)
+    # Hadamard product in frequency domain
+    p_fft = a_fft * b_fft
+    # inverse real FFT
+    return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)

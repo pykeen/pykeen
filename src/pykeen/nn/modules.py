@@ -29,10 +29,7 @@ from torch import nn
 from torch.nn.init import xavier_normal_
 from typing_extensions import Self
 
-from . import functional as pkf
-from . import init
-from .algebra import quaterion_multiplication_table
-from .compute_kernel import batched_dot
+from . import init, quaternion
 from .sim import KG2ESimilarity, kg2e_similarity_resolver
 from .utils import apply_optional_bn
 from ..metrics.utils import ValueRange
@@ -50,6 +47,8 @@ from ..typing import (
 from ..utils import (
     add_cudnn_error_hint,
     at_least_eps,
+    batched_dot,
+    circular_correlation,
     clamp_norm,
     einsum,
     ensure_complex,
@@ -1045,7 +1044,7 @@ class ConvEInteraction(Interaction[FloatTensor, FloatTensor, tuple[FloatTensor, 
 
         # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
         # output_shape: batch_dims
-        x = einsum("...d, ...d -> ...", x, t_emb)
+        x = batched_dot(x, t_emb)
 
         # add bias term
         return x + t_bias
@@ -1440,7 +1439,7 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         x = self.mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
         # dot product
-        return einsum("...d,...d->...", x, t)
+        return batched_dot(x, t)
 
 
 @parse_docdata
@@ -1629,10 +1628,10 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
             The scores.
         """
         # composite: (*batch_dims, d)
-        composite = pkf.circular_correlation(h, t)
+        composite = circular_correlation(h, t)
 
         # inner product with relation embedding
-        return (r * composite).sum(dim=-1)
+        return batched_dot(r, composite)
 
 
 @parse_docdata
@@ -1778,7 +1777,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         x = self.inner_activation(tensor_sum(h, r, self.b_c))
 
         # dot product with t
-        return self.outer_activation(einsum("...d, ...d -> ...", x, t) + self.b_p)
+        return self.outer_activation(batched_dot(x, t) + self.b_p)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
@@ -2782,16 +2781,23 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
 
 
 @parse_docdata
-class QuatEInteraction(
-    FunctionalInteraction[
-        FloatTensor,
-        FloatTensor,
-        FloatTensor,
-    ],
-):
-    """A module wrapper for the QuatE interaction function.
+class QuatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+    r"""The state-less QuatE interaction function.
 
-    .. seealso:: :func:`pykeen.nn.functional.quat_e_interaction`
+    It is given as
+
+    .. math ::
+        \langle \mathbf{h} \otimes \mathbf{r}, \mathbf{t} \rangle
+
+    where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{H}^d$ are quanternion representations,
+    $\otimes$ denotes the Hamilton product, and $\langle \cdot, \cdot \rangle$ the inner product.
+
+    .. warning ::
+        In order to representation a rotation, $\mathbf{r}$ must be normalized to unit length,
+        cf. :func:`pykeen.nn.quaternion.normalize`.
+
+    .. seealso::
+        - https://en.wikipedia.org/wiki/Quaternion
 
     ---
     citation:
@@ -2805,15 +2811,34 @@ class QuatEInteraction(
     # with k=4
     entity_shape: Sequence[str] = ("dk",)
     relation_shape: Sequence[str] = ("dk",)
-    func = pkf.quat_e_interaction
 
     def __init__(self) -> None:
         """Initialize the interaction module."""
         super().__init__()
-        self.register_buffer(name="table", tensor=quaterion_multiplication_table())
+        self.register_buffer(name="table", tensor=quaternion.multiplication_table())
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(table=self.table)
+    def forward(self, h: FloatTensor, r: tuple[FloatTensor, FloatTensor], t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function of QuatE for given embeddings.
+
+        The embeddings have to be in a broadcastable shape.
+
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
+
+        :param h: shape: (`*batch_dims`, dim, 4)
+            The head representations.
+        :param r: shape: (`*batch_dims`, dim, 4)
+            The head representations.
+        :param t: shape: (`*batch_dims`, dim, 4)
+            The tail representations.
+
+        :return: shape: (...)
+            The scores.
+        """
+        # TODO: this sign is in the official code, too, but why do we need it?
+        # note: this is a fused kernel for computing the Hamilton product and the inner product at once
+        return -einsum("...di, ...dj, ...dk, ijk -> ...", h, r, t, self.table)
 
 
 class MonotonicAffineTransformationInteraction(
@@ -3338,7 +3363,7 @@ class CPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         :return: shape: ``batch_dims``
             The scores.
         """
-        return (h * r * t).sum(dim=(-2, -1))
+        return einsum("...kd, ...kd, ...kd -> ...", h, r, t)
 
 
 @parse_docdata
@@ -3821,7 +3846,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         :return: shape: `batch_dims`
             The scores
         """
-        return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
+        return sum(sign * tensor_product(h[hi], r[ri], t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(coefficients=self.coefficients)
