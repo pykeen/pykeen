@@ -14,7 +14,7 @@ __all__ = [
     "env",
 ]
 
-VERSION = "1.11.0-dev"
+VERSION = "1.11.0"
 
 
 @lru_cache(maxsize=2)
