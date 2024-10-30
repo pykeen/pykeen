@@ -16,7 +16,15 @@ import numpy
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver import (
+    FunctionResolver,
+    HintOrType,
+    OneOrManyHintOrType,
+    OneOrManyOptionalKwargs,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
@@ -25,8 +33,9 @@ from torch.nn import functional
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
-from .text import TextEncoder, text_encoder_resolver
-from .utils import PyOBOCache, ShapeError, TextCache, WikidataCache
+from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
+from .text.encoder import TextEncoder, text_encoder_resolver
+from .utils import ShapeError
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -1038,6 +1047,9 @@ class TextRepresentation(Representation):
 
     labels: list[str]
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("encoder", "text_encoder_resolver"),
+    )
     def __init__(
         self,
         labels: Sequence[str | None],
@@ -1046,7 +1058,7 @@ class TextRepresentation(Representation):
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
         missing_action: Literal["blank", "error"] = "error",
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         Initialize the representation.
@@ -1311,7 +1323,7 @@ class WikidataTextRepresentation(CachedTextRepresentation):
     name: Wikidata Text Encoding
     """
 
-    cache_cls = WikidataCache
+    cache_cls = WikidataTextCache
 
 
 class BiomedicalCURIERepresentation(CachedTextRepresentation):
@@ -1357,7 +1369,7 @@ class BiomedicalCURIERepresentation(CachedTextRepresentation):
     name: Biomedical CURIE Text Encoding
     """
 
-    cache_cls = PyOBOCache
+    cache_cls = PyOBOTextCache
 
 
 @parse_docdata

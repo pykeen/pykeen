@@ -14,11 +14,11 @@ from torch import nn
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 
-from ..typing import FloatTensor
-from ..utils import determine_maximum_batch_size, get_preferred_device, resolve_device, upgrade_to_sequence
+from ...typing import FloatTensor
+from ...utils import determine_maximum_batch_size, get_preferred_device, resolve_device, upgrade_to_sequence
 
 if TYPE_CHECKING:
-    from .representation import Representation
+    from ..representation import Representation
 
 __all__ = [
     # abstract
@@ -150,7 +150,7 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
         :param aggregation: the aggregation to use to pool the character embeddings
         """
         super().__init__()
-        from . import representation_resolver
+        from .. import representation_resolver
 
         self.aggregation = aggregation_resolver.make(aggregation, dim=-2)
         self.vocabulary = vocabulary

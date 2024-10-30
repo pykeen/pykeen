@@ -15,11 +15,12 @@ import torch.utils.data
 from class_resolver import OptionalKwargs
 from docdata import parse_docdata
 
-from .representation import BackfillRepresentation, Representation
-from .utils import ShapeError, WikidataCache
-from ..datasets import Dataset
-from ..triples import TriplesFactory
-from ..typing import FloatTensor, LongTensor, OneOrSequence
+from .cache import WikidataImageCache
+from ..representation import BackfillRepresentation, Representation
+from ..utils import ShapeError
+from ...datasets import Dataset
+from ...triples import TriplesFactory
+from ...typing import FloatTensor, LongTensor, OneOrSequence
 
 try:
     from PIL import Image
@@ -32,6 +33,8 @@ __all__ = [
     "VisionDataset",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
+    "ImageHint",
+    "ImageHints",
 ]
 
 
@@ -40,17 +43,23 @@ def _ensure_vision(instance: object, module: Optional[Any]):
         raise ImportError(f"{instance.__class__.__name__} requires `torchvision` to be installed.")
 
 
+#: A path to an image file or a tensor representation of the image
+ImageHint = Union[str, pathlib.Path, torch.Tensor]
+#: A sequence of image hints
+ImageHints = Sequence[ImageHint]
+
+
 class VisionDataset(torch.utils.data.Dataset):
     """
     A dataset of images with data augmentation.
 
     .. note ::
-        requires `torchvision` to be installed.
+        requires :mod:`torchvision` to be installed.
     """
 
     def __init__(
         self,
-        images: Sequence[Union[str, pathlib.Path, torch.Tensor]],
+        images: ImageHints,
         transforms: Optional[Sequence] = None,
         root: Optional[pathlib.Path] = None,
     ) -> None:
@@ -104,7 +113,7 @@ class VisualRepresentation(Representation):
 
     def __init__(
         self,
-        images: Sequence,
+        images: ImageHints,
         encoder: Union[str, torch.nn.Module],
         layer_name: str,
         max_id: Optional[int] = None,
@@ -254,7 +263,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param max_id:
             the total number of IDs. If provided, must match the length of `wikidata_ids`
         :param image_kwargs:
-            keyword-based parameters passed to :meth:`WikidataCache.get_image_paths`
+            keyword-based parameters passed to :meth:`WikidataImageCache.get_image_paths`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
 
@@ -264,7 +273,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         max_id = max_id or len(wikidata_ids)
         if len(wikidata_ids) != max_id:
             raise ValueError(f"Inconsistent max_id={max_id} vs. len(wikidata_ids)={len(wikidata_ids)}")
-        images = WikidataCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
+        images = WikidataImageCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
         base_ids = [i for i, path in enumerate(images) if path is not None]
         images = [path for path in images if path is not None]
         super().__init__(

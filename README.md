@@ -194,9 +194,9 @@ The following 20 representations are implemented by PyKEEN.
 | Tokenization               | [`pykeen.nn.TokenizationRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representation.TokenizationRepresentation.html)   |
 | Transformed                | [`pykeen.nn.TransformedRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.TransformedRepresentation.html)                |
 | Typed Message Passing      | [`pykeen.nn.TypedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.TypedMessagePassingRepresentation.html)           |
-| Visual                     | [`pykeen.nn.VisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.VisualRepresentation.html)                                  |
+| Visual                     | [`pykeen.nn.VisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.representation.VisualRepresentation.html)                   |
 | Wikidata Text Encoding     | [`pykeen.nn.WikidataTextRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.WikidataTextRepresentation.html)              |
-| Wikidata Visual            | [`pykeen.nn.WikidataVisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.WikidataVisualRepresentation.html)                  |
+| Wikidata Visual            | [`pykeen.nn.WikidataVisualRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.vision.representation.WikidataVisualRepresentation.html)   |
 
 ### Interactions
 
@@ -236,7 +236,7 @@ The following 34 interactions are implemented by PyKEEN.
 | TransH                         | [`pykeen.nn.TransHInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TransHInteraction.html)                       | [Wang *et al.*, 2014](https://aaai.org/papers/8870-knowledge-graph-embedding-by-translating-on-hyperplanes/)               |
 | TransR                         | [`pykeen.nn.TransRInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TransRInteraction.html)                       | [Lin *et al.*, 2015](https://aaai.org/papers/9491-learning-entity-and-relation-embeddings-for-knowledge-graph-completion/) |
 | TripleRE                       | [`pykeen.nn.TripleREInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TripleREInteraction.html)                   | [Yu *et al.*, 2021](https://vixra.org/abs/2112.0095)                                                                       |
-| Tucker                         | [`pykeen.nn.TuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TuckerInteraction.html)                       | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                               |
+| TuckER                         | [`pykeen.nn.TuckERInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.TuckERInteraction.html)                       | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                               |
 | Unstructured Model             | [`pykeen.nn.UMInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.UMInteraction.html)                               | [Bordes *et al.*, 2014](https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf)                             |
 
 ### Models

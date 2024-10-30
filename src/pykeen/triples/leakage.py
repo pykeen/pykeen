@@ -280,7 +280,7 @@ def _generate_compact_vectorized_lookup(
     """
     Given a tensor of IDs and a label to ID mapping, retain only occurring IDs, and compact the mapping.
 
-    Additionally returns a vectorized translation, i.e. a tensor `translation` of shape (max_old_id,) with
+    Additionally, returns a vectorized translation, i.e. a tensor `translation` of shape (max_old_id,) with
     `translation[old_id] = new_id` for all translated IDs and `translation[old_id] = -1` for non-occurring IDs.
     This allows to use `translation[ids]` to translate the IDs as a simple integer index based lookup.
 

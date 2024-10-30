@@ -7,9 +7,8 @@ import torch
 from class_resolver import ClassResolver
 from torch import nn
 
-from .compute_kernel import batched_dot
 from ..typing import FloatTensor, GaussianDistribution
-from ..utils import at_least_eps, tensor_sum
+from ..utils import at_least_eps, batched_dot, tensor_sum
 
 __all__ = [
     "KG2ESimilarity",
@@ -20,7 +19,7 @@ __all__ = [
 
 
 class KG2ESimilarity(nn.Module, abc.ABC):
-    """The similarity between the different of head and tail distribution and the relation distribution.
+    """The similarity between the difference of head and tail distribution and the relation distribution.
 
     Only implemented for multi-variate Gaussian distributions with diagonal covariance matrix.
     """
@@ -158,6 +157,7 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         return -result
 
 
+#: A resolver for similarities for :class:`pykeen.nn.modules.KG2EInteraction`
 kg2e_similarity_resolver: ClassResolver[KG2ESimilarity] = ClassResolver.from_subclasses(
     base=KG2ESimilarity,
     synonyms={"kl": NegativeKullbackLeiblerDivergence, "el": ExpectedLikelihood},

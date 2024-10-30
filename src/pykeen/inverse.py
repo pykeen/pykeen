@@ -69,6 +69,7 @@ class DefaultRelationInverter(RelationInverter):
         return ids % 2 == 1
 
 
+#: A resolver for relation inverter protocols
 relation_inverter_resolver: Resolver[RelationInverter] = Resolver.from_subclasses(
     RelationInverter,
     default=DefaultRelationInverter,

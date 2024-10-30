@@ -10,14 +10,19 @@ import numpy
 import torch
 import torch.nn.functional
 import unittest_templates
-from torch import nn
 
 import pykeen.nn.modules
 import pykeen.nn.sim
 import pykeen.utils
-from pykeen.models.unimodal.quate import quaternion_normalizer
+from pykeen.nn import quaternion
 from pykeen.typing import Representation, Sign
-from pykeen.utils import clamp_norm, complex_normalize, einsum, ensure_tuple, project_entity
+from pykeen.utils import (
+    clamp_norm,
+    complex_normalize,
+    einsum,
+    ensure_tuple,
+    project_entity,
+)
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -227,19 +232,6 @@ class ProjETests(cases.InteractionTestCase):
         )
 
 
-def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
-    # Rotate (=Hamilton product in quaternion space).
-    return torch.stack(
-        [
-            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
-            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
-            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
-            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
-        ],
-        dim=-1,
-    )
-
-
 class QuatETests(cases.InteractionTestCase):
     """Tests for QuatE interaction."""
 
@@ -247,14 +239,14 @@ class QuatETests(cases.InteractionTestCase):
     shape_kwargs = dict(k=4)  # quaternions
     atol = 1.0e-06
 
-    def _exp_score(self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor, table: torch.Tensor) -> torch.FloatTensor:  # noqa: D102
+    def _exp_score(self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor) -> torch.FloatTensor:  # noqa: D102
         # we calculate the scores using the hard-coded formula, instead of utilizing table + einsum
-        x = _rotate_quaternion(*(x.unbind(dim=-1) for x in [h, r]))
+        x = quaternion.hamiltonian_product(*(x.unbind(dim=-1) for x in [h, r]))
         return -(x * t).sum()
 
     def _get_hrt(self, *shapes):
         h, r, t = super()._get_hrt(*shapes)
-        r = quaternion_normalizer(r)
+        r = quaternion.normalize(r)
         return h, r, t
 
 
@@ -287,17 +279,21 @@ class KG2ETests(cases.InteractionTestCase):
 class TuckerTests(cases.InteractionTestCase):
     """Tests for Tucker interaction function."""
 
-    cls = pykeen.nn.modules.TuckerInteraction
+    cls = pykeen.nn.modules.TuckERInteraction
     kwargs = dict(
         embedding_dim=cases.InteractionTestCase.dim,
     )
 
-    def _exp_score(self, bn_h, bn_hr, core_tensor, do_h, do_r, do_hr, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
-        a = do_r((core_tensor * r[None, :, None]).sum(dim=1, keepdims=True))  # shape: (embedding_dim, 1, embedding_dim)
-        b = do_h(bn_h(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
+        a = self.instance.relation_dropout(
+            (self.instance.core_tensor * r[None, :, None]).sum(dim=1, keepdims=True)
+        )  # shape: (embedding_dim, 1, embedding_dim)
+        b = self.instance.head_dropout(self.instance.head_batch_norm(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
         c = (b[:, None, None] * a).sum(dim=0, keepdims=True)  # shape: (1, 1, embedding_dim)
-        d = do_hr(bn_hr(c.view(1, -1))).view(1, 1, -1)  # shape: (1, 1, 1, embedding_dim)
+        d = self.instance.head_relation_dropout(self.instance.head_relation_batch_norm(c.view(1, -1))).view(
+            1, 1, -1
+        )  # shape: (1, 1, 1, embedding_dim)
         return (d * t[None, None, :]).sum()
 
 
@@ -461,11 +457,13 @@ class SimplEInteractionTests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.SimplEInteraction
 
-    def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
-        assert clamp is None
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        h_fwd, h_bwd = h
+        r_fwd, r_bwd = r
+        t_fwd, t_bwd = t
         return 0.5 * pykeen.nn.modules.DistMultInteraction.func(
-            h=h, r=r, t=t
-        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(h=h_inv, r=r_inv, t=t_inv)
+            h_fwd, r_fwd, t_fwd
+        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(t_bwd, r_bwd, h_bwd)
 
 
 class MuRETests(cases.TranslationalInteractionTests):
@@ -570,19 +568,11 @@ class TransformerTests(cases.InteractionTestCase):
         assert self.dim % kwargs["num_heads"] == 0
         return kwargs
 
-    def _exp_score(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        transformer: nn.TransformerEncoder,
-        position_embeddings: torch.FloatTensor,
-        final: nn.Module,
-    ) -> torch.FloatTensor:  # noqa: D102
-        x = torch.stack([h, r], dim=0) + position_embeddings
-        x = transformer(src=x.unsqueeze(dim=1))
+    def _exp_score(self, h: torch.FloatTensor, r: torch.FloatTensor, t: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+        x = torch.stack([h, r], dim=0) + self.instance.position_embeddings
+        x = self.instance.transformer(src=x.unsqueeze(dim=1))
         x = x.sum(dim=0)
-        x = final(x).squeeze(dim=0)
+        x = self.instance.final(x).squeeze(dim=0)
         return (x * t).sum()
 
 
@@ -599,8 +589,8 @@ class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
         kwargs["tail_dim"] = self.shape_kwargs["f"]
         return kwargs
 
-    def _exp_score(self, core_tensor, h, r, t) -> torch.FloatTensor:
-        return einsum("ijk,i,j,k", core_tensor, h, r, t)
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        return einsum("ijk,i,j,k", self.instance.core_tensor, h, r, t)
 
 
 class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules.Interaction]):
@@ -612,6 +602,8 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
         pykeen.nn.modules.Interaction,
         pykeen.nn.modules.FunctionalInteraction,
         pykeen.nn.modules.NormBasedInteraction,
+        pykeen.nn.modules.ClampedInteraction,
+        pykeen.nn.modules.DirectionAverageInteraction,
         # FIXME
         pykeen.nn.modules.BoxEInteraction,
     }
