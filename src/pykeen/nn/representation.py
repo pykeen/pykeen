@@ -1206,23 +1206,26 @@ class CombinedRepresentation(Representation):
         Initialize the representation.
 
         :param max_id:
-            the number of representations.
+            The number of representations.
         :param shape:
             The shape of an individual representation.
+
         :param base:
-            the base representations, or hints thereof
+            The base representations, or hints thereof.
         :param base_kwargs:
-            keyword-based parameters for the instantiation of base representations
+            Keyword-based parameters for the instantiation of base representations.
+
         :param combination:
-            the combination, or a hint thereof
+            The combination, or a hint thereof.
         :param combination_kwargs:
-            additional keyword-based parameters used to instantiate the combination
+            Additional keyword-based parameters used to instantiate the combination.
+
         :param kwargs:
-            additional keyword-based parameters passed to `Representation.__init__`.
+            additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`.
             May not contain any of `{max_id, shape, unique}`.
 
         :raises ValueError:
-            if the `max_id` of the base representations does not match
+            If the `max_id` of the base representations does not match.
         """
         # input normalization
         combination = combination_resolver.make(combination, combination_kwargs)
@@ -1244,7 +1247,7 @@ class CombinedRepresentation(Representation):
 
         # shape inference
         shape = ShapeError.verify(shape=combination.output_shape(input_shapes=[b.shape for b in base]), reference=shape)
-        super().__init__(max_id=max_id, shape=shape, unique=any(b.unique for b in base), **kwargs)
+        super().__init__(max_id=max_id, shape=shape, unique=all(b.unique for b in base), **kwargs)
 
         # assign base representations *after* super init
         self.base = nn.ModuleList(base)
