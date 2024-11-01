@@ -2,10 +2,65 @@
 
 Representations
 ===============
-In PyKEEN, a :class:`pykeen.nn.representation.Representation` is used to map
-integer indices to numeric representations. A simple example is the
-:class:`pykeen.nn.representation.Embedding` class, where the mapping is a simple
+In PyKEEN, a :class:`~pykeen.nn.representation.Representation` is used to map
+*integer indices* to *numeric representations*. A simple example is an
+:class:`~pykeen.nn.representation.Embedding`, where the mapping is a simple
 lookup. However, more advanced representation modules are available, too.
+
+This tutorial aims to provide a comprehensive overview of possible components.
+Feel free to visit the pages of individual representations for detailed technical information.
+
+Overview:
+    - Base
+    - Combination / Adapter
+    - Decomposition
+    - Message Passing
+    - Text-Based
+    - Visual
+
+Overview:
+    - :class:`~pykeen.nn.representation.Representation`
+      base class; can have *normalizer* & *regularizer* (but no constrainer);
+      todo: explain unique? also highlight issues with e.g., dropout
+    - :class:`~pykeen.nn.representation.Embedding`
+      a lookup table
+    - :class:`~pykeen.nn.representation.LowRankRepresentation`
+      low rank factorization; base representation; learnable weights
+    - :class:`~pykeen.nn.representation.PartitionRepresentation`
+      base representations; each index is assigned to one of them
+    - :class:`~pykeen.nn.representation.BackfillRepresentation`
+      partition, with two bases; main + backfill for OOV
+    - :class:`~pykeen.nn.representation.TransformedRepresentation`
+      (learnable) transformation upon existing
+    - :class:`~pykeen.nn.representation.CombinedRepresentation`
+      bases representations for each index + combination operation
+    
+    - :class:`~pykeen.nn.representation.SubsetRepresentation`
+      base representation; some indices are hidden
+    - :class:`~pykeen.nn.representation.TensorTrainRepresentation`
+      tensor train factorization; corresponds to hierarchical decomposition
+    
+    - :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`
+      each index is represented by a sequence of tokens; each token has a representation
+
+    - :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`
+      uses one or TokenizationRepresentation; combines them into a singel representation
+
+    - :class:`~pykeen.nn.message_passing.RGCNRepresentation`
+    - :class:`~pykeen.nn.representation.SingleCompGCNRepresentation`
+    - :class:`~pykeen.nn.pyg.MessagePassingRepresentation`
+    - :class:`~pykeen.nn.pyg.FeaturizedMessagePassingRepresentation`
+    - :class:`~pykeen.nn.pyg.SimpleMessagePassingRepresentation`
+    - :class:`~pykeen.nn.pyg.TypedMessagePassingRepresentation`
+
+    - :class:`~pykeen.nn.vision.representation.VisualRepresentation`
+    - :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation`
+
+    - :class:`~pykeen.nn.representation.TextRepresentation`
+    - :class:`~pykeen.nn.representation.WikidataTextRepresentation`
+
+    - :class:`~pykeen.nn.representation.BiomedicalCURIERepresentation`
+
 
 Message Passing
 ---------------

@@ -69,6 +69,9 @@ The following examples are for entity representations, but can be equivalently u
     :class:`pykeen.nn.Representation` class. You can also register your own classes to the resolver. Detailed
     information can be found in the documentation of the package or :ref:`using_resolvers`
 
+.. seealso::
+    :ref:`representations`
+
 
 Interaction Function
 --------------------
