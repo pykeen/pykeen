@@ -1175,7 +1175,10 @@ class TextRepresentation(Representation):
 
 @parse_docdata
 class CombinedRepresentation(Representation):
-    """A combined representation.
+    """Combined representation.
+
+    It has a sequence of base representations, each providing representations for each index.
+    A combination is used to combine the multiple representations into a single one.
 
     ---
     name: Combined
