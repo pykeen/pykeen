@@ -501,6 +501,7 @@ class LowRankRepresentation(Representation):
         """
         super().__init__(max_id=max_id, shape=shape)
         self.bases = Embedding(max_id=num_bases, shape=shape, **kwargs)
+        # TODO: allow putting normalization upon weights, e.g., by making it a representation
         self.weight_initializer = weight_initializer
         self.weight = nn.Parameter(torch.empty(max_id, num_bases))
         self.reset_parameters()
