@@ -26,6 +26,41 @@ to get a numeric representation of a fixed shape :attr:`~pykeen.nn.representatio
     batches of indices of arbitrary shape, and return batches of corresponding numeric representations.
     The batch dimensions always precede the actual shape of the returned numerical representations.
 
+Combinations & Adapters
+-----------------------
+PyKEEN provides a rich set of generic tools to combine and adapt representations to form new representations.
+
+Transformed Representations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A :class:`~pykeen.nn.representation.TransformedRepresentation` adds a (learnable)
+transformation to an existing representation. It can be particularly useful when we have
+some fixed features for entities or relations, e.g. from a pre-trained model, or encodings
+of other modalities like text or images, and want to learn a transformation on them to
+make them suitable for simple interaction functions like :class:`~pykeen.nn.modules.DistMultInteraction`.
+
+Subset Representations
+~~~~~~~~~~~~~~~~~~~~~~
+A :class:`~pykeen.nn.representation.SubsetRepresentation` allows to *"hide"* some indices.
+This can be useful e.g. if we want to share some representations between modules, while others
+should be exclusive, e.g. we want to use inverse relations for a message passing phase, but no
+inverses in scoring triples.
+
+Partitioned Representations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A :class:`~pykeen.nn.representation.PartitionRepresentation` uses multiple base representations
+and chooses exactly one of them for each index based on a fixed mapping.
+:class:`~pykeen.nn.representation.BackfillRepresentation` implements a frequently used
+special case, where we have two base representations, where one is the
+*"main"* representation and the other is used as a backup whenever
+the first one fails to provide a representation.
+This is useful when we want to use features or pre-trained embeddings whenever
+possible, and learn new embeddings for any entities or relations for which we have no features.
+
+Combined Representations
+~~~~~~~~~~~~~~~~~~~~~~~~
+:class:`~pykeen.nn.representation.CombinedRepresentation` can be used when we have multiple
+sources of representations and want to combine those into a single one.
+Use cases are multi-modal models, or :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`.
 
 Embedding
 ---------
@@ -36,48 +71,42 @@ rely on embeddings to represent entities or relations.
 
 Decomposition
 -------------
-- Combination / Adapter / Decomposition
-        - :class:`~pykeen.nn.representation.LowRankRepresentation`
-        low rank factorization; base representation; learnable weights
-        - :class:`~pykeen.nn.representation.PartitionRepresentation`
-        base representations; each index is assigned to one of them
-        - :class:`~pykeen.nn.representation.BackfillRepresentation`
-        partition, with two bases; main + backfill for OOV
-        - :class:`~pykeen.nn.representation.TransformedRepresentation`
-        (learnable) transformation upon existing
-        - :class:`~pykeen.nn.representation.CombinedRepresentation`
-        bases representations for each index + combination operation
-        - :class:`~pykeen.nn.representation.SubsetRepresentation`
-        base representation; some indices are hidden
-        - :class:`~pykeen.nn.representation.TensorTrainRepresentation`
-        tensor train factorization; corresponds to hierarchical decomposition
-        - :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`
-        each index is represented by a sequence of tokens; each token has a representation
-        - :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`
-        uses one or TokenizationRepresentation; combines them into a singel representation
-
-Since knowledge graphs may contain a large number of entities, having
-independent trainable embeddings for each of them may result in an
-excessive amount of trainable parameters. Therefore, methods have been
-developed, which do not learn independent representations, but rather
-have a set of base representations, and create individual representations
+Since knowledge graphs can contain a large number of entities, having
+independent trainable embeddings for each of them can lead to an
+excessive number of trainable parameters. Therefore, methods have been
+developed that do not learn independent representations, but rather
+have a set of base representations and create individual representations
 by combining them.
 
 Low-Rank Factorization
 ~~~~~~~~~~~~~~~~~~~~~~
 A simple method to reduce the number of parameters is to use a low-rank
 decomposition of the embedding matrix, as implemented in
-:class:`pykeen.nn.representation.LowRankEmbeddingRepresentation`. Here, each
+:class:`~pykeen.nn.representation.LowRankRepresentation`. Here, each
 representation is a linear combination of shared base representations.
-Typically, the number of bases is chosen smaller than the dimension of
+Typically, the number of bases is chosen to be smaller than the dimension of
 each base representation.
+Low-rank factorization can also be seen as a special case of
+:class:`~pykeen.nn.representation.CombinedRepresentation` with a restricted (but very efficient)
+combination operation.
+
+Tensor Train Factorization
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+:class:`~pykeen.nn.representation.TensorTrainRepresentation` uses a tensor factorization
+method, which can also be interpreted as a hierarchical decomposition.
+The tensor train decomposition is also known as matrix product states.
 
 NodePiece
 ~~~~~~~~~
+- :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`
+each index is represented by a sequence of tokens; each token has a representation
+- :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`
+uses one or TokenizationRepresentation; combines them into a single representation
+
 Another example is NodePiece, which takes inspiration
 from tokenization we encounter in, e.g.. NLP, and represents each entity
 as a set of tokens. The implementation in PyKEEN,
-:class:`pykeen.nn.representation.NodePieceRepresentation`, implements a simple yet
+:class:`~pykeen.nn.representation.NodePieceRepresentation`, implements a simple yet
 effective variant thereof, which uses a set of randomly chosen incident
 relations (including inverse relations) as tokens.
 
