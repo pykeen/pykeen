@@ -152,9 +152,13 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
         :param dropout:
             The optional dropout probability
         :param unique:
-            whether to optimize for calculating representations for same indices only once. This is only useful if the
-            calculation of representations is either significantly more expensive than an index-based lookup and
-            duplicate indices are expected, e.g., when using negative sampling and large batch sizes
+            Whether to optimize for calculating representations for same indices only once. This is only useful if the
+            calculation of representations is significantly more expensive than an index-based lookup and
+            duplicate indices are expected, e.g., when using negative sampling and large batch sizes.
+
+            .. warning ::
+                When using this optimization you may encounter unexpected results for stochastic operations, e.g.,
+                :class:`torch.nn.Dropout`.
         """
         super().__init__()
         self.max_id = max_id
@@ -162,10 +166,10 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
         self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
         self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
-        # TODO: dropout vs. unique
         if unique is None:
             # heuristic
-            unique = not isinstance(self, Embedding)
+            unique = not isinstance(self, Embedding) and not dropout
+            logger.info(f"Inferred {unique=} for {self}")
         self.unique = unique
 
     @abstractmethod
@@ -181,12 +185,6 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
         indices: LongTensor | None = None,
     ) -> FloatTensor:
         """Get representations for indices.
-
-        .. note ::
-            depending on :attr:`Representation.unique`, this implementation will use an optimization for duplicate
-            indices. It is generally only recommended if computing individual representation is expensive, e.g.,
-            since it involves message passing, or a large encoder networks, but discouraged for cheap lookups, e.g., a
-            plain embedding lookup.
 
         :param indices: shape: s
             The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
