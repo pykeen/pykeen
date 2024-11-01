@@ -162,6 +162,7 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
         self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
         self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
+        # TODO: dropout vs. unique
         if unique is None:
             # heuristic
             unique = not isinstance(self, Embedding)
