@@ -1607,6 +1607,8 @@ class TransformedRepresentation(Representation):
     name: Transformed
     """
 
+    # TODO: circular import issue
+    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"))
     def __init__(
         self,
         transformation: nn.Module,
