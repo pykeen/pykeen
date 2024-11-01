@@ -7,8 +7,8 @@ In PyKEEN, a :class:`~pykeen.nn.representation.Representation` is used to map
 :class:`~pykeen.nn.representation.Embedding`, where the mapping is a simple
 lookup. However, more advanced representation modules are available, too.
 
-This tutorial aims to provide a comprehensive overview of possible components.
-Feel free to visit the pages of individual representations for detailed technical information.
+This tutorial is intended to provide a comprehensive overview of possible components.
+Feel free to visit the pages of the individual representations for detailed technical information.
 
 .. contents:: Table of Contents
     :depth: 3
@@ -22,7 +22,7 @@ We can pass any integer index $i \in [0, \text{max_id})$ to a representation mod
 to get a numeric representation of a fixed shape :attr:`~pykeen.nn.representation.Representation.shape`.
 
 .. note ::
-    To support efficient training and inference, all representations accept 
+    To support efficient training and inference, all representations accept
     batches of indices of arbitrary shape, and return batches of corresponding numeric representations.
     The batch dimensions always precede the actual shape of the returned numerical representations.
 
@@ -98,61 +98,75 @@ The tensor train decomposition is also known as matrix product states.
 
 NodePiece
 ~~~~~~~~~
-- :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`
-each index is represented by a sequence of tokens; each token has a representation
-- :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`
-uses one or TokenizationRepresentation; combines them into a single representation
-
 Another example is NodePiece, which takes inspiration
 from tokenization we encounter in, e.g.. NLP, and represents each entity
-as a set of tokens. The implementation in PyKEEN,
-:class:`~pykeen.nn.representation.NodePieceRepresentation`, implements a simple yet
-effective variant thereof, which uses a set of randomly chosen incident
-relations (including inverse relations) as tokens.
+as a set of tokens.
+The basic implementation can be found in
+:class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`,
+where each index is represented by a sequence of tokens, and the tokens
+have their own representation.
+:class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` builds upon them
+and uses one or more :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`
+with are then combined into a single representation.
 
-.. seealso:: https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
+.. seealso::
+    - https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
+    - :ref:`getting_started_with_node_piece`
 
 Message Passing
 ---------------
-- Message Passing
-        - :class:`~pykeen.nn.message_passing.RGCNRepresentation`
-        - :class:`~pykeen.nn.representation.SingleCompGCNRepresentation`
-        - :class:`~pykeen.nn.pyg.MessagePassingRepresentation`
-        - :class:`~pykeen.nn.pyg.FeaturizedMessagePassingRepresentation`
-        - :class:`~pykeen.nn.pyg.SimpleMessagePassingRepresentation`
-        - :class:`~pykeen.nn.pyg.TypedMessagePassingRepresentation`
 Message passing representation modules enrich the representations of
 entities by aggregating the information from their graph neighborhood.
-Example implementations from PyKEEN include
-:class:`pykeen.nn.representation.RGCNRepresentation` which uses RGCN layers for
-enrichment, or :class:`pykeen.nn.representation.SingleCompGCNRepresentation`,
-which enrich via CompGCN layers.
 
+RGCN
+~~~~
+The :class:`~pykeen.nn.message_passing.RGCNRepresentation` uses
+:class:`~pykeen.nn.message_passing.RGCNLayer` to pass messages between entities.
+These layers aggregate representations of neighboring entities,
+which are first transformed by a relation-specific linear transformation.
+
+CompGCN
+~~~~~~~
+The :class:`~pykeen.nn.representation.SingleCompGCNRepresentation` enriches representations
+using :class:`~pykeen.nn.representation.CompGCNLayer`, which instead uses a more flexible composition
+of entity and relation representations along each edge.
+As a technical detail, since each :class:`~pykeen.nn.representation.CompGCNLayer` transforms
+entity and relation representations, we must first construct a
+:class:`~pykeen.nn.representation.CombinedCompGCNRepresentations` and then split its output into separate
+:class:`~pykeen.nn.representation.SingleCompGCNRepresentation` for entities and relations, respectively.
+
+PyTorch Geometric
+~~~~~~~~~~~~~~~~~
 Another way to utilize message passing is via the modules provided in :mod:`pykeen.nn.pyg`,
 which allow to use the message passing layers from PyTorch Geometric
 to enrich base representations via message passing.
+We include the following templates to easily create custom transformations:
+
+    - :class:`~pykeen.nn.pyg.MessagePassingRepresentation`
+    - :class:`~pykeen.nn.pyg.FeaturizedMessagePassingRepresentation`
+    - :class:`~pykeen.nn.pyg.SimpleMessagePassingRepresentation`
+    - :class:`~pykeen.nn.pyg.TypedMessagePassingRepresentation`
 
 Text-based
 ----------
-- Text-Based
-        - :class:`~pykeen.nn.representation.TextRepresentation`
-        - :class:`~pykeen.nn.representation.WikidataTextRepresentation`
-        - :class:`~pykeen.nn.representation.BiomedicalCURIERepresentation`
 Text-based representations use the entities' (or relations') labels to
 derive representations. To this end,
-:class:`pykeen.nn.representation.TextRepresentation` uses a
+:class:`~pykeen.nn.representation.TextRepresentation` uses a
 (pre-trained) transformer model from the :mod:`transformers` library to encode
 the labels. Since the transformer models have been trained on huge corpora
 of text, their text encodings often contain semantic information, i.e.,
 labels with similar semantic meaning get similar representations. While we
 can also benefit from these strong features by just initializing an
-:class:`pykeen.nn.representation.Embedding` with the vectors, e.g., using
-:class:`pykeen.nn.init.LabelBasedInitializer`, the
-:class:`pykeen.nn.representation.TextRepresentation` include the
+:class:`~pykeen.nn.representation.Embedding` with the vectors, e.g., using
+:class:`~pykeen.nn.init.LabelBasedInitializer`, the
+:class:`~pykeen.nn.representation.TextRepresentation` include the
 transformer model as part of the KGE model, and thus allow fine-tuning
 the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
 predictions for entities not seen during training.
+
+.. todo ::
+    extract into file
 
 .. code-block:: python
 
@@ -221,11 +235,19 @@ function, we would get similar scores
 As a downside, this will usually substantially increase the
 computational cost of computing triple scores.
 
+Wikidata
+~~~~~~~~
+Since quite a few benchmark datasets for link prediction on knowledge graphs use
+`Wikidata <https://www.wikidata.org>`_ as a source, e.g.,
+:class:`~pykeen.datasets.codex.CoDExSmall` or :class:`~pykeen.datasets.wd50k.WD50KT`,
+we added a convenience class :class:`~pykeen.nn.representation.WikidataTextRepresentation`
+that looks up labels based on Wikidata Ids.
+
 Biomedical Entities
 ~~~~~~~~~~~~~~~~~~~
 If your dataset is labeled with compact uniform resource identifiers (e.g., CURIEs)
 for biomedical entities like chemicals, proteins, diseases, and pathways, then
-the :class:`pykeen.nn.representation.BiomedicalCURIERepresentation`
+the :class:`~pykeen.nn.representation.BiomedicalCURIERepresentation`
 representation can make use of :mod:`pyobo` to look up names (via CURIE) via the
 :func:`pyobo.get_name` function, then encode them using the text encoder.
 
@@ -238,6 +260,13 @@ and `this blog post on CURIEs <https://cthoyt.com/2021/09/14/curies.html>`_.
 
 Visual
 ------
-- Visual
-        - :class:`~pykeen.nn.vision.representation.VisualRepresentation`
-        - :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation`
+Sometimes, we also have visual information about entities, e.g., in the form of images.
+For these cases there is
+:class:`~pykeen.nn.vision.representation.VisualRepresentation` which uses an image encoder backbone
+to obtain representations.
+
+Wikidata
+~~~~~~~~
+As for textual representations, we provide a convenience class
+:class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation` for Wikidata-based datasets
+that looks up labels based on Wikidata Ids.
