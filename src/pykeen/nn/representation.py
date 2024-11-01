@@ -1402,6 +1402,10 @@ class PartitionRepresentation(Representation):
 
     .. literalinclude:: ../examples/nn/representation/partition.py
 
+    .. note ::
+        For this simple but often occuring case, we provide a more convenient specialized
+        :class:`~pykeen.nn.representation.BackfillRepresentation`.
+
     ---
     name: Partition
     """
@@ -1516,6 +1520,11 @@ class BackfillRepresentation(PartitionRepresentation):
     name: Backfill
     """
 
+    # TODO: circular import issue
+    # @update_docstring_with_resolver_keys(
+    #    ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"),
+    #    ResolverKey(name="backfill", resolver="pykeen.nn.representation_resolver"),
+    # )
     def __init__(
         self,
         max_id: int,
@@ -1529,20 +1538,28 @@ class BackfillRepresentation(PartitionRepresentation):
         """Initialize the representation.
 
         :param max_id:
-            The total number of entities that need to be embedded
+            The total number of entities that need to be represented.
         :param base_ids:
-            An iterable of integer entity indexes which are provided through the base representations
+            The indices which are provided through the base representation.
+
         :param base:
-            the base representation, or a hint thereof.
+            The base representation, or a hint thereof.
         :param base_kwargs:
-            keyword-based parameters to instantiate the base representation
+            Keyword-based parameters to instantiate the base representation
+
         :param backfill:
-            the backfill representation, or hints thereof.
+            The backfill representation, or hints thereof.
         :param backfill_kwargs:
-            keyword-based parameters to instantiate the backfill representation
+            Keyword-based parameters to instantiate the backfill representation.
+
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Representation.__init__`. May not contain `max_id`,
-            or `shape`, which are inferred from the base representations.
+            additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
+            May not contain `shape`, which is inferred from the base representation.
+
+        .. warning ::
+            The base and backfill representations have to have coherent shapes.
+            If the backfill representation is initialized within this constructor,
+            it will receive the base representation's shape.
         """
         # import here to avoid cyclic import
         from . import representation_resolver
