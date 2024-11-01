@@ -94,19 +94,19 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
 
     A representation module maps integer IDs to representations, which are tensors of floats.
 
-    `max_id` defines the upper bound of indices we are allowed to request (exclusively). For simple embeddings this is
+    ``max_id`` defines the upper bound of indices we are allowed to request (exclusively). For simple embeddings this is
     equivalent to num_embeddings, but more a more appropriate word for general non-embedding representations, where the
     representations could come from somewhere else, e.g. a GNN encoder.
 
-    `shape` describes the shape of a single representation. In case of a vector embedding, this is just a single
-    dimension. For others, e.g. :class:`pykeen.models.RESCAL`, we have 2-d representations, and in general it can be
+    ``shape`` describes the shape of a single representation. In case of a vector embedding, this is just a single
+    dimension. For others, e.g. :class:`~pykeen.models.RESCAL`, we have 2-d representations, and in general it can be
     any fixed shape.
 
-    We can look at all representations as a tensor of shape `(max_id, *shape)`, and this is exactly the result of
-    passing `indices=None` to the forward method.
+    We can look at all representations as a tensor of shape ``(max_id, *shape)``, and this is exactly the result of
+    passing ``indices=None`` to the forward method.
 
-    We can also pass multi-dimensional `indices` to the forward method, in which case the indices' shape becomes the
-    prefix of the result shape: `(*indices.shape, *self.shape)`.
+    We can also pass multi-dimensional ``indices`` to the forward method, in which case the indices' shape becomes the
+    prefix of the result shape: ``(*indices.shape, *self.shape)``.
     """
 
     #: the maximum ID (exclusively)
@@ -124,6 +124,11 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
     #: dropout
     dropout: nn.Dropout | None
 
+    # TODO: cyclic import
+    # @update_docstring_with_resolver_keys(ResolverKey("normalizer", resolver="pykeen.nn.normalizer_resolver"))
+    @update_docstring_with_resolver_keys(
+        ResolverKey("regularizer", resolver="pykeen.regularizers.regularizer_resolver")
+    )
     def __init__(
         self,
         max_id: int,
@@ -138,19 +143,22 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
         """Initialize the representation module.
 
         :param max_id:
-            The maximum ID (exclusively). Valid Ids reach from 0, ..., max_id-1
+            The maximum ID (exclusively). Valid Ids reach from ``0`` to ``max_id-1``.
         :param shape:
             The shape of an individual representation.
+
         :param normalizer:
             A normalization function, which is applied to the selected representations in every forward pass.
         :param normalizer_kwargs:
-            Additional keyword arguments passed to the normalizer
+            Additional keyword arguments passed to the normalizer.
+
         :param regularizer:
-            An output regularizer, which is applied to the selected representations in forward pass
+            An output regularizer, which is applied to the selected representations in forward pass.
         :param regularizer_kwargs:
-            Additional keyword arguments passed to the regularizer
+            Additional keyword arguments passed to the regularizer.
+
         :param dropout:
-            The optional dropout probability
+            The optional dropout probability.
         :param unique:
             Whether to optimize for calculating representations for same indices only once. This is only useful if the
             calculation of representations is significantly more expensive than an index-based lookup and
@@ -186,11 +194,11 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
     ) -> FloatTensor:
         """Get representations for indices.
 
-        :param indices: shape: s
-            The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
-            more efficiently).
+        :param indices: shape: ``s``
+            The indices, or ``None``. If ``None``, this is interpreted as ``torch.arange(self.max_id)``
+            (although implemented more efficiently).
 
-        :return: shape: (``*s``, ``*self.shape``)
+        :return: shape: ``(*s, *self.shape)``
             The representations.
         """
         inverse = None
