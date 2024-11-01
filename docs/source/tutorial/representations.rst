@@ -25,8 +25,8 @@ to get a numeric representation of a fixed shape :attr:`~pykeen.nn.representatio
     To support efficient training and inference, all representations accept 
     batches of indices of arbitrary shape, and return batches of corresponding numeric representations.
     The batch dimensions always precede the actual shape of the returned numerical representations.
- 
-        
+
+
 Embedding
 ---------
 An :class:`~pykeen.nn.representation.Embedding` is the simplest representation,
