@@ -29,8 +29,10 @@ to get a numeric representation of a fixed shape :attr:`~pykeen.nn.representatio
         
 Embedding
 ---------
-- :class:`~pykeen.nn.representation.Embedding`
-    a lookup table
+An :class:`~pykeen.nn.representation.Embedding` is the simplest representation,
+where the an index is mapped to a numerical representation by a simple lookup in a table.
+Despite its simplicity, almost all publications on transductive link prediction
+rely on embeddings to represent entities or relations.
 
 Decomposition
 -------------
