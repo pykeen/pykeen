@@ -1870,6 +1870,8 @@ class TensorTrainRepresentation(Representation):
         if n_prod < s_prod:
             raise ValueError(f"prod(ns)={n_prod} < prod(shape)={s_prod}")
 
+    # TODO: circular import issue
+    # @update_docstring_with_resolver_keys(ResolverKey(name="bases", resolver="pykeen.nn.representation_resolver"))
     def __init__(
         self,
         assignment: LongTensor | None = None,
