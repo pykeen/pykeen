@@ -244,33 +244,40 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
 class SubsetRepresentation(Representation):
     """A representation module, which only exposes a subset of representations of its base.
 
+    .. note ::
+        At runtime, no index verification is made. Thus the only effect is based on the adjusted ``max_id``.
+
     ---
     name: Subset Representation
     """
 
+    # TODO: circular import issue
+    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"))
     def __init__(
         self,
         max_id: int,
+        shape: OneOrSequence[int] | None = None,
         base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
-        shape: OneOrSequence[int] | None = None,
         **kwargs,
     ):
         """
         Initialize the representations.
 
         :param max_id:
-            the number of representations
-        :param base:
-            the base representations. have to have a sufficient number of representations, i.e., at least max_id.
-        :param base_kwargs:
-            additional keyword arguments for the base representation
+            The number of representations.
         :param shape:
             The shape of an individual representation.
-        :param kwargs:
-            additional keyword-based parameters passed to super.__init__
 
-        :raises ValueError: if ``max_id`` is larger than the base representation's mad_id
+        :param base:
+            The base representation. Has to have a sufficient number of representations, i.e., at least ``max_id``.
+        :param base_kwargs:
+            Additional keyword arguments for the base representation.
+
+        :param kwargs:
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
+
+        :raises ValueError: if ``max_id`` is larger than the base representation's ``max_id``
         """
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
