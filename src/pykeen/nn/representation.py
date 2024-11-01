@@ -1039,22 +1039,7 @@ class TextRepresentation(Representation):
     Entity representations are obtained by encoding the labels with a Transformer model. The transformer
     model becomes part of the KGE model, and its parameters are trained jointly.
 
-    .. code-block:: python
-
-        from pykeen.datasets import get_dataset
-        from pykeen.nn.representation import TextRepresentation
-        from pykeen.models import ERModel
-
-        dataset = get_dataset(dataset="nations")
-        entity_representations = TextRepresentation.from_dataset(
-            dataset=dataset,
-            encoder="transformer",
-        )
-        model = ERModel(
-            interaction="ermlp",
-            entity_representations=entity_representations,
-            relation_representations_kwargs=dict(shape=entity_representations.shape),
-        )
+    .. literalinclude:: ../examples/nn/representation/text_based.py
 
     ---
     name: Text Encoding
