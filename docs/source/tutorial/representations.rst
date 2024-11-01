@@ -10,73 +10,50 @@ lookup. However, more advanced representation modules are available, too.
 This tutorial aims to provide a comprehensive overview of possible components.
 Feel free to visit the pages of individual representations for detailed technical information.
 
-Overview:
-    - Base
-    - Combination / Adapter
-    - Decomposition
-    - Message Passing
-    - Text-Based
-    - Visual
+.. contents:: Table of Contents
+    :depth: 3
 
-Overview:
-    - :class:`~pykeen.nn.representation.Representation`
-      base class; can have *normalizer* & *regularizer* (but no constrainer);
-      todo: explain unique? also highlight issues with e.g., dropout
-    - :class:`~pykeen.nn.representation.Embedding`
-      a lookup table
-    - :class:`~pykeen.nn.representation.LowRankRepresentation`
-      low rank factorization; base representation; learnable weights
-    - :class:`~pykeen.nn.representation.PartitionRepresentation`
-      base representations; each index is assigned to one of them
-    - :class:`~pykeen.nn.representation.BackfillRepresentation`
-      partition, with two bases; main + backfill for OOV
-    - :class:`~pykeen.nn.representation.TransformedRepresentation`
-      (learnable) transformation upon existing
-    - :class:`~pykeen.nn.representation.CombinedRepresentation`
-      bases representations for each index + combination operation
-    
-    - :class:`~pykeen.nn.representation.SubsetRepresentation`
-      base representation; some indices are hidden
-    - :class:`~pykeen.nn.representation.TensorTrainRepresentation`
-      tensor train factorization; corresponds to hierarchical decomposition
-    
-    - :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`
-      each index is represented by a sequence of tokens; each token has a representation
+Base
+----
+The :class:`~pykeen.nn.representation.Representation` class defines a common
+interface for all representation modules.
+Each representation defines a :attr:`~pykeen.nn.representation.Representation.max_id` attribute.
+We can pass any integer index $i \in [0, \text{max_id})$ to a representation module
+to get a numeric representation of a fixed shape :attr:`~pykeen.nn.representation.Representation.shape`.
 
-    - :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`
-      uses one or TokenizationRepresentation; combines them into a singel representation
-
-    - :class:`~pykeen.nn.message_passing.RGCNRepresentation`
-    - :class:`~pykeen.nn.representation.SingleCompGCNRepresentation`
-    - :class:`~pykeen.nn.pyg.MessagePassingRepresentation`
-    - :class:`~pykeen.nn.pyg.FeaturizedMessagePassingRepresentation`
-    - :class:`~pykeen.nn.pyg.SimpleMessagePassingRepresentation`
-    - :class:`~pykeen.nn.pyg.TypedMessagePassingRepresentation`
-
-    - :class:`~pykeen.nn.vision.representation.VisualRepresentation`
-    - :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation`
-
-    - :class:`~pykeen.nn.representation.TextRepresentation`
-    - :class:`~pykeen.nn.representation.WikidataTextRepresentation`
-
-    - :class:`~pykeen.nn.representation.BiomedicalCURIERepresentation`
-
-
-Message Passing
----------------
-Message passing representation modules enrich the representations of
-entities by aggregating the information from their graph neighborhood.
-Example implementations from PyKEEN include
-:class:`pykeen.nn.representation.RGCNRepresentation` which uses RGCN layers for
-enrichment, or :class:`pykeen.nn.representation.SingleCompGCNRepresentation`,
-which enrich via CompGCN layers.
-
-Another way to utilize message passing is via the modules provided in :mod:`pykeen.nn.pyg`,
-which allow to use the message passing layers from PyTorch Geometric
-to enrich base representations via message passing.
+.. note ::
+    To support efficient training and inference, all representations accept 
+    batches of indices of arbitrary shape, and return batches of corresponding numeric representations.
+    The batch dimensions always precede the actual shape of the returned numerical representations.
+ 
+        
+Embedding
+---------
+- :class:`~pykeen.nn.representation.Embedding`
+    a lookup table
 
 Decomposition
 -------------
+- Combination / Adapter / Decomposition
+        - :class:`~pykeen.nn.representation.LowRankRepresentation`
+        low rank factorization; base representation; learnable weights
+        - :class:`~pykeen.nn.representation.PartitionRepresentation`
+        base representations; each index is assigned to one of them
+        - :class:`~pykeen.nn.representation.BackfillRepresentation`
+        partition, with two bases; main + backfill for OOV
+        - :class:`~pykeen.nn.representation.TransformedRepresentation`
+        (learnable) transformation upon existing
+        - :class:`~pykeen.nn.representation.CombinedRepresentation`
+        bases representations for each index + combination operation
+        - :class:`~pykeen.nn.representation.SubsetRepresentation`
+        base representation; some indices are hidden
+        - :class:`~pykeen.nn.representation.TensorTrainRepresentation`
+        tensor train factorization; corresponds to hierarchical decomposition
+        - :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`
+        each index is represented by a sequence of tokens; each token has a representation
+        - :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`
+        uses one or TokenizationRepresentation; combines them into a singel representation
+
 Since knowledge graphs may contain a large number of entities, having
 independent trainable embeddings for each of them may result in an
 excessive amount of trainable parameters. Therefore, methods have been
@@ -104,8 +81,32 @@ relations (including inverse relations) as tokens.
 
 .. seealso:: https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
 
+Message Passing
+---------------
+- Message Passing
+        - :class:`~pykeen.nn.message_passing.RGCNRepresentation`
+        - :class:`~pykeen.nn.representation.SingleCompGCNRepresentation`
+        - :class:`~pykeen.nn.pyg.MessagePassingRepresentation`
+        - :class:`~pykeen.nn.pyg.FeaturizedMessagePassingRepresentation`
+        - :class:`~pykeen.nn.pyg.SimpleMessagePassingRepresentation`
+        - :class:`~pykeen.nn.pyg.TypedMessagePassingRepresentation`
+Message passing representation modules enrich the representations of
+entities by aggregating the information from their graph neighborhood.
+Example implementations from PyKEEN include
+:class:`pykeen.nn.representation.RGCNRepresentation` which uses RGCN layers for
+enrichment, or :class:`pykeen.nn.representation.SingleCompGCNRepresentation`,
+which enrich via CompGCN layers.
+
+Another way to utilize message passing is via the modules provided in :mod:`pykeen.nn.pyg`,
+which allow to use the message passing layers from PyTorch Geometric
+to enrich base representations via message passing.
+
 Text-based
 ----------
+- Text-Based
+        - :class:`~pykeen.nn.representation.TextRepresentation`
+        - :class:`~pykeen.nn.representation.WikidataTextRepresentation`
+        - :class:`~pykeen.nn.representation.BiomedicalCURIERepresentation`
 Text-based representations use the entities' (or relations') labels to
 derive representations. To this end,
 :class:`pykeen.nn.representation.TextRepresentation` uses a
@@ -203,3 +204,9 @@ this will change.
 
 To learn more about CURIEs, please take a look at the `Bioregistry <https://bioregistry.io>`_
 and `this blog post on CURIEs <https://cthoyt.com/2021/09/14/curies.html>`_.
+
+Visual
+------
+- Visual
+        - :class:`~pykeen.nn.vision.representation.VisualRepresentation`
+        - :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation`
