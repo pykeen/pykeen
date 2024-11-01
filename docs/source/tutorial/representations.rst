@@ -165,72 +165,22 @@ the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
 predictions for entities not seen during training.
 
-.. todo ::
-    extract into file
-
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-    from pykeen.datasets import get_dataset
-    from pykeen.nn import TextRepresentation
-    from pykeen.models import ERModel
-
-    dataset = get_dataset(dataset="nations")
-    entity_representations = TextRepresentation.from_dataset(
-        triples_factory=dataset,
-        encoder="transformer",
-    )
-    result = pipeline(
-        dataset=dataset,
-        model=ERModel,
-        model_kwargs=dict(
-            interaction="ermlpe",
-            interaction_kwargs=dict(
-                embedding_dim=entity_representations.shape[0],
-            ),
-            entity_representations=entity_representations,
-            relation_representations_kwargs=dict(
-                shape=entity_representations.shape,
-            ),
-        ),
-        training_kwargs=dict(
-            num_epochs=1,
-        ),
-    )
-    model = result.model
+.. literalinclude:: ../examples/representations/text_based.py
+    :lines: 3-27
 
 We can use the label-encoder part to generate representations for
 unknown entities with labels. For instance, `"uk"` is an entity in
 `nations`, but we can also put in `"united kingdom"`, and get a
 roughly equivalent vector representations
 
-.. code-block:: python
-
-    entity_representation = model.entity_representations[0]
-    label_encoder = entity_representation.encoder
-    uk, united_kingdom = label_encoder(labels=["uk", "united kingdom"])
+.. literalinclude:: ../examples/representations/text_based.py
+    :lines: 30-33
 
 Thus, if we would put the resulting representations into the interaction
 function, we would get similar scores
 
-.. code-block:: python
-
-    # true triple from train: ['brazil', 'exports3', 'uk']
-    relation_representation = model.relation_representations[0]
-    h_repr = entity_representation.get_in_more_canonical_shape(
-        dim="h",
-        indices=torch.as_tensor(dataset.entity_to_id["brazil"]).view(1),
-    )
-    r_repr = relation_representation.get_in_more_canonical_shape(
-        dim="r",
-        indices=torch.as_tensor(dataset.relation_to_id["exports3"]).view(1),
-    )
-    scores = model.interaction(
-        h=h_repr,
-        r=r_repr,
-        t=torch.stack([uk, united_kingdom]),
-    )
-    print(scores)
+.. literalinclude:: ../examples/representations/text_based.py
+    :lines: 34-
 
 As a downside, this will usually substantially increase the
 computational cost of computing triple scores.
