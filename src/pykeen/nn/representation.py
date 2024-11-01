@@ -1676,24 +1676,24 @@ class TransformedRepresentation(Representation):
 @parse_docdata
 class TensorTrainRepresentation(Representation):
     r"""
-        A tensor factorization of representations.
+    A tensor factorization of representations.
 
-        In the simple case without provided assignment this corresponds to `TT-emb` described in
-        https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
+    In the simple case without provided assignment this corresponds to `TT-emb` described in
+    https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
 
-        where
+    where
 
-        .. math ::
+    .. math ::
 
-            \mathbf{A}[i_1 \cdot \ldots \cdot i_k, j_1 \cdot \ldots \cdot j_k]
-                = \sum_{r_i, \ldots, r_k} \mathbf{G}_1[0, i_1, j_1, r_1]
-                    \cdot \mathbf{G}_2[r_1, i_2, j_2, r_2]
-                    \cdot \ldots
-                    \cdot \mathbf{G}_k[r_k, i_k, j_k, 0]
+        \mathbf{A}[i_1 \cdot \ldots \cdot i_k, j_1 \cdot \ldots \cdot j_k]
+            = \sum_{r_i, \ldots, r_k} \mathbf{G}_1[0, i_1, j_1, r_1]
+                \cdot \mathbf{G}_2[r_1, i_2, j_2, r_2]
+                \cdot \ldots
+                \cdot \mathbf{G}_k[r_k, i_k, j_k, 0]
 
-        with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times m_i \times n_i \times R_i$ and $R_0 = R_d = 1$.
+    with TT core $\mathbf{G}_i$ of shape $R_{i-1} \times m_i \times n_i \times R_i$ and $R_0 = R_d = 1$.
 
-        Another variant in the paper used an assignment based on hierarchical topological clustering.
+    Another variant in the paper used an assignment based on hierarchical topological clustering.
 
     .. seealso::
         - https://en.wikipedia.org/wiki/Matrix_product_state
