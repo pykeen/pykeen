@@ -254,7 +254,7 @@ class SubsetRepresentation(Representation):
         Initialize the representations.
 
         :param max_id:
-            the maximum number of relations.
+            the number of representations
         :param base:
             the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         :param base_kwargs:
