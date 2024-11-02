@@ -88,6 +88,26 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+#: A resolver for constrainers.
+#:
+#: - :func:`torch.nn.functional.normalize`
+#: - :func:`complex_normalize`
+#: - :func:`torch.clamp`
+#: - :func:`clamp_norm`
+constrainer_resolver = FunctionResolver(
+    [functional.normalize, complex_normalize, torch.clamp, clamp_norm],
+    location="pykeen.nn.representation.constrainer_resolver",
+)
+
+#: A resolver for normalizers.
+#:
+#: - :func:`torch.nn.functional.normalize`
+normalizer_resolver = FunctionResolver(
+    [functional.normalize],
+    location="pykeen.nn.representation.normalizer_resolver",
+)
+
+
 class Representation(nn.Module, ExtraReprMixin, ABC):
     """
     A base class for obtaining representations for entities/relations.
@@ -124,6 +144,10 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
     #: dropout
     dropout: nn.Dropout | None
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("normalizer", normalizer_resolver),
+        ResolverKey("regularizer", regularizer_resolver),
+    )
     def __init__(
         self,
         max_id: int,
@@ -327,6 +351,10 @@ class Embedding(Representation):
     regularizer: Regularizer | None
     dropout: nn.Dropout | None
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("initializer", initializer_resolver),
+        ResolverKey("constrainer", constrainer_resolver),
+    )
     def __init__(
         self,
         max_id: int | None = None,
@@ -595,36 +623,30 @@ def process_max_id(max_id: int | None, num_embeddings: int | None) -> int:
     return max_id
 
 
-#: Constrainers
-#:
-#: - :func:`torch.nn.functional.normalize`
-#: - :func:`complex_normalize`
-#: - :func:`torch.clamp`
-#: - :func:`clamp_norm`
-constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
-
-#: Normalizers, which has by default:
-#:
-#: - :func:`torch.nn.functional.normalize`
-normalizer_resolver = FunctionResolver([functional.normalize])
-
-
 class CompGCNLayer(nn.Module):
     """A single layer of the CompGCN model."""
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("composition", composition_resolver),
+        ResolverKey("edge_weighting", edge_weight_resolver),
+        ResolverKey("activation", activation_resolver),
+    )
     def __init__(
         self,
         input_dim: int,
         output_dim: int | None = None,
+        *,
         dropout: float = 0.0,
         use_bias: bool = True,
         use_relation_bias: bool = False,
         composition: Hint[CompositionModule] = None,
+        composition_kwargs: OptionalKwargs = None,
         attention_heads: int = 4,
         attention_dropout: float = 0.1,
         activation: HintOrType[nn.Module] = nn.Identity,
         activation_kwargs: Mapping[str, Any] | None = None,
         edge_weighting: HintType[EdgeWeighting] = SymmetricEdgeWeighting,
+        edge_weighting_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the module.
@@ -641,6 +663,8 @@ class CompGCNLayer(nn.Module):
             Whether to use a bias for the relation transformation.
         :param composition:
             The composition function.
+        :param composition_kwargs:
+            Additional keyword based arguments passed to the composition.
         :param attention_heads:
             Number of attention heads when using the attention weighting
         :param attention_dropout:
@@ -652,6 +676,14 @@ class CompGCNLayer(nn.Module):
         :param edge_weighting:
             A pre-instantiated :class:`EdgeWeighting`, a class, or name to look
             up with :class:`class_resolver`.
+        :param edge_weighting_kwargs:
+            Additional keyword based arguments passed to the edge weighting.
+            Note that the following keyword arguments for :class:`CompGCNLayer` are automatically
+            shuttled in here:
+
+            - ``output_dim`` (or ``input_dim``, if output dimension is not given) is passed to ``message_dim``
+            - ``attention_dropout`` is passed to ``dropout``
+            - ``attention_heads`` is passed to ``num_heads``
         """
         super().__init__()
 
@@ -659,11 +691,15 @@ class CompGCNLayer(nn.Module):
         output_dim = output_dim or input_dim
 
         # entity-relation composition
-        self.composition = composition_resolver.make(composition)
+        self.composition = composition_resolver.make(composition, composition_kwargs)
 
         # edge weighting
         self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(
-            edge_weighting, message_dim=output_dim, dropout=attention_dropout, num_heads=attention_heads
+            edge_weighting,
+            edge_weighting_kwargs,
+            message_dim=output_dim,
+            dropout=attention_dropout,
+            num_heads=attention_heads,
         )
 
         # message passing weights
@@ -1172,6 +1208,7 @@ class CombinedRepresentation(Representation):
     #: the combination module
     combination: Combination
 
+    @update_docstring_with_resolver_keys(ResolverKey("combination", combination_resolver))
     def __init__(
         self,
         max_id: int,

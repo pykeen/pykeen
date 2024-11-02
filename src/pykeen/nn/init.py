@@ -490,6 +490,7 @@ initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
         if not func.startswith("_") and func.endswith("_") and func not in {"xavier_normal_", "xavier_uniform_"}
     ],
     default=torch.nn.init.normal_,
+    location="pykeen.nn.init.initializer_resolver",
 )
 for func in [
     xavier_normal_,

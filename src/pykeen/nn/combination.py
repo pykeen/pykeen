@@ -15,6 +15,7 @@ from ..utils import ExtraReprMixin, combine_complex, split_complex
 
 __all__ = [
     "Combination",
+    "combination_resolver",
     # Concrete classes
     "ComplexSeparatedCombination",
     "ConcatCombination",
@@ -310,7 +311,9 @@ class GatedCombination(Combination):
         return self.dropout(z * h + (1 - z) * xs[0])
 
 
+#: Resolve combinations
 combination_resolver: ClassResolver[Combination] = ClassResolver.from_subclasses(
     base=Combination,
     default=ConcatCombination,
+    location="pykeen.nn.combination.combination_resolver",
 )
