@@ -147,8 +147,6 @@ class Representation(nn.Module, ExtraReprMixin, ABC):
     @update_docstring_with_resolver_keys(
         ResolverKey("normalizer", normalizer_resolver),
         ResolverKey("regularizer", regularizer_resolver),
-        # TODO: cyclic import
-        # ResolverKey("normalizer", resolver="pykeen.nn.normalizer_resolver"),
     )
     def __init__(
         self,
