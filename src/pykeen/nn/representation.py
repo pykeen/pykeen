@@ -1695,12 +1695,12 @@ class TensorTrainRepresentation(Representation):
         - https://en.wikipedia.org/wiki/Matrix_product_state
         - http://tensorly.org/stable/user_guide/tensor_decomposition.html#matrix-product-state-tensor-train-decomposition
 
-        ---
-        name: Tensor-Train
-        author: Yin
-        year: 2022
-        arxiv: 2206.10581
-        link: https://arxiv.org/abs/2206.10581
+    ---
+    name: Tensor-Train
+    author: Yin
+    year: 2022
+    arxiv: 2206.10581
+    link: https://arxiv.org/abs/2206.10581
     """
 
     #: shape: (max_id, num_cores)
