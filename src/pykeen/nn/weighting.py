@@ -235,5 +235,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
 
 #: A resolver for R-GCN edge weighting implementations
 edge_weight_resolver: ClassResolver[EdgeWeighting] = ClassResolver.from_subclasses(
-    base=EdgeWeighting, default=SymmetricEdgeWeighting
+    base=EdgeWeighting,
+    default=SymmetricEdgeWeighting,
+    location="pykeen.nn.weighting.edge_weight_resolver",
 )
