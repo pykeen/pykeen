@@ -1206,9 +1206,11 @@ class CombinedRepresentation(Representation):
     #: the combination module
     combination: Combination
 
-    # TODO: circular import issue
-    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"))
-    @update_docstring_with_resolver_keys(ResolverKey("combination", combination_resolver))
+    @update_docstring_with_resolver_keys(
+        ResolverKey("combination", combination_resolver),
+        # TODO: circular import issue
+        # ResolverKey(name="base", resolver="pykeen.nn.representation_resolver")
+    )
     def __init__(
         self,
         max_id: int,
