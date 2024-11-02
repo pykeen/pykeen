@@ -270,8 +270,7 @@ class SubsetRepresentation(Representation):
     name: Subset Representation
     """
 
-    # TODO: circular import issue
-    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"))
+    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"))
     def __init__(
         self,
         max_id: int,
@@ -1208,8 +1207,7 @@ class CombinedRepresentation(Representation):
 
     @update_docstring_with_resolver_keys(
         ResolverKey("combination", combination_resolver),
-        # TODO: circular import issue
-        # ResolverKey(name="base", resolver="pykeen.nn.representation_resolver")
+        ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"),
     )
     def __init__(
         self,
@@ -1440,8 +1438,7 @@ class PartitionRepresentation(Representation):
     #: the assignment from global ID to (representation, local id), shape: (max_id, 2)
     assignment: LongTensor
 
-    # TODO: circular import issue
-    # @update_docstring_with_resolver_keys(ResolverKey(name="bases", resolver="pykeen.nn.representation_resolver"))
+    @update_docstring_with_resolver_keys(ResolverKey(name="bases", resolver="pykeen.nn.representation_resolver"))
     def __init__(
         self,
         assignment: LongTensor,
@@ -1547,11 +1544,10 @@ class BackfillRepresentation(PartitionRepresentation):
     name: Backfill
     """
 
-    # TODO: circular import issue
-    # @update_docstring_with_resolver_keys(
-    #    ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"),
-    #    ResolverKey(name="backfill", resolver="pykeen.nn.representation_resolver"),
-    # )
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"),
+        ResolverKey(name="backfill", resolver="pykeen.nn.representation_resolver"),
+    )
     def __init__(
         self,
         max_id: int,
@@ -1626,8 +1622,7 @@ class TransformedRepresentation(Representation):
     name: Transformed
     """
 
-    # TODO: circular import issue
-    # @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"))
+    @update_docstring_with_resolver_keys(ResolverKey(name="base", resolver="pykeen.nn.representation_resolver"))
     def __init__(
         self,
         transformation: nn.Module,
@@ -1897,8 +1892,7 @@ class TensorTrainRepresentation(Representation):
         if n_prod < s_prod:
             raise ValueError(f"prod(ns)={n_prod} < prod(shape)={s_prod}")
 
-    # TODO: circular import issue
-    # @update_docstring_with_resolver_keys(ResolverKey(name="bases", resolver="pykeen.nn.representation_resolver"))
+    @update_docstring_with_resolver_keys(ResolverKey(name="bases", resolver="pykeen.nn.representation_resolver"))
     def __init__(
         self,
         assignment: LongTensor | None = None,
