@@ -16,10 +16,6 @@ import numpy
 import numpy as np
 import torch
 import torch.nn
-from docdata import parse_docdata
-from torch import nn
-from torch.nn import functional
-
 from class_resolver import (
     FunctionResolver,
     HintOrType,
@@ -30,6 +26,10 @@ from class_resolver import (
     update_docstring_with_resolver_keys,
 )
 from class_resolver.contrib.torch import activation_resolver
+from docdata import parse_docdata
+from torch import nn
+from torch.nn import functional
+
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
