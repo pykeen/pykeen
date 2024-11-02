@@ -663,6 +663,8 @@ class CompGCNLayer(nn.Module):
             Whether to use a bias for the relation transformation.
         :param composition:
             The composition function.
+        :param composition_kwargs:
+            Additional keyword based arguments passed to the composition.
         :param attention_heads:
             Number of attention heads when using the attention weighting
         :param attention_dropout:
@@ -674,6 +676,14 @@ class CompGCNLayer(nn.Module):
         :param edge_weighting:
             A pre-instantiated :class:`EdgeWeighting`, a class, or name to look
             up with :class:`class_resolver`.
+        :param edge_weighting_kwargs:
+            Additional keyword based arguments passed to the edge weighting.
+            Note that the following keyword arguments for :class:`CompGCNLayer` are automatically
+            shuttled in here:
+
+            - ``output_dim`` (or ``input_dim``, if output dimension is not given) is passed to ``message_dim``
+            - ``attention_dropout`` is passed to ``dropout``
+            - ``attention_heads`` is passed to ``num_heads``
         """
         super().__init__()
 
