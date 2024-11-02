@@ -165,7 +165,7 @@ the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
 predictions for entities not seen during training.
 
-.. literalinclude:: ../examples/representations/text_based.py
+.. literalinclude:: ../examples/nn/representation/text_based.py
     :lines: 3-27
 
 We can use the label-encoder part to generate representations for
@@ -173,13 +173,13 @@ unknown entities with labels. For instance, `"uk"` is an entity in
 `nations`, but we can also put in `"united kingdom"`, and get a
 roughly equivalent vector representations
 
-.. literalinclude:: ../examples/representations/text_based.py
+.. literalinclude:: ../examples/nn/representation/text_based.py
     :lines: 30-33
 
 Thus, if we would put the resulting representations into the interaction
 function, we would get similar scores
 
-.. literalinclude:: ../examples/representations/text_based.py
+.. literalinclude:: ../examples/nn/representation/text_based.py
     :lines: 34-
 
 As a downside, this will usually substantially increase the
@@ -191,7 +191,8 @@ Since quite a few benchmark datasets for link prediction on knowledge graphs use
 `Wikidata <https://www.wikidata.org>`_ as a source, e.g.,
 :class:`~pykeen.datasets.codex.CoDExSmall` or :class:`~pykeen.datasets.wd50k.WD50KT`,
 we added a convenience class :class:`~pykeen.nn.representation.WikidataTextRepresentation`
-that looks up labels based on Wikidata Ids.
+that looks up labels based on Wikidata QIDs
+(e.g., `Q42 <https://www.wikidata.org/wiki/Q42>`_ for Douglas Adams).
 
 Biomedical Entities
 ~~~~~~~~~~~~~~~~~~~
@@ -219,4 +220,4 @@ Wikidata
 ~~~~~~~~
 As for textual representations, we provide a convenience class
 :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation` for Wikidata-based datasets
-that looks up labels based on Wikidata Ids.
+that looks up labels based on Wikidata QIDs.
