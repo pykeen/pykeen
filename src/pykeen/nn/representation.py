@@ -1162,8 +1162,8 @@ class TextRepresentation(Representation):
 class CombinedRepresentation(Representation):
     """Combined representation.
 
-    It has a sequence of base representations, each providing representations for each index.
-    A combination is used to combine the multiple representations into a single one.
+    It has a sequence of base representations, each providing a representation for each index.
+    A combination is used to combine the multiple representations for the same index into a single one.
 
     ---
     name: Combined
@@ -1182,10 +1182,13 @@ class CombinedRepresentation(Representation):
     )
     def __init__(
         self,
-        max_id: int,
+        max_id: int | None,
         shape: OneOrSequence[int] | None = None,
+        unique: bool | None = None,
         base: OneOrManyHintOrType[Representation] = None,
         base_kwargs: OneOrManyOptionalKwargs = None,
+        # TODO: we could relax that to Callable[[Sequence[Representation]], Representation]
+        #   to make it easier to create ad-hoc combinations
         combination: HintOrType[Combination] = None,
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -1194,9 +1197,18 @@ class CombinedRepresentation(Representation):
         Initialize the representation.
 
         :param max_id:
-            The number of representations.
+            The number of representations. If `None`, it will be inferred from the base representations.
         :param shape:
             The shape of an individual representation.
+        :param unique:
+            Whether to optimize for calculating representations for same indices only once. This is only useful if the
+            calculation of representations is significantly more expensive than an index-based lookup and
+            duplicate indices are expected, e.g., when using negative sampling and large batch sizes.
+            If `None` it is inferred from the base representations.
+
+            .. warning ::
+                When using this optimization you may encounter unexpected results for stochastic operations, e.g.,
+                :class:`torch.nn.Dropout`.
 
         :param base:
             The base representations, or hints thereof.
@@ -1209,8 +1221,7 @@ class CombinedRepresentation(Representation):
             Additional keyword-based parameters used to instantiate the combination.
 
         :param kwargs:
-            additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`.
-            May not contain any of `{max_id, shape, unique}`.
+            Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`.
 
         :raises ValueError:
             If the `max_id` of the base representations does not match.
@@ -1233,27 +1244,30 @@ class CombinedRepresentation(Representation):
         if max_id != max_ids[0]:
             raise ValueError(f"max_id={max_id} does not match base max_id={max_ids[0]}")
 
+        if unique is None:
+            unique = all(b.unique for b in base)
+
         # shape inference
         shape = ShapeError.verify(shape=combination.output_shape(input_shapes=[b.shape for b in base]), reference=shape)
-        super().__init__(max_id=max_id, shape=shape, unique=all(b.unique for b in base), **kwargs)
+        super().__init__(max_id=max_id, shape=shape, unique=unique, **kwargs)
 
         # assign base representations *after* super init
         self.base = nn.ModuleList(base)
         self.combination = combination
 
     @staticmethod
-    def combine(
+    def _combine(
         combination: nn.Module, base: Sequence[Representation], indices: LongTensor | None = None
     ) -> FloatTensor:
         """
         Combine base representations for the given indices.
 
-        :param combination: the combination
-        :param base: the base representations
-        :param indices: the indices, as given to :meth:`Representation._plain_forward`
+        :param combination: The combination.
+        :param base: The base representations.
+        :param indices: The indices, as given to :meth:`Representation._plain_forward`.
 
         :return:
-            the combined representations for the given indices
+            The combined representations for the given indices.
         """
         return combination([b._plain_forward(indices=indices) for b in base])
 
@@ -1262,7 +1276,7 @@ class CombinedRepresentation(Representation):
         self,
         indices: LongTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        return self.combine(combination=self.combination, base=self.base, indices=indices)
+        return self._combine(combination=self.combination, base=self.base, indices=indices)
 
 
 class CachedTextRepresentation(TextRepresentation):
