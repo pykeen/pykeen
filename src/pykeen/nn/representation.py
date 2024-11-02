@@ -1620,7 +1620,7 @@ class TransformedRepresentation(Representation):
     In the following example, we create representations which are obtained from a trainable transformation of fixed
     random walk encoding features, and transform them using a 2-layer MLP.
 
-    .. literalinclude:: ../examples/nn/representations/transformed.py
+    .. literalinclude:: ../examples/nn/representation/transformed.py
 
     ---
     name: Transformed
