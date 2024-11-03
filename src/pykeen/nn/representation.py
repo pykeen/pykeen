@@ -482,10 +482,10 @@ class LowRankRepresentation(Representation):
     Low-rank embedding factorization.
 
     This representation reduces the number of trainable parameters by not learning independent weights for each index,
-    but rather having shared bases among all indices, and only learn the weights of the linear combination.
+    but rather having shared bases for all indices and learning only the weights of the linear combination.
 
     .. math ::
-        E[i] = \sum_k B[i, k] * W[k]
+        E[i] = \sum_k B[i, k] \cdot W[k]
 
     ---
     name: Low Rank Embedding
@@ -504,15 +504,17 @@ class LowRankRepresentation(Representation):
         Initialize the representations.
 
         :param max_id:
-            the maximum ID (exclusively). Valid Ids reach from 0, ..., max_id-1
+            The maximum ID (exclusively). Valid Ids reach from ``0`` to ``max_id-1``.
         :param shape:
-            the shape of an individual base representation.
+            The shape of an individual base representation.
+
         :param num_bases:
-            the number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
+            The number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
         :param weight_initializer:
-            the initializer for basis weights
+            The initializer for basis weights.
+
         :param kwargs:
-            additional keyword based arguments passed to :class:`pykeen.nn.representation.Embedding`, which is used
+            Additional keyword based arguments passed to :class:`~pykeen.nn.representation.Embedding`, which is used
             for the base representations.
         """
         super().__init__(max_id=max_id, shape=shape)
@@ -529,18 +531,18 @@ class LowRankRepresentation(Representation):
 
         .. note ::
 
-            While this method tries to find a good approximation of the base representation, you may lose all (useful)
+            While this method tries to find a good approximation of the base representation, you may lose any (useful)
             inductive biases you had with the original one, e.g., from shared tokens in
-            :class:`pykeen.representation.NodePieceRepresentation`.
+            :class:`~pykeen.nn.node_piece.NodePieceRepresentation`.
 
         :param other:
-            the other representation
+            The representation to approximate.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`LowRankRepresentation.__init__`. Must not contain
-            `max_id` nor `shape`, which are determined by `other`
+            Additional keyword-based parameters passed to :meth:`__init__`. Must not contain
+            ``max_id`` nor ``shape``, which are determined by ``other``.
 
         :return:
-            a low-rank approximation obtained via (truncated) SVD
+            A low-rank approximation obtained via (truncated) SVD, cf. :func:`torch.svd_lowrank`.
         """
         # create low-rank approximation object
         r = cls(max_id=other.max_id, shape=other.shape, **kwargs)
