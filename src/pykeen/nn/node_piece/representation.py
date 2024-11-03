@@ -240,13 +240,13 @@ class HashDiversityInfo(NamedTuple):
 @parse_docdata
 class NodePieceRepresentation(CombinedRepresentation):
     r"""
-    Basic implementation of node piece decomposition [galkin2021]_.
+    Basic implementation of NodePiece decomposition [galkin2021]_.
 
     .. math ::
-        x_e = agg(\{T[t] \mid t \in tokens(e) \})
+        x_e = \textit{agg}(\{T[t] \mid t \in \textit{tok}(e) \})
 
-    where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
-    an aggregation function, which aggregates the individual token representations to a single entity representation.
+    where $T$ are token representations, *tok* selects a fixed number of $k$ tokens for each index, and *agg* is
+    an aggregation function, which aggregates the individual token representations to a single representation.
 
     ---
     name: NodePiece
@@ -257,6 +257,11 @@ class NodePieceRepresentation(CombinedRepresentation):
         github: https://github.com/migalkin/NodePiece
     """
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("token_representations", resolver="pykeen.nn.representation_resolver"),
+        ResolverKey("tokenizers", resolver="pykeen.nn.node_piece.tokenizer_resolver"),
+        ResolverKey("aggregation", resolver="class_resolver.contrib.torch.aggregation_resolver"),
+    )
     def __init__(
         self,
         *,
@@ -267,6 +272,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         tokenizers_kwargs: OneOrManyOptionalKwargs = None,
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[FloatTensor, int], FloatTensor]] = None,
+        aggregation_kwargs: OptionalKwargs = None,
         max_id: Optional[int] = None,
         **kwargs,
     ):
@@ -274,19 +280,22 @@ class NodePieceRepresentation(CombinedRepresentation):
         Initialize the representation.
 
         :param triples_factory:
-            the triples factory
+            The triples factory, required for tokenization.
+
         :param token_representations:
-            the token representation specification, or pre-instantiated representation module.
+            The token representation specification, or pre-instantiated representation module.
         :param token_representations_kwargs:
-            additional keyword-based parameters
+            Additional keyword-based parameters.
+
         :param tokenizers:
-            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+            The tokenizer to use.
         :param tokenizers_kwargs:
-            additional keyword-based parameters passed to the tokenizer upon construction.
+            Additional keyword-based parameters passed to the tokenizer upon construction.
+
         :param num_tokens:
-            the number of tokens for each entity.
+            The number of tokens for each entity.
         :param aggregation:
-            aggregation of multiple token representations to a single entity representation. By default,
+            Aggregation of multiple token representations to a single entity representation. By default,
             this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
             torch function, e.g. "mean" for :func:`torch.mean`, or "sum" for func:`torch.sum`. An aggregation can
             also have trainable parameters, .e.g., ``MLP(mean(MLP(tokens)))`` (cf. DeepSets from [zaheer2017]_). In
@@ -298,9 +307,9 @@ class NodePieceRepresentation(CombinedRepresentation):
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
         :param max_id:
-            Only pass this to check if the number of entities in the triples factories is the same
+            Only pass this to check if the number of entities in the triples factories is the same.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`CombinedRepresentation.__init__`
+            Additional keyword-based parameters passed to :class:`pykeen.nn.representation.CombinedRepresentation`.
         """
         if max_id:
             assert max_id == triples_factory.num_entities
@@ -347,7 +356,9 @@ class NodePieceRepresentation(CombinedRepresentation):
             max_id=triples_factory.num_entities,
             base=token_representations,
             combination=ConcatAggregationCombination,
-            combination_kwargs=dict(aggregation=aggregation, dim=-len(token_representations[0].shape)),
+            combination_kwargs=dict(
+                aggregation=aggregation, aggregation_kwargs=aggregation_kwargs, dim=-len(token_representations[0].shape)
+            ),
             **kwargs,
         )
 
@@ -371,20 +382,7 @@ class NodePieceRepresentation(CombinedRepresentation):
 
         Example usage:
 
-        .. code-block::
-
-            from pykeen.model import NodePiece
-
-            model = NodePiece(
-                triples_factory=dataset.training,
-                tokenizers=["AnchorTokenizer", "RelationTokenizer"],
-                num_tokens=[20, 12],
-                embedding_dim=64,
-                interaction="rotate",
-                relation_constrainer="complex_normalize",
-                entity_initializer="xavier_uniform_",
-            )
-            print(model.entity_representations[0].estimate_diversity())
+        .. literalinclude:: ../examples/nn/representation/node_piece_diversity.py
 
         .. seealso:: https://github.com/pykeen/pykeen/pull/896
         """
