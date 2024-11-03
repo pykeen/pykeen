@@ -603,7 +603,7 @@ class RGCNRepresentation(Representation):
 
         :param edge_weighting:
             The edge weighting mechanism.
-        :param edge_weighting:
+        :param edge_weighting_kwargs:
             Additional keyword-based parameters for the edge weighting.
 
         :param decomposition:
