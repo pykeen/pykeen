@@ -1694,10 +1694,9 @@ class TransformedRepresentation(Representation):
 @parse_docdata
 class TensorTrainRepresentation(Representation):
     r"""
-    A tensor factorization of representations.
+    A tensor train factorization of representations.
 
-    In the simple case without provided assignment this corresponds to `TT-emb` described in
-    https://assets.amazon.science/5c/0f/dd3eb08c4df88f2b4722e5fa8a7c/nimble-gnn-embedding-with-tensor-train-decomposition.pdf
+    In the simple case without provided assignment this corresponds to ``TT-emb`` described in [yin2022]_.
 
     where
 
@@ -1714,8 +1713,9 @@ class TensorTrainRepresentation(Representation):
     Another variant in the paper used an assignment based on hierarchical topological clustering.
 
     .. seealso::
-        - https://en.wikipedia.org/wiki/Matrix_product_state
-        - http://tensorly.org/stable/user_guide/tensor_decomposition.html#matrix-product-state-tensor-train-decomposition
+        - `Wikipedia: Matrix Product State <https://en.wikipedia.org/wiki/Matrix_product_state>`_
+        - `TensorLy: Matrix-Product-State / Tensor-Train Decomposition
+          <http://tensorly.org/stable/user_guide/tensor_decomposition.html#matrix-product-state-tensor-train-decomposition>`_
 
     ---
     name: Tensor-Train
@@ -1735,42 +1735,44 @@ class TensorTrainRepresentation(Representation):
     def factor_sizes(cls, max_id: int, shape: Sequence[int], num_cores: int) -> tuple[Sequence[int], Sequence[int]]:
         r"""Factor the representation shape into smaller shapes for the cores.
 
+        .. note ::
+            This method implements a very simple heuristic of using the same value for each $m_i$ / $n_i$.
+
         :param max_id:
-            the number of representations, "row count", $M$
+            The number of representations, "row count", $M$.
         :param shape:
-            the shape of an individual representation, "column count", $N$
+            The shape of an individual representation, "column count", $N$.
         :param num_cores:
-            the number of cores, $k$
+            The number of cores, $k$.
 
         :return:
-            a tuple (ms, ns) of positive integer sequences of length $k$ fulfilling
+            A tuple ``(ms, ns)`` of positive integer sequences of length $k$ fulfilling
 
             .. math ::
 
-                \prod \limits_{m_i \in ms} m_i \geq M
-
-                \prod \limits_{n_i \in ns} n_i \geq N
+                M \leq \prod \limits_{m_i \in \textit{ms}} m_i \quad
+                N \leq \prod \limits_{n_i \in \textit{ns}} n_i
         """
         m_k = int(math.ceil(max_id ** (1 / num_cores)))
         n_k = int(math.ceil(numpy.prod(shape) ** (1 / num_cores)))
         return [m_k] * num_cores, [n_k] * num_cores
 
     @staticmethod
-    def check_assignment(assignment: torch.Tensor, max_id: int, num_cores: int, ms: Sequence[int]):
+    def check_assignment(assignment: torch.Tensor, max_id: int, num_cores: int, ms: Sequence[int]) -> None:
         """
-        Check that the assignment matches the other properties.
+        Check that the assignment match in shape and its values are valid core "row" indices.
 
-        :param assignment: shape: (max_id, num_cores)
-            the assignment
+        :param assignment: shape: ``(max_id, num_cores)``
+            The assignment.
         :param max_id:
-            the number of representations
+            The number of representations.
         :param num_cores:
-            the number of tensor-train cores
+            The number of tensor-train cores.
         :param ms:
-            the individual sizes $m_i$
+            The individual sizes $m_i$.
 
         :raises ValueError:
-            if the assignment is invalid
+            If the assignment is invalid.
         """
         # check shape
         if assignment.shape != (max_id, num_cores):
@@ -1792,12 +1794,12 @@ class TensorTrainRepresentation(Representation):
         Determine core shapes and einsum equation.
 
         :param ranks:
-            the core ranks
+            The core ranks.
         :param ns:
-            the sizes $n_i$
+            The sizes $n_i$.
         :return:
-            a pair (eq, shapes), where `eq` is a valid einsum equation and `shapes` a sequence of representation
-            shapes. Notice that the shapes do not include the "`max_id` dimension" of the resulting embedding.
+            A pair ``(eq, shapes)``, where ``eq`` is a valid einsum equation and ``shapes`` a sequence of representation
+            shapes. Notice that the shapes do not include the "``max_id`` dimension" of the resulting embedding.
         """
         shapes: list[list[int]] = []
         terms: list[list[str]] = []
@@ -1834,14 +1836,14 @@ class TensorTrainRepresentation(Representation):
         Create an assignment without using structural information.
 
         :param max_id:
-            the number of representations
+            The number of representations.
         :param num_cores:
-            the number of tensor cores
+            The number of tensor cores.
         :param ms:
-            the sizes $m_i$
+            The sizes $m_i$.
 
-        :return: shape: (max_id, num_cores)
-            the assignment
+        :return: shape: ``(max_id, num_cores)``
+            The assignment.
         """
         assignment = torch.empty(max_id, num_cores, dtype=torch.long)
         ids = torch.arange(max_id)
@@ -1852,29 +1854,31 @@ class TensorTrainRepresentation(Representation):
         return assignment
 
     @staticmethod
-    def check_factors(ms: Sequence[int], ns: Sequence[int], max_id: int, shape: tuple[int, ...], num_cores: int):
+    def check_factors(
+        ms: Sequence[int], ns: Sequence[int], max_id: int, shape: tuple[int, ...], num_cores: int
+    ) -> None:
         r"""
         Check whether the factors match the other parts.
 
         Verifies that
 
         .. math ::
-            \prod \limits_{m_i \in ms} m_i \geq M
-            \prod \limits_{n_i \in ns} n_i \geq N
+            M \leq \prod \limits_{m_i \in \textit{ms}} m_i \quad
+            N \leq \prod \limits_{n_i \in \textit{ns}} n_i
 
-        :param ms: length: num_cores
-            the $M$ factors $m_i$
-        :param ns: length: num_cores
-            the $N$ factors $n_i$
+        :param ms: length: ``num_cores``
+            The $M$ factors $m_i$.
+        :param ns: length: ``num_cores``
+            The $N$ factors $n_i$.
         :param max_id:
-            the maximum id, $M$
+            The maximum id, $M$.
         :param shape:
-            the shape, $N=prod(shape)$
+            The shape, $N=prod(shape)$.
         :param num_cores:
-            the number of cores
+            The number of cores.
 
         :raises ValueError:
-            if any of the conditions is violated
+            If any of the conditions is violated.
         """
         if len(ms) != num_cores or len(ns) != num_cores:
             raise ValueError(f"Invalid length: len(ms)={len(ms)}, len(ns)={len(ns)} vs. num_cores={num_cores}")
@@ -1900,21 +1904,21 @@ class TensorTrainRepresentation(Representation):
     ) -> None:
         """Initialize the representation.
 
-        :param assignment: shape: (max_id, num_cores)
-            the assignment on each level
+        :param assignment: shape: ``(max_id, num_cores)``
+            The core-assignment for each index on each level. If ``None``, :meth:`create_default_assignment` is used.
         :param num_cores:
-            the number of cores to use
-        :param ranks: length: num_cores - 1
-            the individual ranks. Note that $R_0 = R_d = 1$ should not be included
+            The number of cores to use.
+        :param ranks: length: ``num_cores - 1``
+            The individual ranks for each core. Note that $R_0 = R_d = 1$ should not be included.
         :param bases:
-            the base representations for each level, or hints thereof.
+            The base representations for each level, or hints thereof.
         :param bases_kwargs:
-            keyword-based parameters for the bases
+            Keyword-based parameters for the bases.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Representation.__init__`
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`
 
         :raises ValueError:
-            if the input validation on ranks or assignment failed
+            If the input validation on ranks or assignment failed.
         """
         # import here to avoid cyclic import
         from . import representation_resolver
