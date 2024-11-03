@@ -263,9 +263,7 @@ class MessagePassingRepresentation(Representation, ABC):
         return x
 
     @abstractmethod
-    def pass_messages(
-        self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None
-    ) -> FloatTensor:
+    def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:
         """
         Perform the message passing steps.
 
@@ -301,9 +299,7 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
     """
 
     # docstr-coverage: inherited
-    def pass_messages(
-        self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None
-    ) -> FloatTensor:  # noqa: D102
+    def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=edge_index))
         return x
@@ -357,9 +353,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
         return self.edge_type[edge_mask]
 
     # docstr-coverage: inherited
-    def pass_messages(
-        self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None
-    ) -> FloatTensor:  # noqa: D102
+    def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=edge_index, edge_type=edge_type))
@@ -428,9 +422,7 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
         self.relation_transformation = relation_transformation
 
     # docstr-coverage: inherited
-    def pass_messages(
-        self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None
-    ) -> FloatTensor:  # noqa: D102
+    def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         # get initial relation representations
         x_rel = self.relation_representation(indices=None)
