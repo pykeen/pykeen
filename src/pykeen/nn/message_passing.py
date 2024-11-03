@@ -582,9 +582,9 @@ class RGCNRepresentation(Representation):
             The shape information. If ``None``, will propagate the shape information of the base entity representations.
 
         :param entity_representations:
-            The base entity representations (or a hint for them)
+            The base entity representations (or a hint for them).
         :param entity_representations_kwargs:
-            Additional keyword-based parameters for the base entity representations
+            Additional keyword-based parameters for the base entity representations.
 
         :param num_layers:
             The number of layers.
@@ -603,6 +603,8 @@ class RGCNRepresentation(Representation):
 
         :param edge_weighting:
             The edge weighting mechanism.
+        :param edge_weighting:
+            Additional keyword-based parameters for the edge weighting.
 
         :param decomposition:
             The decomposition.

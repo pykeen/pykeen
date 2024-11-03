@@ -306,6 +306,8 @@ class NodePieceRepresentation(CombinedRepresentation):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
+        :param aggregation_kwargs:
+            Additional keyword-based parameters.
         :param max_id:
             Only pass this to check if the number of entities in the triples factories is the same.
         :param kwargs:
