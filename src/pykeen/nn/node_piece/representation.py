@@ -6,8 +6,16 @@ from collections.abc import Iterable
 from typing import Callable, NamedTuple, Optional, Union
 
 import torch
-from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver import (
+    HintOrType,
+    OneOrManyHintOrType,
+    OneOrManyOptionalKwargs,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from docdata import parse_docdata
+from typing_extensions import Self
 
 from .tokenization import Tokenizer, tokenizer_resolver
 from ..combination import ConcatAggregationCombination
@@ -29,15 +37,24 @@ logger = logging.getLogger(__name__)
 
 @parse_docdata
 class TokenizationRepresentation(Representation):
-    """A module holding the result of tokenization.
+    r"""A module holding the result of tokenization.
+
+    It represents each index by the concatenation of representations of the corresponding tokens.
+
+    .. math ::
+        [T[t] | t \in \textit{tok}(i)]
+
+    where $tok(i)$ denotes the sequence of token indices for the given index $i$,
+    and $T$ stores the representations for each token.
 
     ---
     name: Tokenization
     citation:
         author: Galkin
         year: 2021
+        arxiv: 2106.12144
         link: https://arxiv.org/abs/2106.12144
-        github: https://github.com/migalkin/NodePiece
+        github: migalkin/NodePiece
     """
 
     #: the token ID of the padding token
@@ -49,6 +66,9 @@ class TokenizationRepresentation(Representation):
     #: the assigned tokens for each entity
     assignment: LongTensor
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="token_representation", resolver="pykeen.nn.representation_resolver")
+    )
     def __init__(
         self,
         assignment: LongTensor,
@@ -60,19 +80,20 @@ class TokenizationRepresentation(Representation):
         """
         Initialize the tokenization.
 
-        :param assignment: shape: `(n, num_chosen_tokens)`
-            the token assignment.
-        :param token_representation: shape: `(num_total_tokens, *shape)`
-            the token representations
+        :param assignment: shape: ``(n, num_chosen_tokens)``
+            The token assignment.
+        :param token_representation: shape: ``(num_total_tokens, *shape)``
+            The token representations.
         :param token_representation_kwargs:
-            additional keyword-based parameters
+            Additional keyword-based parameters.
         :param shape:
-            The shape of an individual representation. If provided, has to match.
+            The shape of an individual representation. If provided, has to match
+            ``(assignment.shape[1], *token_representation.shape)``.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Representation.__init__`
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
 
-        :raises ValueError: if there's a mismatch between the representation size
-            and the vocabulary size
+        :raises ValueError:
+            If there's a mismatch between the representation size and the vocabulary size.
         """
         # needs to be lazily imported to avoid cyclic imports
         from .. import representation_resolver
@@ -126,37 +147,38 @@ class TokenizationRepresentation(Representation):
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
         **kwargs,
-    ) -> "TokenizationRepresentation":
+    ) -> Self:
         """
         Create a tokenization from applying a tokenizer.
 
         :param tokenizer:
-            the tokenizer instance.
+            The tokenizer instance.
         :param num_tokens:
-            the number of tokens to select for each entity.
-        :param token_representation:
-            the pre-instantiated token representations, class, or name of a class
+            The number of tokens to select for each entity.
+        :param token_representation: shape: ``(num_total_tokens, *shape)``
+            The token representations.
         :param token_representation_kwargs:
-            additional keyword-based parameters
+            Additional keyword-based parameters.
         :param mapped_triples:
-            the ID-based triples
+            The ID-based triples.
         :param num_entities:
-            the number of entities
+            The number of entities.
         :param num_relations:
-            the number of relations
+            The number of relations.
         :param kwargs:
-            additional keyword-based parameters passed to TokenizationRepresentation.__init__
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.node_piece.TokenizationRepresentation`.
+
         :return:
-            A tokenization representation by applying the tokenizer
+            A :class:`~pykeen.nn.node_piece.TokenizationRepresentation` by applying the tokenizer.
         """
         # apply tokenizer
-        vocabulary_size, assignment = tokenizer(
+        assignment = tokenizer(
             mapped_triples=mapped_triples,
             num_tokens=num_tokens,
             num_entities=num_entities,
             num_relations=num_relations,
-        )
-        return TokenizationRepresentation(
+        )[1]
+        return cls(
             assignment=assignment,
             token_representation=token_representation,
             token_representation_kwargs=token_representation_kwargs,
@@ -185,14 +207,14 @@ class TokenizationRepresentation(Representation):
 
     @property
     def num_tokens(self) -> int:
-        """Return the number of selected tokens for ID."""
+        """Return the number of selected tokens for each index."""
         return self.assignment.shape[1]
 
     def save_assignment(self, output_path: pathlib.Path):
         """Save the assignment to a file.
 
         :param output_path:
-            the output file path. Its parent directories will be created if necessary.
+            The output file path. Its parent directories will be created if necessary.
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self.assignment, output_path)
