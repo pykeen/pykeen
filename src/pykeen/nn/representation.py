@@ -1348,30 +1348,12 @@ class WikidataTextRepresentation(CachedTextRepresentation):
     Textual representations for datasets grounded in Wikidata.
 
     The label and description for each entity are obtained from Wikidata using
-    :class:`pykeen.nn.utils.WikidataCache` and encoded with :class:`TextRepresentation`.
+    :class:`~pykeen.nn.text.cache.WikidataTextCache` and encoded with
+    :class:`~pykeen.nn.representation.TextRepresentation`.
 
     Example usage:
 
-    .. code-block:: python
-
-        from pykeen.datasets import get_dataset
-        from pykeen.models import ERModel
-        from pykeen.nn import WikidataTextRepresentation
-        from pykeen.pipeline import pipeline
-
-        dataset = get_dataset(dataset="codexsmall")
-        entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset, encoder="transformer")
-        result = pipeline(
-            dataset=dataset,
-            model=ERModel,
-            model_kwargs=dict(
-                interaction="distmult",
-                entity_representations=entity_representations,
-                relation_representation_kwargs=dict(
-                    shape=entity_representations.shape,
-                ),
-            ),
-        )
+    .. literalinclude:: ../examples/nn/representation/text_wikidata.py
 
     ---
     name: Wikidata Text Encoding
@@ -1385,39 +1367,12 @@ class BiomedicalCURIERepresentation(CachedTextRepresentation):
     Textual representations for datasets grounded with biomedical CURIEs.
 
     The label and description for each entity are obtained via :mod:`pyobo` using
-    :class:`pykeen.nn.utils.PyOBOCache` and encoded with :class:`TextRepresentation`.
+    :class:`~pykeen.nn.text.cache.PyOBOTextCache` and encoded with
+    :class:`~pykeen.nn.representation.TextRepresentation`.
 
     Example usage:
 
-    .. code-block:: python
-
-        from pykeen.datasets import get_dataset
-        from pykeen.models import ERModel
-        from pykeen.nn import BiomedicalCURIERepresentation
-        from pykeen.pipeline import pipeline
-        import bioontologies
-
-        # Generate graph dataset from the Monarch Disease Ontology (MONDO)
-        graph = bioontologies.get_obograph_by_prefix("mondo").squeeze(standardize=True)
-        triples = (edge.as_tuple() for edge in graph.edges)
-        triples = [t for t in triples if all(t)]
-        triples = TriplesFactory.from_labeled_triples(np.array(triples))
-        dataset = Dataset.from_tf(triples)
-
-        entity_representations = BiomedicalCURIERepresentation.from_dataset(
-            dataset=dataset, encoder="transformer",
-        )
-        result = pipeline(
-            dataset=dataset,
-            model=ERModel,
-            model_kwargs=dict(
-                interaction="distmult",
-                entity_representations=entity_representations,
-                relation_representation_kwargs=dict(
-                    shape=entity_representations.shape,
-                ),
-            ),
-        )
+    .. literalinclude:: ../examples/nn/representation/text_curie.py
 
     ---
     name: Biomedical CURIE Text Encoding
