@@ -309,7 +309,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         :param max_id:
             Only pass this to check if the number of entities in the triples factories is the same.
         :param kwargs:
-            Additional keyword-based parameters passed to :class:`pykeen.nn.representation.CombinedRepresentation`.
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.CombinedRepresentation`.
         """
         if max_id:
             assert max_id == triples_factory.num_entities
