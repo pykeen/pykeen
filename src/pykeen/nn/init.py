@@ -481,8 +481,19 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         super().__init__(tensor=tensor)
 
 
-#: A resolver for initializers, including both elements of :mod:`torch.nn.init` and
-#: custom additions in :mod:`pykeen.nn.init`
+# TODO: replace by automatically generated list
+#: A resolver for initializers, including elements from :mod:`pykeen.nn.init`
+#:
+#: - :func:`pykeen.nn.init.init_phases`
+#: - :func:`pykeen.nn.init.init_quaternions`
+#: - :func:`pykeen.nn.init.normal_norm_`
+#: - :func:`pykeen.nn.init.uniform_norm_`
+#: - :func:`pykeen.nn.init.xavier_uniform_`
+#: - :func:`pykeen.nn.init.xavier_uniform_norm`
+#: - :func:`pykeen.nn.init.xavier_normal_`
+#: - :func:`pykeen.nn.init.xavier_normal_norm_`
+#:
+#: as well as initializers from :mod:`torch.nn.init`.
 initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
     [
         getattr(torch.nn.init, func)

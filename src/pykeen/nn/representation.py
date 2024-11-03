@@ -337,18 +337,7 @@ class Embedding(Representation):
     example shows how to obtain different scores for a single triple from an (untrained) model. These scores can be
     considered as samples from a distribution over the scores.
 
-    >>> from pykeen.datasets import Nations
-    >>> dataset = Nations()
-    >>> from pykeen.models import ERModel
-    >>> model = ERModel(
-    ...     triples_factory=dataset.training,
-    ...     interaction='distmult',
-    ...     entity_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
-    ...     relation_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
-    ... )
-    >>> import torch
-    >>> batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
-    >>> scores = model.score_hrt(batch)
+    .. literalinclude:: ../examples/nn/representation/monte_carlo_embedding.py
 
     ---
     name: Embedding
@@ -380,7 +369,7 @@ class Embedding(Representation):
         """Instantiate an embedding with extended functionality.
 
         .. note ::
-            the difference between a *normalizer* (cf. :class:`Representation`) and a *constrainer* is that the
+            The difference between a *normalizer* (cf. :class:`Representation`) and a *constrainer* is that the
             normalizer is applied to the retrieved representations, and part of the forward call. Thus, it is part
             of the computational graph, and may contribute towards the gradients received by the weight. A
             *constrainer* on the other hand, is applied *after* a parameter update (using the
@@ -390,43 +379,33 @@ class Embedding(Representation):
             The number of embeddings.
         :param num_embeddings: >0
             The number of embeddings.
+
+            .. note::
+                This argument is kept for backwards compatibility. New code should use ``max_id`` instead.
+
         :param embedding_dim: >0
             The embedding dimensionality.
         :param shape:
             The shape of an individual representation.
         :param initializer:
-            An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
+            An optional initializer, which takes an uninitialized ``(max_id, *shape)`` tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
-            initialization may be in-place). Can be passed as a function, or as string corresponding to a key in
-            :data:`pykeen.nn.representation.initializers` such as:
-
-            - ``"xavier_uniform"``
-            - ``"xavier_uniform_norm"``
-            - ``"xavier_normal"``
-            - ``"xavier_normal_norm"``
-            - ``"normal"``
-            - ``"normal_norm"``
-            - ``"uniform"``
-            - ``"uniform_norm"``
-            - ``"init_phases"``
+            initialization may be in-place). Can be passed as a function, or as string, cf. resolver note.
         :param initializer_kwargs:
             Additional keyword arguments passed to the initializer
         :param constrainer:
             A function which is applied to the weights after each parameter update, without tracking gradients.
             It may be used to enforce model constraints outside gradient-based training. The function does not need
-            to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string
-            corresponding to a key in :data:`pykeen.nn.representation.constrainer_resolver` such as:
-
-            - ``'normalize'``
-            - ``'complex_normalize'``
-            - ``'clamp'``
-            - ``'clamp_norm'``
+            to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string,
+            cf. resolver note.
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
-        :param trainable: Should the wrapped embeddings be marked to require gradient. Defaults to True.
-        :param dtype: The datatype (otherwise uses :func:`torch.get_default_dtype` to look up)
+        :param trainable:
+            Should the wrapped embeddings be marked to require gradient.
+        :param dtype:
+            The datatype (otherwise uses :func:`torch.get_default_dtype` to look up).
         :param kwargs:
-            additional keyword-based parameters passed to Representation.__init__
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.modules.Representation`
         """
         # normalize num_embeddings vs. max_id
         max_id = process_max_id(max_id, num_embeddings)
