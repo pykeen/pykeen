@@ -43,8 +43,8 @@ The following examples are for entity representations, but can be equivalently u
             ...,
         )
 
-*  two :class:`~pykeen.nn.representation.Embedding` with same dimensionality 64, suitable, e.g., for interactions such as
-   :class:`~pykeen.nn.modules.BoxEInteraction`
+*  two :class:`~pykeen.nn.representation.Embedding` with same dimensionality 64, suitable,
+   e.g., for interactions such as :class:`~pykeen.nn.modules.BoxEInteraction`
 
     .. code-block:: python
 
