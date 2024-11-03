@@ -267,14 +267,14 @@ class MessagePassingRepresentation(Representation, ABC):
         """
         Perform the message passing steps.
 
-        :param x: shape: `(n, d_in)`
+        :param x: shape: ``(n, d_in)``
             the base entity representations
-        :param edge_index: shape: `(num_selected_edges,)`
+        :param edge_index: shape: ``(num_selected_edges,)``
             the edge index (which may already be a selection of the full edge index)
-        :param edge_mask: shape: `(num_edges,)`
+        :param edge_mask: shape: ``(num_edges,)``
             an edge mask if message passing is restricted
 
-        :return: shape: `(n, d_out)`
+        :return: shape: ``(n, d_out)``
             the enriched entity representations
         """
         raise NotImplementedError
