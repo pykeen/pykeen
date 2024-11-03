@@ -9,12 +9,13 @@ from pykeen.datasets import get_dataset
 from pykeen.models import ERModel
 from pykeen.nn.init import LabelBasedInitializer
 from pykeen.pipeline import pipeline
+from pykeen.triples.triples_factory import TriplesFactory
 
 dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=True))
-entity_initializer = LabelBasedInitializer.from_triples_factory(
-    triples_factory=dataset.training,
-    for_entities=True,
-)
+triples_factory = dataset.training
+# build initializer with encoding of entity labels
+assert isinstance(triples_factory, TriplesFactory)
+entity_initializer = LabelBasedInitializer.from_triples_factory(triples_factory=triples_factory, for_entities=True)
 (embedding_dim,) = entity_initializer.tensor.shape[1:]
 pipeline(
     dataset=dataset,
@@ -23,7 +24,7 @@ pipeline(
         interaction="distmult",
         entity_representations="SimpleMessagePassing",
         entity_representations_kwargs=dict(
-            triples_factory=dataset.training,
+            triples_factory=triples_factory,
             base_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,

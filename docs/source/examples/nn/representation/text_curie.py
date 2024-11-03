@@ -11,10 +11,10 @@ from pykeen.triples.triples_factory import TriplesFactory
 
 # Generate graph dataset from the Monarch Disease Ontology (MONDO)
 graph = bioontologies.get_obograph_by_prefix("mondo").squeeze(standardize=True)
-triples = (edge.as_tuple() for edge in graph.edges)
-triples = [t for t in triples if all(t)]
-triples = TriplesFactory.from_labeled_triples(np.array(triples))
-dataset = Dataset.from_tf(triples)
+edge_tuples = (edge.as_tuple() for edge in graph.edges)
+triples = [t for t in edge_tuples if all(t)]
+triples_factory = TriplesFactory.from_labeled_triples(np.array(triples))
+dataset = Dataset.from_tf(triples_factory)
 
 entity_representations = BiomedicalCURIERepresentation.from_dataset(
     dataset=dataset,

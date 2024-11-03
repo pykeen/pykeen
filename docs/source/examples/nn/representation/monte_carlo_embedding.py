@@ -6,7 +6,7 @@ from pykeen.datasets import Nations
 from pykeen.models import ERModel
 
 dataset = Nations()
-model = ERModel(
+model: ERModel = ERModel(
     triples_factory=dataset.training,
     interaction="distmult",
     entity_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
