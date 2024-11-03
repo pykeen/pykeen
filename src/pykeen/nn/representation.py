@@ -1025,14 +1025,16 @@ class SingleCompGCNRepresentation(Representation):
         if position == "entity":
             max_id = combined.entity_representations.max_id
             shape_ = (combined.output_dim,)
+            position_index = 0
         elif position == "relation":
             max_id = combined.relation_representations.max_id
             shape_ = (combined.output_dim,)
+            position_index = 1
         else:
             raise ValueError
         super().__init__(max_id=max_id, shape=ShapeError.verify(shape=shape_, reference=shape), **kwargs)
         self.combined = combined
-        self.position = position
+        self.position = position_index
         self.reset_parameters()
 
     # docstr-coverage: inherited
