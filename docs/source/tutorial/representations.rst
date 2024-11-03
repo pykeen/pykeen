@@ -142,10 +142,14 @@ which allow to use the message passing layers from PyTorch Geometric
 to enrich base representations via message passing.
 We include the following templates to easily create custom transformations:
 
-    - :class:`~pykeen.nn.pyg.MessagePassingRepresentation`
-    - :class:`~pykeen.nn.pyg.FeaturizedMessagePassingRepresentation`
-    - :class:`~pykeen.nn.pyg.SimpleMessagePassingRepresentation`
+    - :class:`~pykeen.nn.pyg.MessagePassingRepresentation`:
+      Base class.
+    - :class:`~pykeen.nn.pyg.SimpleMessagePassingRepresentation`:
+      For message passing ignoring relation type information.
     - :class:`~pykeen.nn.pyg.TypedMessagePassingRepresentation`
+      For message passing using categorical relation type information.
+    - :class:`~pykeen.nn.pyg.FeaturizedMessagePassingRepresentation`
+      For message passing using relation representations during message passing.
 
 Text-based
 ----------
