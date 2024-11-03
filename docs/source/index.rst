@@ -10,6 +10,7 @@ PyKEEN
    installation
    tutorial/first_steps
    tutorial/models
+   tutorial/representations
    tutorial/trackers/index
    tutorial/checkpoints
    tutorial/translational_toy_example
@@ -17,12 +18,12 @@ PyKEEN
    tutorial/running_hpo
    tutorial/running_ablation
    tutorial/performance
-   tutorial/representations
    tutorial/node_piece
    tutorial/inductive_lp
    tutorial/splitting
    contrib/lightning
    tutorial/using_resolvers
+   tutorial/normalizer_constrainer_regularizer
    tutorial/troubleshooting
 
 .. toctree::

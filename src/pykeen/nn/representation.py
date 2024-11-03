@@ -324,18 +324,19 @@ class Embedding(Representation):
     """Trainable embeddings.
 
     This class provides the same interface as :class:`torch.nn.Embedding` and
-    can be used throughout PyKEEN as a more fully featured drop-in replacement.
+    can be used throughout PyKEEN as a more complete drop-in replacement.
 
-    It extends it by adding additional options for normalizing, constraining, or applying dropout.
+    It extends it by adding additional options to normalize, constrain, or apply drop-out.
 
-    When a *normalizer* is selected, it is applied in every forward pass. It can be used, e.g., to ensure that the
-    embedding vectors are of unit length. A *constrainer* can be used similarly, but it is applied after each parameter
-    update (using the post_parameter_update hook), i.e., outside of the automatic gradient computation.
+    .. note ::
+        A discussion about the differences between normalizers and constrainers can be found
+        in :ref:`normalizer_constrainer_regularizer`.
 
-    The optional dropout can also be used as a regularization technique. Moreover, it enables to obtain uncertainty
-    estimates via techniques such as `Monte-Carlo dropout <https://arxiv.org/abs/1506.02142>`_. The following simple
-    example shows how to obtain different scores for a single triple from an (untrained) model. These scores can be
-    considered as samples from a distribution over the scores.
+    The optional *dropout* can also be used as a regularization technique.
+    It also allows uncertainty estimates to be obtained using techniques such as
+    `Monte-Carlo dropout <https://arxiv.org/abs/1506.02142>`_.
+    The following simple example shows how to obtain different scores for a single triple from an (untrained) model.
+    These scores can be viewed as samples from a distribution over the scores.
 
     .. literalinclude:: ../examples/nn/representation/monte_carlo_embedding.py
 
@@ -368,15 +369,8 @@ class Embedding(Representation):
     ):
         """Instantiate an embedding with extended functionality.
 
-        .. note ::
-            The difference between a *normalizer* (cf. :class:`Representation`) and a *constrainer* is that the
-            normalizer is applied to the retrieved representations, and part of the forward call. Thus, it is part
-            of the computational graph, and may contribute towards the gradients received by the weight. A
-            *constrainer* on the other hand, is applied *after* a parameter update (using the
-            :meth:`post_parameter_update` hook), and hence *not* part of the computational graph.
-
         :param max_id: >0
-            The number of embeddings.
+            The number of embeddings, cf. :class:`~pykeen.nn.representation.Representation`.
         :param num_embeddings: >0
             The number of embeddings.
 
@@ -386,7 +380,14 @@ class Embedding(Representation):
         :param embedding_dim: >0
             The embedding dimensionality.
         :param shape:
-            The shape of an individual representation.
+            The shape of an individual representation, cf. :class:`~pykeen.nn.representation.Representation`.
+
+            .. note::
+                You can pass exactly only one of ``embedding_dim`` and ``shape``.
+                ``shape`` is generally preferred because it is the more generic parameter also used in
+                :class:`~pykeen.nn.representation.Representation`,
+                but the term ``embedding_dim`` is so ubiquitous that it is available as well.
+
         :param initializer:
             An optional initializer, which takes an uninitialized ``(max_id, *shape)`` tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
@@ -405,7 +406,7 @@ class Embedding(Representation):
         :param dtype:
             The datatype (otherwise uses :func:`torch.get_default_dtype` to look up).
         :param kwargs:
-            Additional keyword-based parameters passed to :class:`~pykeen.nn.modules.Representation`
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`
         """
         # normalize num_embeddings vs. max_id
         max_id = process_max_id(max_id, num_embeddings)
