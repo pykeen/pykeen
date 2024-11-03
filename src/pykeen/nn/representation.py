@@ -617,7 +617,7 @@ def process_max_id(max_id: int | None, num_embeddings: int | None) -> int:
 
 
 class CompGCNLayer(nn.Module):
-    """A single layer of the CompGCN model."""
+    """A single CompGCN layer."""
 
     @update_docstring_with_resolver_keys(
         ResolverKey("composition", composition_resolver),
@@ -647,7 +647,7 @@ class CompGCNLayer(nn.Module):
         :param input_dim:
             The input dimension.
         :param output_dim:
-            The output dimension. If None, equals the input dimension.
+            The output dimension. If ``None``, equals the input dimension.
         :param dropout:
             The dropout to use for forward and backward edges.
         :param use_bias:  # TODO: do we really need this? it comes before a mandatory batch norm layer
@@ -738,13 +738,13 @@ class CompGCNLayer(nn.Module):
         """
         Perform message passing.
 
-        :param x_e: shape: (num_entities, input_dim)
+        :param x_e: shape: ``(num_entities, input_dim)``
             The entity representations.
-        :param x_r: shape: (2 * num_relations, input_dim)
+        :param x_r: shape: ``(2 * num_relations, input_dim)``
             The relation representations (including inverse relations).
-        :param edge_index: shape: (2, num_edges)
+        :param edge_index: shape: ``(2, num_edges)``
             The edge index, pairs of source and target entity for each triple.
-        :param edge_type: shape (num_edges,)
+        :param edge_type: shape ``(num_edges,)``
             The edge type, i.e., relation ID, for each triple.
         :param weight:
             The transformation weight.
@@ -789,16 +789,16 @@ class CompGCNLayer(nn.Module):
                 + \left( \sum_{e,r,t \in T} \alpha(e, t) \phi(X_E[t], X_R[r^{-1}]) W_b \right)
             \right)
 
-        :param x_e: shape: (num_entities, input_dim)
+        :param x_e: shape: ``(num_entities, input_dim)``
             The entity representations.
-        :param x_r: shape: (2 * num_relations, input_dim)
+        :param x_r: shape: ``(2 * num_relations, input_dim)``
             The relation representations (including inverse relations).
-        :param edge_index: shape: (2, num_edges)
+        :param edge_index: shape: ``(2, num_edges)``
             The edge index, pairs of source and target entity for each triple.
-        :param edge_type: shape (num_edges,)
+        :param edge_type: shape ``(num_edges,)``
             The edge type, i.e., relation ID, for each triple.
 
-        :return: shape: (num_entities, output_dim) / (2 * num_relations, output_dim)
+        :return: shape: ``(num_entities, output_dim)`` / ``(2 * num_relations, output_dim)``
             The updated entity and relation representations.
         """
         # prepare for inverse relations
@@ -843,11 +843,20 @@ def build_representation(
 
 
 class CombinedCompGCNRepresentations(nn.Module):
-    """A sequence of CompGCN layers."""
+    """A sequence of CompGCN layers.
 
+    .. seealso::
+        :class:`pykeen.nn.representation.CompGCNLayer`
+    """
+
+    # TODO: extract adapter for cached representations; cf. RGCN
     # Buffered enriched entity and relation representations
     enriched_representations: tuple[FloatTensor, FloatTensor] | None
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("entity_representations", resolver="pykeen.nn.representation_resolver"),
+        ResolverKey("relation_representations", resolver="pykeen.nn.representation_resolver"),
+    )
     def __init__(
         self,
         *,
@@ -865,14 +874,17 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         :param triples_factory:
             The triples factory containing the training triples.
+
         :param entity_representations:
-            the base entity representations
+            The base entity representations
         :param entity_representations_kwargs:
-            additional keyword parameters for the base entity representations
+            Additional keyword parameters for the base entity representations.
+
         :param relation_representations:
-            the base relation representations
+            The base relation representations.
         :param relation_representations_kwargs:
-            additional keyword parameters for the base relation representations
+            Additional keyword parameters for the base relation representations.
+
         :param num_layers:
             The number of message passing layers to use. If None, will be inferred by len(dims), i.e., requires dims to
             be a sequence / list.
@@ -880,8 +892,9 @@ class CombinedCompGCNRepresentations(nn.Module):
             The hidden dimensions to use. If None, defaults to the embedding dimension of the base representations.
             If an integer, is the same for all layers. The last dimension is equal to the output dimension.
         :param layer_kwargs:
-            Additional key-word based parameters passed to the individual layers; cf. CompGCNLayer.
-        :raises ValueError: for several invalid combinations of arguments:
+            Additional key-word based parameters passed to the individual layers;
+            cf. :class:`~pykeen.nn.representation.CompGCNLayer`.
+        :raises ValueError: For several invalid combinations of arguments:
             1. If the dimensions were given as an integer but no number of layers were given
             2. If the dimensions were given as a ist but it does not match the number of layers that were given
         """
@@ -971,14 +984,20 @@ class CombinedCompGCNRepresentations(nn.Module):
     def split(self) -> tuple[SingleCompGCNRepresentation, SingleCompGCNRepresentation]:
         """Return the separated representations."""
         return (
-            SingleCompGCNRepresentation(self, position=0),
-            SingleCompGCNRepresentation(self, position=1),
+            SingleCompGCNRepresentation(self, position="entity"),
+            SingleCompGCNRepresentation(self, position="relation"),
         )
+
+
+_Position = Literal["entity", "relation"]
 
 
 @parse_docdata
 class SingleCompGCNRepresentation(Representation):
     """A wrapper around the combined representation module.
+
+    .. seealso::
+        :class:`pykeen.nn.representation.CombinedCompGCNRepresentations`
 
     ---
     name: CompGCN
@@ -987,7 +1006,7 @@ class SingleCompGCNRepresentation(Representation):
     def __init__(
         self,
         combined: CombinedCompGCNRepresentations,
-        position: int = 0,
+        position: _Position = "entity",
         shape: OneOrSequence[int] | None = None,
         **kwargs,
     ):
@@ -997,17 +1016,19 @@ class SingleCompGCNRepresentation(Representation):
         :param combined:
             The combined representations.
         :param position:
-            The position, either 0 for entities, or 1 for relations.
+            The position.
         :param shape:
             The shape of an individual representation.
         :param kwargs:
-            additional keyword-based parameters passed to super.__init__
-        :raises ValueError: If an invalid value is given for the position
+            Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`.
+
+        :raises ValueError:
+            If an invalid value is given for the position.
         """
-        if position == 0:  # entity
+        if position == "entity":
             max_id = combined.entity_representations.max_id
             shape_ = (combined.output_dim,)
-        elif position == 1:  # relation
+        elif position == "relation":
             max_id = combined.relation_representations.max_id
             shape_ = (combined.output_dim,)
         else:
