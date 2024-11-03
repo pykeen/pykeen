@@ -1079,9 +1079,7 @@ class TextRepresentation(Representation):
 
     labels: list[str]
 
-    @update_docstring_with_resolver_keys(
-        ResolverKey("encoder", "text_encoder_resolver"),
-    )
+    @update_docstring_with_resolver_keys(ResolverKey("encoder", resolver="pykeen.nn.text.text_encoder_resolver"))
     def __init__(
         self,
         labels: Sequence[str | None],
@@ -1096,27 +1094,25 @@ class TextRepresentation(Representation):
         Initialize the representation.
 
         :param labels:
-            an ordered, finite collection of labels
+            An ordered, finite collection of labels.
         :param max_id:
-            the number of representations. If provided, has to match the number of labels
+            The number of representations. If provided, has to match the number of labels.
         :param shape:
             The shape of an individual representation.
-        :param encoder:
-            the text encoder, or a hint thereof. This can be one of:
 
-            - `'characterembedding'` for :class:`pykeen.nn.text.CharacterEmbeddingTextEncoder`
-            - `'transformer'` for :class:`pykeen.nn.text.TransformerTextEncoder`
-            - or any other loaded via :data:`pykeen.nn.text.text_encoder_resolver`
+        :param encoder:
+            The text encoder, or a hint thereof.
         :param encoder_kwargs:
-            keyword-based parameters used to instantiate the text encoder
+            Keyword-based parameters used to instantiate the text encoder.
+
         :param missing_action:
             Which policy for handling nones in the given labels. If "error", raises an error
             on any nones. If "blank", replaces nones with an empty string.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Representation.__init__`
+            Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`
 
         :raises ValueError:
-            if the max_id does not match
+            If the ``max_id`` does not match.
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
         # check max_id
@@ -1142,11 +1138,11 @@ class TextRepresentation(Representation):
         Prepare a text representations with labels from a triples factory.
 
         :param triples_factory:
-            the triples factory
+            The triples factory.
         :param for_entities:
-            whether to create the initializer for entities (or relations)
+            Whether to create the initializer for entities (or relations).
         :param kwargs:
-            additional keyword-based arguments passed to :meth:`TextRepresentation.__init__`
+            Additional keyword-based arguments passed to :class:`pykeen.nn.representation.TextRepresentation`
 
         :returns:
             a text representation from the triples factory
@@ -1158,21 +1154,23 @@ class TextRepresentation(Representation):
     def from_dataset(
         cls,
         dataset: Dataset,
+        for_entities: bool = True,
         **kwargs,
     ) -> TextRepresentation:
         """Prepare text representation with labels from a dataset.
 
         :param dataset:
-            the dataset
+            The dataset.
+        :param for_entities:
+            Whether to create the initializer for entities (or relations).
         :param kwargs:
-            additional keyword-based parameters passed to
-            :meth:`TextRepresentation.from_triples_factory`
+            Additional keyword-based arguments passed to :class:`pykeen.nn.representation.TextRepresentation`
 
         :return:
-            a text representation from the dataset
+            A text representation from the dataset.
 
         :raises TypeError:
-            if the dataset's triples factory does not provide labels
+            If the dataset's triples factory does not provide labels.
         """
         if not isinstance(dataset.training, TriplesFactory):
             raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
