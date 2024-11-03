@@ -15,44 +15,11 @@ The three classes differ in how the make use of the relation type information:
 * :class:`FeaturizedMessagePassingRepresentation` is for message passing layer which can use edge attributes
   via the parameter `edge_attr`, e.g., :class:`torch_geometric.nn.conv.GMMConv`.
 
-We can also easily utilize these representations with :class:`pykeen.models.ERModel`. Here, we showcase how to combine
+We can also easily utilize these representations with :class:`~pykeen.models.ERModel`. Here, we showcase how to combine
 static label-based entity features with a trainable GCN encoder for entity representations, with learned embeddings for
-relation representations and a DistMult interaction function.
+relation representations and a :class:`~pykeen.nn.modules.DistMultInteraction` function.
 
-.. code-block:: python
-
-    from pykeen.datasets import get_dataset
-    from pykeen.models import ERModel
-    from pykeen.nn.init import LabelBasedInitializer
-    from pykeen.pipeline import pipeline
-
-    dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=True))
-    entity_initializer = LabelBasedInitializer.from_triples_factory(
-        triples_factory=dataset.training,
-        for_entities=True,
-    )
-    (embedding_dim,) = entity_initializer.tensor.shape[1:]
-    r = pipeline(
-        dataset=dataset,
-        model=ERModel,
-        model_kwargs=dict(
-            interaction="distmult",
-            entity_representations="SimpleMessagePassing",
-            entity_representations_kwargs=dict(
-                triples_factory=dataset.training,
-                base_kwargs=dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    trainable=False,
-                ),
-                layers=["GCN"] * 2,
-                layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-            ),
-        ),
-    )
+.. literalinclude:: ../../examples/nn/pyg.py
 """
 
 from abc import ABC, abstractmethod
