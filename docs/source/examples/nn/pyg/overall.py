@@ -1,4 +1,9 @@
-"""Example for using PyTorch Geometric."""
+"""
+Example for using PyTorch Geometric.
+
+Combine static label-based entity features with a trainable GCN encoder for entity representations,
+with learned embeddings for relation representations and a DistMult interaction function.
+"""
 
 from pykeen.datasets import get_dataset
 from pykeen.models import ERModel
@@ -11,7 +16,7 @@ entity_initializer = LabelBasedInitializer.from_triples_factory(
     for_entities=True,
 )
 (embedding_dim,) = entity_initializer.tensor.shape[1:]
-r = pipeline(
+pipeline(
     dataset=dataset,
     model=ERModel,
     model_kwargs=dict(

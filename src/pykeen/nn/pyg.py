@@ -19,14 +19,24 @@ We can also easily utilize these representations with :class:`~pykeen.models.ERM
 static label-based entity features with a trainable GCN encoder for entity representations, with learned embeddings for
 relation representations and a :class:`~pykeen.nn.modules.DistMultInteraction` function.
 
-.. literalinclude:: ../../examples/nn/pyg.py
+.. literalinclude:: ../../examples/nn/pyg/overall.py
 """
+
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Sequence
-from typing import Literal, Optional
+from typing import Literal
 
-from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver import (
+    ClassResolver,
+    HintOrType,
+    OneOrManyHintOrType,
+    OneOrManyOptionalKwargs,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
@@ -76,7 +86,7 @@ FLOW_DIRECTIONS: Collection[FlowDirection] = {"source_to_target", "target_to_sou
 
 def _extract_flow(layers: Sequence[MessagePassing]) -> FlowDirection:
     """Extract the flow direction from the message passing layers."""
-    flow: Optional[FlowDirection] = None
+    flow: FlowDirection | None = None
     for layer in layers:
         if flow is None:
             if layer.flow not in FLOW_DIRECTIONS:
@@ -93,12 +103,12 @@ class MessagePassingRepresentation(Representation, ABC):
     An abstract representation class utilizing PyTorch Geometric message passing layers.
 
     It comprises:
-        * base (entity) representations, which can also be passed as hints
-        * a sequence of message passing layers. They are utilized in an abstract
-          :meth:`MessagePassingRepresentation._message_passing` to enrich the base representations
+        * Base (entity) representations, which can also be passed as hints.
+        * A sequence of message passing layers. They are utilized in an abstract
+          :meth:`pass_messages` to enrich the base representations
           by neighborhood information.
-        * a sequence of activation layers in between the message passing layers.
-        * an `edge_index` buffer, which stores the edge index and is moved to the device alongside
+        * A sequence of activation layers in between the message passing layers.
+        * An ``edge_index`` buffer, which stores the edge index and is moved to the device alongside
           the module.
     """
 
@@ -111,6 +121,11 @@ class MessagePassingRepresentation(Representation, ABC):
     #: the edge index, shape: (2, num_edges)
     edge_index: LongTensor
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("layers", resolver="pykeen.nn.pyg.layer_resolver"),
+        ResolverKey("base", resolver="pykeen.nn.representation_resolver"),
+        ResolverKey("activations", resolver="class_resolver.contrib.torch.activation_resolver"),
+    )
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
@@ -118,8 +133,8 @@ class MessagePassingRepresentation(Representation, ABC):
         layers_kwargs: OneOrManyOptionalKwargs = None,
         base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
-        max_id: Optional[int] = None,
-        shape: Optional[OneOrSequence[int]] = None,
+        max_id: int | None = None,
+        shape: OneOrSequence[int] | None = None,
         activations: OneOrManyHintOrType[nn.Module] = None,
         activations_kwargs: OneOrManyOptionalKwargs = None,
         restrict_k_hop: bool = False,
@@ -129,39 +144,40 @@ class MessagePassingRepresentation(Representation, ABC):
         Initialize the representation.
 
         :param triples_factory:
-            the factory comprising the training triples used for message passing
+            The factory comprising the training triples used for message passing.
 
         :param layers:
-            the message passing layer(s) or hints thereof
+            The message passing layer(s) or hints thereof.
         :param layers_kwargs:
-            additional keyword-based parameters passed to the layers upon instantiation
+            Additional keyword-based parameters passed to the layers upon instantiation.
 
         :param base:
-            the base representations for entities, or a hint thereof
+            The base representations for entities, or a hint thereof.
         :param base_kwargs:
-            additional keyword-based parameters passed to the base representations upon instantiation
+            Additional keyword-based parameters passed to the base representations upon instantiation.
 
         :param shape:
-            the output shape. Defaults to the base representation shape. Has to match to output shape of the last
+            The output shape. Defaults to the base representation shape. Has to match to output shape of the last
             message passing layer.
         :param max_id:
-            the number of representations. If provided, has to match the base representation's max_id
+            The number of representations. If provided, has to match the base representation's max_id.
 
         :param activations:
-            the activation(s), or hints thereof
+            The activation(s), or hints thereof.
         :param activations_kwargs:
-            additional keyword-based parameters passed to the activations upon instantiation
+            Additional keyword-based parameters passed to the activations upon instantiation
+
         :param restrict_k_hop:
-            whether to restrict the message passing only to the k-hop neighborhood, when only some indices
+            Whether to restrict the message passing only to the k-hop neighborhood, when only some indices
             are requested. This utilizes :func:`torch_geometric.utils.k_hop_subgraph`.
 
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Representation.__init__`
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
 
         :raises ImportError:
-            if PyTorch Geometric is not installed
+            If PyTorch Geometric is not installed.
         :raises ValueError:
-            if the number of activations and message passing layers do not match (after input normalization)
+            If the number of activations and message passing layers do not match (after input normalization).
         """
         # fail if dependencies are missing
         if MessagePassing is None or layer_resolver is None or k_hop_subgraph is None:
@@ -214,7 +230,7 @@ class MessagePassingRepresentation(Representation, ABC):
         #   * keep layers & activations
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: Optional[LongTensor] = None) -> FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         if self.restrict_k_hop and indices is not None:
             # we can restrict the message passing to the k-hop neighborhood of the desired indices;
             # this does only make sense if we do not request *all* indices
@@ -248,7 +264,7 @@ class MessagePassingRepresentation(Representation, ABC):
 
     @abstractmethod
     def pass_messages(
-        self, x: FloatTensor, edge_index: LongTensor, edge_mask: Optional[BoolTensor] = None
+        self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None
     ) -> FloatTensor:
         """
         Perform the message passing steps.
@@ -276,20 +292,9 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
     available layers from the PyTorch Geometric library.
 
     Here, we create a two-layer :class:`torch_geometric.nn.conv.GCNConv` on top of an
-    :class:`pykeen.nn.representation.Embedding`:
+    :class:`~pykeen.nn.representation.Embedding`.
 
-    .. code-block:: python
-
-        from pykeen.datasets import get_dataset
-
-        embedding_dim = 64
-        dataset = get_dataset(dataset="nations")
-        r = SimpleMessagePassingRepresentation(
-            triples_factory=dataset.training,
-            base_kwargs=dict(shape=embedding_dim),
-            layers=["gcn"] * 2,
-            layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
-        )
+    .. literalinclude:: ../examples/nn/pyg/simple.py
 
     ---
     name: Simple Message Passing
@@ -297,7 +302,7 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: FloatTensor, edge_index: LongTensor, edge_mask: Optional[BoolTensor] = None
+        self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None
     ) -> FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations):
             x = activation(layer(x, edge_index=edge_index))
@@ -315,23 +320,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
 
     The following example creates a one-layer RGCN using the basis decomposition:
 
-    .. code-block:: python
-
-        from pykeen.datasets import get_dataset
-
-        embedding_dim = 64
-        dataset = get_dataset(dataset="nations")
-        r = TypedMessagePassingRepresentation(
-            triples_factory=dataset.training,
-            base_kwargs=dict(shape=embedding_dim),
-            layers="rgcn",
-            layers_kwargs=dict(
-                in_channels=embedding_dim,
-                out_channels=embedding_dim,
-                num_bases=2,
-                num_relations=dataset.num_relations,
-            ),
-        )
+    .. literalinclude:: ../examples/nn/pyg/typed.py
 
     ---
     name: Typed Message Passing
@@ -345,23 +334,23 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
         Initialize the representation.
 
         :param triples_factory:
-            the factory comprising the training triples used for message passing
+            The factory comprising the training triples used for message passing
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`MessagePassingRepresentation.__init__`
+            Additional keyword-based parameters passed to :class:`pykeen.nn.pyg.MessagePassingRepresentation`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
         # register an additional buffer for the categorical edge type
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
-    def _get_edge_type(self, edge_mask: Optional[BoolTensor] = None) -> LongTensor:
+    def _get_edge_type(self, edge_mask: BoolTensor | None = None) -> LongTensor:
         """
         Return the (selected part of the) edge type.
 
-        :param edge_mask: shape: `(num_edges,)`
-            the edge mask
+        :param edge_mask: shape: ``(num_edges,)``
+            The edge mask.
 
-        :return: shape: `(num_selected_edges,)`
-            the selected edge types, or all edge types if `edge_mask` is None
+        :return: shape: ``(num_selected_edges,)``
+            The selected edge types, or all edge types if ``edge_mask`` is None.
         """
         if edge_mask is None:
             return self.edge_type
@@ -369,7 +358,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: FloatTensor, edge_index: LongTensor, edge_mask: Optional[BoolTensor] = None
+        self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None
     ) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         for layer, activation in zip(self.layers, self.activations):
@@ -389,26 +378,7 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
 
     The following example creates a two-layer GAT on top of the base representations:
 
-
-    .. code-block:: python
-
-        from pykeen.datasets import get_dataset
-
-        embedding_dim = 64
-        dataset = get_dataset(dataset="nations")
-        r = FeaturizedMessagePassingRepresentation(
-            triples_factory=dataset.training,
-            base_kwargs=dict(shape=embedding_dim),
-            relation_representation_kwargs=dict(
-                shape=embedding_dim,
-            ),
-            layers="gat",
-            layers_kwargs=dict(
-                in_channels=embedding_dim,
-                out_channels=embedding_dim,
-                edge_dim=embedding_dim,  # should match relation dim
-            ),
-        )
+    .. literalinclude:: ../examples/nn/pyg/featurized.py
 
     ---
     name: Featurized Message Passing
@@ -417,32 +387,35 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
     #: the relation representations used to obtain initial edge features
     relation_representation: Representation
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("relation_representation", resolver="pykeen.nn.representation_resolver"),
+    )
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
         relation_representation: HintOrType[Representation] = None,
         relation_representation_kwargs: OptionalKwargs = None,
-        relation_transformation: Optional[nn.Module] = None,
+        relation_transformation: nn.Module | None = None,
         **kwargs,
     ):
         """
         Initialize the representation.
 
         :param triples_factory:
-            the factory comprising the training triples used for message passing
+            The factory comprising the training triples used for message passing.
 
         :param relation_representation:
-            the base representations for relations, or a hint thereof
+            The base representations for relations, or a hint thereof.
         :param relation_representation_kwargs:
-            additional keyword-based parameters passed to the base representations upon instantiation
+            Additional keyword-based parameters passed to the base representations upon instantiation.
 
         :param relation_transformation:
-            an optional transformation to apply to the relation representations after each message passing step.
-            If None, do not modify the representations.
+            An optional transformation to apply to the relation representations after each message passing step.
+            If ``None``, do not modify the representations.
 
         :param kwargs:
-            additional keyword-based parameters passed to
-            :meth:`TypedMessagePassingRepresentation.__init__`, except the `triples_factory`
+            Additional keyword-based parameters passed to
+            :class:`pykeen.nn.pyg.TypedMessagePassingRepresentation`, except the ``triples_factory``.
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
 
@@ -456,7 +429,7 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: FloatTensor, edge_index: LongTensor, edge_mask: Optional[BoolTensor] = None
+        self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None
     ) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         # get initial relation representations
