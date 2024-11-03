@@ -989,9 +989,6 @@ class CombinedCompGCNRepresentations(nn.Module):
         )
 
 
-_Position = Literal["entity", "relation"]
-
-
 @parse_docdata
 class SingleCompGCNRepresentation(Representation):
     """A wrapper around the combined representation module.
@@ -1006,7 +1003,7 @@ class SingleCompGCNRepresentation(Representation):
     def __init__(
         self,
         combined: CombinedCompGCNRepresentations,
-        position: _Position = "entity",
+        position: Literal["entity", "relation"] = "entity",
         shape: OneOrSequence[int] | None = None,
         **kwargs,
     ):
