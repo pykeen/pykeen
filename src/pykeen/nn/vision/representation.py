@@ -14,6 +14,7 @@ import torch.nn
 import torch.utils.data
 from class_resolver import OptionalKwargs
 from docdata import parse_docdata
+from typing_extensions import Self
 
 from .cache import WikidataImageCache
 from ..representation import BackfillRepresentation, Representation
@@ -66,12 +67,13 @@ class VisionDataset(torch.utils.data.Dataset):
         """
         Initialize the dataset.
 
-        :param images: the images, either as (relative) path, or preprocessed tensors.
+        :param images:
+            The images, either as (relative) path, or preprocessed tensors.
         :param transforms:
-            a sequence of transformations to apply to the images,
-            cf. :mod:`torchvision.transforms`
+            A sequence of transformations to apply to the images, cf. :mod:`torchvision.transforms`.
+            Defaults to random size crops.
         :param root:
-            the root directory for images
+            The root directory for images.
         """
         _ensure_vision(self, vision_transforms)
         super().__init__()
@@ -105,7 +107,7 @@ class VisionDataset(torch.utils.data.Dataset):
 
 @parse_docdata
 class VisualRepresentation(Representation):
-    """Visual representations using a torchvision model.
+    """Visual representations using a :mod:`torchvision` model.
 
     ---
     name: Visual
@@ -128,30 +130,30 @@ class VisualRepresentation(Representation):
         Initialize the representations.
 
         :param images:
-            the images, either as tensors, or paths to image files.
+            The images, either as tensors, or paths to image files.
         :param encoder:
-            the encoder to use. If given as a string, lookup in :mod:`torchvision.models`
+            The encoder to use. If given as a string, lookup in :mod:`torchvision.models`.
         :param layer_name:
-            the model's layer name to use for extracting the features, cf.
+            The model's layer name to use for extracting the features, cf.
             :func:`torchvision.models.feature_extraction.create_feature_extractor`
         :param max_id:
-            the number of representations. If given, it must match the number of images.
+            The number of representations. If given, it must match the number of images.
         :param shape:
-            the shape of an individual representation. If provided, it must match the encoder output dimension
+            The shape of an individual representation. If provided, it must match the encoder output dimension
         :param transforms:
-            transformations to apply to the images. Notice that stochastic transformations will result in
+            Transformations to apply to the images. Notice that stochastic transformations will result in
             stochastic representations, too.
         :param encoder_kwargs:
-            additional keyword-based parameters passed to encoder upon instantiation.
+            Additional keyword-based parameters passed to encoder upon instantiation.
         :param batch_size:
-            the batch size to use during encoding
+            The batch size to use during encoding.
         :param trainable:
-            whether the encoder should be trainable
+            Whether the encoder should be trainable.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Representation.__init__`.
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
 
         :raises ValueError:
-            if `max_id` is provided and does not match the number of images
+            If `max_id` is provided and does not match the number of images.
         """
         _ensure_vision(self, models)
         self.images = VisionDataset(images=images, transforms=transforms)
@@ -194,14 +196,14 @@ class VisualRepresentation(Representation):
         """
         Encode images with the given encoder and pooling methods.
 
-        :param images: shape: (batch_size, num_channels, height, width)
-            a batch of images
+        :param images: shape: ``(batch_size, num_channels, height, width)``
+            A batch of images.
         :param encoder:
-            the encoder, returning a dictionary with key "features"
+            The encoder, returning a dictionary with key "features".
         :param pool:
-            the pooling method to use
+            The pooling method to use.
         :return: shape: (batch_size, dim)
-            the encoded representations.
+            The encoded representations.
         """
         return pool(encoder(images)["feature"])
 
@@ -211,6 +213,7 @@ class VisualRepresentation(Representation):
         if indices is not None:
             dataset = torch.utils.data.Subset(dataset=dataset, indices=indices)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
+        # TODO: automatic batch size optimization?
         with torch.inference_mode(mode=not self.trainable):
             return torch.cat(
                 [self._encode(images=images, encoder=self.encoder, pool=self.pool) for images in data_loader], dim=-1
@@ -226,27 +229,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
 
     Example usage
 
-    .. code-block:: python
-
-        from pykeen.datasets import get_dataset
-        from pykeen.models import ERModel
-        from pykeen.nn import WikidataVisualRepresentation
-        from pykeen.pipeline import pipeline
-
-        dataset = get_dataset(dataset="codexsmall")
-        entity_representations = WikidataVisualRepresentation.from_dataset(dataset=dataset)
-
-        result = pipeline(
-            dataset=dataset,
-            model=ERModel,
-            model_kwargs=dict(
-                interaction="distmult",
-                entity_representations=entity_representations,
-                relation_representation_kwargs=dict(
-                    shape=entity_representations.shape,
-                ),
-            ),
-        )
+    .. literalinclude:: ../examples/nn/representation/visual_wikidata.py
 
     ---
     name: Wikidata Visual
@@ -259,16 +242,16 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         Initialize the representation.
 
         :param wikidata_ids:
-            the Wikidata IDs
+            The Wikidata IDs.
         :param max_id:
-            the total number of IDs. If provided, must match the length of `wikidata_ids`
+            The total number of IDs. If provided, must match the length of ``wikidata_ids``.
         :param image_kwargs:
-            keyword-based parameters passed to :meth:`WikidataImageCache.get_image_paths`
+            Keyword-based parameters passed to :meth:`pykeen.nn.vision.cache.WikidataImageCache.get_image_paths`.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`VisualRepresentation.__init__`
+            Additional keyword-based parameters passed to :class:`pykeen.nn.vision.representation.VisualRepresentation`.
 
         :raises ValueError:
-            if the max_id does not match the number of Wikidata IDs
+            If the max_id does not match the number of Wikidata IDs.
         """
         max_id = max_id or len(wikidata_ids)
         if len(wikidata_ids) != max_id:
@@ -286,19 +269,20 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
-    ) -> "WikidataVisualRepresentation":
+    ) -> Self:
         """
         Prepare a visual representations for Wikidata entities from a triples factory.
 
         :param triples_factory:
-            the triples factory
+            The triples factory.
         :param for_entities:
-            whether to create the initializer for entities (or relations)
+            Whether to create the initializer for entities (or relations).
         :param kwargs:
-            additional keyword-based arguments passed to :meth:`WikidataVisualRepresentation.__init__`
+            Additional keyword-based arguments passed to
+            :class:`pykeen.nn.vision.representation.WikidataVisualRepresentation`.
 
         :returns:
-            a visual representation from the triples factory
+            A visual representation from the triples factory.
         """
         return cls(
             wikidata_ids=(
@@ -311,22 +295,26 @@ class WikidataVisualRepresentation(BackfillRepresentation):
     def from_dataset(
         cls,
         dataset: Dataset,
+        for_entities: bool = True,
         **kwargs,
-    ) -> "WikidataVisualRepresentation":
+    ) -> Self:
         """Prepare representations from a dataset.
 
         :param dataset:
-            the dataset; needs to have Wikidata IDs as entity names
+            The dataset; needs to have Wikidata IDs as entity names.
+        :param for_entities:
+            Whether to create the initializer for entities (or relations).
+
         :param kwargs:
-            additional keyword-based parameters passed to
-            :meth:`WikidataVisualRepresentation.from_triples_factory`
+            Additional keyword-based arguments passed to
+            :class:`pykeen.nn.vision.representation.WikidataVisualRepresentation`.
 
         :return:
-            the representation
+            A visual representation from the training factory in the dataset.
 
         :raises TypeError:
-            if the triples factory does not provide labels
+            If the triples factory does not provide labels.
         """
         if not isinstance(dataset.training, TriplesFactory):
             raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
-        return cls.from_triples_factory(triples_factory=dataset.training, **kwargs)
+        return cls.from_triples_factory(triples_factory=dataset.training, for_entities=for_entities, **kwargs)

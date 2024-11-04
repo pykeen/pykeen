@@ -1,3 +1,5 @@
+.. _getting_started_with_node_piece:
+
 ################################
  Getting Started with NodePiece
 ################################
