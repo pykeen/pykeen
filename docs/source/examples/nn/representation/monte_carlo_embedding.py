@@ -4,9 +4,10 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.models import ERModel
+from pykeen.typing import FloatTensor
 
 dataset = Nations()
-model: ERModel = ERModel(
+model: ERModel[FloatTensor, FloatTensor, FloatTensor] = ERModel(
     triples_factory=dataset.training,
     interaction="distmult",
     entity_representations_kwargs=dict(embedding_dim=3, dropout=0.1),

@@ -61,22 +61,22 @@ The following examples are for entity representations, but can be equivalently u
 
     Internally, the :mod:`class_resolver` library is used to support various alternative parametrization, e.g.,
     the string name of a representation class, the `class` object, or instances of the
-    :class:`~pykeen.nn.Representation` class. You can also register your own classes to the resolver. Detailed
-    information can be found in the documentation of the package or :ref:`using_resolvers`
+    :class:`~pykeen.nn.representation.Representation` class. You can also register your own classes to the resolver.
+    Detailed information can be found in the documentation of the package or in the :ref:`using_resolvers` tutorial
 
 
 Interaction Function
 --------------------
-An interaction function calculates scalar scores from head, relation and tail representations.
+An interaction function calculates scalar scores from head, relation, and tail representations.
 These scores can be interpreted as the plausibility of a triple, i.e., the higher the score, the more plausible
-the triple is. Good models thus should output high scores for true triples, and low scores for false triples.
+the triple is. Good models thus should output high scores for true triples and low scores for false triples.
 
-In PyKEEN, interactions are provided as subclasses of :class:`pykeen.nn.Interaction`, which is a
+In PyKEEN, interactions are provided as subclasses of :class:`~pykeen.nn.Interaction`, which is a
 :class:`torch.nn.Module`, i.e., it can hold additional (trainable) parameters, and can also be used outside of PyKEEN.
-Its core method is :meth:`pykeen.nn.Interaction.forward`, which receives batches of head, relation and tail
+Its core method is :meth:`~pykeen.nn.modules.Interaction.forward`, which receives batches of head, relation, and tail
 representations and calculates the corresponding triple scores.
 
-As with the representations, interactions passed to :class:`pykeen.models.ERModel` are resolved, this time using
+As with the representations, interactions passed to :class:`~pykeen.models.ERModel` are resolved, this time using
 :meth:`pykeen.nn.interaction_resolver.make`. Hence, we can provide, e.g., strings corresponding to the interaction
 function instead of an instantiated class. Further information can be found at :ref:`using_resolvers`.
 

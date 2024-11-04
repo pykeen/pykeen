@@ -6,7 +6,11 @@ from pykeen.nn import WikidataTextRepresentation
 from pykeen.pipeline import pipeline
 
 dataset = get_dataset(dataset="codexsmall")
-entity_representations = WikidataTextRepresentation.from_dataset(dataset=dataset, encoder="transformer")
+entity_representations = WikidataTextRepresentation.from_dataset(
+    dataset=dataset,
+    encoder="transformer",
+)
+
 result = pipeline(
     dataset=dataset,
     model=ERModel,

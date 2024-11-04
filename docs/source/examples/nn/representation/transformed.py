@@ -11,7 +11,10 @@ dataset = get_dataset(dataset="nations")
 # We used dim+1 for the RWPE initializion as by default it doesn't return the first dimension of 0's
 # That is, in the default setup, dim = 33 would return a 32d vector
 dim = 32
-initializer = init.RandomWalkPositionalEncodingInitializer(triples_factory=dataset.training, dim=dim + 1)
+initializer = init.RandomWalkPositionalEncodingInitializer(
+    triples_factory=dataset.training,
+    dim=dim + 1,
+)
 
 # build an MLP
 hidden = 64
@@ -23,5 +26,10 @@ mlp = nn.Sequential(
 r = TransformedRepresentation(
     transformation=mlp,
     # note: this will create an Embedding base representation
-    base_kwargs=dict(max_id=dataset.num_entities, shape=(dim,), initializer=initializer, trainable=False),
+    base_kwargs=dict(
+        max_id=dataset.num_entities,
+        shape=(dim,),
+        initializer=initializer,
+        trainable=False,
+    ),
 )

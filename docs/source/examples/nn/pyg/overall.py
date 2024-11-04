@@ -11,11 +11,17 @@ from pykeen.nn.init import LabelBasedInitializer
 from pykeen.pipeline import pipeline
 from pykeen.triples.triples_factory import TriplesFactory
 
-dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=True))
+dataset = get_dataset(
+    dataset="nations",
+    dataset_kwargs=dict(create_inverse_triples=True),
+)
 triples_factory = dataset.training
 # build initializer with encoding of entity labels
 assert isinstance(triples_factory, TriplesFactory)
-entity_initializer = LabelBasedInitializer.from_triples_factory(triples_factory=triples_factory, for_entities=True)
+entity_initializer = LabelBasedInitializer.from_triples_factory(
+    triples_factory=triples_factory,
+    for_entities=True,
+)
 (embedding_dim,) = entity_initializer.tensor.shape[1:]
 pipeline(
     dataset=dataset,
@@ -31,7 +37,10 @@ pipeline(
                 trainable=False,
             ),
             layers=["GCN"] * 2,
-            layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
+            layers_kwargs=dict(
+                in_channels=embedding_dim,
+                out_channels=embedding_dim,
+            ),
         ),
         relation_representations_kwargs=dict(
             shape=embedding_dim,

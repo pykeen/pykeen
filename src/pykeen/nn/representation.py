@@ -1047,7 +1047,7 @@ class SingleCompGCNRepresentation(Representation):
             shape_ = (combined.output_dim,)
             position_index = 1
         else:
-            raise TypeError(f"invalid position: {position}")
+            raise ValueError(f"invalid position: {position}")
         super().__init__(max_id=max_id, shape=ShapeError.verify(shape=shape_, reference=shape), **kwargs)
         self.combined = combined
         self.position = position_index
