@@ -26,7 +26,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
+_OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}  # noqa:UP007
 _SKIP_ARGS = {
     "return",
     "triples_factory",
@@ -40,12 +40,12 @@ _SKIP_ARGS = {
     "coefficients",  # from AutoSF
 }
 _SKIP_ANNOTATIONS = {
-    Optional[nn.Embedding],
-    Optional[nn.Parameter],
-    Optional[nn.Module],
-    Optional[Mapping[str, Any]],
-    Union[None, str, nn.Module],
-    Union[None, str, Decomposition],
+    Optional[nn.Embedding],  # noqa:UP007
+    Optional[nn.Parameter],  # noqa:UP007
+    Optional[nn.Module],  # noqa:UP007
+    Optional[Mapping[str, Any]],  # noqa:UP007
+    Union[None, str, nn.Module],  # noqa:UP007
+    Union[None, str, Decomposition],  # noqa:UP007
 }
 _SKIP_HINTS = {
     Hint[Initializer],
@@ -78,7 +78,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             elif name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
 
-            elif annotation in {Optional[int], Optional[str]}:
+            elif annotation in {Optional[int], Optional[str]}:  # noqa:UP007
                 option = click.option(f'--{name.replace("_", "-")}', type=_OPTIONAL_MAP[annotation])
 
             else:
@@ -135,7 +135,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
         learning_rate,
         evaluator,
         stopper,
-        output_directory: Optional[pathlib.Path],
+        output_directory: pathlib.Path | None,
         mlflow_tracking_uri,
         title,
         dataset,
@@ -157,8 +157,8 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
         )
         from ...pipeline import pipeline
 
-        result_tracker: Optional[str]
-        result_tracker_kwargs: Optional[Mapping[str, Any]]
+        result_tracker: str | None
+        result_tracker_kwargs: Mapping[str, Any] | None
         if mlflow_tracking_uri:
             result_tracker = "mlflow"
             result_tracker_kwargs = {
@@ -168,7 +168,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             result_tracker = None
             result_tracker_kwargs = None
 
-        def _triples_factory(path: Optional[str]) -> Optional[TriplesFactory]:
+        def _triples_factory(path: str | None) -> TriplesFactory | None:
             if path is None:
                 return None
             return TriplesFactory.from_path(path=path, create_inverse_triples=create_inverse_triples)

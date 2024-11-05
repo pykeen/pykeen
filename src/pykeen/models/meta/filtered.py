@@ -1,7 +1,7 @@
 """Filtered models."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, ClassVar
 
 import scipy.sparse
 import torch
@@ -54,7 +54,7 @@ class CooccurrenceFilteredModel(Model):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        additional_triples: Union[None, MappedTriples, list[MappedTriples]] = None,
+        additional_triples: None | MappedTriples | list[MappedTriples] = None,
         apply_in_training: bool = False,
         base: HintOrType[Model] = "rotate",
         training_fill_value: float = -1.0e03,
@@ -118,10 +118,10 @@ class CooccurrenceFilteredModel(Model):
                     dtype=bool,
                     norm=None,
                 )
-                for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items())
+                for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items(), strict=False)
                 if row_label != col_label
             }
-            for num_cols, (col_label, col_index) in zip(nums, TARGET_TO_INDEX.items())
+            for num_cols, (col_label, col_index) in zip(nums, TARGET_TO_INDEX.items(), strict=False)
         }
 
         # initialize base model's parameters
@@ -141,7 +141,7 @@ class CooccurrenceFilteredModel(Model):
         first_mask, second_mask = (
             index[batch_indices.cpu().numpy()]
             for batch_indices, (_target, index) in zip(
-                batch.t(), sorted(self.indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]])
+                batch.t(), sorted(self.indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]]), strict=False
             )
         )
         # combine masks
@@ -155,7 +155,7 @@ class CooccurrenceFilteredModel(Model):
         return new_scores
 
     # docstr-coverage: inherited
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:
         return self.base._get_entity_len(mode=mode)
 
     # docstr-coverage: inherited

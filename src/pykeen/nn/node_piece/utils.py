@@ -2,7 +2,6 @@
 
 import logging
 from collections.abc import Collection, Mapping
-from typing import Optional
 
 import numpy
 import torch
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 def random_sample_no_replacement(
     pool: Mapping[int, Collection[int]],
     num_tokens: int,
-    num_entities: Optional[int] = None,
+    num_entities: int | None = None,
 ) -> LongTensor:
     """Sample randomly without replacement num_tokens relations for each entity.
 
@@ -54,7 +53,7 @@ def random_sample_no_replacement(
     return assignment
 
 
-def ensure_num_entities(edge_index: numpy.ndarray, num_entities: Optional[int] = None) -> int:
+def ensure_num_entities(edge_index: numpy.ndarray, num_entities: int | None = None) -> int:
     """Calculate the number of entities from the edge index if not given."""
     if num_entities is not None:
         return num_entities

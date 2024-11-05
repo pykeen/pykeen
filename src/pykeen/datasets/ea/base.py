@@ -3,7 +3,6 @@
 import logging
 from abc import abstractmethod
 from collections.abc import Iterable
-from typing import Optional
 
 import pandas
 from class_resolver import HintOrType, OptionalKwargs
@@ -30,7 +29,7 @@ class EADataset(EagerDataset):
     def __init__(
         self,
         *,
-        side: Optional[EASide] = EA_SIDE_LEFT,
+        side: EASide | None = EA_SIDE_LEFT,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),

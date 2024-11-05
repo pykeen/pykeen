@@ -1,7 +1,7 @@
 """An adapter for MLflow."""
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary
@@ -16,10 +16,10 @@ class MLFlowResultTracker(ResultTracker):
 
     def __init__(
         self,
-        tracking_uri: Optional[str] = None,
-        experiment_id: Optional[int] = None,
-        experiment_name: Optional[str] = None,
-        tags: Optional[dict[str, Any]] = None,
+        tracking_uri: str | None = None,
+        experiment_id: int | None = None,
+        experiment_name: str | None = None,
+        tags: dict[str, Any] | None = None,
     ):
         """
         Initialize result tracking via MLFlow.
@@ -48,7 +48,7 @@ class MLFlowResultTracker(ResultTracker):
             self.mlflow.set_experiment(experiment_name)
 
     # docstr-coverage: inherited
-    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+    def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.mlflow.start_run(run_name=run_name)
         if self.tags is not None:
             self.mlflow.set_tags(tags=self.tags)
@@ -57,14 +57,14 @@ class MLFlowResultTracker(ResultTracker):
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         self.mlflow.log_metrics(metrics=metrics, step=step)
 
     # docstr-coverage: inherited
-    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.mlflow.log_params(params=params)
 

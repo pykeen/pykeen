@@ -1,7 +1,7 @@
 """Implementation of the ComplEx model."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 from class_resolver.api import HintOrType
@@ -57,7 +57,7 @@ class ComplEx(ERModel):
         entity_initializer: Hint[Initializer] = normal_,
         relation_initializer: Hint[Initializer] = normal_,
         regularizer: HintOrType[Regularizer] = LpRegularizer,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         """Initialize ComplEx.

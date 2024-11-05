@@ -8,9 +8,9 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from operator import itemgetter
-from typing import Any, Callable, ClassVar, Generic, Optional, Union, cast, overload
+from typing import Any, ClassVar, Generic, cast, overload
 
 import more_itertools
 import numpy
@@ -145,9 +145,9 @@ def parallel_slice_batches(
     n_parts = max(map(len, parts))
     parts = [r_parts if len(r_parts) == n_parts else r_parts * n_parts for r_parts in parts]
     # yield batches
-    for batch in zip(*parts):
+    for batch in zip(*parts, strict=False):
         # complex typing
-        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:])))  # type: ignore
+        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:], strict=False)))  # type: ignore
 
 
 # docstr-coverage:excused `overload`
@@ -1337,7 +1337,7 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
                 self.hidden.bias.view(*make_ones_like(prefix), -1),
                 *(
                     einsum("...i, ji -> ...j", xx, weight)
-                    for xx, weight in zip([h, r, t], self.hidden.weight.split(split_size=dim, dim=-1))
+                    for xx, weight in zip([h, r, t], self.hidden.weight.split(split_size=dim, dim=-1), strict=False)
                 ),
             )
         return self.hidden_to_score(self.activation(x)).squeeze(dim=-1)
@@ -2557,7 +2557,7 @@ class MuREInteraction(
         )
 
 
-Clamp = Union[tuple[Optional[float], float], tuple[float, Optional[float]]]
+Clamp = tuple[float | None, float] | tuple[float, float | None]
 
 
 class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
@@ -3858,7 +3858,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(zip("hrt", ensure_tuple(h, r, t)))
+        return dict(zip("hrt", ensure_tuple(h, r, t), strict=False))
 
     def extend(self, *new_coefficients: tuple[int, int, int, Sign]) -> AutoSFInteraction:
         """Extend AutoSF function, as described in the greedy search algorithm in the paper."""

@@ -1,8 +1,8 @@
 """Test that models are set in the right mode when they're training."""
 
 import unittest
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import torch
 

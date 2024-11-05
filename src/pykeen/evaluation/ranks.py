@@ -2,7 +2,6 @@
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Union
 
 import torch
 
@@ -137,13 +136,13 @@ class RankBuilder:
     y_true: torch.Tensor
 
     #: the number of scores which were larger than the true score, shape: (*bs), dtype: long
-    larger: Union[torch.Tensor, int] = 0
+    larger: torch.Tensor | int = 0
 
     #: the number of scores which were not smaller than the true score, shape: (*bs), dtype: long
-    not_smaller: Union[torch.Tensor, int] = 0
+    not_smaller: torch.Tensor | int = 0
 
     #: the total number of compared scores, shape: (*bs), dtype: long
-    total: Union[torch.Tensor, int] = 0
+    total: torch.Tensor | int = 0
 
     def update(self, y_pred: FloatTensor) -> "RankBuilder":
         """Update the rank builder with a batch of scores.

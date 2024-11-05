@@ -1,7 +1,7 @@
 """A simple AutoSF-based model."""
 
 from collections.abc import Mapping, Sequence
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -50,7 +50,7 @@ class AutoSF(ERModel):
         embedding_dim: int = 256,
         num_components: int = 4,
         coefficients: Sequence[tuple[int, int, int, Sign]] = YAGO310_COEFFICIENTS,
-        embedding_kwargs: Optional[Mapping[str, Any]] = None,
+        embedding_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize AutoSF via the :class:`pykeen.nn.AutoSFInteraction` interaction.
