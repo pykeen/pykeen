@@ -12,14 +12,14 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import ComplExInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ComplEx",
 ]
 
 
-class ComplEx(ERModel):
+class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ComplEx [trouillon2016]_.
 
     The ComplEx model combines complex-valued :class:`pykeen.nn.Embedding` entity and relation representations with a
