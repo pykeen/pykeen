@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from operator import itemgetter
 from typing import Any, ClassVar, Generic, Literal, cast
 
@@ -247,7 +247,7 @@ def repeat_if_necessary(
 
 def iter_slices(
     ids: LongTensor | None, slice_size: int, total: int, device: torch.device, dim: int = -1
-) -> Iterable[LongTensor]:
+) -> Iterator[LongTensor]:
     """
     Iterate over slices of an (implicit) index tensor.
 
@@ -262,14 +262,13 @@ def iter_slices(
     :param dim:
         The dimension along which to slice.
 
-    :return:
-        A list of index tensor parts, if an index tensor is given.
-    :yields: Slices of the implicit range tensor, if no explicit index tensor is given.
+    :yields: Slices of the index tensor
     """
-    if ids is not None:
-        return ids.split(split_size=slice_size, dim=dim)
-    for start in range(0, total, slice_size):
-        yield torch.arange(start=start, end=min(start + slice_size, total), device=device)
+    if ids is None:
+        for start in range(0, total, slice_size):
+            yield torch.arange(start=start, end=min(start + slice_size, total), device=device)
+    else:
+        yield from ids.split(split_size=slice_size, dim=dim)
 
 
 class ERModel(
