@@ -5,15 +5,9 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from operator import itemgetter
-from typing import (
-    Any,
-    ClassVar,
-    Generic,
-    Literal,
-    cast,
-)
+from typing import Any, ClassVar, Generic, Literal, cast
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -249,6 +243,32 @@ def repeat_if_necessary(
     if representations:
         return scores
     return scores.repeat(1, num)
+
+
+def iter_slices(
+    ids: LongTensor | None, slice_size: int, total: int, device: torch.device, dim: int = -1
+) -> Iterator[LongTensor]:
+    """
+    Iterate over slices of an (implicit) index tensor.
+
+    :param ids:
+        The ID tensor, or None to indicate :code:`torch.arange(total)`
+    :param slice_size: $>0$
+        The (maximum) size of each individual slice.
+    :param total:
+        The total number of IDs; only used when ``ids`` is ``None``.
+    :param device:
+        The device on which to create the slices of the implicit :code:`torch.arange(total)`.
+    :param dim:
+        The dimension along which to slice.
+
+    :yields: Slices of the index tensor
+    """
+    if ids is None:
+        for start in range(0, total, slice_size):
+            yield torch.arange(start=start, end=min(start + slice_size, total), device=device)
+    else:
+        yield from ids.split(split_size=slice_size, dim=dim)
 
 
 class ERModel(
@@ -497,13 +517,10 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_t(
-                        hr_batch=hr_batch,
-                        slice_size=None,
-                        mode=mode,
-                        tails=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    self.score_t(hr_batch=hr_batch, slice_size=None, mode=mode, tails=partial_tails)
+                    for partial_tails in iter_slices(
+                        ids=tails, slice_size=slice_size, total=self.num_entities, device=hr_batch.device
                     )
-                    for start in range(0, self.num_entities, slice_size)
                 ],
                 dim=-1,
             )
@@ -538,13 +555,10 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_h(
-                        rt_batch=rt_batch,
-                        slice_size=None,
-                        mode=mode,
-                        heads=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    self.score_h(rt_batch=rt_batch, slice_size=None, mode=mode, heads=partial_heads)
+                    for partial_heads in iter_slices(
+                        ids=heads, slice_size=slice_size, total=self.num_entities, device=rt_batch.device
                     )
-                    for start in range(0, self.num_entities, slice_size)
                 ],
                 dim=-1,
             )
@@ -579,13 +593,10 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_r(
-                        ht_batch=ht_batch,
-                        slice_size=None,
-                        mode=mode,
-                        relations=torch.arange(start=start, end=min(start + slice_size, self.num_relations)),
+                    self.score_r(ht_batch=ht_batch, slice_size=None, mode=mode, relations=partial_relations)
+                    for partial_relations in iter_slices(
+                        ids=relations, slice_size=slice_size, total=self.num_relations, device=ht_batch.device
                     )
-                    for start in range(0, self.num_relations, slice_size)
                 ],
                 dim=-1,
             )
