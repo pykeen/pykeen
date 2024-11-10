@@ -261,6 +261,10 @@ def iter_slices(
         The device on which to create the slices of the implicit :code:`torch.arange(total)`.
     :param dim:
         The dimension along which to slice.
+
+    :return:
+        A list of index tensor parts, if an index tensor is given.
+    :yields: Slices of the implicit range tensor, if no explicit index tensor is given.
     """
     if ids is not None:
         return ids.split(split_size=slice_size, dim=dim)
