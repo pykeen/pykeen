@@ -1254,7 +1254,7 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :return: shape: ``batch_dims``
             The scores.
         """
-        return tensor_sum(batched_dot(h, r), batched_dot(r, t), batched_dot(h, t))
+        return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
 
 
 @parse_docdata
