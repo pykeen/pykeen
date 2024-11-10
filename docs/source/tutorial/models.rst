@@ -9,6 +9,7 @@ uses the interaction function to calculate a scalar score from them.
 
 This tutorial gives a high-level overview of these components, and explains how to select them.
 A detailed discussions of possible representations can be found here: :ref:`representations`.
+Interaction functions are discussed in detail in :ref:`interactions`.
 
 Representation
 --------------
