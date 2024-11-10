@@ -487,7 +487,7 @@ class CoreTriplesFactory(KGInfo):
             raise TypeError("n must be either an integer or a float")
 
         uniq, counts = self.mapped_triples[:, 1].unique(return_counts=True)
-        top_counts, top_ids = counts.topk(k=n, largest=True)
+        top_ids = counts.topk(k=n, largest=True)[1]
         return set(uniq[top_ids].tolist())
 
     def clone_and_exchange_triples(
