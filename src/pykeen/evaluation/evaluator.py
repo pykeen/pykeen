@@ -610,7 +610,7 @@ def filter_scores_(
         A reference to the scores, which have been updated in-place.
     """
     # Bind shape
-    batch_size, num_entities = scores.shape
+    num_entities = scores.shape[1]
 
     # Set all filtered triples to NaN to ensure their exclusion in subsequent calculations
     scores[filter_batch[:, 0], filter_batch[:, 1]] = float("nan")
