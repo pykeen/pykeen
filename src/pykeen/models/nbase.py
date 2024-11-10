@@ -7,13 +7,7 @@ from abc import ABC
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import (
-    Any,
-    ClassVar,
-    Generic,
-    Literal,
-    cast,
-)
+from typing import Any, ClassVar, Generic, Literal, cast
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -249,6 +243,25 @@ def repeat_if_necessary(
     if representations:
         return scores
     return scores.repeat(1, num)
+
+
+def iter_slices(ids: LongTensor | None, slice_size: int, total: int, device: torch.device) -> Iterable[LongTensor]:
+    """
+    Iterate over slices of an (implicit) index tensor.
+
+    :param ids:
+        The ID tensor, or None to indicate :code:`torch.arange(total)`
+    :param slice_size: $>0$
+        The (maximum) size of each individual slice.
+    :param total:
+        The total number of IDs; only used when ``ids`` is ``None``.
+    :param device:
+        The device on which to create the slices of the implicit :code:`torch.arange(total)`.
+    """
+    if ids is not None:
+        return ids.split(split_size=slice_size, dim=0)
+    for start in range(0, total, slice_size):
+        yield torch.arange(start=start, end=min(start + slice_size, total), device=device)
 
 
 class ERModel(
@@ -495,13 +508,6 @@ class ERModel(
 
         # slice early to allow lazy computation of target representations
         if slice_size:
-            if tails is None:
-                tails_it = (
-                    torch.arange(start=start, end=min(start + slice_size, self.num_entities))
-                    for start in range(0, self.num_entities, slice_size)
-                )
-            else:
-                tails_it = tails.split(split_size=slice_size, dim=0)
             return torch.cat(
                 [
                     self.score_t(
@@ -510,7 +516,9 @@ class ERModel(
                         mode=mode,
                         tails=partial_tails,
                     )
-                    for partial_tails in tails_it
+                    for partial_tails in iter_slices(
+                        ids=tails, slice_size=slice_size, total=self.num_entities, device=hr_batch.device
+                    )
                 ],
                 dim=-1,
             )
