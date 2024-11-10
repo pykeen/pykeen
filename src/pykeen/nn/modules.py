@@ -1254,7 +1254,7 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         :return: shape: ``batch_dims``
             The scores.
         """
-        return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
+        return tensor_sum(batched_dot(h, r), batched_dot(r, t), batched_dot(h, t))
 
 
 @parse_docdata
@@ -3655,7 +3655,7 @@ AutoSFBlock = tuple[int, int, int, Sign]
 
 
 @parse_docdata
-class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class AutoSFInteraction(FunctionalInteraction[Representation, Representation, Representation]):
     r"""
     The AutoSF interaction as described by [zhang2020]_.
 
