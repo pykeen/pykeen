@@ -6,7 +6,14 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Callable, Optional
 
 import torch
-from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
+from class_resolver import (
+    ClassResolver,
+    Hint,
+    HintOrType,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
@@ -15,6 +22,7 @@ from ..utils import ExtraReprMixin, combine_complex, split_complex
 
 __all__ = [
     "Combination",
+    "combination_resolver",
     # Concrete classes
     "ComplexSeparatedCombination",
     "ConcatCombination",
@@ -131,22 +139,28 @@ class ConcatProjectionCombination(ConcatCombination):
 class ConcatAggregationCombination(ConcatCombination):
     """Combine representation by concatenation followed by an aggregation along the same axis."""
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("aggregation", resolver="class_resolver.contrib.torch.aggregation_resolver"),
+    )
     def __init__(
         self,
         aggregation: Hint[Callable[[FloatTensor], FloatTensor]] = None,
+        aggregation_kwargs: OptionalKwargs = None,
         dim: int = -1,
     ) -> None:
         """
         Initialize the combination.
 
         :param aggregation:
-            the aggregation, or a hint thereof, cf. :data:`class_resolver.contrib.torch.aggregation_resolver`
+            The aggregation, or a hint thereof.
+        :param aggregation_kwargs:
+            Additional keyword-based parameters.
         :param dim:
             the concatenation and reduction dimension.
         """
         super().__init__(dim=dim)
         self.dim = dim
-        self.aggregation = aggregation_resolver.make(aggregation)
+        self.aggregation = aggregation_resolver.make(aggregation, aggregation_kwargs)
 
     # docstr-coverage: inherited
     def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
@@ -310,7 +324,9 @@ class GatedCombination(Combination):
         return self.dropout(z * h + (1 - z) * xs[0])
 
 
+#: Resolve combinations
 combination_resolver: ClassResolver[Combination] = ClassResolver.from_subclasses(
     base=Combination,
     default=ConcatCombination,
+    location="pykeen.nn.combination.combination_resolver",
 )

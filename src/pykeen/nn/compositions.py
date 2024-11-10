@@ -77,10 +77,12 @@ class CircularCorrelationCompositionModule(FunctionalCompositionModule):
     func: ClassVar[Composition] = circular_correlation
 
 
+#: A resolver for compositions
 composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
     skip={
         FunctionalCompositionModule,
     },
+    location="pykeen.nn.compositions.composition_resolver",
 )

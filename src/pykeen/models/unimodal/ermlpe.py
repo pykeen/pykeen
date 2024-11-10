@@ -9,14 +9,14 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.modules import ERMLPEInteraction
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ERMLPE",
 ]
 
 
-class ERMLPE(ERModel):
+class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An extension of :class:`pykeen.models.ERMLP` proposed by [sharifzadeh2019]_.
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an

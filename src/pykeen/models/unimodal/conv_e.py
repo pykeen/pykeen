@@ -13,7 +13,7 @@ from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.init import xavier_normal_
 from ...nn.modules import ConvEInteraction
 from ...triples import CoreTriplesFactory
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ConvE",
@@ -22,7 +22,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvE(ERModel):
+class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
     r"""An implementation of ConvE from [dettmers2018]_.
 
     ConvE represents entities using a $d$-dimensional embedding and a scalar tail bias.
