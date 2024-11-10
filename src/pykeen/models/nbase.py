@@ -245,7 +245,9 @@ def repeat_if_necessary(
     return scores.repeat(1, num)
 
 
-def iter_slices(ids: LongTensor | None, slice_size: int, total: int, device: torch.device) -> Iterable[LongTensor]:
+def iter_slices(
+    ids: LongTensor | None, slice_size: int, total: int, device: torch.device, dim: int = -1
+) -> Iterable[LongTensor]:
     """
     Iterate over slices of an (implicit) index tensor.
 
@@ -257,9 +259,11 @@ def iter_slices(ids: LongTensor | None, slice_size: int, total: int, device: tor
         The total number of IDs; only used when ``ids`` is ``None``.
     :param device:
         The device on which to create the slices of the implicit :code:`torch.arange(total)`.
+    :param dim:
+        The dimension along which to slice.
     """
     if ids is not None:
-        return ids.split(split_size=slice_size, dim=0)
+        return ids.split(split_size=slice_size, dim=dim)
     for start in range(0, total, slice_size):
         yield torch.arange(start=start, end=min(start + slice_size, total), device=device)
 
