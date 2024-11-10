@@ -495,15 +495,22 @@ class ERModel(
 
         # slice early to allow lazy computation of target representations
         if slice_size:
+            if tails is None:
+                tails_it = (
+                    torch.arange(start=start, end=min(start + slice_size, self.num_entities))
+                    for start in range(0, self.num_entities, slice_size)
+                )
+            else:
+                tails_it = tails.split(split_size=slice_size, dim=0)
             return torch.cat(
                 [
                     self.score_t(
                         hr_batch=hr_batch,
                         slice_size=None,
                         mode=mode,
-                        tails=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                        tails=partial_tails,
                     )
-                    for start in range(0, self.num_entities, slice_size)
+                    for partial_tails in tails_it
                 ],
                 dim=-1,
             )
