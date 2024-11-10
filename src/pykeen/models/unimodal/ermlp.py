@@ -9,14 +9,14 @@ from torch import nn
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import ERMLPInteraction
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ERMLP",
 ]
 
 
-class ERMLP(ERModel):
+class ERMLP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ERMLP from [dong2014]_.
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an

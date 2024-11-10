@@ -11,7 +11,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import KG2EInteraction
 from ...nn.sim import KG2ESimilarity
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class KG2E(ERModel):
+class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]):
     r"""An implementation of KG2E from [he2015]_.
 
     KG2E aims to explicitly model (un)certainties in entities and relations (e.g. influenced by the number of triples
