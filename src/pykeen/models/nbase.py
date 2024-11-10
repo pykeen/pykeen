@@ -510,12 +510,7 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_t(
-                        hr_batch=hr_batch,
-                        slice_size=None,
-                        mode=mode,
-                        tails=partial_tails,
-                    )
+                    self.score_t(hr_batch=hr_batch, slice_size=None, mode=mode, tails=partial_tails)
                     for partial_tails in iter_slices(
                         ids=tails, slice_size=slice_size, total=self.num_entities, device=hr_batch.device
                     )
@@ -553,13 +548,10 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_h(
-                        rt_batch=rt_batch,
-                        slice_size=None,
-                        mode=mode,
-                        heads=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    self.score_h(rt_batch=rt_batch, slice_size=None, mode=mode, heads=partial_heads)
+                    for partial_heads in iter_slices(
+                        ids=heads, slice_size=slice_size, total=self.num_entities, device=rt_batch.device
                     )
-                    for start in range(0, self.num_entities, slice_size)
                 ],
                 dim=-1,
             )
@@ -594,13 +586,10 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_r(
-                        ht_batch=ht_batch,
-                        slice_size=None,
-                        mode=mode,
-                        relations=torch.arange(start=start, end=min(start + slice_size, self.num_relations)),
+                    self.score_r(ht_batch=ht_batch, slice_size=None, mode=mode, relations=partial_relations)
+                    for partial_relations in iter_slices(
+                        ids=relations, slice_size=slice_size, total=self.num_relations, device=ht_batch.device
                     )
-                    for start in range(0, self.num_relations, slice_size)
                 ],
                 dim=-1,
             )
