@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Optional
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import TorusEInteraction
-from ...typing import Hint, FloatTensor, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "TorusE",
