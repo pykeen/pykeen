@@ -7,7 +7,7 @@ import pathlib
 import re
 from collections.abc import Collection, Iterable, Mapping
 from re import Pattern
-from typing import Any, Optional, Union
+from typing import Any
 
 import click
 from tqdm import tqdm
@@ -24,10 +24,10 @@ min_triples_option = click.option("--min-triples", type=int)
 
 
 def iter_dataset_classes(
-    regex_name_filter: Union[None, str, Pattern] = None,
+    regex_name_filter: None | str | Pattern = None,
     *,
-    max_triples: Optional[int] = None,
-    min_triples: Optional[int] = None,
+    max_triples: int | None = None,
+    min_triples: int | None = None,
     use_tqdm: bool = True,
 ) -> Iterable[tuple[str, type[Dataset]]]:
     """Iterate over dataset classes with given constraints.
@@ -64,10 +64,10 @@ def iter_dataset_classes(
 
 
 def iter_dataset_instances(
-    regex_name_filter: Union[None, str, Pattern] = None,
+    regex_name_filter: None | str | Pattern = None,
     *,
-    max_triples: Optional[int] = None,
-    min_triples: Optional[int] = None,
+    max_triples: int | None = None,
+    min_triples: int | None = None,
     use_tqdm: bool = True,
 ) -> Iterable[tuple[str, Dataset]]:
     """Iterate over dataset instances with given constraints.
@@ -90,11 +90,11 @@ def iter_dataset_instances(
 
 def get_dataset(
     *,
-    dataset: Union[None, str, pathlib.Path, Dataset, type[Dataset]] = None,
-    dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
-    testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
-    validation: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
+    dataset: None | str | pathlib.Path | Dataset | type[Dataset] = None,
+    dataset_kwargs: Mapping[str, Any] | None = None,
+    training: None | str | pathlib.Path | CoreTriplesFactory = None,
+    testing: None | str | pathlib.Path | CoreTriplesFactory = None,
+    validation: None | str | pathlib.Path | CoreTriplesFactory = None,
 ) -> Dataset:
     """Get a dataset, cached based on the given kwargs.
 
@@ -141,8 +141,8 @@ def get_dataset(
     if dataset is not None:
         raise TypeError(f"Dataset is invalid type: {type(dataset)}")
 
-    if isinstance(training, (str, pathlib.Path)) and isinstance(testing, (str, pathlib.Path)):
-        if validation is None or isinstance(validation, (str, pathlib.Path)):
+    if isinstance(training, str | pathlib.Path) and isinstance(testing, str | pathlib.Path):
+        if validation is None or isinstance(validation, str | pathlib.Path):
             return PathDataset(
                 training_path=training,
                 testing_path=testing,
@@ -194,7 +194,7 @@ def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: boo
 
 def _cached_get_dataset(
     dataset: str,
-    dataset_kwargs: Optional[Mapping[str, Any]],
+    dataset_kwargs: Mapping[str, Any] | None,
     force: bool = False,
 ) -> Dataset:
     """Get dataset by name, potentially using file-based cache."""

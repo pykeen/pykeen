@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Iterable
-from typing import Optional, cast
+from typing import cast
 
 import torch
 from torch import nn
@@ -40,7 +40,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
     def __init__(
         self,
         *,
-        gnn_encoder: Optional[Iterable[nn.Module]] = None,
+        gnn_encoder: Iterable[nn.Module] | None = None,
         **kwargs,
     ) -> None:
         """
@@ -108,10 +108,10 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
     def _get_representations(
         self,
-        h: Optional[LongTensor],
-        r: Optional[LongTensor],
-        t: Optional[LongTensor],
-        mode: Optional[InductiveMode] = None,
+        h: LongTensor | None,
+        r: LongTensor | None,
+        t: LongTensor | None,
+        mode: InductiveMode | None = None,
     ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape with a GNN encoder."""
         entity_representations = self._get_entity_representations_from_inductive_mode(mode=mode)

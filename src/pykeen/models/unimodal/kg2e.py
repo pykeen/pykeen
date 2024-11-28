@@ -1,7 +1,7 @@
 """Implementation of KG2E."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
@@ -61,10 +61,10 @@ class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
         c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = uniform_,
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_constrainer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize KG2E.

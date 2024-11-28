@@ -1,8 +1,7 @@
 """Plotting utilities for the pipeline results."""
 
 import logging
-from collections.abc import Mapping
-from typing import Callable, Optional
+from collections.abc import Callable, Mapping
 
 from ..losses import loss_resolver
 from ..models.nbase import ERModel
@@ -88,19 +87,19 @@ def build_representation_getter(relation: bool = False, index: int = 0) -> Calla
 def plot_er(  # noqa: C901
     pipeline_result,
     *,
-    model: Optional[str] = None,
-    entities: Optional[set[str]] = None,
-    relations: Optional[set[str]] = None,
+    model: str | None = None,
+    entities: set[str] | None = None,
+    relations: set[str] | None = None,
     apply_limits: bool = True,
     margin: float = 0.4,
     plot_entities: bool = True,
-    plot_relations: Optional[bool] = None,
+    plot_relations: bool | None = None,
     annotation_x_offset: float = 0.02,
     annotation_y_offset: float = 0.03,
     entity_embedding_getter=None,
     relation_embedding_getter=None,
     ax=None,
-    subtitle: Optional[str] = None,
+    subtitle: str | None = None,
     **kwargs,
 ):
     """Plot the reduced entities and relation vectors in 2D.
@@ -294,7 +293,7 @@ def _get_reducer_cls(model: str, **kwargs):
     return Reducer, kwargs
 
 
-def plot(pipeline_result, er_kwargs: Optional[Mapping[str, str]] = None, figsize=(10, 4)):
+def plot(pipeline_result, er_kwargs: Mapping[str, str] | None = None, figsize=(10, 4)):
     """Plot all plots."""
     import matplotlib.pyplot as plt
 

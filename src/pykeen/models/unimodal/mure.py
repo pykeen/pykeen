@@ -1,7 +1,7 @@
 """Implementation of MuRE."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from torch.nn.init import normal_, uniform_, zeros_
 
@@ -44,12 +44,12 @@ class MuRE(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
         p: int = 2,
         power_norm: bool = True,
         entity_initializer: Hint[Initializer] = normal_,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_initializer_kwargs: Mapping[str, Any] | None = None,
         entity_bias_initializer: Hint[Initializer] = zeros_,
         relation_initializer: Hint[Initializer] = normal_,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer_kwargs: Mapping[str, Any] | None = None,
         relation_matrix_initializer: Hint[Initializer] = uniform_,
-        relation_matrix_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_matrix_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize MuRE via the :class:`pykeen.nn.modules.MuREInteraction` interaction.

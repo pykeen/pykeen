@@ -2,7 +2,7 @@
 
 import tempfile
 from collections.abc import MutableMapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 import unittest_templates
@@ -195,7 +195,7 @@ class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
     """A generic test case for sLCWA training loops."""
 
     #: Should negative samples be filtered?
-    filterer_cls: ClassVar[Optional[type[Filterer]]] = None
+    filterer_cls: ClassVar[type[Filterer] | None] = None
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)

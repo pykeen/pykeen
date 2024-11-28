@@ -2,7 +2,6 @@
 
 import math
 from collections.abc import Collection
-from typing import Optional
 
 import torch
 
@@ -67,7 +66,7 @@ class BasicNegativeSampler(NegativeSampler):
     def __init__(
         self,
         *,
-        corruption_scheme: Optional[Collection[Target]] = None,
+        corruption_scheme: Collection[Target] | None = None,
         **kwargs,
     ) -> None:
         """Initialize the basic negative sampler with the given entities.
@@ -96,7 +95,7 @@ class BasicNegativeSampler(NegativeSampler):
         split_idx = int(math.ceil(total_num_negatives / len(self._corruption_indices)))
 
         # Do not detach, as no gradients should flow into the indices.
-        for index, start in zip(self._corruption_indices, range(0, total_num_negatives, split_idx)):
+        for index, start in zip(self._corruption_indices, range(0, total_num_negatives, split_idx), strict=False):
             stop = min(start + split_idx, total_num_negatives)
             random_replacement_(
                 batch=negative_batch,

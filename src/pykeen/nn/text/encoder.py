@@ -3,8 +3,8 @@
 import logging
 import string
 from abc import abstractmethod
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, Optional, Union
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType
@@ -62,7 +62,7 @@ def _encode_all_memory_utilization_optimized(
 class TextEncoder(nn.Module):
     """An encoder for text."""
 
-    def forward(self, labels: Union[str, Sequence[str]]) -> FloatTensor:
+    def forward(self, labels: str | Sequence[str]) -> FloatTensor:
         """
         Encode a batch of text.
 
@@ -93,7 +93,7 @@ class TextEncoder(nn.Module):
     def encode_all(
         self,
         labels: Sequence[str],
-        batch_size: Optional[int] = None,
+        batch_size: int | None = None,
     ) -> FloatTensor:
         """Encode all labels (inference mode & batched).
 

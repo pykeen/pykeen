@@ -6,7 +6,6 @@ This experiment investigates the differences between
 
 import itertools as itt
 import logging
-from typing import Optional
 
 import click
 import matplotlib.pyplot as plt
@@ -56,7 +55,7 @@ def main(force: bool, clip: int, mode):
 
 
 def run_inverse_stability_workflow(
-    dataset: str, model: str, training_loop: str, random_seed=0, device="cpu", *, mode: Optional[InductiveMode]
+    dataset: str, model: str, training_loop: str, random_seed=0, device="cpu", *, mode: InductiveMode | None
 ):
     """Run an inverse stability experiment."""
     dataset_instance: Dataset = get_dataset(

@@ -1,7 +1,7 @@
 """Implementation of TorusE."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -37,11 +37,11 @@ class TorusE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         p: int = 2,
         power_norm: bool = False,
         entity_initializer: Hint[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_initializer_kwargs: Mapping[str, Any] | None = None,
         entity_normalizer: Hint[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize TorusE via the :class:`pykeen.nn.modules.TorusEInteraction` interaction.

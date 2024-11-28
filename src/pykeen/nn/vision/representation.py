@@ -6,8 +6,8 @@ Generally requires :mod:`torchvision` to be installed.
 
 import functools
 import pathlib
-from collections.abc import Sequence
-from typing import Any, Callable, Optional, Union
+from collections.abc import Callable, Sequence
+from typing import Any, TypeAlias
 
 import torch
 import torch.nn
@@ -39,15 +39,15 @@ __all__ = [
 ]
 
 
-def _ensure_vision(instance: object, module: Optional[Any]):
+def _ensure_vision(instance: object, module: Any | None):
     if module is None:
         raise ImportError(f"{instance.__class__.__name__} requires `torchvision` to be installed.")
 
 
 #: A path to an image file or a tensor representation of the image
-ImageHint = Union[str, pathlib.Path, torch.Tensor]
+ImageHint: TypeAlias = str | pathlib.Path | torch.Tensor
 #: A sequence of image hints
-ImageHints = Sequence[ImageHint]
+ImageHints: TypeAlias = Sequence[ImageHint]
 
 
 class VisionDataset(torch.utils.data.Dataset):
@@ -61,8 +61,8 @@ class VisionDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         images: ImageHints,
-        transforms: Optional[Sequence] = None,
-        root: Optional[pathlib.Path] = None,
+        transforms: Sequence | None = None,
+        root: pathlib.Path | None = None,
     ) -> None:
         """
         Initialize the dataset.
@@ -92,12 +92,12 @@ class VisionDataset(torch.utils.data.Dataset):
     def __getitem__(self, item: int) -> torch.Tensor:  # noqa:D105
         _ensure_vision(self, Image)
         image = self.images[item]
-        if isinstance(image, (str, pathlib.Path)):
+        if isinstance(image, str | pathlib.Path):
             path = pathlib.Path(image)
             if not path.is_absolute():
                 path = self.root.joinpath(path)
             image = Image.open(path)
-        assert isinstance(image, (torch.Tensor, Image.Image))
+        assert isinstance(image, torch.Tensor | Image.Image)
         return self.transforms(image)
 
     # docstr-coverage: inherited
@@ -116,11 +116,11 @@ class VisualRepresentation(Representation):
     def __init__(
         self,
         images: ImageHints,
-        encoder: Union[str, torch.nn.Module],
+        encoder: str | torch.nn.Module,
         layer_name: str,
-        max_id: Optional[int] = None,
-        shape: Optional[OneOrSequence[int]] = None,
-        transforms: Optional[Sequence] = None,
+        max_id: int | None = None,
+        shape: OneOrSequence[int] | None = None,
+        transforms: Sequence | None = None,
         encoder_kwargs: OptionalKwargs = None,
         batch_size: int = 32,
         trainable: bool = True,
@@ -208,7 +208,7 @@ class VisualRepresentation(Representation):
         return pool(encoder(images)["feature"])
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: Optional[LongTensor] = None) -> FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         dataset = self.images
         if indices is not None:
             dataset = torch.utils.data.Subset(dataset=dataset, indices=indices)
@@ -236,7 +236,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
     """
 
     def __init__(
-        self, wikidata_ids: Sequence[str], max_id: Optional[int] = None, image_kwargs: OptionalKwargs = None, **kwargs
+        self, wikidata_ids: Sequence[str], max_id: int | None = None, image_kwargs: OptionalKwargs = None, **kwargs
     ):
         """
         Initialize the representation.

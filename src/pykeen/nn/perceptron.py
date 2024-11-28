@@ -1,7 +1,5 @@
 """Perceptron-like modules."""
 
-from typing import Optional, Union
-
 from torch import nn
 
 from ..typing import FloatTensor
@@ -23,9 +21,9 @@ class ConcatMLP(nn.Sequential):
     def __init__(
         self,
         input_dim: int,
-        output_dim: Optional[int] = None,
+        output_dim: int | None = None,
         dropout: float = 0.1,
-        ratio: Union[int, float] = 2,
+        ratio: int | float = 2,
         flatten_dims: int = 2,
     ):
         """Initialize the module.

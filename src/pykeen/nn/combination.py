@@ -2,8 +2,8 @@
 
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, Callable, Optional
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import Any
 
 import torch
 from class_resolver import (
@@ -96,7 +96,7 @@ class ConcatProjectionCombination(ConcatCombination):
     def __init__(
         self,
         input_dims: Sequence[int],
-        output_dim: Optional[int] = None,
+        output_dim: int | None = None,
         bias: bool = True,
         dropout: float = 0.0,
         activation: HintOrType[nn.Module] = nn.Identity,
@@ -213,7 +213,7 @@ class ComplexSeparatedCombination(Combination):
                 f"complex data type."
             )
         # split complex; repeat real
-        xs_real, xs_imag = list(zip(*(split_complex(x) if x.is_complex() else (x, x) for x in xs)))
+        xs_real, xs_imag = list(zip(*(split_complex(x) if x.is_complex() else (x, x) for x in xs), strict=False))
         # separately combine real and imaginary parts
         x_re = self.real_combination(xs_real)
         x_im = self.imag_combination(xs_imag)
@@ -270,12 +270,12 @@ class GatedCombination(Combination):
     def __init__(
         self,
         entity_dim: int = 32,
-        literal_dim: Optional[int] = None,
+        literal_dim: int | None = None,
         input_dropout: float = 0.0,
         gate_activation: HintOrType[nn.Module] = nn.Sigmoid,
-        gate_activation_kwargs: Optional[Mapping[str, Any]] = None,
+        gate_activation_kwargs: Mapping[str, Any] | None = None,
         hidden_activation: HintOrType[nn.Module] = nn.Tanh,
-        hidden_activation_kwargs: Optional[Mapping[str, Any]] = None,
+        hidden_activation_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Instantiate the module.
 

@@ -26,7 +26,6 @@ has some nice features:
 """
 
 from abc import abstractmethod
-from typing import Optional
 
 import click
 import pytorch_lightning
@@ -68,7 +67,7 @@ class LitModule(pytorch_lightning.LightningModule):
         # dataset
         dataset: HintOrType[Dataset] = "nations",
         dataset_kwargs: OptionalKwargs = None,
-        mode: Optional[InductiveMode] = None,
+        mode: InductiveMode | None = None,
         # model
         model: HintOrType[Model] = "distmult",
         model_kwargs: OptionalKwargs = None,

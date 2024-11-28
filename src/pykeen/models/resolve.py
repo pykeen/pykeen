@@ -57,7 +57,7 @@ argument of :func:`pykeen.pipeline.pipeline`.
 
 import logging
 from collections.abc import Mapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any
 
 from class_resolver import OptionalKwargs
 
@@ -74,13 +74,11 @@ logger = logging.getLogger(__name__)
 
 
 def make_model(
-    dimensions: Union[int, Mapping[str, int]],
-    interaction: Union[
-        str,
-        Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-        type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
-    ],
-    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    dimensions: int | Mapping[str, int],
+    interaction: str
+    | Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
+    | type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+    interaction_kwargs: Mapping[str, Any] | None = None,
     entity_representations_kwargs: OptionalKwargs = None,
     relation_representations_kwargs: OptionalKwargs = None,
     **kwargs,
@@ -116,13 +114,11 @@ class DimensionError(ValueError):
 
 
 def make_model_cls(
-    dimensions: Union[int, Mapping[str, int]],
-    interaction: Union[
-        str,
-        Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-        type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
-    ],
-    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    dimensions: int | Mapping[str, int],
+    interaction: str
+    | Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
+    | type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+    interaction_kwargs: Mapping[str, Any] | None = None,
     entity_representations_kwargs: OptionalKwargs = None,
     relation_representations_kwargs: OptionalKwargs = None,
 ) -> type[ERModel]:
@@ -160,7 +156,7 @@ def make_model_cls(
 
 
 def _normalize_representation_kwargs(
-    dimensions: Union[int, Mapping[str, int]],
+    dimensions: int | Mapping[str, int],
     interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
     entity_representations_kwargs: OptionalKwargs,
     relation_representations_kwargs: OptionalKwargs,

@@ -171,7 +171,7 @@ def test_iter_entity_mappings():
     # apply
     mappings = list(pykeen.datasets.ea.combination.iter_entity_mappings(*pairs, offsets=offsets))
     assert len(mappings) == len(pairs)
-    for (old, new), mapi in zip(pairs, mappings):
+    for (old, new), mapi in zip(pairs, mappings, strict=False):
         # every key is contained
         assert set(mapi.keys()) == set(old.tolist())
         # value range

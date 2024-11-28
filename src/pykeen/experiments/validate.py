@@ -2,8 +2,8 @@
 
 import inspect
 import pathlib
-from collections.abc import Iterable
-from typing import Callable, Optional, Union
+from collections.abc import Callable, Iterable
+from typing import Optional, Union
 
 from class_resolver import Hint
 from torch import nn
@@ -34,18 +34,18 @@ _SKIP_NAMES = {
 }
 _SKIP_ANNOTATIONS = {
     nn.Embedding,
-    Optional[nn.Embedding],
+    Optional[nn.Embedding],  # noqa:UP007
     type[nn.Embedding],
-    Optional[type[nn.Embedding]],
+    Optional[type[nn.Embedding]],  # noqa:UP007
     nn.Module,
-    Optional[nn.Module],
+    Optional[nn.Module],  # noqa:UP007
     type[nn.Module],
-    Optional[type[nn.Module]],
+    Optional[type[nn.Module]],  # noqa:UP007
     Model,
-    Optional[Model],
+    Optional[Model],  # noqa:UP007
     type[Model],
-    Optional[type[Model]],
-    Union[str, Callable[[FloatTensor], FloatTensor]],
+    Optional[type[Model]],  # noqa:UP007
+    Union[str, Callable[[FloatTensor], FloatTensor]],  # noqa:UP007
     Hint[nn.Module],
 }
 _SKIP_EXTRANEOUS = {
@@ -76,7 +76,7 @@ def _should_skip_because_type(x):
     return False
 
 
-def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
+def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     configuration = load_configuration(path)
 
@@ -93,10 +93,10 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
         *,
         required: bool = True,
         normalize: bool = False,
-        suffix: Optional[str] = None,
+        suffix: str | None = None,
         check_kwargs: bool = False,
-        required_kwargs: Optional[set[str]] = None,
-        allowed_missing_kwargs: Optional[set[str]] = None,
+        required_kwargs: set[str] | None = None,
+        allowed_missing_kwargs: set[str] | None = None,
     ):
         value = test_dict.get(key)
         if value is None:

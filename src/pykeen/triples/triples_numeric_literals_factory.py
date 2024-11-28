@@ -3,7 +3,7 @@
 import logging
 import pathlib
 from collections.abc import Iterable, Mapping, MutableMapping
-from typing import Any, ClassVar, Optional, TextIO, Union
+from typing import Any, ClassVar, TextIO
 
 import numpy as np
 import pandas
@@ -72,9 +72,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     @classmethod
     def from_path(
         cls,
-        path: Union[str, pathlib.Path, TextIO],
+        path: str | pathlib.Path | TextIO,
         *,
-        path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
+        path_to_numeric_triples: None | str | pathlib.Path | TextIO = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if path_to_numeric_triples is None:
@@ -125,9 +125,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[dict[str, Any]] = None,
+        extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
-        create_inverse_triples: Optional[bool] = None,
+        create_inverse_triples: bool | None = None,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
@@ -145,7 +145,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
+    def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping
         pandas.DataFrame(
@@ -167,7 +167,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             path.joinpath(f"{cls.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )
-        data["literals_to_id"] = dict(zip(df["label"], df["id"]))
+        data["literals_to_id"] = dict(zip(df["label"], df["id"], strict=False))
         # load literals
         data["numeric_literals"] = np.load(
             str(path.joinpath(cls.file_name_numeric_literals).with_suffix(suffix=".npy"))

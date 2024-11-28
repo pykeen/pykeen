@@ -1,7 +1,7 @@
 """Implementation of TuckEr."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from class_resolver import OptionalKwargs
 
@@ -56,7 +56,7 @@ class TuckER(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         self,
         *,
         embedding_dim: int = 200,
-        relation_dim: Optional[int] = None,
+        relation_dim: int | None = None,
         dropout_0: float = 0.3,
         dropout_1: float = 0.4,
         dropout_2: float = 0.5,

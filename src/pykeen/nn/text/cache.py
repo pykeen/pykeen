@@ -7,10 +7,10 @@ import logging
 import re
 import subprocess
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from itertools import chain
 from textwrap import dedent
-from typing import Any, Callable, Literal, cast
+from typing import Any, Literal, cast
 
 import more_itertools
 import requests
@@ -278,7 +278,7 @@ class WikidataTextCache(TextCache):
         for i, wikidata_id in enumerate(ids):
             result[i] = self._load(wikidata_id=wikidata_id, component=component)
         # determine missing entries
-        missing = [wikidata_id for wikidata_id, desc in zip(ids, result) if not desc]
+        missing = [wikidata_id for wikidata_id, desc in zip(ids, result, strict=False) if not desc]
         # retrieve information via SPARQL
         entries = self.query_text(wikidata_ids=missing)
         # save entries
@@ -305,7 +305,7 @@ class WikidataTextCache(TextCache):
         titles = self.get_labels(wikidata_identifiers=identifiers)
         descriptions = self.get_descriptions(wikidata_identifiers=identifiers)
         # compose labels
-        return [f"{title}: {description}" for title, description in zip(titles, descriptions)]
+        return [f"{title}: {description}" for title, description in zip(titles, descriptions, strict=False)]
 
     def get_labels(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
         """

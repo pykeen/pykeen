@@ -17,17 +17,15 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
 from typing import (
     Any,
-    Callable,
     Generic,
     TextIO,
     TypeVar,
-    Union,
 )
 
 import numpy as np
@@ -497,7 +495,7 @@ def calculate_broadcasted_elementwise_result_shape(
     second: tuple[int, ...],
 ) -> tuple[int, ...]:
     """Determine the return shape of a broadcasted elementwise operation."""
-    return tuple(max(a, b) for a, b in zip(first, second))
+    return tuple(max(a, b) for a, b in zip(first, second, strict=False))
 
 
 def estimate_cost_of_sequence(
@@ -846,7 +844,7 @@ def check_shapes(
         if len(actual_shape) != len(shape):
             errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
             continue
-        for dim, name in zip(actual_shape, shape):
+        for dim, name in zip(actual_shape, shape, strict=False):
             exp_dim = dims.get(name)
             if exp_dim is not None and exp_dim != dim:
                 errors.append(f"{name}: {dim} vs. {exp_dim}")
@@ -1124,7 +1122,7 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
     return list(result.values())
 
 
-PathType = Union[str, pathlib.Path, TextIO]
+PathType = str | pathlib.Path | TextIO
 
 
 def normalize_path(
