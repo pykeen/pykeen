@@ -8,7 +8,7 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
 from typing import Any, ClassVar, Generic, Optional, Union, cast, overload
 
@@ -440,10 +440,6 @@ class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepr
         super().__init__()
         self.p = p
         self.power_norm = power_norm
-
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        raise AssertionError("This is a relic.")
 
 
 @parse_docdata
@@ -1487,7 +1483,7 @@ class RotatEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 
     is_complex: ClassVar[bool] = True
 
-    def __init__(self, p=2, power_norm=False):
+    def __init__(self, p: int = 2, power_norm: bool = False):
         """
         Initialize the interaction module.
 
