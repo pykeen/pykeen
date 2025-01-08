@@ -122,6 +122,14 @@ TripleRE
 .. math ::
     \mathbf{h} \odot (\mathbf{r}_h + u) - \mathbf{t} \odot (\mathbf{r}_t + u) + \mathbf{r}
 
+RotatE
+~~~~~~
+:class:`~pykeen.nn.modules.RotatEInteraction`
+
+QuatE
+~~~~~
+:class:`~pykeen.nn.modules.QuatEInteraction`
+
 .. todo::
     - :class:`~pykeen.nn.modules.BoxEInteraction`
         - has some extra projections
@@ -132,20 +140,102 @@ TripleRE
 
 Semantic Matching / Factorization
 ----------------------------------
-Semantic matching of factorization based interactions ...
+All *semantic matching* or *factorization-based* interactions can be expressed as
 
-    - :class:`~pykeen.nn.modules.AutoSFInteraction`
-    - :class:`~pykeen.nn.modules.ComplExInteraction`
-    - :class:`~pykeen.nn.modules.CPInteraction`
-    - :class:`~pykeen.nn.modules.DistMAInteraction`
-    - :class:`~pykeen.nn.modules.DistMultInteraction`
-    - :class:`~pykeen.nn.modules.HolEInteraction`
-    - :class:`~pykeen.nn.modules.QuatEInteraction`
-    - :class:`~pykeen.nn.modules.RESCALInteraction`
-    - :class:`~pykeen.nn.modules.RotatEInteraction`
-    - :class:`~pykeen.nn.modules.TransFInteraction`
-    - :class:`~pykeen.nn.modules.MultiLinearTuckerInteraction`
-    - :class:`~pykeen.nn.modules.TuckERInteraction`
+.. math ::
+
+    \sum \mathbf{Z}_{i, j, k} \mathbf{h}_i \mathbf{r}_j \mathbf{t}_k
+
+for suitable tensor $\mathbf{Z} \in \mathbb{R}^{d_h \times d_r \times d_t}$, and potentially re-shaped head entity, relation, and tail entity representations $\mathbf{h} \in \mathbb{R}^{d_h}, \mathbf{r} \in \mathbb{R}^{d_r}, \mathbf{t} \in \mathbb{R}^{d_t}$.
+Many of the interactions have a regular structured choice for $\mathbf{Z}$ which permits efficient calculation.
+We will use the simplified formulae where possible.
+
+DistMult
+~~~~~~~~
+The :class:`~pykeen.nn.modules.DistMultInteraction` uses the sum of products along each dimension
+
+.. math ::
+    \sum_i \mathbf{h}_i \mathbf{r}_i \mathbf{t}_i
+
+for $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$.
+
+Canonical Tensor Decomposition
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:class:`~pykeen.nn.modules.CPInteraction` is equivalent to :class:`~pykeen.nn.modules.DistMultInteraction`, except that it uses different sources for head and tail representations, while :class:`~pykeen.nn.modules.DistMultInteraction` uses one shared entity embedding matrix.
+
+.. math ::
+    \sum_{i, j} \mathbf{h}_{i, j} \mathbf{r}_{i, j} \mathbf{t}_{i, j}
+
+RESCAL
+~~~~~~
+:class:`~pykeen.nn.modules.RESCALInteraction` operates on $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$ and $\mathbf{R} \in \mathbb{R}^{d \times d}$ by
+
+.. math ::
+    \sum_{i, j} \mathbf{h}_{i} \mathbf{R}_{i,j} \mathbf{t}_{j}
+
+
+Tucker Decomposition
+~~~~~~~~~~~~~~~~~~~~
+:class:`~pykeen.nn.modules.TuckERInteraction` / :class:`~pykeen.nn.modules.MultiLinearTuckerInteraction` are stateful interaction functions which make $\mathbf{Z}$ a trainable global parameter and set $d_h = d_t$.
+
+.. math ::
+
+    \sum \mathbf{Z}_{i, j, k} \mathbf{h}_i \mathbf{r}_j \mathbf{t}_k
+
+.. warning::
+    Both additionally add batch normalization and dropout layers, which technically makes them neural models.
+    However, the intuition behind the interaction is still similar to semantic matching based models, which is why we list them here.
+
+DistMA
+~~~~~~
+:class:`~pykeen.nn.modules.DistMAInteraction` uses the sum of pairwise scalar products between $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^{d}$:
+
+.. math ::
+    \langle \mathbf{h}, \mathbf{r} \rangle
+    + \langle \mathbf{r}, \mathbf{t} \rangle
+    + \langle \mathbf{t}, \mathbf{h} \rangle
+
+TransF
+~~~~~~
+:class:`~pykeen.nn.modules.TransFInteraction` defines the interaction between $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^{d}$ as:
+
+.. math ::
+    2 \cdot \langle \mathbf{h}, \mathbf{t} \rangle
+    + \langle \mathbf{r}, \mathbf{t} \rangle
+    - \langle \mathbf{h}, \mathbf{r} \rangle
+
+ComplEx
+~~~~~~~
+:class:`~pykeen.nn.modules.ComplExInteraction` extends :class:`~pykeen.nn.modules.DistMultInteraction` to use complex numbers instead, i.e., operate on $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbf{C}^{d}$, and defines
+
+.. math ::
+    \textit{Re}\left(
+        \sum_i \mathbf{h}_i \mathbf{r}_i \bar{\mathbf{t}}_i
+    \right)
+
+where *Re* refers to the real part, and $\bar{\cdot}$ denotes the complex conjugate.
+
+HolE
+~~~~~
+:class:`~pykeen.nn.modules.HolEInteraction` is given by
+
+.. math::
+    \langle \mathbf{r}, \mathbf{h} \star \mathbf{t}\rangle
+
+where $\star: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}^d$ denotes the circular correlation:
+
+.. math::
+    [\mathbf{a} \star \mathbf{b}]_i = \sum_{k=0}^{d-1} \mathbf{a}_{k} * \mathbf{b}_{(i+k)\ \mod \ d}
+
+AutoSF
+~~~~~~
+:class:`~pykeen.nn.modules.AutoSFInteraction` is an attempt to parametrize *block-based* semantic matching interaction functions to enable automated search across those.
+Its interaction is given as
+
+.. math ::
+    \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
+
+where $\mathcal{C}$ defines the block interactions, and $h, r, t$ are lists of blocks.
 
 Neural Interactions
 -------------------
