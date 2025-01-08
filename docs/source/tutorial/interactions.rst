@@ -170,6 +170,19 @@ Canonical Tensor Decomposition
 .. math ::
     \sum_{i, j} \mathbf{h}_{i, j} \mathbf{r}_{i, j} \mathbf{t}_{i, j}
 
+SimplE
+~~~~~~
+:class:`~pykeen.nn.modules.SimplEInteraction` defines the interaction as
+
+.. math ::
+    \frac{1}{2} \left(
+        \langle \mathbf{h}_h, \mathbf{r}_{\rightarrow}, \mathbf{t}_t \rangle
+        + \langle \mathbf{t}_h, \mathbf{r}_{\leftarrow}, \mathbf{h}_t \rangle
+    \right)
+
+for $\mathbf{h}_h, \mathbf{h}_t, \mathbf{r}_{\rightarrow}, \mathbf{r}_{\leftarrow}, \mathbf{t}_{h}, \mathbf{t}_{t} \in \mathbb{R}^{d}$.
+In contrast to :class:`~pykeen.nn.modules.CPInteraction`, :class:`~pykeen.nn.modules.SimplEInteraction` introduces separate weights for each relation $\mathbf{r}_{\rightarrow}$ and $\mathbf{r}_{\leftarrow}$ for the inverse relation.
+
 RESCAL
 ~~~~~~
 :class:`~pykeen.nn.modules.RESCALInteraction` operates on $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$ and $\mathbf{R} \in \mathbb{R}^{d \times d}$ by
@@ -265,7 +278,6 @@ All other interaction functions are usually called *neural*.
     - :class:`~pykeen.nn.modules.KG2EInteraction`
     - :class:`~pykeen.nn.modules.NTNInteraction`
     - :class:`~pykeen.nn.modules.ProjEInteraction`
-    - :class:`~pykeen.nn.modules.SimplEInteraction`
     - :class:`~pykeen.nn.modules.TransformerInteraction`
 
 Notes
