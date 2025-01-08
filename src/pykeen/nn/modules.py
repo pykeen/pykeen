@@ -617,7 +617,7 @@ class TransFInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The ComplEx interaction proposed by [trouillon2016]_.
 
     ComplEx operates on complex-valued entity and relation representations, i.e.,
@@ -625,7 +625,7 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
 
     .. math::
 
-        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\bar{\mathbf{e}}_t)
+        f(h,r,t) =  Re(\left\langle \mathbf{e}_h, \mathbf{r}_r, \bar{\mathbf{e}}_t\right\rangle)
 
     Which expands to:
 
@@ -662,19 +662,21 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
 
     # TODO: update class docstring
 
-    # TODO: give this a better name?
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
-        r"""Evaluate the interaction function.
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
 
-        :param h: shape: (`*batch_dims`, dim)
-            The complex head representations.
-        :param r: shape: (`*batch_dims`, dim)
-            The complex relation representations.
-        :param t: shape: (`*batch_dims`, dim)
-            The complex tail representations.
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
 
-        :return: shape: batch_dims
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
             The scores.
         """
         return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
