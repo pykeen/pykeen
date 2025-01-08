@@ -2100,7 +2100,7 @@ class UMInteraction(NormBasedInteraction[FloatTensor, tuple[()], FloatTensor]):
 
 @parse_docdata
 class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """The TorusE interaction function from [ebisu2018].
+    """The TorusE interaction function from [ebisu2018]_.
 
     .. note ::
         This only implements the two L_p norm based variants.
