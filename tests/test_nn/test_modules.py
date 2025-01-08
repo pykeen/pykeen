@@ -600,7 +600,6 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
     base_test = cases.InteractionTestCase
     skip_cls = {
         pykeen.nn.modules.Interaction,
-        pykeen.nn.modules.FunctionalInteraction,
         pykeen.nn.modules.NormBasedInteraction,
         pykeen.nn.modules.ClampedInteraction,
         pykeen.nn.modules.DirectionAverageInteraction,
