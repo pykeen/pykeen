@@ -3670,7 +3670,7 @@ AutoSFBlock = tuple[int, int, int, Sign]
 
 
 @parse_docdata
-class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class AutoSFInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     r"""
     The AutoSF interaction as described by [zhang2020]_.
 
