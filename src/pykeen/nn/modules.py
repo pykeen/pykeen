@@ -69,7 +69,6 @@ __all__ = [
     "interaction_resolver",
     # Base Classes
     "Interaction",
-    "FunctionalInteraction",
     "NormBasedInteraction",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
@@ -424,63 +423,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 continue
             if hasattr(mod, "reset_parameters"):
                 mod.reset_parameters()
-
-
-class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
-    """Base class for interaction functions."""
-
-    #: The functional interaction form
-    func: Callable[..., FloatTensor]
-
-    def forward(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> FloatTensor:
-        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
-
-        :param h: shape: (`*batch_dims`, `*dims`)
-            The head representations.
-        :param r: shape: (`*batch_dims`, `*dims`)
-            The relation representations.
-        :param t: shape: (`*batch_dims`, `*dims`)
-            The tail representations.
-
-        :return: shape: batch_dims
-            The scores.
-        """
-        return self.__class__.func(**self._prepare_for_functional(h=h, r=r, t=t))
-
-    def _prepare_for_functional(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> Mapping[str, FloatTensor]:
-        """Conversion utility to prepare the arguments for the functional form."""
-        kwargs = self._prepare_hrt_for_functional(h=h, r=r, t=t)
-        kwargs.update(self._prepare_state_for_functional())
-        return kwargs
-
-    # docstr-coverage: inherited
-    @classmethod
-    def _prepare_hrt_for_functional(
-        cls,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        """Conversion utility to prepare the h/r/t representations for the functional form."""
-        # TODO: we only allow single-tensor representations here, but could easily generalize
-        assert all(torch.is_tensor(x) for x in (h, r, t))
-        if cls.is_complex:
-            h, r, t = ensure_complex(h, r, t)
-        return dict(h=h, r=r, t=t)
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        """Conversion utility to prepare the state to be passed to the functional form."""
-        return dict()
 
 
 class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -3941,7 +3883,6 @@ interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses
     Interaction,
     skip={
         NormBasedInteraction,
-        FunctionalInteraction,
         MonotonicAffineTransformationInteraction,
         ClampedInteraction,
         DirectionAverageInteraction,
