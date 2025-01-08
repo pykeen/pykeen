@@ -269,24 +269,113 @@ where $\mathcal{C}$ defines the block interactions, and $h, r, t$ are lists of b
 Neural Interactions
 -------------------
 All other interaction functions are usually called *neural*.
+They share that they usually have a multi-layer architecture (usually two) and employ non-linearities.
+Many of them also introduce customized hidden layers such as interpreting concatenated embedding vectors as image, pairs of embedding vectors as normal distributions, or semantic matching inspired sums of linear products.
 
-    - :class:`~pykeen.nn.modules.ConvEInteraction`
-    - :class:`~pykeen.nn.modules.ConvKBInteraction`
-    - :class:`~pykeen.nn.modules.CrossEInteraction`
-    - :class:`~pykeen.nn.modules.ERMLPInteraction`
-    - :class:`~pykeen.nn.modules.ERMLPEInteraction`
-    - :class:`~pykeen.nn.modules.KG2EInteraction`
-    - :class:`~pykeen.nn.modules.NTNInteraction`
-    - :class:`~pykeen.nn.modules.ProjEInteraction`
-    - :class:`~pykeen.nn.modules.TransformerInteraction`
+Moreover, some choose a form that can be decomposed into
 
-Notes
-=====
-.. todo::
-    - general description, larger is better
-    - stateful vs. state-less, extra parameters
-    - norm-based / semantic matching & factorization / neural
-    - value ranges?
-    - properties? (symmetric, etc.)
-    - computational complexity?
-    - expose formula programmatically?
+.. math ::
+    f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = f_o(f_i(\mathbf{h}, \mathbf{r}), \mathbf{t})
+
+with an expensive $f_i$ and a cheap $f_o$.
+Such form allows efficient scoring of many tails for a given head-relation combination, and can be combined with inverse relation modelling for an overall efficient training and inference architecture.
+
+ConvE
+~~~~~
+:class:`~pykeen.nn.modules.ConvEInteraction` uses an interaction of the form
+
+.. math ::
+    \langle g(\mathbf{h}, \mathbf{r}), \mathbf{t} \rangle + t_b
+
+for $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ are the head entity, relation, and tail entity representation, and $t_b \in \mathbb{R}$ is an entity bias.
+$g$ is a CNN-based encoder, which first operates on a 2D-reshaped "image" and then flattens the output for a second linear layer.
+Dropout and batch normalization is utilized, too.
+
+ConvKB
+~~~~~~
+:class:`~pykeen.nn.modules.ConvKBInteraction` concatenates $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ to a $3 \times d$ "image" and applies a $3 \times 1$ convolution.
+The output is flattened and a linear layer predicts the score.
+
+CrossE
+~~~~~~
+:class:`~pykeen.nn.modules.CrossEInteraction` uses
+
+.. math ::
+    \langle g(\mathbf{h}, \mathbf{r}), \mathbf{t} \rangle
+
+where
+
+.. math ::
+    g(\mathbf{h}, \mathbf{r}) = \sigma(
+        \mathbf{c}_r \odot \mathbf{h}
+        + \mathbf{c}_r \odot \mathbf{h} \odot \mathbf{r}
+        + \mathbf{b}
+    )
+
+with an activation function $\sigma$.
+Moreover, dropout is applied to the output of $g$.
+
+
+ERMLP
+~~~~~
+:class:`~pykeen.nn.modules.ERMLPInteraction` uses a simple 2-layer MLP on the concatenated head, relation, and tail representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$.
+
+ERMLP (E)
+~~~~~~~~~
+:class:`~pykeen.nn.modules.ERMLPEInteraction` adjusts :class:`~pykeen.nn.modules.ERMLPInteraction` for a more efficient training and inference architecture by using
+
+.. math ::
+    \langle g(\mathbf{h}, \mathbf{r}), \mathbf{t} \rangle
+
+where $g$ is a 2-layer MLP.
+
+KG2E
+~~~~
+:class:`~pykeen.nn.modules.KG2EInteraction` interprets pairs of vectors $\mathbf{h}_{\mu}, \mathbf{h}_{\Sigma}, \mathbf{r}_{\mu}, \mathbf{r}_{\Sigma}, \mathbf{t}_{\mu}, \mathbf{t}_{\Sigma} \in \mathbb{R}^d$ as normal distributions $\mathcal{N}_h, \mathcal{N}_r, \mathcal{N}_t$ and determines a similarity between $\mathcal{N}_h - \mathcal{N}_t$ and $\mathcal{N}_r$.
+
+.. todo ::
+    This does not really fit well into the neural category.
+
+Neural Tensor Network (NTN)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:class:`~pykeen.nn.modules.NTNInteraction` defines the interaction function as
+
+.. math ::
+    \left \langle
+        \mathbf{r}_{u},
+        \sigma(
+            \mathbf{h} \mathbf{R}_{3} \mathbf{t}
+            + \mathbf{R}_{2} [\mathbf{h};\mathbf{t}]
+            + \mathbf{r}_1
+        )
+    \right \rangle
+
+where $\mathbf{h}, \mathbf{t} \in \mathbf{R}^d$ are head and tail entity representations, and $\mathbf{r}_1, \mathbf{r}_u \in \mathbb{R}^d, \mathbf{R}_2 \in \mathbb{R}^{k \times 2d}, \mathbf{R}_3 \in \mathbf{R}^{d \times d \times k}$ are relation-specific parameters, and $\sigma$ is an activation.
+
+ProjE
+~~~~~
+:class:`~pykeen.nn.modules.ProjEInteraction` uses
+
+.. math ::
+    \sigma_1(
+        \left \langle
+        \sigma_2(
+            \mathbf{d}_h \odot \mathbf{h}
+            + \mathbf{d}_r \odot \mathbf{r}
+            + \mathbf{b}
+        ),
+        \mathbf{t}
+        \right \rangle
+        + b_p
+    )
+
+where $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ are the head entity, relation, and tail entity representations, $\mathbf{d}_h, \mathbf{d}_r, \mathbf{b} \in \mathbb{R}^d$ and $b_p \in \mathbb{R}$ are global parameters, and $\sigma_1, \sigma_2$ activation functions.
+
+Transformer
+~~~~~~~~~~~
+:class:`~pykeen.nn.modules.TransformerInteraction` uses
+
+.. math ::
+    \langle g([\mathbf{h}; \mathbf{r}]), \mathbf{t} \rangle
+
+with $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$ and $g$ denoting a transformer encoder with learnable absolute positional embedding followed by sum pooling and a linear projection.
