@@ -32,6 +32,7 @@ Norm-based interactions can be generally written as
     -\|g(\mathbf{h}, \mathbf{r}, \mathbf{t})\|
 
 for some (vector) norm $\|\cdot\|$ and inner function $g$.
+Sometimes, the $p$-th power of a $p$ norm is used instead.
 
 Unstructured Model (UM)
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,7 +90,7 @@ $c$ refers to an additional norm-clamping function.
 
 TransH
 ~~~~~~
-:class:`~pykeen.nn.modules.TransHInteraction` projects head and tail representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^{d}$ to a relation-specific hyper-plane defined by $\mathbf{r}_{w} \in \mathbf{R}^d$, before applying the relation-specific translation $\mathbf{r}_{d} \in \mathbf{R}^d$.
+:class:`~pykeen.nn.modules.TransHInteraction` projects head and tail representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^{d}$ to a relation-specific hyper-plane defined by $\mathbf{r}_{w} \in \mathbf{R}^d$, before applying the relation-specific translation $\mathbf{r}_{d} \in \mathbb{R}^d$.
 
 .. math ::
     \mathbf{h}_{r} + \mathbf{r}_d - \mathbf{t}_{r}
@@ -102,7 +103,7 @@ where
 
 PairRE
 ~~~~~~
-:class:`~pykeen.nn.modules.PairREInteraction` modulates the head and tail representations $\mathbf{h}, \mathbf{t} \in \mathbf{R}^{d}$ by elementwise multiplication by relation-specific $\mathbf{r}_h, \mathbf{r}_t \in \mathbb{R}^{d}$, before taking their difference
+:class:`~pykeen.nn.modules.PairREInteraction` modulates the head and tail representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^{d}$ by elementwise multiplication by relation-specific $\mathbf{r}_h, \mathbf{r}_t \in \mathbb{R}^{d}$, before taking their difference
 
 .. math ::
 
@@ -124,11 +125,14 @@ TripleRE
 
 RotatE
 ~~~~~~
-:class:`~pykeen.nn.modules.RotatEInteraction`
+:class:`~pykeen.nn.modules.RotatEInteraction` uses
 
-QuatE
-~~~~~
-:class:`~pykeen.nn.modules.QuatEInteraction`
+.. math ::
+    \mathbf{h} \odot \mathbf{r} - \mathbf{t}
+
+with complex representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{C}^d$.
+When $\mathbf{r}$ is element-wise normalized to unit length, this operation corresponds to dimension-wise rotation in the complex plane.
+
 
 .. todo::
     - :class:`~pykeen.nn.modules.BoxEInteraction`
@@ -214,6 +218,18 @@ ComplEx
     \right)
 
 where *Re* refers to the real part, and $\bar{\cdot}$ denotes the complex conjugate.
+
+QuatE
+~~~~~
+:class:`~pykeen.nn.modules.QuatEInteraction` uses
+
+.. math ::
+    \langle
+        \mathbf{h} \otimes \mathbf{r},
+        \mathbf{t}
+    \rangle
+
+for quaternions $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbf{H}^{d}$, and Hamilton product $\otimes$.
 
 HolE
 ~~~~~
