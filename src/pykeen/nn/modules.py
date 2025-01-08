@@ -1166,7 +1166,7 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class DistMultInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateless DistMult interaction function.
 
     This interaction is given by
@@ -1194,8 +1194,7 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
         arxiv: 1412.6575
     """
 
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::
@@ -1216,7 +1215,7 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
 
 
 @parse_docdata
-class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class DistMAInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateless DistMA interaction function from [shi2019]_.
 
     For head entity, relation, and tail representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$,
@@ -1238,8 +1237,7 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://www.aclweb.org/anthology/D19-1075.pdf
     """
 
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::
@@ -1518,11 +1516,16 @@ class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
 
 
 @parse_docdata
-class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class RotatEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The RotatE interaction function proposed by [sun2019]_.
 
     RotatE operates on complex-valued entity and relation representations, i.e.,
     $\mathbf{e}_i, \mathbf{r}_i \in \mathbb{C}^d$.
+
+    The interaction function is given by
+
+    .. math ::
+        \| \mathbf{h} \odot \mathbf{r} - \mathbf{t} \|
 
     .. note::
         this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
@@ -1542,25 +1545,40 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     is_complex: ClassVar[bool] = True
 
-    # TODO: give this a better name?
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+    def __init__(self, p = 2, power_norm = False):
+        """
+        Initialize the interaction module.
+
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+        """
+        super().__init__(p=p, power_norm=power_norm)
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
-        .. note::
-            this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
-            `True`.
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
 
-        :param h: shape: (`*batch_dims`, dim)
+        :param h: shape: ``(*batch_dims, d)``
             The head representations.
-        :param r: shape: (`*batch_dims`, dim)
+        :param r: shape: ``(*batch_dims, d)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, dim)
+        :param t: shape: ``(*batch_dims, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
+        h, r, t = ensure_complex(h, r, t)
         if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
             # r expresses a rotation in complex plane.
             # rotate head by relation (=Hadamard product in complex space)
