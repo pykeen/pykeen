@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from operator import itemgetter
-from typing import Any, Callable, ClassVar, Generic, Optional, Union, cast, overload
+from typing import Any, ClassVar, Generic, Optional, Union, cast, overload
 
 import more_itertools
 import numpy
@@ -1487,7 +1487,7 @@ class RotatEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 
     is_complex: ClassVar[bool] = True
 
-    def __init__(self, p = 2, power_norm = False):
+    def __init__(self, p=2, power_norm=False):
         """
         Initialize the interaction module.
 
