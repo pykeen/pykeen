@@ -2170,7 +2170,7 @@ class TransDInteraction(
 
     To do so, all head entities, tail entities, and relations are represented by two vectors,
     $\mathbf{h}_v, \mathbf{h}_p, \mathbf{t}_v, \mathbf{t}_p \in \mathbb{R}^d$
-    and $\mathbf{r}_v, \mathbf{r}_v \in \mathbb{R}^k$, respectively.
+    and $\mathbf{r}_p, \mathbf{r}_v \in \mathbb{R}^k$, respectively.
 
     The first set of representations is used for calculating the entity-relation-specific projection matrices:
 
