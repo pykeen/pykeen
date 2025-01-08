@@ -17,9 +17,8 @@ Interaction functions can also have trainable parameters that are global and not
 
 Base
 ----
-- :class:`~pykeen.nn.modules.Interaction`
-- :class:`~pykeen.nn.modules.FunctionalInteraction`
-- :class:`~pykeen.nn.modules.NormBasedInteraction`
+:class:`~pykeen.nn.modules.Interaction` is the base class for all interactions.
+It defines the API for (batch) calculation of plausibility scores, see :meth:`~pykeen.nn.modules.Interaction.forward`, and provides some meta information about required symbolic shapes of different arguments.
 
 Combinations & Adapters
 -----------------------
