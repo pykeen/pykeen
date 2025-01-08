@@ -33,24 +33,102 @@ Norm-based interactions can be generally written as
 
 for some (vector) norm $\|\cdot\|$ and inner function $g$.
 
+Unstructured Model (UM)
+~~~~~~~~~~~~~~~~~~~~~~~
+The unstructured model (UM) interaction, :class:`~pykeen.nn.modules.UMInteraction`, uses the distance between head and tail representation $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$ as inner function:
+
+.. math ::
+    \mathbf{h}  - \mathbf{t}
+
+Structure Embedding
+~~~~~~~~~~~~~~~~~~~
+:class:`~pykeen.nn.modules.SEInteraction` can be seen as an extension of UM, where head and relation representation $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$ are first linearly transformed using a relation-specific head and tail transformation matrices $\mathbf{R}_h, \mathbf{R}_t \in \mathbb{R}^{k \times d}$
+
+.. math ::
+
+    \mathbf{R}_{h} \mathbf{h}  - \mathbf{R}_t \mathbf{t}
+
+TransE
+~~~~~~
+:class:`~pykeen.nn.modules.TransEInteraction` interprets the relation representation as translation vector and defines
+
+.. math::
+
+    \mathbf{h} + \mathbf{r} - \mathbf{t}
+
+for $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$
+
+TransR
+~~~~~~
+:class:`~pykeen.nn.modules.TransRInteraction` uses a relation-specific projection matrix $\mathbf{R} \in \mathbb{R}^{k \times d}$ to project $\mathbf{h}, \mathbf{t} \in \mathbb{R}^{d}$ into the relation subspace, and then applies a :class:`~pykeen.nn.modules.TransEInteraction`-style translation by $\mathbf{r} \in \mathbb{R}^{k}$:
+
+.. math ::
+    c(\mathbf{R}\mathbf{h}) + \mathbf{r} - c(\mathbf{R}\mathbf{t})
+
+$c$ refers to an additional norm-clamping function.
+
+TransD
+~~~~~~
+
+:class:`~pykeen.nn.modules.TransDInteraction` extends :class:`~pykeen.nn.modules.TransRInteraction` to construct separate head and tail projections, $\mathbf{M}_{r, h}, \mathbf{M}_{r, t} \in \mathbb{R}^{k \times d}$ , similar to :class:`~pykeen.nn.modules.SEInteraction`.
+These projections are build (low-rank) from a shared relation-specific part $\mathbf{r}_p \in \mathbb{R}^{k}$, and an additional head/tail representation, $\mathbf{h}_p, \mathbf{t}_p \in \mathbb{R}^{d}$.
+The matrices project the base head and tail representations $\mathbf{h}_v, \mathbf{t}_v \in \mathbb{R}^{d}$ into a relation-specific sub-space before a translation $\mathbf{r}_v \in \mathbb{R}^{k}$ is applied.
+
+.. math ::
+
+    c(\mathbf{M}_{r, h} \mathbf{h}_v) + \mathbf{r}_v - c(\mathbf{M}_{r, t} \mathbf{t}_v)
+
+where
+
+.. math ::
+
+    \mathbf{M}_{r, h} &=& \mathbf{r}_p \mathbf{h}_p^{T} + \tilde{\mathbf{I}} \\
+    \mathbf{M}_{r, t} &=& \mathbf{r}_p \mathbf{t}_p^{T} + \tilde{\mathbf{I}}
+
+$c$ refers to an additional norm-clamping function.
+
+TransH
+~~~~~~
+:class:`~pykeen.nn.modules.TransHInteraction` projects head and tail representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^{d}$ to a relation-specific hyper-plane defined by $\mathbf{r}_{w} \in \mathbf{R}^d$, before applying the relation-specific translation $\mathbf{r}_{d} \in \mathbf{R}^d$.
+
+.. math ::
+    \mathbf{h}_{r} + \mathbf{r}_d - \mathbf{t}_{r}
+
+where
+
+.. math ::
+    \mathbf{h}_{r} &=& \mathbf{h} - \mathbf{r}_{w}^T \mathbf{h} \mathbf{r}_w \\
+    \mathbf{t}_{r} &=& \mathbf{t} - \mathbf{r}_{w}^T \mathbf{t} \mathbf{r}_w
+
+PairRE
+~~~~~~
+:class:`~pykeen.nn.modules.PairREInteraction` modulates the head and tail representations $\mathbf{h}, \mathbf{t} \in \mathbf{R}^{d}$ by elementwise multiplication by relation-specific $\mathbf{r}_h, \mathbf{r}_t \in \mathbb{R}^{d}$, before taking their difference
+
+.. math ::
+
+    \mathbf{h} \odot \mathbf{r}_h - \mathbf{t} \odot \mathbf{r}_t
+
+LineaRE
+~~~~~~~
+:class:`~pykeen.nn.modules.LineaREInteraction` adds an additional relation-specific translation $\mathbf{r} \in \mathbb{R}^d$ to :class:`~pykeen.nn.modules.PairREInteraction`.
+
+.. math ::
+    \mathbf{h} \odot \mathbf{r}_h - \mathbf{t} \odot \mathbf{r}_t + \mathbf{r}
+
+TripleRE
+~~~~~~~~
+:class:`~pykeen.nn.modules.TripleREInteraction` adds an additional global scalar term $u \in \mathbb{r}$ to the modulation vectors :class:`~pykeen.nn.modules.LineaREInteraction`.
+
+.. math ::
+    \mathbf{h} \odot (\mathbf{r}_h + u) - \mathbf{t} \odot (\mathbf{r}_t + u) + \mathbf{r}
+
 .. todo::
-    - BoxE
-    - MuRE has bias terms after norm
-
-- norm-based
-
-  - :class:`~pykeen.nn.modules.PairREInteraction`
-  - :class:`~pykeen.nn.modules.SEInteraction`
-  - :class:`~pykeen.nn.modules.TorusEInteraction`
-  - :class:`~pykeen.nn.modules.TransDInteraction`
-  - :class:`~pykeen.nn.modules.TransEInteraction`
-  - :class:`~pykeen.nn.modules.TransHInteraction`
-  - :class:`~pykeen.nn.modules.TransRInteraction`
-  - :class:`~pykeen.nn.modules.UMInteraction`
-  - :class:`~pykeen.nn.modules.BoxEInteraction`
-  - :class:`~pykeen.nn.modules.MuREInteraction`
-  - :class:`~pykeen.nn.modules.LineaREInteraction`
-  - :class:`~pykeen.nn.modules.TripleREInteraction`
+    - :class:`~pykeen.nn.modules.BoxEInteraction`
+        - has some extra projections
+    - :class:`~pykeen.nn.modules.MuREInteraction`
+        - has some extra head/tail biases
+    - :class:`~pykeen.nn.modules.TorusEInteraction`
+  
 
 Semantic Matching / Factorization
 ----------------------------------
