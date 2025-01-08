@@ -235,12 +235,12 @@ class EvaluatorUtilsTests(unittest.TestCase):
         batch = all_triples[:batch_size, :]
 
         # head based filter
-        sparse_positives, relation_filter = create_sparse_positive_filter_(
+        sparse_positives = create_sparse_positive_filter_(
             hrt_batch=batch,
             all_pos_triples=all_triples,
             relation_filter=None,
             filter_col=0,
-        )
+        )[0]
 
         # preprocessing for faster lookup
         triples = set()

@@ -26,7 +26,7 @@ class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
 
     def test_sample_basic(self):
         """Test if relations and half of heads and tails are not corrupted."""
-        negative_batch, batch_filter = self.instance.sample(positive_batch=self.positive_batch)
+        negative_batch = self.instance.sample(positive_batch=self.positive_batch)[0]
 
         # Test that half of the subjects and half of the objects are corrupted
         positive_batch = self.positive_batch.unsqueeze(dim=1)

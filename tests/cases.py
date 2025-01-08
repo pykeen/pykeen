@@ -2186,7 +2186,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest("no implementation of closed-form expectation") from error
 
         generator = numpy.random.default_rng(seed=0)
-        low, simulated, high = self.instance.numeric_expected_value_with_ci(
+        low, _simulated, high = self.instance.numeric_expected_value_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
@@ -2214,7 +2214,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         self.assertLessEqual(0, closed)
 
         generator = numpy.random.default_rng(seed=0)
-        low, simulated, high = self.instance.numeric_variance_with_ci(
+        low, _simulated, high = self.instance.numeric_variance_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
@@ -2476,7 +2476,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
             ],
             columns=[EA_SIDE_LEFT, EA_SIDE_RIGHT],
         )
-        combined_tf, alignment_t = self.instance(left=left_tf, right=right_tf, alignment=test_links)
+        combined_tf = self.instance(left=left_tf, right=right_tf, alignment=test_links)[0]
         self._verify_manual(combined_tf=combined_tf)
 
     @abstractmethod
