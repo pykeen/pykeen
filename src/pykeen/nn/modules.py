@@ -1575,7 +1575,7 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 @parse_docdata
-class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class HolEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateless HolE interaction function.
 
     Holographic embeddings (HolE) make use of the circular correlation operator to compute interactions between
@@ -1605,12 +1605,7 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
         arxiv: 1510.04935
     """
 
-    @staticmethod
-    def func(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::
@@ -3825,40 +3820,25 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             **kwargs,
         )
 
-    @staticmethod
-    def func(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-        coefficients: Collection[AutoSFBlock],
-    ) -> FloatTensor:
-        r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
+    def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:
+        """Evaluate the interaction function.
 
-        :param h: each shape: (`*batch_dims`, dim)
-            The list of head representations.
-        :param r: each shape: (`*batch_dims`, dim)
-            The list of relation representations.
-        :param t: each shape: (`*batch_dims`, dim)
-            The list of tail representations.
-        :param coefficients:
-            the coefficients, cf. :class:`pykeen.nn.AutoSFInteraction`
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
 
-        :return: shape: `batch_dims`
-            The scores
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
         """
-        return sum(sign * tensor_product(h[hi], r[ri], t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(coefficients=self.coefficients)
-
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(zip("hrt", ensure_tuple(h, r, t)))
+        hl, rl, tl = ensure_tuple(h, r, t)
+        return sum(sign * tensor_product(hl[hi], rl[ri], tl[ti]).sum(dim=-1) for hi, ri, ti, sign in self.coefficients)
 
     def extend(self, *new_coefficients: tuple[int, int, int, Sign]) -> AutoSFInteraction:
         """Extend AutoSF function, as described in the greedy search algorithm in the paper."""
