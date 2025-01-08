@@ -15,7 +15,7 @@ import pykeen.nn.modules
 import pykeen.nn.sim
 import pykeen.utils
 from pykeen.nn import quaternion
-from pykeen.typing import Representation, Sign
+from pykeen.typing import Representation
 from pykeen.utils import (
     clamp_norm,
     complex_normalize,
