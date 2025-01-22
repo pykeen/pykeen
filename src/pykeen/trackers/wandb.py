@@ -48,6 +48,9 @@ class WANDBResultTracker(ResultTracker):
             raise ValueError("Weights & Biases requires a project name.")
         self.project = project
 
+        if "allow_val_change" not in kwargs:
+            kwargs["allow_val_change"] = None
+
         if offline:
             os.environ[self.wandb.env.MODE] = "dryrun"  # type: ignore
         self.kwargs = kwargs
@@ -79,4 +82,8 @@ class WANDBResultTracker(ResultTracker):
         if self.run is None:
             raise AssertionError("start_run must be called before logging any metrics")
         params = flatten_dictionary(dictionary=params, prefix=prefix)
-        self.run.config.update(params)
+
+        if self.kwargs["allow_val_change"]:
+            self.run.config.update(params, allow_val_change=True)
+        else:
+            self.run.config.update(params)

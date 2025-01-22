@@ -147,6 +147,13 @@ class JSONResultTracker(FileResultTracker):
     extension = "jsonl"
 
     def _write(self, obj) -> None:
+        obj = obj.copy()
+        for key, value in obj.items():
+            # Check if value is JSON serializable
+            try:
+                json.dumps(value)
+            except TypeError:
+                obj[key] = value.__class__.__name__
         print(json.dumps(obj), file=self.file, flush=True)  # noqa:T201
 
     # docstr-coverage: inherited
