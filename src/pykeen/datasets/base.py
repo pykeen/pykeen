@@ -260,7 +260,8 @@ class Dataset(ExtraReprMixin):
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
         metadata_path = path.joinpath(cls.metadata_file_name)
-        metadata = torch.load(metadata_path) if metadata_path.is_file() else None
+        # TODO: consider restricting metadata to JSON
+        metadata = torch.load(metadata_path, weights_only=False) if metadata_path.is_file() else None
         return EagerDataset(**tfs, metadata=metadata)
 
     def to_directory_binary(self, path: str | pathlib.Path) -> None:
