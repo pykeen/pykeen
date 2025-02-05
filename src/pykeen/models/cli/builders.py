@@ -79,7 +79,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
                 option = CLI_OPTIONS[name]
 
             elif annotation in {Optional[int], Optional[str]}:
-                option = click.option(f'--{name.replace("_", "-")}', type=_OPTIONAL_MAP[annotation])
+                option = click.option(f"--{name.replace('_', '-')}", type=_OPTIONAL_MAP[annotation])
 
             else:
                 parameter = signature.parameters[name]
@@ -93,7 +93,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
                     )
                     continue
 
-                option = click.option(f'--{name.replace("_", "-")}', type=annotation, default=parameter.default)
+                option = click.option(f"--{name.replace('_', '-')}", type=annotation, default=parameter.default)
 
             try:
                 command = option(command)
@@ -152,7 +152,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
         """CLI for PyKEEN."""
         click.echo(
             f"Training {model.__name__} with "
-            f'{training_loop.__name__[:-len("TrainingLoop")]} using '
+            f"{training_loop.__name__[: -len('TrainingLoop')]} using "
             f"{optimizer.__name__} and {evaluator.__name__}",
         )
         from ...pipeline import pipeline

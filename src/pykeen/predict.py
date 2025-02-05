@@ -1009,7 +1009,7 @@ def predict_all(
     """
     # note: the models' predict method takes care of setting the model to evaluation mode
     logger.warning(
-        f"predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations:,} "
+        f"predict is an expensive operation, involving {model.num_entities**2 * model.num_real_relations:,} "
         f"score evaluations.",
     )
 
