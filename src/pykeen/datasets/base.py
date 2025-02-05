@@ -90,6 +90,8 @@ def _update_eval_triples_factory(
     heads, tails = _map_ids(factory.mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
     relations = _map_ids(factory.mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
     mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    # We need to drop triples where some IDs have been filtered.
+    mapped_triples = mapped_triples[(mapped_triples >= 0).any(dim=-1)]
     return TriplesFactory(
         mapped_triples=mapped_triples,
         entity_to_id=entity_to_id,
