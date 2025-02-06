@@ -1164,7 +1164,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             torch_cuda_random_state = None
 
         if best_epoch_model_checkpoint_file_path is not None:
-            best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path)
+            best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path, weights_only=False)
         else:
             best_epoch_model_checkpoint = None
 
@@ -1230,7 +1230,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError
 
         logger.info(f"=> loading checkpoint '{path}'")
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, weights_only=False)
         if checkpoint["checksum"] != self.checksum:
             raise CheckpointMismatchError(
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "

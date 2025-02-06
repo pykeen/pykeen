@@ -72,7 +72,7 @@ class Stopper(ABC):
             The summary dict of the stopper at the time of saving the checkpoint.
         """
         logger.info(f"=> loading stopper summary dict from training loop checkpoint in '{path}'")
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, weights_only=False)
         logger.info(f"=> loaded stopper summary dictionary from checkpoint in '{path}'")
         return checkpoint["stopper_dict"]
 

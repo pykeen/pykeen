@@ -854,7 +854,7 @@ def _handle_random_seed(
         checkpoint_directory.mkdir(parents=True, exist_ok=True)
         checkpoint_path = checkpoint_directory / checkpoint_name
         if checkpoint_path.is_file():
-            checkpoint_dict = torch.load(checkpoint_path)
+            checkpoint_dict = torch.load(checkpoint_path, weights_only=False)
             _random_seed = checkpoint_dict["random_seed"]
             logger.info("loaded random seed %s from checkpoint.", _random_seed)
             # We have to set clear optimizer to False since training should be continued
