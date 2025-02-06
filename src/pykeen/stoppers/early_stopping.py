@@ -264,7 +264,7 @@ class EarlyStopper(Stopper):
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
             logger.info(f"Re-loading weights from best epoch from {self.best_model_path}")
-            self.model.load_state_dict(torch.load(self.best_model_path))
+            self.model.load_state_dict(torch.load(self.best_model_path), weights_only=False)
             if self.clean_up_checkpoint:
                 self.best_model_path.unlink()
                 logger.debug(f"Clean up checkpoint with best weights: {self.best_model_path}")
