@@ -15,7 +15,7 @@ import pykeen.nn.modules
 import pykeen.nn.sim
 import pykeen.utils
 from pykeen.nn import quaternion
-from pykeen.typing import Representation, Sign
+from pykeen.typing import Representation
 from pykeen.utils import (
     clamp_norm,
     complex_normalize,
@@ -461,9 +461,8 @@ class SimplEInteractionTests(cases.InteractionTestCase):
         h_fwd, h_bwd = h
         r_fwd, r_bwd = r
         t_fwd, t_bwd = t
-        return 0.5 * pykeen.nn.modules.DistMultInteraction.func(
-            h_fwd, r_fwd, t_fwd
-        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(t_bwd, r_bwd, h_bwd)
+        dist_mult = pykeen.nn.modules.DistMultInteraction()
+        return 0.5 * dist_mult(h_fwd, r_fwd, t_fwd) + 0.5 * dist_mult(t_bwd, r_bwd, h_bwd)
 
 
 class MuRETests(cases.TranslationalInteractionTests):
@@ -600,7 +599,6 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
     base_test = cases.InteractionTestCase
     skip_cls = {
         pykeen.nn.modules.Interaction,
-        pykeen.nn.modules.FunctionalInteraction,
         pykeen.nn.modules.NormBasedInteraction,
         pykeen.nn.modules.ClampedInteraction,
         pykeen.nn.modules.DirectionAverageInteraction,
@@ -709,14 +707,12 @@ class AutoSFTests(cases.InteractionTestCase):
     )
 
     def _exp_score(
-        self,
-        h: Sequence[torch.FloatTensor],
-        r: Sequence[torch.FloatTensor],
-        t: Sequence[torch.FloatTensor],
-        coefficients: Sequence[tuple[int, int, int, Sign]],
+        self, h: Sequence[torch.FloatTensor], r: Sequence[torch.FloatTensor], t: Sequence[torch.FloatTensor]
     ) -> torch.FloatTensor:  # noqa: D102
         h, r, t = ensure_tuple(h, r, t)
-        return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)
+        instance = self.instance
+        assert isinstance(instance, pykeen.nn.modules.AutoSFInteraction)
+        return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in instance.coefficients)
 
 
 class LineaRETests(cases.TranslationalInteractionTests):

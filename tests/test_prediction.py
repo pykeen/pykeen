@@ -243,9 +243,11 @@ def test_predict_triples(
 def _iter_get_input_batch_inputs() -> Iterable[
     tuple[
         CoreTriplesFactory | None,
-        None | int | str,
-        None | int | str,
-        None | int | str,
+        int | str | None,
+        int,
+        str | None,
+        int,
+        str | None,
         pykeen.typing.Target,
     ]
 ]:

@@ -62,7 +62,7 @@ from pykeen.metrics.ranking import (
 from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.mocks import FixedModel
-from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction
+from pykeen.nn.modules import DistMultInteraction, Interaction
 from pykeen.nn.representation import Representation
 from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
@@ -652,20 +652,6 @@ class InteractionTestCase(
             expected_shape = self._get_output_shape(hs, rs, ts)
             self._check_scores(scores=scores, exp_shape=expected_shape)
 
-    def test_forward_consistency_with_functional(self):
-        """Test forward's consistency with functional."""
-        if not isinstance(self.instance, FunctionalInteraction):
-            self.skipTest("Not a functional interaction")
-
-        # set in eval mode (otherwise there are non-deterministic factors like Dropout
-        self.instance.eval()
-        for hs, rs, ts in self._get_test_shapes():
-            h, r, t = self._get_hrt(hs, rs, ts)
-            scores = self.instance(h=h, r=r, t=t)
-            kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
-            scores_f = self.cls.func(**kwargs)
-            assert torch.allclose(scores, scores_f)
-
     def test_scores(self):
         """Test individual scores."""
         # set in eval mode (otherwise there are non-deterministic factors like Dropout
@@ -674,17 +660,10 @@ class InteractionTestCase(
             # test multiple different initializations
             self.instance.reset_parameters()
             h, r, t = self._get_hrt(tuple(), tuple(), tuple())
-
-            if isinstance(self.instance, FunctionalInteraction):
-                kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
-                # calculate by functional
-                scores_f = self.cls.func(**kwargs).view(-1)
-            else:
-                kwargs = dict(h=h, r=r, t=t)
-                scores_f = self.instance(h=h, r=r, t=t)
+            scores_f = self.instance(h=h, r=r, t=t)
 
             # calculate manually
-            scores_f_manual = self._exp_score(**kwargs).view(-1)
+            scores_f_manual = self._exp_score(h=h, r=r, t=t).view(-1)
             if not torch.allclose(scores_f, scores_f_manual, rtol=self.rtol, atol=self.atol):
                 # allclose checks: | input - other | < atol + rtol * |other|
                 a_delta = (scores_f_manual - scores_f).abs()
@@ -2202,7 +2181,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest("no implementation of closed-form expectation") from error
 
         generator = numpy.random.default_rng(seed=0)
-        low, simulated, high = self.instance.numeric_expected_value_with_ci(
+        low, _simulated, high = self.instance.numeric_expected_value_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
@@ -2230,7 +2209,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         self.assertLessEqual(0, closed)
 
         generator = numpy.random.default_rng(seed=0)
-        low, simulated, high = self.instance.numeric_variance_with_ci(
+        low, _simulated, high = self.instance.numeric_variance_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
@@ -2492,7 +2471,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
             ],
             columns=[EA_SIDE_LEFT, EA_SIDE_RIGHT],
         )
-        combined_tf, alignment_t = self.instance(left=left_tf, right=right_tf, alignment=test_links)
+        combined_tf = self.instance(left=left_tf, right=right_tf, alignment=test_links)[0]
         self._verify_manual(combined_tf=combined_tf)
 
     @abstractmethod

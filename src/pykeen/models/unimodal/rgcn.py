@@ -21,9 +21,7 @@ __all__ = [
 ]
 
 
-class RGCN(
-    ERModel[FloatTensor, RelationRepresentation, FloatTensor],
-):
+class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     r"""An implementation of R-GCN from [schlichtkrull2018]_.
 
     The Relational Graph Convolutional Network (R-GCN) comprises three parts:

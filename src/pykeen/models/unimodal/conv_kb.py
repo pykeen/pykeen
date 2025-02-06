@@ -10,7 +10,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ConvKB",
@@ -19,7 +19,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvKB(ERModel):
+class ConvKB(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ConvKB from [nguyen2018]_.
 
     ConvKB represents entities and relations using a $d$-dimensional embedding vectors,

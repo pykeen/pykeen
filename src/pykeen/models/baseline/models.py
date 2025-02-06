@@ -179,14 +179,14 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
 
     # docstr-coverage: inherited
     def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
-        r = hr_batch[:, 1]
+        r = hr_batch[:, 1].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)
 
     # docstr-coverage: inherited
     def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
-        r = rt_batch[:, 0]
+        r = rt_batch[:, 0].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)

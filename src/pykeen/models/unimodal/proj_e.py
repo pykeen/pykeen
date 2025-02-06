@@ -11,14 +11,14 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.init import xavier_uniform_
 from ...nn.modules import ProjEInteraction
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ProjE",
 ]
 
 
-class ProjE(ERModel):
+class ProjE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ProjE from [shi2017]_.
 
     ProjE represents entities and relations using a $d$-dimensional embedding vector stored in an

@@ -12,7 +12,7 @@ from ...nn import quaternion
 from ...nn.init import init_quaternions
 from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import get_expected_norm
 
 __all__ = [
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class QuatE(ERModel):
+class QuatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of QuatE from [zhang2019]_.
 
     QuatE uses hypercomplex valued representations for the

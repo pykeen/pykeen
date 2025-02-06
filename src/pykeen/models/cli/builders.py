@@ -5,6 +5,7 @@ import json
 import logging
 import pathlib
 import sys
+import typing as t
 from collections.abc import Mapping
 from typing import Any, Optional, Union
 
@@ -78,7 +79,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             elif name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
 
-            elif annotation in {Optional[int], Optional[str]}:  # noqa:UP007
+            elif annotation in {t.Optional[int], t.Optional[str]}:  # noqa:UP007
                 option = click.option(f"--{name.replace('_', '-')}", type=_OPTIONAL_MAP[annotation])
 
             else:

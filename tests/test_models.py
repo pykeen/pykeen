@@ -777,6 +777,22 @@ class ERModelTests(cases.ModelTestCase):
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
 
+    def test_multi_t_and_slicing(self):
+        """Test whether we can use multi-tail scoring with slicing."""
+        hr_batch = torch.stack(
+            [
+                torch.randint(self.instance.num_entities, size=(self.batch_size,), generator=self.generator),
+                torch.randint(self.instance.num_relations, size=(self.batch_size,), generator=self.generator),
+            ],
+            dim=-1,
+        )
+        tails = torch.randint(
+            self.instance.num_entities, size=(self.instance.num_entities // 2,), generator=self.generator
+        )
+        sliced_ts = self.instance.score_t(hr_batch=hr_batch, slice_size=2, tails=tails)
+        ts = self.instance.score_t(hr_batch=hr_batch, tails=tails)
+        torch.allclose(sliced_ts, ts)
+
 
 class CooccurrenceFilteredModelTests(cases.ModelTestCase):
     """Tests for the filtered meta model."""

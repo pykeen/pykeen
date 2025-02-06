@@ -6,14 +6,14 @@ from typing import Any, ClassVar
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import CPInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "CP",
 ]
 
 
-class CP(ERModel):
+class CP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of CP as described in [lacroix2018]_ based on [hitchcock1927]_.
 
     It has separate entity representations for the head and tail role, both a $r \times d$-dimensional matrices.

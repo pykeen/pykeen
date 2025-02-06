@@ -8,7 +8,7 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
 from typing import Any, ClassVar, Generic, cast, overload
 
@@ -69,7 +69,6 @@ __all__ = [
     "interaction_resolver",
     # Base Classes
     "Interaction",
-    "FunctionalInteraction",
     "NormBasedInteraction",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
@@ -426,63 +425,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 mod.reset_parameters()
 
 
-class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
-    """Base class for interaction functions."""
-
-    #: The functional interaction form
-    func: Callable[..., FloatTensor]
-
-    def forward(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> FloatTensor:
-        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
-
-        :param h: shape: (`*batch_dims`, `*dims`)
-            The head representations.
-        :param r: shape: (`*batch_dims`, `*dims`)
-            The relation representations.
-        :param t: shape: (`*batch_dims`, `*dims`)
-            The tail representations.
-
-        :return: shape: batch_dims
-            The scores.
-        """
-        return self.__class__.func(**self._prepare_for_functional(h=h, r=r, t=t))
-
-    def _prepare_for_functional(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> Mapping[str, FloatTensor]:
-        """Conversion utility to prepare the arguments for the functional form."""
-        kwargs = self._prepare_hrt_for_functional(h=h, r=r, t=t)
-        kwargs.update(self._prepare_state_for_functional())
-        return kwargs
-
-    # docstr-coverage: inherited
-    @classmethod
-    def _prepare_hrt_for_functional(
-        cls,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        """Conversion utility to prepare the h/r/t representations for the functional form."""
-        # TODO: we only allow single-tensor representations here, but could easily generalize
-        assert all(torch.is_tensor(x) for x in (h, r, t))
-        if cls.is_complex:
-            h, r, t = ensure_complex(h, r, t)
-        return dict(h=h, r=r, t=t)
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        """Conversion utility to prepare the state to be passed to the functional form."""
-        return dict()
-
-
 class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Norm-based interactions use a (powered) $p$-norm in their scoring function."""
 
@@ -498,10 +440,6 @@ class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepr
         super().__init__()
         self.p = p
         self.power_norm = power_norm
-
-    # docstr-coverage: inherited
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        raise AssertionError("This is a relic.")
 
 
 @parse_docdata
@@ -617,7 +555,7 @@ class TransFInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The ComplEx interaction proposed by [trouillon2016]_.
 
     ComplEx operates on complex-valued entity and relation representations, i.e.,
@@ -662,19 +600,21 @@ class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTe
 
     # TODO: update class docstring
 
-    # TODO: give this a better name?
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
-        r"""Evaluate the interaction function.
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+        """Evaluate the interaction function.
 
-        :param h: shape: (`*batch_dims`, dim)
-            The complex head representations.
-        :param r: shape: (`*batch_dims`, dim)
-            The complex relation representations.
-        :param t: shape: (`*batch_dims`, dim)
-            The complex tail representations.
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
 
-        :return: shape: batch_dims
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
             The scores.
         """
         return torch.real(einsum("...d, ...d, ...d -> ...", h, r, torch.conj(t)))
@@ -1163,7 +1103,7 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 @parse_docdata
-class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class DistMultInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateless DistMult interaction function.
 
     This interaction is given by
@@ -1191,8 +1131,7 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
         arxiv: 1412.6575
     """
 
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::
@@ -1213,7 +1152,7 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
 
 
 @parse_docdata
-class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class DistMAInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateless DistMA interaction function from [shi2019]_.
 
     For head entity, relation, and tail representations $\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^d$,
@@ -1235,8 +1174,7 @@ class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         link: https://www.aclweb.org/anthology/D19-1075.pdf
     """
 
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::
@@ -1515,7 +1453,7 @@ class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
 
 
 @parse_docdata
-class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class RotatEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The RotatE interaction function proposed by [sun2019]_.
 
     RotatE operates on complex-valued entity and relation representations, i.e.,
@@ -1539,25 +1477,40 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     is_complex: ClassVar[bool] = True
 
-    # TODO: give this a better name?
-    @staticmethod
-    def func(h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
+    def __init__(self, p: int = 2, power_norm: bool = False):
+        """
+        Initialize the interaction module.
+
+        .. seealso::
+            The parameter ``p`` and ``power_norm`` are directly passed to
+            :class:`~pykeen.nn.modules.NormBasedInteraction`.
+
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+        """
+        super().__init__(p=p, power_norm=power_norm)
+
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
-        .. note::
-            this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
-            `True`.
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
 
-        :param h: shape: (`*batch_dims`, dim)
+        :param h: shape: ``(*batch_dims, d)``
             The head representations.
-        :param r: shape: (`*batch_dims`, dim)
+        :param r: shape: ``(*batch_dims, d)``
             The relation representations.
-        :param t: shape: (`*batch_dims`, dim)
+        :param t: shape: ``(*batch_dims, d)``
             The tail representations.
 
-        :return: shape: batch_dims
+        :return: shape: ``batch_dims``
             The scores.
         """
+        h, r, t = ensure_complex(h, r, t)
         if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
             # r expresses a rotation in complex plane.
             # rotate head by relation (=Hadamard product in complex space)
@@ -1574,7 +1527,7 @@ class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 @parse_docdata
-class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class HolEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The stateless HolE interaction function.
 
     Holographic embeddings (HolE) make use of the circular correlation operator to compute interactions between
@@ -1604,12 +1557,7 @@ class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
         arxiv: 1510.04935
     """
 
-    @staticmethod
-    def func(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
         .. seealso::
@@ -3654,7 +3602,7 @@ AutoSFBlock = tuple[int, int, int, Sign]
 
 
 @parse_docdata
-class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class AutoSFInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     r"""
     The AutoSF interaction as described by [zhang2020]_.
 
@@ -3824,40 +3772,25 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
             **kwargs,
         )
 
-    @staticmethod
-    def func(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-        coefficients: Collection[AutoSFBlock],
-    ) -> FloatTensor:
-        r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
+    def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:
+        """Evaluate the interaction function.
 
-        :param h: each shape: (`*batch_dims`, dim)
-            The list of head representations.
-        :param r: each shape: (`*batch_dims`, dim)
-            The list of relation representations.
-        :param t: each shape: (`*batch_dims`, dim)
-            The list of tail representations.
-        :param coefficients:
-            the coefficients, cf. :class:`pykeen.nn.AutoSFInteraction`
+        .. seealso::
+            :meth:`Interaction.forward <pykeen.nn.modules.Interaction.forward>` for a detailed description about
+            the generic batched form of the interaction function.
 
-        :return: shape: `batch_dims`
-            The scores
+        :param h: shape: ``(*batch_dims, d)``
+            The head representations.
+        :param r: shape: ``(*batch_dims, d)``
+            The relation representations.
+        :param t: shape: ``(*batch_dims, d)``
+            The tail representations.
+
+        :return: shape: ``batch_dims``
+            The scores.
         """
-        return sum(sign * tensor_product(h[hi], r[ri], t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        return dict(coefficients=self.coefficients)
-
-    # docstr-coverage: inherited
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
-        return dict(zip("hrt", ensure_tuple(h, r, t), strict=False))
+        hl, rl, tl = ensure_tuple(h, r, t)
+        return sum(sign * tensor_product(hl[hi], rl[ri], tl[ti]).sum(dim=-1) for hi, ri, ti, sign in self.coefficients)
 
     def extend(self, *new_coefficients: tuple[int, int, int, Sign]) -> AutoSFInteraction:
         """Extend AutoSF function, as described in the greedy search algorithm in the paper."""
@@ -3940,7 +3873,6 @@ interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses
     Interaction,
     skip={
         NormBasedInteraction,
-        FunctionalInteraction,
         MonotonicAffineTransformationInteraction,
         ClampedInteraction,
         DirectionAverageInteraction,
