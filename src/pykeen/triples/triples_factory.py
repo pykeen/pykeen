@@ -734,7 +734,8 @@ class CoreTriplesFactory(KGInfo):
         path: pathlib.Path,
     ) -> MutableMapping[str, Any]:
         # load base
-        data = dict(torch.load(path.joinpath(cls.base_file_name)))
+        # TODO: consider restricting metadata to JSON
+        data = dict(torch.load(path.joinpath(cls.base_file_name), weights_only=False))
         # load numeric triples
         data["mapped_triples"] = torch.as_tensor(
             pd.read_csv(path.joinpath(cls.triples_file_name), sep="\t", dtype=int).values,

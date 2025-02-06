@@ -153,7 +153,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
         """CLI for PyKEEN."""
         click.echo(
             f"Training {model.__name__} with "
-            f"{training_loop.__name__[: -len('TrainingLoop')]} using "
+            f"{training_loop.__name__.removesuffix('TrainingLoop')} using "
             f"{optimizer.__name__} and {evaluator.__name__}",
         )
         from ...pipeline import pipeline
