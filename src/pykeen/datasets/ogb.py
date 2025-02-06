@@ -188,7 +188,8 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
     def _load_data_dict_for_split(self, dataset, which):
         # noqa: D102
         data_dict = torch.load(
-            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
+            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
+            weights_only=False,
         )
         if which == "train":
             data_dict = cast(WikiKG2TrainDict, data_dict)
@@ -297,7 +298,8 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
     # docstr-coverage: inherited
     def _load_data_dict_for_split(self, dataset, which):  # noqa: D102
         data_dict = torch.load(
-            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
+            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
+            weights_only=False,
         )
         if which == "train":
             data_dict = cast(BioKGTrainDict, data_dict)
