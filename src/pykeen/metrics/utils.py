@@ -2,7 +2,7 @@
 
 from collections.abc import Collection
 from dataclasses import dataclass
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 import numpy as np
 from docdata import get_docdata
@@ -26,13 +26,13 @@ class ValueRange:
     """A value range description."""
 
     #: the lower bound
-    lower: Optional[float] = None
+    lower: float | None = None
 
     #: whether the lower bound is inclusive
     lower_inclusive: bool = False
 
     #: the upper bound
-    upper: Optional[float] = None
+    upper: float | None = None
 
     #: whether the upper bound is inclusive
     upper_inclusive: bool = False
@@ -67,7 +67,7 @@ class ValueRange:
         return f"{left}{self._coerce(self.lower, low=True)}, {self._coerce(self.upper, low=False)}{right}"
 
     @staticmethod
-    def _coerce(n: Optional[float], low: bool) -> str:
+    def _coerce(n: float | None, low: bool) -> str:
         if n is None:
             return "-inf" if low else "inf"  # ∞
         if isinstance(n, int):
@@ -87,7 +87,7 @@ class Metric(ExtraReprMixin):
     link: ClassVar[str]
 
     #: whether the metric needs binarized scores
-    binarize: ClassVar[Optional[bool]] = None
+    binarize: ClassVar[bool | None] = None
 
     #: whether it is increasing, i.e., larger values are better
     increasing: ClassVar[bool]
@@ -140,7 +140,7 @@ class Metric(ExtraReprMixin):
         return f"{left_bracket}{left}, {right}{right_bracket}".replace("inf", "∞")
 
 
-def weighted_mean_expectation(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
+def weighted_mean_expectation(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""
     Calculate the expectation of a weighted sum of variables with given individual expected value.
 
@@ -162,7 +162,7 @@ def weighted_mean_expectation(individual: np.ndarray, weights: Optional[np.ndarr
     return np.average(individual, weights=weights).item()
 
 
-def weighted_mean_variance(individual: np.ndarray, weights: Optional[np.ndarray]) -> float:
+def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""
     Calculate the variance of a weighted mean of variables with given individual variances.
 
@@ -230,7 +230,7 @@ def stable_product(a: np.ndarray, is_log: bool = False) -> np.ndarray:
     return sign * np.exp(np.sum(a))
 
 
-def weighted_harmonic_mean(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
+def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndarray:
     """
     Calculate weighted harmonic mean.
 
@@ -255,7 +255,7 @@ def weighted_harmonic_mean(a: np.ndarray, weights: Optional[np.ndarray] = None) 
     return np.reciprocal(np.average(np.reciprocal(a.astype(float)), weights=weights))
 
 
-def weighted_median(a: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
+def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndarray:
     """Calculate weighted median."""
     if weights is None:
         return np.median(a)

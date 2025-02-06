@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from torch.nn.init import uniform_
 
@@ -59,7 +59,7 @@ class ConvKB(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         embedding_dim: int = 200,
         hidden_dropout_rate: float = 0.0,
         num_filters: int = 400,
-        regularizer: Optional[Regularizer] = None,
+        regularizer: Regularizer | None = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
         **kwargs,

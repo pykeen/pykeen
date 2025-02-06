@@ -1,7 +1,7 @@
 """Implementation of the R-GCN model."""
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 from class_resolver import Hint, HintOrType
 from torch import nn
@@ -83,22 +83,22 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         num_layers: int = 2,
         # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
         base_entity_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
-        base_entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        base_entity_initializer_kwargs: Mapping[str, Any] | None = None,
         relation_representations: HintOrType[Representation] = None,
         relation_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer_kwargs: Mapping[str, Any] | None = None,
         interaction: HintOrType[Interaction[FloatTensor, RelationRepresentation, FloatTensor]] = "DistMult",
-        interaction_kwargs: Optional[Mapping[str, Any]] = None,
+        interaction_kwargs: Mapping[str, Any] | None = None,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
-        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        activation_kwargs: Mapping[str, Any] | None = None,
         edge_dropout: float = 0.4,
         self_loop_dropout: float = 0.2,
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
-        decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        decomposition_kwargs: Mapping[str, Any] | None = None,
         regularizer: Hint[Regularizer] = None,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ):
         """

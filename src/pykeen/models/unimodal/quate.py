@@ -1,7 +1,7 @@
 """Implementation of the QuatE model."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 
@@ -64,10 +64,10 @@ class QuatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         embedding_dim: int = 100,
         entity_initializer: Hint[Initializer] = init_quaternions,
         entity_regularizer: Hint[Regularizer] = LpRegularizer,
-        entity_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_regularizer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = init_quaternions,
         relation_regularizer: Hint[Regularizer] = LpRegularizer,
-        relation_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_regularizer_kwargs: Mapping[str, Any] | None = None,
         relation_normalizer: Hint[Constrainer] = quaternion.normalize,
         **kwargs,
     ) -> None:

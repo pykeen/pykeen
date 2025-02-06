@@ -4,14 +4,11 @@ import dataclasses
 import logging
 import pathlib
 import re
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
-    Callable,
     ClassVar,
-    Optional,
     TextIO,
-    Union,
     cast,
 )
 
@@ -142,9 +139,9 @@ def _map_triples_elements_to_ids(
 def _get_triple_mask(
     ids: Collection[int],
     triples: MappedTriples,
-    columns: Union[int, Collection[int]],
+    columns: int | Collection[int],
     invert: bool = False,
-    max_id: Optional[int] = None,
+    max_id: int | None = None,
 ) -> BoolTensor:
     # normalize input
     triples = triples[:, columns]
@@ -162,7 +159,7 @@ def _get_triple_mask(
 
 
 def _ensure_ids(
-    labels_or_ids: Union[Collection[int], Collection[str]],
+    labels_or_ids: Collection[int] | Collection[str],
     label_to_id: Mapping[str, int],
 ) -> Collection[int]:
     """Convert labels to IDs."""
@@ -193,7 +190,7 @@ class Labeling:
 
     def label(
         self,
-        ids: Union[int, Sequence[int], np.ndarray, LongTensor],
+        ids: int | Sequence[int] | np.ndarray | LongTensor,
         unknown_label: str = "unknown",
     ) -> np.ndarray:
         """Convert IDs to labels."""
@@ -218,8 +215,8 @@ class Labeling:
 
 def restrict_triples(
     mapped_triples: MappedTriples,
-    entities: Optional[Collection[int]] = None,
-    relations: Optional[Collection[int]] = None,
+    entities: Collection[int] | None = None,
+    relations: Collection[int] | None = None,
     invert_entity_selection: bool = False,
     invert_relation_selection: bool = False,
 ) -> MappedTriples:
@@ -320,11 +317,11 @@ class CoreTriplesFactory(KGInfo):
 
     def __init__(
         self,
-        mapped_triples: Union[MappedTriples, np.ndarray],
+        mapped_triples: MappedTriples | np.ndarray,
         num_entities: int,
         num_relations: int,
         create_inverse_triples: bool = False,
-        metadata: Optional[Mapping[str, Any]] = None,
+        metadata: Mapping[str, Any] | None = None,
     ):
         """
         Create the triples factory.
@@ -368,10 +365,10 @@ class CoreTriplesFactory(KGInfo):
     def create(
         cls,
         mapped_triples: MappedTriples,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
+        num_entities: int | None = None,
+        num_relations: int | None = None,
         create_inverse_triples: bool = False,
-        metadata: Optional[Mapping[str, Any]] = None,
+        metadata: Mapping[str, Any] | None = None,
     ) -> "CoreTriplesFactory":
         """
         Create a triples factory without any label information.
@@ -423,7 +420,7 @@ class CoreTriplesFactory(KGInfo):
         yield from super().iter_extra_repr()
         yield f"num_triples={self.num_triples}"
         for k, v in sorted(self.metadata.items()):
-            if isinstance(v, (str, pathlib.Path)):
+            if isinstance(v, str | pathlib.Path):
                 v = f'"{v}"'
             yield f"{k}={v}"
 
@@ -469,7 +466,7 @@ class CoreTriplesFactory(KGInfo):
             ]
         )
 
-    def get_most_frequent_relations(self, n: Union[int, float]) -> set[int]:
+    def get_most_frequent_relations(self, n: int | float) -> set[int]:
         """Get the IDs of the n most frequent relations.
 
         :param n:
@@ -493,9 +490,9 @@ class CoreTriplesFactory(KGInfo):
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[dict[str, Any]] = None,
+        extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
-        create_inverse_triples: Optional[bool] = None,
+        create_inverse_triples: bool | None = None,
     ) -> "CoreTriplesFactory":
         """
         Create a new triples factory sharing everything except the triples.
@@ -531,11 +528,11 @@ class CoreTriplesFactory(KGInfo):
 
     def split(
         self,
-        ratios: Union[float, Sequence[float]] = 0.8,
+        ratios: float | Sequence[float] = 0.8,
         *,
         random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
-        method: Optional[str] = None,
+        method: str | None = None,
     ) -> list["CoreTriplesFactory"]:
         """Split a triples factory into a training part and a variable number of (transductive) evaluation parts.
 
@@ -596,7 +593,7 @@ class CoreTriplesFactory(KGInfo):
             )
         ]
 
-    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
+    def entities_to_ids(self, entities: Collection[int] | Collection[str]) -> Collection[int]:
         """Normalize entities to IDs.
 
         :param entities: A collection of either integer identifiers for entities or
@@ -611,7 +608,7 @@ class CoreTriplesFactory(KGInfo):
                 raise ValueError(f"{self.__class__.__name__} cannot convert entity IDs from {type(e)} to int.")
         return cast(Collection[int], entities)
 
-    def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:
+    def relations_to_ids(self, relations: Collection[int] | Collection[str]) -> Collection[int]:
         """Normalize relations to IDs.
 
         :param relations: A collection of either integer identifiers for relations or
@@ -643,7 +640,7 @@ class CoreTriplesFactory(KGInfo):
     def tensor_to_df(
         self,
         tensor: LongTensor,
-        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+        **kwargs: torch.Tensor | np.ndarray | Sequence,
     ) -> pd.DataFrame:
         """Take a tensor of triples and make a pandas dataframe with labels.
 
@@ -659,8 +656,8 @@ class CoreTriplesFactory(KGInfo):
 
     def new_with_restriction(
         self,
-        entities: Union[None, Collection[int], Collection[str]] = None,
-        relations: Union[None, Collection[int], Collection[str]] = None,
+        entities: None | Collection[int] | Collection[str] = None,
+        relations: None | Collection[int] | Collection[str] = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
     ) -> "CoreTriplesFactory":
@@ -716,7 +713,7 @@ class CoreTriplesFactory(KGInfo):
     # docstr-coverage: inherited
     def from_path_binary(
         cls,
-        path: Union[str, pathlib.Path, TextIO],
+        path: str | pathlib.Path | TextIO,
     ) -> "CoreTriplesFactory":  # noqa: D102
         """
         Load triples factory from a binary file.
@@ -748,7 +745,7 @@ class CoreTriplesFactory(KGInfo):
 
     def to_path_binary(
         self,
-        path: Union[str, pathlib.Path, TextIO],
+        path: str | pathlib.Path | TextIO,
     ) -> pathlib.Path:
         """
         Save triples factory to path in (PyTorch's .pt) binary format.
@@ -790,13 +787,13 @@ class TriplesFactory(CoreTriplesFactory):
 
     def __init__(
         self,
-        mapped_triples: Union[MappedTriples, np.ndarray],
+        mapped_triples: MappedTriples | np.ndarray,
         entity_to_id: EntityMapping,
         relation_to_id: RelationMapping,
         create_inverse_triples: bool = False,
-        metadata: Optional[Mapping[str, Any]] = None,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
+        metadata: Mapping[str, Any] | None = None,
+        num_entities: int | None = None,
+        num_relations: int | None = None,
     ):
         """
         Create the triples factory.
@@ -850,11 +847,11 @@ class TriplesFactory(CoreTriplesFactory):
         triples: LabeledTriples,
         *,
         create_inverse_triples: bool = False,
-        entity_to_id: Optional[EntityMapping] = None,
-        relation_to_id: Optional[RelationMapping] = None,
+        entity_to_id: EntityMapping | None = None,
+        relation_to_id: RelationMapping | None = None,
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> "TriplesFactory":
         """
         Create a new triples factory from label-based triples.
@@ -926,14 +923,14 @@ class TriplesFactory(CoreTriplesFactory):
     @classmethod
     def from_path(
         cls,
-        path: Union[str, pathlib.Path, TextIO],
+        path: str | pathlib.Path | TextIO,
         *,
         create_inverse_triples: bool = False,
-        entity_to_id: Optional[EntityMapping] = None,
-        relation_to_id: Optional[RelationMapping] = None,
+        entity_to_id: EntityMapping | None = None,
+        relation_to_id: RelationMapping | None = None,
         compact_id: bool = True,
-        metadata: Optional[dict[str, Any]] = None,
-        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
+        load_triples_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> "TriplesFactory":
         """
@@ -997,7 +994,7 @@ class TriplesFactory(CoreTriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
+    def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # store entity/relation to ID
         for name, data in (
@@ -1028,16 +1025,16 @@ class TriplesFactory(CoreTriplesFactory):
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
             )
-            data[name] = dict(zip(df["label"], df["id"]))
+            data[name] = dict(zip(df["label"], df["id"], strict=False))
         return data
 
     # docstr-coverage: inherited
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[dict[str, Any]] = None,
+        extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
-        create_inverse_triples: Optional[bool] = None,
+        create_inverse_triples: bool | None = None,
     ) -> "TriplesFactory":  # noqa: D102
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
@@ -1078,7 +1075,7 @@ class TriplesFactory(CoreTriplesFactory):
         logger.warning("Reconstructing all label-based triples. This is expensive and rarely needed.")
         return self.label_triples(self.mapped_triples)
 
-    def get_inverse_relation_id(self, relation: Union[str, int]) -> int:
+    def get_inverse_relation_id(self, relation: str | int) -> int:
         """Get the inverse relation identifier for the given relation."""
         relation = next(iter(self.relations_to_ids(relations=[relation])))  # type: ignore
         return super().get_inverse_relation_id(relation=relation)
@@ -1087,7 +1084,7 @@ class TriplesFactory(CoreTriplesFactory):
         self,
         triples: MappedTriples,
         unknown_entity_label: str = "[UNKNOWN]",
-        unknown_relation_label: Optional[str] = None,
+        unknown_relation_label: str | None = None,
     ) -> LabeledTriples:
         """
         Convert ID-based triples to label-based ones.
@@ -1116,28 +1113,29 @@ class TriplesFactory(CoreTriplesFactory):
                         (self.entity_labeling, unknown_entity_label),
                     ],
                     triples.t().numpy(),
+                    strict=False,
                 )
             ],
             axis=1,
         )
 
     # docstr-coverage: inherited
-    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:  # noqa: D102
+    def entities_to_ids(self, entities: Collection[int] | Collection[str]) -> Collection[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_labeling.label_to_id)
 
     # docstr-coverage: inherited
-    def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:  # noqa: D102
+    def relations_to_ids(self, relations: Collection[int] | Collection[str]) -> Collection[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_labeling.label_to_id)
 
     def get_mask_for_relations(
         self,
-        relations: Union[Collection[int], Collection[str]],
+        relations: Collection[int] | Collection[str],
         invert: bool = False,
     ) -> BoolTensor:
         """Get a boolean mask for triples with the given relations."""
         return super().get_mask_for_relations(relations=self.relations_to_ids(relations=relations), invert=invert)
 
-    def entity_word_cloud(self, top: Optional[int] = None):
+    def entity_word_cloud(self, top: int | None = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
@@ -1153,7 +1151,7 @@ class TriplesFactory(CoreTriplesFactory):
             top=top or 100,
         )
 
-    def relation_word_cloud(self, top: Optional[int] = None):
+    def relation_word_cloud(self, top: int | None = None):
         """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
 
         :param top: The number of top relations to show. Defaults to 100.
@@ -1189,7 +1187,7 @@ class TriplesFactory(CoreTriplesFactory):
         svg_str: str = (
             WordCloud(normalize_plurals=False, max_words=top, mode="RGBA", background_color=None)
             .generate_from_frequencies(
-                frequencies=dict(zip(map(id_to_label.__getitem__, top_ids.tolist()), top_counts.tolist()))
+                frequencies=dict(zip(map(id_to_label.__getitem__, top_ids.tolist()), top_counts.tolist(), strict=False))
             )
             .to_svg()
         )
@@ -1202,7 +1200,7 @@ class TriplesFactory(CoreTriplesFactory):
     def tensor_to_df(
         self,
         tensor: LongTensor,
-        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+        **kwargs: torch.Tensor | np.ndarray | Sequence,
     ) -> pd.DataFrame:  # noqa: D102
         data = super().tensor_to_df(tensor=tensor, **kwargs)
         old_col = list(data.columns)
@@ -1226,8 +1224,8 @@ class TriplesFactory(CoreTriplesFactory):
     # docstr-coverage: inherited
     def new_with_restriction(
         self,
-        entities: Union[None, Collection[int], Collection[str]] = None,
-        relations: Union[None, Collection[int], Collection[str]] = None,
+        entities: None | Collection[int] | Collection[str] = None,
+        relations: None | Collection[int] | Collection[str] = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
     ) -> "TriplesFactory":  # noqa: D102
@@ -1294,17 +1292,15 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     return 1 - steps / n
 
 
-AnyTriples = Union[
-    tuple[str, str, str], Sequence[tuple[str, str, str]], LabeledTriples, MappedTriples, CoreTriplesFactory
-]
+AnyTriples = tuple[str, str, str] | Sequence[tuple[str, str, str]] | LabeledTriples | MappedTriples | CoreTriplesFactory
 
 
 def get_mapped_triples(
-    x: Optional[AnyTriples] = None,
+    x: AnyTriples | None = None,
     *,
-    mapped_triples: Optional[MappedTriples] = None,
-    triples: Union[None, LabeledTriples, tuple[str, str, str], Sequence[tuple[str, str, str]]] = None,
-    factory: Optional[CoreTriplesFactory] = None,
+    mapped_triples: MappedTriples | None = None,
+    triples: None | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]] = None,
+    factory: CoreTriplesFactory | None = None,
 ) -> MappedTriples:
     """
     Get ID-based triples either directly, or from a factory.

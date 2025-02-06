@@ -1,7 +1,6 @@
 """Test that training loops work correctly."""
 
 import unittest
-from typing import Optional
 
 import torch
 from torch import optim
@@ -39,7 +38,7 @@ class DummyTrainingLoop(SLCWATrainingLoop):
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         assert (stop - start) <= self.sub_batch_size
 

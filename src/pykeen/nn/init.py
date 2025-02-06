@@ -4,7 +4,7 @@ import functools
 import logging
 import math
 from collections.abc import Sequence
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -290,7 +290,7 @@ class LabelBasedInitializer(PretrainedInitializer):
         labels: Sequence[str],
         encoder: HintOrType[TextEncoder] = None,
         encoder_kwargs: OptionalKwargs = None,
-        batch_size: Optional[int] = None,
+        batch_size: int | None = None,
     ):
         """
         Initialize the initializer.
@@ -355,10 +355,10 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         color_initializer_kwargs: OptionalKwargs = None,
         shape: OneOrSequence[int] = 32,
         # variants for the edge index
-        edge_index: Optional[LongTensor] = None,
-        num_entities: Optional[int] = None,
-        mapped_triples: Optional[LongTensor] = None,
-        triples_factory: Optional[CoreTriplesFactory] = None,
+        edge_index: LongTensor | None = None,
+        num_entities: int | None = None,
+        mapped_triples: LongTensor | None = None,
+        triples_factory: CoreTriplesFactory | None = None,
         # additional parameters for iter_weisfeiler_lehman
         **kwargs,
     ) -> None:
@@ -425,11 +425,11 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
     def __init__(
         self,
         *,
-        triples_factory: Optional[CoreTriplesFactory] = None,
-        mapped_triples: Optional[MappedTriples] = None,
-        edge_index: Optional[torch.Tensor] = None,
+        triples_factory: CoreTriplesFactory | None = None,
+        mapped_triples: MappedTriples | None = None,
+        edge_index: torch.Tensor | None = None,
         dim: int,
-        num_entities: Optional[int] = None,
+        num_entities: int | None = None,
         space_dim: int = 0,
         skip_first_power: bool = True,
     ) -> None:

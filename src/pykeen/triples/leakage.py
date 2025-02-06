@@ -9,7 +9,7 @@ novel triples.
 
 import logging
 from collections.abc import Collection, Iterable, Mapping
-from typing import Optional, TypeVar, Union, cast
+from typing import TypeVar, cast
 
 import click
 import numpy
@@ -148,7 +148,7 @@ def mapped_triples_to_sparse_matrices(
 def get_candidate_pairs(
     *,
     a: scipy.sparse.spmatrix,
-    b: Optional[scipy.sparse.spmatrix] = None,
+    b: scipy.sparse.spmatrix | None = None,
     threshold: float,
     no_self: bool = True,
 ) -> set[tuple[int, int]]:
@@ -175,7 +175,7 @@ def get_candidate_pairs(
         num = sim.shape[0]
         idx = numpy.arange(num)
         sim[idx, idx] = 0
-    return set(zip(*(sim >= threshold).nonzero()))
+    return set(zip(*(sim >= threshold).nonzero(), strict=False))
 
 
 class Sealant:
@@ -189,7 +189,7 @@ class Sealant:
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        minimum_frequency: Optional[float] = None,
+        minimum_frequency: float | None = None,
         symmetric: bool = True,
     ):
         """Index the inverse frequencies and the inverse relations in the triples factory.
@@ -223,7 +223,7 @@ class Sealant:
             f" at similarity > {self.minimum_frequency} in {self.triples_factory}",
         )
         self.candidates = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
-        sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True)))
+        sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True), strict=False))
         self.relations_to_delete = _select_by_most_pairs(
             size=sizes,
             components=get_connected_components((a, b) for a, b in self.candidates if a != b),
@@ -238,8 +238,8 @@ class Sealant:
 def unleak(
     train: CoreTriplesFactory,
     *triples_factories: CoreTriplesFactory,
-    n: Union[None, int, float] = None,
-    minimum_frequency: Optional[float] = None,
+    n: None | int | float = None,
+    minimum_frequency: float | None = None,
 ) -> Iterable[CoreTriplesFactory]:
     """Unleak a train, test, and validate triples factory.
 
@@ -329,6 +329,7 @@ def _translate_triples(
             for column, trans in zip(
                 triples.t(),
                 (entity_translation, relation_translation, entity_translation),
+                strict=False,
             )
         ],
         dim=-1,
