@@ -27,7 +27,7 @@ scores of a base function over the forward and backward representations.
 It can be seen as a generalization of :class:`~pykeen.nn.modules.SimplEInteraction`.
 
 The :class:`~pykeen.nn.modules.MonotonicAffineTransformationInteraction` adds trainable scalar scale and bias terms
-to an existing interaction function. The scale parameter is parametrized to take only positive values, 
+to an existing interaction function. The scale parameter is parametrized to take only positive values,
 preserving the interpretation of larger values corresponding to more plausible triples.
 This adapter is particularly useful for base interactions with a restricted range of values,
 such as norm-based interactions, and loss functions with absolute decision thresholds,
@@ -173,7 +173,7 @@ this operation corresponds to dimension-wise rotation in the complex plane.
     - :class:`~pykeen.nn.modules.MuREInteraction`
         - has some extra head/tail biases
     - :class:`~pykeen.nn.modules.TorusEInteraction`
-  
+
 
 Semantic Matching / Factorization
 ----------------------------------
@@ -217,7 +217,7 @@ SimplE
         + \langle \mathbf{t}_h, \mathbf{r}_{\leftarrow}, \mathbf{h}_t \rangle
     \right)
 
-for $\mathbf{h}_h, \mathbf{h}_t, \mathbf{r}_{\rightarrow}, \mathbf{r}_{\leftarrow}, \mathbf{t}_{h}, 
+for $\mathbf{h}_h, \mathbf{h}_t, \mathbf{r}_{\rightarrow}, \mathbf{r}_{\leftarrow}, \mathbf{t}_{h},
 \mathbf{t}_{t} \in \mathbb{R}^{d}$.
 In contrast to :class:`~pykeen.nn.modules.CPInteraction`, :class:`~pykeen.nn.modules.SimplEInteraction` introduces
 separate weights for each relation $\mathbf{r}_{\rightarrow}$ and $\mathbf{r}_{\leftarrow}$ for the inverse relation.
@@ -407,7 +407,7 @@ Neural Tensor Network (NTN)
     \right \rangle
 
 where $\mathbf{h}, \mathbf{t} \in \mathbf{R}^d$ are head and tail entity representations, and
-$\mathbf{r}_1, \mathbf{r}_u \in \mathbb{R}^d, \mathbf{R}_2 \in \mathbb{R}^{k \times 2d}, 
+$\mathbf{r}_1, \mathbf{r}_u \in \mathbb{R}^d, \mathbf{R}_2 \in \mathbb{R}^{k \times 2d},
 \mathbf{R}_3 \in \mathbf{R}^{d \times d \times k}$ are relation-specific parameters, and $\sigma$ is an activation.
 
 ProjE
