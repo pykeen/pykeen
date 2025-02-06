@@ -122,7 +122,7 @@ class ClassificationMetric(Metric, abc.ABC):
             return self.forward(y_true=y_true, y_score=y_score)
         if not self.supports_weights:
             raise ValueError(
-                f"{self.__call__.__qualname__} does not support sample weights but received" f"weights={weights}.",
+                f"{self.__call__.__qualname__} does not support sample weights but receivedweights={weights}.",
             )
         return self.forward(y_true=y_true, y_score=y_score, sample_weight=weights)
 

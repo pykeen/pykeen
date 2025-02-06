@@ -659,8 +659,7 @@ class ConvEResolvedImageShape:
         if dim is None:
             if channels is None or width is None or height is None:
                 raise ValueError(
-                    f"When {dim=} none of the other dimensions may be None, "
-                    f"but {channels=}, {width=}, and {height=}"
+                    f"When {dim=} none of the other dimensions may be None, but {channels=}, {width=}, and {height=}"
                 )
             dim = channels * width * height
 
