@@ -426,6 +426,15 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
         base_ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
     )
 
+    def test_max_id_verification(self):
+        """Test that an invalid max_id raises a ValueError."""
+        with self.assertRaises(ValueError):
+            pykeen.nn.representation.BackfillRepresentation(
+                base_ids=[0, 1, 2],
+                max_id=2,
+                base=pykeen.nn.representation.Embedding(num_embeddings=3, shape=(3,)),
+            )
+
 
 class TransformedRepresentationTest(cases.RepresentationTestCase):
     """Tests for transformed representations."""
