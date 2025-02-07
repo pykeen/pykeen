@@ -310,6 +310,13 @@ class KGInfo(ExtraReprMixin):
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
 
+def max_value(x: torch.Tensor) -> int | None:
+    """Return the maximum value, or None if the tensor is empty."""
+    if x.numel():
+        return x.max().item()
+    return None
+
+
 class CoreTriplesFactory(KGInfo):
     """Create instances from ID-based triples."""
 
@@ -389,9 +396,9 @@ class CoreTriplesFactory(KGInfo):
             A new triples factory.
         """
         if num_entities is None:
-            num_entities = mapped_triples[:, [0, 2]].max().item() + 1
+            num_entities = (max_value(mapped_triples[:, [0, 2]]) or 0) + 1
         if num_relations is None:
-            num_relations = mapped_triples[:, 1].max().item() + 1
+            num_relations = (max_value(mapped_triples[:, 1]) or 0) + 1
         return CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=num_entities,
