@@ -399,7 +399,8 @@ where
         + \mathbf{b}
     )
 
-with an activation function $\sigma$. Moreover, dropout is applied to the output of $g$.
+with an activation function $\sigma$ and $\odot$ denoting the element-wise product. Moreover, dropout is applied to the
+output of $g$.
 
 ERMLP
 ~~~~~
