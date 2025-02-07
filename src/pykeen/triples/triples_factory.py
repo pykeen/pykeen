@@ -687,7 +687,7 @@ class CoreTriplesFactory(KGInfo):
             which share everything else with this root triples factory.
 
         .. seealso::
-            https://arxiv.org/abs/2107.04894 # TODO: add this to references, and use a proper link instead
+            - [ali2021]_
         """
         # Make new triples factories for each group
         return [

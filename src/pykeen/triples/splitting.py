@@ -556,7 +556,24 @@ def split_semi_inductive(
     ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
-    """Create a semi-inductive split, as defined by https://arxiv.org/abs/2107.04894."""
+    """Create a semi-inductive split, as defined by [ali2021]_.
+
+    In a semi-inductive split, we first split the entities into training and evaluation entities.
+    The training graph is then composed of all triples involving only training entities.
+    The evaluation graphs are built by looking at the triples that involve exactly one training
+    and one evaluation entity.
+
+    :param mapped_triples: shape: (n, 3)
+        The ID-based triples.
+    :param ratios:
+        The *entity* split ratio(s).
+    :param random_state:
+        The random state used to shuffle and split the triples.
+
+    :return:
+        A partition of triples, which are split (approximately) according to the ratios, stored TriplesFactory's
+        which share everything else with this root triples factory.
+    """
     # normalize input
     generator = ensure_torch_random_state(random_state=random_state)
     ratios = normalize_ratios(ratios=ratios)
@@ -592,7 +609,26 @@ def split_fully_inductive(
     evaluation_triples_ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
-    """Create a fully-inductive split, as defined by https://arxiv.org/abs/2107.04894."""
+    """Create a full-inductive split, as defined by [ali2021]_.
+
+    In a fully inductive split, we first split the entities into two disjoint sets:
+    training entities and inference entities. We use the induced subgraph of the training entities for training.
+    The triples of the inference graph are then further split into inference triples and evaluation triples.
+
+    :param mapped_triples: shape: (n, 3)
+        The ID-based triples.
+    :param entity_split_train_ratio:
+        The ratio of entities to use for the training part. The remainder will be used for the
+        inference/evaluation graph.
+    :param evaluation_triples_ratios:
+        The split ratio for the inference graph split.
+    :param random_state:
+        The random state used to shuffle and split the triples.
+
+    :return:
+        A (transductive) training triples factory, the inductive inference triples factory,
+        as well as the evaluation triples factories.
+    """
     # normalize input
     generator = ensure_torch_random_state(random_state=random_state)
     evaluation_triples_ratios = normalize_ratios(ratios=evaluation_triples_ratios)
