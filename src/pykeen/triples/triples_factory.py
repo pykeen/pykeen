@@ -317,17 +317,33 @@ def max_value(x: LongTensor) -> int | None:
     return None
 
 
+def get_num_ids(x: LongTensor) -> int:
+    """Return the number of ids values."""
+    max_id = max_value(x)
+    if max_id is None:
+        return 0
+    return max_id + 1
+
+
 def _make_condensation_map(x: LongTensor) -> LongTensor | None:
     """Create a dense vector suitable for condensing Ids to a consecutive ID range."""
     # TODO: we have this functionality somewhere already?!
     if not x.numel():
         return None
-    max_id = x.max().item()
+    k = get_num_ids(x)
     unique_entities = x.unique()
-    if torch.equal(unique_entities, torch.arange(max_id + 1)):
+    old_ids_t = torch.arange(k)
+    if torch.equal(unique_entities, old_ids_t):
         return None
-    y = torch.full((max_id + 1,), fill_value=-1)
-    return y.scatter_(dim=0, index=unique_entities, src=torch.arange(max_id + 1))
+    y = torch.full((k,), fill_value=-1)
+    return y.scatter_(dim=0, index=unique_entities, src=old_ids_t)
+
+
+def _iter_index_remap_from_condensation_map(c: LongTensor) -> Iterable[tuple[int, int]]:
+    """Iterate over pairs of old-index -> new-index."""
+    old_indices = (c >= 0).nonzero().view(-1).tolist()
+    new_indices = range(max_value(c) + 1)
+    return zip(old_indices, new_indices, strict=True)
 
 
 class CoreTriplesFactory(KGInfo):
@@ -409,9 +425,9 @@ class CoreTriplesFactory(KGInfo):
             A new triples factory.
         """
         if num_entities is None:
-            num_entities = (max_value(mapped_triples[:, [0, 2]]) or 0) + 1
+            num_entities = get_num_ids(mapped_triples[:, [0, 2]])
         if num_relations is None:
-            num_relations = (max_value(mapped_triples[:, 1]) or 0) + 1
+            num_relations = get_num_ids(mapped_triples[:, 1])
         return CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=num_entities,
@@ -564,8 +580,8 @@ class CoreTriplesFactory(KGInfo):
         r = relation_condensation[r]
         return CoreTriplesFactory(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
-            num_entities=max_value(ht) or 0,
-            num_relations=max_value(r) or 0,
+            num_entities=get_num_ids(ht),
+            num_relations=get_num_ids(r),
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -1127,6 +1143,36 @@ class TriplesFactory(CoreTriplesFactory):
             and super().__eq__(__o)
             and (self.entity_to_id == __o.entity_to_id)
             and (self.relation_to_id == __o.relation_to_id)
+        )
+
+    # docstr-coverage: inherited
+    def condense(self) -> Self:  # noqa: D102
+        ht = self.mapped_triples[:, 0::2]
+        r = self.mapped_triples[:, 1]
+        entity_condensation = _make_condensation_map(ht)
+        relation_condensation = _make_condensation_map(r)
+        if entity_condensation is None and relation_condensation is None:
+            return self
+        ht = entity_condensation[ht]
+        r = relation_condensation[r]
+        num_entities = get_num_ids(ht)
+        num_relations = get_num_ids(r)
+        entity_to_id = {
+            self.entity_id_to_label[old]: new
+            for old, new in _iter_index_remap_from_condensation_map(entity_condensation)
+        }
+        relation_to_id = {
+            self.relation_id_to_label[old]: new
+            for old, new in _iter_index_remap_from_condensation_map(relation_condensation)
+        }
+        return TriplesFactory(
+            mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            num_entities=num_entities,
+            num_relations=num_relations,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
         )
 
     def to_core_triples_factory(self) -> CoreTriplesFactory:
