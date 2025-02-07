@@ -326,9 +326,8 @@ def _make_condensation_map(x: LongTensor) -> LongTensor | None:
     unique_entities = x.unique()
     if torch.equal(unique_entities, torch.arange(max_id + 1)):
         return None
-    y = torch.full(size=max_id + 1, fill_value=-1)
-    y[unique_entities] = torch.arange(max_id + 1)
-    return y
+    y = torch.full((max_id + 1,), fill_value=-1)
+    return y.scatter_(dim=0, index=unique_entities, src=torch.arange(max_id + 1))
 
 
 class CoreTriplesFactory(KGInfo):
