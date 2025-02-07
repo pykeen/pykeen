@@ -345,6 +345,7 @@ class TestSplit(unittest.TestCase):
             with self.subTest(ratios=ratios):
                 factories_1 = self.triples_factory.split_semi_inductive(ratios, random_state=0)
                 self.assertEqual(n, len(factories_1))
+                # TODO: there are other invariants to check than for transductive splits
 
                 # check for reproducibility, by splitting a second time with the same seed
                 factories_2 = self.triples_factory.split_semi_inductive(ratios, random_state=0)
