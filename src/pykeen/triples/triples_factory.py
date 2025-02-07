@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .splitting import split, split_semi_inductive
+from .splitting import split, split_fully_inductive, split_semi_inductive
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
@@ -630,6 +630,41 @@ class CoreTriplesFactory(KGInfo):
                 split_semi_inductive(mapped_triples=self.mapped_triples, ratios=ratios, random_state=random_state)
             )
         ]
+
+    def split_fully_inductive(
+        self,
+        entity_split_ratio: float = 0.5,
+        evaluation_triples_ratios: float | Sequence[float] = 0.8,
+        random_state: TorchRandomHint = None,
+    ) -> list[Self]:
+        """Create a fully inductive split.
+
+        In a fully inductive split, we first split the entities into two disjoint sets:
+        training entities and inference entities. We use the induced subgraph of the training entities for training.
+        The triples of the inference graph are then further split into inference triples and evaluation triples.
+
+        :param
+        """
+        training, inference, *evaluation = split_fully_inductive(
+            mapped_triples=self.mapped_triples,
+            entity_split_ratio=entity_split_ratio,
+            evaluation_triples_ratios=evaluation_triples_ratios,
+            random_state=random_state,
+        )
+        # TODO: do we need to adjust the entity map of training? (or inference?)
+        training_tf = self.create(
+            mapped_triples=training, metadata=self.metadata, create_inverse_triples=self.create_inverse_triples
+        )
+        inference_tf = self.create(
+            mapped_triples=inference, metadata=self.metadata, create_inverse_triples=self.create_inverse_triples
+        )
+        # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+        evaluation_tfs = [
+            inference_tf.clone_and_exchange_triples(mapped_triples=mapped_triples, create_inverse_triples=False)
+            for mapped_triples in evaluation
+        ]
+        # Make new triples factories for each group
+        return [training_tf, inference_tf] + evaluation_tfs
 
     def entities_to_ids(self, entities: Collection[int] | Collection[str]) -> Collection[int]:
         """Normalize entities to IDs.
