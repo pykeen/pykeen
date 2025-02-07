@@ -602,6 +602,11 @@ class CoreTriplesFactory(KGInfo):
     ) -> list[Self]:
         """Create a semi-inductive split.
 
+        In a semi-inductive split, we first split the entities into training and evaluation entities.
+        The training graph is then composed of all triples involving only training entities.
+        The evaluation graphs are built by looking at the triples that involve exactly one training
+        and one evaluation entity.
+
         :param ratios:
             The *entity* split ratio(s).
         :param random_state:
