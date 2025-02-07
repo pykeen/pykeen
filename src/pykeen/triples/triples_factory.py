@@ -465,7 +465,7 @@ class CoreTriplesFactory(KGInfo):
         self,
         entity_to_id: Mapping[str, int],
         relation_to_id: Mapping[str, int],
-    ) -> "TriplesFactory":
+    ) -> Self:
         """Add labeling to the TriplesFactory."""
         # check new label to ID mappings
         for name, columns, new_labeling in (
@@ -476,7 +476,7 @@ class CoreTriplesFactory(KGInfo):
             if not existing_ids.issubset(new_labeling.values()):
                 diff = existing_ids.difference(new_labeling.values())
                 raise ValueError(f"Some existing IDs do not occur in the new {name} labeling: {diff}")
-        return TriplesFactory(
+        return self.new(
             mapped_triples=self.mapped_triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
