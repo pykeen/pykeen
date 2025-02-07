@@ -590,7 +590,7 @@ def split_semi_inductive(
 def split_fully_inductive(
     mapped_triples: MappedTriples,
     *,
-    entity_split_ratio: float = 0.5,
+    entity_split_train_ratio: float = 0.5,
     evaluation_triples_ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
@@ -601,7 +601,7 @@ def split_fully_inductive(
 
     # split entities into training and inference
     train, inference = _random_split_unique_values(
-        mapped_triples[:, 0::2], ratios=[entity_split_ratio, 1.0 - entity_split_ratio], generator=generator
+        mapped_triples[:, 0::2], ratios=[entity_split_train_ratio, 1.0 - entity_split_train_ratio], generator=generator
     )
     logger.info(f"Entity split into {len(train):_} entities and {len(inference):_} inference entities.")
 

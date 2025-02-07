@@ -640,7 +640,7 @@ class CoreTriplesFactory(KGInfo):
 
     def split_fully_inductive(
         self,
-        entity_split_ratio: float = 0.5,
+        entity_split_train_ratio: float = 0.5,
         evaluation_triples_ratios: float | Sequence[float] = 0.8,
         random_state: TorchRandomHint = None,
     ) -> list[Self]:
@@ -654,7 +654,7 @@ class CoreTriplesFactory(KGInfo):
         """
         training, inference, *evaluation = split_fully_inductive(
             mapped_triples=self.mapped_triples,
-            entity_split_ratio=entity_split_ratio,
+            entity_split_train_ratio=entity_split_train_ratio,
             evaluation_triples_ratios=evaluation_triples_ratios,
             random_state=random_state,
         )
