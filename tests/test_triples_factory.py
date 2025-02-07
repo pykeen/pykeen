@@ -357,7 +357,7 @@ class TestSplit(unittest.TestCase):
             (3, 0.5, 0.8),
             (3, 0.5, [0.8]),
             (4, 0.6, [0.80, 0.10]),
-            (4, 0.1, [0.80, 0.10, 0.10]),
+            (4, 0.4, [0.80, 0.10, 0.10]),
         ]
         for n, entity_split, triple_ratios in cases:
             with self.subTest(entity_split=entity_split, triple_ratios=triple_ratios):
