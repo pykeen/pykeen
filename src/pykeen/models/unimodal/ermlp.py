@@ -1,7 +1,7 @@
 """Implementation of ERMLP."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch import nn
@@ -44,7 +44,7 @@ class ERMLP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         self,
         *,
         embedding_dim: int = 64,
-        hidden_dim: Optional[int] = None,
+        hidden_dim: int | None = None,
         activation: HintOrType[nn.Module] = nn.ReLU,
         activation_kwargs: OptionalKwargs = None,
         entity_initializer: Hint[Initializer] = nn.init.uniform_,

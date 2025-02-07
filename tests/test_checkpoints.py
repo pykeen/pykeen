@@ -91,7 +91,7 @@ class BestCheckpointKeeperTests(CheckpointKeeperTests):
     def iter_steps(self) -> Iterator[list[int]]:
         for steps in super().iter_steps():
             losses = torch.rand(len(steps), generator=self.generator)
-            for step, loss in zip(steps, losses.tolist()):
+            for step, loss in zip(steps, losses.tolist(), strict=False):
                 self.result_tracker.log_metrics(metrics=dict(loss=loss), step=step, prefix="validation")
             yield steps
 

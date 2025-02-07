@@ -1,8 +1,8 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from collections.abc import Mapping
-from typing import Any, Callable, ClassVar
+from collections.abc import Callable, Mapping
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs

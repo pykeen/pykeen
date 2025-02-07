@@ -1,8 +1,7 @@
 """Dataset analysis utilities."""
 
 import logging
-from collections.abc import Collection
-from typing import Callable, Optional, Union
+from collections.abc import Callable, Collection
 
 import pandas as pd
 import torch
@@ -32,7 +31,7 @@ def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[
     return torch.cat([dataset.factory_dict[part].mapped_triples for part in parts], dim=0).tolist()
 
 
-def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]]) -> Collection[str]:
+def _normalize_parts(dataset: Dataset, parts: None | str | Collection[str]) -> Collection[str]:
     if parts is None:
         parts = dataset.factory_dict.keys()
     elif isinstance(parts, str):
@@ -195,7 +194,7 @@ def get_relation_pattern_types_df(
     min_support: int = 0,
     min_confidence: float = 0.95,
     drop_confidence: bool = False,
-    parts: Optional[Collection[str]] = None,
+    parts: Collection[str] | None = None,
     force: bool = False,
     add_labels: bool = True,
 ) -> pd.DataFrame:
@@ -289,7 +288,7 @@ def get_relation_pattern_types_df(
 def get_relation_cardinality_types_df(
     *,
     dataset: Dataset,
-    parts: Optional[Collection[str]] = None,
+    parts: Collection[str] | None = None,
     add_labels: bool = True,
 ) -> pd.DataFrame:
     r"""
@@ -332,7 +331,7 @@ def get_relation_cardinality_types_df(
 def get_relation_injectivity_df(
     *,
     dataset: Dataset,
-    parts: Optional[Collection[str]] = None,
+    parts: Collection[str] | None = None,
     add_labels: bool = True,
 ) -> pd.DataFrame:
     """
@@ -362,7 +361,7 @@ def get_relation_injectivity_df(
 def get_relation_functionality_df(
     *,
     dataset: Dataset,
-    parts: Optional[Collection[str]] = None,
+    parts: Collection[str] | None = None,
     add_labels: bool = True,
 ) -> pd.DataFrame:
     """
