@@ -1,7 +1,5 @@
 """Implementation of triples splitting functions."""
 
-from __future__ import annotations
-
 import logging
 import typing
 from abc import abstractmethod
