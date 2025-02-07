@@ -683,6 +683,30 @@ class CoreTriplesFactory(KGInfo):
         # Make new triples factories for each group
         return [training_tf, inference_tf] + evaluation_tfs
 
+    def merge(self, *others: Self) -> Self:
+        """Merge the triples factory with others.
+
+        The other triples factories have to be compatible.
+        """
+        if not others:
+            return self
+        mapped_triples = [self.mapped_triples]
+        for i, other in enumerate(others):
+            if other.num_entities != self.num_entities:
+                raise ValueError(
+                    f"Number of entities does not match for others[{i}]: {self.num_entities=} vs. {other.num_entities=}"
+                )
+            if other.num_relations != self.num_relations:
+                raise ValueError(
+                    f"Number of relations does not match for others[{i}]: {self.num_relations=} vs. {other.num_relations=}"
+                )
+            if other.create_inverse_triples != self.create_inverse_triples:
+                raise ValueError(
+                    f"Creation of inverse triples does not match for others[{i}]: {self.create_inverse_triples=} vs. {other.create_inverse_triples=}"
+                )
+            mapped_triples.append(other.mapped_triples)
+        return self.clone_and_exchange_triples(torch.cat(mapped_triples, dim=0))
+
     def entities_to_ids(self, entities: Collection[int] | Collection[str]) -> Collection[int]:
         """Normalize entities to IDs.
 
