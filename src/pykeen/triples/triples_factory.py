@@ -5,17 +5,12 @@ import logging
 import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import (
-    Any,
-    ClassVar,
-    Self,
-    TextIO,
-    cast,
-)
+from typing import Any, ClassVar, TextIO, cast
 
 import numpy as np
 import pandas as pd
 import torch
+from typing_extensions import Self
 
 from .splitting import split, split_fully_inductive, split_semi_inductive
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
@@ -342,7 +337,7 @@ def _make_condensation_map(x: LongTensor) -> LongTensor | None:
 def _iter_index_remap_from_condensation_map(c: LongTensor) -> Iterable[tuple[int, int]]:
     """Iterate over pairs of old-index -> new-index."""
     old_indices = (c >= 0).nonzero().view(-1).tolist()
-    new_indices = range(max_value(c) + 1)
+    new_indices = range(get_num_ids(c))
     return zip(old_indices, new_indices, strict=True)
 
 
@@ -428,7 +423,7 @@ class CoreTriplesFactory(KGInfo):
             num_entities = get_num_ids(mapped_triples[:, [0, 2]])
         if num_relations is None:
             num_relations = get_num_ids(mapped_triples[:, 1])
-        return CoreTriplesFactory(
+        return cls(
             mapped_triples=mapped_triples,
             num_entities=num_entities,
             num_relations=num_relations,
@@ -563,7 +558,7 @@ class CoreTriplesFactory(KGInfo):
             },
         )
 
-    def condense(self) -> Self:
+    def condense(self) -> "CoreTriplesFactory":
         """
         Drop all IDs which are not present in the triples.
 
@@ -576,12 +571,20 @@ class CoreTriplesFactory(KGInfo):
         relation_condensation = _make_condensation_map(r)
         if entity_condensation is None and relation_condensation is None:
             return self
-        ht = entity_condensation[ht]
-        r = relation_condensation[r]
+        if entity_condensation is None:
+            num_entities = self.num_entities
+        else:
+            ht = entity_condensation[ht]
+            num_entities = get_num_ids(ht)
+        if relation_condensation is None:
+            num_relations = self.num_relations
+        else:
+            r = relation_condensation[r]
+            num_relations = get_num_ids(r)
         return CoreTriplesFactory(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
-            num_entities=get_num_ids(ht),
-            num_relations=get_num_ids(r),
+            num_entities=num_entities,
+            num_relations=num_relations,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -1146,25 +1149,33 @@ class TriplesFactory(CoreTriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def condense(self) -> Self:  # noqa: D102
+    def condense(self) -> "TriplesFactory":  # noqa: D102
         ht = self.mapped_triples[:, 0::2]
         r = self.mapped_triples[:, 1]
         entity_condensation = _make_condensation_map(ht)
         relation_condensation = _make_condensation_map(r)
         if entity_condensation is None and relation_condensation is None:
             return self
-        ht = entity_condensation[ht]
-        r = relation_condensation[r]
-        num_entities = get_num_ids(ht)
-        num_relations = get_num_ids(r)
-        entity_to_id = {
-            self.entity_id_to_label[old]: new
-            for old, new in _iter_index_remap_from_condensation_map(entity_condensation)
-        }
-        relation_to_id = {
-            self.relation_id_to_label[old]: new
-            for old, new in _iter_index_remap_from_condensation_map(relation_condensation)
-        }
+        if entity_condensation is None:
+            num_entities = self.num_entities
+            entity_to_id = self.entity_to_id
+        else:
+            ht = entity_condensation[ht]
+            num_entities = get_num_ids(ht)
+            entity_to_id = {
+                self.entity_id_to_label[old]: new
+                for old, new in _iter_index_remap_from_condensation_map(entity_condensation)
+            }
+        if relation_condensation is None:
+            num_relations = self.num_relations
+            relation_to_id = self.relation_to_id
+        else:
+            r = relation_condensation[r]
+            num_relations = get_num_ids(r)
+            relation_to_id = {
+                self.relation_id_to_label[old]: new
+                for old, new in _iter_index_remap_from_condensation_map(relation_condensation)
+            }
         return TriplesFactory(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
             entity_to_id=entity_to_id,
