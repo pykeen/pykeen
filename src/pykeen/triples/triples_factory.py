@@ -753,11 +753,13 @@ class CoreTriplesFactory(KGInfo):
                 )
             if other.num_relations != self.num_relations:
                 raise ValueError(
-                    f"Number of relations does not match for others[{i}]: {self.num_relations=} vs. {other.num_relations=}"
+                    f"Number of relations does not match for others[{i}]: "
+                    f"{self.num_relations=} vs. {other.num_relations=}"
                 )
             if other.create_inverse_triples != self.create_inverse_triples:
                 raise ValueError(
-                    f"Creation of inverse triples does not match for others[{i}]: {self.create_inverse_triples=} vs. {other.create_inverse_triples=}"
+                    f"Creation of inverse triples does not match for others[{i}]: "
+                    f"{self.create_inverse_triples=} vs. {other.create_inverse_triples=}"
                 )
             mapped_triples.append(other.mapped_triples)
         return self.clone_and_exchange_triples(torch.cat(mapped_triples, dim=0))
