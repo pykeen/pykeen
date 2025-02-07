@@ -13,7 +13,7 @@ dataset.summarize()
 tf_all = dataset.training.merge(dataset.validation, dataset.testing)
 
 # create a fully inductive split with two evaluation parts (validation & test)
-tf_training, tf_inference, tf_testing, tf_validation = tf_all.split_fully_inductive(
+tf_training, tf_inference, tf_validation, tf_testing = tf_all.split_fully_inductive(
     entity_split_train_ratio=0.5, evaluation_triples_ratios=(0.8, 0.1), random_state=42
 )
 
