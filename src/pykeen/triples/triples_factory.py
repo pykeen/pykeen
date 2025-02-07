@@ -569,6 +569,9 @@ class CoreTriplesFactory(KGInfo):
 
         .. warning::
             This creates a triples factory that may have a new entity or relation to id mapping.
+
+        :return:
+            A condensed version with potentially smaller num_entities or num_relations.
         """
         ht = self.mapped_triples[:, 0::2]
         r = self.mapped_triples[:, 1]
@@ -743,6 +746,16 @@ class CoreTriplesFactory(KGInfo):
         """Merge the triples factory with others.
 
         The other triples factories have to be compatible.
+
+        :param others:
+            The other factories.
+        
+        :return:
+            A new factory with the combined triples.
+        
+        :raises ValueError:
+            If any of the other factories has incompatible settings
+            (number of entities or relations, or creation of inverse triples.)
         """
         if not others:
             return self
