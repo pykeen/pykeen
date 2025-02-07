@@ -706,8 +706,8 @@ class CoreTriplesFactory(KGInfo):
             random_state=random_state,
         )
         # TODO: do we need to adjust the entity map of training? (or inference?)
-        training_tf = self.clone_and_exchange_triples(mapped_triples=training)
-        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference)
+        training_tf = self.clone_and_exchange_triples(mapped_triples=training).condense()
+        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).condense()
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
             inference_tf.clone_and_exchange_triples(mapped_triples=mapped_triples, create_inverse_triples=False)
