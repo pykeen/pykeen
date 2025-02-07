@@ -1570,6 +1570,11 @@ class BackfillRepresentation(PartitionRepresentation):
             If the backfill representation is initialized within this constructor,
             it will receive the base representation's shape.
         """
+
+        # If the maximum id is not greater than the maximum base id, the backfill representation creation will fail at a later stage.
+        if max_id <= max(base_ids):
+            raise ValueError(f"max_id={max_id}: Value must be greater than the largest base_id ({max(base_ids)})")
+
         # import here to avoid cyclic import
         from . import representation_resolver
 
