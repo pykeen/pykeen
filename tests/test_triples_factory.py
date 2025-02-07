@@ -351,6 +351,28 @@ class TestSplit(unittest.TestCase):
                 factories_2 = self.triples_factory.split_semi_inductive(ratios, random_state=0)
                 self._compare_factories(factories_1, factories_2)
 
+    def test_fully_inductive_split(self) -> None:
+        """Test semi-inductive splitting."""
+        cases = [
+            (3, 0.5, 0.8),
+            (3, 0.5, [0.8]),
+            (4, 0.6, [0.80, 0.10]),
+            (4, 0.1, [0.80, 0.10, 0.10]),
+        ]
+        for n, entity_split, triple_ratios in cases:
+            with self.subTest(entity_split=entity_split, triple_ratios=triple_ratios):
+                factories_1 = self.triples_factory.split_fully_inductive(
+                    entity_split_ratio=entity_split, evaluation_triples_ratios=triple_ratios, random_state=0
+                )
+                self.assertEqual(n, len(factories_1))
+                # TODO: there are other invariants to check than for transductive splits
+
+                # check for reproducibility, by splitting a second time with the same seed
+                factories_2 = self.triples_factory.split_fully_inductive(
+                    entity_split_ratio=entity_split, evaluation_triples_ratios=triple_ratios, random_state=0
+                )
+                self._compare_factories(factories_1, factories_2)
+
     def test_load_model(self):
         """Test splitting a tabbed dataset."""
 
