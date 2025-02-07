@@ -8,6 +8,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapp
 from typing import (
     Any,
     ClassVar,
+    Self,
     TextIO,
     cast,
 )
@@ -16,7 +17,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .splitting import split
+from .splitting import split, split_semi_inductive
 from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
@@ -493,7 +494,7 @@ class CoreTriplesFactory(KGInfo):
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
         create_inverse_triples: bool | None = None,
-    ) -> "CoreTriplesFactory":
+    ) -> Self:
         """
         Create a new triples factory sharing everything except the triples.
 
@@ -590,6 +591,38 @@ class CoreTriplesFactory(KGInfo):
                     randomize_cleanup=randomize_cleanup,
                     method=method,
                 )
+            )
+        ]
+
+    def split_semi_inductive(
+        self,
+        ratios: float | Sequence[float] = 0.8,
+        *,
+        random_state: TorchRandomHint = None,
+    ) -> list[Self]:
+        """Create a semi-inductive split.
+
+        :param ratios:
+            The *entity* split ratio(s).
+        :param random_state:
+            The random state used to shuffle and split the triples.
+
+        :return:
+            A partition of triples, which are split (approximately) according to the ratios, stored TriplesFactory's
+            which share everything else with this root triples factory.
+
+        .. seealso::
+            https://arxiv.org/abs/2107.04894 # TODO: add this to references, and use a proper link instead
+        """
+        # Make new triples factories for each group
+        return [
+            self.clone_and_exchange_triples(
+                mapped_triples=triples,
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=None if i == 0 else False,
+            )
+            for i, triples in enumerate(
+                split_semi_inductive(mapped_triples=self.mapped_triples, ratios=ratios, random_state=random_state)
             )
         ]
 
@@ -1035,7 +1068,7 @@ class TriplesFactory(CoreTriplesFactory):
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
         create_inverse_triples: bool | None = None,
-    ) -> "TriplesFactory":  # noqa: D102
+    ) -> Self:  # noqa: D102
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesFactory(
