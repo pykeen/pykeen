@@ -749,10 +749,10 @@ class CoreTriplesFactory(KGInfo):
 
         :param others:
             The other factories.
-        
+
         :return:
             A new factory with the combined triples.
-        
+
         :raises ValueError:
             If any of the other factories has incompatible settings
             (number of entities or relations, or creation of inverse triples.)
