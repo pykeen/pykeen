@@ -395,6 +395,7 @@ class CoreTriplesFactory(KGInfo):
 
     @classmethod
     def new(cls, **kwargs: Any) -> Self:
+        """Create a new instance of the same type."""
         return cls(**kwargs)
 
     @classmethod
@@ -1012,8 +1013,9 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=metadata,
         )
 
+    # docstr-coverage: inherited
     @classmethod
-    def new(cls, **kwargs) -> Self:
+    def new(cls, **kwargs) -> Self:  # noqa: D102
         return cls(**kwargs)
 
     @classmethod
@@ -1441,7 +1443,7 @@ class TriplesFactory(CoreTriplesFactory):
         relations: None | Collection[int] | Collection[str] = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
-    ) -> "TriplesFactory":  # noqa: D102
+    ) -> Self:  # noqa: D102
         if entities is None and relations is None:
             return self
         if entities is not None:
