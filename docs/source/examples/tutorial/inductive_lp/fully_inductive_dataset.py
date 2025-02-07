@@ -24,4 +24,4 @@ inductive_dataset = EagerInductiveDataset(
     inductive_validation=tf_validation,
     create_inverse_triples=False,
 )
-inductive_dataset.summarize(show_examples=False)
+inductive_dataset.summarize()
