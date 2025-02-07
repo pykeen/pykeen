@@ -296,7 +296,7 @@ def _prepare_cleanup(
             tuple[int, int],
             tuple(max(training[:, col].max().item(), testing[:, col].max().item()) + 1 for col in columns),
         )
-    for col, max_id in zip(columns, max_ids):
+    for col, max_id in zip(columns, max_ids, strict=False):
         # IDs not in training
         not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
         not_in_training_mask[training[:, col].view(-1)] = False
@@ -421,7 +421,7 @@ class Splitter:
         ratios = normalize_ratios(ratios=ratios)
         sizes = get_absolute_split_sizes(n_total=mapped_triples.shape[0], ratios=ratios)
         triples_groups = self.split_absolute_size(mapped_triples=mapped_triples, sizes=sizes, generator=generator)
-        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios, strict=False)):
             actual_size = triples.shape[0]
             actual_ratio = actual_size / exp_size * exp_ratio
             if actual_size != exp_size:

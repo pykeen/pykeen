@@ -154,6 +154,7 @@ __all__ = [
     "GatedCombination",
 ]
 
+#: A resolver for representations
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(
     base=Representation,
     default=Embedding,

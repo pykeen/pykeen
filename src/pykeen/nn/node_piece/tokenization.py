@@ -5,7 +5,6 @@ import pathlib
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Collection, Mapping
-from typing import Optional
 
 import more_itertools
 import numpy
@@ -150,7 +149,7 @@ class AnchorTokenizer(Tokenizer):
         num_empty = (tokens < 0).all(axis=1).sum()
         if num_empty > 0:
             logger.warning(
-                f"{format_relative_comparison(part=num_empty, total=num_entities)} " f"do not have any anchor.",
+                f"{format_relative_comparison(part=num_empty, total=num_entities)} do not have any anchor.",
             )
         # convert to torch
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
@@ -267,10 +266,10 @@ class PrecomputedPoolTokenizer(Tokenizer):
     def _load_pool(
         cls,
         *,
-        path: Optional[pathlib.Path] = None,
-        url: Optional[str] = None,
+        path: pathlib.Path | None = None,
+        url: str | None = None,
         download_kwargs: OptionalKwargs = None,
-        pool: Optional[Mapping[int, Collection[int]]] = None,
+        pool: Mapping[int, Collection[int]] | None = None,
         loader: HintOrType[PrecomputedTokenizerLoader] = None,
     ) -> tuple[Mapping[int, Collection[int]], int]:
         """Load a precomputed pool via one of the supported ways."""
@@ -290,10 +289,10 @@ class PrecomputedPoolTokenizer(Tokenizer):
     def __init__(
         self,
         *,
-        path: Optional[pathlib.Path] = None,
-        url: Optional[str] = None,
+        path: pathlib.Path | None = None,
+        url: str | None = None,
         download_kwargs: OptionalKwargs = None,
-        pool: Optional[Mapping[int, Collection[int]]] = None,
+        pool: Mapping[int, Collection[int]] | None = None,
         randomize_selection: bool = False,
         loader: HintOrType[PrecomputedTokenizerLoader] = None,
     ):

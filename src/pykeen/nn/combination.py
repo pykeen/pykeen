@@ -2,11 +2,18 @@
 
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, Callable, Optional
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import Any
 
 import torch
-from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
+from class_resolver import (
+    ClassResolver,
+    Hint,
+    HintOrType,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
@@ -15,6 +22,7 @@ from ..utils import ExtraReprMixin, combine_complex, split_complex
 
 __all__ = [
     "Combination",
+    "combination_resolver",
     # Concrete classes
     "ComplexSeparatedCombination",
     "ConcatCombination",
@@ -88,7 +96,7 @@ class ConcatProjectionCombination(ConcatCombination):
     def __init__(
         self,
         input_dims: Sequence[int],
-        output_dim: Optional[int] = None,
+        output_dim: int | None = None,
         bias: bool = True,
         dropout: float = 0.0,
         activation: HintOrType[nn.Module] = nn.Identity,
@@ -131,22 +139,28 @@ class ConcatProjectionCombination(ConcatCombination):
 class ConcatAggregationCombination(ConcatCombination):
     """Combine representation by concatenation followed by an aggregation along the same axis."""
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("aggregation", resolver="class_resolver.contrib.torch.aggregation_resolver"),
+    )
     def __init__(
         self,
         aggregation: Hint[Callable[[FloatTensor], FloatTensor]] = None,
+        aggregation_kwargs: OptionalKwargs = None,
         dim: int = -1,
     ) -> None:
         """
         Initialize the combination.
 
         :param aggregation:
-            the aggregation, or a hint thereof, cf. :data:`class_resolver.contrib.torch.aggregation_resolver`
+            The aggregation, or a hint thereof.
+        :param aggregation_kwargs:
+            Additional keyword-based parameters.
         :param dim:
             the concatenation and reduction dimension.
         """
         super().__init__(dim=dim)
         self.dim = dim
-        self.aggregation = aggregation_resolver.make(aggregation)
+        self.aggregation = aggregation_resolver.make(aggregation, aggregation_kwargs)
 
     # docstr-coverage: inherited
     def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
@@ -199,7 +213,7 @@ class ComplexSeparatedCombination(Combination):
                 f"complex data type."
             )
         # split complex; repeat real
-        xs_real, xs_imag = list(zip(*(split_complex(x) if x.is_complex() else (x, x) for x in xs)))
+        xs_real, xs_imag = list(zip(*(split_complex(x) if x.is_complex() else (x, x) for x in xs), strict=False))
         # separately combine real and imaginary parts
         x_re = self.real_combination(xs_real)
         x_im = self.imag_combination(xs_imag)
@@ -256,12 +270,12 @@ class GatedCombination(Combination):
     def __init__(
         self,
         entity_dim: int = 32,
-        literal_dim: Optional[int] = None,
+        literal_dim: int | None = None,
         input_dropout: float = 0.0,
         gate_activation: HintOrType[nn.Module] = nn.Sigmoid,
-        gate_activation_kwargs: Optional[Mapping[str, Any]] = None,
+        gate_activation_kwargs: Mapping[str, Any] | None = None,
         hidden_activation: HintOrType[nn.Module] = nn.Tanh,
-        hidden_activation_kwargs: Optional[Mapping[str, Any]] = None,
+        hidden_activation_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Instantiate the module.
 
@@ -310,7 +324,9 @@ class GatedCombination(Combination):
         return self.dropout(z * h + (1 - z) * xs[0])
 
 
+#: Resolve combinations
 combination_resolver: ClassResolver[Combination] = ClassResolver.from_subclasses(
     base=Combination,
     default=ConcatCombination,
+    location="pykeen.nn.combination.combination_resolver",
 )

@@ -4,7 +4,7 @@ import importlib
 import os
 import unittest
 from collections.abc import Iterable, MutableMapping
-from typing import Any, Union
+from typing import Any
 
 import torch
 import unittest_templates
@@ -683,8 +683,11 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
 
                 for name in dir(module):
                     value = getattr(module, name)
-                    if isinstance(value, type) and issubclass(value, Model):
-                        model_names.add(value.__name__)
+                    try:
+                        if isinstance(value, type) and issubclass(value, Model):
+                            model_names.add(value.__name__)
+                    except TypeError:
+                        continue
 
         star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
         # FIXME definitely a type mismatch going on here
@@ -718,7 +721,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                 )
 
 
-def _remove_non_models(elements: Iterable[Union[str, type[Model]]]) -> set[type[Model]]:
+def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]]:
     rv = set()
     for element in elements:
         try:
@@ -776,6 +779,22 @@ class ERModelTests(cases.ModelTestCase):
 
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
+
+    def test_multi_t_and_slicing(self):
+        """Test whether we can use multi-tail scoring with slicing."""
+        hr_batch = torch.stack(
+            [
+                torch.randint(self.instance.num_entities, size=(self.batch_size,), generator=self.generator),
+                torch.randint(self.instance.num_relations, size=(self.batch_size,), generator=self.generator),
+            ],
+            dim=-1,
+        )
+        tails = torch.randint(
+            self.instance.num_entities, size=(self.instance.num_entities // 2,), generator=self.generator
+        )
+        sliced_ts = self.instance.score_t(hr_batch=hr_batch, slice_size=2, tails=tails)
+        ts = self.instance.score_t(hr_batch=hr_batch, tails=tails)
+        torch.allclose(sliced_ts, ts)
 
 
 class CooccurrenceFilteredModelTests(cases.ModelTestCase):

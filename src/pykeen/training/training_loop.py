@@ -14,7 +14,7 @@ from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, Optional, TypeVar, Union
+from typing import IO, Any, ClassVar, Generic, TypeVar
 
 import numpy as np
 import torch
@@ -121,7 +121,7 @@ def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
-    lr_scheduler: Optional[LRScheduler]
+    lr_scheduler: LRScheduler | None
     model: Model
     optimizer: Optimizer
 
@@ -143,7 +143,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         lr_scheduler: HintOrType[LRScheduler] = None,
         lr_scheduler_kwargs: OptionalKwargs = None,
         automatic_memory_optimization: bool = True,
-        mode: Optional[InductiveMode] = None,
+        mode: InductiveMode | None = None,
         result_tracker: HintOrType[ResultTracker] = None,
         result_tracker_kwargs: OptionalKwargs = None,
     ) -> None:
@@ -212,31 +212,31 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         triples_factory: CoreTriplesFactory,
         num_epochs: int = 1,
-        batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
+        batch_size: int | None = None,
+        slice_size: int | None = None,
         label_smoothing: float = 0.0,
-        sampler: Optional[str] = None,
+        sampler: str | None = None,
         continue_training: bool = False,
         only_size_probing: bool = False,
         use_tqdm: bool = True,
         use_tqdm_batch: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-        stopper: Optional[Stopper] = None,
-        sub_batch_size: Optional[int] = None,
-        num_workers: Optional[int] = None,
+        tqdm_kwargs: Mapping[str, Any] | None = None,
+        stopper: Stopper | None = None,
+        sub_batch_size: int | None = None,
+        num_workers: int | None = None,
         clear_optimizer: bool = False,
-        checkpoint_directory: Union[None, str, pathlib.Path] = None,
-        checkpoint_name: Optional[str] = None,
-        checkpoint_frequency: Optional[int] = None,
+        checkpoint_directory: None | str | pathlib.Path = None,
+        checkpoint_name: str | None = None,
+        checkpoint_frequency: int | None = None,
         checkpoint_on_failure: bool = False,
-        drop_last: Optional[bool] = None,
+        drop_last: bool | None = None,
         callbacks: TrainingCallbackHint = None,
         callbacks_kwargs: TrainingCallbackKwargsHint = None,
-        gradient_clipping_max_norm: Optional[float] = None,
-        gradient_clipping_norm_type: Optional[float] = None,
-        gradient_clipping_max_abs_value: Optional[float] = None,
+        gradient_clipping_max_norm: float | None = None,
+        gradient_clipping_norm_type: float | None = None,
+        gradient_clipping_max_abs_value: float | None = None,
         pin_memory: bool = True,
-    ) -> Optional[list[float]]:
+    ) -> list[float] | None:
         """Train the KGE model.
 
         .. note ::
@@ -371,7 +371,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         # If the stopper loaded from the training loop checkpoint stopped the training, we return those results
         if getattr(stopper, "stopped", False):
-            result: Optional[list[float]] = self.losses_per_epochs
+            result: list[float] | None = self.losses_per_epochs
         else:
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
@@ -435,9 +435,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         batches: DataLoader,
         callbacks: MultiTrainingCallback,
-        sub_batch_size: Optional[int],
+        sub_batch_size: int | None,
         label_smoothing: float,
-        slice_size: Optional[int],
+        slice_size: int | None,
         epoch: int,
         only_size_probing: bool,
         backward: bool = True,
@@ -521,32 +521,32 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         triples_factory: CoreTriplesFactory,
         num_epochs: int = 1,
-        batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
+        batch_size: int | None = None,
+        slice_size: int | None = None,
         label_smoothing: float = 0.0,
-        sampler: Optional[str] = None,
+        sampler: str | None = None,
         continue_training: bool = False,
         only_size_probing: bool = False,
         use_tqdm: bool = True,
         use_tqdm_batch: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-        stopper: Optional[Stopper] = None,
-        sub_batch_size: Optional[int] = None,
-        num_workers: Optional[int] = None,
+        tqdm_kwargs: Mapping[str, Any] | None = None,
+        stopper: Stopper | None = None,
+        sub_batch_size: int | None = None,
+        num_workers: int | None = None,
         save_checkpoints: bool = False,
-        checkpoint_path: Union[None, str, pathlib.Path] = None,
-        checkpoint_frequency: Optional[int] = None,
-        checkpoint_on_failure_file_path: Union[None, str, pathlib.Path] = None,
-        best_epoch_model_file_path: Optional[pathlib.Path] = None,
-        last_best_epoch: Optional[int] = None,
-        drop_last: Optional[bool] = None,
+        checkpoint_path: None | str | pathlib.Path = None,
+        checkpoint_frequency: int | None = None,
+        checkpoint_on_failure_file_path: None | str | pathlib.Path = None,
+        best_epoch_model_file_path: pathlib.Path | None = None,
+        last_best_epoch: int | None = None,
+        drop_last: bool | None = None,
         callbacks: TrainingCallbackHint = None,
         callbacks_kwargs: TrainingCallbackKwargsHint = None,
-        gradient_clipping_max_norm: Optional[float] = None,
-        gradient_clipping_norm_type: Optional[float] = None,
-        gradient_clipping_max_abs_value: Optional[float] = None,
+        gradient_clipping_max_norm: float | None = None,
+        gradient_clipping_norm_type: float | None = None,
+        gradient_clipping_max_abs_value: float | None = None,
         pin_memory: bool = True,
-    ) -> Optional[list[float]]:
+    ) -> list[float] | None:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         if self.optimizer is None:
             raise ValueError("optimizer must be set before running _train()")
@@ -703,7 +703,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
-        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None
+        best_epoch_model_checkpoint_file_path: pathlib.Path | None = None
 
         # Training Loop
         for epoch in epochs:
@@ -826,7 +826,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     @abstractmethod
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, *, sampler: Optional[str], batch_size: int, drop_last: bool, **kwargs
+        self, triples_factory: CoreTriplesFactory, *, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
     ) -> DataLoader[BatchType]:
         """
         Create a data loader over training instances.
@@ -854,7 +854,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         stop: int,
         current_batch_size: int,
         label_smoothing: float,
-        slice_size: Optional[int],
+        slice_size: int | None,
         backward: bool = True,
     ) -> float:
         # forward pass
@@ -898,7 +898,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> FloatTensor:
         """Process a single batch and returns the loss."""
         raise NotImplementedError
@@ -907,7 +907,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        batch_size: Optional[int] = None,
+        batch_size: int | None = None,
     ) -> tuple[int, bool]:
         """Find the maximum batch size for training with the current setting.
 
@@ -979,9 +979,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         *,
         batch_size: int,
-        sampler: Optional[str],
+        sampler: str | None,
         triples_factory: CoreTriplesFactory,
-    ) -> tuple[int, Optional[int]]:
+    ) -> tuple[int, int | None]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
         sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(
             batch_size=batch_size,
@@ -1036,7 +1036,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         *,
         batch_size: int,
-        sampler: Optional[str],
+        sampler: str | None,
         triples_factory: CoreTriplesFactory,
     ) -> tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
@@ -1129,10 +1129,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     def _save_state(
         self,
-        path: Union[IO[bytes], str, pathlib.Path],
-        stopper: Optional[Stopper] = None,
-        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None,
-        triples_factory: Optional[CoreTriplesFactory] = None,
+        path: IO[bytes] | str | pathlib.Path,
+        stopper: Stopper | None = None,
+        best_epoch_model_checkpoint_file_path: pathlib.Path | None = None,
+        triples_factory: CoreTriplesFactory | None = None,
     ) -> None:
         """Save the state of the training loop.
 
@@ -1164,7 +1164,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             torch_cuda_random_state = None
 
         if best_epoch_model_checkpoint_file_path is not None:
-            best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path)
+            best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path, weights_only=False)
         else:
             best_epoch_model_checkpoint = None
 
@@ -1206,9 +1206,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     def _load_state(
         self,
-        path: Union[str, pathlib.Path],
-        triples_factory: Optional[CoreTriplesFactory] = None,
-    ) -> tuple[Optional[pathlib.Path], Optional[int]]:
+        path: str | pathlib.Path,
+        triples_factory: CoreTriplesFactory | None = None,
+    ) -> tuple[pathlib.Path | None, int | None]:
         """Load the state of the training loop from a checkpoint.
 
         :param path:
@@ -1230,7 +1230,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError
 
         logger.info(f"=> loading checkpoint '{path}'")
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, weights_only=False)
         if checkpoint["checksum"] != self.checksum:
             raise CheckpointMismatchError(
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "

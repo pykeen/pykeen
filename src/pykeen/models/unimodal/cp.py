@@ -1,19 +1,19 @@
 """Implementation of CP model."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import CPInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "CP",
 ]
 
 
-class CP(ERModel):
+class CP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of CP as described in [lacroix2018]_ based on [hitchcock1927]_.
 
     It has separate entity representations for the head and tail role, both a $r \times d$-dimensional matrices.
@@ -42,11 +42,11 @@ class CP(ERModel):
         embedding_dim: int = 64,
         rank: int = 64,
         entity_initializer: Hint[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_initializer_kwargs: Mapping[str, Any] | None = None,
         entity_normalizer: Hint[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize the model.

@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from torch.nn.init import uniform_
 
@@ -10,7 +10,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ConvKB",
@@ -19,7 +19,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvKB(ERModel):
+class ConvKB(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ConvKB from [nguyen2018]_.
 
     ConvKB represents entities and relations using a $d$-dimensional embedding vectors,
@@ -59,7 +59,7 @@ class ConvKB(ERModel):
         embedding_dim: int = 200,
         hidden_dropout_rate: float = 0.0,
         num_filters: int = 400,
-        regularizer: Optional[Regularizer] = None,
+        regularizer: Regularizer | None = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
         **kwargs,

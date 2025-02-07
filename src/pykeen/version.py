@@ -4,7 +4,6 @@ import os
 import sys
 from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
-from typing import Optional
 
 __all__ = [
     "VERSION",
@@ -35,7 +34,7 @@ def get_git_hash(terse: bool = True) -> str:
 
 
 @lru_cache(maxsize=1)
-def get_git_branch() -> Optional[str]:
+def get_git_branch() -> str | None:
     """Get the PyKEEN branch, if installed from git in editable mode.
 
     :return:
@@ -44,7 +43,7 @@ def get_git_branch() -> Optional[str]:
     return _run("git", "branch", "--show-current")
 
 
-def _run(*args: str) -> Optional[str]:
+def _run(*args: str) -> str | None:
     with open(os.devnull, "w") as devnull:
         try:
             ret = check_output(  # noqa: S603,S607

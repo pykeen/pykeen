@@ -1,7 +1,7 @@
 """Implementation of the ComplEx model."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 from class_resolver.api import HintOrType
@@ -12,14 +12,14 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import ComplExInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ComplEx",
 ]
 
 
-class ComplEx(ERModel):
+class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ComplEx [trouillon2016]_.
 
     The ComplEx model combines complex-valued :class:`pykeen.nn.Embedding` entity and relation representations with a
@@ -57,7 +57,7 @@ class ComplEx(ERModel):
         entity_initializer: Hint[Initializer] = normal_,
         relation_initializer: Hint[Initializer] = normal_,
         regularizer: HintOrType[Regularizer] = LpRegularizer,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         """Initialize ComplEx.

@@ -1,7 +1,8 @@
 """Composition modules."""
 
 from abc import ABC, abstractmethod
-from typing import Callable, ClassVar
+from collections.abc import Callable
+from typing import ClassVar
 
 import torch
 from class_resolver import ClassResolver
@@ -77,10 +78,12 @@ class CircularCorrelationCompositionModule(FunctionalCompositionModule):
     func: ClassVar[Composition] = circular_correlation
 
 
+#: A resolver for compositions
 composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
     skip={
         FunctionalCompositionModule,
     },
+    location="pykeen.nn.compositions.composition_resolver",
 )

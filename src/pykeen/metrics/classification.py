@@ -121,9 +121,7 @@ class ClassificationMetric(Metric, abc.ABC):
         if weights is None:
             return self.forward(y_true=y_true, y_score=y_score)
         if not self.supports_weights:
-            raise ValueError(
-                f"{self.__call__.__qualname__} does not support sample weights but received" f"weights={weights}.",
-            )
+            raise ValueError(f"{self.__call__.__qualname__} does not support sample weights but received {weights=}.")
         return self.forward(y_true=y_true, y_score=y_score, sample_weight=weights)
 
     @abc.abstractmethod

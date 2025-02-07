@@ -1,7 +1,7 @@
 """Implementation of ERMLP."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch import nn
@@ -9,14 +9,14 @@ from torch import nn
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import ERMLPInteraction
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ERMLP",
 ]
 
 
-class ERMLP(ERModel):
+class ERMLP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ERMLP from [dong2014]_.
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an
@@ -44,7 +44,7 @@ class ERMLP(ERModel):
         self,
         *,
         embedding_dim: int = 64,
-        hidden_dim: Optional[int] = None,
+        hidden_dim: int | None = None,
         activation: HintOrType[nn.Module] = nn.ReLU,
         activation_kwargs: OptionalKwargs = None,
         entity_initializer: Hint[Initializer] = nn.init.uniform_,

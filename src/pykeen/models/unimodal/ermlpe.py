@@ -1,7 +1,7 @@
 """An implementation of the extension to ERMLP."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from torch.nn.init import uniform_
 
@@ -9,14 +9,14 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.modules import ERMLPEInteraction
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ERMLPE",
 ]
 
 
-class ERMLPE(ERModel):
+class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An extension of :class:`pykeen.models.ERMLP` proposed by [sharifzadeh2019]_.
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an
@@ -52,9 +52,9 @@ class ERMLPE(ERModel):
         self,
         *,
         embedding_dim: int = 256,
-        hidden_dim: Optional[int] = None,
+        hidden_dim: int | None = None,
         input_dropout: float = 0.2,
-        hidden_dropout: Optional[float] = None,
+        hidden_dropout: float | None = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = None,
         **kwargs,

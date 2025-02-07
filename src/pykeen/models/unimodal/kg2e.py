@@ -1,7 +1,7 @@
 """Implementation of KG2E."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
@@ -11,7 +11,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import KG2EInteraction
 from ...nn.sim import KG2ESimilarity
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class KG2E(ERModel):
+class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]):
     r"""An implementation of KG2E from [he2015]_.
 
     KG2E aims to explicitly model (un)certainties in entities and relations (e.g. influenced by the number of triples
@@ -61,10 +61,10 @@ class KG2E(ERModel):
         c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = uniform_,
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_constrainer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize KG2E.

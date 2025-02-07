@@ -1,7 +1,7 @@
 """Implementation of the QuatE model."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 
@@ -12,7 +12,7 @@ from ...nn import quaternion
 from ...nn.init import init_quaternions
 from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import get_expected_norm
 
 __all__ = [
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class QuatE(ERModel):
+class QuatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of QuatE from [zhang2019]_.
 
     QuatE uses hypercomplex valued representations for the
@@ -64,10 +64,10 @@ class QuatE(ERModel):
         embedding_dim: int = 100,
         entity_initializer: Hint[Initializer] = init_quaternions,
         entity_regularizer: Hint[Regularizer] = LpRegularizer,
-        entity_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_regularizer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = init_quaternions,
         relation_regularizer: Hint[Regularizer] = LpRegularizer,
-        relation_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_regularizer_kwargs: Mapping[str, Any] | None = None,
         relation_normalizer: Hint[Constrainer] = quaternion.normalize,
         **kwargs,
     ) -> None:

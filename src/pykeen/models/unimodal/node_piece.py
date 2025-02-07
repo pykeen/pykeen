@@ -1,8 +1,8 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from collections.abc import Mapping
-from typing import Any, Callable, ClassVar
+from collections.abc import Callable, Mapping
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
@@ -14,7 +14,7 @@ from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...regularizers import Regularizer
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import Constrainer, Initializer, Normalizer, OneOrSequence
+from ...typing import Constrainer, FloatTensor, Initializer, Normalizer, OneOrSequence
 from ...utils import upgrade_to_sequence
 
 __all__ = [
@@ -24,7 +24,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class NodePiece(ERModel):
+class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
     This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical

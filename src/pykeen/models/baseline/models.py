@@ -1,7 +1,5 @@
 """Non-parametric baseline models."""
 
-from typing import Optional
-
 import numpy
 import torch
 
@@ -33,7 +31,7 @@ class EvaluationOnlyModel(Model):
             random_seed=0,
         )
 
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> int:
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         return self.num_entities
 
     def _reset_parameters_(self):
@@ -155,7 +153,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        threshold: Optional[float] = None,
+        threshold: float | None = None,
     ):
         """
         Initialize the model.
@@ -181,14 +179,14 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
 
     # docstr-coverage: inherited
     def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
-        r = hr_batch[:, 1]
+        r = hr_batch[:, 1].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)
 
     # docstr-coverage: inherited
     def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
-        r = rt_batch[:, 0]
+        r = rt_batch[:, 0].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)

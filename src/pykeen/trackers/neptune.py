@@ -1,7 +1,7 @@
 """An adapter for Neptune.ai."""
 
 from collections.abc import Collection, Mapping
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary
@@ -24,12 +24,12 @@ class NeptuneResultTracker(ResultTracker):
 
     def __init__(
         self,
-        project_qualified_name: Optional[str] = None,
-        api_token: Optional[str] = None,
+        project_qualified_name: str | None = None,
+        api_token: str | None = None,
         offline: bool = False,
-        experiment_id: Optional[int] = None,
-        experiment_name: Optional[str] = None,
-        tags: Optional[Collection[str]] = None,
+        experiment_id: int | None = None,
+        experiment_name: str | None = None,
+        tags: Collection[str] | None = None,
     ):
         """Initialize the Neptune result tracker.
 
@@ -79,15 +79,15 @@ class NeptuneResultTracker(ResultTracker):
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(metrics, prefix=prefix)
         for k, v in metrics.items():
             self._help_log(k, step, v)
 
     # docstr-coverage: inherited
-    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         params = flatten_dictionary(params, prefix=prefix)
         for k, v in params.items():
             self._help_log(k, v)

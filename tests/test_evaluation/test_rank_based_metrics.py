@@ -1,7 +1,7 @@
 """Tests for rank-based metrics."""
 
 import unittest
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import numpy
 import numpy as np
@@ -205,7 +205,7 @@ class WeightedTests(unittest.TestCase):
         generator = np.random.default_rng()
         self.array = generator.random(size=(10,))
 
-    def _test_equal_weights(self, func: Callable[[numpy.ndarray, Optional[numpy.ndarray]], numpy.ndarray]):
+    def _test_equal_weights(self, func: Callable[[numpy.ndarray, numpy.ndarray | None], numpy.ndarray]):
         """Verify that equal weights lead to unweighted results."""
         weights = np.full_like(self.array, fill_value=2.0)
         self.assertAlmostEqual(func(self.array, None).item(), func(self.array, weights).item())
@@ -220,7 +220,7 @@ class WeightedTests(unittest.TestCase):
 
     def _test_weighted_mean_moment(
         self,
-        closed_form: Callable[[numpy.ndarray, Optional[numpy.ndarray]], numpy.ndarray],
+        closed_form: Callable[[numpy.ndarray, numpy.ndarray | None], numpy.ndarray],
         statistic: Callable[[numpy.ndarray], numpy.ndarray],
         key: str,
     ):
