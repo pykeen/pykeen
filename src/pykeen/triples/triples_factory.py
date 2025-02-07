@@ -394,6 +394,10 @@ class CoreTriplesFactory(KGInfo):
         self.relation_inverter = relation_inverter_resolver.make(query=None)
 
     @classmethod
+    def new(cls, **kwargs: Any) -> Self:
+        return cls(**kwargs)
+
+    @classmethod
     def create(
         cls,
         mapped_triples: MappedTriples,
@@ -401,7 +405,7 @@ class CoreTriplesFactory(KGInfo):
         num_relations: int | None = None,
         create_inverse_triples: bool = False,
         metadata: Mapping[str, Any] | None = None,
-    ) -> "CoreTriplesFactory":
+    ) -> Self:
         """
         Create a triples factory without any label information.
 
@@ -558,7 +562,7 @@ class CoreTriplesFactory(KGInfo):
             },
         )
 
-    def condense(self) -> "CoreTriplesFactory":
+    def condense(self) -> Self:
         """
         Drop all IDs which are not present in the triples.
 
@@ -581,7 +585,7 @@ class CoreTriplesFactory(KGInfo):
         else:
             r = relation_condensation[r]
             num_relations = get_num_ids(r)
-        return CoreTriplesFactory(
+        return self.new(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
             num_entities=num_entities,
             num_relations=num_relations,
@@ -1007,6 +1011,10 @@ class TriplesFactory(CoreTriplesFactory):
         )
 
     @classmethod
+    def new(cls, **kwargs) -> Self:
+        return cls(**kwargs)
+
+    @classmethod
     def from_labeled_triples(
         cls,
         triples: LabeledTriples,
@@ -1017,7 +1025,7 @@ class TriplesFactory(CoreTriplesFactory):
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
         metadata: dict[str, Any] | None = None,
-    ) -> "TriplesFactory":
+    ) -> Self:
         """
         Create a new triples factory from label-based triples.
 
@@ -1097,7 +1105,7 @@ class TriplesFactory(CoreTriplesFactory):
         metadata: dict[str, Any] | None = None,
         load_triples_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
-    ) -> "TriplesFactory":
+    ) -> Self:
         """
         Create a new triples factory from triples stored in a file.
 
@@ -1149,7 +1157,7 @@ class TriplesFactory(CoreTriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def condense(self) -> "TriplesFactory":  # noqa: D102
+    def condense(self) -> Self:  # noqa: D102
         ht = self.mapped_triples[:, 0::2]
         r = self.mapped_triples[:, 1]
         entity_condensation = _make_condensation_map(ht)
@@ -1176,7 +1184,7 @@ class TriplesFactory(CoreTriplesFactory):
                 self.relation_id_to_label[old]: new
                 for old, new in _iter_index_remap_from_condensation_map(relation_condensation)
             }
-        return TriplesFactory(
+        return self.new(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
