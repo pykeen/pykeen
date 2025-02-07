@@ -310,11 +310,25 @@ class KGInfo(ExtraReprMixin):
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
 
-def max_value(x: torch.Tensor) -> int | None:
+def max_value(x: LongTensor) -> int | None:
     """Return the maximum value, or None if the tensor is empty."""
     if x.numel():
         return x.max().item()
     return None
+
+
+def _make_condensation_map(x: LongTensor) -> LongTensor | None:
+    """Create a dense vector suitable for condensing Ids to a consecutive ID range."""
+    # TODO: we have this functionality somewhere already?!
+    if not x.numel():
+        return None
+    max_id = x.max().item()
+    unique_entities = x.unique()
+    if torch.equal(unique_entities, torch.arange(max_id + 1)):
+        return None
+    y = torch.full(size=max_id + 1, fill_value=-1)
+    y[unique_entities] = torch.arange(max_id + 1)
+    return y
 
 
 class CoreTriplesFactory(KGInfo):
@@ -534,6 +548,29 @@ class CoreTriplesFactory(KGInfo):
             },
         )
 
+    def condense(self) -> Self:
+        """
+        Drop all IDs which are not present in the triples.
+
+        .. warning::
+            This creates a triples factory that may have a new entity or relation to id mapping.
+        """
+        ht = self.mapped_triples[:, 0::2]
+        r = self.mapped_triples[:, 1]
+        entity_condensation = _make_condensation_map(ht)
+        relation_condensation = _make_condensation_map(r)
+        if entity_condensation is None and relation_condensation is None:
+            return self
+        ht = entity_condensation[ht]
+        r = relation_condensation[r]
+        return CoreTriplesFactory(
+            mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
+            num_entities=max_value(ht) or 0,
+            num_relations=max_value(r) or 0,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
     def split(
         self,
         ratios: float | Sequence[float] = 0.8,
@@ -541,7 +578,7 @@ class CoreTriplesFactory(KGInfo):
         random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
         method: str | None = None,
-    ) -> list["CoreTriplesFactory"]:
+    ) -> list[Self]:
         """Split a triples factory into a training part and a variable number of (transductive) evaluation parts.
 
         .. warning::
@@ -669,12 +706,8 @@ class CoreTriplesFactory(KGInfo):
             random_state=random_state,
         )
         # TODO: do we need to adjust the entity map of training? (or inference?)
-        training_tf = self.create(
-            mapped_triples=training, metadata=self.metadata, create_inverse_triples=self.create_inverse_triples
-        )
-        inference_tf = self.create(
-            mapped_triples=inference, metadata=self.metadata, create_inverse_triples=self.create_inverse_triples
-        )
+        training_tf = self.clone_and_exchange_triples(mapped_triples=training)
+        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference)
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
             inference_tf.clone_and_exchange_triples(mapped_triples=mapped_triples, create_inverse_triples=False)
@@ -774,7 +807,7 @@ class CoreTriplesFactory(KGInfo):
         relations: None | Collection[int] | Collection[str] = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
-    ) -> "CoreTriplesFactory":
+    ) -> Self:
         """Make a new triples factory only keeping the given entities and relations, but keeping the ID mapping.
 
         :param entities:
@@ -828,7 +861,7 @@ class CoreTriplesFactory(KGInfo):
     def from_path_binary(
         cls,
         path: str | pathlib.Path | TextIO,
-    ) -> "CoreTriplesFactory":  # noqa: D102
+    ) -> Self:  # noqa: D102
         """
         Load triples factory from a binary file.
 
