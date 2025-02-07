@@ -650,7 +650,17 @@ class CoreTriplesFactory(KGInfo):
         training entities and inference entities. We use the induced subgraph of the training entities for training.
         The triples of the inference graph are then further split into inference triples and evaluation triples.
 
-        :param
+        :param entity_split_train_ratio:
+            The ratio of entities to use for the training part. The remainder will be used for the
+            inference/evaluation graph.
+        :param evaluation_triples_ratios:
+            The split ratio for the inference graph split.
+        :param random_state:
+            The random state used to shuffle and split the triples.
+
+        :return:
+            A (transductive) training triples factory, the inductive inference triples factory,
+            as well as the evaluation triples factories.
         """
         training, inference, *evaluation = split_fully_inductive(
             mapped_triples=self.mapped_triples,
