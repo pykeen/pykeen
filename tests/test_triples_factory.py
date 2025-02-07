@@ -285,7 +285,7 @@ class TestSplit(unittest.TestCase):
         self.triples_factory = self.dataset.training
         self.assertEqual(1592, self.triples_factory.num_triples)
 
-    def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory, loss_less: bool = True) -> None:
+    def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory, lossy: bool = False) -> None:
         """Test invariants for result of triples factory splitting."""
         # verify that all entities and relations are present in the training factory
         self.assertEqual(training_triples_factory.num_entities, self.triples_factory.num_entities)
@@ -298,8 +298,11 @@ class TestSplit(unittest.TestCase):
             self.assertEqual(type(factory), type(self.triples_factory))
 
         # verify that no triple got lost
-        if loss_less:
-            self.assertEqual(sum(t.num_triples for t in all_factories), self.triples_factory.num_triples)
+        total_num_triples = sum(t.num_triples for t in all_factories)
+        if lossy:
+            self.assertLessEqual(total_num_triples, self.triples_factory.num_triples)
+        else:
+            self.assertEqual(total_num_triples, self.triples_factory.num_triples)
 
         # verify that the label-to-id mappings match
         self.assertSetEqual(
@@ -350,7 +353,7 @@ class TestSplit(unittest.TestCase):
             with self.subTest(ratios=ratios):
                 factories_1 = self.triples_factory.split_semi_inductive(ratios, random_state=0)
                 self.assertEqual(n, len(factories_1))
-                self._test_invariants(*factories_1, loss_less=False)
+                self._test_invariants(*factories_1, lossy=True)
                 # TODO: there are other invariants to check than for transductive splits
 
                 # check for reproducibility, by splitting a second time with the same seed
@@ -373,7 +376,7 @@ class TestSplit(unittest.TestCase):
                 self.assertEqual(n, len(factories_1))
                 # in the fully inductive setting, we have two separate graphs, with all but the training factory
                 # in the inference graph.
-                self._test_invariants(*factories_1[1:], loss_less=False)
+                self._test_invariants(*factories_1[1:], lossy=True)
                 # TODO: there are other invariants to check than for transductive splits
 
                 # check for reproducibility, by splitting a second time with the same seed
