@@ -434,7 +434,7 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
                 max_id=2,
                 base=pykeen.nn.representation.Embedding(max_id=3, shape=(3,)),
             )
-    
+
     def test_max_id_verification(self):
         """Test that a valid max_id does not raise a ValueError."""
         pykeen.nn.representation.BackfillRepresentation(
