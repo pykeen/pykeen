@@ -341,6 +341,15 @@ def _iter_index_remap_from_condensation_map(c: LongTensor) -> Iterable[tuple[int
     return zip(old_indices, new_indices, strict=True)
 
 
+def _maybe_condense(x: LongTensor, condensation: LongTensor | None, num: int) -> tuple[int, LongTensor]:
+    """Apply condensation, if present."""
+    if condensation is None:
+        return num, x
+    x = condensation[x]
+    num = get_num_ids(x)
+    return num, x
+
+
 class CoreTriplesFactory(KGInfo):
     """Create instances from ID-based triples."""
 
@@ -582,17 +591,9 @@ class CoreTriplesFactory(KGInfo):
         if entity_condensation is None and relation_condensation is None:
             return self
         # maybe condense entities
-        if entity_condensation is None:
-            num_entities = self.num_entities
-        else:
-            ht = entity_condensation[ht]
-            num_entities = get_num_ids(ht)
+        num_entities, ht = _maybe_condense(ht, condensation=entity_condensation, num=self.num_entities)
         # maybe condense relations
-        if relation_condensation is None:
-            num_relations = self.num_relations
-        else:
-            r = relation_condensation[r]
-            num_relations = get_num_ids(r)
+        num_relations, r = _maybe_condense(r, condensation=relation_condensation, num=self.num_relations)
         # build new triples factory
         return self.__class__(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
@@ -1180,26 +1181,26 @@ class TriplesFactory(CoreTriplesFactory):
     def condense(self, entities: bool = True, relations: bool = False) -> Self:  # noqa: D102
         ht = self.mapped_triples[:, 0::2]
         r = self.mapped_triples[:, 1]
+        # determine condensation maps (dense vectors for vectorized remapping)
         entity_condensation = _make_condensation_map(ht) if entities else None
         relation_condensation = _make_condensation_map(r) if relations else None
+        # short-circuit if nothing needs to change
         if entity_condensation is None and relation_condensation is None:
             return self
+        # maybe condense entities
+        num_entities, ht = _maybe_condense(ht, condensation=entity_condensation, num=self.num_entities)
         if entity_condensation is None:
-            num_entities = self.num_entities
             entity_to_id = self.entity_to_id
         else:
-            ht = entity_condensation[ht]
-            num_entities = get_num_ids(ht)
             entity_to_id = {
                 self.entity_id_to_label[old]: new
                 for old, new in _iter_index_remap_from_condensation_map(entity_condensation)
             }
+        # maybe condense relations
+        num_relations, r = _maybe_condense(r, condensation=relation_condensation, num=self.num_relations)
         if relation_condensation is None:
-            num_relations = self.num_relations
             relation_to_id = self.relation_to_id
         else:
-            r = relation_condensation[r]
-            num_relations = get_num_ids(r)
             relation_to_id = {
                 self.relation_id_to_label[old]: new
                 for old, new in _iter_index_remap_from_condensation_map(relation_condensation)
