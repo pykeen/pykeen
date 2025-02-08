@@ -973,6 +973,13 @@ class CoreTriplesFactory(KGInfo):
         )
 
 
+def _maybe_condense_map(id_to_label: Mapping[int, str], condensation: LongTensor | None) -> Mapping[str, int]:
+    """Condense label to Id mapping, if necessary."""
+    if condensation is None:
+        return {label: idx for idx, label in id_to_label.items()}
+    return {id_to_label[old]: new for old, new in _iter_index_remap_from_condensation_map(condensation)}
+
+
 class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
 
@@ -1189,22 +1196,10 @@ class TriplesFactory(CoreTriplesFactory):
             return self
         # maybe condense entities
         num_entities, ht = _maybe_condense(ht, condensation=entity_condensation, num=self.num_entities)
-        if entity_condensation is None:
-            entity_to_id = self.entity_to_id
-        else:
-            entity_to_id = {
-                self.entity_id_to_label[old]: new
-                for old, new in _iter_index_remap_from_condensation_map(entity_condensation)
-            }
+        entity_to_id = _maybe_condense_map(self.entity_id_to_label, condensation=entity_condensation)
         # maybe condense relations
         num_relations, r = _maybe_condense(r, condensation=relation_condensation, num=self.num_relations)
-        if relation_condensation is None:
-            relation_to_id = self.relation_to_id
-        else:
-            relation_to_id = {
-                self.relation_id_to_label[old]: new
-                for old, new in _iter_index_remap_from_condensation_map(relation_condensation)
-            }
+        relation_to_id = _maybe_condense_map(self.relation_id_to_label, condensation=relation_condensation)
         return self.__class__(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
             entity_to_id=entity_to_id,
