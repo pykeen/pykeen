@@ -9,6 +9,7 @@ from pykeen.triples import TriplesFactory
 # YOu most likely want to train a model on triples you have already prepared.
 # This example demonstrates the most basic way to bring your own data to PyKEEN.
 # If you have triples that already have relation & entity mappings, you can use the TriplesFactory class constructor directly - that is not shown here.
+# For a complete deep dive into Bringing Your Own Data to PyKeen, see https://pykeen.readthedocs.io/en/stable/byo/data.html
 
 # define a set of triples. In this case, we'll make up some data about the Beatles
 # The triples are in the form (head, relation, tail)
