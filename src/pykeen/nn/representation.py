@@ -1574,6 +1574,9 @@ class BackfillRepresentation(PartitionRepresentation):
 
         # If the maximum id is not greater than the maximum base id,
         # the backfill representation creation will fail at a later stage.
+        # If the max ID is less than the length of the base IDs, the backfill representation will fail as the resulting requested tensor will have negative dimensions.
+        # If the max ID is not greater than the maximum base ID, IndexError will result.
+        # This is because the `assignment` tensor will not have enough space to accomodate the base IDs.
         if max_id <= max(base_ids):
             raise ValueError(f"{max_id=}: Value must be greater than the largest base_id ({max(base_ids)=})")
 
