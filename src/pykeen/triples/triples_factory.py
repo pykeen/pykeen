@@ -726,7 +726,8 @@ class CoreTriplesFactory(KGInfo):
             evaluation_triples_ratios=evaluation_triples_ratios,
             random_state=random_state,
         )
-        # TODO: do we need to adjust the entity map of training? (or inference?)
+        # separately condense the entity-to-id mappings for each of the graphs (training vs. inference)
+        # TODO: what about relations? We might not be allowed to do that!
         training_tf = self.clone_and_exchange_triples(mapped_triples=training).condense()
         inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).condense()
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
