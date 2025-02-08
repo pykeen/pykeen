@@ -1570,6 +1570,7 @@ class BackfillRepresentation(PartitionRepresentation):
             If the backfill representation is initialized within this constructor,
             it will receive the base representation's shape.
         """
+        base_ids = sorted(set(base_ids))
 
         # If the maximum id is not greater than the maximum base id, the backfill representation creation will fail at a later stage.
         if max_id <= max(base_ids):
@@ -1578,7 +1579,6 @@ class BackfillRepresentation(PartitionRepresentation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        base_ids = sorted(set(base_ids))
         base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
         # comment: not all representations support passing a shape parameter
         backfill = representation_resolver.make(
