@@ -289,6 +289,8 @@ class TestSplit(unittest.TestCase):
         # verify that the type got correctly promoted
         for factory in factories:
             self.assertEqual(type(factory), type(self.triples_factory))
+            # we only support inductive *entity* splits for now
+            self.assertEqual(factory.num_relations, self.triples_factory.num_relations)
         # verify that no triple got lost
         total_num_triples = sum(t.num_triples for t in factories)
         if lossy:
@@ -302,7 +304,6 @@ class TestSplit(unittest.TestCase):
         """Test invariants for result of triples factory splitting."""
         # verify that all entities and relations are present in the training factory
         self.assertEqual(training_triples_factory.num_entities, self.triples_factory.num_entities)
-        self.assertEqual(training_triples_factory.num_relations, self.triples_factory.num_relations)
 
         all_factories = (training_triples_factory, *other_factories)
         self._test_invariants_shared(*all_factories, lossy=lossy)
