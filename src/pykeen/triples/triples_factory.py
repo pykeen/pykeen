@@ -737,9 +737,11 @@ class CoreTriplesFactory(KGInfo):
             random_state=random_state,
         )
         # separately condense the entity-to-id mappings for each of the graphs (training vs. inference)
-        # TODO: what about relations? We might not be allowed to do that!
-        training_tf = self.clone_and_exchange_triples(mapped_triples=training).condense()
-        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).condense()
+        # we do *not* condense relations, because we only work in entity-inductive settings (for now).
+        training_tf = self.clone_and_exchange_triples(mapped_triples=training).condense(entities=True, relations=False)
+        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).condense(
+            entities=True, relations=False
+        )
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
             inference_tf.clone_and_exchange_triples(mapped_triples=mapped_triples, create_inverse_triples=False)
