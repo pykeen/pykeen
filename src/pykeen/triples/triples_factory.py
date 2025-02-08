@@ -558,9 +558,14 @@ class CoreTriplesFactory(KGInfo):
             },
         )
 
-    def condense(self) -> Self:
+    def condense(self, entities: bool = True, relations: bool = False) -> Self:
         """
         Drop all IDs which are not present in the triples.
+
+        :param entities:
+            Whether to condense entity IDs.
+        :param relations:
+            Whether to condense relation IDs.
 
         .. warning::
             This creates a triples factory that may have a new entity or relation to id mapping.
@@ -570,20 +575,25 @@ class CoreTriplesFactory(KGInfo):
         """
         ht = self.mapped_triples[:, 0::2]
         r = self.mapped_triples[:, 1]
-        entity_condensation = _make_condensation_map(ht)
-        relation_condensation = _make_condensation_map(r)
+        # determine condensation maps (dense vectors for vectorized remapping)
+        entity_condensation = _make_condensation_map(ht) if entities else None
+        relation_condensation = _make_condensation_map(r) if relations else None
+        # short-circuit if nothing needs to change
         if entity_condensation is None and relation_condensation is None:
             return self
+        # maybe condense entities
         if entity_condensation is None:
             num_entities = self.num_entities
         else:
             ht = entity_condensation[ht]
             num_entities = get_num_ids(ht)
+        # maybe condense relations
         if relation_condensation is None:
             num_relations = self.num_relations
         else:
             r = relation_condensation[r]
             num_relations = get_num_ids(r)
+        # build new triples factory
         return self.__class__(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
             num_entities=num_entities,
