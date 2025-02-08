@@ -6,8 +6,9 @@ from pykeen.triples import TriplesFactory
 # Bring Your Own Triples
 # -------------------
 # It's unlikely that the data you want to work with is already in the PyKEEN package.
-# Moreso, you might want to train a model on triples you have already prepared.
+# YOu most likely want to train a model on triples you have already prepared.
 # This example demonstrates the most basic way to bring your own data to PyKEEN.
+# If you have triples that already have relation & entity mappings, you can use the TriplesFactory class constructor directly - that is not shown here.
 
 # define a set of triples. In this case, we'll make up some data about the Beatles
 # The triples are in the form (head, relation, tail)
