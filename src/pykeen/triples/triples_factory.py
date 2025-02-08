@@ -394,11 +394,6 @@ class CoreTriplesFactory(KGInfo):
         self.relation_inverter = relation_inverter_resolver.make(query=None)
 
     @classmethod
-    def new(cls, **kwargs: Any) -> Self:
-        """Create a new instance of the same type."""
-        return cls(**kwargs)
-
-    @classmethod
     def create(
         cls,
         mapped_triples: MappedTriples,
@@ -465,7 +460,7 @@ class CoreTriplesFactory(KGInfo):
         self,
         entity_to_id: Mapping[str, int],
         relation_to_id: Mapping[str, int],
-    ) -> Self:
+    ) -> "TriplesFactory":
         """Add labeling to the TriplesFactory."""
         # check new label to ID mappings
         for name, columns, new_labeling in (
@@ -476,7 +471,7 @@ class CoreTriplesFactory(KGInfo):
             if not existing_ids.issubset(new_labeling.values()):
                 diff = existing_ids.difference(new_labeling.values())
                 raise ValueError(f"Some existing IDs do not occur in the new {name} labeling: {diff}")
-        return self.new(
+        return TriplesFactory(
             mapped_triples=self.mapped_triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
@@ -589,7 +584,7 @@ class CoreTriplesFactory(KGInfo):
         else:
             r = relation_condensation[r]
             num_relations = get_num_ids(r)
-        return self.new(
+        return self.__class__(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
             num_entities=num_entities,
             num_relations=num_relations,
@@ -1026,11 +1021,6 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=metadata,
         )
 
-    # docstr-coverage: inherited
-    @classmethod
-    def new(cls, **kwargs) -> Self:  # noqa: D102
-        return cls(**kwargs)
-
     @classmethod
     def from_labeled_triples(
         cls,
@@ -1201,7 +1191,7 @@ class TriplesFactory(CoreTriplesFactory):
                 self.relation_id_to_label[old]: new
                 for old, new in _iter_index_remap_from_condensation_map(relation_condensation)
             }
-        return self.new(
+        return self.__class__(
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
