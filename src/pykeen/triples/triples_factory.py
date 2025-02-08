@@ -1453,16 +1453,15 @@ class TriplesFactory(CoreTriplesFactory):
             entities = self.entities_to_ids(entities=entities)
         if relations is not None:
             relations = self.relations_to_ids(relations=relations)
-        return (
-            super()
-            .new_with_restriction(
-                entities=entities,
-                relations=relations,
-                invert_entity_selection=invert_entity_selection,
-                invert_relation_selection=invert_relation_selection,
-            )
-            .with_labels(entity_to_id=self.entity_to_id, relation_to_id=self.relation_to_id)
+        tf = super().new_with_restriction(
+            entities=entities,
+            relations=relations,
+            invert_entity_selection=invert_entity_selection,
+            invert_relation_selection=invert_relation_selection,
         )
+        tf.entity_labeling = self.entity_labeling
+        tf.relation_labeling = self.relation_labeling
+        return tf
 
     def map_triples(self, triples: LabeledTriples) -> MappedTriples:
         """Convert label-based triples to ID-based triples."""
