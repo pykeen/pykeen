@@ -10,8 +10,7 @@ logging.basicConfig(level=logging.INFO)
 # we use all of CodexSmall's data as source graph
 dataset = get_dataset(dataset="CodexSmall")
 dataset.summarize()
-assert dataset.validation is not None
-tf_all = dataset.training.merge(dataset.validation, dataset.testing)
+tf_all = dataset.merged()
 
 # create a fully inductive split with two evaluation parts (validation & test)
 tf_training, tf_inference, tf_validation, tf_testing = tf_all.split_fully_inductive(
