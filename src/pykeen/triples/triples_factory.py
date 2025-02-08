@@ -1177,11 +1177,11 @@ class TriplesFactory(CoreTriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def condense(self) -> Self:  # noqa: D102
+    def condense(self, entities: bool = True, relations: bool = False) -> Self:  # noqa: D102
         ht = self.mapped_triples[:, 0::2]
         r = self.mapped_triples[:, 1]
-        entity_condensation = _make_condensation_map(ht)
-        relation_condensation = _make_condensation_map(r)
+        entity_condensation = _make_condensation_map(ht) if entities else None
+        relation_condensation = _make_condensation_map(r) if relations else None
         if entity_condensation is None and relation_condensation is None:
             return self
         if entity_condensation is None:
