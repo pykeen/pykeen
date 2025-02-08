@@ -114,7 +114,9 @@ desired behavior as in:
 >>> result.save_to_directory('doctests/test_pre_stratified_transe')
 
 Triples factories can also be instantiated using the ``triples`` keyword argument instead of the ``path`` argument
-if you already have triples loaded in a :class:`numpy.ndarray`.
+if you already have triples loaded in a :class:`numpy.ndarray`:
+
+>>> tf = TriplesFactory.from_labeled_triples(triples=ndarray_of_triples)
 
 Unstratified Dataset
 --------------------
