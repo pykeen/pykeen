@@ -329,7 +329,7 @@ where $\star: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}^d$ denotes
 
 .. math::
 
-    [\mathbf{a} \star \mathbf{b}]_i = \sum_{k=0}^{d-1} \mathbf{a}_{k} * \mathbf{b}_{(i+k)\ \mod \ d}
+    [\mathbf{a} \star \mathbf{b}]_i = \sum_{k=0}^{d-1} \mathbf{a}_{k} * \mathbf{b}_{(i+k) \mod d}
 
 AutoSF
 ~~~~~~
