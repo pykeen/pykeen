@@ -1210,6 +1210,21 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
+    # docstr-coverage: inherited
+    def merge(self, *others: Self) -> Self:  # noqa: D102
+        for i, other in enumerate(others):
+            if other.entity_to_id != self.entity_to_id:
+                raise ValueError(
+                    f"Entity to ID mapping does not match for others[{i}]: "
+                    f"{self.entity_to_id=} vs. {other.entity_to_id=}"
+                )
+            if other.relation_to_id != self.relation_to_id:
+                raise ValueError(
+                    f"Relation to ID mapping does not match for others[{i}]: "
+                    f"{self.relation_to_id=} vs. {other.relation_to_id=}"
+                )
+        return super().merge(*others)
+
     def to_core_triples_factory(self) -> CoreTriplesFactory:
         """Return this factory as a core factory."""
         return CoreTriplesFactory(
