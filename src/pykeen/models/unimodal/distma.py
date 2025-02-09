@@ -1,21 +1,23 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of DistMA."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import DistMAInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "DistMA",
 ]
 
 
-class DistMA(ERModel):
+class DistMA(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of DistMA from [shi2019]_.
+
+    It models entities and relations by $d$-dimensional vectors stored in :class:`~pykeen.nn.representation.Embedding`,
+    and the :class:`~pykeen.nn.modules.DistMAInteraction` to obtain triple scores.
 
     ---
     citation:
@@ -33,14 +35,14 @@ class DistMA(ERModel):
         self,
         embedding_dim: int = 256,
         entity_initializer: Hint[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_initializer_kwargs: Mapping[str, Any] | None = None,
         entity_normalizer: Hint[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        r"""Initialize DistMA via the :class:`pykeen.nn.modules.DistMAInteraction` interaction.
+        r"""Initialize the model.
 
         :param embedding_dim: The entity embedding dimension $d$.
         :param entity_initializer: Entity initializer function. Defaults to None

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """A module for PyKEEN ranking and classification metrics."""
 
 from .classification import ClassificationMetric, classification_metric_resolver

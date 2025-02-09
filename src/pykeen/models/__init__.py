@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
-
 r"""
 A knowledge graph embedding model is capable of computing real-valued scores representing the plausibility
 of a triple $(h,r,t) \in \mathbb{K}$, where a larger score indicates a higher plausibility. The interpretation
 of the score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 
 In PyKEEN, the API of a model is defined in :class:`Model`, where the scoring function is exposed as
-:meth:`Model.score_hrt`, which can be used to compute plausability scores for (a batch of) triples.
+:meth:`Model.score_hrt`, which can be used to compute plausibility scores for (a batch of) triples.
 In addition, the :class:`Model` class also offers additional scoring methods, which can be used to
 (efficiently) compute scores for a large number of triples sharing some parts, e.g., to compute scores
-for triples `(h, r, e)` for a given `(h, r)` pair and all available entities $e \in \mathcal{E}$.
+for triples $(h, r, e)$ for a given $(h, r)$ pair and all available entities $e \in \mathcal{E}$.
 
 .. note ::
 
@@ -33,7 +31,7 @@ It combines a variable number of *representations* for entities and relations, c
 :class:`pykeen.nn.representation.Representation`, and an interaction function, cf.
 :class:`pykeen.nn.modules.Interaction`. The representation modules convert integer entity or relation indices to
 numeric representations, e.g., vectors. The interaction function takes the representations of the head entities,
-relations and tail entities as input and computes a scalar plausability score for triples.
+relations and tail entities as input and computes a scalar plausibility score for triples.
 
 .. note ::
 
@@ -152,6 +150,7 @@ __all__ = [
     "make_model_cls",
 ]
 
+#: A resolver for knowledge graph embedding models
 model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
     base=Model,
     skip={

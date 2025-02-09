@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of ranked based evaluator."""
 
 from __future__ import annotations
@@ -11,21 +9,10 @@ import math
 import random
 import re
 from collections import defaultdict
+from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
-    Callable,
-    DefaultDict,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
     NamedTuple,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
-    cast,
 )
 
 import numpy as np
@@ -49,6 +36,8 @@ from ..typing import (
     SIDE_BOTH,
     SIDES,
     ExtendedTarget,
+    FloatTensor,
+    LongTensor,
     MappedTriples,
     RankType,
     Target,
@@ -66,7 +55,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-RANKING_METRICS: Mapping[str, Type[Metric]] = {cls().key: cls for cls in rank_based_metric_resolver}
+RANKING_METRICS: Mapping[str, type[Metric]] = {cls().key: cls for cls in rank_based_metric_resolver}
 
 K = TypeVar("K")
 
@@ -82,9 +71,9 @@ class RankPack(NamedTuple):
     rank_type: RankType
     ranks: np.ndarray
     num_candidates: np.ndarray
-    weights: Optional[np.ndarray]
+    weights: np.ndarray | None
 
-    def resample(self, seed: Optional[int]) -> "RankPack":
+    def resample(self, seed: int | None) -> RankPack:
         """Resample rank pack."""
         generator = np.random.default_rng(seed=seed)
         n = len(self.ranks)
@@ -100,9 +89,9 @@ class RankPack(NamedTuple):
 
 
 def _iter_ranks(
-    ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
+    ranks: Mapping[tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
-    weights: Optional[Mapping[Target, Sequence[np.ndarray]]] = None,
+    weights: Mapping[Target, Sequence[np.ndarray]] | None = None,
 ) -> Iterable[RankPack]:
     sides = sorted(num_candidates.keys())
     # flatten dictionaries
@@ -214,8 +203,8 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         match = METRIC_PATTERN.match(s)
         if not match:
             raise ValueError(f"Invalid metric name: {s}")
-        k: Union[None, str, int]
-        name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
+        k: None | str | int
+        name, side, rank_type, k = (match.group(key) for key in ("name", "side", "type", "k"))
         name = name.lower()
         match = HITS_PATTERN.match(name)
         if match:
@@ -251,7 +240,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         cls,
         metrics: Iterable[RankBasedMetric],
         rank_and_candidates: Iterable[RankPack],
-    ) -> "RankBasedMetricResults":
+    ) -> RankBasedMetricResults:
         """Create rank-based metric results from the given rank/candidate sets."""
         return cls(
             data={
@@ -263,7 +252,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         )
 
     @classmethod
-    def create_random(cls, random_state: Optional[int] = None) -> "RankBasedMetricResults":
+    def create_random(cls, random_state: int | None = None) -> RankBasedMetricResults:
         """Create random results useful for testing."""
         targets = [LABEL_HEAD, LABEL_TAIL]
         num_targets = len(targets)
@@ -277,7 +266,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         ranks = numpy.stack([ranks[0], (ranks[0] + ranks[1]) / 2, ranks[1]], axis=0)
         data: dict[RankBasedMetricKey | str, float] = {}
         # fixme: the annotation of ClassResolver.__iter__ seems to be broken (X instead of Type[X])
-        metric_cls: Type[RankBasedMetric]
+        metric_cls: type[RankBasedMetric]
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
             for (target, i), (j, rank_type) in itertools.product(
@@ -294,9 +283,9 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
     """A rank-based evaluator for KGE models."""
 
     metric_result_cls = RankBasedMetricResults
-    num_entities: Optional[int]
-    ranks: MutableMapping[Tuple[Target, RankType], List[np.ndarray]]
-    num_candidates: MutableMapping[Target, List[np.ndarray]]
+    num_entities: int | None
+    ranks: MutableMapping[tuple[Target, RankType], list[np.ndarray]]
+    num_candidates: MutableMapping[Target, list[np.ndarray]]
 
     def __init__(
         self,
@@ -355,9 +344,9 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: Optional[torch.FloatTensor] = None,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:  # noqa: D102
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
@@ -399,7 +388,7 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
         :return:
             a flat dictionary from metric names to list of values
         """
-        result: DefaultDict[str, List[float]] = defaultdict(list)
+        result: defaultdict[str, list[float]] = defaultdict(list)
 
         for i in range(n_boot):
             rank_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
@@ -413,11 +402,11 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
 
     def finalize_with_confidence(
         self,
-        estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
-        ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
+        estimator: str | Callable[[Sequence[float]], float] = np.median,
+        ci: int | str | Callable[[Sequence[float]], float] = 90,
         n_boot: int = 1_000,
         seed: int = 42,
-    ) -> Mapping[str, Tuple[float, float]]:
+    ) -> Mapping[str, tuple[float, float]]:
         """Finalize result with confidence estimation via bootstrapping.
 
         Start by training a model (here, only for a one epochs)
@@ -456,16 +445,16 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
         }
 
 
-def _resolve_estimator(estimator: Union[str, Callable[[Sequence[float]], float]]) -> Callable[[Sequence[float]], float]:
+def _resolve_estimator(estimator: str | Callable[[Sequence[float]], float]) -> Callable[[Sequence[float]], float]:
     if callable(estimator):
         return estimator
     return getattr(np, estimator)
 
 
-def _resolve_confidence(ci: Union[int, str, Callable[[Sequence[float]], float]]) -> Callable[[Sequence[float]], float]:
+def _resolve_confidence(ci: int | str | Callable[[Sequence[float]], float]) -> Callable[[Sequence[float]], float]:
     if callable(ci):
         return ci
-    if isinstance(ci, (int, float)):
+    if isinstance(ci, int | float):
         if ci < 0 or ci > 100:
             raise ValueError(f"Invalid CI value: {ci}. Must be in [0, 100].")
         ci_half = ci / 2.0
@@ -480,9 +469,9 @@ def _resolve_confidence(ci: Union[int, str, Callable[[Sequence[float]], float]])
 
 def summarize_values(
     vs: Sequence[float],
-    estimator: Union[str, Callable[[Sequence[float]], float]] = np.median,
-    ci: Union[int, str, Callable[[Sequence[float]], float]] = 90,
-) -> Tuple[float, float]:
+    estimator: str | Callable[[Sequence[float]], float] = np.median,
+    ci: int | str | Callable[[Sequence[float]], float] = 90,
+) -> tuple[float, float]:
     """Summarize values.
 
     :param vs:
@@ -502,10 +491,10 @@ def summarize_values(
 
 def sample_negatives(
     evaluation_triples: MappedTriples,
-    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
     num_samples: int = 50,
-    num_entities: Optional[int] = None,
-) -> Mapping[Target, torch.FloatTensor]:
+    num_entities: int | None = None,
+) -> Mapping[Target, FloatTensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -533,7 +522,7 @@ def sample_negatives(
     all_ids = set(range(num_entities))
     negatives = {}
     for side in [LABEL_HEAD, LABEL_TAIL]:
-        this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
+        this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = TARGET_TO_KEY_LABELS[side]
         for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
             by=other,
@@ -563,16 +552,16 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     cf. https://arxiv.org/abs/2106.06935.
     """
 
-    negative_samples: Mapping[Target, torch.LongTensor]
+    negative_samples: Mapping[Target, LongTensor]
 
     def __init__(
         self,
         evaluation_factory: CoreTriplesFactory,
         *,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-        num_negatives: Optional[int] = None,
-        head_negatives: Optional[torch.LongTensor] = None,
-        tail_negatives: Optional[torch.LongTensor] = None,
+        additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+        num_negatives: int | None = None,
+        head_negatives: LongTensor | None = None,
+        tail_negatives: LongTensor | None = None,
         **kwargs,
     ):
         """
@@ -636,9 +625,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: Optional[torch.FloatTensor] = None,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:  # noqa: D102
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
@@ -669,7 +658,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 class MacroRankBasedEvaluator(RankBasedEvaluator):
     """Macro-average rank-based evaluation."""
 
-    weights: MutableMapping[Target, List[np.ndarray]]
+    weights: MutableMapping[Target, list[np.ndarray]]
 
     def __init__(self, **kwargs):
         """
@@ -705,9 +694,9 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: Optional[torch.FloatTensor] = None,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:  # noqa: D102
         super().process_scores_(
             hrt_batch=hrt_batch,

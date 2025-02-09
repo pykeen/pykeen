@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The DBpedia datasets from [shi2017b]_.
 
 - GitHub Repository: https://github.com/bxshi/ConMask

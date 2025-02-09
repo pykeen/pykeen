@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The Wikidata5m dataset from [wang2019]_.
 
 Wikidata5m is a million-scale knowledge graph dataset with aligned corpus.

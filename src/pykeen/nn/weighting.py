@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
-
 """Various edge weighting implementations for R-GCN."""
 
 from abc import abstractmethod
-from typing import ClassVar, Optional, Union
+from typing import ClassVar
 
 import torch
 from class_resolver import ClassResolver
 from torch import nn
 
+from ..typing import FloatTensor, LongTensor
 from ..utils import einsum
 
 try:
@@ -28,8 +27,8 @@ __all__ = [
 
 def softmax(
     src: torch.Tensor,
-    index: torch.LongTensor,
-    num_nodes: Union[None, int, torch.Tensor] = None,
+    index: LongTensor,
+    num_nodes: None | int | torch.Tensor = None,
     dim: int = 0,
 ) -> torch.Tensor:
     r"""
@@ -85,11 +84,11 @@ class EdgeWeighting(nn.Module):
     @abstractmethod
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: Optional[torch.FloatTensor] = None,
-        x_e: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:
         """Compute edge weights.
 
         :param source: shape: (num_edges,)
@@ -107,7 +106,7 @@ class EdgeWeighting(nn.Module):
         raise NotImplementedError
 
 
-def _inverse_frequency_weighting(idx: torch.LongTensor) -> torch.FloatTensor:
+def _inverse_frequency_weighting(idx: LongTensor) -> FloatTensor:
     """Calculate inverse relative frequency weighting."""
     # Calculate in-degree, i.e. number of incoming edges
     inv, cnt = torch.unique(idx, return_counts=True, return_inverse=True)[1:]
@@ -120,11 +119,11 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
     # docstr-coverage: inherited
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: Optional[torch.FloatTensor] = None,
-        x_e: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -138,11 +137,11 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
     # docstr-coverage: inherited
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: Optional[torch.FloatTensor] = None,
-        x_e: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -156,11 +155,11 @@ class SymmetricEdgeWeighting(EdgeWeighting):
     # docstr-coverage: inherited
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: Optional[torch.FloatTensor] = None,
-        x_e: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -204,11 +203,11 @@ class AttentionEdgeWeighting(EdgeWeighting):
     # docstr-coverage: inherited
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: Optional[torch.FloatTensor] = None,
-        x_e: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         if message is None or x_e is None:
             raise ValueError(f"{self.__class__.__name__} requires message and x_e.")
 
@@ -234,6 +233,9 @@ class AttentionEdgeWeighting(EdgeWeighting):
         return (message_ * alpha.view(-1, self.num_heads, 1)).view(-1, self.num_heads * self.attention_dim)
 
 
+#: A resolver for R-GCN edge weighting implementations
 edge_weight_resolver: ClassResolver[EdgeWeighting] = ClassResolver.from_subclasses(
-    base=EdgeWeighting, default=SymmetricEdgeWeighting
+    base=EdgeWeighting,
+    default=SymmetricEdgeWeighting,
+    location="pykeen.nn.weighting.edge_weight_resolver",
 )

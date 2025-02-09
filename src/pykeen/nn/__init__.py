@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """PyKEEN internal "nn" module."""
 
 from class_resolver import ClassResolver
@@ -49,7 +47,7 @@ from .modules import (
     TransHInteraction,
     TransRInteraction,
     TripleREInteraction,
-    TuckerInteraction,
+    TuckERInteraction,
     UMInteraction,
     interaction_resolver,
 )
@@ -144,7 +142,7 @@ __all__ = [
     "TransHInteraction",
     "TransRInteraction",
     "TripleREInteraction",
-    "TuckerInteraction",
+    "TuckERInteraction",
     "UMInteraction",
     "interaction_resolver",
     # combinations
@@ -156,6 +154,7 @@ __all__ = [
     "GatedCombination",
 ]
 
+#: A resolver for representations
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(
     base=Representation,
     default=Embedding,

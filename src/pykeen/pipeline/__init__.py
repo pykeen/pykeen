@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The PyKEEN pipeline and related wrapper functions."""
 
 from .api import (

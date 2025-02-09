@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Inductive models in PyKEEN."""
 
 from class_resolver import ClassResolver
@@ -30,6 +28,7 @@ __all__ = [
     "ILPC2022Small",
 ]
 
+#: A resolver for inductive datasets
 inductive_dataset_resolver: ClassResolver[InductiveDataset] = ClassResolver.from_subclasses(
     InductiveDataset,
     skip={

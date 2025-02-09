@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Tests for deterioration workflow."""
 
 import unittest

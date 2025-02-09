@@ -2,7 +2,7 @@
 
 import logging
 from abc import abstractmethod
-from typing import Iterable, Optional, Tuple
+from collections.abc import Iterable
 
 import pandas
 from class_resolver import HintOrType, OptionalKwargs
@@ -29,10 +29,10 @@ class EADataset(EagerDataset):
     def __init__(
         self,
         *,
-        side: Optional[EASide] = EA_SIDE_LEFT,
+        side: EASide | None = EA_SIDE_LEFT,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
-        split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
+        split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
         combination: HintOrType[GraphPairCombinator] = None,
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -61,7 +61,7 @@ class EADataset(EagerDataset):
         """
         if side is None:
             # load both graphs
-            left, right = [self._load_graph(side=side) for side in EA_SIDES]
+            left, right = (self._load_graph(side=side) for side in EA_SIDES)
             # load alignment
             alignment = self._load_alignment()
             # drop duplicates

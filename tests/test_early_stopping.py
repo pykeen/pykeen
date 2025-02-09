@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """Tests of early stopping."""
 
 import unittest
-from typing import List
 
 import numpy
 import pytest
@@ -76,19 +73,19 @@ class TestEarlyStopper(cases.EarlyStopperTestCase):
     """Tests for early stopping."""
 
     patience: int = 2
-    mock_losses: List[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
+    mock_losses: list[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
     stop_constant: int = 4
     delta: float = 0.0
-    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+    best_results: list[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
 
 class TestEarlyStopperDelta(cases.EarlyStopperTestCase):
     """Test early stopping with a tiny delta."""
 
-    mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
+    mock_losses: list[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
     stop_constant: int = 4
     delta: float = 0.1
-    best_results: List[float] = [10.0, 10.0, 8.0, 8.0, 8.0]
+    best_results: list[float] = [10.0, 10.0, 8.0, 8.0, 8.0]
 
 
 class TestEarlyStopperRealWorld(unittest.TestCase):
@@ -121,7 +118,7 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         # Set automatic_memory_optimization to false during testing
         nations = Nations()
         model: Model = TransE(triples_factory=nations.training)
-        evaluator = RankBasedEvaluator(automatic_memory_optimization=False)
+        evaluator = RankBasedEvaluator()
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Tools for removing the leakage from datasets.
 
 Leakage is when the inverse of a given training triple appears in either
@@ -10,7 +8,8 @@ novel triples.
 """
 
 import logging
-from typing import Collection, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
+from collections.abc import Collection, Iterable, Mapping
+from typing import TypeVar, cast
 
 import click
 import numpy
@@ -19,7 +18,7 @@ import torch
 
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import CoreTriplesFactory, TriplesFactory, cat_triples
-from pykeen.typing import MappedTriples
+from pykeen.typing import LongTensor, MappedTriples
 from pykeen.utils import compact_mapping, get_connected_components
 
 __all__ = [
@@ -38,7 +37,7 @@ def _select_by_most_pairs(
     size: Mapping[int, int],
 ) -> Collection[int]:
     """Select relations to keep with the most associated pairs."""
-    result: Set[int] = set()
+    result: set[int] = set()
     for component in components:
         keep = max(component, key=size.__getitem__)
         result.update(r for r in component if r != keep)
@@ -76,7 +75,7 @@ def jaccard_similarity_scipy(
 
 def triples_factory_to_sparse_matrices(
     triples_factory: CoreTriplesFactory,
-) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
+) -> tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
     """Compute relation representations as sparse matrices of entity pairs.
 
     .. note ::
@@ -96,9 +95,9 @@ def triples_factory_to_sparse_matrices(
 
 
 def _to_one_hot(
-    rows: torch.LongTensor,
-    cols: torch.LongTensor,
-    shape: Tuple[int, int],
+    rows: LongTensor,
+    cols: LongTensor,
+    shape: tuple[int, int],
 ) -> scipy.sparse.spmatrix:
     """Create a one-hot matrix given indices of non-zero elements (potentially containing duplicates)."""
     rows, cols = torch.stack([rows, cols], dim=0).unique(dim=1).numpy()
@@ -113,7 +112,7 @@ def _to_one_hot(
 def mapped_triples_to_sparse_matrices(
     mapped_triples: MappedTriples,
     num_relations: int,
-) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
+) -> tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
     """Compute relation representations as sparse matrices of entity pairs.
 
     .. note ::
@@ -149,10 +148,10 @@ def mapped_triples_to_sparse_matrices(
 def get_candidate_pairs(
     *,
     a: scipy.sparse.spmatrix,
-    b: Optional[scipy.sparse.spmatrix] = None,
+    b: scipy.sparse.spmatrix | None = None,
     threshold: float,
     no_self: bool = True,
-) -> Set[Tuple[int, int]]:
+) -> set[tuple[int, int]]:
     """Find pairs of sets with Jaccard similarity above threshold using :func:`jaccard_similarity_scipy`.
 
     :param a:
@@ -176,7 +175,7 @@ def get_candidate_pairs(
         num = sim.shape[0]
         idx = numpy.arange(num)
         sim[idx, idx] = 0
-    return set(zip(*(sim >= threshold).nonzero()))
+    return set(zip(*(sim >= threshold).nonzero(), strict=False))
 
 
 class Sealant:
@@ -185,12 +184,12 @@ class Sealant:
     triples_factory: CoreTriplesFactory
     minimum_frequency: float
     inverses: Mapping[int, int]
-    inverse_relations_to_delete: Set[int]
+    inverse_relations_to_delete: set[int]
 
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        minimum_frequency: Optional[float] = None,
+        minimum_frequency: float | None = None,
         symmetric: bool = True,
     ):
         """Index the inverse frequencies and the inverse relations in the triples factory.
@@ -224,7 +223,7 @@ class Sealant:
             f" at similarity > {self.minimum_frequency} in {self.triples_factory}",
         )
         self.candidates = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
-        sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True)))
+        sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True), strict=False))
         self.relations_to_delete = _select_by_most_pairs(
             size=sizes,
             components=get_connected_components((a, b) for a, b in self.candidates if a != b),
@@ -239,8 +238,8 @@ class Sealant:
 def unleak(
     train: CoreTriplesFactory,
     *triples_factories: CoreTriplesFactory,
-    n: Union[None, int, float] = None,
-    minimum_frequency: Optional[float] = None,
+    n: None | int | float = None,
+    minimum_frequency: float | None = None,
 ) -> Iterable[CoreTriplesFactory]:
     """Unleak a train, test, and validate triples factory.
 
@@ -275,13 +274,13 @@ def unleak(
 
 
 def _generate_compact_vectorized_lookup(
-    ids: torch.LongTensor,
+    ids: LongTensor,
     label_to_id: Mapping[str, int],
-) -> Tuple[Mapping[str, int], torch.LongTensor]:
+) -> tuple[Mapping[str, int], LongTensor]:
     """
     Given a tensor of IDs and a label to ID mapping, retain only occurring IDs, and compact the mapping.
 
-    Additionally returns a vectorized translation, i.e. a tensor `translation` of shape (max_old_id,) with
+    Additionally, returns a vectorized translation, i.e. a tensor `translation` of shape (max_old_id,) with
     `translation[old_id] = new_id` for all translated IDs and `translation[old_id] = -1` for non-occurring IDs.
     This allows to use `translation[ids]` to translate the IDs as a simple integer index based lookup.
 
@@ -308,8 +307,8 @@ def _generate_compact_vectorized_lookup(
 
 def _translate_triples(
     triples: MappedTriples,
-    entity_translation: torch.LongTensor,
-    relation_translation: torch.LongTensor,
+    entity_translation: LongTensor,
+    relation_translation: LongTensor,
 ) -> MappedTriples:
     """
     Translate triples given vectorized translations for entities and relations.
@@ -330,6 +329,7 @@ def _translate_triples(
             for column, trans in zip(
                 triples.t(),
                 (entity_translation, relation_translation, entity_translation),
+                strict=False,
             )
         ],
         dim=-1,
@@ -338,18 +338,18 @@ def _translate_triples(
     return triples
 
 
-def reindex(*triples_factories: CoreTriplesFactory) -> List[CoreTriplesFactory]:
+def reindex(*triples_factories: CoreTriplesFactory) -> list[CoreTriplesFactory]:
     """Reindex a set of triples factories."""
     # get entities and relations occurring in triples
     all_triples = cat_triples(*triples_factories)
 
     if not all(isinstance(f, TriplesFactory) for f in triples_factories):
         raise NotImplementedError("reindex has not been updated for non-TriplesFactory yet.")
-    triples_factories = cast(Tuple[TriplesFactory, ...], triples_factories)
+    triples_factories = cast(tuple[TriplesFactory, ...], triples_factories)
 
     # generate ID translation and new label to Id mappings
     one_factory = triples_factories[0]
-    (entity_to_id, entity_id_translation), (relation_to_id, relation_id_translation) = [
+    (entity_to_id, entity_id_translation), (relation_to_id, relation_id_translation) = (
         _generate_compact_vectorized_lookup(
             ids=all_triples[:, cols],
             label_to_id=label_to_id,
@@ -358,7 +358,7 @@ def reindex(*triples_factories: CoreTriplesFactory) -> List[CoreTriplesFactory]:
             ([0, 2], one_factory.entity_to_id),
             (1, one_factory.relation_to_id),
         )
-    ]
+    )
 
     return [
         TriplesFactory(

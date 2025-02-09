@@ -6,7 +6,6 @@
    :caption: nn
    :name: nn
 
-   functional
    modules
    similarity
    representation
@@ -15,6 +14,9 @@
    pyg_message_passing
    weighting
    combinations
+   compositions
    perceptron
    utils
    node_piece
+   text
+   vision

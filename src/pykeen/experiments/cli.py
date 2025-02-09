@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Run landmark experiments."""
 
 import logging
@@ -8,7 +6,7 @@ import pathlib
 import shutil
 import sys
 import time
-from typing import Iterable, Optional, Union
+from collections.abc import Iterable
 from uuid import uuid4
 
 import click
@@ -92,7 +90,7 @@ def reproduce(
     directory: str,
     move_to_cpu: bool,
     discard_replicates: bool,
-    extra_config: Optional[pathlib.Path],
+    extra_config: pathlib.Path | None,
     keep_seed: bool,
 ):
     """Reproduce a pre-defined experiment included in PyKEEN.
@@ -137,7 +135,7 @@ def run(
     directory: str,
     move_to_cpu: bool,
     discard_replicates: bool,
-    extra_config: Optional[pathlib.Path],
+    extra_config: pathlib.Path | None,
     keep_seed: bool,
 ):
     """Run a single reproduction experiment."""
@@ -154,13 +152,13 @@ def run(
 
 def _help_reproduce(
     *,
-    directory: Union[str, pathlib.Path],
-    path: Union[str, pathlib.Path],
+    directory: str | pathlib.Path,
+    path: str | pathlib.Path,
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
-    file_name: Optional[str] = None,
-    extra_config: Optional[pathlib.Path] = None,
+    file_name: str | None = None,
+    extra_config: pathlib.Path | None = None,
     keep_seed: bool = False,
 ) -> None:
     """Help run the configuration at a given path.

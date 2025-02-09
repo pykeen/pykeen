@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 r"""Consider the following properties of relation $r$. Because the corruption operations (see `Corruption`_)
 are applied independently of triples, the resulting candidate corrupt triples could overlap with known positive
 triples in $\mathcal{K}$.
@@ -125,13 +123,13 @@ as solid evaluation results as possible.
 
 import math
 from abc import abstractmethod
-from typing import Iterable
+from collections.abc import Iterable
 
 import torch
 from class_resolver import ClassResolver
 from torch import nn
 
-from ..typing import MappedTriples
+from ..typing import BoolTensor, LongTensor, MappedTriples
 from ..utils import triple_tensor_to_set
 
 __all__ = [
@@ -148,7 +146,7 @@ class Filterer(nn.Module):
     def forward(
         self,
         negative_batch: MappedTriples,
-    ) -> torch.BoolTensor:
+    ) -> BoolTensor:
         """Filter all proposed negative samples that are positive in the training dataset.
 
         Normally there is a low probability that proposed negative samples are positive in the training datasets and
@@ -171,7 +169,7 @@ class Filterer(nn.Module):
         return ~self.contains(batch=negative_batch)
 
     @abstractmethod
-    def contains(self, batch: MappedTriples) -> torch.BoolTensor:
+    def contains(self, batch: MappedTriples) -> BoolTensor:
         """
         Check whether a triple is contained.
 
@@ -204,7 +202,7 @@ class PythonSetFilterer(Filterer):
         self.triples = triple_tensor_to_set(mapped_triples)
 
     # docstr-coverage: inherited
-    def contains(self, batch: MappedTriples) -> torch.BoolTensor:  # noqa: D102
+    def contains(self, batch: MappedTriples) -> BoolTensor:  # noqa: D102
         return torch.as_tensor(
             data=[tuple(triple) in self.triples for triple in batch.view(-1, 3).tolist()],
             dtype=torch.bool,
@@ -224,10 +222,10 @@ class BloomFilterer(Filterer):
     """
 
     #: some prime numbers for tuple hashing
-    mersenne: torch.LongTensor
+    mersenne: LongTensor
 
     #: The bit-array for the Bloom filter data structure
-    bit_array: torch.BoolTensor
+    bit_array: BoolTensor
 
     def __init__(self, mapped_triples: MappedTriples, error_rate: float = 0.001):
         """
@@ -309,7 +307,7 @@ class BloomFilterer(Filterer):
     def probe(
         self,
         batch: MappedTriples,
-    ) -> Iterable[torch.LongTensor]:
+    ) -> Iterable[LongTensor]:
         """
         Iterate over indices from the probes.
 
@@ -334,7 +332,7 @@ class BloomFilterer(Filterer):
         for i in self.probe(batch=triples):
             self.bit_array[i] = True
 
-    def contains(self, batch: MappedTriples) -> torch.BoolTensor:
+    def contains(self, batch: MappedTriples) -> BoolTensor:
         """
         Check whether a triple is contained.
 
@@ -351,6 +349,7 @@ class BloomFilterer(Filterer):
         return result
 
 
+#: A resolver for mapping filterers
 filterer_resolver: ClassResolver[Filterer] = ClassResolver.from_subclasses(
     base=Filterer,
     default=BloomFilterer,

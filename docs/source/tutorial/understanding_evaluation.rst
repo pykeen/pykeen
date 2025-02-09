@@ -1,3 +1,5 @@
+.. _understanding-evaluation:
+
 Understanding the Evaluation
 ============================
 This part of the tutorial is aimed to help you understand the evaluation of knowledge graph embeddings.
@@ -44,27 +46,37 @@ As an example, consider we trained a KGEM on the countries dataset, e.g., using
     from pykeen.datasets import get_dataset
     from pykeen.pipeline import pipeline
     dataset = get_dataset(dataset="countries")
-    result = pipeline(dataset=dataset, model="mure")
+    result = pipeline(dataset=dataset, model="mure", random_seed=42, training_kwargs=dict(num_epochs=100))
 
-During evaluation time, we now evaluate head and tail prediction, i.e., whether we can correct the correct
+During evaluation time, we now evaluate head and tail prediction, i.e., whether we can predict the correct
 head/tail entity from the remainder of a triple. The first triple in the test split of this dataset is
 `['belgium', 'locatedin', 'europe']`. Thus, for tail prediction, we aim to answer `['belgium', 'locatedin', ?]`.
 We can see the results using the prediction workflow:
 
 .. code-block:: python
 
-    from pykeen.models.predict import get_tail_prediction_df
+    from pykeen.predict import predict_target
 
-    df = get_tail_prediction_df(
+    df = predict_target(
         model=result.model,
-        head_label="belgium",
-        relation_label="locatedin",
+        head="belgium",
+        relation="locatedin",
         triples_factory=result.training,
-        add_novelties=False,
     )
 
 which returns a dataframe of all tail candidate entities sorted according to the predicted score.
 The index in this sorted list is essentially the *rank* of the correct answer.
+Here is what the first 5 rows of this table look like:
+
+=======  ========  ===================
+tail_id  score     tail_label
+=======  ========  ===================
+265      -1.02144  western_europe
+77       -1.7295   europe
+69       -2.21642  eastern_europe
+216      -2.32269  south-eastern_asia
+173      -2.39417  northern_europe
+=======  ========  ===================
 
 Rank-Based Metrics
 ~~~~~~~~~~~~~~~~~~
@@ -86,7 +98,8 @@ variants have been implemented, which yield different results in the presence of
   tie breaking mechanism of the sort algorithm's implementation.
 
 PyKEEN supports the first three: optimistic, pessimistic and realistic. When only using a single score, the
-realistic score should be reported. The pessimistic and optimistic rank, or more specific the deviation between both,
+realistic score should be reported.
+The pessimistic and optimistic rank, or more specifically the deviation between both,
 can be used to detect whether a model predicts exactly equal scores for many choices. There are a few causes such as:
 
 * finite-precision arithmetic in conjunction with explicitly using sigmoid activation
@@ -177,7 +190,7 @@ Pipeline Scenario
 During vanilla training with the :func:`pykeen.pipeline.pipeline` that has no optimization, no early stopping, nor
 any *post-hoc* choices using the validation set, the set of known positive triples comprises the training and
 testing sets. This scenario is very atypical, and regardless, should be augmented with the validation triples
-to make more comparable to other published results that do not consider this scenario.
+to make it more comparable to other published results that do not consider this scenario.
 
 Custom Training Loops
 *********************
@@ -231,7 +244,7 @@ Entity and Relation Restriction
 Sometimes, we are only interested in a certain set of entities and/or relations,
 :math:`\mathcal{E}_I \subset \mathcal{E}` and :math:`\mathcal{R}_I \subset \mathcal{R}` respectively,
 but have additional information available in form of triples with other entities/relations.
-As example, we would like to predict whether an actor stars in a movie. Thus, we are only interested in the relation
+As an example, we would like to predict whether an actor stars in a movie. Thus, we are only interested in the relation
 `stars_in` between entities which are actors/movies. However, we may have additional information available, e.g.
 who directed the movie, or the movie's language, which may help in the prediction task. Thus, we would like to train the
 model on the full dataset including all available relations and entities, but restrict the evaluation to the task we

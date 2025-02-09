@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """PyKEEN is a Python package for reproducible, facile knowledge graph embeddings.
 
 The fastest way to get up and running is to use the :func:`pykeen.pipeline.pipeline`

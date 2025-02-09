@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
+"""Optimizers available in PyKEEN, based on :class:`pykeen.optim.optimizer.Optimizer`."""
 
-"""Optimizers available in PyKEEN."""
-
-from typing import Any, Mapping, Type
+from collections.abc import Mapping
+from typing import Any
 
 from class_resolver.contrib.torch import optimizer_resolver
 from torch.optim.adagrad import Adagrad
@@ -19,7 +18,7 @@ __all__ = [
 ]
 
 #: The default strategy for optimizing the optimizers' hyper-parameters (yo dawg)
-optimizers_hpo_defaults: Mapping[Type[Optimizer], Mapping[str, Any]] = {
+optimizers_hpo_defaults: Mapping[type[Optimizer], Mapping[str, Any]] = {
     Adagrad: dict(
         lr=dict(type=float, low=0.001, high=0.1, scale="log"),
     ),

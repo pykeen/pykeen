@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """Utilities for generating triples."""
 
 import torch
 
 from .triples_factory import CoreTriplesFactory
 from .utils import get_entities, get_relations
-from ..typing import TorchRandomHint
+from ..typing import MappedTriples, TorchRandomHint
 from ..utils import ensure_torch_random_state
 
 __all__ = [
@@ -21,7 +19,7 @@ def generate_triples(
     num_triples: int = 101,
     compact: bool = True,
     random_state: TorchRandomHint = None,
-) -> torch.LongTensor:
+) -> MappedTriples:
     """Generate random triples in a torch tensor."""
     random_state = ensure_torch_random_state(random_state)
 
@@ -33,6 +31,11 @@ def generate_triples(
         ],
         dim=1,
     )
+    # ensure that each entity & relation occurs at least once
+    idx = torch.randperm(num_triples)[:num_entities]
+    rv[idx, 0] = torch.arange(num_entities)
+    idx = torch.randperm(num_triples)[:num_relations]
+    rv[idx, 1] = torch.arange(num_relations)
 
     if compact:
         new_entity_id = {entity: i for i, entity in enumerate(sorted(get_entities(rv)))}

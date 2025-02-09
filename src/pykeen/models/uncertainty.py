@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Analyze uncertainty.
 
@@ -59,12 +57,13 @@ A collection of related work on uncertainty quantification can be found here:
 https://github.com/uncertainty-toolbox/uncertainty-toolbox/blob/master/docs/paper_list.md
 """
 
-from typing import Callable, NamedTuple, Optional
+from collections.abc import Callable
+from typing import NamedTuple
 
 import torch
 
 from .base import Model
-from ..typing import InductiveMode
+from ..typing import FloatTensor, InductiveMode, LongTensor
 from ..utils import get_dropout_modules
 
 __all__ = [
@@ -91,10 +90,10 @@ class UncertainPrediction(NamedTuple):
     """
 
     #: The scores
-    score: torch.FloatTensor
+    score: FloatTensor
 
     #: The uncertainty, in the same shape as scores
-    uncertainty: torch.FloatTensor
+    uncertainty: FloatTensor
 
     @classmethod
     def from_scores(cls, scores: torch.Tensor):
@@ -105,12 +104,12 @@ class UncertainPrediction(NamedTuple):
 @torch.inference_mode()
 def predict_uncertain_helper(
     model: Model,
-    batch: torch.LongTensor,
-    score_method: Callable[..., torch.FloatTensor],
+    batch: LongTensor,
+    score_method: Callable[..., FloatTensor],
     num_samples: int,
-    slice_size: Optional[int] = None,
+    slice_size: int | None = None,
     *,
-    mode: Optional[InductiveMode],
+    mode: InductiveMode | None,
 ) -> UncertainPrediction:
     """
     Predict with uncertainty estimates via Monte-Carlo dropout.
@@ -171,10 +170,10 @@ def predict_uncertain_helper(
 
 def predict_hrt_uncertain(
     model: Model,
-    hrt_batch: torch.LongTensor,
+    hrt_batch: LongTensor,
     num_samples: int = 5,
     *,
-    mode: Optional[InductiveMode] = None,
+    mode: InductiveMode | None = None,
 ) -> UncertainPrediction:
     """
     Calculate the scores with uncertainty quantification via Monte-Carlo dropout.
@@ -222,11 +221,11 @@ def predict_hrt_uncertain(
 
 def predict_h_uncertain(
     model: Model,
-    rt_batch: torch.LongTensor,
+    rt_batch: LongTensor,
     num_samples: int = 5,
-    slice_size: Optional[int] = None,
+    slice_size: int | None = None,
     *,
-    mode: Optional[InductiveMode] = None,
+    mode: InductiveMode | None = None,
 ) -> UncertainPrediction:
     """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -274,11 +273,11 @@ def predict_h_uncertain(
 
 def predict_r_uncertain(
     model: Model,
-    ht_batch: torch.LongTensor,
+    ht_batch: LongTensor,
     num_samples: int = 5,
-    slice_size: Optional[int] = None,
+    slice_size: int | None = None,
     *,
-    mode: Optional[InductiveMode] = None,
+    mode: InductiveMode | None = None,
 ) -> UncertainPrediction:
     """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
@@ -319,11 +318,11 @@ def predict_r_uncertain(
 
 def predict_t_uncertain(
     model: Model,
-    hr_batch: torch.LongTensor,
+    hr_batch: LongTensor,
     num_samples: int = 5,
-    slice_size: Optional[int] = None,
+    slice_size: int | None = None,
     *,
-    mode: Optional[InductiveMode] = None,
+    mode: InductiveMode | None = None,
 ) -> UncertainPrediction:
     """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 

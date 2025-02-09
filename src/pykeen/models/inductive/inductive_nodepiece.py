@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional
+from collections.abc import Callable, Mapping
+from typing import Any, ClassVar
 
 import more_itertools
 import torch
@@ -57,8 +56,8 @@ class InductiveNodePiece(InductiveERModel):
         relation_representations_kwargs: OptionalKwargs = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        validation_factory: Optional[CoreTriplesFactory] = None,
-        test_factory: Optional[CoreTriplesFactory] = None,
+        validation_factory: CoreTriplesFactory | None = None,
+        test_factory: CoreTriplesFactory | None = None,
         **kwargs,
     ) -> None:
         """

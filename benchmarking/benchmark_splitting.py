@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Benchmark the speed for generating new datasets by remixing old ones."""
 
 import itertools as itt
@@ -45,7 +43,7 @@ columns = [
 
 
 def _log(s):
-    tqdm.write(f'[{datetime.now().strftime("%H:%M:%S")}] {s}')
+    tqdm.write(f"[{datetime.now().strftime('%H:%M:%S')}] {s}")
 
 
 @click.command()
@@ -163,7 +161,7 @@ def _make_2(df, git_hash):
         "training_size",
         "testing_size",
     ]
-    for x, ax in zip(xs, axes.ravel()):
+    for x, ax in zip(xs, axes.ravel(), strict=False):
         sns.scatterplot(
             data=df,
             y="split_time",

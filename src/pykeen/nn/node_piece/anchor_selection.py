@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Anchor selection for NodePiece.
 
@@ -10,7 +8,7 @@ entities. Most of these methods rely on some form of
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterable, Optional, Sequence, Union
+from collections.abc import Iterable, Sequence
 
 import numpy
 import torch
@@ -54,7 +52,7 @@ class AnchorSelection(ExtraReprMixin, ABC):
     def __call__(
         self,
         edge_index: numpy.ndarray,
-        known_anchors: Optional[numpy.ndarray] = None,
+        known_anchors: numpy.ndarray | None = None,
     ) -> numpy.ndarray:
         """
         Select anchor nodes.
@@ -81,7 +79,7 @@ class AnchorSelection(ExtraReprMixin, ABC):
     def filter_unique(
         self,
         anchor_ranking: numpy.ndarray,
-        known_anchors: Optional[numpy.ndarray],
+        known_anchors: numpy.ndarray | None,
     ) -> numpy.ndarray:
         """
         Filter out already known anchors, and select from remaining ones afterwards.
@@ -112,7 +110,7 @@ class SingleSelection(AnchorSelection, ABC):
     def __call__(
         self,
         edge_index: numpy.ndarray,
-        known_anchors: Optional[numpy.ndarray] = None,
+        known_anchors: numpy.ndarray | None = None,
     ) -> numpy.ndarray:
         """
         Select anchor nodes.
@@ -200,7 +198,7 @@ class RandomAnchorSelection(SingleSelection):
     def __init__(
         self,
         num_anchors: int = 32,
-        random_seed: Optional[int] = None,
+        random_seed: int | None = None,
     ) -> None:
         """
         Initialize the selection stragegy.
@@ -224,7 +222,7 @@ class MixtureAnchorSelection(AnchorSelection):
     def __init__(
         self,
         selections: Sequence[HintOrType[AnchorSelection]],
-        ratios: Union[None, float, Sequence[float]] = None,
+        ratios: None | float | Sequence[float] = None,
         selections_kwargs: OneOrSequence[OptionalKwargs] = None,
         **kwargs,
     ) -> None:
@@ -254,10 +252,10 @@ class MixtureAnchorSelection(AnchorSelection):
         num_anchors = get_absolute_split_sizes(n_total=self.num_anchors, ratios=normalize_ratios(ratios=ratios))
         self.selections = [
             anchor_selection_resolver.make(selection, selection_kwargs, num_anchors=num)
-            for selection, selection_kwargs, num in zip(selections, selections_kwargs, num_anchors)
+            for selection, selection_kwargs, num in zip(selections, selections_kwargs, num_anchors, strict=False)
         ]
         # if pre-instantiated
-        for selection, num in zip(self.selections, num_anchors):
+        for selection, num in zip(self.selections, num_anchors, strict=False):
             if selection.num_anchors != num:
                 logger.warning(f"{selection} had wrong number of anchors. Setting to {num}")
                 selection.num_anchors = num
@@ -271,7 +269,7 @@ class MixtureAnchorSelection(AnchorSelection):
     def __call__(
         self,
         edge_index: numpy.ndarray,
-        known_anchors: Optional[numpy.ndarray] = None,
+        known_anchors: numpy.ndarray | None = None,
     ) -> numpy.ndarray:  # noqa: D102
         anchors = known_anchors or None
         for selection in self.selections:
@@ -279,6 +277,7 @@ class MixtureAnchorSelection(AnchorSelection):
         return anchors
 
 
+#: A resolver for NodePiece anchor selectors
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
     base=AnchorSelection,
     default=DegreeAnchorSelection,

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
 import logging
 import pathlib
-from typing import Any, ClassVar, Dict, Iterable, Mapping, MutableMapping, Optional, TextIO, Tuple, Union
+from collections.abc import Iterable, Mapping, MutableMapping
+from typing import Any, ClassVar, TextIO
 
 import numpy as np
 import pandas
@@ -12,7 +11,7 @@ import torch
 
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples
+from ..typing import EntityMapping, FloatTensor, LabeledTriples, MappedTriples
 
 __all__ = [
     "TriplesNumericLiteralsFactory",
@@ -22,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 
 def create_matrix_of_literals(
-    numeric_triples: np.array,
+    numeric_triples: np.ndarray,
     entity_to_id: EntityMapping,
-) -> Tuple[np.ndarray, Dict[str, int]]:
+) -> tuple[np.ndarray, dict[str, int]]:
     """Create matrix of literals where each row corresponds to an entity and each column to a literal."""
     data_relations = np.unique(np.ndarray.flatten(numeric_triples[:, 1:2]))
-    data_rel_to_id: Dict[str, int] = {value: key for key, value in enumerate(data_relations)}
+    data_rel_to_id: dict[str, int] = {value: key for key, value in enumerate(data_relations)}
     # Prepare literal matrix, set every literal to zero, and afterwards fill in the corresponding value if available
     num_literals = np.zeros([len(entity_to_id), len(data_rel_to_id)], dtype=np.float32)
 
@@ -73,9 +72,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     @classmethod
     def from_path(
         cls,
-        path: Union[str, pathlib.Path, TextIO],
+        path: str | pathlib.Path | TextIO,
         *,
-        path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
+        path_to_numeric_triples: None | str | pathlib.Path | TextIO = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if path_to_numeric_triples is None:
@@ -108,12 +107,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=literals_to_id,
         )
 
-    def get_numeric_literals_tensor(self) -> torch.FloatTensor:
+    def get_numeric_literals_tensor(self) -> FloatTensor:
         """Return the numeric literals as a tensor."""
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 
     @property
-    def literal_shape(self) -> Tuple[int, ...]:
+    def literal_shape(self) -> tuple[int, ...]:
         """Return the shape of the literals."""
         return self.numeric_literals.shape[1:]
 
@@ -126,9 +125,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        extra_metadata: Optional[Dict[str, Any]] = None,
+        extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
-        create_inverse_triples: Optional[bool] = None,
+        create_inverse_triples: bool | None = None,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
@@ -146,7 +145,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
+    def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping
         pandas.DataFrame(
@@ -168,7 +167,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             path.joinpath(f"{cls.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )
-        data["literals_to_id"] = dict(zip(df["label"], df["id"]))
+        data["literals_to_id"] = dict(zip(df["label"], df["id"], strict=False))
         # load literals
         data["numeric_literals"] = np.load(
             str(path.joinpath(cls.file_name_numeric_literals).with_suffix(suffix=".npy"))

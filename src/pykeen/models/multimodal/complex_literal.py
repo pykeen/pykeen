@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of the ComplexLiteral model."""
 
-from typing import Any, ClassVar, Mapping, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 import torch
 import torch.nn as nn
@@ -38,10 +37,10 @@ class ComplExLiteral(LiteralModel):
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
+    loss_default: ClassVar[type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
-    interaction_cls: ClassVar[Type[Interaction]] = ComplExInteraction
+    interaction_cls: ClassVar[type[Interaction]] = ComplExInteraction
 
     def __init__(
         self,

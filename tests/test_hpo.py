@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """Test hyper-parameter optimization."""
 
 import inspect
 import tempfile
 import unittest
-from typing import Collection, Type
+from collections.abc import Collection
 from unittest.mock import MagicMock, patch
 
 import optuna
@@ -60,7 +58,7 @@ class TestInvalidConfigurations(unittest.TestCase):
 class TestHPOObjective(unittest.TestCase):
     """Test HPO objective."""
 
-    def _test_re_raise(self, MockTrial, exception: Type[Exception]):  # noqa: N803
+    def _test_re_raise(self, MockTrial, exception: type[Exception]):  # noqa: N803
         """Test whether the given exception is raised when evaluating with the mocked trial."""
         objective = Objective(
             dataset=Nations,
@@ -386,7 +384,7 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
         (TrainingLoop, []),
     ],
 )
-def test_hpo_defaults(base_cls: Type, ignore: Collection[Type]):
+def test_hpo_defaults(base_cls: type, ignore: Collection[type]):
     """Test HPO defaults for components that are used in the HPO pipeline."""
     classes = set(get_subclasses(base_cls))
 

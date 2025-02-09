@@ -1,24 +1,22 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of the Comp-GCN model."""
 
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
-import torch
 from class_resolver import Hint
 
 from ..nbase import ERModel
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.representation import CombinedCompGCNRepresentations
 from ...triples import CoreTriplesFactory
-from ...typing import RelationRepresentation
+from ...typing import FloatTensor, RelationRepresentation
 
 __all__ = [
     "CompGCN",
 ]
 
 
-class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]):
+class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     """An implementation of CompGCN from [vashishth2020]_.
 
     This model uses graph convolutions, and composition functions.
@@ -41,9 +39,9 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         *,
         triples_factory: CoreTriplesFactory,
         embedding_dim: int = 64,
-        encoder_kwargs: Optional[Mapping[str, Any]] = None,
-        interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = None,
-        interaction_kwargs: Optional[Mapping[str, Any]] = None,
+        encoder_kwargs: Mapping[str, Any] | None = None,
+        interaction: Hint[Interaction[FloatTensor, RelationRepresentation, FloatTensor]] = None,
+        interaction_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ):
         """Initialize the model.

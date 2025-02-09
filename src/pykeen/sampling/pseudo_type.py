@@ -1,15 +1,12 @@
-# -*- coding: utf-8 -*-
-
 """Pseudo-Typed negative sampling."""
 
 import itertools
 import logging
-from typing import Tuple
 
 import torch
 
 from .negative_sampler import NegativeSampler
-from ..typing import MappedTriples
+from ..typing import LongTensor, MappedTriples
 from ..utils import create_relation_to_entity_set_mapping
 
 __all__ = [
@@ -22,7 +19,7 @@ logger = logging.getLogger(__name__)
 def create_index(
     mapped_triples: MappedTriples,
     num_relations: int,
-) -> Tuple[torch.LongTensor, torch.LongTensor]:
+) -> tuple[LongTensor, LongTensor]:
     """
     Create an index for efficient vectorized pseudo-type negative sampling.
 
@@ -72,10 +69,10 @@ class PseudoTypedNegativeSampler(NegativeSampler):
     """
 
     #: The array of offsets within the data array, shape: (2 * num_relations + 1,)
-    offsets: torch.LongTensor
+    offsets: LongTensor
 
     #: The concatenated sorted sets of head/tail entities
-    data: torch.LongTensor
+    data: LongTensor
 
     def __init__(
         self,
@@ -95,7 +92,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         self.data, self.offsets = create_index(mapped_triples=mapped_triples, num_relations=self.num_relations)
 
     # docstr-coverage: inherited
-    def corrupt_batch(self, positive_batch: torch.LongTensor):  # noqa: D102
+    def corrupt_batch(self, positive_batch: LongTensor):  # noqa: D102
         batch_size = positive_batch.shape[0]
 
         # shape: (batch_size, num_neg_per_pos, 3)

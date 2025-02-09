@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Constants for PyKEEN testing."""
 
 import os

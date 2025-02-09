@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Test embeddings."""
 
 from collections import ChainMap
-from typing import Any, ClassVar, MutableMapping, Tuple
+from collections.abc import MutableMapping
+from typing import Any, ClassVar
 
 import numpy
 import torch
@@ -166,7 +165,7 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
     kwargs = dict(
         max_id=7,
     )
-    shape: Tuple[int, ...] = (13,)
+    shape: tuple[int, ...] = (13,)
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -205,7 +204,7 @@ class CachedTextRepresentationTests(TextRepresentationTests):
     """Tests for cached text representations."""
 
     cls = pykeen.nn.representation.CachedTextRepresentation
-    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.utils.IdentityCache())
+    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.text.IdentityCache())
     key_labels: str = "identifiers"
 
 
@@ -359,8 +358,8 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
     """Tests for partition representation."""
 
     cls = pykeen.nn.representation.PartitionRepresentation
-    max_ids: ClassVar[Tuple[int, ...]] = (5, 7)
-    shape: Tuple[int, ...] = (3,)
+    max_ids: ClassVar[tuple[int, ...]] = (5, 7)
+    shape: tuple[int, ...] = (3,)
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -389,7 +388,7 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
     def test_coherence(self):
         """Test coherence with base representations."""
         xs = self.instance(indices=None)
-        for x, (repr_id, local_index) in zip(xs, self.instance.assignment):
+        for x, (repr_id, local_index) in zip(xs, self.instance.assignment, strict=False):
             x_base = self.instance.bases[repr_id](indices=local_index)
             assert (x_base == x).all()
 
@@ -401,7 +400,7 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
 
         # inconsistent base shapes
         shapes = range(2, len(self.max_ids) + 2)
-        bases_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes)]
+        bases_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes, strict=False)]
         with self.assertRaises(ValueError):
             self.cls(**ChainMap(dict(bases_kwargs=bases_kwargs), self.instance_kwargs))
 

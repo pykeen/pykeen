@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
-
 """A simple AutoSF-based model."""
 
-from typing import Any, ClassVar, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any, ClassVar
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import AutoSFInteraction
-from ...typing import Sign
+from ...typing import Representation, Sign
 
 __all__ = [
     "AutoSF",
 ]
 
-YAGO310_COEFFICIENTS: Sequence[Tuple[int, int, int, Sign]] = [
+YAGO310_COEFFICIENTS: Sequence[tuple[int, int, int, Sign]] = [
     # diagonal entries
     (0, 0, 0, 1),
     (1, 1, 1, 1),
@@ -25,7 +24,7 @@ YAGO310_COEFFICIENTS: Sequence[Tuple[int, int, int, Sign]] = [
 ]
 
 
-class AutoSF(ERModel):
+class AutoSF(ERModel[Representation, Representation, Representation]):
     r"""An implementation of AutoSF from [zhang2020]_.
 
     The AutoSF model combines one or more :class:`pykeen.nn.Embedding`s for entities and relations with a
@@ -50,8 +49,8 @@ class AutoSF(ERModel):
         self,
         embedding_dim: int = 256,
         num_components: int = 4,
-        coefficients: Sequence[Tuple[int, int, int, Sign]] = YAGO310_COEFFICIENTS,
-        embedding_kwargs: Optional[Mapping[str, Any]] = None,
+        coefficients: Sequence[tuple[int, int, int, Sign]] = YAGO310_COEFFICIENTS,
+        embedding_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize AutoSF via the :class:`pykeen.nn.AutoSFInteraction` interaction.

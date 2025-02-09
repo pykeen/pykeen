@@ -1,57 +1,31 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of TuckEr."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from class_resolver import OptionalKwargs
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import TuckerInteraction
+from ...nn import TuckERInteraction
 from ...nn.init import xavier_normal_
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "TuckER",
 ]
 
 
-class TuckER(ERModel):
+class TuckER(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of TuckEr from [balazevic2019]_.
 
-    TuckER is a linear model that is based on the tensor factorization method Tucker in which a three-mode tensor
-    $\mathfrak{X} \in \mathbb{R}^{I \times J \times K}$ is decomposed into a set of factor matrices
-    $\textbf{A} \in \mathbb{R}^{I \times P}$, $\textbf{B} \in \mathbb{R}^{J \times Q}$, and
-    $\textbf{C} \in \mathbb{R}^{K \times R}$ and a core tensor
-    $\mathfrak{Z} \in \mathbb{R}^{P \times Q \times R}$ (of lower rank):
+    It represents entities by $d_e$-dimensional vectors and relations by $d_r$-dimensional vectors, stored in
+    :class:`~pykeen.nn.representation.Embedding`. The state-ful :class:`~pykeen.nn.modules.TuckERInteraction` is then
+    used to score triples.
 
-    .. math::
-
-        \mathfrak{X} \approx \mathfrak{Z} \times_1 \textbf{A} \times_2 \textbf{B} \times_3 \textbf{C}
-
-    where $\times_n$ is the tensor product, with $n$ denoting along which mode the tensor product is computed.
-    In TuckER, a knowledge graph is considered as a binary tensor which is factorized using the Tucker factorization
-    where $\textbf{E} = \textbf{A} = \textbf{C} \in \mathbb{R}^{n_{e} \times d_e}$ denotes the entity embedding
-    matrix, $\textbf{R} = \textbf{B} \in \mathbb{R}^{n_{r} \times d_r}$ represents the relation embedding matrix,
-    and $\mathfrak{W} = \mathfrak{Z} \in \mathbb{R}^{d_e \times d_r \times d_e}$ is the *core tensor* that
-    indicates the extent of interaction between the different factors. The interaction model is defined as:
-
-    .. math::
-
-        f(h,r,t) = \mathfrak{W} \times_1 \textbf{h} \times_2 \textbf{r} \times_3 \textbf{t}
-
-    where $\textbf{h},\textbf{t}$ correspond to rows of $\textbf{E}$ and $\textbf{r}$ to a row of $\textbf{R}$.
-
-    The dropout values correspond to the following dropouts in the model's score function:
-
-    .. math::
-
-        \text{Dropout}_2(BN(\text{Dropout}_0(BN(h)) \times_1 \text{Dropout}_1(W \times_2 r))) \times_3 t
-
-    where h,r,t are the head, relation, and tail embedding, W is the core tensor, \times_i denotes the tensor
-    product along the i-th mode, BN denotes batch normalization, and :math:`\text{Dropout}` dropout.
+    For $E$ entities and $R$ relations, the model has $Ed_e + Rd_r + d_e^2d_r$ effective parameters (ignoring additional
+    parameters from the :class:`torch.nn.BatchNorm1d` layers in :class:`~pykeen.nn.modules.TuckERInteraction`).
 
     .. seealso::
 
@@ -74,7 +48,7 @@ class TuckER(ERModel):
         dropout_2=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
@@ -82,7 +56,7 @@ class TuckER(ERModel):
         self,
         *,
         embedding_dim: int = 200,
-        relation_dim: Optional[int] = None,
+        relation_dim: int | None = None,
         dropout_0: float = 0.3,
         dropout_1: float = 0.4,
         dropout_2: float = 0.5,
@@ -121,7 +95,7 @@ class TuckER(ERModel):
         """
         relation_dim = relation_dim or embedding_dim
         super().__init__(
-            interaction=TuckerInteraction,
+            interaction=TuckERInteraction,
             interaction_kwargs=dict(
                 embedding_dim=embedding_dim,
                 relation_dim=relation_dim,

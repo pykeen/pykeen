@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
 """Non-parametric baseline models."""
-
-from typing import Optional
 
 import numpy
 import torch
@@ -10,7 +6,7 @@ import torch
 from .utils import get_csr_matrix, get_relation_similarity, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
-from ...typing import InductiveMode
+from ...typing import FloatTensor, InductiveMode, LongTensor
 
 __all__ = [
     "EvaluationOnlyModel",
@@ -21,10 +17,6 @@ __all__ = [
 
 class EvaluationOnlyModel(Model):
     """A model which only implements the methods used for evaluation."""
-
-    can_slice_h = False
-    can_slice_r = False
-    can_slice_t = False
 
     def __init__(self, triples_factory: CoreTriplesFactory):
         """Non-parametric models take a minimal set of arguments.
@@ -39,7 +31,7 @@ class EvaluationOnlyModel(Model):
             random_seed=0,
         )
 
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> int:
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         return self.num_entities
 
     def _reset_parameters_(self):
@@ -50,11 +42,11 @@ class EvaluationOnlyModel(Model):
         """Non-parametric models do not implement :meth:`Model.collect_regularization_term`."""
         raise RuntimeError
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs):  # noqa: D102
+    def score_hrt(self, hrt_batch: LongTensor, **kwargs):  # noqa: D102
         """Non-parametric models do not implement :meth:`Model.score_hrt`."""
         raise RuntimeError
 
-    def score_r(self, ht_batch: torch.LongTensor, **kwargs):  # noqa: D102
+    def score_r(self, ht_batch: LongTensor, **kwargs):  # noqa: D102
         """Non-parametric models do not implement :meth:`Model.score_r`."""
         raise RuntimeError
 
@@ -105,30 +97,30 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         super().__init__(triples_factory=triples_factory)
         h, r, t = numpy.asarray(triples_factory.mapped_triples).T
         if relation_margin:
-            self.head_per_relation, self.tail_per_relation = [
+            self.head_per_relation, self.tail_per_relation = (
                 get_csr_matrix(
                     row_indices=r,
                     col_indices=col_indices,
                     shape=(triples_factory.num_relations, triples_factory.num_entities),
                 )
                 for col_indices in (h, t)
-            ]
+            )
         else:
             self.head_per_relation = self.tail_per_relation = None
         if entity_margin:
-            self.head_per_tail, self.tail_per_head = [
+            self.head_per_tail, self.tail_per_head = (
                 get_csr_matrix(
                     row_indices=row_indices,
                     col_indices=col_indices,
                     shape=(triples_factory.num_entities, triples_factory.num_entities),
                 )
                 for row_indices, col_indices in ((t, h), (h, t))
-            ]
+            )
         else:
             self.head_per_tail = self.tail_per_head = None
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return marginal_score(
             entity_relation_batch=hr_batch,
             per_entity=self.tail_per_head,
@@ -137,7 +129,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         )
 
     # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return marginal_score(
             entity_relation_batch=rt_batch.flip(1),
             per_entity=self.head_per_tail,
@@ -161,7 +153,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        threshold: Optional[float] = None,
+        threshold: float | None = None,
     ):
         """
         Initialize the model.
@@ -176,25 +168,25 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         self.sim, self.sim_inv = get_relation_similarity(triples_factory, threshold=threshold)
         # mapping from relations to head/tail entities
         h, r, t = numpy.asarray(triples_factory.mapped_triples).T
-        self.rel_to_head, self.rel_to_tail = [
+        self.rel_to_head, self.rel_to_tail = (
             get_csr_matrix(
                 row_indices=r,
                 col_indices=col_indices,
                 shape=(triples_factory.num_relations, triples_factory.num_entities),
             )
             for col_indices in (h, t)
-        ]
+        )
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        r = hr_batch[:, 1]
+    def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+        r = hr_batch[:, 1].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)
 
     # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
-        r = rt_batch[:, 0]
+    def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+        r = rt_batch[:, 0].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)

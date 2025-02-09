@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """Tests for uncertainty workflows."""
 
-from typing import Callable, Tuple
+from collections.abc import Callable
 
 import torch
 
@@ -41,8 +39,8 @@ class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
 
     def _test_predict_uncertain(
         self,
-        method: Callable[..., Tuple[torch.FloatTensor, torch.FloatTensor]],
-        expected_shape: Tuple[int, ...],
+        method: Callable[..., tuple[torch.FloatTensor, torch.FloatTensor]],
+        expected_shape: tuple[int, ...],
         **kwargs,
     ):
         """General testing of uncertainty prediction."""

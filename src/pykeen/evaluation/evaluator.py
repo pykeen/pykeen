@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Basic structure of a evaluator."""
 
 from __future__ import annotations
@@ -9,19 +7,13 @@ import timeit
 import warnings
 from abc import ABC, abstractmethod
 from collections import ChainMap
+from collections.abc import Collection, Hashable, Mapping
 from typing import (
     Any,
     ClassVar,
-    Collection,
     Generic,
-    List,
-    Mapping,
     NamedTuple,
-    Optional,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -35,8 +27,16 @@ from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
-from ..utils import flatten_dictionary, format_relative_comparison, normalize_string, prepare_filter_triples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, InductiveMode, MappedTriples, Target
+from ..utils import (
+    FloatTensor,
+    LongTensor,
+    determine_maximum_batch_size,
+    flatten_dictionary,
+    format_relative_comparison,
+    normalize_string,
+    prepare_filter_triples,
+)
 
 __all__ = [
     "Evaluator",
@@ -49,13 +49,13 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 # TODO: maybe move into separate module?
-MetricKeyType = TypeVar("MetricKeyType", bound=Tuple)
+MetricKeyType = TypeVar("MetricKeyType", bound=tuple)
 
 
 class MetricResults(Generic[MetricKeyType]):
     """Results from computing metrics."""
 
-    metrics: ClassVar[Mapping[str, Type[Metric]]]
+    metrics: ClassVar[Mapping[str, type[Metric]]]
     data: Mapping[MetricKeyType, float]
 
     def __init__(self, data: Mapping[MetricKeyType | str, float]):
@@ -116,6 +116,7 @@ class MetricResults(Generic[MetricKeyType]):
         """Output the metrics as a pandas dataframe."""
         one_key = next(iter(self.data.keys()))
         # assert isinstance(one_key, NamedTuple)
+        # TODO: should we enforce this?
         one_key_nt = cast(NamedTuple, one_key)
         columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
@@ -129,16 +130,15 @@ class Evaluator(ABC, Generic[MetricKeyType]):
     intermediate results in its state, and offers a method to obtain the final results once finished.
     """
 
-    metric_result_cls: Type[MetricResults[MetricKeyType]]
+    metric_result_cls: type[MetricResults[MetricKeyType]]
 
     def __init__(
         self,
         filtered: bool = False,
         requires_positive_mask: bool = False,
-        batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
-        automatic_memory_optimization: bool = True,
-        mode: Optional[InductiveMode] = None,
+        batch_size: int | None = None,
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
     ):
         """Initialize the evaluator.
 
@@ -146,8 +146,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         :param requires_positive_mask: Does the evaluator need access to the masks?
         :param batch_size: >0. Evaluation batch size.
         :param slice_size: >0. The divisor for the scoring function when using slicing
-        :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
-            evaluation with regards to the hardware at hand.
         :param mode:
             the inductive mode, or None for transductive evaluation
         """
@@ -155,7 +153,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
-        self.automatic_memory_optimization = automatic_memory_optimization
         self.mode = mode
 
     @classmethod
@@ -168,9 +165,9 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: Optional[torch.FloatTensor] = None,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:
         """Process a batch of triples with their computed scores for all entities.
 
@@ -198,15 +195,15 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
+        batch_size: int | None = None,
+        slice_size: int | None = None,
+        device: torch.device | None = None,
         use_tqdm: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-        restrict_entities_to: Optional[Collection[int]] = None,
-        restrict_relations_to: Optional[Collection[int]] = None,
+        tqdm_kwargs: Mapping[str, Any] | None = None,
+        restrict_entities_to: Collection[int] | None = None,
+        restrict_relations_to: Collection[int] | None = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults[MetricKeyType]:
@@ -366,9 +363,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         mapped_triples = mapped_triples.to(device=device)
         num_triples = mapped_triples.shape[0]
         # no batch size -> automatic memory optimization
-        if batch_size is None:
-            batch_size = 32 if device.type == "cpu" else num_triples
-            logger.debug(f"Automatically set maximum batch size to {batch_size=}")
+        batch_size = determine_maximum_batch_size(batch_size, device, num_triples)
         # no slice size -> automatic memory optimization
         if slice_size is None:
             nums: set[int] = set()
@@ -394,7 +389,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 evaluator=self,
                 mapped_triples=mapped_triples,
                 # note: we provide the *maximum* batch and slice size here; it is reduced if necessary
-                batch_size=num_triples,
+                batch_size=batch_size,
                 slice_size=slice_size,
                 progress_bar=progress_bar,
                 targets=targets,
@@ -442,12 +437,31 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             )
 
 
-def _hasher(kwargs: Mapping[str, Any]) -> int:
+def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
     """Share optimal batch size whenever this hash matches."""
-    return hash((id(kwargs["evaluator"]), kwargs["mapped_triples"].shape[0], kwargs["targets"]))
+    ignored_keys = {
+        # we ignore keys which clearly do not have an effect on the memory consumptions
+        "progress_bar",
+        # we ignore batch_size and slice_size as those are optimized
+        "batch_size",
+        "slice_size",
+        # we use mapped_triples' shape instead
+        "mapped_triples",
+        # we want to separate optimize for each evaluator instance
+        "evaluator",
+    }
+    values: tuple[Hashable, ...] = (kwargs["mapped_triples"].shape[0], id(kwargs["evaluator"]))
+    for key, value in kwargs.items():
+        if key in ignored_keys:
+            continue
+        if not isinstance(value, Hashable):
+            warnings.warn(f"Encountered {type(value)=} which cannot be hashed", category=UserWarning, stacklevel=3)
+            continue
+        values += (value,)
+    return hash(values)
 
 
-@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_optimal_batch_size_group_id)
 @torch.inference_mode()
 def evaluate(
     *,
@@ -463,7 +477,7 @@ def evaluate(
     Evaluate a model with the given evaluator.
 
     .. note ::
-        this method is wrapped into two memory utilization maximizer, which reduce the parameters `batch_size` and
+        This method is decorated by maximize_memory_utilization, which reduce the parameters `batch_size` and
         `slice_size`, if necessary due to memory constraints.
 
     :param evaluator:
@@ -512,10 +526,10 @@ def evaluate(
 
 def create_sparse_positive_filter_(
     hrt_batch: MappedTriples,
-    all_pos_triples: torch.LongTensor,
-    relation_filter: torch.BoolTensor | None = None,
+    all_pos_triples: LongTensor,
+    relation_filter: BoolTensor | None = None,
     filter_col: int = 0,
-) -> Tuple[torch.LongTensor, torch.BoolTensor]:
+) -> tuple[LongTensor, BoolTensor]:
     """Compute indices of all positives.
 
     For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
@@ -564,9 +578,9 @@ def create_sparse_positive_filter_(
 
 
 def create_dense_positive_mask_(
-    zero_tensor: torch.FloatTensor,
-    filter_batch: torch.LongTensor,
-) -> torch.FloatTensor:
+    zero_tensor: FloatTensor,
+    filter_batch: LongTensor,
+) -> FloatTensor:
     """Construct dense positive mask.
 
     :param zero_tensor: shape: (batch_size, num_entities)
@@ -582,9 +596,9 @@ def create_dense_positive_mask_(
 
 
 def filter_scores_(
-    scores: torch.FloatTensor,
-    filter_batch: torch.LongTensor,
-) -> torch.FloatTensor:
+    scores: FloatTensor,
+    filter_batch: LongTensor,
+) -> FloatTensor:
     """Filter scores by setting true scores to NaN.
 
     :param scores: shape: (batch_size, num_entities)
@@ -596,7 +610,7 @@ def filter_scores_(
         A reference to the scores, which have been updated in-place.
     """
     # Bind shape
-    batch_size, num_entities = scores.shape
+    num_entities = scores.shape[1]
 
     # Set all filtered triples to NaN to ensure their exclusion in subsequent calculations
     scores[filter_batch[:, 0], filter_batch[:, 1]] = float("nan")
@@ -605,7 +619,7 @@ def filter_scores_(
     # (scores != scores) yields true for all NaN instances (IEEE 754), thus allowing to count the filtered triples.
     if ((scores != scores).sum(dim=1) == num_entities).any():
         logger.warning(
-            "User selected filtered metric computation, but all corrupted triples exists also as positive " "triples",
+            "User selected filtered metric computation, but all corrupted triples exists also as positive triples",
         )
 
     return scores
@@ -616,13 +630,13 @@ def _evaluate_batch(
     model: Model,
     target: Target,
     evaluator: Evaluator,
-    slice_size: Optional[int],
-    all_pos_triples: Optional[MappedTriples],
-    relation_filter: Optional[torch.BoolTensor],
-    restrict_entities_to: Optional[torch.LongTensor],
+    slice_size: int | None,
+    all_pos_triples: MappedTriples | None,
+    relation_filter: BoolTensor | None,
+    restrict_entities_to: LongTensor | None,
     *,
-    mode: Optional[InductiveMode],
-) -> torch.BoolTensor:
+    mode: InductiveMode | None,
+) -> BoolTensor:
     """
     Evaluate ranking for batch.
 
@@ -711,10 +725,10 @@ def _evaluate_batch(
 
 def get_candidate_set_size(
     mapped_triples: MappedTriples,
-    restrict_entities_to: Optional[Collection[int]] = None,
-    restrict_relations_to: Optional[Collection[int]] = None,
-    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-    num_entities: Optional[int] = None,
+    restrict_entities_to: Collection[int] | None = None,
+    restrict_relations_to: Collection[int] | None = None,
+    additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+    num_entities: int | None = None,
 ) -> pandas.DataFrame:
     """
     Calculate the candidate set sizes for head/tail prediction for the given triples.
@@ -786,7 +800,7 @@ def get_candidate_set_size(
 
 
 def normalize_flattened_metric_results(
-    result: Mapping[str, Any], metric_result_cls: Type[MetricResults] | None = None
+    result: Mapping[str, Any], metric_result_cls: type[MetricResults] | None = None
 ) -> Mapping[str, Any]:
     """
     Flatten metric result dictionary and normalize metric keys.

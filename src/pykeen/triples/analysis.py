@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
-
 """Analysis utilities for (mapped) triples."""
 
 import hashlib
 import itertools as itt
 import logging
 from collections import defaultdict
-from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
+from collections.abc import Collection, Iterable, Mapping, Sequence
+from typing import NamedTuple
 
 import numpy
 import pandas as pd
@@ -77,11 +76,11 @@ SUPPORT_COLUMN_NAME = "support"
 def _add_labels(
     df: pd.DataFrame,
     add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]],
+    label_to_id: Mapping[str, int] | None,
     id_column: str,
     label_column: str,
     label_to_id_mapping_name: str,
-    triples_factory: Optional[TriplesFactory] = None,
+    triples_factory: TriplesFactory | None = None,
 ) -> pd.DataFrame:
     """Add labels to a dataframe."""
     if not add_labels:
@@ -105,8 +104,8 @@ def add_entity_labels(
     *,
     df: pd.DataFrame,
     add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]] = None,
-    triples_factory: Optional[TriplesFactory] = None,
+    label_to_id: Mapping[str, int] | None = None,
+    triples_factory: TriplesFactory | None = None,
 ) -> pd.DataFrame:
     """Add entity labels to a dataframe."""
     return _add_labels(
@@ -124,8 +123,8 @@ def add_relation_labels(
     df: pd.DataFrame,
     *,
     add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]] = None,
-    triples_factory: Optional[TriplesFactory] = None,
+    label_to_id: Mapping[str, int] | None = None,
+    triples_factory: TriplesFactory | None = None,
 ) -> pd.DataFrame:
     """Add relation labels to a dataframe."""
     return _add_labels(
@@ -149,8 +148,8 @@ class PatternMatch(NamedTuple):
 
 
 def composition_candidates(
-    mapped_triples: Iterable[Tuple[int, int, int]],
-) -> Collection[Tuple[int, int]]:
+    mapped_triples: Iterable[tuple[int, int, int]],
+) -> Collection[tuple[int, int]]:
     r"""Pre-filtering relation pair candidates for composition pattern.
 
     Determines all relation pairs $(r, r')$ with at least one entity $e$ such that
@@ -177,39 +176,39 @@ def composition_candidates(
 
 
 def index_relations(
-    triples: Iterable[Tuple[int, int, int]],
-) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    triples: Iterable[tuple[int, int, int]],
+) -> tuple[Mapping[int, set[int]], Mapping[int, set[int]]]:
     """Create an index for in-relationships and out-relationships."""
     # index triples
     # incoming relations per entity
-    ins: DefaultDict[int, Set[int]] = defaultdict(set)
+    ins: defaultdict[int, set[int]] = defaultdict(set)
     # outgoing relations per entity
-    outs: DefaultDict[int, Set[int]] = defaultdict(set)
+    outs: defaultdict[int, set[int]] = defaultdict(set)
     for h, r, t in triples:
         outs[h].add(r)
         ins[t].add(r)
     return dict(ins), dict(outs)
 
 
-def index_pairs(triples: Iterable[Tuple[int, int, int]]) -> Mapping[int, Set[Tuple[int, int]]]:
+def index_pairs(triples: Iterable[tuple[int, int, int]]) -> Mapping[int, set[tuple[int, int]]]:
     """Create a mapping from relation to head/tail pairs for fast lookup."""
-    rv: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
+    rv: defaultdict[int, set[tuple[int, int]]] = defaultdict(set)
     for h, r, t in triples:
         rv[r].add((h, t))
     return dict(rv)
 
 
-def get_adjacency_dict(triples: Iterable[Tuple[int, int, int]]) -> Mapping[int, Mapping[int, Set[int]]]:
+def get_adjacency_dict(triples: Iterable[tuple[int, int, int]]) -> Mapping[int, Mapping[int, set[int]]]:
     """Create a two-level mapping from relation to head to tails."""
     # indexing triples for fast join r1 & r2
-    rv: DefaultDict[int, DefaultDict[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
+    rv: defaultdict[int, defaultdict[int, set[int]]] = defaultdict(lambda: defaultdict(set))
     for h, r, t in triples:
         rv[r][h].add(t)
     return rv
 
 
 def iter_unary_patterns(
-    pairs: Mapping[int, Set[Tuple[int, int]]],
+    pairs: Mapping[int, set[tuple[int, int]]],
 ) -> Iterable[PatternMatch]:
     r"""
     Yield unary patterns from pre-indexed triples.
@@ -240,7 +239,7 @@ def iter_unary_patterns(
 
 
 def iter_binary_patterns(
-    pairs: Mapping[int, Set[Tuple[int, int]]],
+    pairs: Mapping[int, set[tuple[int, int]]],
 ) -> Iterable[PatternMatch]:
     r"""
     Yield binary patterns from pre-indexed triples.
@@ -264,8 +263,8 @@ def iter_binary_patterns(
 
 
 def iter_ternary_patterns(
-    mapped_triples: Collection[Tuple[int, int, int]],
-    pairs: Mapping[int, Set[Tuple[int, int]]],
+    mapped_triples: Collection[tuple[int, int, int]],
+    pairs: Mapping[int, set[tuple[int, int]]],
 ) -> Iterable[PatternMatch]:
     r"""
     Yield ternary patterns from pre-indexed triples.
@@ -306,7 +305,7 @@ def iter_ternary_patterns(
 
 
 def iter_patterns(
-    mapped_triples: Collection[Tuple[int, int, int]],
+    mapped_triples: Collection[tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
     """Iterate over unary, binary, and ternary patterns.
 
@@ -323,7 +322,7 @@ def iter_patterns(
 
 
 def triple_set_hash(
-    mapped_triples: Collection[Tuple[int, int, int]],
+    mapped_triples: Collection[tuple[int, int, int]],
 ) -> str:
     """
     Compute an order-invariant hash value for a set of triples given as list of triples.
@@ -342,7 +341,7 @@ def _is_injective_mapping(
     df: pd.DataFrame,
     source: str,
     target: str,
-) -> Tuple[int, float]:
+) -> tuple[int, float]:
     """
     (Soft-)Determine whether there is an injective mapping from source to target.
 
@@ -364,7 +363,7 @@ def _is_injective_mapping(
 
 
 def iter_relation_cardinality_types(
-    mapped_triples: Collection[Tuple[int, int, int]],
+    mapped_triples: Collection[tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
     """Iterate over relation-cardinality types.
 
@@ -402,8 +401,8 @@ def iter_relation_cardinality_types(
 
 
 def _help_iter_relation_cardinality_types(
-    mapped_triples: Collection[Tuple[int, int, int]],
-) -> Iterable[Tuple[int, int, float, float]]:
+    mapped_triples: Collection[tuple[int, int, int]],
+) -> Iterable[tuple[int, int, float, float]]:
     df = pd.DataFrame(data=mapped_triples, columns=COLUMN_LABELS)
     for relation, group in df.groupby(by=LABEL_RELATION):
         n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source=LABEL_HEAD, target=LABEL_TAIL)
@@ -414,8 +413,8 @@ def _help_iter_relation_cardinality_types(
 
 
 def _get_skyline(
-    xs: Iterable[Tuple[int, float]],
-) -> Iterable[Tuple[int, float]]:
+    xs: Iterable[tuple[int, float]],
+) -> Iterable[tuple[int, float]]:
     """Calculate 2-D skyline."""
     # cf. https://stackoverflow.com/questions/19059878/dominant-set-of-points-in-on
     largest_y = float("-inf")
@@ -440,7 +439,7 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
     :yields: An entry from the support-confidence skyline.
     """
     # group by (relation id, pattern type)
-    data: DefaultDict[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
+    data: defaultdict[tuple[int, str], set[tuple[int, float]]] = defaultdict(set)
     for tup in data_stream:
         data[tup[:2]].add(tup[2:])
     # for each group, yield from skyline
@@ -451,8 +450,8 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
 
 def _get_counts(
     mapped_triples: MappedTriples,
-    column: Union[int, Sequence[int]],
-) -> Tuple[numpy.ndarray, numpy.ndarray]:
+    column: int | Sequence[int],
+) -> tuple[numpy.ndarray, numpy.ndarray]:
     unique, counts = mapped_triples[:, column].view(-1).unique(return_counts=True)
     return unique.numpy(), counts.numpy()
 
@@ -501,13 +500,14 @@ def get_relation_counts(
             zip(
                 [RELATION_ID_COLUMN_NAME, COUNT_COLUMN_NAME],
                 _get_counts(mapped_triples=mapped_triples, column=1),
+                strict=False,
             )
         )
     )
 
 
 def relation_pattern_types(
-    mapped_triples: Collection[Tuple[int, int, int]],
+    mapped_triples: Collection[tuple[int, int, int]],
 ) -> pd.DataFrame:
     r"""
     Categorize relations based on patterns from RotatE [sun2019]_.
@@ -554,9 +554,9 @@ def relation_pattern_types(
 
 
 def relation_injectivity(
-    mapped_triples: Collection[Tuple[int, int, int]],
+    mapped_triples: Collection[tuple[int, int, int]],
     add_labels: bool = True,
-    label_to_id: Optional[Mapping[str, int]] = None,
+    label_to_id: Mapping[str, int] | None = None,
 ) -> pd.DataFrame:
     """
     Calculate "soft" injectivity scores for each relation.
@@ -580,9 +580,9 @@ def relation_injectivity(
 
 
 def relation_cardinality_types(
-    mapped_triples: Collection[Tuple[int, int, int]],
+    mapped_triples: Collection[tuple[int, int, int]],
     add_labels: bool = True,
-    label_to_id: Optional[Mapping[str, int]] = None,
+    label_to_id: Mapping[str, int] | None = None,
 ) -> pd.DataFrame:
     r"""
     Determine the relation cardinality types.
@@ -667,9 +667,9 @@ def entity_relation_co_occurrence(
 
 
 def get_relation_functionality(
-    mapped_triples: Collection[Tuple[int, int, int]],
+    mapped_triples: Collection[tuple[int, int, int]],
     add_labels: bool = True,
-    label_to_id: Optional[Mapping[str, int]] = None,
+    label_to_id: Mapping[str, int] | None = None,
 ) -> pd.DataFrame:
     """Calculate relation functionalities.
 

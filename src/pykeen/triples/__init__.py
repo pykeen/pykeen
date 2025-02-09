@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 r"""
 A module to handle triples.
 
@@ -14,8 +12,7 @@ into the index-based format, as well as advanced methods for creating leakage-fr
 test splits and analyzing data distribution.
 
 Basic Handling
-==============
-
+--------------
 The most basic information about a knowledge graph is stored in :class:`KGInfo`. It contains the
 minimal information needed to create a knowledge graph embedding: the number of entities and
 relations, as well as information about the use of inverse relations (which artificially increases
@@ -36,8 +33,7 @@ It also extends serialization to ensure that the string-to-index mappings are in
 with the files.
 
 Splitting
-=========
-
+---------
 To evaluate knowledge graph embedding models, we need training, validation, and test sets.
 In classical machine learning settings, we often have a large number of independent samples and can use simple random
 sampling.
@@ -50,7 +46,7 @@ triples used in the evaluation are also present in the training triples.
 PyKEEN includes methods to construct splits that ensure the presence of all entities and relations in the training part.
 Those can be found in :mod:`pykeen.triples.splitting`.
 
-In addition, knowledge graphs may contain inverse relationships, such as a _predecessor_ and _successor_ relationship.
+In addition, knowledge graphs may contain inverse relationships, such as a *predecessor* and *successor* relationship.
 In this case, careless splitting can lead to test leakage, where models that only check whether the inverse relationship
 exists in training can produce significantly strong results, inflating scores without learning meaningful relationship
 patterns.
@@ -59,10 +55,8 @@ PyKEEN includes methods to check knowledge graph splits for leakage, which can b
 
 In :mod:`pykeen.triples.remix`, we offer methods to examine the effects of a particular choice of splits.
 
-
 Analysis
-========
-
+--------
 We also provide methods for analyzing knowledge graphs.
 These include simple statistics such as the number of entities or relations (in :mod:`pykeen.triples.stats`),
 as well as advanced analysis of relational patterns (:mod:`pykeen.triples.analysis`).

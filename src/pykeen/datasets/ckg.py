@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Clinical Knowledge Graph."""
 
-import pathlib
 import tarfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Optional
 from urllib.request import urlretrieve
 
 import click
@@ -61,7 +58,7 @@ class CKG(TabbedDataset):
         )
         self.preloaded_path = self.cache_root.joinpath("preloaded.tsv.gz")
 
-    def _get_path(self) -> Optional[pathlib.Path]:
+    def _get_path(self) -> Path | None:
         return self.preloaded_path
 
     def _get_df(self) -> pd.DataFrame:

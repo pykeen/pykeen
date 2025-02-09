@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Test cases for training."""
 
 import tempfile
-from typing import Any, ClassVar, MutableMapping, Optional, Type
+from collections.abc import MutableMapping
+from typing import Any, ClassVar
 
 import torch
 import unittest_templates
@@ -29,9 +28,9 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
 
     model: Model
     factory: TriplesFactory
-    loss_cls: ClassVar[Type[Loss]]
+    loss_cls: ClassVar[type[Loss]]
     loss: Loss
-    optimizer_cls: ClassVar[Type[Optimizer]] = Adam
+    optimizer_cls: ClassVar[type[Optimizer]] = Adam
     optimizer: Optimizer
     random_seed = 0
     batch_size: int = 128
@@ -196,7 +195,7 @@ class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
     """A generic test case for sLCWA training loops."""
 
     #: Should negative samples be filtered?
-    filterer_cls: ClassVar[Optional[Type[Filterer]]] = None
+    filterer_cls: ClassVar[type[Filterer] | None] = None
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)

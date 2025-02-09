@@ -4,6 +4,7 @@ Regularizers
     :no-heading:
     :headings: --
     :skip: Regularizer
+    :include-all-objects:
 
 Base Classes
 ------------

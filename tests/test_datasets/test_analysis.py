@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Tests for dataset analysis utilities."""
 
 import itertools
 import unittest
-from typing import Iterable, Mapping
+from collections.abc import Iterable, Mapping
 
 import numpy as np
 import pandas
@@ -30,6 +28,7 @@ class TestUtils(unittest.TestCase):
             zip(
                 np.random.randint(low=0, high=200, size=n, dtype=int),
                 np.random.uniform(0, 6, size=n),
+                strict=False,
             )
         )
         self.assertEqual(set(_old_skyline(pairs)), set(triple_analysis._get_skyline(pairs)))

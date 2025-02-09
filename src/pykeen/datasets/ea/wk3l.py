@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The Wk3l-15k dataset family.
 
 Get a summary with ``python -m pykeen.datasets.wk3l``
@@ -9,7 +7,8 @@ import itertools
 import logging
 import pathlib
 from abc import ABC
-from typing import ClassVar, Iterable, Literal, Mapping, Tuple, Union
+from collections.abc import Iterable, Mapping
+from typing import ClassVar, Literal
 
 import click
 import pandas
@@ -37,14 +36,14 @@ EN_DE: GraphPair = "en_de"
 EN_FR: GraphPair = "en_fr"
 GRAPH_PAIRS = (EN_DE, EN_FR)
 WK3L_MODULE = PYKEEN_DATASETS_MODULE.module("wk3l")
-EA_SIDES_R: Tuple[EASide, EASide] = (EA_SIDE_RIGHT, EA_SIDE_LEFT)
+EA_SIDES_R: tuple[EASide, EASide] = (EA_SIDE_RIGHT, EA_SIDE_LEFT)
 
 
 class MTransEDataset(EADataset, ABC):
     """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
 
     #: The mapping from (graph-pair, side) to triple file name
-    FILE_NAMES: ClassVar[Mapping[Tuple[GraphPair, Union[None, EASide, Tuple[EASide, EASide]]], str]]
+    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, None | EASide | tuple[EASide, EASide]], str]]
 
     #: The internal dataset name
     DATASET_NAME: ClassVar[str]
@@ -83,7 +82,7 @@ class MTransEDataset(EADataset, ABC):
         yield "wk3l"
 
     @classmethod
-    def _relative_path(cls, graph_pair: GraphPair, key: Union[None, EASide, Tuple[EASide, EASide]]) -> pathlib.PurePath:
+    def _relative_path(cls, graph_pair: GraphPair, key: None | EASide | tuple[EASide, EASide]) -> pathlib.PurePath:
         """Determine the relative path inside the zip file."""
         return pathlib.PurePosixPath(
             "data",
@@ -92,7 +91,7 @@ class MTransEDataset(EADataset, ABC):
             cls.FILE_NAMES[graph_pair, key],
         )
 
-    def _load_df(self, key: Union[None, EASide, Tuple[EASide, EASide]], **kwargs) -> pandas.DataFrame:
+    def _load_df(self, key: None | EASide | tuple[EASide, EASide], **kwargs) -> pandas.DataFrame:
         return read_zipfile_csv(
             path=self.zip_path,
             inner_path=str(self._relative_path(graph_pair=self.graph_pair, key=key)),

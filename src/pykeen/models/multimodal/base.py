@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Base classes for multi-modal models."""
 
-from typing import ClassVar, Tuple, Type
+from typing import ClassVar
 
-import torch
 from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 
 from ..nbase import ERModel
@@ -13,6 +10,7 @@ from ...nn.init import PretrainedInitializer
 from ...nn.modules import Interaction
 from ...nn.representation import CombinedRepresentation, Embedding, Representation
 from ...triples import TriplesNumericLiteralsFactory
+from ...typing import FloatTensor
 from ...utils import upgrade_to_sequence
 
 __all__ = [
@@ -21,20 +19,18 @@ __all__ = [
 
 
 class LiteralModel(
-    ERModel[
-        Tuple[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]
-    ],
+    ERModel[tuple[FloatTensor, FloatTensor], FloatTensor, tuple[FloatTensor, FloatTensor]],
     autoreset=False,
 ):
     """Base class for models with entity literals that uses combinations from :class:`pykeen.nn.combinations`."""
 
     #: the interaction class (for generating the overview table)
-    interaction_cls: ClassVar[Type[Interaction]]
+    interaction_cls: ClassVar[type[Interaction]]
 
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
-        interaction: HintOrType[Interaction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]],
+        interaction: HintOrType[Interaction[FloatTensor, FloatTensor, FloatTensor]],
         entity_representations: OneOrManyHintOrType[Representation] = None,
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
         combination: HintOrType[Combination] = None,

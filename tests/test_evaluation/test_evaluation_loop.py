@@ -1,6 +1,7 @@
 """Tests for evaluation loops."""
 
-from typing import Any, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.evaluation.rank_based_evaluator

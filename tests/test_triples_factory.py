@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
-
 """Unit tests for triples factories."""
 
 import itertools as itt
 import os
 import tempfile
 import unittest
+from collections.abc import Collection, Iterable, Mapping
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Any, Collection, Iterable, Mapping, Optional, Tuple
+from typing import Any
 from unittest.mock import patch
 
 import numpy as np
@@ -17,6 +16,8 @@ import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+from pykeen.training.lcwa import create_lcwa_instances
+from pykeen.training.slcwa import create_slcwa_instances
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids, get_mapped_triples
@@ -85,7 +86,7 @@ class TestTriplesFactory(unittest.TestCase):
         ]
         t = np.array(t, dtype=str)
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        instances = factory.create_slcwa_instances()
+        instances = create_slcwa_instances(factory)
         assert len(instances) == 4
 
     def test_automatic_incomplete_inverse_detection(self):
@@ -138,9 +139,9 @@ class TestTriplesFactory(unittest.TestCase):
     def _test_restriction(
         self,
         original_triples_factory: TriplesFactory,
-        entity_restriction: Optional[Collection[str]],
+        entity_restriction: Collection[str] | None,
         invert_entity_selection: bool,
-        relation_restriction: Optional[Collection[str]],
+        relation_restriction: Collection[str] | None,
         invert_relation_selection: bool,
     ):
         """Run the actual test for new_with_restriction."""
@@ -225,13 +226,13 @@ class TestTriplesFactory(unittest.TestCase):
     def test_create_lcwa_instances(self):
         """Test create_lcwa_instances."""
         factory = Nations().training
-        instances = factory.create_lcwa_instances()
+        instances = create_lcwa_instances(factory)
         assert isinstance(instances, LCWAInstances)
 
         # check compressed triples
         # reconstruct triples from compressed form
         reconstructed_triples = set()
-        for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0])):
+        for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0]), strict=False):
             h, r = hr.tolist()
             _, tails = instances.compressed[row_id].nonzero()
             reconstructed_triples.update((h, r, t) for t in tails.tolist())
@@ -357,7 +358,7 @@ class TestSplit(unittest.TestCase):
         )
 
     def _compare_factories(self, factories_1, factories_2, msg=None) -> None:
-        for factory_1, factory_2 in zip(factories_1, factories_2):
+        for factory_1, factory_2 in zip(factories_1, factories_2, strict=False):
             triples_1 = factory_1.mapped_triples.detach().cpu().numpy()
             triples_2 = factory_2.mapped_triples.detach().cpu().numpy()
             self.assertTrue((triples_1 == triples_2).all(), msg=msg)
@@ -554,7 +555,7 @@ class TestUtils(unittest.TestCase):
         (torch.bool, (11, 3), does_not_raise()),
     ],
 )
-def test_core_triples_factory_error_handling(dtype: torch.dtype, size: Tuple[int, ...], expectation):
+def test_core_triples_factory_error_handling(dtype: torch.dtype, size: tuple[int, ...], expectation):
     """Test error handling in init method of CoreTriplesFactory."""
     with expectation:
         CoreTriplesFactory(
@@ -562,7 +563,7 @@ def test_core_triples_factory_error_handling(dtype: torch.dtype, size: Tuple[int
         )
 
 
-def _iter_get_mapped_triples_inputs() -> Iterable[Tuple[Any, Mapping[str, Any]]]:
+def _iter_get_mapped_triples_inputs() -> Iterable[tuple[Any, Mapping[str, Any]]]:
     """Iterate valid test inputs for get_mapped_triples."""
     factory = Nations().training
     # >>> positional argument

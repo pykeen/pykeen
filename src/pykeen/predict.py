@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Prediction workflows.
 
@@ -270,8 +268,11 @@ import dataclasses
 import logging
 import math
 from abc import ABC, abstractmethod
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import Collection, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import (
+    TypeAlias,  # Python <=3.9
+)
 
 import numpy
 import pandas
@@ -279,7 +280,6 @@ import torch
 import torch.utils.data
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
-from typing_extensions import TypeAlias  # Python <=3.9
 
 from .constants import COLUMN_LABELS, TARGET_TO_INDEX
 from .models import Model
@@ -290,12 +290,14 @@ from .typing import (
     LABEL_RELATION,
     LABEL_TAIL,
     DeviceHint,
+    FloatTensor,
     InductiveMode,
     LabeledTriples,
+    LongTensor,
     MappedTriples,
     Target,
 )
-from .utils import invert_mapping, isin_many_dim, resolve_device
+from .utils import determine_maximum_batch_size, invert_mapping, isin_many_dim, resolve_device
 
 __all__ = [
     # high-level
@@ -308,7 +310,6 @@ __all__ = [
     "CountScoreConsumer",
     "TopKScoreConsumer",
     "AllScoreConsumer",
-    "CountScoreConsumer",
     "ScorePack",
     "Predictions",
     "TriplePredictions",
@@ -330,7 +331,7 @@ class Predictions(ABC):
     df: pandas.DataFrame
 
     #: an optional factory to use for labeling
-    factory: Optional[CoreTriplesFactory]
+    factory: CoreTriplesFactory | None
 
     def __post_init__(self):
         """Verify constraints."""
@@ -358,7 +359,7 @@ class Predictions(ABC):
         """
         raise NotImplementedError
 
-    def filter_triples(self, *triples: Optional[AnyTriples]) -> pandas.DataFrame:
+    def filter_triples(self, *triples: AnyTriples | None) -> pandas.DataFrame:
         """Filter out known triples."""
         df = self.df
         for mapped_triples in triples:
@@ -371,7 +372,7 @@ class Predictions(ABC):
             ]
         return self.exchange_df(df=df)
 
-    def add_membership_columns(self, **filter_triples: Optional[AnyTriples]) -> pandas.DataFrame:
+    def add_membership_columns(self, **filter_triples: AnyTriples | None) -> pandas.DataFrame:
         """Add columns indicating whether the triples are known."""
         df = self.df.copy()
         for key, mapped_triples in filter_triples.items():
@@ -420,7 +421,7 @@ class TargetPredictions(Predictions):
     target: Target
 
     #: the other column's fixed IDs
-    other_columns_fixed_ids: Tuple[int, int]
+    other_columns_fixed_ids: tuple[int, int]
 
     # docstr-coverage: inherited
     def __post_init__(self):  # noqa: D105
@@ -445,12 +446,12 @@ class ScorePack:
     """A pair of result triples and scores."""
 
     #: the ID-based triples, shape: (n, 3)
-    result: torch.LongTensor
+    result: LongTensor
 
     #: the scores
-    scores: torch.FloatTensor
+    scores: FloatTensor
 
-    def process(self, factory: Optional[CoreTriplesFactory] = None, **kwargs) -> "TriplePredictions":
+    def process(self, factory: CoreTriplesFactory | None = None, **kwargs) -> "TriplePredictions":
         """Start post-processing scores."""
         if factory is None:
             df = tensor_to_df(self.result, score=self.scores, **kwargs)
@@ -460,11 +461,11 @@ class ScorePack:
 
 
 def _get_targets(
-    ids: Union[None, torch.Tensor, Collection[Union[str, int]]],
-    triples_factory: Optional[TriplesFactory],
+    ids: None | torch.Tensor | Collection[str | int],
+    triples_factory: TriplesFactory | None,
     device: torch.device,
     entity: bool = True,
-) -> Tuple[Optional[Iterable[str]], Optional[Iterable[int]], Optional[torch.Tensor]]:
+) -> tuple[Iterable[str] | None, Iterable[int] | None, torch.Tensor | None]:
     """
     Prepare prediction targets for restricted target prediction.
 
@@ -484,13 +485,13 @@ def _get_targets(
         a 3-tuple of an optional list of labels, a list of ids, and the tensor to pass to the prediction method.
     """
     # 3-tuple for return
-    labels: Optional[Iterable[str]] = None
-    id_list: Optional[Iterable[int]] = None
-    tensor: Optional[torch.Tensor] = None
+    labels: Iterable[str] | None = None
+    id_list: Iterable[int] | None = None
+    tensor: torch.Tensor | None = None
 
     # extract label information, if possible
-    label_to_id: Optional[Mapping[str, int]]
-    id_to_label: Optional[Mapping[int, str]]
+    label_to_id: Mapping[str, int] | None
+    id_to_label: Mapping[int, str] | None
     if isinstance(triples_factory, TriplesFactory):
         label_to_id = triples_factory.entity_to_id if entity else triples_factory.relation_to_id
         id_to_label = invert_mapping(label_to_id)
@@ -524,12 +525,12 @@ def _get_targets(
 
 
 def _get_input_batch(
-    factory: Optional[TriplesFactory] = None,
+    factory: TriplesFactory | None = None,
     # exactly one of them is None
-    head: Union[None, int, str] = None,
-    relation: Union[None, int, str] = None,
-    tail: Union[None, int, str] = None,
-) -> Tuple[Target, torch.LongTensor, Tuple[int, int]]:
+    head: None | int | str = None,
+    relation: None | int | str = None,
+    tail: None | int | str = None,
+) -> tuple[Target, LongTensor, tuple[int, int]]:
     """Prepare input batch for prediction.
 
     :param factory:
@@ -548,8 +549,8 @@ def _get_input_batch(
         a 3-tuple (target, batch, batch_tuple) of the prediction target, the input batch, and the input batch as tuple.
     """
     # create input batch
-    batch_ids: List[int] = []
-    target: Optional[Target] = None
+    batch_ids: list[int] = []
+    target: Target | None = None
     if head is None:
         target = LABEL_HEAD
     else:
@@ -579,21 +580,21 @@ def _get_input_batch(
             f"Exactly one of {{head, relation, tail}} must be None, but got {head}, {relation}, {tail}",
         )
 
-    batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long))
+    batch = torch.as_tensor([batch_ids], dtype=torch.long)
     return target, batch, (batch_ids[0], batch_ids[1])
 
 
 # note type alias annotation required,
 # cf. https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
 # batch, TODO: ids?
-PredictionBatch: TypeAlias = torch.LongTensor
+PredictionBatch: TypeAlias = LongTensor
 
 
 class ScoreConsumer:
     """A consumer of scores for visitor pattern."""
 
-    result: torch.LongTensor
-    scores: torch.FloatTensor
+    result: LongTensor
+    scores: FloatTensor
     flatten: bool
 
     @abstractmethod
@@ -601,7 +602,7 @@ class ScoreConsumer:
         self,
         batch: PredictionBatch,
         target: Target,
-        scores: torch.FloatTensor,
+        scores: FloatTensor,
     ) -> None:
         """Consume scores for the given hr_batch."""
         raise NotImplementedError
@@ -625,7 +626,7 @@ class CountScoreConsumer(ScoreConsumer):
         self,
         batch: PredictionBatch,
         target: Target,
-        scores: torch.FloatTensor,
+        scores: FloatTensor,
     ) -> None:  # noqa: D102
         self.batch_count += batch.shape[0]
         self.score_count += scores.numel()
@@ -656,7 +657,7 @@ class TopKScoreConsumer(ScoreConsumer):
         self,
         batch: PredictionBatch,
         target: Target,
-        scores: torch.FloatTensor,
+        scores: FloatTensor,
     ) -> None:  # noqa: D102
         batch_size, num_scores = scores.shape
         assert batch.shape == (batch_size, 2)
@@ -693,8 +694,8 @@ class TopKScoreConsumer(ScoreConsumer):
         top_triples = torch.stack(triples, dim=-1)
 
         # append to global top scores
-        self.scores = torch.cat([self.scores, top_scores])
-        self.result = torch.cat([self.result, top_triples])
+        self.scores = torch.cat([self.scores, top_scores.to(device=self.scores.device)])
+        self.result = torch.cat([self.result, top_triples.to(device=self.result.device)])
 
         # reduce size if necessary
         if self.result.shape[0] > self.k:
@@ -734,10 +735,10 @@ class AllScoreConsumer(ScoreConsumer):
         self,
         batch: PredictionBatch,
         target: Target,
-        scores: torch.FloatTensor,
+        scores: FloatTensor,
     ) -> None:  # noqa: D102
         j = 0
-        selectors: List[Union[slice, torch.LongTensor]] = []
+        selectors: list[slice | LongTensor] = []
         for col in COLUMN_LABELS:
             if col == target:
                 selector = slice(None)
@@ -803,12 +804,12 @@ class AllPredictionDataset(PredictionDataset):
         return self.num_entities * self.num_relations
 
     # docstr-coverage: inherited
-    def __getitem__(self, item: int) -> torch.LongTensor:  # noqa: D105
+    def __getitem__(self, item: int) -> LongTensor:  # noqa: D105
         quotient, remainder = divmod(item, self.divisor)
         return torch.as_tensor([quotient, remainder])
 
 
-Restriction = Union[torch.LongTensor, Collection[int], int]
+Restriction = LongTensor | Collection[int] | int
 
 
 class PartiallyRestrictedPredictionDataset(PredictionDataset):
@@ -849,14 +850,14 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
     """
 
     #: the choices for the first and second component of the input batch
-    parts: Tuple[torch.LongTensor, torch.LongTensor]
+    parts: tuple[LongTensor, LongTensor]
 
     def __init__(
         self,
         *,
-        heads: Optional[Restriction] = None,
-        relations: Optional[Restriction] = None,
-        tails: Optional[Restriction] = None,
+        heads: Restriction | None = None,
+        relations: Restriction | None = None,
+        tails: Restriction | None = None,
         target: Target = LABEL_TAIL,
     ) -> None:
         """
@@ -875,8 +876,8 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
             if the target position is restricted, or any non-target position is not restricted
         """
         super().__init__(target=target)
-        parts: List[torch.LongTensor] = []
-        for restriction, on in zip((heads, relations, tails), COLUMN_LABELS):
+        parts: list[LongTensor] = []
+        for restriction, on in zip((heads, relations, tails), COLUMN_LABELS, strict=False):
             if on == target:
                 if restriction is not None:
                     raise NotImplementedError("Restrictions on the target are not yet supported.")
@@ -907,7 +908,7 @@ def consume_scores(
     dataset: PredictionDataset,
     *consumers: ScoreConsumer,
     batch_size: int = 1,
-    mode: Optional[InductiveMode] = None,
+    mode: InductiveMode | None = None,
 ) -> None:
     """
     Batch-wise calculation of all triple scores and consumption.
@@ -930,7 +931,7 @@ def consume_scores(
     :param consumers:
         the consumers of score batches
     :param batch_size:
-        the batch size to use. Will automatically be lowered, if the hardware cannot handle this large batch sizes
+        The batch size to use. Will automatically be lowered, if the hardware cannot handle this large batch sizes.
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
@@ -951,7 +952,7 @@ def consume_scores(
             consumer(batch, target=dataset.target, scores=scores)
 
 
-def _build_pack(result: torch.LongTensor, scores: torch.FloatTensor, flatten: bool = False) -> ScorePack:
+def _build_pack(result: LongTensor, scores: FloatTensor, flatten: bool = False) -> ScorePack:
     """Sort final result and package in a score pack."""
     scores, indices = torch.sort(scores.flatten() if flatten else scores, descending=True)
     result = result[indices]
@@ -964,8 +965,8 @@ def _predict_triples_batched(
     mapped_triples: MappedTriples,
     batch_size: int,
     *,
-    mode: Optional[InductiveMode],
-) -> torch.FloatTensor:
+    mode: InductiveMode | None,
+) -> FloatTensor:
     """Predict scores for triples in batches."""
     return torch.cat(
         [
@@ -981,9 +982,9 @@ def _predict_triples_batched(
 def predict_all(
     model: Model,
     *,
-    k: Optional[int] = None,
-    batch_size: Optional[int] = 1,
-    mode: Optional[InductiveMode] = None,
+    k: int | None = None,
+    batch_size: int | None = 1,
+    mode: InductiveMode | None = None,
     target: Target = LABEL_TAIL,
 ) -> ScorePack:
     """Calculate scores for all triples, and either keep all of them or only the top k triples.
@@ -993,7 +994,7 @@ def predict_all(
     :param k:
         The number of triples to return. Set to ``None`` to keep all.
     :param batch_size:
-        The batch size to use for calculating scores; set to `None` to determine largest possible batch size
+        The batch size to use for calculating scores; set to `None` to determine largest possible batch size.
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
@@ -1009,7 +1010,7 @@ def predict_all(
     """
     # note: the models' predict method takes care of setting the model to evaluation mode
     logger.warning(
-        f"predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations:,} "
+        f"predict is an expensive operation, involving {model.num_entities**2 * model.num_real_relations:,} "
         f"score evaluations.",
     )
 
@@ -1026,7 +1027,10 @@ def predict_all(
     else:
         consumer = TopKScoreConsumer(k=k, device=model.device)
     dataset = AllPredictionDataset(num_entities=num_entities, num_relations=model.num_real_relations, target=target)
-    consume_scores(model, dataset, consumer, batch_size=batch_size or len(dataset), mode=mode)
+    batch_size = determine_maximum_batch_size(
+        batch_size=batch_size, device=model.device, maximum_batch_size=len(dataset)
+    )
+    consume_scores(model, dataset, consumer, batch_size=batch_size, mode=mode)
     return consumer.finalize()
 
 
@@ -1035,13 +1039,13 @@ def predict_target(
     model: Model,
     *,
     # exactly one of them is None
-    head: Union[None, int, str] = None,
-    relation: Union[None, int, str] = None,
-    tail: Union[None, int, str] = None,
+    head: None | int | str = None,
+    relation: None | int | str = None,
+    tail: None | int | str = None,
     #
-    triples_factory: Optional[TriplesFactory] = None,
-    targets: Union[None, torch.LongTensor, Sequence[Union[int, str]]] = None,
-    mode: Optional[InductiveMode] = None,
+    triples_factory: TriplesFactory | None = None,
+    targets: None | LongTensor | Sequence[int | str] = None,
+    mode: InductiveMode | None = None,
 ) -> Predictions:
     """Get predictions for the head, relation, and/or tail combination.
 
@@ -1072,6 +1076,7 @@ def predict_target(
     :return:
         The predictions, containing either the $k$ highest scoring targets, or all targets if $k$ is `None`.
     """
+    # TODO: add support for (automatic) slicing
     # note: the models' predict method takes care of setting the model to evaluation mode
 
     # get input & target
@@ -1106,10 +1111,10 @@ def predict_target(
 def predict_triples(
     model: Model,
     *,
-    triples: Union[None, MappedTriples, LabeledTriples, Union[Tuple[str, str, str], Sequence[Tuple[str, str, str]]]],
-    triples_factory: Optional[CoreTriplesFactory] = None,
-    batch_size: Optional[int] = None,
-    mode: Optional[InductiveMode] = None,
+    triples: None | MappedTriples | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]],
+    triples_factory: CoreTriplesFactory | None = None,
+    batch_size: int | None = None,
+    mode: InductiveMode | None = None,
 ) -> ScorePack:
     """
     Predict on labeled or mapped triples.
@@ -1129,7 +1134,7 @@ def predict_triples(
         The triples factory. Must be given if triples are label-based. If provided and triples are ID-based, add labels
         to result.
     :param batch_size:
-        The batch size to use. Use None for automatic memory optimization.
+        The batch size to use. Use `None` to use the largest possible.
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
@@ -1141,7 +1146,10 @@ def predict_triples(
     # normalize input
     triples = get_mapped_triples(triples, factory=triples_factory)
     # calculate scores (with automatic memory optimization)
-    scores = _predict_triples_batched(
-        model=model, mapped_triples=triples, batch_size=batch_size or len(triples), mode=mode
-    ).squeeze(dim=1)
+    batch_size = determine_maximum_batch_size(
+        batch_size=batch_size, device=model.device, maximum_batch_size=len(triples)
+    )
+    scores = _predict_triples_batched(model=model, mapped_triples=triples, batch_size=batch_size, mode=mode).squeeze(
+        dim=1
+    )
     return ScorePack(result=triples, scores=scores)

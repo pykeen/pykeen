@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Training callbacks.
 
 Training callbacks allow for arbitrary extension of the functionality of the :class:`pykeen.training.TrainingLoop`
@@ -53,8 +51,11 @@ to implement a gradient clipping callback:
 
 from __future__ import annotations
 
+import logging
 import pathlib
-from typing import Any, List, Mapping, Optional, Sequence
+import uuid
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
@@ -63,6 +64,8 @@ from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from torch_max_mem import maximize_memory_utilization
 
 from .. import training  # required for type annotations
+from ..checkpoints import CheckpointKeeper, CheckpointSchedule, keeper_resolver, save_model, schedule_resolver
+from ..constants import PYKEEN_CHECKPOINTS
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
 from ..losses import Loss
@@ -71,14 +74,19 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
+from ..utils import determine_maximum_batch_size
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
+    "callback_resolver",
     "TrainingCallbackHint",
     "TrainingCallback",
     "StopperTrainingCallback",
     "TrackerTrainingCallback",
     "EvaluationLoopTrainingCallback",
     "EvaluationTrainingCallback",
+    "CheckpointTrainingCallback",
     "MultiTrainingCallback",
     "GradientNormClippingTrainingCallback",
     "GradientAbsClippingTrainingCallback",
@@ -139,7 +147,7 @@ class TrainingCallback:
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         """Call after epoch."""
 
-    def post_train(self, losses: List[float], **kwargs: Any) -> None:
+    def post_train(self, losses: list[float], **kwargs: Any) -> None:
         """Call after training."""
 
 
@@ -158,7 +166,7 @@ class TrackerTrainingCallback(TrainingCallback):
 class GradientNormClippingTrainingCallback(TrainingCallback):
     """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_norm_`."""
 
-    def __init__(self, max_norm: float, norm_type: Optional[float] = None):
+    def __init__(self, max_norm: float, norm_type: float | None = None):
         """
         Initialize the callback.
 
@@ -236,7 +244,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         frequency: int = 1,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         **kwargs,
     ):
         """
@@ -284,7 +292,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         self,
         factory: CoreTriplesFactory,
         frequency: int = 1,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         additional_filter_triples: AdditionalFilterTriplesHint = None,
@@ -347,8 +355,8 @@ class StopperTrainingCallback(TrainingCallback):
         stopper: Stopper,
         *,
         triples_factory: CoreTriplesFactory,
-        last_best_epoch: Optional[int] = None,
-        best_epoch_model_file_path: Optional[pathlib.Path],
+        last_best_epoch: int | None = None,
+        best_epoch_model_file_path: pathlib.Path | None,
     ):
         """
         Initialize the callback.
@@ -543,15 +551,16 @@ class EvaluationLossTrainingCallback(TrainingCallback):
         self.model.eval()
 
         # determine maximum batch size
-        maximum_batch_size = self.maximum_batch_size or self.triples_factory.num_triples
-        if self.model.device.type != "cuda":
-            # try to avoid OOM kills on cpu for large datasets
-            maximum_batch_size = min(maximum_batch_size, 2**16)
+        maximum_batch_size = determine_maximum_batch_size(
+            batch_size=self.maximum_batch_size,
+            device=self.model.device,
+            # TODO: this should be num_instances rather than num_triples
+            maximum_batch_size=self.triples_factory.num_triples,
+        )
 
         loss = _validation_loss_amo_wrapper(
             training_loop=self.training_loop,
             triples_factory=self.triples_factory,
-            # TODO: this should be num_instances rather than num_triples; also for cpu, we may want to reduce this
             batch_size=maximum_batch_size,
             # note: slicing is only effective for LCWA training
             slice_size=self.training_loop.num_targets if isinstance(self.training_loop, LCWATrainingLoop) else 1,
@@ -572,7 +581,7 @@ class MultiTrainingCallback(TrainingCallback):
     """A wrapper for calling multiple training callbacks together."""
 
     #: A collection of callbacks
-    callbacks: List[TrainingCallback]
+    callbacks: list[TrainingCallback]
 
     def __init__(
         self,
@@ -633,11 +642,90 @@ class MultiTrainingCallback(TrainingCallback):
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
 
     # docstr-coverage: inherited
-    def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
+    def post_train(self, losses: list[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses, **kwargs)
 
 
+class CheckpointTrainingCallback(TrainingCallback):
+    """Save checkpoints at user-specific epochs."""
+
+    def __init__(
+        self,
+        schedule: HintOrType[CheckpointSchedule] = None,
+        schedule_kwargs: OptionalKwargs = None,
+        keeper: HintOrType[CheckpointKeeper] = None,
+        keeper_kwargs: OptionalKwargs = None,
+        root: pathlib.Path | str | None = None,
+        name_template: str = "checkpoint_{epoch:07d}.pt",
+    ):
+        """
+        Create callback.
+
+        :param schedule:
+            a selection of the checkpoint schedule, cf. :const:`pykeen.checkpoints.scheduler_resolver`
+        :param schedule_kwargs:
+            keyword-based parameters to instantiate the checkpoint schedule, if necessary,
+            cf. :const:`pykeen.checkpoints.scheduler_resolver`
+        :param keeper:
+            a selection of the checkpoint retention logic, cf. :const:`pykeen.checkpoints.keeper_resolver`.
+            `None` corresponds to keeping all checkpoints (which were created).
+        :param keeper_kwargs:
+            keyword-based parameters to instantiate the retention policy, if necessary,
+            cf. :const:`pykeen.checkpoints.keeper_resolver`
+        :param root:
+            the checkpoint root directory. Defaults to a fresh sub-directory of
+            :const:`pykeen.constants.PYKEEN_CHECKPOINTS`
+        :param name_template:
+            a name template for the checkpoint file. Can contain a format key `{epoch}` which is replaced by the actual
+            epoch. This callback does not take care of overwriting existing files, i.e., if you want to keep multiple
+            checkpoints make sure to choose unique filenames.
+        """
+        super().__init__()
+        self.schedule = schedule_resolver.make(schedule, schedule_kwargs)
+        self.keeper = keeper_resolver.make_safe(keeper, keeper_kwargs)
+        self.checkpoint_store: dict[int, pathlib.Path] = dict()
+        if root is None:
+            while (path := PYKEEN_CHECKPOINTS.joinpath(str(uuid.uuid4()))).exists():
+                continue
+            root = path
+            logger.info(f"Inferred checkpoint {path= !s}")
+        self.root = pathlib.Path(root)
+        self.name_template = name_template
+        self.root.mkdir(parents=True, exist_ok=True)
+
+    # docstr-coverage: inherited
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+        # use 1-based epochs
+        epoch += 1
+        if not self.schedule(epoch):
+            return
+
+        # save checkpoint
+        path = self.root.joinpath(self.name_template.format(epoch=epoch))
+        save_model(self.training_loop.model, path)
+        logger.info(f"Saved checkpoint for {epoch=:_} to {path= !s}")
+
+        # None corresponds to no clean-up
+        if self.keeper is None:
+            return
+
+        # add newly saved checkpoint to the store
+        if epoch in self.checkpoint_store:
+            raise ValueError(
+                f"Cannot add multiple checkpoints for a single {epoch=}, "
+                f"but got {path= !s} and had already {self.checkpoint_store[epoch]= !s}."
+            )
+        self.checkpoint_store[epoch] = path
+
+        # delete checkpoints which we do not want to keep
+        for step in set(self.checkpoint_store).difference(self.keeper(sorted(self.checkpoint_store))):
+            path = self.checkpoint_store.pop(step)
+            path.unlink()
+            logger.info(f"Deleted checkpoint for {step=:_} at {path= !s}")
+
+
+#: A resolver for training callbacks
 callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
     base=TrainingCallback,
     skip={MultiTrainingCallback},

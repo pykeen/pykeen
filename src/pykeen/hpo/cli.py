@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """A command line interface for hyper-parameter optimization in PyKEEN."""
 
 import sys
-from typing import Optional
 
 import click
 from class_resolver.contrib.optuna import sampler_resolver
@@ -26,9 +23,9 @@ def optimize(
     dataset: str,
     loss: str,
     sampler: str,
-    storage: Optional[str],
-    n_trials: Optional[int],
-    timeout: Optional[int],
+    storage: str | None,
+    n_trials: int | None,
+    timeout: int | None,
     output: str,
 ):
     """Optimize hyper-parameters for a KGE model.

@@ -1,6 +1,7 @@
 """Filtered models."""
 
-from typing import Any, ClassVar, List, Mapping, Optional, Union
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 import scipy.sparse
 import torch
@@ -11,7 +12,16 @@ from ..base import Model
 from ..baseline.utils import get_csr_matrix
 from ...constants import TARGET_TO_INDEX
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
+from ...typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    FloatTensor,
+    InductiveMode,
+    LongTensor,
+    MappedTriples,
+    Target,
+)
 from ...utils import prepare_filter_triples
 
 __all__ = [
@@ -44,7 +54,7 @@ class CooccurrenceFilteredModel(Model):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        additional_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        additional_triples: None | MappedTriples | list[MappedTriples] = None,
         apply_in_training: bool = False,
         base: HintOrType[Model] = "rotate",
         training_fill_value: float = -1.0e03,
@@ -108,10 +118,10 @@ class CooccurrenceFilteredModel(Model):
                     dtype=bool,
                     norm=None,
                 )
-                for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items())
+                for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items(), strict=False)
                 if row_label != col_label
             }
-            for num_cols, (col_label, col_index) in zip(nums, TARGET_TO_INDEX.items())
+            for num_cols, (col_label, col_index) in zip(nums, TARGET_TO_INDEX.items(), strict=False)
         }
 
         # initialize base model's parameters
@@ -119,33 +129,33 @@ class CooccurrenceFilteredModel(Model):
 
     def _mask(
         self,
-        scores: torch.FloatTensor,
-        batch: torch.LongTensor,
+        scores: FloatTensor,
+        batch: LongTensor,
         target: Target,
         in_training: bool,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         if in_training and not self.apply_in_training:
             return scores
         fill_value = self.training_fill_value if in_training else self.inference_fill_value
         # get masks, shape: (batch_size, num_entities/num_relations)
-        first_mask, second_mask = [
+        first_mask, second_mask = (
             index[batch_indices.cpu().numpy()]
             for batch_indices, (_target, index) in zip(
-                batch.t(), sorted(self.indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]])
+                batch.t(), sorted(self.indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]]), strict=False
             )
-        ]
+        )
         # combine masks
         # note: * is an elementwise and, and + and elementwise or
         mask = (first_mask * second_mask) if self.conjunctive else (first_mask + second_mask)
         # get non-zero entries
-        rows, cols = [torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero()]
+        rows, cols = (torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero())
         # set scores for fill value for every non-occuring entry
         new_scores = scores.new_full(size=scores.shape, fill_value=fill_value)
         new_scores[rows, cols] = scores[rows, cols]
         return new_scores
 
     # docstr-coverage: inherited
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:
         return self.base._get_entity_len(mode=mode)
 
     # docstr-coverage: inherited
@@ -153,17 +163,17 @@ class CooccurrenceFilteredModel(Model):
         return self.base._reset_parameters_()
 
     # docstr-coverage: inherited
-    def collect_regularization_term(self) -> torch.FloatTensor:  # noqa: D102
+    def collect_regularization_term(self) -> FloatTensor:  # noqa: D102
         return self.base.collect_regularization_term()
 
     # docstr-coverage: inherited
-    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         if self.apply_in_training:
             raise NotImplementedError
         return self.base.score_hrt(hrt_batch=hrt_batch, **kwargs)
 
     # docstr-coverage: inherited
-    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_h(rt_batch=rt_batch, **kwargs),
             batch=rt_batch,
@@ -172,7 +182,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def score_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_r(ht_batch=ht_batch, **kwargs),
             batch=ht_batch,
@@ -181,7 +191,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_t(hr_batch=hr_batch, **kwargs),
             batch=hr_batch,
@@ -190,7 +200,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def predict_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def predict_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_h(rt_batch, **kwargs),
             batch=rt_batch,
@@ -199,7 +209,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def predict_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def predict_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_t(hr_batch, **kwargs),
             batch=hr_batch,
@@ -208,7 +218,7 @@ class CooccurrenceFilteredModel(Model):
         )
 
     # docstr-coverage: inherited
-    def predict_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
+    def predict_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_r(ht_batch, **kwargs),
             batch=ht_batch,

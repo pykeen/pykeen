@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Deterioration algorithm."""
 
 import logging
 import math
 from itertools import zip_longest
-from typing import List, Union
 
 import click
 import more_click
@@ -25,9 +22,9 @@ logger = logging.getLogger(__name__)
 def deteriorate(
     reference: TriplesFactory,
     *others: TriplesFactory,
-    n: Union[int, float],
+    n: int | float,
     random_state: TorchRandomHint = None,
-) -> List[TriplesFactory]:
+) -> list[TriplesFactory]:
     """Remove n triples from the reference set.
 
     :param reference: The reference triples factory

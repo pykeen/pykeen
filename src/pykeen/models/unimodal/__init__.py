@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Unimodal KGE Models.
 
 .. [balazevic2019] Balažević, *et al.* (2019) `TuckER: Tensor Factorization for Knowledge Graph Completion

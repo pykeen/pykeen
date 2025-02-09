@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """New-style base module for all KGE models."""
 
 from __future__ import annotations
@@ -7,22 +5,9 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from collections import defaultdict
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from operator import itemgetter
-from typing import (
-    Any,
-    ClassVar,
-    Generic,
-    Iterable,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, ClassVar, Generic, Literal, cast
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs
@@ -35,7 +20,14 @@ from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
 from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
-from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
+from ..typing import (
+    FloatTensor,
+    HeadRepresentation,
+    InductiveMode,
+    LongTensor,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from ..utils import check_shapes, get_batchnorm_modules
 
 __all__ = [
@@ -64,13 +56,9 @@ class _NewAbstractModel(Model, ABC):
     """
 
     #: The default regularizer class
-    regularizer_default: ClassVar[Optional[Type[Regularizer]]] = None
+    regularizer_default: ClassVar[type[Regularizer] | None] = None
     #: The default parameters for the default regularizer class
-    regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-
-    can_slice_h = True
-    can_slice_r = True
-    can_slice_t = True
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any] | None] = None
 
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
@@ -116,7 +104,7 @@ class _NewAbstractModel(Model, ABC):
         self,
         regularizer: HintOrType[Regularizer],
         regularizer_kwargs: OptionalKwargs = None,
-    ) -> Optional[Regularizer]:
+    ) -> Regularizer | None:
         """
         Instantiate a regularizer using the default if None is provided.
 
@@ -224,6 +212,7 @@ def _prepare_representation_module_list(
         *zip(
             (r.shape for r in rs),
             shapes,
+            strict=False,
         ),
         raise_on_errors=True,
     )
@@ -231,10 +220,10 @@ def _prepare_representation_module_list(
 
 
 def repeat_if_necessary(
-    scores: torch.FloatTensor,
+    scores: FloatTensor,
     representations: Sequence[Representation],
-    num: Optional[int],
-) -> torch.FloatTensor:
+    num: int | None,
+) -> FloatTensor:
     """
     Repeat score tensor if necessary.
 
@@ -255,6 +244,32 @@ def repeat_if_necessary(
     if representations:
         return scores
     return scores.repeat(1, num)
+
+
+def iter_slices(
+    ids: LongTensor | None, slice_size: int, total: int, device: torch.device, dim: int = -1
+) -> Iterator[LongTensor]:
+    """
+    Iterate over slices of an (implicit) index tensor.
+
+    :param ids:
+        The ID tensor, or None to indicate :code:`torch.arange(total)`
+    :param slice_size: $>0$
+        The (maximum) size of each individual slice.
+    :param total:
+        The total number of IDs; only used when ``ids`` is ``None``.
+    :param device:
+        The device on which to create the slices of the implicit :code:`torch.arange(total)`.
+    :param dim:
+        The dimension along which to slice.
+
+    :yields: Slices of the index tensor
+    """
+    if ids is None:
+        for start in range(0, total, slice_size):
+            yield torch.arange(start=start, end=min(start + slice_size, total), device=device)
+    else:
+        yield from ids.split(split_size=slice_size, dim=dim)
 
 
 class ERModel(
@@ -285,7 +300,7 @@ class ERModel(
     relation_representations: Sequence[Representation]
 
     #: The weight regularizers
-    weight_regularizers: List[Regularizer]
+    weight_regularizers: list[Regularizer]
 
     #: The interaction function
     interaction: Interaction
@@ -363,14 +378,14 @@ class ERModel(
             representations=representations,
             representations_kwargs=representations_kwargs,
             max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
-            shapes=self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape,
+            shapes=self.interaction.entity_shape if label == "entity" else self.interaction.relation_shape,
             label=label,
             **kwargs,
         )
 
     def append_weight_regularizer(
         self,
-        parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
+        parameter: str | nn.Parameter | Iterable[str | nn.Parameter],
         regularizer: HintOrType[Regularizer],
         regularizer_kwargs: OptionalKwargs = None,
         default_regularizer: HintOrType[Regularizer] = None,
@@ -404,7 +419,7 @@ class ERModel(
         )
 
         # normalize input
-        if isinstance(parameter, (str, nn.Parameter)):
+        if isinstance(parameter, str | nn.Parameter):
             parameter = [parameter]
         weights: Mapping[str, nn.Parameter] = dict(self.named_parameters())
         for param in parameter:
@@ -417,14 +432,14 @@ class ERModel(
 
     def forward(
         self,
-        h_indices: torch.LongTensor,
-        r_indices: torch.LongTensor,
-        t_indices: torch.LongTensor,
-        slice_size: Optional[int] = None,
+        h_indices: LongTensor,
+        r_indices: LongTensor,
+        t_indices: LongTensor,
+        slice_size: int | None = None,
         slice_dim: int = 0,
         *,
-        mode: Optional[InductiveMode],
-    ) -> torch.FloatTensor:
+        mode: InductiveMode | None,
+    ) -> FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail indices and calculates the corresponding scores.
@@ -455,7 +470,7 @@ class ERModel(
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: LongTensor, *, mode: InductiveMode | None = None) -> FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -476,7 +491,7 @@ class ERModel(
         h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
-    def _check_slicing(self, slice_size: Optional[int]) -> None:
+    def _check_slicing(self, slice_size: int | None) -> None:
         """Raise an error, if slicing is requested, but the model does not support it."""
         if not slice_size:
             return
@@ -488,12 +503,12 @@ class ERModel(
     # docstr-coverage: inherited
     def score_t(
         self,
-        hr_batch: torch.LongTensor,
+        hr_batch: LongTensor,
         *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-        tails: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+        tails: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -503,13 +518,10 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_t(
-                        hr_batch=hr_batch,
-                        slice_size=None,
-                        mode=mode,
-                        tails=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    self.score_t(hr_batch=hr_batch, slice_size=None, mode=mode, tails=partial_tails)
+                    for partial_tails in iter_slices(
+                        ids=tails, slice_size=slice_size, total=self.num_entities, device=hr_batch.device
                     )
-                    for start in range(0, self.num_entities, slice_size)
                 ],
                 dim=-1,
             )
@@ -529,12 +541,12 @@ class ERModel(
     # docstr-coverage: inherited
     def score_h(
         self,
-        rt_batch: torch.LongTensor,
+        rt_batch: LongTensor,
         *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-        heads: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+        heads: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -544,13 +556,10 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_h(
-                        rt_batch=rt_batch,
-                        slice_size=None,
-                        mode=mode,
-                        heads=torch.arange(start=start, end=min(start + slice_size, self.num_entities)),
+                    self.score_h(rt_batch=rt_batch, slice_size=None, mode=mode, heads=partial_heads)
+                    for partial_heads in iter_slices(
+                        ids=heads, slice_size=slice_size, total=self.num_entities, device=rt_batch.device
                     )
-                    for start in range(0, self.num_entities, slice_size)
                 ],
                 dim=-1,
             )
@@ -570,12 +579,12 @@ class ERModel(
     # docstr-coverage: inherited
     def score_r(
         self,
-        ht_batch: torch.LongTensor,
+        ht_batch: LongTensor,
         *,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-        relations: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+        relations: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         # normalize before checking
         if slice_size and slice_size >= self.num_relations:
             slice_size = None
@@ -585,13 +594,10 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self.score_r(
-                        ht_batch=ht_batch,
-                        slice_size=None,
-                        mode=mode,
-                        relations=torch.arange(start=start, end=min(start + slice_size, self.num_relations)),
+                    self.score_r(ht_batch=ht_batch, slice_size=None, mode=mode, relations=partial_relations)
+                    for partial_relations in iter_slices(
+                        ids=relations, slice_size=slice_size, total=self.num_relations, device=ht_batch.device
                     )
-                    for start in range(0, self.num_relations, slice_size)
                 ],
                 dim=-1,
             )
@@ -609,7 +615,7 @@ class ERModel(
         )
 
     def _get_entity_representations_from_inductive_mode(
-        self, *, mode: Optional[InductiveMode]
+        self, *, mode: InductiveMode | None
     ) -> Sequence[Representation]:
         """
         Return the entity representations for the given inductive mode.
@@ -628,7 +634,7 @@ class ERModel(
             raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:  # noqa:D105
         """
         Return the number of entities for the given inductive mode.
 
@@ -648,26 +654,26 @@ class ERModel(
 
     def _get_representations(
         self,
-        h: Optional[torch.LongTensor],
-        r: Optional[torch.LongTensor],
-        t: Optional[torch.LongTensor],
+        h: LongTensor | None,
+        r: LongTensor | None,
+        t: LongTensor | None,
         *,
-        mode: Optional[InductiveMode],
-    ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+        mode: InductiveMode | None,
+    ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
-        head_representations = [head_representations[i] for i in self.interaction.head_indices()]
-        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices()]
-        hr, rr, tr = [
+        head_representations = [head_representations[i] for i in self.interaction.head_indices]
+        tail_representations = [tail_representations[i] for i in self.interaction.tail_indices]
+        hr, rr, tr = (
             [representation(indices=indices) for representation in representations]
             for indices, representations in (
                 (h, head_representations),
                 (r, self.relation_representations),
                 (t, tail_representations),
             )
-        ]
+        )
         # normalization
         return cast(
-            Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
+            tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
             tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr)),
         )

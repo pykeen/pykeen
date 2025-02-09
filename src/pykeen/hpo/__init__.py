@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The easiest way to optimize a model is with the :func:`pykeen.hpo.hpo_pipeline` function.
 
 All of the following examples are about getting the best model

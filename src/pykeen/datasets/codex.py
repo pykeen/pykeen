@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The **Co**mpletion **D**atasets **Ex**tracted from Wikidata and Wikipedia (CoDEx) datasets from [safavi2020]_.
 
 - GitHub Repository: https://github.com/tsafavi/codex

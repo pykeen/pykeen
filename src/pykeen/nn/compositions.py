@@ -1,31 +1,37 @@
-# -*- coding: utf-8 -*-
-
 """Composition modules."""
 
 from abc import ABC, abstractmethod
-from typing import Callable, ClassVar
+from collections.abc import Callable
+from typing import ClassVar
 
 import torch
 from class_resolver import ClassResolver
 from torch import nn
 
-from .functional import circular_correlation
+from ..typing import FloatTensor
+from ..utils import circular_correlation
 
 __all__ = [
+    # Base
     "CompositionModule",
+    # Concrete
     "FunctionalCompositionModule",
     "SubtractionCompositionModule",
     "MultiplicationCompositionModule",
     "CircularCorrelationCompositionModule",
+    # Resolver
     "composition_resolver",
 ]
 
 
+Composition = Callable[[FloatTensor, FloatTensor], FloatTensor]
+
+
 class CompositionModule(nn.Module, ABC):
-    """An (elementwise) composition function for vectors."""
+    """An (element-wise) composition function for vectors."""
 
     @abstractmethod
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:
         """Compose two batches of vectors.
 
         The tensors have to be broadcastable.
@@ -41,35 +47,43 @@ class CompositionModule(nn.Module, ABC):
 class FunctionalCompositionModule(CompositionModule):
     """Composition by a function (i.e. state-less)."""
 
-    func: ClassVar[Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]]
+    #: The stateless function that gets composed
+    func: ClassVar[Composition]
 
     # docstr-coverage: inherited
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.__class__.func(a, b)
+
+
+# NOTE: wrapping torch.sub and torch.mul since their docstrings cause an issue...
 
 
 class SubtractionCompositionModule(FunctionalCompositionModule):
     """Composition by element-wise subtraction."""
 
-    func = torch.sub
+    #: Subtracts with :func:`torch.sub`
+    func: ClassVar[Composition] = lambda a, b: torch.sub(a, b)
 
 
 class MultiplicationCompositionModule(FunctionalCompositionModule):
     """Composition by element-wise multiplication."""
 
-    func = torch.mul
+    #: Multiplies with :func:`torch.mul`
+    func: ClassVar[Composition] = lambda a, b: torch.mul(a, b)
 
 
 class CircularCorrelationCompositionModule(FunctionalCompositionModule):
     """Composition by circular correlation via :func:`pykeen.nn.functional.circular_correlation`."""
 
-    func = circular_correlation
+    func: ClassVar[Composition] = circular_correlation
 
 
+#: A resolver for compositions
 composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
     skip={
         FunctionalCompositionModule,
     },
+    location="pykeen.nn.compositions.composition_resolver",
 )

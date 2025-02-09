@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Inductive models in PyKEEN."""
 
 from .base import InductiveERModel

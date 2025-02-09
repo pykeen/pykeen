@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
-
 """Basic structure for a negative sampler."""
 
 from abc import abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Tuple
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
-import torch
 from class_resolver import HintOrType, normalize_string
 from torch import nn
 
 from .filtering import Filterer, filterer_resolver
-from ..typing import MappedTriples
+from ..typing import BoolTensor, LongTensor, MappedTriples
 
 __all__ = [
     "NegativeSampler",
@@ -26,7 +24,7 @@ class NegativeSampler(nn.Module):
     )
 
     #: A filterer for negative batches
-    filterer: Optional[Filterer]
+    filterer: Filterer | None
 
     num_entities: int
     num_relations: int
@@ -36,12 +34,12 @@ class NegativeSampler(nn.Module):
         self,
         *,
         mapped_triples: MappedTriples,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
-        num_negs_per_pos: Optional[int] = None,
+        num_entities: int | None = None,
+        num_relations: int | None = None,
+        num_negs_per_pos: int | None = None,
         filtered: bool = False,
         filterer: HintOrType[Filterer] = None,
-        filterer_kwargs: Optional[Mapping[str, Any]] = None,
+        filterer_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
@@ -80,7 +78,7 @@ class NegativeSampler(nn.Module):
         """Get the normalized name of the negative sampler."""
         return normalize_string(cls.__name__, suffix=NegativeSampler.__name__)
 
-    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:
+    def sample(self, positive_batch: LongTensor) -> tuple[LongTensor, BoolTensor | None]:
         """
         Generate negative samples from the positive batch.
 
@@ -106,7 +104,7 @@ class NegativeSampler(nn.Module):
         return negative_batch, self.filterer(negative_batch=negative_batch)
 
     @abstractmethod
-    def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
+    def corrupt_batch(self, positive_batch: LongTensor) -> LongTensor:
         """
         Generate negative samples from the positive batch without application of any filter.
 

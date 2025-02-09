@@ -1,6 +1,7 @@
 Datasets
 ========
 .. automodapi:: pykeen.datasets
+    :include-all-objects:
 
 .. automodapi:: pykeen.datasets.base
 

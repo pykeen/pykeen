@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """The Aristo-v4 dataset."""
 
 import pathlib

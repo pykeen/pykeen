@@ -23,6 +23,7 @@ def test_get_absolute_split_sizes():
     for num_splits, n_total in zip(
         (2, 3, 4),
         (100, 200, 10412),
+        strict=False,
     ):
         # generate random ratios
         ratios = numpy.random.uniform(size=(num_splits,))
@@ -165,9 +166,9 @@ class RandomizedCleanerTests(CleanerTestCase):
             (1, 1000, 4),
         }
 
-        new_training, new_testing = [
+        new_training, new_testing = (
             triple_tensor_to_set(arr) for arr in self.instance.cleanup_pair(training, testing, random_state=None)
-        ]
+        )
 
         if expected_training_1 == new_training:
             self.assertEqual(expected_testing_1, new_testing)

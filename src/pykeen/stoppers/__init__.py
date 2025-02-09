@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Early stoppers.
 
 The following code will create a scenario in which training will stop
@@ -39,6 +37,7 @@ __all__ = [
     "stopper_resolver",
 ]
 
+#: A resolver for stoppers
 stopper_resolver: ClassResolver[Stopper] = ClassResolver.from_subclasses(
     Stopper,
     default=NopStopper,

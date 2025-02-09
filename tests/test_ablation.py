@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Tests for ablation studies."""
 
 import tempfile

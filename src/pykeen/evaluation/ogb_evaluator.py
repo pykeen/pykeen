@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from collections.abc import Collection, Iterable, Mapping
+from typing import Any
 
 import torch
 from torch_max_mem import maximize_memory_utilization
@@ -14,7 +15,16 @@ from .rank_based_evaluator import RankBasedMetricKey, RankBasedMetricResults, Sa
 from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
 from ..models import Model
-from ..typing import LABEL_HEAD, LABEL_TAIL, RANK_REALISTIC, SIDE_BOTH, ExtendedTarget, MappedTriples, Target
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_TAIL,
+    RANK_REALISTIC,
+    SIDE_BOTH,
+    ExtendedTarget,
+    LongTensor,
+    MappedTriples,
+    Target,
+)
 
 __all__ = [
     "OGBEvaluator",
@@ -41,15 +51,15 @@ class OGBEvaluator(SampledRankBasedEvaluator):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
+        batch_size: int | None = None,
+        slice_size: int | None = None,
+        device: torch.device | None = None,
         use_tqdm: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, str]] = None,
-        restrict_entities_to: Optional[Collection[int]] = None,
-        restrict_relations_to: Optional[Collection[int]] = None,
+        tqdm_kwargs: Mapping[str, str] | None = None,
+        restrict_entities_to: Collection[int] | None = None,
+        restrict_relations_to: Collection[int] | None = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults:
@@ -81,9 +91,9 @@ def evaluate_ogb(
     mapped_triples: MappedTriples,
     batch_size: int | None = None,
     slice_size: int | None = None,
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
     use_tqdm: bool = True,
-    tqdm_kwargs: Optional[Mapping[str, Any]] = None,
+    tqdm_kwargs: Mapping[str, Any] | None = None,
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
 ) -> MetricResults:
     """
@@ -147,9 +157,9 @@ def evaluate_ogb(
         )
 
     # filter supported metrics
-    metrics: List[RankBasedMetric] = []
+    metrics: list[RankBasedMetric] = []
     for metric in evaluator.metrics:
-        if not isinstance(metric, (HitsAtK, InverseHarmonicMeanRank)) or (
+        if not isinstance(metric, HitsAtK | InverseHarmonicMeanRank) or (
             isinstance(metric, HitsAtK) and metric.k not in {1, 3, 10}
         ):
             logger.warning(f"{metric} is not supported by OGB evaluator")
@@ -159,8 +169,8 @@ def evaluate_ogb(
     # prepare input format, cf. `evaluator.expected_input``
     # y_pred_pos: shape: (num_edge,)
     # y_pred_neg: shape: (num_edge, num_nodes_neg)
-    y_pred_pos: Dict[Target, torch.Tensor] = {}
-    y_pred_neg: Dict[Target, torch.Tensor] = {}
+    y_pred_pos: dict[Target, torch.Tensor] = {}
+    y_pred_neg: dict[Target, torch.Tensor] = {}
 
     # move tensor to device
     device = device or model.device
@@ -184,7 +194,7 @@ def evaluate_ogb(
                 progress_bar=progress_bar,
             )
 
-    def iter_preds() -> Iterable[Tuple[ExtendedTarget, torch.Tensor, torch.Tensor]]:
+    def iter_preds() -> Iterable[tuple[ExtendedTarget, torch.Tensor, torch.Tensor]]:
         """Iterate over predicted scores for extended prediction targets."""
         targets = sorted(y_pred_pos.keys())
         for _target in targets:
@@ -195,7 +205,7 @@ def evaluate_ogb(
             torch.cat([y_pred_neg[t] for t in targets], dim=0),
         )
 
-    result: Dict[RankBasedMetricKey | str, float] = {}
+    result: dict[RankBasedMetricKey | str, float] = {}
     # cf. https://github.com/snap-stanford/ogb/pull/357
     rank_type = RANK_REALISTIC
     for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
@@ -225,7 +235,7 @@ def _evaluate_ogb(
     slice_size: int,
     mapped_triples: MappedTriples,
     model: Model,
-    negatives: torch.LongTensor,
+    negatives: LongTensor,
     target: Target,
     progress_bar: tqdm,
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -241,7 +251,7 @@ def _evaluate_ogb(
     # iterate over batches
     offset = 0
     for hrt_batch, negatives_batch in zip(
-        mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size)
+        mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size), strict=False
     ):
         # combine ids, shape: (batch_size, num_negatives + 1)
         ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)

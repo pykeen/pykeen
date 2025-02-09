@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Get triples from the Nations dataset."""
 
 import pathlib

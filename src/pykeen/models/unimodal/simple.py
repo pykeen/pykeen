@@ -1,41 +1,35 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of SimplE."""
 
-from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from class_resolver import OptionalKwargs
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn.modules import SimplEInteraction
+from ...nn.modules import Clamp, ClampedInteraction, SimplEInteraction
 from ...regularizers import PowerSumRegularizer, Regularizer, regularizer_resolver
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "SimplE",
 ]
 
 
-class SimplE(ERModel):
+class SimplE(
+    ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]
+):
     r"""An implementation of SimplE [kazemi2018]_.
 
-    SimplE is an extension of canonical polyadic (CP), an early tensor factorization approach in which each entity
-    $e \in \mathcal{E}$ is represented by two vectors $\textbf{h}_e, \textbf{t}_e \in \mathbb{R}^d$ and each
-    relation by a single vector $\textbf{r}_r \in \mathbb{R}^d$. Depending whether an entity participates in a
-    triple as the head or tail entity, either $\textbf{h}$ or $\textbf{t}$ is used. Both entity
-    representations are learned independently, i.e. observing a triple $(h,r,t)$, the method only updates
-    $\textbf{h}_h$ and $\textbf{t}_t$. In contrast to CP, SimplE introduces for each relation $\textbf{r}_r$
-    the inverse relation $\textbf{r'}_r$, and formulates its the interaction model based on both:
+    SimplE learns two $d$-dimensional vectors for each entity and each relation, stored in
+    :class:`~pykeen.nn.representation.Embedding`, and applies the :class:`~pykeen.nn.modules.SimplEInteraction` on top.
 
-    .. math::
-
-        f(h,r,t) = \frac{1}{2}\left(\left\langle\textbf{h}_h, \textbf{r}_r, \textbf{t}_t\right\rangle
-        + \left\langle\textbf{h}_t, \textbf{r'}_r, \textbf{t}_h\right\rangle\right)
-
-    Therefore, for each triple $(h,r,t) \in \mathbb{K}$, both $\textbf{h}_h$ and $\textbf{h}_t$
-    as well as $\textbf{t}_h$ and $\textbf{t}_t$ are updated.
+    .. note ::
+        In the code in their repository, the score is clamped to $[-20, 20]$.
+        That is not mentioned in the paper, so it is made optional.
 
     .. seealso::
 
@@ -54,13 +48,13 @@ class SimplE(ERModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
+    loss_default: ClassVar[type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
     #: regularization term by the number of elements, which is 200.
-    regularizer_default: ClassVar[Type[Regularizer]] = PowerSumRegularizer
+    regularizer_default: ClassVar[type[Regularizer]] = PowerSumRegularizer
     #: The power sum settings used by [trouillon2016]_ for SimplE
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=20,
@@ -72,7 +66,7 @@ class SimplE(ERModel):
         self,
         *,
         embedding_dim: int = 200,
-        clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
+        clamp_score: Clamp | float | None = None,
         entity_initializer: Hint[Initializer] = None,
         relation_initializer: Hint[Initializer] = None,
         regularizer: Hint[Regularizer] = None,
@@ -85,7 +79,7 @@ class SimplE(ERModel):
         :param embedding_dim:
             the embedding dimension
         :param clamp_score:
-            whether to clamp scores, cf. :meth:`SimplEInteraction.__init__`
+            whether to clamp scores, cf. :class:`~pykeen.nn.modules.ClampedInteraction`
         :param entity_initializer:
             the entity representation initializer
         :param relation_initializer:
@@ -98,10 +92,13 @@ class SimplE(ERModel):
         :param kwargs:
             additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """
+        # TODO: what about using the default regularizer?
         regularizer = regularizer_resolver.make_safe(regularizer, pos_kwargs=regularizer_kwargs)
+        # Note: In the code in their repository, the score is clamped to [-20, 20].
+        #       That is not mentioned in the paper, so it is made optional here.
         super().__init__(
-            interaction=SimplEInteraction,
-            interaction_kwargs=dict(clamp_score=clamp_score),
+            interaction=ClampedInteraction,
+            interaction_kwargs=dict(base=SimplEInteraction, clamp_score=clamp_score),
             entity_representations_kwargs=[
                 # (head) entity
                 dict(

@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """Version information for PyKEEN."""
 
 import os
 import sys
 from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
-from typing import Optional, Tuple
 
 __all__ = [
     "VERSION",
@@ -16,7 +13,7 @@ __all__ = [
     "env",
 ]
 
-VERSION = "1.10.3-dev"
+VERSION = "1.11.1-dev"
 
 
 @lru_cache(maxsize=2)
@@ -37,7 +34,7 @@ def get_git_hash(terse: bool = True) -> str:
 
 
 @lru_cache(maxsize=1)
-def get_git_branch() -> Optional[str]:
+def get_git_branch() -> str | None:
     """Get the PyKEEN branch, if installed from git in editable mode.
 
     :return:
@@ -46,7 +43,7 @@ def get_git_branch() -> Optional[str]:
     return _run("git", "branch", "--show-current")
 
 
-def _run(*args: str) -> Optional[str]:
+def _run(*args: str) -> str | None:
     with open(os.devnull, "w") as devnull:
         try:
             ret = check_output(  # noqa: S603,S607
@@ -70,7 +67,7 @@ def get_version(with_git_hash: bool = False) -> str:
     return f"{VERSION}-{get_git_hash(terse=True)}" if with_git_hash else VERSION
 
 
-def env_table(tablefmt: str = "github", headers: Tuple[str, str] = ("Key", "Value")) -> str:
+def env_table(tablefmt: str = "github", headers: tuple[str, str] = ("Key", "Value")) -> str:
     """Generate a table describing the environment in which PyKEEN is being run."""
     import platform
     import time

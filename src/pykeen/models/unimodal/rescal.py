@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Implementation of RESCAL."""
 
-from typing import Any, ClassVar, Mapping, Type
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.init import uniform_
@@ -11,29 +10,23 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import RESCALInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "RESCAL",
 ]
 
 
-class RESCAL(ERModel):
+class RESCAL(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of RESCAL from [nickel2011]_.
 
-    This model represents relations as matrices and models interactions between latent features.
+    RESCAL models entities by $d$-dimensional vectors and relations by $d \times d$-dimensional matrices, both stored
+    in :class:`~pykeen.nn.representation.Embedding`.
+    The :class:`~pykeen.nn.modules.RESCALInteraction` function is used to obtain scores from them.
 
-    RESCAL is a bilinear model that models entities as vectors and relations as matrices.
-    The relation matrices $\textbf{W}_{r} \in \mathbb{R}^{d \times d}$ contain weights $w_{i,j}$ that
-    capture the amount of interaction between the $i$-th latent factor of $\textbf{e}_h \in \mathbb{R}^{d}$ and the
-    $j$-th latent factor of $\textbf{e}_t \in \mathbb{R}^{d}$.
+    .. note ::
+        For $E$ entities and $R$ relations, this model requires $Ed + Rd^2$ parameters.
 
-    Thus, the plausibility score of $(h,r,t) \in \mathbb{K}$ is given by:
-
-    .. math::
-
-        f(h,r,t) = \textbf{e}_h^{T} \textbf{W}_{r} \textbf{e}_t = \sum_{i=1}^{d}\sum_{j=1}^{d} w_{ij}^{(r)}
-        (\textbf{e}_h)_{i} (\textbf{e}_t)_{j}
     ---
     citation:
         author: Nickel
@@ -48,7 +41,7 @@ class RESCAL(ERModel):
     #: The regularizer used by [nickel2011]_ for for RESCAL
     #: According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py
     #: a normalized weight of 10 is used.
-    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
+    regularizer_default: ClassVar[type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nickel2011]_ for for RESCAL
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=10,
@@ -75,11 +68,11 @@ class RESCAL(ERModel):
         :param relation_initializer:
             relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param regularizer:
-            the regularizer. Default to :attr:`RESCAL.defaul_regularizer`
+            the regularizer. Default to :attr:`pykeen.models.RESCAL.default_regularizer`
         :param regularizer_kwargs:
             additional keyword-based parameters for the regularizer
         :param kwargs:
-            remaining keyword arguments to forward to :meth:`pykeen.models.ERModel.__init__`
+            remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
 
         .. seealso::
 

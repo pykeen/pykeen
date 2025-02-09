@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Tracking results in local files."""
 
 import csv
@@ -7,7 +5,8 @@ import datetime
 import json
 import logging
 import pathlib
-from typing import Any, ClassVar, Mapping, Optional, TextIO, Union
+from collections.abc import Mapping
+from typing import Any, ClassVar, TextIO
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
@@ -22,7 +21,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _format_key(key: str, prefix: Optional[str] = None) -> str:
+def _format_key(key: str, prefix: str | None = None) -> str:
     """Prepend prefix is necessary."""
     if prefix is None:
         return key
@@ -47,8 +46,8 @@ class FileResultTracker(ResultTracker):
 
     def __init__(
         self,
-        path: Union[None, str, pathlib.Path] = None,
-        name: Optional[str] = None,
+        path: None | str | pathlib.Path = None,
+        name: str | None = None,
     ):
         """Initialize the tracker.
 
@@ -85,8 +84,8 @@ class CSVResultTracker(FileResultTracker):
 
     def __init__(
         self,
-        path: Union[None, str, pathlib.Path] = None,
-        name: Optional[str] = None,
+        path: None | str | pathlib.Path = None,
+        name: str | None = None,
         **kwargs,
     ):
         """Initialize the tracker.
@@ -102,7 +101,7 @@ class CSVResultTracker(FileResultTracker):
         self.csv_writer = csv.writer(self.file, **kwargs)
 
     # docstr-coverage: inherited
-    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+    def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.csv_writer.writerow(self.HEADER)
 
     # docstr-coverage: inherited
@@ -110,8 +109,8 @@ class CSVResultTracker(FileResultTracker):
         self,
         dictionary: Mapping[str, Any],
         label: str,
-        step: Optional[int],
-        prefix: Optional[str],
+        step: int | None,
+        prefix: str | None,
     ) -> None:  # noqa: D102
         dictionary = flatten_dictionary(dictionary=dictionary, prefix=prefix)
         self.csv_writer.writerows((label, step, key, value) for key, value in dictionary.items())
@@ -121,7 +120,7 @@ class CSVResultTracker(FileResultTracker):
     def log_params(
         self,
         params: Mapping[str, Any],
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         self._write(dictionary=params, label="parameter", step=0, prefix=prefix)
 
@@ -129,8 +128,8 @@ class CSVResultTracker(FileResultTracker):
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         self._write(dictionary=metrics, label="metric", step=step, prefix=prefix)
 
@@ -154,7 +153,7 @@ class JSONResultTracker(FileResultTracker):
     def log_params(
         self,
         params: Mapping[str, Any],
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         self._write({"params": params, "prefix": prefix})
 
@@ -162,7 +161,7 @@ class JSONResultTracker(FileResultTracker):
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         self._write({"metrics": metrics, "prefix": prefix, "step": step})

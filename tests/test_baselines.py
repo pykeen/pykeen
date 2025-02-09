@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Test non-parametric baseline models."""
 
 import torch

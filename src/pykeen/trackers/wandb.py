@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """An adapter for Weights and Biases."""
 
 import os
-from typing import TYPE_CHECKING, Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary
@@ -55,7 +54,7 @@ class WANDBResultTracker(ResultTracker):
         self.run = None
 
     # docstr-coverage: inherited
-    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+    def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.run = self.wandb.init(project=self.project, name=run_name, **self.kwargs)  # type: ignore
 
     # docstr-coverage: inherited
@@ -67,8 +66,8 @@ class WANDBResultTracker(ResultTracker):
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         if self.run is None:
             raise AssertionError("start_run must be called before logging any metrics")
@@ -76,7 +75,7 @@ class WANDBResultTracker(ResultTracker):
         self.run.log(metrics, step=step)
 
     # docstr-coverage: inherited
-    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         if self.run is None:
             raise AssertionError("start_run must be called before logging any metrics")
         params = flatten_dictionary(dictionary=params, prefix=prefix)

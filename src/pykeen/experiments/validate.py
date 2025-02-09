@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """A validator for experimental settings."""
 
 import inspect
 import pathlib
-from typing import Callable, Iterable, Optional, Set, Tuple, Type, Union
+from collections.abc import Callable, Iterable
+from typing import Optional, Union
 
-import torch
 from class_resolver import Hint
 from torch import nn
 
@@ -20,6 +18,7 @@ from ..optimizers import optimizer_resolver
 from ..regularizers import regularizer_resolver
 from ..sampling import negative_sampler_resolver
 from ..training import training_loop_resolver
+from ..typing import FloatTensor
 from ..utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_string
 
 _SKIP_NAMES = {
@@ -35,18 +34,18 @@ _SKIP_NAMES = {
 }
 _SKIP_ANNOTATIONS = {
     nn.Embedding,
-    Optional[nn.Embedding],
-    Type[nn.Embedding],
-    Optional[Type[nn.Embedding]],
+    Optional[nn.Embedding],  # noqa:UP007
+    type[nn.Embedding],
+    Optional[type[nn.Embedding]],  # noqa:UP007
     nn.Module,
-    Optional[nn.Module],
-    Type[nn.Module],
-    Optional[Type[nn.Module]],
+    Optional[nn.Module],  # noqa:UP007
+    type[nn.Module],
+    Optional[type[nn.Module]],  # noqa:UP007
     Model,
-    Optional[Model],
-    Type[Model],
-    Optional[Type[Model]],
-    Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
+    Optional[Model],  # noqa:UP007
+    type[Model],
+    Optional[type[Model]],  # noqa:UP007
+    Union[str, Callable[[FloatTensor], FloatTensor]],  # noqa:UP007
     Hint[nn.Module],
 }
 _SKIP_EXTRANEOUS = {
@@ -54,7 +53,7 @@ _SKIP_EXTRANEOUS = {
 }
 
 
-def iterate_config_paths() -> Iterable[Tuple[str, pathlib.Path, pathlib.Path]]:
+def iterate_config_paths() -> Iterable[tuple[str, pathlib.Path, pathlib.Path]]:
     """Iterate over all configuration paths."""
     for model_directory in HERE.iterdir():
         if model_directory.name not in model_resolver.lookup_dict:
@@ -77,7 +76,7 @@ def _should_skip_because_type(x):
     return False
 
 
-def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
+def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     configuration = load_configuration(path)
 
@@ -94,10 +93,10 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
         *,
         required: bool = True,
         normalize: bool = False,
-        suffix: Optional[str] = None,
+        suffix: str | None = None,
         check_kwargs: bool = False,
-        required_kwargs: Optional[Set[str]] = None,
-        allowed_missing_kwargs: Optional[Set[str]] = None,
+        required_kwargs: set[str] | None = None,
+        allowed_missing_kwargs: set[str] | None = None,
     ):
         value = test_dict.get(key)
         if value is None:

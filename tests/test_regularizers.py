@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Test that regularizers can be executed."""
 
 import unittest
-from typing import Sequence
+from collections.abc import Sequence
 
 import pytest
 import torch

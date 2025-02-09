@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
-
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
 import math
-from typing import Collection, Optional
+from collections.abc import Collection
 
 import torch
 
 from .negative_sampler import NegativeSampler
 from ..constants import LABEL_HEAD, LABEL_TAIL, TARGET_TO_INDEX
-from ..typing import Target
+from ..typing import LongTensor, Target
 
 __all__ = [
     "BasicNegativeSampler",
@@ -17,7 +15,7 @@ __all__ = [
 ]
 
 
-def random_replacement_(batch: torch.LongTensor, index: int, selection: slice, size: int, max_index: int) -> None:
+def random_replacement_(batch: LongTensor, index: int, selection: slice, size: int, max_index: int) -> None:
     """
     Replace a column of a batch of indices by random indices.
 
@@ -68,7 +66,7 @@ class BasicNegativeSampler(NegativeSampler):
     def __init__(
         self,
         *,
-        corruption_scheme: Optional[Collection[Target]] = None,
+        corruption_scheme: Collection[Target] | None = None,
         **kwargs,
     ) -> None:
         """Initialize the basic negative sampler with the given entities.
@@ -84,7 +82,7 @@ class BasicNegativeSampler(NegativeSampler):
         self._corruption_indices = [TARGET_TO_INDEX[side] for side in self.corruption_scheme]
 
     # docstr-coverage: inherited
-    def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+    def corrupt_batch(self, positive_batch: LongTensor) -> LongTensor:  # noqa: D102
         batch_shape = positive_batch.shape[:-1]
 
         # clone positive batch for corruption (.repeat_interleave creates a copy)
@@ -97,7 +95,7 @@ class BasicNegativeSampler(NegativeSampler):
         split_idx = int(math.ceil(total_num_negatives / len(self._corruption_indices)))
 
         # Do not detach, as no gradients should flow into the indices.
-        for index, start in zip(self._corruption_indices, range(0, total_num_negatives, split_idx)):
+        for index, start in zip(self._corruption_indices, range(0, total_num_negatives, split_idx), strict=False):
             stop = min(start + split_idx, total_num_negatives)
             random_replacement_(
                 batch=negative_batch,

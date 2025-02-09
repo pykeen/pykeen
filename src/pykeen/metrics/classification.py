@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Classification metrics.
 
@@ -17,7 +15,8 @@ from __future__ import annotations
 import abc
 import math
 import warnings
-from typing import ClassVar, Collection, Literal
+from collections.abc import Collection
+from typing import ClassVar, Literal
 
 import numpy
 from class_resolver import ClassResolver
@@ -122,9 +121,7 @@ class ClassificationMetric(Metric, abc.ABC):
         if weights is None:
             return self.forward(y_true=y_true, y_score=y_score)
         if not self.supports_weights:
-            raise ValueError(
-                f"{self.__call__.__qualname__} does not support sample weights but received" f"weights={weights}.",
-            )
+            raise ValueError(f"{self.__call__.__qualname__} does not support sample weights but received {weights=}.")
         return self.forward(y_true=y_true, y_score=y_score, sample_weight=weights)
 
     @abc.abstractmethod
@@ -774,6 +771,7 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
         )
 
 
+#: A resolver for classification metrics
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
     base=ClassificationMetric,
     default=AveragePrecisionScore,

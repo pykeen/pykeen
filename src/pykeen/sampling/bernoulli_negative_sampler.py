@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """Negative sampling algorithm based on the work of [wang2014]_."""
 
 import torch
 
 from .basic_negative_sampler import random_replacement_
 from .negative_sampler import NegativeSampler
-from ..typing import COLUMN_HEAD, COLUMN_TAIL, MappedTriples
+from ..typing import COLUMN_HEAD, COLUMN_TAIL, LongTensor, MappedTriples
 
 __all__ = [
     "BernoulliNegativeSampler",
@@ -71,7 +69,7 @@ class BernoulliNegativeSampler(NegativeSampler):
             self.corrupt_head_probability[r] = tph / (tph + hpt)
 
     # docstr-coverage: inherited
-    def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+    def corrupt_batch(self, positive_batch: LongTensor) -> LongTensor:  # noqa: D102
         batch_shape = positive_batch.shape[:-1]
 
         # Decide whether to corrupt head or tail
