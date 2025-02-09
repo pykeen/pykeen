@@ -1593,7 +1593,7 @@ class BackfillRepresentation(PartitionRepresentation):
                 max_id,
             )
         elif backfill_max_id < 0:
-            raise BackfillNegativeMaxIDError
+            raise BackfillNegativeMaxIDError(max_id, base.max_id, base_ids)
 
         # comment: not all representations support passing a shape parameter
         backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=base.shape)
@@ -1614,6 +1614,14 @@ class BackfillRepresentation(PartitionRepresentation):
 
 class BackfillNegativeMaxIDError(ValueError):
     """Raised when trying to construct a backfill representation with negative max_id."""
+
+    def __init__(self, max_id: int, base_max_id: int, base_ids: list[int]) -> None:
+        self.max_id = max_id
+        self.base_max_id = base_max_id
+        self.base_ids = base_ids
+
+    def __str__(self) -> str:
+        return f"{self.max_id=} was less than the length of base_ids ({self.base_max_id=}), which were: {self.base_ids}"
 
 
 @parse_docdata
