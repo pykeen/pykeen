@@ -1572,13 +1572,6 @@ class BackfillRepresentation(PartitionRepresentation):
         """
         base_ids = sorted(set(base_ids))
 
-        # If the maximum id is not greater than the maximum base id, there will be an error. So, we check and raise explicitly here.
-        # If the max ID is less than the length of the base IDs, the representation_resolver.make() will fail since a tensor with negative dimensions cannot be created.
-        # If the max ID is not greater than the maximum base ID, IndexError will result on `assignment[base_ids, 0] = 0`
-        # This is because the `assignment` tensor created from max_id will not have enough space to accomodate all the base_ids.
-        if max_id <= max(base_ids):
-            raise ValueError(f"{max_id=}: Value must be greater than the largest base_id ({max(base_ids)=})")
-
         # import here to avoid cyclic import
         from . import representation_resolver
 
