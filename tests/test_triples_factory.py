@@ -18,7 +18,7 @@ from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.training.lcwa import create_lcwa_instances
 from pykeen.training.slcwa import create_slcwa_instances
-from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
+from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory, generation
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids, get_mapped_triples
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
@@ -650,3 +650,24 @@ def test_get_mapped_triples(x, inputs: Mapping[str, Any]):
     assert mapped_triples.dtype == torch.long
     assert mapped_triples.ndim == 2
     assert mapped_triples.shape[-1] == 3
+
+
+@pytest.fixture()
+def tf_one_hole() -> CoreTriplesFactory:
+    """Create a condensable triples factory."""
+    # create (already condensed) triples factory
+    tf = generation.generate_triples_factory(random_state=42)
+    # remove all triples with entity or relation ID 0
+    keep_mask = (tf.mapped_triples != 0).all(dim=-1)
+    tf.mapped_triples = tf.mapped_triples[keep_mask]
+    return tf
+
+
+@pytest.mark.parametrize(("entities", "relations"), itt.product((False, True), repeat=2))
+def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bool) -> None:
+    """Test condensation."""
+    tf_new = tf_one_hole.condense(entities=entities, relations=relations)
+    expected_num_entities = tf_one_hole.num_entities - 1 if entities else tf_one_hole.num_entities
+    assert tf_new.num_entities == expected_num_entities
+    expected_num_relations = tf_one_hole.num_relations - 1 if relations else tf_one_hole.num_relations
+    assert tf_new.num_relations == expected_num_relations
