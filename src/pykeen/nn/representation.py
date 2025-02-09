@@ -1586,7 +1586,12 @@ class BackfillRepresentation(PartitionRepresentation):
 
         backfill_max_id = max_id - base.max_id
         if backfill_max_id == 0:
-            raise BackfillZeroMaxIDError
+            logger.warning(
+                "Because the given max_id (%d) is the same as the length of the base_ids, "
+                "the backfill representation will be effectively equivalent to the "
+                "base representation",
+                max_id,
+            )
         elif backfill_max_id < 0:
             raise BackfillNegativeMaxIDError
 
@@ -1605,10 +1610,6 @@ class BackfillRepresentation(PartitionRepresentation):
         assignment[mask, 1] = torch.arange(backfill.max_id)
 
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
-
-
-class BackfillZeroMaxIDError(ValueError):
-    """Raised when trying to construct a backfill representation with a max_id of zero."""
 
 
 class BackfillNegativeMaxIDError(ValueError):
