@@ -1583,15 +1583,15 @@ def determine_maximum_batch_size(batch_size: int | None, device: torch.device, m
         A maximum batch size.
     """
     if batch_size is None:
-        if device.type == "cuda":
-            batch_size = maximum_batch_size
-        else:
+        if device.type != "cuda":
             batch_size = 32
             logger.warning(
                 f"Using automatic batch size on {device.type=} can cause unexplained out-of-memory crashes. "
                 f"Therefore, we use a conservative small {batch_size=:_}. "
                 f"Performance may be improved by explicitly specifying a larger batch size."
             )
+        else:
+            batch_size = maximum_batch_size
         logger.debug(f"Automatically set maximum batch size to {batch_size=:_}")
     return batch_size
 
