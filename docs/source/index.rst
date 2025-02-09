@@ -11,6 +11,7 @@ PyKEEN
    tutorial/first_steps
    tutorial/models
    tutorial/representations
+   tutorial/interactions
    tutorial/trackers/index
    tutorial/checkpoints
    tutorial/translational_toy_example

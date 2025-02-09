@@ -446,23 +446,23 @@ class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepr
 class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The state-less norm-based TransE interaction function.
 
-    TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`:
+    TransE models relations as a translation from head to tail entities in :math:`\mathbf{e}`:
 
     .. math::
 
-        \textbf{e}_h + \textbf{e}_r \approx \textbf{e}_t
+        \mathbf{e}_h + \mathbf{e}_r \approx \mathbf{e}_t
 
     This equation is rearranged and the :math:`l_p` norm is applied to create the TransE interaction function.
 
     .. math::
 
-        f(h, r, t) = - \|\textbf{e}_h + \textbf{e}_r - \textbf{e}_t\|_{p}
+        f(h, r, t) = - \|\mathbf{e}_h + \mathbf{e}_r - \mathbf{e}_t\|_{p}
 
     While this formulation is computationally efficient, it inherently cannot model one-to-many, many-to-one, and
     many-to-many relationships. For triples :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}` where :math:`t_1 \neq t_2`,
-    the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
-    and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
-    :math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
+    the model adapts the embeddings in order to ensure :math:`\mathbf{e}_h + \mathbf{e}_r \approx \mathbf{e}_{t_1}`
+    and :math:`\mathbf{e}_h + \mathbf{e}_r \approx \mathbf{e}_{t_2}` which results in
+    :math:`\mathbf{e}_{t_1} \approx \mathbf{e}_{t_2}`.
 
     ---
     citation:
@@ -559,11 +559,11 @@ class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     r"""The ComplEx interaction proposed by [trouillon2016]_.
 
     ComplEx operates on complex-valued entity and relation representations, i.e.,
-    $\textbf{e}_i, \textbf{r}_i \in \mathbb{C}^d$ and calculates the plausibility score via the Hadamard product:
+    $\mathbf{e}_i, \mathbf{r}_i \in \mathbb{C}^d$ and calculates the plausibility score via the Hadamard product:
 
     .. math::
 
-        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\bar{\mathbf{e}}_t)
+        f(h,r,t) =  Re(\left\langle \mathbf{e}_h, \mathbf{r}_r, \bar{\mathbf{e}}_t\right\rangle)
 
     Which expands to:
 
@@ -574,8 +574,8 @@ class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         + \left\langle Re(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
         - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
 
-    where $Re(\textbf{x})$ and $Im(\textbf{x})$ denote the real and imaginary parts of the complex valued vector
-    $\textbf{x}$. Because the Hadamard product is not commutative in the complex space, ComplEx can model
+    where $Re(\mathbf{x})$ and $Im(\mathbf{x})$ denote the real and imaginary parts of the complex valued vector
+    $\mathbf{x}$. Because the Hadamard product is not commutative in the complex space, ComplEx can model
     anti-symmetric relations in contrast to DistMult.
 
     .. seealso ::
@@ -1206,8 +1206,8 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
         f(\mathbf{h}, \mathbf{r}, \mathbf{t}) = \mathbf{w}^{T} g(\mathbf{W} [\mathbf{h}; \mathbf{r}; \mathbf{t}]),
 
-    where $\textbf{W} \in \mathbb{R}^{k \times 3d}$ represents the weight matrix of the hidden layer,
-    $\textbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
+    where $\mathbf{W} \in \mathbb{R}^{k \times 3d}$ represents the weight matrix of the hidden layer,
+    $\mathbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
     as the hyperbolic tangent.
 
     ---
@@ -1301,13 +1301,13 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
     .. math::
 
-        f(h, r, t) = \textbf{w}^{T} g(\textbf{W} [\textbf{h}; \textbf{r}; \textbf{t}])
+        f(h, r, t) = \mathbf{w}^{T} g(\mathbf{W} [\mathbf{h}; \mathbf{r}; \mathbf{t}])
 
     whereas here it is:
 
     .. math::
 
-        f(h, r, t) = \textbf{t}^{T} f(\textbf{W} (g(\textbf{W} [\textbf{h}; \textbf{r}]))
+        f(h, r, t) = \mathbf{t}^{T} f(\mathbf{W} (g(\mathbf{W} [\mathbf{h}; \mathbf{r}]))
 
     including dropouts and batch-norms between each two hidden layers. Thus,
     :class:`~pykeen.nn.modules.ConvEInteraction` can be seen as a special case of ERMLP (E).
@@ -1457,7 +1457,12 @@ class RotatEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
     r"""The RotatE interaction function proposed by [sun2019]_.
 
     RotatE operates on complex-valued entity and relation representations, i.e.,
-    $\textbf{e}_i, \textbf{r}_i \in \mathbb{C}^d$.
+    $\mathbf{e}_i, \mathbf{r}_i \in \mathbb{C}^d$.
+
+    The interaction function is given by
+
+    .. math ::
+        \| \mathbf{h} \odot \mathbf{r} - \mathbf{t} \|
 
     .. note::
         this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
@@ -1535,18 +1540,18 @@ class HolEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
     .. math::
 
-        f(h,r,t) = \textbf{r}^{T}(\textbf{h} \star \textbf{t})
+        f(h,r,t) = \mathbf{r}^{T}(\mathbf{h} \star \mathbf{t})
 
     where the circular correlation $\star: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}^d$ is defined as:
 
     .. math::
 
-        [\textbf{a} \star \textbf{b}]_i = \sum_{k=0}^{d-1} \textbf{a}_{k} * \textbf{b}_{(i+k)\ mod \ d}
+        [\mathbf{a} \star \mathbf{b}]_i = \sum_{k=0}^{d-1} \mathbf{a}_{k} * \mathbf{b}_{(i+k)\ mod \ d}
 
-    By using the correlation operator each component $[\textbf{h} \star \textbf{t}]_i$ represents a sum over a
+    By using the correlation operator each component $[\mathbf{h} \star \mathbf{t}]_i$ represents a sum over a
     fixed partition over pairwise interactions. This enables the model to put semantic similar interactions into the
-    same partition and share weights through $\textbf{r}$. Similarly irrelevant interactions of features could also
-    be placed into the same partition which could be assigned a small weight in $\textbf{r}$.
+    same partition and share weights through $\mathbf{r}$. Similarly irrelevant interactions of features could also
+    be placed into the same partition which could be assigned a small weight in $\mathbf{r}$.
 
     ---
     citation:
@@ -1743,10 +1748,10 @@ class RESCALInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
     .. math::
 
-        \mathbf{h}^T \textbf{R} \textbf{t}
+        \mathbf{h}^T \mathbf{R} \mathbf{t}
         = \sum_{i=1}^{d} \sum_{j=1}^{d} \mathbf{h}_i \mathbf{R}_{i, j} \mathbf{t}_{i}
 
-    Thus, the relation matrices $\textbf{R}$ contain weights $\textbf{R}_{i, j}$ that capture the amount of interaction
+    Thus, the relation matrices $\mathbf{R}$ contain weights $\mathbf{R}_{i, j}$ that capture the amount of interaction
     between the $i$-th latent factor of the head representation and the $j$-th latent factor.
 
     The computational complexity is given by $\mathcal{O}(d^2)$.
@@ -1785,13 +1790,13 @@ class SEInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTe
     r"""The Structured Embedding (SE) interaction function.
 
     SE applies role- and relation-specific projection matrices
-    $\textbf{M}_{r}^{h}, \textbf{M}_{r}^{t} \in \mathbb{R}^{d \times d}$ to the head and tail
+    $\mathbf{M}_{r}^{h}, \mathbf{M}_{r}^{t} \in \mathbb{R}^{d \times d}$ to the head and tail
     entities' representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$ before computing their distance.
 
     .. math::
 
-        f(\textbf{h}, (\textbf{M}_{r}^{h}, \textbf{M}_{r}^{t}), \textbf{t})
-            = -\|\textbf{M}_{r}^{h} \textbf{h}  - \textbf{M}_{r}^{t} \textbf{t}\|_p
+        f(\mathbf{h}, (\mathbf{M}_{r}^{h}, \mathbf{M}_{r}^{t}), \mathbf{t})
+            = -\|\mathbf{M}_{r}^{h} \mathbf{h}  - \mathbf{M}_{r}^{t} \mathbf{t}\|_p
 
     ---
     name: Structured Embedding
@@ -1990,7 +1995,7 @@ class UMInteraction(NormBasedInteraction[FloatTensor, tuple[()], FloatTensor]):
 
     .. math::
 
-        -\|\textbf{h}  - \textbf{t}\|_p^2
+        -\|\mathbf{h}  - \mathbf{t}\|_p^2
 
     It is appropriate for networks with a single relationship type that is undirected.
 
@@ -2047,7 +2052,7 @@ class UMInteraction(NormBasedInteraction[FloatTensor, tuple[()], FloatTensor]):
 
 @parse_docdata
 class TorusEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """The TorusE interaction function from [ebisu2018].
+    """The TorusE interaction function from [ebisu2018]_.
 
     .. note ::
         This only implements the two L_p norm based variants.
@@ -2117,7 +2122,7 @@ class TransDInteraction(
 
     To do so, all head entities, tail entities, and relations are represented by two vectors,
     $\mathbf{h}_v, \mathbf{h}_p, \mathbf{t}_v, \mathbf{t}_p \in \mathbb{R}^d$
-    and $\mathbf{r}_v, \mathbf{r}_v \in \mathbb{R}^k$, respectively.
+    and $\mathbf{r}_p, \mathbf{r}_v \in \mathbb{R}^k$, respectively.
 
     The first set of representations is used for calculating the entity-relation-specific projection matrices:
 
@@ -2127,7 +2132,7 @@ class TransDInteraction(
 
         \mathbf{M}_{r, t} &=& \mathbf{r}_p \mathbf{t}_p^{T} + \tilde{\mathbf{I}}
 
-    where $\tilde{\textbf{I}} \in \mathbb{R}^{k \times d}$ is a $k \times d$ matrix with ones on the diagonal and
+    where $\tilde{\mathbf{I}} \in \mathbb{R}^{k \times d}$ is a $k \times d$ matrix with ones on the diagonal and
     zeros elsewhere. Next, $\mathbf{h}_v$ and $\mathbf{t}_v$ are projected into the relation space by means of the
     constructed projection matrices, before calculating a distance similar to
     :class:`~pykeen.nn.modules.TransEInteraction`:
@@ -2212,8 +2217,8 @@ class NTNInteraction(
             + \mathbf{r}_1
         )
 
-    with $\mathbf{W}_3 \in \mathbb{R}^{d \times d \times k}$, $\textbf{R}_2 \in \mathbb{R}^{k \times 2d}$,
-    the bias vector $\textbf{r}_1$, the final projection $\textbf{r}_u \in \mathbb{R}^k$, and a non-linear activation
+    with $\mathbf{W}_3 \in \mathbb{R}^{d \times d \times k}$, $\mathbf{R}_2 \in \mathbb{R}^{k \times 2d}$,
+    the bias vector $\mathbf{r}_1$, the final projection $\mathbf{r}_u \in \mathbb{R}^k$, and a non-linear activation
     function $\sigma$ (which defaults to :class:`~torch.nn.Tanh`).
 
     It can be seen as an extension of a two-layer MLP with relation-specific weights
@@ -2398,7 +2403,7 @@ class TransHInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
 
     .. math::
 
-        -\|\textbf{h}_{r} + \textbf{r}_d - \textbf{t}_{r}\|_{p}^2
+        -\|\mathbf{h}_{r} + \mathbf{r}_d - \mathbf{t}_{r}\|_{p}^2
 
     ---
     citation:
@@ -2574,16 +2579,16 @@ class DirectionAverageInteraction(
 
     A separate representation is learned for each entity $e \in \mathcal{E}$ for when it appears as the
     subject of a triple $\mathbf{e}_h \in \mathbb{R}^d$ and as the object of a triple $\mathbf{e}_t \in \mathbb{R}^d$.
-    Similarly, two representations are learned for each relationship for a forward $\textbf{r}_{\rightarrow}$
-    and backward triple $\textbf{r}_{\leftarrow}$.
+    Similarly, two representations are learned for each relationship for a forward $\mathbf{r}_{\rightarrow}$
+    and backward triple $\mathbf{r}_{\leftarrow}$.
 
     The score is then obtained by averaging the *forward* and the *backward* interaction function value:
 
     .. math::
 
         \frac{
-              f(\textbf{h}_{h}, \textbf{r}_{\rightarrow}, \textbf{t}_{t})
-            + f(\textbf{t}_{h}, \textbf{r}_{\leftarrow}, \textbf{h}_{t})
+              f(\mathbf{h}_{h}, \mathbf{r}_{\rightarrow}, \mathbf{t}_{t})
+            + f(\mathbf{t}_{h}, \mathbf{r}_{\leftarrow}, \mathbf{h}_{t})
         }{2}
 
     Where ``f`` is the interaction model used. If :class:`pykeen.nn.modules.DistMultInteraction` is used,
@@ -2649,14 +2654,14 @@ class SimplEInteraction(DirectionAverageInteraction):
     representations are learned independently, i.e. observing a triple $(h,r,t)$, the method only updates
     $\mathbf{h}_h$ and $\mathbf{t}_t$.
     In contrast to :class:`~pykeen.nn.modules.CPInteraction`, SimplE introduces separate weights for each relation:
-    $\textbf{r}_{\rightarrow}$ and $\textbf{r}_{\leftarrow}$ for the inverse relation.
+    $\mathbf{r}_{\rightarrow}$ and $\mathbf{r}_{\leftarrow}$ for the inverse relation.
     The interaction model is based on both:
 
     .. math::
 
         \frac{1}{2}\left(
-              \left\langle\textbf{h}_{h}, \textbf{r}_{\rightarrow}, \textbf{t}_{t}\right\rangle
-            + \left\langle\textbf{t}_{h}, \textbf{r}_{\leftarrow}, \textbf{h}_{t}\right\rangle
+              \left\langle\mathbf{h}_{h}, \mathbf{r}_{\rightarrow}, \mathbf{t}_{t}\right\rangle
+            + \left\langle\mathbf{t}_{h}, \mathbf{r}_{\leftarrow}, \mathbf{h}_{t}\right\rangle
         \right)
 
     ---
