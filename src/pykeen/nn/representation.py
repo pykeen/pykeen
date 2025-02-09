@@ -1613,7 +1613,10 @@ class BackfillNegativeMaxIDError(ValueError):
         self.base_ids = base_ids
 
     def __str__(self) -> str:
-        return f"{self.max_id=} was less than the length of base_ids ({self.base_max_id=}), which were: {self.base_ids}"
+        return (
+            f"Tried to construct a backfill representation when giving a max_id ({self.max_id}) "
+            f"less than the length of base_ids ({self.base_max_id}), which were: {self.base_ids}"
+        )
 
 
 @parse_docdata
