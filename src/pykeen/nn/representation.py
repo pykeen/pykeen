@@ -1583,10 +1583,15 @@ class BackfillRepresentation(PartitionRepresentation):
         from . import representation_resolver
 
         base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
+
+        backfill_max_id = max_id - base.max_id
+        if backfill_max_id == 0:
+            raise BackfillZeroMaxIDError
+        elif backfill_max_id < 0:
+            raise BackfillNegativeMaxIDError
+
         # comment: not all representations support passing a shape parameter
-        backfill = representation_resolver.make(
-            backfill, backfill_kwargs, max_id=max_id - base.max_id, shape=base.shape
-        )
+        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=base.shape)
 
         # create assignment
         assignment = torch.full(size=(max_id, 2), fill_value=1, dtype=torch.long)
@@ -1600,6 +1605,14 @@ class BackfillRepresentation(PartitionRepresentation):
         assignment[mask, 1] = torch.arange(backfill.max_id)
 
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
+
+
+class BackfillZeroMaxIDError(ValueError):
+    """Raised when trying to construct a backfill representation with a max_id of zero."""
+
+
+class BackfillNegativeMaxIDError(ValueError):
+    """Raised when trying to construct a backfill representation with negative max_id."""
 
 
 @parse_docdata
