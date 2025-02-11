@@ -1,7 +1,8 @@
 Analysis
 ========
-.. toctree::
-   :name: analysis
-   :caption: Analysis
 
-   dataset_degree_distributions
+.. toctree::
+    :name: analysis
+    :caption: Analysis
+
+    dataset_degree_distributions

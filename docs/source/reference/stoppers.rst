@@ -1,5 +1,6 @@
 Stoppers
 ========
+
 .. automodapi:: pykeen.stoppers
     :no-heading:
     :headings: --
