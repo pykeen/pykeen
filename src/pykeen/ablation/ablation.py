@@ -266,7 +266,7 @@ def ablation_pipeline_from_config(
         flag to 'True' to avoid unnecessary GPU usage.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
     """
-    return ablation_pipeline(
+    ablation_pipeline(
         **config,
         directory=directory,
         dry_run=dry_run,

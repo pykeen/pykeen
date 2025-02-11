@@ -77,6 +77,7 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         # noqa:DAR202
         # noqa:DAR401
         """
+        raise NotImplementedError
 
 
 class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
