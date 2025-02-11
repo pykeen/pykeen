@@ -487,6 +487,11 @@ class Dataset(ExtraReprMixin):
         # compose restricted dataset
         return EagerDataset(training=training, testing=testing, validation=validation, metadata=metadata)
 
+    def merged(self) -> CoreTriplesFactory:
+        """Return a single triples factory with all triples."""
+        training, *rest = self._tup()
+        return training.merge(*rest)
+
 
 class EagerDataset(Dataset):
     """A dataset whose training, testing, and optional validation factories are pre-loaded."""
