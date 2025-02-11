@@ -66,18 +66,14 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
     ) -> Instances:
         """Create instances from mapped triples.
 
-        :param mapped_triples: shape: (num_triples, 3)
-            The ID-based triples.
-        :param num_entities: >0
-            The number of entities.
-        :param num_relations: >0
-            The number of relations.
-        :param kwargs:
-            additional keyword-based parameters.
+        :param mapped_triples: shape: (num_triples, 3) The ID-based triples.
+        :param num_entities: >0 The number of entities.
+        :param num_relations: >0 The number of relations.
+        :param kwargs: additional keyword-based parameters.
 
-        :return:
-            The instances.
+        :returns: The instances.
 
+        # noqa:DAR201
         # noqa:DAR202
         # noqa:DAR401
         """
@@ -98,16 +94,11 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
     ):
         """Initialize the sLCWA instances.
 
-        :param mapped_triples: shape: (num_triples, 3)
-            the ID-based triples, passed to the negative sampler
-        :param num_entities: >0
-            the number of entities, passed to the negative sampler
-        :param num_relations: >0
-            the number of relations, passed to the negative sampler
-        :param negative_sampler:
-            the negative sampler, or a hint thereof
-        :param negative_sampler_kwargs:
-            additional keyword-based arguments passed to the negative sampler
+        :param mapped_triples: shape: (num_triples, 3) the ID-based triples, passed to the negative sampler
+        :param num_entities: >0 the number of entities, passed to the negative sampler
+        :param num_relations: >0 the number of relations, passed to the negative sampler
+        :param negative_sampler: the negative sampler, or a hint thereof
+        :param negative_sampler_kwargs: additional keyword-based arguments passed to the negative sampler
         """
         self.mapped_triples = mapped_triples
         self.sampler = negative_sampler_resolver.make(
@@ -162,10 +153,10 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
 
 
 class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
-    """
-    Pre-batched training instances for the sLCWA training loop.
+    """Pre-batched training instances for the sLCWA training loop.
 
-    .. note ::
+    .. note::
+
         this class is intended to be used with automatic batching disabled, i.e., both parameters `batch_size` and
         `batch_sampler` of torch.utils.data.DataLoader` are set to `None`.
     """
@@ -180,23 +171,15 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
     ):
-        """
-        Initialize the dataset.
+        """Initialize the dataset.
 
-        :param mapped_triples: shape: (num_triples, 3)
-            the mapped triples
-        :param batch_size:
-            the batch size
-        :param drop_last:
-            whether to drop the last (incomplete) batch
-        :param num_entities: >0
-            the number of entities, passed to the negative sampler
-        :param num_relations: >0
-            the number of relations, passed to the negative sampler
-        :param negative_sampler:
-            the negative sampler, or a hint thereof
-        :param negative_sampler_kwargs:
-            additional keyword-based parameters used to instantiate the negative sampler
+        :param mapped_triples: shape: (num_triples, 3) the mapped triples
+        :param batch_size: the batch size
+        :param drop_last: whether to drop the last (incomplete) batch
+        :param num_entities: >0 the number of entities, passed to the negative sampler
+        :param num_relations: >0 the number of relations, passed to the negative sampler
+        :param negative_sampler: the negative sampler, or a hint thereof
+        :param negative_sampler_kwargs: additional keyword-based parameters used to instantiate the negative sampler
         """
         self.mapped_triples = mapped_triples
         self.batch_size = batch_size
@@ -249,11 +232,9 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
     def __init__(self, **kwargs):
-        """
-        Initialize the instances.
+        """Initialize the instances.
 
-        :param kwargs:
-            keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
+        :param kwargs: keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
         """
         super().__init__(**kwargs)
         # indexing
@@ -340,22 +321,15 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
         target: int | None = None,
         **kwargs,
     ) -> Instances:
-        """
-        Create LCWA instances from triples.
+        """Create LCWA instances from triples.
 
-        :param mapped_triples: shape: (num_triples, 3)
-            The ID-based triples.
-        :param num_entities:
-            The number of entities.
-        :param num_relations:
-            The number of relations.
-        :param target:
-            The column to predict
-        :param kwargs:
-            Keyword arguments (thrown out)
+        :param mapped_triples: shape: (num_triples, 3) The ID-based triples.
+        :param num_entities: The number of entities.
+        :param num_relations: The number of relations.
+        :param target: The column to predict
+        :param kwargs: Keyword arguments (thrown out)
 
-        :return:
-            The instances.
+        :returns: The instances.
         """
         if target is None:
             target = 2

@@ -50,15 +50,11 @@ class WikidataImageCache(WikidataTextCache):
     ) -> Sequence[pathlib.Path | None]:
         """Get paths to images for the given IDs.
 
-        :param ids:
-            the Wikidata IDs.
-        :param extensions:
-            the allowed file extensions
-        :param progress:
-            whether to display a progress bar
+        :param ids: the Wikidata IDs.
+        :param extensions: the allowed file extensions
+        :param progress: whether to display a progress bar
 
-        :return:
-            the paths to images for the given IDs.
+        :returns: the paths to images for the given IDs.
         """
         id_to_path = self._discover_images(extensions=extensions)
         missing = sorted(set(ids).difference(id_to_path.keys()))

@@ -1,5 +1,6 @@
 Metrics
 =======
+
 .. automodapi:: pykeen.metrics
     :no-heading:
     :inherited-members:

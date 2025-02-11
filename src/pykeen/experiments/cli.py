@@ -170,8 +170,7 @@ def _help_reproduce(
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param file_name: Name of JSON/YAML file (optional)
     :param extra_config: Extra configuration path
-    :param keep_seed:
-        whether to keep a random seed if given as part of the configuration
+    :param keep_seed: whether to keep a random seed if given as part of the configuration
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 

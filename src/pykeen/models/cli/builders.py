@@ -60,14 +60,12 @@ _SKIP_HINTS = {
 def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
     """Build a :mod:`click` command line interface for a KGE model.
 
-    Allows users to specify all of the (hyper)parameters to the
-    model via command line options using :class:`click.Option`.
+    Allows users to specify all of the (hyper)parameters to the model via command line options using
+    :class:`click.Option`.
 
-    :param model:
-        the model class
+    :param model: the model class
 
-    :return:
-        a click command for training a model of the given class
+    :returns: a click command for training a model of the given class
     """
     signature = inspect.signature(model.__init__)
 

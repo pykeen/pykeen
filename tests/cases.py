@@ -1360,8 +1360,8 @@ class BaseKG2ETest(ModelTestCase):
     def _check_constraints(self):
         """Check model constraints.
 
-        * Entity and relation embeddings have to have at most unit L2 norm.
-        * Covariances have to have values between c_min and c_max
+        - Entity and relation embeddings have to have at most unit L2 norm.
+        - Covariances have to have values between c_min and c_max
         """
         self.instance: ERModel
         (e_mean, e_cov), (r_mean, r_cov) = self.instance.entity_representations, self.instance.relation_representations
@@ -1623,14 +1623,11 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
             assert y.shape == (self.x.shape[0], self.output_dim)
 
     def prepare_adjacency(self, horizontal: bool) -> torch.Tensor:
-        """
-        Prepare adjacency matrix for the given stacking direction.
+        """Prepare adjacency matrix for the given stacking direction.
 
-        :param horizontal:
-            whether to stack horizontally or vertically
+        :param horizontal: whether to stack horizontally or vertically
 
-        :return:
-            the adjacency matrix
+        :returns: the adjacency matrix
         """
         return adjacency_tensor_to_stacked_matrix(
             num_relations=self.factory.num_relations,
@@ -2435,8 +2432,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
         self._test_combination(labels=False)
 
     def test_manual(self):
-        """
-        Smoke-test on a manual example.
+        """Smoke-test on a manual example.
 
         cf. https://github.com/pykeen/pykeen/pull/893#discussion_r861553903
         """

@@ -1,10 +1,11 @@
 Utilities
 =========
+
 .. automodule:: pykeen.utils
-   :members:
+    :members:
 
 .. autofunction:: pykeen.env
 
 .. automodule:: pykeen.version
-   :members:
-   :exclude-members: env
+    :members:
+    :exclude-members: env

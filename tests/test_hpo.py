@@ -304,7 +304,9 @@ class TestHPODatasets(unittest.TestCase):
     def test_custom_tf_object(self):
         """Test using a custom triples factories with HPO.
 
-        .. seealso:: https://github.com/pykeen/pykeen/issues/230
+        .. seealso::
+
+            https://github.com/pykeen/pykeen/issues/230
         """
         tf = TriplesFactory.from_path(path=NATIONS_TRAIN_PATH)
         training, testing, validation = tf.split([0.8, 0.1, 0.1], random_state=0)

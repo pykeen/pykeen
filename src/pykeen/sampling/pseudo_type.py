@@ -20,25 +20,21 @@ def create_index(
     mapped_triples: MappedTriples,
     num_relations: int,
 ) -> tuple[LongTensor, LongTensor]:
-    """
-    Create an index for efficient vectorized pseudo-type negative sampling.
+    """Create an index for efficient vectorized pseudo-type negative sampling.
 
-    For this sampling, we need to store for each relation the set of head / tail entities. For efficient
-    vectorized sampling, the following data structure is employed, which is partially inspired by the
-    CSR format of sparse matrices (cf. :class:`scipy.sparse.csr_matrix`).
+    For this sampling, we need to store for each relation the set of head / tail entities. For efficient vectorized
+    sampling, the following data structure is employed, which is partially inspired by the CSR format of sparse matrices
+    (cf. :class:`scipy.sparse.csr_matrix`).
 
-    We use two arrays, ``offsets`` and ``data``. The `offsets` array is of shape ``(2 * num_relations + 1,)``.
-    The ``data`` array contains the sorted set of heads and tails for each relation, i.e.
+    We use two arrays, ``offsets`` and ``data``. The `offsets` array is of shape ``(2 * num_relations + 1,)``. The
+    ``data`` array contains the sorted set of heads and tails for each relation, i.e.
     ``data[offsets[2*r]:offsets[2*r+1]]`` are the IDs of head entities for relation ``r``, and
     ``data[offsets[2*r+1]:offsets[2*r+2]]`` the ID of tail entities.
 
-    :param mapped_triples:
-        the mapped triples
-    :param num_relations:
-        the number of relations
+    :param mapped_triples: the mapped triples
+    :param num_relations: the number of relations
 
-    :return:
-        A pair (data, offsets) containing the compressed triples.
+    :returns: A pair (data, offsets) containing the compressed triples.
     """
     heads, tails = create_relation_to_entity_set_mapping(triples=mapped_triples.tolist())
     relations = set(heads.keys()).union(tails.keys())
@@ -62,10 +58,12 @@ def create_index(
 class PseudoTypedNegativeSampler(NegativeSampler):
     r"""A sampler that accounts for which entities co-occur with a relation.
 
-    To generate a corrupted head entity for triple $(h, r, t)$, only those entities are considered which occur as a
-    head entity in a triple with the relation $r$.
+    To generate a corrupted head entity for triple $(h, r, t)$, only those entities are considered which occur as a head
+    entity in a triple with the relation $r$.
 
-    .. warning:: With this type of sampler, filtering for false negatives is more important.
+    .. warning::
+
+        With this type of sampler, filtering for false negatives is more important.
     """
 
     #: The array of offsets within the data array, shape: (2 * num_relations + 1,)
@@ -80,13 +78,10 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         mapped_triples: MappedTriples,
         **kwargs,
     ):
-        """
-        Instantiate the pseudo-typed negative sampler.
+        """Instantiate the pseudo-typed negative sampler.
 
-        :param mapped_triples:
-            the positive training triples
-        :param kwargs:
-            Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
+        :param mapped_triples: the positive training triples
+        :param kwargs: Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
         super().__init__(mapped_triples=mapped_triples, **kwargs)
         self.data, self.offsets = create_index(mapped_triples=mapped_triples, num_relations=self.num_relations)
