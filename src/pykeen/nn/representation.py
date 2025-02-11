@@ -1549,7 +1549,8 @@ class BackfillRepresentation(PartitionRepresentation):
         :param max_id:
             The total number of entities that need to be represented.
         :param base_ids:
-            The indices which are provided through the base representation.
+            The indices (in the new, increased indexing scheme)
+            which are provided through the base representation.
 
         :param base:
             The base representation, or a hint thereof.
@@ -1579,9 +1580,10 @@ class BackfillRepresentation(PartitionRepresentation):
         if max(base_ids) >= base.max_id:
             raise ValueError(f"Some of the {base_ids=} exceed {base.max_id}")
         if len(base_ids) != base.max_id:
-            raise ValueError(f"{len(base_ids)=} != {base.max_id}. If you only want to re-use some of the indices, take a look at SubsetRepresentation.")
-        
-        
+            raise ValueError(
+                f"{len(base_ids)=} != {base.max_id}. If you only want to re-use some of the indices, take a look at SubsetRepresentation."
+            )
+
         backfill_max_id = max_id - base.max_id
         if backfill_max_id == 0:
             logger.warning(
