@@ -1520,6 +1520,10 @@ class PartitionRepresentation(Representation):
         return x
 
 
+class InvalidBaseIdsError(ValueError):
+    """Raised when the provided base ids are invalid."""
+
+
 @parse_docdata
 class BackfillRepresentation(PartitionRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
@@ -1577,18 +1581,21 @@ class BackfillRepresentation(PartitionRepresentation):
         # normalize and validate base ids
         base_ids = sorted(set(base_ids))
         if min(base_ids) < 0:
-            raise ValueError(f"Some of the {base_ids=} are not non-negative.")
+            raise InvalidBaseIdsError(f"Some of the {base_ids=} are not non-negative.")
         if max(base_ids) >= max_id:
-            raise ValueError(f"Some of the {base_ids=} exceed {max_id=:_}")
+            raise InvalidBaseIdsError(f"Some of the {base_ids=} exceed {max_id=:_}")
 
         base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
         # if a pre-instantiated `base` was passed, the following does not necessarily need to hold
         if len(base_ids) != base.max_id:
-            raise ValueError(
+            raise InvalidBaseIdsError(
                 f"{len(base_ids)=} != {base.max_id}. If you only want to re-use some of the indices, "
                 f"take a look at SubsetRepresentation.",
             )
 
+        # Note: we know that len(base_ids) == base.max_id, and base_ids is a (sorted) set of non-negative integers
+        # => max_id >= base.max_id
+        assert max_id >= base.max_id
         backfill_max_id = max_id - base.max_id
         if backfill_max_id == 0:
             logger.warning(
@@ -1597,8 +1604,6 @@ class BackfillRepresentation(PartitionRepresentation):
                 "base representation",
                 max_id,
             )
-        elif backfill_max_id < 0:
-            raise BackfillNegativeMaxIDError(max_id, base.max_id, base_ids)
 
         # comment: not all representations support passing a shape parameter
         backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=base.shape)
@@ -1615,21 +1620,6 @@ class BackfillRepresentation(PartitionRepresentation):
         assignment[mask, 1] = torch.arange(backfill.max_id)
 
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
-
-
-class BackfillNegativeMaxIDError(ValueError):
-    """Raised when trying to construct a backfill representation with negative max_id."""
-
-    def __init__(self, max_id: int, base_max_id: int, base_ids: list[int]) -> None:
-        self.max_id = max_id
-        self.base_max_id = base_max_id
-        self.base_ids = base_ids
-
-    def __str__(self) -> str:
-        return (
-            f"Tried to construct a backfill representation when giving a max_id ({self.max_id}) "
-            f"less than the length of base_ids ({self.base_max_id}), which were: {self.base_ids}"
-        )
 
 
 @parse_docdata

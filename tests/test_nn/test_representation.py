@@ -428,17 +428,18 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
 
     def test_max_id_verification_raises_value_error(self):
         """Test that an invalid max_id raises a ValueError."""
-        with self.assertRaises(pykeen.nn.representation.BackfillNegativeMaxIDError) as info:
-            pykeen.nn.representation.BackfillRepresentation(
-                base_ids=[0, 1, 2, 5],
-                max_id=2,
-                base=pykeen.nn.representation.Embedding(max_id=4, shape=(4,)),
-            )
-        self.assertEqual(
-            "Tried to construct a backfill representation when giving a max_id (2) less than "
-            "the length of base_ids (4), which were: [0, 1, 2, 5]",
-            str(info.exception),
-        )
+        for base_ids, message_part in (
+            ([0, 1, 2, 5], "exceed max_id"),
+            ([-1, 1, 2, 5], "not non-negative"),
+            ([0, 1], "take a look at SubsetRepresentation"),
+        ):
+            with self.subTest(message_part), self.assertRaises(pykeen.nn.representation.InvalidBaseIdsError) as info:
+                pykeen.nn.representation.BackfillRepresentation(
+                    base_ids=base_ids,
+                    max_id=2,
+                    base=pykeen.nn.representation.Embedding(max_id=4, shape=(4,)),
+                )
+            self.assertIn(message_part, str(info.exception))
 
     def test_max_id_verification(self):
         """Test that a valid max_id does not raise a ValueError."""
