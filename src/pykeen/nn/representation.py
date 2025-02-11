@@ -1579,7 +1579,7 @@ class BackfillRepresentation(PartitionRepresentation):
         if max(base_ids) >= base.max_id:
             raise ValueError(f"Some of the {base_ids=} exceed {base.max_id}")
         if len(base_ids) != base.max_id:
-            raise ValueError(f"{len(base_ids)=} != {base.max_id}. If you only want to re-use some of the indices, take a look at SubsetRepresentation."}
+            raise ValueError(f"{len(base_ids)=} != {base.max_id}. If you only want to re-use some of the indices, take a look at SubsetRepresentation.")
         
         
         backfill_max_id = max_id - base.max_id
