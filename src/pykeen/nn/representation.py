@@ -1576,6 +1576,8 @@ class BackfillRepresentation(PartitionRepresentation):
 
         # normalize and validate base ids
         base_ids = sorted(set(base_ids))
+        if min(base_ids) < 0:
+            raise ValueError(f"Some of the {base_ids=} are not non-negative.")
         if max(base_ids) >= max_id:
             raise ValueError(f"Some of the {base_ids=} exceed {max_id=:_}")
 
