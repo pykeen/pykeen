@@ -1,5 +1,6 @@
 Datasets
 ========
+
 .. automodapi:: pykeen.datasets
     :include-all-objects:
 
@@ -9,8 +10,10 @@ Datasets
 
 Inductive Datasets
 ==================
+
 .. automodapi:: pykeen.datasets.inductive
 
 Entity Alignment
 ================
+
 .. automodapi:: pykeen.datasets.ea.combination

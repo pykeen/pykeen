@@ -46,8 +46,7 @@ class ResultTracker:
 
         HAS to be called after the experiment is finished.
 
-        :param success:
-            Can be used to signal failed runs. May be ignored.
+        :param success: Can be used to signal failed runs. May be ignored.
         """
 
 
@@ -70,7 +69,6 @@ class PythonResultTracker(ResultTracker):
         print("Default configuration:")
         for k, v in tracker.configuration.items():
             print(f"{k:20} = {v}")
-
     """
 
     #: The name of the run
@@ -131,21 +129,14 @@ class ConsoleResultTracker(ResultTracker):
         start_end_run: bool = False,
         writer: str = "tqdm",
     ):
-        """
-        Initialize the tracker.
+        """Initialize the tracker.
 
-        :param track_parameters:
-            Whether to print parameters.
-        :param parameter_filter:
-            A regular expression to filter parameters. If None, print all parameters.
-        :param track_metrics:
-            Whether to print metrics.
-        :param metric_filter:
-            A regular expression to filter metrics. If None, print all parameters.
-        :param start_end_run:
-            Whether to print start/end run messages.
-        :param writer:
-            The writer to use - one of "tqdm", "builtin", or "logger".
+        :param track_parameters: Whether to print parameters.
+        :param parameter_filter: A regular expression to filter parameters. If None, print all parameters.
+        :param track_metrics: Whether to print metrics.
+        :param metric_filter: A regular expression to filter metrics. If None, print all parameters.
+        :param start_end_run: Whether to print start/end run messages.
+        :param writer: The writer to use - one of "tqdm", "builtin", or "logger".
         """
         self.start_end_run = start_end_run
 
@@ -213,11 +204,9 @@ class MultiResultTracker(ResultTracker):
     trackers: list[ResultTracker]
 
     def __init__(self, trackers: TrackerHint = None) -> None:
-        """
-        Initialize the tracker.
+        """Initialize the tracker.
 
-        :param trackers:
-            the base tracker(s).
+        :param trackers: the base tracker(s).
         """
         if trackers is None:
             self.trackers = []

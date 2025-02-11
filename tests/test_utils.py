@@ -177,7 +177,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(set(id_remapping.values()), set(compacted_mapping.values()))
 
     def test_clamp_norm(self):
-        """Test  clamp_norm() ."""
+        """Test clamp_norm() ."""
         max_norm = 1.0
         gen = torch.manual_seed(42)
         eps = 1.0e-06

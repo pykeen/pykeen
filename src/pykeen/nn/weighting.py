@@ -31,24 +31,17 @@ def softmax(
     num_nodes: None | int | torch.Tensor = None,
     dim: int = 0,
 ) -> torch.Tensor:
-    r"""
-    Compute a sparsely evaluated softmax.
+    r"""Compute a sparsely evaluated softmax.
 
-    Given a value tensor :attr:`src`, this function first groups the values
-    along the given dimension based on the indices specified in :attr:`index`,
-    and then proceeds to compute the softmax individually for each group.
+    Given a value tensor :attr:`src`, this function first groups the values along the given dimension based on the
+    indices specified in :attr:`index`, and then proceeds to compute the softmax individually for each group.
 
-    :param src:
-        The source tensor.
-    :param index:
-        The indices of elements for applying the softmax.
-    :param num_nodes:
-        The number of nodes, i.e., :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
-    :param dim:
-        The dimension along which to compute the softmax.
+    :param src: The source tensor.
+    :param index: The indices of elements for applying the softmax.
+    :param num_nodes: The number of nodes, i.e., :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
+    :param dim: The dimension along which to compute the softmax.
 
-    :returns:
-        The softmax-ed tensor.
+    :returns: The softmax-ed tensor.
 
     :raises ImportError: if :mod:`torch_scatter` is not installed
     """
@@ -72,11 +65,9 @@ class EdgeWeighting(nn.Module):
     needs_message: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
-        """
-        Initialize the module.
+        """Initialize the module.
 
-        :param kwargs:
-            ignored keyword-based parameters.
+        :param kwargs: ignored keyword-based parameters.
         """
         # stub init to enable arbitrary arguments in subclasses
         super().__init__()
@@ -91,17 +82,12 @@ class EdgeWeighting(nn.Module):
     ) -> FloatTensor:
         """Compute edge weights.
 
-        :param source: shape: (num_edges,)
-                The source indices.
-        :param target: shape: (num_edges,)
-            The target indices.
-        :param message: shape (num_edges, dim)
-            Actual messages to weight
-        :param x_e: shape (num_nodes, dim)
-            Node states up to the weighting point
+        :param source: shape: (num_edges,) The source indices.
+        :param target: shape: (num_edges,) The target indices.
+        :param message: shape (num_edges, dim) Actual messages to weight
+        :param x_e: shape (num_nodes, dim) Node states up to the weighting point
 
-        :return: shape: (num_edges, dim)
-             Messages weighted with the edge weights.
+        :returns: shape: (num_edges, dim) Messages weighted with the edge weights.
         """
         raise NotImplementedError
 
@@ -179,16 +165,13 @@ class AttentionEdgeWeighting(EdgeWeighting):
         num_heads: int = 8,
         dropout: float = 0.1,
     ):
-        """
-        Initialize the module.
+        """Initialize the module.
 
-        :param message_dim: >0
-            the message dimension. has to be divisible by num_heads
-            .. todo:: change to multiplicative instead of divisive to make this easier to use
-        :param num_heads: >0
-            the number of attention heads
-        :param dropout:
-            the attention dropout
+        :param message_dim: >0 the message dimension. has to be divisible by num_heads .. todo:: change to
+            multiplicative instead of divisive to make this easier to use
+        :param num_heads: >0 the number of attention heads
+        :param dropout: the attention dropout
+
         :raises ValueError: If ``message_dim`` is not divisible by ``num_heads``
         """
         super().__init__()

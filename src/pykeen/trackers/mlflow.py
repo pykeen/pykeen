@@ -21,19 +21,14 @@ class MLFlowResultTracker(ResultTracker):
         experiment_name: str | None = None,
         tags: dict[str, Any] | None = None,
     ):
-        """
-        Initialize result tracking via MLFlow.
+        """Initialize result tracking via MLFlow.
 
-        :param tracking_uri:
-            The tracking uri.
-        :param experiment_id:
-            The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has priority over
-            experiment_name.
-        :param experiment_name:
-            The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
-            create an experiment of the given name.
-        :param tags:
-            The additional run details which are presented as tags to be logged
+        :param tracking_uri: The tracking uri.
+        :param experiment_id: The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has
+            priority over experiment_name.
+        :param experiment_name: The experiment name. If this experiment name exists, add the current run to this
+            experiment. Otherwise create an experiment of the given name.
+        :param tags: The additional run details which are presented as tags to be logged
         """
         import mlflow as _mlflow
 

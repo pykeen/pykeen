@@ -44,12 +44,12 @@ def resolve_result_trackers(
 ) -> MultiResultTracker:
     """Resolve and compose result trackers.
 
-    :param result_tracker: Either none (will result in a Python result tracker),
-        a single tracker (as either a class, instance, or string for class name), or a list
-        of trackers (as either a class, instance, or string for class name
-    :param result_tracker_kwargs: Either none (will use all defaults), a single dictionary
-        (will be used for all trackers), or a list of dictionaries with the same length
-        as the result trackers
+    :param result_tracker: Either none (will result in a Python result tracker), a single tracker (as either a class,
+        instance, or string for class name), or a list of trackers (as either a class, instance, or string for class
+        name
+    :param result_tracker_kwargs: Either none (will use all defaults), a single dictionary (will be used for all
+        trackers), or a list of dictionaries with the same length as the result trackers
+
     :returns: A multi-result trackers that offloads to all contained result trackers
     """
     if result_tracker is None:

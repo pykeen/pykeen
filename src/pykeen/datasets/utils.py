@@ -36,6 +36,7 @@ def iter_dataset_classes(
     :param max_triples: An optional maximum number of triples for the dataset
     :param min_triples: An optional minimum number of triples for the dataset
     :param use_tqdm: Should a progress bar be shown?
+
     :yields: Pairs of dataset names and dataset classes
     """
     from . import dataset_resolver
@@ -76,6 +77,7 @@ def iter_dataset_instances(
     :param max_triples: An optional maximum number of triples for the dataset
     :param min_triples: An optional minimum number of triples for the dataset
     :param use_tqdm: Should a progress bar be shown?
+
     :yields: Pairs of dataset names and dataset instances
     """
     for name, cls in iter_dataset_classes(
@@ -99,17 +101,17 @@ def get_dataset(
     """Get a dataset, cached based on the given kwargs.
 
     :param dataset: The name of a dataset, an instance of a dataset, or the class for a dataset.
-    :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for
-        the ``dataset`` keyword argument.
+    :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for the ``dataset``
+        keyword argument.
     :param training: A triples factory for training triples or a path to a training triples file if ``dataset=None``
-    :param testing: A triples factory for testing triples or a path to a testing triples file  if ``dataset=None``
-    :param validation: A triples factory for validation triples or a path to a validation triples file
-        if ``dataset=None``
+    :param testing: A triples factory for testing triples or a path to a testing triples file if ``dataset=None``
+    :param validation: A triples factory for validation triples or a path to a validation triples file if
+        ``dataset=None``
+
     :returns: An instantiated dataset
 
     :raises ValueError: for incorrect usage of the input of the function
-    :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of
-        :class:`pykeen.datasets.Dataset`
+    :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of :class:`pykeen.datasets.Dataset`
     """
     from . import dataset_resolver, has_dataset
 

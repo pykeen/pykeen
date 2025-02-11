@@ -25,33 +25,25 @@ class KG2ESimilarity(nn.Module, abc.ABC):
     """
 
     def __init__(self, exact: bool = True):
-        """
-        Initialize the similarity module.
+        """Initialize the similarity module.
 
-        :param exact:
-            Whether to return the exact similarity, or leave out constant offsets for slightly improved speed.
+        :param exact: Whether to return the exact similarity, or leave out constant offsets for slightly improved speed.
         """
         super().__init__()
         self.exact = exact
 
     @abc.abstractmethod
     def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
+        """Calculate the similarity.
+
+        :param h: shape: (`*batch_dims`, `d`) The head entity Gaussian distribution.
+        :param r: shape: (`*batch_dims`, `d`) The relation Gaussian distribution.
+        :param t: shape: (`*batch_dims`, `d`) The tail entity Gaussian distribution.
+
+        :returns: torch.Tensor, shape: (`*batch_dims`) # noqa: DAR202 The similarity.
+
+        # noqa:DAR202
         """
-        Calculate the similarity.
-
-        # noqa: DAR401
-
-        :param h: shape: (`*batch_dims`, `d`)
-            The head entity Gaussian distribution.
-        :param r: shape: (`*batch_dims`, `d`)
-            The relation Gaussian distribution.
-        :param t: shape: (`*batch_dims`, `d`)
-            The tail entity Gaussian distribution.
-
-        :return: torch.Tensor, shape: (`*batch_dims`)  # noqa: DAR202
-            The similarity.
-        """
-        raise NotImplementedError
 
 
 class ExpectedLikelihood(KG2ESimilarity):
@@ -101,6 +93,7 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
     Since all covariance matrices are diagonal, we can further simplify:
 
     .. math::
+
         tr\left(\Sigma_r^{-1} \Sigma_e\right)
         &=&
         \sum_i \Sigma_e[i] / \Sigma_r[i]
@@ -113,7 +106,8 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         &=&
         \sum_i \ln \Sigma_r[i] - \sum_i \ln \Sigma_e[i]
 
-    .. seealso ::
+    .. seealso::
+
         `Wikipedia: Multivariate_normal_distribution > Kullback-Leibler Divergence
         <https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence>`_
     """

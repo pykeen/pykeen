@@ -36,11 +36,10 @@ class CompositionModule(nn.Module, ABC):
 
         The tensors have to be broadcastable.
 
-        :param a: shape: s_1
-            The first tensor.
-        :param b: shape: s_2
-            The second tensor.
-        :return: shape: s
+        :param a: shape: s_1 The first tensor.
+        :param b: shape: s_2 The second tensor.
+
+        :returns: shape: s
         """
 
 

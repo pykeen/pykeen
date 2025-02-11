@@ -43,15 +43,12 @@ def load_state_torch(file: pathlib.Path | str | BinaryIO) -> ModelState:
 
 
 def save_model(model: Model, file: pathlib.Path | str | BinaryIO) -> None:
-    """
-    Save a model to a file.
+    """Save a model to a file.
 
-    :param model:
-        the model to save
-    :param file:
-        the file to save to, either as a path, or a binary file-like object
+    :param model: the model to save
+    :param file: the file to save to, either as a path, or a binary file-like object
 
-    Example::
+    .. code-block:: python
 
         from pykeen.pipeline import pipeline
         from pykeen.checkpoints import save_model, load_state_torch

@@ -45,20 +45,15 @@ class Tokenizer:
         num_entities: int,
         num_relations: int,
     ) -> tuple[int, LongTensor]:
-        """
-        Tokenize the entities contained given the triples.
+        """Tokenize the entities contained given the triples.
 
-        :param mapped_triples: shape: (n, 3)
-            the ID-based triples
-        :param num_tokens:
-            the number of tokens to select for each entity
-        :param num_entities:
-            the number of entities
-        :param num_relations:
-            the number of relations
+        :param mapped_triples: shape: (n, 3) the ID-based triples
+        :param num_tokens: the number of tokens to select for each entity
+        :param num_entities: the number of entities
+        :param num_relations: the number of relations
 
-        :return: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size
-            the selected relation IDs for each entity. -1 is used as a padding token.
+        :returns: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size the selected relation IDs for each
+            entity. -1 is used as a padding token.
         """
         raise NotImplementedError
 
@@ -99,8 +94,7 @@ class RelationTokenizer(Tokenizer):
 
 
 class AnchorTokenizer(Tokenizer):
-    """
-    Tokenize entities by representing them as a bag of anchor entities.
+    """Tokenize entities by representing them as a bag of anchor entities.
 
     The entities are chosen by shortest path distance.
     """
@@ -116,17 +110,12 @@ class AnchorTokenizer(Tokenizer):
         searcher: HintOrType[AnchorSearcher] = None,
         searcher_kwargs: OptionalKwargs = None,
     ) -> None:
-        """
-        Initialize the tokenizer.
+        """Initialize the tokenizer.
 
-        :param selection:
-            the anchor node selection strategy.
-        :param selection_kwargs:
-            additional keyword-based arguments passed to the selection strategy
-        :param searcher:
-            the component for searching the closest anchors for each entity
-        :param searcher_kwargs:
-            additional keyword-based arguments passed to the searcher
+        :param selection: the anchor node selection strategy.
+        :param selection_kwargs: additional keyword-based arguments passed to the selection strategy
+        :param searcher: the component for searching the closest anchors for each entity
+        :param searcher_kwargs: additional keyword-based arguments passed to the searcher
         """
         self.anchor_selection = anchor_selection_resolver.make(selection, pos_kwargs=selection_kwargs)
         self.searcher = anchor_searcher_resolver.make(searcher, pos_kwargs=searcher_kwargs)
@@ -170,8 +159,7 @@ class AnchorTokenizer(Tokenizer):
 
 
 class MetisAnchorTokenizer(AnchorTokenizer):
-    """
-    An anchor tokenizer, which first partitions the graph using METIS.
+    """An anchor tokenizer, which first partitions the graph using METIS.
 
     We use the binding by :mod:`torch_sparse`. The METIS graph partitioning algorithm is described here:
     http://glaros.dtc.umn.edu/gkhome/metis/metis/overview
@@ -180,13 +168,10 @@ class MetisAnchorTokenizer(AnchorTokenizer):
     def __init__(self, num_partitions: int = 2, device: DeviceHint = None, **kwargs):
         """Initialize the tokenizer.
 
-        :param num_partitions:
-            the number of partitions obtained through Metis.
-        :param device:
-            the device to use for tokenization
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`AnchorTokenizer.__init__`. note that there will be one
-            anchor tokenizer per partition, i.e., the vocabulary size will grow respectively.
+        :param num_partitions: the number of partitions obtained through Metis.
+        :param device: the device to use for tokenization
+        :param kwargs: additional keyword-based parameters passed to :meth:`AnchorTokenizer.__init__`. note that there
+            will be one anchor tokenizer per partition, i.e., the vocabulary size will grow respectively.
         """
         super().__init__(**kwargs)
         self.num_partitions = num_partitions
@@ -296,25 +281,21 @@ class PrecomputedPoolTokenizer(Tokenizer):
         randomize_selection: bool = False,
         loader: HintOrType[PrecomputedTokenizerLoader] = None,
     ):
-        r"""
-        Initialize the tokenizer.
+        r"""Initialize the tokenizer.
 
-        .. note ::
+        .. note::
+
             the preference order for loading the precomputed pools is (1) from the given pool (2) from the given path,
             and (3) by downloading from the given url
 
-        :param path:
-            a path for a file containing the precomputed pools
-        :param url:
-            an url to download the file with precomputed pools from
-        :param download_kwargs:
-            additional download parameters, passed to pystow.Module.ensure
-        :param pool:
-            the precomputed pools.
-        :param randomize_selection:
-            whether to randomly choose from tokens, or always take the first `num_token` precomputed tokens.
-        :param loader:
-            the loader to use for loading the pool
+        :param path: a path for a file containing the precomputed pools
+        :param url: an url to download the file with precomputed pools from
+        :param download_kwargs: additional download parameters, passed to pystow.Module.ensure
+        :param pool: the precomputed pools.
+        :param randomize_selection: whether to randomly choose from tokens, or always take the first `num_token`
+            precomputed tokens.
+        :param loader: the loader to use for loading the pool
+
         :raises ValueError: If the pool's keys are not contiguous on $0 \dots N-1$.
         """
         self.pool, self.vocabulary_size = self._load_pool(

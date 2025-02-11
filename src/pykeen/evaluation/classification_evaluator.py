@@ -99,11 +99,9 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
     all_positives: MutableMapping[Target, MutableMapping[tuple[int, int], np.ndarray]]
 
     def __init__(self, **kwargs):
-        """
-        Initialize the evaluator.
+        """Initialize the evaluator.
 
-        :param kwargs:
-            keyword-based parameters passed to :meth:`Evaluator.__init__`.
+        :param kwargs: keyword-based parameters passed to :meth:`Evaluator.__init__`.
         """
         super().__init__(
             filtered=False,
