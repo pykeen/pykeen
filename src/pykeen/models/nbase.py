@@ -349,16 +349,23 @@ class ERModel(
         representations: OneOrManyHintOrType[Representation] = None,
         representations_kwargs: OneOrManyOptionalKwargs = None,
         label: Literal["entity", "relation"] = "entity",
+        max_id: int | None = None,
+        shapes: Sequence[str] | None = None,
         **kwargs,
     ) -> Sequence[Representation]:
         """Build representations for the given factory."""
         # note, triples_factory is required instead of just using self.num_entities
         # and self.num_relations for the inductive case when this is different
+        if max_id is None:
+            # TODO maybe require this is explicit always
+            max_id = triples_factory.num_entities if label == "entity" else triples_factory.num_relations
+        if shapes is None:
+            shapes = self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
-            max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
-            shapes=self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape,
+            max_id=max_id,
+            shapes=shapes,
             label=label,
             **kwargs,
         )

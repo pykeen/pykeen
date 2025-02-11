@@ -139,7 +139,7 @@ def parallel_unsqueeze(x: Representation, dim: int) -> Representation:
     """Unsqueeze all representations along the given dimension."""
     xs: Sequence[torch.FloatTensor] = upgrade_to_sequence(x)
     xs = [xx.unsqueeze(dim=dim) for xx in xs]
-    return xs[0] if len(xs) == 1 else xs
+    return cast(Representation, xs[0] if len(xs) == 1 else xs)
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
