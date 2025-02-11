@@ -1574,11 +1574,13 @@ class BackfillRepresentation(PartitionRepresentation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
+        # normalize and validate base ids
         base_ids = sorted(set(base_ids))
+        if max(base_ids) >= max_id:
+            raise ValueError(f"Some of the {base_ids=} exceed {max_id=:_}")
+
         base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
         # if a pre-instantiated `base` was passed, the following does not necessarily need to hold
-        if max(base_ids) >= base.max_id:
-            raise ValueError(f"Some of the {base_ids=} exceed {base.max_id}")
         if len(base_ids) != base.max_id:
             raise ValueError(
                 f"{len(base_ids)=} != {base.max_id}. If you only want to re-use some of the indices, take a look at SubsetRepresentation."
