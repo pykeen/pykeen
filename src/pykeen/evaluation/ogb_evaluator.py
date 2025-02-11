@@ -96,39 +96,27 @@ def evaluate_ogb(
     tqdm_kwargs: Mapping[str, Any] | None = None,
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
 ) -> MetricResults:
-    """
-    Evaluate a model using OGB's evaluator.
+    """Evaluate a model using OGB's evaluator.
 
-    :param evaluator:
-        An evaluator
-    :param model:
-        the model; will be set to evaluation mode.
-    :param mapped_triples:
-        the evaluation triples
+    :param evaluator: An evaluator
+    :param model: the model; will be set to evaluation mode.
+    :param mapped_triples: the evaluation triples
 
-        .. note ::
+        .. note::
+
             the evaluation triples have to match with the stored explicit negatives
-    :param device:
-            The device on which the evaluation shall be run. If None is given, use the model's device.
 
-    :param batch_size:
-        the batch size
-    :param slice_size: >0
-        The divisor for the scoring function when using slicing.
-    :param use_tqdm:
-        Should a progress bar be displayed?
-    :param tqdm_kwargs:
-        Additional keyword based arguments passed to the progress bar.
-    :param targets:
-        the prediction targets
+    :param device: The device on which the evaluation shall be run. If None is given, use the model's device.
+    :param batch_size: the batch size
+    :param slice_size: >0 The divisor for the scoring function when using slicing.
+    :param use_tqdm: Should a progress bar be displayed?
+    :param tqdm_kwargs: Additional keyword based arguments passed to the progress bar.
+    :param targets: the prediction targets
 
-    :return:
-        the evaluation results
+    :returns: the evaluation results
 
-    :raises ImportError:
-        if ogb is not installed
-    :raises ValueError:
-        if illegal ``additional_filter_triples`` argument is given in the kwargs
+    :raises ImportError: if ogb is not installed
+    :raises ValueError: if illegal ``additional_filter_triples`` argument is given in the kwargs
     """
     try:
         import ogb.linkproppred

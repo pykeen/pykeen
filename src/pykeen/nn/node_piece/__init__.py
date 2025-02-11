@@ -1,25 +1,23 @@
-"""
-NodePiece modules.
+"""NodePiece modules.
 
-A :class:`NodePieceRepresentation` contains a collection of :class:`TokenizationRepresentation`.
-A :class:`TokenizationRepresentation` is defined as :class:`Representation` module mapping token
-indices to representations, also called the `vocabulary` in resemblance of token representations
-known from NLP applications, and an assignment from entities to (multiple) tokens.
+A :class:`NodePieceRepresentation` contains a collection of :class:`TokenizationRepresentation`. A
+:class:`TokenizationRepresentation` is defined as :class:`Representation` module mapping token indices to
+representations, also called the `vocabulary` in resemblance of token representations known from NLP applications, and
+an assignment from entities to (multiple) tokens.
 
-In order to obtain the vocabulary and assignment, multiple options are available, which often
-follow a two-step approach of first selecting a vocabulary, and afterwards assigning the entities
-to the set of tokens, usually using the graph structure of the KG.
+In order to obtain the vocabulary and assignment, multiple options are available, which often follow a two-step approach
+of first selecting a vocabulary, and afterwards assigning the entities to the set of tokens, usually using the graph
+structure of the KG.
 
-One way of tokenization, is tokenization by :class:`AnchorTokenizer`, which selects some anchor
-entities from the graph as vocabulary. The anchor selection process is controlled by an
-:class:`AnchorSelection` instance. In order to obtain the assignment, some measure of graph
-distance is used. To this end, a :class:`AnchorSearcher` instance calculates the closest
-anchor entities from the vocabulary for each of the entities in the graph.
+One way of tokenization, is tokenization by :class:`AnchorTokenizer`, which selects some anchor entities from the graph
+as vocabulary. The anchor selection process is controlled by an :class:`AnchorSelection` instance. In order to obtain
+the assignment, some measure of graph distance is used. To this end, a :class:`AnchorSearcher` instance calculates the
+closest anchor entities from the vocabulary for each of the entities in the graph.
 
 Since some tokenizations are expensive to compute, we offer a mechanism to use precomputed tokenizations via
 :class:`PrecomputedPoolTokenizer`. To enable loading from different formats, a loader subclassing from
-:class:`PrecomputedTokenizerLoader` can be selected accordingly. To precompute anchor-based tokenizations,
-you can use the command
+:class:`PrecomputedTokenizerLoader` can be selected accordingly. To precompute anchor-based tokenizations, you can use
+the command
 
 .. code-block:: console
 

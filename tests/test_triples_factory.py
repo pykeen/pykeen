@@ -537,7 +537,9 @@ class TestUtils(unittest.TestCase):
     def test_load_triples_with_nans(self):
         """Test loading triples that have a ``nan`` string.
 
-        .. seealso:: https://github.com/pykeen/pykeen/pull/883
+        .. seealso::
+
+            https://github.com/pykeen/pykeen/pull/883
         """
         path = RESOURCES.joinpath("test_nans.tsv")
         expected_triples = [

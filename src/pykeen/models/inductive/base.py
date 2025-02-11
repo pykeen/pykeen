@@ -13,12 +13,11 @@ from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
 
 
 class InductiveERModel(ERModel):
-    """
-    A base class for inductive models.
+    """A base class for inductive models.
 
-    This model assumes a shared set of relations between all triple sets (e.g., training and validation), and a
-    separate inference factory used during validation. During testing time, either the validation factory is re-used
-    or another separate testing factory may be provided.
+    This model assumes a shared set of relations between all triple sets (e.g., training and validation), and a separate
+    inference factory used during validation. During testing time, either the validation factory is re-used or another
+    separate testing factory may be provided.
     """
 
     #: a mapping from inductive mode to corresponding entity representations
@@ -38,19 +37,14 @@ class InductiveERModel(ERModel):
     ) -> None:
         """Initialize the inductive model.
 
-        :param triples_factory:
-            the (training) factory
-        :param entity_representations:
-            the training entity representations
-        :param entity_representations_kwargs:
-            additional keyword-based parameters for the training entity representations
-        :param validation_factory:
-            the validation factory
-        :param testing_factory:
-            the testing factory. If None, the validation factory is re-used, i.e., validation and test entities come
-            from the same (unseen) set of entities.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        :param triples_factory: the (training) factory
+        :param entity_representations: the training entity representations
+        :param entity_representations_kwargs: additional keyword-based parameters for the training entity
+            representations
+        :param validation_factory: the validation factory
+        :param testing_factory: the testing factory. If None, the validation factory is re-used, i.e., validation and
+            test entities come from the same (unseen) set of entities.
+        :param kwargs: additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """
         super().__init__(
             triples_factory=triples_factory,

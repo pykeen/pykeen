@@ -1,7 +1,6 @@
 """Inverse Stability Workflow.
 
 This experiment investigates the differences between
-
 """
 
 import itertools as itt

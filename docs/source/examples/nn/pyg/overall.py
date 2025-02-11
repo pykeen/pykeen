@@ -1,8 +1,7 @@
-"""
-Example for using PyTorch Geometric.
+"""Example for using PyTorch Geometric.
 
-Combine static label-based entity features with a trainable GCN encoder for entity representations,
-with learned embeddings for relation representations and a DistMult interaction function.
+Combine static label-based entity features with a trainable GCN encoder for entity representations, with learned
+embeddings for relation representations and a DistMult interaction function.
 """
 
 from pykeen.datasets import get_dataset
