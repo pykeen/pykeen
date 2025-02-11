@@ -1589,7 +1589,7 @@ class BackfillRepresentation(PartitionRepresentation):
         # if a pre-instantiated `base` was passed, the following does not necessarily need to hold
         if len(base_ids) != base.max_id:
             raise InvalidBaseIdsError(
-                f"{len(base_ids)=} != {base.max_id}. If you only want to re-use some of the indices, "
+                f"{len(base_ids)=} != {base.max_id=:_}. If you only want to re-use some of the indices, "
                 f"take a look at SubsetRepresentation.",
             )
 
